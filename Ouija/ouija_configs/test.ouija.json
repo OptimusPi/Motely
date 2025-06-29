@@ -1,0 +1,35 @@
+{
+    "name": "test",
+    "description": "Filter configuration created by Ouija GUI",
+    "author": "pifreak",
+    "keywords": [
+        "CHAD",
+        "PERK",
+        "YEET"
+    ],
+    "filter_config": {
+        "numNeeds": 1,
+        "numWants": 1,
+        "Needs": [
+            {
+                "type": "SmallBlindTag",
+                "value": "NegativeTag",
+                "searchAntes": [2,3,4,5,6,7,8]
+            }
+        ],
+        "Wants": [
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "None",
+                "searchAntes": [1,2,3,4,5,6]
+            }
+        ],
+        "minSearchAnte": 1,
+        "maxSearchAnte": 8,
+        "deck": "AnaglyphDeck",
+        "stake": "BlackStake",
+        "scoreNaturalNegatives": true,
+        "scoreDesiredNegatives": true
+    }
+}

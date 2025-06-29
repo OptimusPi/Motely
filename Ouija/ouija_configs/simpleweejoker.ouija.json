@@ -1,0 +1,119 @@
+{
+    "name": "chadperkeo",
+    "description": "Filter configuration created by Ouija GUI",
+    "author": "pifreak",
+    "keywords": [
+        "CHAD",
+        "PERK",
+        "YEET"
+    ],
+    "filter_config": {
+        "numNeeds": 2,
+        "numWants": 12,
+        "Needs": [
+            {
+                "type": "SmallBlindTag",
+                "value": "NegativeTag",
+                "searchAntes": [2,3,4,5,6,7,8]
+            },
+            {
+                "type": "BigBlindTag",
+                "value": "NegativeTag",
+                "searchAntes": [3,4,5,6,7]
+            },
+            {
+                "type": "SoulJoker",
+                "value": "Perkeo",
+                "edition": "None",
+                "searchAntes": [1]
+            }
+        ],
+        "Wants": [
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "None",
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "Holographic",
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "Polychrome",
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "Negative",
+                "jokerstickers": [
+                    "Perishable",
+                    "Rental"
+                ],
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "Negative",
+                "jokerstickers": [
+                    "Eternal"
+                ],
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "Negative",
+                "jokerstickers": [],
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Tarot",
+                "value": "TheMagician",
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Spectral",
+                "value": "Immolate",
+                "searchAntes": [1,2]
+            },
+            {
+                "type": "Voucher",
+                "value": "Blank",
+                "searchAntes": [1,2,3,4,5,6,7,8]
+            },
+            {
+                "type": "PlayingCard",
+                "rank": "Ace",
+                "suit": "Heart",
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "PlayingCard",
+                "rank": "Two",
+                "suit": "Heart",
+                "edition": "Polychrome",
+                "enchantment": "Glass",
+                "chip": "RedChip",
+                "searchAntes": [1,2,3,4,5,6]
+            },
+            {
+                "type": "Boss",
+                "value": "TheNeedle",
+                "searchAntes": [1]
+            }
+        ],
+        "minSearchAnte": 1,
+        "maxSearchAnte": 8,
+        "deck": "AnaglyphDeck",
+        "stake": "BlackStake",
+        "scoreNaturalNegatives": true,
+        "scoreDesiredNegatives": true
+    }
+}

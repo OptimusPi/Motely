@@ -4,6 +4,13 @@ using System.Diagnostics;
 namespace Motely;
 
 
+public ref struct MotelySingleRunState(in MotelySeed seed)
+{
+    public MotelySeed Seed = seed;
+    public MotelySingleRunStateVoucher Vouchers;
+    public int Ante = 1;
+}
+
 public ref struct MotelySingleRunStateVoucher
 {
     static MotelySingleRunStateVoucher()

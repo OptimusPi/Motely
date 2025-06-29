@@ -42,6 +42,10 @@ public enum MotelyBoosterPack
 
 public static class MotelyBoosterPackExt
 {
+    public static IEnumerable<MotelyItem> GetStandardPackContents(this MotelyBoosterPack pack, MotelyItemTypeCategory category)
+    {
+        throw new NotImplementedException();
+    }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MotelyBoosterPackType GetPackType(this MotelyBoosterPack pack)
     {

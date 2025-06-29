@@ -1,11 +1,20 @@
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 
 namespace Motely;
-
+public struct MotelySearchResult
+{
+    public string Seed;
+    public bool Success;
+    public int TotalScore;
+    public int NaturalNegativeJokers;
+    public int DesiredNegativeJokers;
+    public int[] ScoreWants;
+}
 
 public ref struct MotelyFilterCreationContext
 {
@@ -81,6 +90,7 @@ public sealed class MotelySearchSettings<TFilter>(IMotelySeedFilterDesc<TFilter>
     /// For example, with a value of 3 one batch would go through 35^3 seeds.
     /// </summary>
     public int BatchCharacterCount { get; set; } = 3;
+    public int EndBatchIndex { get; set; } = -1;
 
     public IMotelySeedFilterDesc<TFilter> FilterDesc { get; set; } = filterDesc;
 
@@ -99,6 +109,12 @@ public sealed class MotelySearchSettings<TFilter>(IMotelySeedFilterDesc<TFilter>
     public MotelySearchSettings<TFilter> WithBatchCharacterCount(int batchCharacterCount)
     {
         BatchCharacterCount = batchCharacterCount;
+        return this;
+    }
+
+    public MotelySearchSettings<TFilter> WithEndBatchIndex(int endBatchIndex)
+    {
+        EndBatchIndex = endBatchIndex;
         return this;
     }
 
@@ -167,6 +183,8 @@ internal unsafe struct SeedHashCache(Vector512<double>* seedHashes, int* seedHas
 
 public interface IMotelySearch : IDisposable
 {
+    ConcurrentQueue<MotelySearchResult> Results { get; }
+    bool IsCompleted { get; }
     public MotelySearchStatus Status { get; }
     public int BatchIndex { get; }
     public int CompletedBatchCount { get; }
@@ -215,8 +233,12 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
     }
 
     private readonly MotelySearchThread[] _threads;
+    private readonly ConcurrentQueue<MotelySearchResult> _results = new();
+    public ConcurrentQueue<MotelySearchResult> Results => _results;
+    public bool IsCompleted => _completedBatchCount >= _batchCount;
     private readonly Barrier _pauseBarrier;
     private readonly Barrier _unpauseBarrier;
+
     private volatile MotelySearchStatus _status;
     public MotelySearchStatus Status => _status;
 
@@ -232,8 +254,10 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
     private readonly int _startBatchIndex;
     private int _batchIndex;
+    private readonly int _batchCount;
     public int BatchIndex => _batchIndex;
     private int _completedBatchCount;
+    private static long _lastStatusUpdateTicks;
     public int CompletedBatchCount => _completedBatchCount;
     private readonly Stopwatch _elapsedTime = new();
 
@@ -248,8 +272,16 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
         _batchCharCount = settings.BatchCharacterCount;
         _seedsPerBatch = (int)Math.Pow(Motely.SeedDigits.Length, _batchCharCount);
-
         _nonBatchCharCount = Motely.MaxSeedLength - _batchCharCount;
+        if (settings.EndBatchIndex != -1)
+        {
+            _batchCount = settings.EndBatchIndex - _startBatchIndex;
+        }
+        else
+        {
+            _batchCount = (int)Math.Pow(Motely.SeedDigits.Length, _nonBatchCharCount);
+        }
+
         _maxBatch = (int)Math.Pow(Motely.SeedDigits.Length, _nonBatchCharCount);
 
         int[] pseudohashKeyLengths = filterCreationContext.CachedPseudohashKeyLengths.ToArray();
@@ -273,6 +305,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
         _pauseBarrier = new(settings.ThreadCount + 1);
         _unpauseBarrier = new(settings.ThreadCount + 1);
+
         _status = MotelySearchStatus.Paused;
 
         _threads = new MotelySearchThread[settings.ThreadCount];
@@ -319,14 +352,14 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
         {
             _unpauseBarrier.SignalAndWait();
         }
-        else
-        {
-            Debug.Assert(oldStatus == MotelySearchStatus.Completed);
-        }
+
+
+
 
 
         foreach (MotelySearchThread thread in _threads)
         {
+            thread.Thread.Join();
             thread.Dispose();
         }
 
@@ -406,13 +439,14 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                 else
                 {
                     SearchBatch(batchIdx);
+                    LastCompletedBatch = batchIdx;
                 }
 
                 int totalCompletedCount = Interlocked.Increment(ref Search._completedBatchCount);
                 int thisCompletedCount = totalCompletedCount - Search._startBatchIndex;
 
-                double totalPortionFinished = totalCompletedCount / (double)Search._maxBatch;
-                double thisPortionFinished = thisCompletedCount / (double)Search._maxBatch;
+                double totalPortionFinished = totalCompletedCount / (double)Search._batchCount;
+                double thisPortionFinished = thisCompletedCount / (double)Search._batchCount;
                 double elapsedMS = Search._elapsedTime.ElapsedMilliseconds;
                 double totalTimeEstimate = elapsedMS / thisPortionFinished;
                 double timeLeft = totalTimeEstimate - elapsedMS;
@@ -426,7 +460,15 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                 if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
                 else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
 
-                FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+                long lastTicks = Interlocked.Read(ref _lastStatusUpdateTicks);
+                    long currentTicks = Environment.TickCount64;
+                    if (currentTicks - lastTicks > 500)
+                    {
+                        if (Interlocked.CompareExchange(ref _lastStatusUpdateTicks, currentTicks, lastTicks) == lastTicks)
+                        {
+                            FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+                        }
+                    }
             }
         }
 
@@ -516,7 +558,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                                     seed += _digits[digit];
                             }
 
-                            FancyConsole.WriteLine($"{seed}");
+                            Search._results.Enqueue(new MotelySearchResult { Seed = seed, Success = true });
                         }
 
                         successMask >>= 1;
