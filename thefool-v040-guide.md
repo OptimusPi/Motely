@@ -274,8 +274,9 @@ public interface IDuckDbService
 public class DuckDbService : IDuckDbService, IDisposable
 {
     private readonly string _databasePath;
-    private readonly Dictionary<string, DuckDBConnection> _connections = new();
-    private readonly Dictionary<string, string[]> _activeHeaders = new();
+    private DuckDBConnection _currentConnection;
+    private string _currentConfigName;
+    private string[] _currentHeaders;
 
     public DuckDbService(IConfiguration configuration)
     {
@@ -285,6 +286,14 @@ public class DuckDbService : IDuckDbService, IDisposable
 
     public async Task<bool> CreateOrUpdateDatabaseAsync(string configName, string[] headers)
     {
+        // Close any existing connection if switching configs
+        if (_currentConfigName != configName && _currentConnection != null)
+        {
+            _currentConnection.Dispose();
+            _currentConnection = null;
+        }
+
+        _currentConfigName = configName;
         var dbPath = GetDatabasePath(configName);
         
         // Check if database exists and headers match
@@ -296,11 +305,11 @@ public class DuckDbService : IDuckDbService, IDisposable
                 // Backup existing database
                 await BackupDatabaseAsync(configName);
                 
-                // Close existing connection
-                if (_connections.ContainsKey(dbPath))
+                // Close connection before deleting
+                if (_currentConnection != null)
                 {
-                    _connections[dbPath].Dispose();
-                    _connections.Remove(dbPath);
+                    _currentConnection.Dispose();
+                    _currentConnection = null;
                 }
                 
                 // Delete old database
@@ -309,37 +318,38 @@ public class DuckDbService : IDuckDbService, IDisposable
             else
             {
                 // Headers match, we're good
-                _activeHeaders[configName] = headers;
+                _currentHeaders = headers;
                 return true;
             }
         }
 
         // Create new database with dynamic schema
-        var connection = GetOrCreateConnection(dbPath);
+        var connection = GetOrCreateConnection(configName);
         var createTableSql = BuildCreateTableSql(headers);
         
         using var command = connection.CreateCommand();
         command.CommandText = createTableSql;
         await command.ExecuteNonQueryAsync();
         
-        _activeHeaders[configName] = headers;
+        _currentHeaders = headers;
         return true;
     }
 
     public async Task InsertResultAsync(string configName, string[] values)
     {
-        var dbPath = GetDatabasePath(configName);
-        var connection = GetOrCreateConnection(dbPath);
-        
-        if (!_activeHeaders.ContainsKey(configName))
+        if (_currentConfigName != configName || _currentConnection == null)
         {
-            throw new InvalidOperationException("Database not initialized. Call CreateOrUpdateDatabaseAsync first.");
+            throw new InvalidOperationException($"Database not initialized for {configName}. Call CreateOrUpdateDatabaseAsync first.");
         }
 
-        var headers = _activeHeaders[configName];
-        var insertSql = BuildInsertSql(headers, values);
+        if (_currentHeaders == null)
+        {
+            throw new InvalidOperationException("Headers not set. Call CreateOrUpdateDatabaseAsync first.");
+        }
+
+        var insertSql = BuildInsertSql(_currentHeaders, values);
         
-        using var command = connection.CreateCommand();
+        using var command = _currentConnection.CreateCommand();
         command.CommandText = insertSql;
         await command.ExecuteNonQueryAsync();
     }
@@ -350,7 +360,7 @@ public class DuckDbService : IDuckDbService, IDisposable
         if (!File.Exists(dbPath))
             return Array.Empty<string>();
 
-        var connection = GetOrCreateConnection(dbPath);
+        var connection = GetOrCreateConnection(configName);
         
         // Get column information from the search_results table
         using var command = connection.CreateCommand();
@@ -360,7 +370,12 @@ public class DuckDbService : IDuckDbService, IDisposable
         using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
-            headers.Add(reader.GetString(1)); // Column name is at index 1
+            var columnName = reader.GetString(1);
+            // Skip metadata columns
+            if (columnName != "inserted_at")
+            {
+                headers.Add(columnName);
+            }
         }
         
         return headers.ToArray();
@@ -375,10 +390,10 @@ public class DuckDbService : IDuckDbService, IDisposable
         var backupPath = $"{dbPath}.BAK";
         
         // Close connection before backup
-        if (_connections.ContainsKey(dbPath))
+        if (_currentConnection != null && _currentConfigName == configName)
         {
-            _connections[dbPath].Dispose();
-            _connections.Remove(dbPath);
+            _currentConnection.Dispose();
+            _currentConnection = null;
         }
         
         File.Copy(dbPath, backupPath, true);
@@ -390,7 +405,7 @@ public class DuckDbService : IDuckDbService, IDisposable
         if (!File.Exists(dbPath))
             return new List<SearchResult>();
 
-        var connection = GetOrCreateConnection(dbPath);
+        var connection = GetOrCreateConnection(configName);
         var results = new List<SearchResult>();
 
         // Build dynamic query based on known columns
@@ -480,15 +495,23 @@ public class DuckDbService : IDuckDbService, IDisposable
         return headers1.SequenceEqual(headers2, StringComparer.OrdinalIgnoreCase);
     }
 
-    private DuckDBConnection GetOrCreateConnection(string dbPath)
+    private DuckDBConnection GetOrCreateConnection(string configName)
     {
-        if (!_connections.ContainsKey(dbPath))
+        // Only maintain ONE connection - to the current config's database
+        if (_currentConnection == null || _currentConfigName != configName)
         {
-            var connection = new DuckDBConnection($"DataSource={dbPath}");
-            connection.Open();
-            _connections[dbPath] = connection;
+            // Close existing connection if switching configs
+            if (_currentConnection != null)
+            {
+                _currentConnection.Dispose();
+            }
+            
+            var dbPath = GetDatabasePath(configName);
+            _currentConnection = new DuckDBConnection($"DataSource={dbPath}");
+            _currentConnection.Open();
+            _currentConfigName = configName;
         }
-        return _connections[dbPath];
+        return _currentConnection;
     }
 
     private string GetDatabasePath(string configName)
@@ -503,7 +526,7 @@ public class DuckDbService : IDuckDbService, IDisposable
         if (!File.Exists(dbPath))
             return new DatabaseStats();
 
-        var connection = GetOrCreateConnection(dbPath);
+        var connection = GetOrCreateConnection(configName);
         var stats = new DatabaseStats();
 
         using var command = connection.CreateCommand();
@@ -531,12 +554,11 @@ public class DuckDbService : IDuckDbService, IDisposable
 
     public void Dispose()
     {
-        foreach (var connection in _connections.Values)
+        if (_currentConnection != null)
         {
-            connection?.Dispose();
+            _currentConnection.Dispose();
+            _currentConnection = null;
         }
-        _connections.Clear();
-        _activeHeaders.Clear();
     }
 }
 ```

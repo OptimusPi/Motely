@@ -1,53 +1,63 @@
-﻿using System.CommandLine;
-using System.CommandLine.Parsing;
+﻿using System.Diagnostics;
+using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Filters;
-using System.Diagnostics;
 
 class Program
 {
     static int Main(string[] args)
     {
-        var rootCommand = new RootCommand("Motely Ouija Search");
-
-        var configOption = new Option<string>("--config", () => "schema.ouija.json")
+        var app = new CommandLineApplication
         {
-            Description = "Path to Ouija config JSON"
-        };
-        var startBatchOption = new Option<int>("--startBatch", () => 0)
-        {
-            Description = "Starting batch index"
-        };
-        var endBatchOption = new Option<int>("--endBatch", () => 1000)
-        {
-            Description = "Ending batch index"
-        };
-        var startingSeedOption = new Option<string>("--startSeed", () => "WEE11111")
-        {
-            Description = "8-char starting seed"
-        };
-        var numSeedsOption = new Option<int>("--numSeeds", () => 1000)
-        {
-            Description = "Number of seeds to search"
+            Name = "MotelySearch",
+            Description = "Motely Ouija Search"
         };
 
-        rootCommand.Add(configOption);
-        rootCommand.Add(startBatchOption);
-        rootCommand.Add(endBatchOption);
-        rootCommand.Add(startingSeedOption);
-        rootCommand.Add(numSeedsOption);
+        app.HelpOption("-?|-h|--help");
 
-        var parseResult = rootCommand.Parse(args);
+        var configOption = app.Option<string>(
+            "--config <PATH>",
+            "Path to Ouija config JSON",
+            CommandOptionType.SingleValue);
+        configOption.DefaultValue = "schema.ouija.json";
 
-        var configName = parseResult.GetValue(configOption);
-        var startBatch = parseResult.GetValue(startBatchOption);
-        var endBatch = parseResult.GetValue(endBatchOption);
-        var startSeed = parseResult.GetValue(startingSeedOption);
-        var numSeeds = parseResult.GetValue(numSeedsOption);
+        var startBatchOption = app.Option<int>(
+            "--startBatch <INDEX>",
+            "Starting batch index",
+            CommandOptionType.SingleValue);
+        startBatchOption.DefaultValue = 0;
 
-        RunMotely(configName!, startBatch, endBatch, startSeed!, numSeeds);
+        var endBatchOption = app.Option<int>(
+            "--endBatch <INDEX>",
+            "Ending batch index",
+            CommandOptionType.SingleValue);
+        endBatchOption.DefaultValue = 1000;
 
-        return 0;
+        var startingSeedOption = app.Option<string>(
+            "--startSeed <SEED>",
+            "8-char starting seed",
+            CommandOptionType.SingleValue);
+        startingSeedOption.DefaultValue = "WEE11111";
+
+        var numSeedsOption = app.Option<int>(
+            "--numSeeds <COUNT>",
+            "Number of seeds to search",
+            CommandOptionType.SingleValue);
+        numSeedsOption.DefaultValue = 1000;
+
+        app.OnExecute(() =>
+        {
+            var configName = configOption.Value();
+            var startBatch = startBatchOption.ParsedValue;
+            var endBatch = endBatchOption.ParsedValue;
+            var startSeed = startingSeedOption.Value();
+            var numSeeds = numSeedsOption.ParsedValue;
+
+            RunMotely(configName!, startBatch, endBatch, startSeed!, numSeeds);
+            return 0;
+        });
+
+        return app.Execute(args);
     }
 
     static void RunMotely(string configName, int batchStart, int batchCount, string startingSeedChar8, int numSeeds)
@@ -102,7 +112,7 @@ class Program
                 string seedStr = IncrementSeedString(startingSeedChar8, i);
                 // Output only the first score for each want (if multiple antes, just print the first for now)
                 var wantScores = string.Join(",", result.ScoreWants.Take(config.Wants.Length));
-                var row = $"{seedStr},{result.TotalScore}";
+                var row = $"|{seedStr},{result.TotalScore}";
                 if (config.ScoreNaturalNegatives) row += $",{result.NaturalNegativeJokers}";
                 if (config.ScoreDesiredNegatives) row += $",{result.DesiredNegativeJokers}";
                 row += "," + wantScores;
