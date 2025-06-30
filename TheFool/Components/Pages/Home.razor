@@ -1,0 +1,179 @@
+@page "/"
+@using TheFool.Models
+@using TheFool.Components.Widgets
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-5">
+    <MudText Typo="Typo.h4" Class="mb-4" Align="Align.Center">
+        🃏 TheFool - Balatro Seed Finder
+    </MudText>
+    
+    <!-- File Management Widget -->
+    <FileLoaderSaverWidget ConfigName="@CurrentConfig.Name"
+                          ConfigNameChanged="HandleConfigNameChange"
+                          OnConfigLoaded="LoadConfiguration"
+                          OnSaveRequested="HandleSave"
+                          GetCurrentConfig="@(() => CurrentConfig)" />
+    
+    <!-- Console Runner Widget -->
+    <ConsoleRunnerWidget @ref="ConsoleRunner"
+                        FilterConfig="@CurrentConfig"
+                        OnSearchStarted="HandleSearchStarted"
+                        OnSearchStopped="HandleSearchStopped"
+                        OnStatusUpdate="HandleStatusUpdate"
+                        OnResultsInserted="RefreshResults" />
+    
+    <MudGrid Class="mt-3">
+        <!-- Left Column - Config Display & Editor -->
+        <MudItem xs="12" lg="5">
+            <MudStack Spacing="3">
+                <!-- Config Display (without button since it's in ConsoleRunner now) -->
+                <FilterConfigViewWidget Config="@CurrentConfig"
+                                       ShowLaunchButton="false" />
+                
+                <!-- Config Editor -->
+                <FilterConfigEditorWidget Config="@CurrentConfig"
+                                         ConfigChanged="UpdateConfiguration" />
+            </MudStack>
+        </MudItem>
+        
+        <!-- Right Column - Search Results -->
+        <MudItem xs="12" lg="7">
+            <SearchResultsWidget @ref="ResultsWidget"
+                                ConfigName="@CurrentConfig.Name"
+                                OnResultsLoaded="HandleResultsLoaded" />
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<!-- Status Bar -->
+<StatusBarWidget @ref="StatusBar"
+                ConnectionStatus="@ConnectionStatus"
+                IsSearching="@IsSearching" />
+
+@code {
+    private FilterConfig CurrentConfig = CreateDefaultConfig();
+    private ConsoleRunnerWidget? ConsoleRunner;
+    private SearchResultsWidget? ResultsWidget;
+    private StatusBarWidget? StatusBar;
+    
+    private string ConnectionStatus = "Ready";
+    private bool IsSearching = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && ResultsWidget != null)
+        {
+            // Load any existing results on startup
+            await ResultsWidget.RefreshItems();
+        }
+    }
+
+    private async Task HandleConfigNameChange(string newName)
+    {
+        CurrentConfig.Name = newName;
+        StateHasChanged();
+        
+        // Refresh results when config name changes
+        if (ResultsWidget != null)
+        {
+            await ResultsWidget.RefreshItems();
+        }
+    }
+
+    private async Task LoadConfiguration(FilterConfig config)
+    {
+        CurrentConfig = config;
+        StateHasChanged();
+        
+        // Refresh results for newly loaded config
+        if (ResultsWidget != null)
+        {
+            await ResultsWidget.RefreshItems();
+        }
+    }
+
+    private void UpdateConfiguration(FilterConfig config)
+    {
+        CurrentConfig = config;
+        StateHasChanged();
+    }
+
+    private void HandleSave(string filename)
+    {
+        StatusBar?.UpdateStatus($"Configuration saved: {filename}");
+    }
+
+    private void HandleResultsLoaded()
+    {
+        // Optional: Update UI based on loaded results
+    }
+
+    private async Task HandleSearchStarted()
+    {
+        IsSearching = true;
+        ConnectionStatus = "Searching...";
+        StatusBar?.SetSearching(true);
+        StatusBar?.UpdateStatus("🔥 Jimbo is cooking! 🔥");
+    }
+
+    private async Task HandleSearchStopped()
+    {
+        IsSearching = false;
+        ConnectionStatus = "Ready";
+        StatusBar?.SetSearching(false);
+        StatusBar?.UpdateStatus("Search completed");
+        
+        // Refresh results to show new findings
+        if (ResultsWidget != null)
+        {
+            await ResultsWidget.RefreshItems();
+        }
+    }
+
+    private async Task HandleStatusUpdate(string statusLine)
+    {
+        // Parse status update and forward to status bar
+        // Expected format: "0.00% | ~2:01:42:40 | 12583 seeds/ms"
+        var parts = statusLine.Split(" | ");
+        if (parts.Length >= 3 && StatusBar != null)
+        {
+            StatusBar.UpdateSearchMetrics(
+                parts[0], // percent
+                parts[1].TrimStart('~'), // time remaining
+                parts[2].Split(' ')[0] // seeds/ms number only
+            );
+        }
+    }
+
+    private async Task RefreshResults()
+    {
+        // Debounced refresh - called every 100 results
+        if (ResultsWidget != null)
+        {
+            await ResultsWidget.RefreshItems();
+        }
+    }
+
+    private static FilterConfig CreateDefaultConfig()
+    {
+        return new FilterConfig
+        {
+            Name = "My Filter",
+            Description = "Custom filter configuration",
+            Author = Environment.UserName,
+            Keywords = new List<string> { "FOOL", "SEARCH" },
+            Settings = new FilterSettings
+            {
+                Needs = new List<FilterCondition>(),
+                Wants = new List<FilterCondition>(),
+                MinSearchAnte = 1,
+                MaxSearchAnte = 8,
+                Deck = "GhostDeck",
+                Stake = "WhiteStake",
+                ScoreNaturalNegatives = true,
+                ScoreDesiredNegatives = true
+            }
+        };
+    }
+}

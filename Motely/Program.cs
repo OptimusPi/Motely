@@ -3,7 +3,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Filters;
 
-class Program
+partial class Program
 {
     static int Main(string[] args)
     {

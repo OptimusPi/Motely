@@ -1,0 +1,455 @@
+@using TheFool.Models
+@using TheFool.Services
+@using System.Collections.Concurrent
+@inject IProcessRunnerService ProcessRunner
+@inject IDuckDbService DuckDbService
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<MudPaper Class="pa-4" Elevation="2">
+    <MudGrid AlignItems="Center" Class="mb-3">
+        <MudItem xs="12" sm="6">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Class="mr-2" />
+                Search Process
+            </MudText>
+            @if (IsRunning)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.RadioButtonChecked">
+                    Running
+                </MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.RadioButtonUnchecked">
+                    Idle
+                </MudChip>
+            }
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                @if (!IsRunning)
+                {
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              Size="Size.Large"
+                              StartIcon="@Icons.Material.Filled.LocalFireDepartment"
+                              OnClick="StartSearch"
+                              Disabled="@(string.IsNullOrEmpty(FilterConfig?.Name))">
+                        🔥 LET JIMBO COOK! 🔥
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Error" 
+                              StartIcon="@Icons.Material.Filled.Stop"
+                              OnClick="StopSearch">
+                        Stop Cooking
+                    </MudButton>
+                }
+                
+                <MudIconButton Icon="@Icons.Material.Filled.ClearAll" 
+                              Color="Color.Default"
+                              OnClick="ClearConsole"
+                              Title="Clear Console" />
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Console Output -->
+    <MudPaper Class="console-output pa-3" Elevation="0" 
+              Style="background-color: #1e1e1e; font-family: 'Consolas', 'Courier New', monospace;">
+        <div @ref="consoleElement" class="console-content">
+            @foreach (var line in ConsoleLines.TakeLast(MaxConsoleLines))
+            {
+                <div class="@GetLineClass(line.Type)">
+                    <span class="timestamp">[@line.Timestamp:HH:mm:ss]</span> 
+                    <span class="content">@line.Content</span>
+                </div>
+            }
+        </div>
+    </MudPaper>
+
+    <!-- Statistics -->
+    @if (ResultsInserted > 0 || HeadersDetected)
+    {
+        <MudGrid Class="mt-3">
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center" Elevation="0">
+                    <MudText Typo="Typo.caption">Results Found</MudText>
+                    <MudText Typo="Typo.h6" Color="Color.Success">@ResultsInserted</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center" Elevation="0">
+                    <MudText Typo="Typo.caption">Runtime</MudText>
+                    <MudText Typo="Typo.h6">@Runtime</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center" Elevation="0">
+                    <MudText Typo="Typo.caption">Database</MudText>
+                    <MudText Typo="Typo.body2" Color="@(DatabaseReady ? Color.Success : Color.Warning)">
+                        @(DatabaseReady ? "Ready" : "Waiting...")
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center" Elevation="0">
+                    <MudText Typo="Typo.caption">Headers</MudText>
+                    <MudText Typo="Typo.body2">@(CurrentHeaders?.Length ?? 0) columns</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudPaper>
+
+<style>
+    .console-output {
+        height: 400px;
+        overflow-y: auto;
+        border-radius: 4px;
+    }
+
+    .console-content {
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .console-line {
+        margin: 2px 0;
+        padding: 2px 4px;
+    }
+
+    .console-line.header {
+        color: #4FC3F7;
+        font-weight: bold;
+    }
+
+    .console-line.result {
+        color: #81C784;
+    }
+
+    .console-line.error {
+        color: #EF5350;
+    }
+
+    .console-line.status {
+        color: #FFB74D;
+    }
+
+    .console-line.normal {
+        color: #E0E0E0;
+    }
+
+    .timestamp {
+        color: #666;
+        margin-right: 8px;
+    }
+
+    /* Auto-scroll to bottom */
+    .console-output {
+        display: flex;
+        flex-direction: column-reverse;
+    }
+</style>
+
+@code {
+    [Parameter] public FilterConfig? FilterConfig { get; set; }
+    [Parameter] public EventCallback OnSearchStarted { get; set; }
+    [Parameter] public EventCallback OnSearchStopped { get; set; }
+    [Parameter] public EventCallback<string> OnStatusUpdate { get; set; }
+    [Parameter] public EventCallback OnResultsInserted { get; set; }
+
+    private ElementReference consoleElement;
+    private Guid? _currentProcessId;
+    private DateTime? _startTime;
+    private System.Timers.Timer? _runtimeTimer;
+    private readonly ConcurrentBag<ConsoleLine> ConsoleLines = new();
+    private const int MaxConsoleLines = 500;
+
+    private bool IsRunning => _currentProcessId.HasValue && ProcessRunner.IsProcessRunning(_currentProcessId.Value);
+    private string Runtime => _startTime.HasValue 
+        ? (DateTime.UtcNow - _startTime.Value).ToString(@"hh\:mm\:ss") 
+        : "00:00:00";
+
+    private int ResultsInserted = 0;
+    private bool HeadersDetected = false;
+    private bool DatabaseReady = false;
+    private string[]? CurrentHeaders = null;
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to process events
+        ProcessRunner.OutputReceived += OnOutputReceived;
+        ProcessRunner.ProcessStateChanged += OnProcessStateChanged;
+
+        // Setup runtime timer
+        _runtimeTimer = new System.Timers.Timer(1000);
+        _runtimeTimer.Elapsed += (s, e) => InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StartSearch()
+    {
+        if (FilterConfig == null)
+        {
+            Snackbar.Add("No filter configuration loaded!", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            // Reset statistics
+            ResultsInserted = 0;
+            HeadersDetected = false;
+            DatabaseReady = false;
+            CurrentHeaders = null;
+            _startTime = DateTime.UtcNow;
+
+            // Save filter to temp file
+            var tempFilterPath = Path.Combine(Path.GetTempPath(), $"{FilterConfig.Name}.json");
+            var json = System.Text.Json.JsonSerializer.Serialize(FilterConfig, new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            });
+            await File.WriteAllTextAsync(tempFilterPath, json);
+
+            AddConsoleLine($"Starting search with filter: {FilterConfig.Name}", ConsoleLineType.Normal);
+            AddConsoleLine($"Filter saved to: {tempFilterPath}", ConsoleLineType.Normal);
+
+            // Start the search process
+            var executable = "dotnet";
+            var motelyPath = Path.GetFullPath("../../Motely.csproj");
+            var arguments = $"run --project \"{motelyPath}\" -- --config \"{tempFilterPath}\"";
+            
+            _currentProcessId = await ProcessRunner.StartProcessAsync(executable, arguments, Path.GetDirectoryName(motelyPath));
+            
+            _runtimeTimer?.Start();
+            await OnSearchStarted.InvokeAsync();
+            
+            AddConsoleLine("🔥 JIMBO IS COOKING! 🔥", ConsoleLineType.Status);
+            Snackbar.Add("Search started!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            AddConsoleLine($"Failed to start search: {ex.Message}", ConsoleLineType.Error);
+            Snackbar.Add($"Failed to start search: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task StopSearch()
+    {
+        if (_currentProcessId.HasValue)
+        {
+            AddConsoleLine("Stopping search...", ConsoleLineType.Status);
+            await ProcessRunner.StopProcessAsync(_currentProcessId.Value);
+            _currentProcessId = null;
+            _runtimeTimer?.Stop();
+            await OnSearchStopped.InvokeAsync();
+            Snackbar.Add("Search stopped", Severity.Warning);
+        }
+    }
+
+    private void OnOutputReceived(object? sender, OutputReceivedEventArgs e)
+    {
+        if (_currentProcessId.HasValue && e.ProcessId == _currentProcessId.Value)
+        {
+            InvokeAsync(async () => await ProcessOutput(e.Data, e.IsError));
+        }
+    }
+
+    private async Task ProcessOutput(string line, bool isError)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+            return;
+
+        // Parse based on first character
+        var firstChar = line[0];
+        var content = line.Length > 1 ? line.Substring(1) : "";
+
+        switch (firstChar)
+        {
+            case '+': // CSV Header
+                await ProcessCsvHeader(content);
+                break;
+                
+            case '|': // CSV Data Row
+                await ProcessCsvRow(content);
+                break;
+                
+            case '$': // Status Update
+                ProcessStatusUpdate(content);
+                break;
+                
+            default: // Regular output
+                AddConsoleLine(line, isError ? ConsoleLineType.Error : ConsoleLineType.Normal);
+                break;
+        }
+    }
+
+    private async Task ProcessCsvHeader(string headerLine)
+    {
+        try
+        {
+            CurrentHeaders = headerLine.Split(',');
+            AddConsoleLine($"CSV Headers detected: {CurrentHeaders.Length} columns", ConsoleLineType.Header);
+            
+            // Create or update database
+            var success = await DuckDbService.CreateOrUpdateDatabaseAsync(FilterConfig!.Name, CurrentHeaders);
+            
+            if (success)
+            {
+                HeadersDetected = true;
+                DatabaseReady = true;
+                AddConsoleLine($"Database ready: {FilterConfig.Name}.ouija.duckdb", ConsoleLineType.Header);
+            }
+            else
+            {
+                AddConsoleLine("Failed to initialize database", ConsoleLineType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddConsoleLine($"Header processing error: {ex.Message}", ConsoleLineType.Error);
+        }
+    }
+
+    private async Task ProcessCsvRow(string dataLine)
+    {
+        if (!DatabaseReady || CurrentHeaders == null)
+        {
+            AddConsoleLine("Received data before database ready - skipping", ConsoleLineType.Error);
+            return;
+        }
+
+        try
+        {
+            var values = dataLine.Split(',');
+            await DuckDbService.InsertResultAsync(FilterConfig!.Name, values);
+            
+            ResultsInserted++;
+            
+            // Show first few results in console
+            if (ResultsInserted <= 5)
+            {
+                AddConsoleLine($"Result: {values[0]} (Score: {values[1]})", ConsoleLineType.Result);
+            }
+            else if (ResultsInserted == 6)
+            {
+                AddConsoleLine("... (subsequent results inserted silently)", ConsoleLineType.Normal);
+            }
+
+            // Notify every 100 results
+            if (ResultsInserted % 100 == 0)
+            {
+                await OnResultsInserted.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            AddConsoleLine($"Insert error: {ex.Message}", ConsoleLineType.Error);
+        }
+    }
+
+    private void ProcessStatusUpdate(string statusLine)
+    {
+        // Parse: "0.00% ~2:01:42:40 remaining (12583 seeds/ms)"
+        var parts = statusLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        
+        if (parts.Length >= 4)
+        {
+            var percentComplete = parts[0];
+            var timeRemaining = parts[1].TrimStart('~');
+            var seedsPerMs = parts[3].Replace("(", "").Replace(")", "");
+            
+            _ = OnStatusUpdate.InvokeAsync($"{percentComplete} | ~{timeRemaining} | {seedsPerMs} seeds/ms");
+        }
+        
+        AddConsoleLine($"Progress: {statusLine}", ConsoleLineType.Status);
+    }
+
+    private void OnProcessStateChanged(object? sender, ProcessStateEventArgs e)
+    {
+        if (_currentProcessId.HasValue && e.ProcessId == _currentProcessId.Value)
+        {
+            InvokeAsync(() =>
+            {
+                if (e.State == ProcessState.Exited)
+                {
+                    _runtimeTimer?.Stop();
+                    var exitMessage = e.ExitCode == 0 
+                        ? "Search completed successfully" 
+                        : $"Search exited with code {e.ExitCode}";
+                    AddConsoleLine(exitMessage, e.ExitCode == 0 ? ConsoleLineType.Status : ConsoleLineType.Error);
+                    
+                    _currentProcessId = null;
+                    _ = OnSearchStopped.InvokeAsync();
+                }
+            });
+        }
+    }
+
+    private void AddConsoleLine(string content, ConsoleLineType type)
+    {
+        ConsoleLines.Add(new ConsoleLine
+        {
+            Content = content,
+            Type = type,
+            Timestamp = DateTime.Now
+        });
+        
+        // Keep only last N lines
+        while (ConsoleLines.Count > MaxConsoleLines)
+        {
+            ConsoleLines.TryTake(out _);
+        }
+        
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearConsole()
+    {
+        ConsoleLines.Clear();
+        AddConsoleLine("Console cleared", ConsoleLineType.Normal);
+    }
+
+    private string GetLineClass(ConsoleLineType type) => type switch
+    {
+        ConsoleLineType.Header => "console-line header",
+        ConsoleLineType.Result => "console-line result",
+        ConsoleLineType.Error => "console-line error",
+        ConsoleLineType.Status => "console-line status",
+        _ => "console-line normal"
+    };
+
+    public void Dispose()
+    {
+        ProcessRunner.OutputReceived -= OnOutputReceived;
+        ProcessRunner.ProcessStateChanged -= OnProcessStateChanged;
+        _runtimeTimer?.Dispose();
+        
+        // Stop any running process
+        if (_currentProcessId.HasValue)
+        {
+            _ = StopSearch();
+        }
+    }
+
+    private class ConsoleLine
+    {
+        public string Content { get; set; } = "";
+        public ConsoleLineType Type { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+
+    private enum ConsoleLineType
+    {
+        Normal,
+        Header,
+        Result,
+        Error,
+        Status
+    }
+}

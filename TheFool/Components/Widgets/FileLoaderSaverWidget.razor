@@ -1,0 +1,162 @@
+@using TheFool.Models
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudGrid Align="Center">
+        <MudItem xs="12" sm="6" md="4">
+            <MudTextField @bind-Value="ConfigName" 
+                         Label="Configuration Name" 
+                         Variant="Variant.Outlined"
+                         Immediate="true"
+                         OnKeyUp="@((e) => ConfigNameChanged.InvokeAsync(ConfigName))"
+                         Adornment="Adornment.End"
+                         AdornmentIcon="@(IsFavorite ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+                         AdornmentColor="@(IsFavorite ? Color.Warning : Color.Default)"
+                         OnAdornmentClick="ToggleFavorite" />
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="4">
+            <MudStack Row="true" Spacing="2">
+                <MudFileUpload T="IBrowserFile" 
+                              Accept=".json" 
+                              FilesChanged="LoadConfigFromFile"
+                              MaximumFileCount="1">
+                    <ButtonTemplate>
+                        <MudButton HtmlTag="label"
+                                  Variant="Variant.Filled"
+                                  Color="Color.Primary"
+                                  StartIcon="@Icons.Material.Filled.CloudUpload">
+                            Load Config
+                        </MudButton>
+                    </ButtonTemplate>
+                </MudFileUpload>
+                
+                <MudButton Variant="Variant.Outlined"
+                          Color="Color.Secondary"
+                          StartIcon="@Icons.Material.Filled.CloudDownload"
+                          OnClick="SaveConfigToFile">
+                    Save Config
+                </MudButton>
+            </MudStack>
+        </MudItem>
+        
+        <MudItem xs="12" md="4">
+            <MudText Typo="Typo.caption" Color="Color.Tertiary" Align="Align.Right">
+                @if (LastSaved.HasValue)
+                {
+                    <span>Last saved: @LastSaved.Value.ToString("HH:mm:ss")</span>
+                }
+                else
+                {
+                    <span>Unsaved changes</span>
+                }
+            </MudText>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public string ConfigName { get; set; } = "My Filter";
+    [Parameter] public EventCallback<string> ConfigNameChanged { get; set; }
+    [Parameter] public EventCallback<FilterConfig> OnConfigLoaded { get; set; }
+    [Parameter] public EventCallback<string> OnSaveRequested { get; set; }
+    [Parameter] public Func<FilterConfig> GetCurrentConfig { get; set; }
+    
+    private bool IsFavorite = false;
+    private DateTime? LastSaved;
+    
+    protected override void OnInitialized()
+    {
+        // Load favorite status from localStorage if needed
+        _ = LoadFavoriteStatus();
+    }
+    
+    private async Task LoadFavoriteStatus()
+    {
+        try
+        {
+            var favoriteJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"favorite_{ConfigName}");
+            IsFavorite = !string.IsNullOrEmpty(favoriteJson) && bool.Parse(favoriteJson);
+            StateHasChanged();
+        }
+        catch
+        {
+            IsFavorite = false;
+        }
+    }
+    
+    private async Task ToggleFavorite()
+    {
+        IsFavorite = !IsFavorite;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", $"favorite_{ConfigName}", IsFavorite.ToString());
+        
+        Snackbar.Add(IsFavorite ? "⭐ Added to favorites" : "Removed from favorites", 
+                    IsFavorite ? Severity.Success : Severity.Info);
+    }
+    
+    private async Task LoadConfigFromFile(IBrowserFile file)
+    {
+        try
+        {
+            if (file.Size > 1024 * 1024) // 1MB limit
+            {
+                Snackbar.Add("File too large. Maximum size is 1MB.", Severity.Error);
+                return;
+            }
+            
+            using var stream = file.OpenReadStream();
+            using var reader = new StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            
+            var config = JsonSerializer.Deserialize<FilterConfig>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            
+            if (config != null)
+            {
+                await OnConfigLoaded.InvokeAsync(config);
+                Snackbar.Add($"✅ Loaded configuration: {config.Name}", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Failed to load configuration: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task SaveConfigToFile()
+    {
+        try
+        {
+            var config = GetCurrentConfig?.Invoke();
+            if (config == null)
+            {
+                Snackbar.Add("No configuration to save", Severity.Warning);
+                return;
+            }
+            
+            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            
+            var fileName = $"{config.Name.Replace(" ", "_")}.json";
+            
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, json, "application/json");
+            
+            LastSaved = DateTime.Now;
+            await OnSaveRequested.InvokeAsync(fileName);
+            
+            Snackbar.Add($"💾 Saved: {fileName}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Failed to save: {ex.Message}", Severity.Error);
+        }
+    }
+}

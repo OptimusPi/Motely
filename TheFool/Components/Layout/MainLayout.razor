@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="@_darkTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudText Typo="Typo.h5">🃏 TheFool - Balatro Seed Finder</MudText>
+        <MudSpacer />
+        <MudText>v0.4.0</MudText>
+    </MudAppBar>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private MudTheme _darkTheme = new()
+    {
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#FF4444",
+            Secondary = "#FF8844",
+            Background = "#1a1a1a",
+            Surface = "#2a2a2a",
+            AppbarBackground = "#2a2a2a",
+        }
+    };
+}

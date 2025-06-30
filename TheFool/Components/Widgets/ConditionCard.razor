@@ -1,0 +1,89 @@
+@using TheFool.Models
+@using MudBlazor
+@using MudBlazor.Utilities
+
+<MudCard Class="condition-card" Elevation="1">
+    <MudCardContent Class="pb-2 pt-2">
+        <MudGrid Align="Center">
+            <MudItem xs="10">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2">
+                        <MudIcon Icon="@GetConditionIcon()" Size="Size.Small" Class="mr-1" />
+                        <strong>@Condition.Type:</strong> @Condition.Value
+                        @if (!string.IsNullOrEmpty(Condition.Edition))
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">
+                                @Condition.Edition
+                            </MudChip>
+                        }
+                    </MudText>
+                    
+                    <MudStack Row="true" Spacing="1" Class="mt-1">
+                        <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                            Antes: @string.Join(", ", Condition.SearchAntes ?? Array.Empty<int>())
+                        </MudText>
+                        
+                        @if (Condition.JokerStickers?.Any() == true)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Info">
+                                | Stickers: @string.Join(", ", Condition.JokerStickers)
+                            </MudText>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(Condition.Rank) || !string.IsNullOrEmpty(Condition.Suit))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Warning">
+                                | @Condition.Rank @Condition.Suit
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+            
+            <MudItem xs="2">
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                  Color="Color.Info" 
+                                  Size="Size.Small"
+                                  OnClick="OnEdit" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                  Color="Color.Error" 
+                                  Size="Size.Small"
+                                  OnClick="OnRemove" />
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+<style>
+    .condition-card {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .condition-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px 0 rgba(0,0,0,0.12) !important;
+    }
+</style>
+
+@code {
+    [Parameter] public FilterCondition Condition { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+
+    private string GetConditionIcon()
+    {
+        return Condition.Type switch
+        {
+            "Joker" => Icons.Material.Filled.Style,
+            "Tarot" => Icons.Material.Filled.AutoAwesome,
+            "Spectral" => Icons.Material.Filled.Stars,
+            "Voucher" => Icons.Material.Filled.LocalOffer,
+            "PlayingCard" => Icons.Material.Filled.Casino,
+            "Boss" => Icons.Material.Filled.Warning,
+            "SmallBlindTag" or "BigBlindTag" => Icons.Material.Filled.Label,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+}
