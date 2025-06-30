@@ -109,7 +109,7 @@
         // Optional: Update UI based on loaded results
     }
 
-    private async Task HandleSearchStarted()
+    private void HandleSearchStarted()
     {
         IsSearching = true;
         ConnectionStatus = "Searching...";
@@ -131,7 +131,7 @@
         }
     }
 
-    private async Task HandleStatusUpdate(string statusLine)
+    private void HandleStatusUpdate(string statusLine)
     {
         // Parse status update and forward to status bar
         // Expected format: "0.00% | ~2:01:42:40 | 12583 seeds/ms"

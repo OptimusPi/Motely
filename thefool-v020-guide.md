@@ -60,7 +60,6 @@ mkdir Widgets
                 </MudTooltip>
                 
                 <MudFileUpload T="IBrowserFile" FilesChanged="LoadConfig" Accept=".json">
-                    <ButtonTemplate>
                         <MudButton HtmlTag="label"
                                   Variant="Variant.Outlined"
                                   Color="Color.Primary"
@@ -69,7 +68,6 @@ mkdir Widgets
                                   for="@context">
                             Load
                         </MudButton>
-                    </ButtonTemplate>
                 </MudFileUpload>
                 
                 <MudButton Variant="Variant.Outlined" 

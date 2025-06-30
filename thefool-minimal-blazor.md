@@ -111,7 +111,6 @@ public record FilterCondition(
                 <!-- Load/Save Buttons -->
                 <MudStack Row="true" Class="mb-4">
                     <MudFileUpload T="IBrowserFile" FilesChanged="LoadConfig" Accept=".json">
-                        <ButtonTemplate>
                             <MudButton HtmlTag="label"
                                       Variant="Variant.Outlined"
                                       Color="Color.Primary"
@@ -119,7 +118,6 @@ public record FilterCondition(
                                       for="@context">
                                 Load JSON
                             </MudButton>
-                        </ButtonTemplate>
                     </MudFileUpload>
                     
                     <MudButton Variant="Variant.Outlined" 

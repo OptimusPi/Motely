@@ -1,5 +1,6 @@
 @using TheFool.Models
 @using System.Text.Json
+@using MudBlazor
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 
@@ -23,14 +24,12 @@
                               Accept=".json" 
                               FilesChanged="LoadConfigFromFile"
                               MaximumFileCount="1">
-                    <ButtonTemplate>
                         <MudButton HtmlTag="label"
                                   Variant="Variant.Filled"
                                   Color="Color.Primary"
                                   StartIcon="@Icons.Material.Filled.CloudUpload">
                             Load Config
                         </MudButton>
-                    </ButtonTemplate>
                 </MudFileUpload>
                 
                 <MudButton Variant="Variant.Outlined"

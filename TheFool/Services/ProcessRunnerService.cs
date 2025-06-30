@@ -18,11 +18,12 @@ public interface IProcessRunnerService
 public class ProcessRunnerService : IProcessRunnerService, IDisposable
 {
     private readonly ConcurrentDictionary<Guid, ManagedProcess> _processes = new();
+    private bool _disposed = false;
     
     public event EventHandler<OutputReceivedEventArgs>? OutputReceived;
     public event EventHandler<ProcessStateEventArgs>? ProcessStateChanged;
 
-    public async Task<Guid> StartProcessAsync(string executable, string arguments, string? workingDirectory = null)
+    public Task<Guid> StartProcessAsync(string executable, string arguments, string? workingDirectory = null)
     {
         var processId = Guid.NewGuid();
         var managedProcess = new ManagedProcess
@@ -105,7 +106,7 @@ public class ProcessRunnerService : IProcessRunnerService, IDisposable
                 State = ProcessState.Running
             });
 
-            return processId;
+            return Task.FromResult(processId);
         }
         catch (Exception ex)
         {
@@ -169,19 +170,42 @@ public class ProcessRunnerService : IProcessRunnerService, IDisposable
 
     public void Dispose()
     {
-        foreach (var process in _processes.Values)
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
         {
-            try
+            if (disposing)
             {
-                if (!process.Process.HasExited)
+                // Dispose managed resources
+                foreach (var process in _processes.Values)
                 {
-                    process.Process.Kill(true);
+                    try
+                    {
+                        if (!process.Process.HasExited)
+                        {
+                            process.Process.Kill(true);
+                        }
+                        process.Process.Dispose();
+                    }
+                    catch { }
                 }
-                process.Process.Dispose();
+                _processes.Clear();
             }
-            catch { }
+
+            // Dispose unmanaged resources if any
+            // (none in this case)
+
+            _disposed = true;
         }
-        _processes.Clear();
+    }
+
+    ~ProcessRunnerService()
+    {
+        Dispose(false);
     }
 
     private class ManagedProcess

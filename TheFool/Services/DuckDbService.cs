@@ -24,6 +24,7 @@ public class DuckDbService : IDuckDbService, IDisposable
     private DuckDBConnection? _currentConnection;
     private string? _currentConfigName;
     private string[]? _currentHeaders;
+    private bool _disposed = false;
 
     public DuckDbService(IConfiguration configuration)
     {
@@ -309,11 +310,34 @@ public class DuckDbService : IDuckDbService, IDisposable
 
     public void Dispose()
     {
-        if (_currentConnection != null)
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
         {
-            _currentConnection.Dispose();
-            _currentConnection = null;
+            if (disposing)
+            {
+                // Dispose managed resources
+                if (_currentConnection != null)
+                {
+                    _currentConnection.Dispose();
+                    _currentConnection = null;
+                }
+            }
+
+            // Dispose unmanaged resources if any
+            // (none in this case)
+
+            _disposed = true;
         }
+    }
+
+    ~DuckDbService()
+    {
+        Dispose(false);
     }
 }
 
