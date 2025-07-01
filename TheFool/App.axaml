@@ -1,0 +1,15 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TheFool.App"
+             xmlns:local="using:TheFool"
+             xmlns:suki="using:SukiUI"
+             RequestedThemeVariant="Dark">
+    
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <suki:SukiTheme ThemeColor="Red" />
+    </Application.Styles>
+</Application>

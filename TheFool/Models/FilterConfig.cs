@@ -1,27 +1,28 @@
 using System.Text.Json.Serialization;
+using System.Collections.Generic;
 
 namespace TheFool.Models;
 
-public class FilterConfig
-{
-    public string Name { get; set; } = "";
-    public string Description { get; set; } = "";
-    public string Author { get; set; } = "";
-    public List<string> Keywords { get; set; } = new();
-    public FilterSettings Settings { get; set; } = new();
-}
+public record FilterConfig(
+    string name,
+    string description,
+    string author,
+    List<string> keywords,
+    FilterSettings filter_config
+);
 
-public class FilterSettings
-{
-    public string Deck { get; set; } = "";
-    public string Stake { get; set; } = "";
-    public bool ScoreNaturalNegatives { get; set; }
-    public bool ScoreDesiredNegatives { get; set; }
-    public int MinSearchAnte { get; set; } = 1;
-    public int MaxSearchAnte { get; set; } = 8;
-    public List<FilterCondition> Needs { get; set; } = new();
-    public List<FilterCondition> Wants { get; set; } = new();
-}
+public record FilterSettings(
+    int numNeeds,
+    int numWants,
+    List<FilterCondition> Needs,
+    List<FilterCondition> Wants,
+    int minSearchAnte,
+    int maxSearchAnte,
+    string deck,
+    string stake,
+    bool scoreNaturalNegatives,
+    bool scoreDesiredNegatives
+);
 
 public class FilterCondition
 {
@@ -44,5 +45,17 @@ public class FilterCondition
         this.Edition = edition;
         this.Rank = rank;
         this.Suit = suit;
+    }
+
+    public override string ToString()
+    {
+        var result = $"{Type}: {Value}";
+        if (!string.IsNullOrEmpty(Edition) && Edition != "None")
+            result += $" ({Edition})";
+        if (!string.IsNullOrEmpty(Rank))
+            result += $" {Rank}";
+        if (!string.IsNullOrEmpty(Suit))
+            result += $" of {Suit}";
+        return result;
     }
 }

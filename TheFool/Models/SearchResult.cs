@@ -1,3 +1,5 @@
+using System;
+
 namespace TheFool.Models;
 
 public class SearchResult

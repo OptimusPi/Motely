@@ -1,7 +1,11 @@
 using DuckDB.NET.Data;
-using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
 using System.Data;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using TheFool.Models;
 
 namespace TheFool.Services;
@@ -20,16 +24,13 @@ public interface IDuckDbService
 public class DuckDbService : IDuckDbService, IDisposable
 {
     private readonly string _databasePath;
-    private readonly IConfiguration _configuration;
     private DuckDBConnection? _currentConnection;
     private string? _currentConfigName;
     private string[]? _currentHeaders;
-    private bool _disposed = false;
 
-    public DuckDbService(IConfiguration configuration)
+    public DuckDbService()
     {
-        _configuration = configuration;
-        _databasePath = _configuration["DuckDbPath"] ?? "ouija_databases";
+        _databasePath = "ouija_databases";
         Directory.CreateDirectory(_databasePath);
     }
 
@@ -310,34 +311,11 @@ public class DuckDbService : IDuckDbService, IDisposable
 
     public void Dispose()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
+        if (_currentConnection != null)
         {
-            if (disposing)
-            {
-                // Dispose managed resources
-                if (_currentConnection != null)
-                {
-                    _currentConnection.Dispose();
-                    _currentConnection = null;
-                }
-            }
-
-            // Dispose unmanaged resources if any
-            // (none in this case)
-
-            _disposed = true;
+            _currentConnection.Dispose();
+            _currentConnection = null;
         }
-    }
-
-    ~DuckDbService()
-    {
-        Dispose(false);
     }
 }
 

@@ -1,0 +1,31 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+X:\Motely\TheFool\Views\MainWindow.axaml.cs(10,9): error CS0103: The name 'InitializeComponent' does not exist in the current context [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\ProcessRunnerService.cs(28,29): warning CS1998: This async method lacks 'await' operators and will run synchronously. Consider using the 'await' operator to await non-blocking API calls, or 'await Task.Run(...)' to do CPU-bound work on a background thread. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(67,56): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(69,21): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(70,56): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(71,56): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\OuijaService.cs(108,23): warning CS1998: This async method lacks 'await' operators and will run synchronously. Consider using the 'await' operator to await non-blocking API calls, or 'await Task.Run(...)' to do CPU-bound work on a background thread. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(19,27): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(20,30): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(37,36): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter.NextValue()' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(43,39): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter.NextValue()' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+
+Build FAILED.
+
+X:\Motely\TheFool\Services\ProcessRunnerService.cs(28,29): warning CS1998: This async method lacks 'await' operators and will run synchronously. Consider using the 'await' operator to await non-blocking API calls, or 'await Task.Run(...)' to do CPU-bound work on a background thread. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(67,56): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(69,21): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(70,56): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\DatabaseService.cs(71,56): warning CS8604: Possible null reference argument for parameter 'value' in 'DuckDBParameter.DuckDBParameter(object value)'. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\OuijaService.cs(108,23): warning CS1998: This async method lacks 'await' operators and will run synchronously. Consider using the 'await' operator to await non-blocking API calls, or 'await Task.Run(...)' to do CPU-bound work on a background thread. [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(19,27): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(20,30): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(37,36): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter.NextValue()' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Services\PerformanceMonitor.cs(43,39): warning CA1416: This call site is reachable on all platforms. 'PerformanceCounter.NextValue()' is only supported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [X:\Motely\TheFool\TheFool.csproj]
+X:\Motely\TheFool\Views\MainWindow.axaml.cs(10,9): error CS0103: The name 'InitializeComponent' does not exist in the current context [X:\Motely\TheFool\TheFool.csproj]
+    10 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:00.62

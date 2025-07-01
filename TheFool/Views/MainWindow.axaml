@@ -1,0 +1,549 @@
+<suki:SukiWindow xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:vm="using:TheFool.ViewModels"
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            xmlns:suki="using:SukiUI.Controls"
+            xmlns:ScottPlot="using:ScottPlot.Avalonia"
+            
+            mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
+            x:Class="TheFool.Views.MainWindow"
+            x:DataType="vm:MainWindowViewModel"
+            Title="🃏 The Fool - Balatro Seed Oracle"
+            Width="1600" Height="900"
+            WindowStartupLocation="CenterScreen">
+
+    <suki:SukiWindow.Resources>
+        <!-- 🎴 BALATRO POKER THEME COLORS 🎴 -->
+        <SolidColorBrush x:Key="BalatroRed" Color="#DC2626"/>
+        <SolidColorBrush x:Key="BalatroGold" Color="#F59E0B"/>
+        <SolidColorBrush x:Key="BalatroBlue" Color="#2563EB"/>
+        <SolidColorBrush x:Key="BalatroPurple" Color="#7C3AED"/>
+        <SolidColorBrush x:Key="BalatroGreen" Color="#059669"/>
+        <SolidColorBrush x:Key="BalatroDark" Color="#1F2937"/>
+        <SolidColorBrush x:Key="BalatroLight" Color="#F3F4F6"/>
+        
+        <!-- 🎨 BUTTON STYLES -->
+        <Style Selector="Button.BalatroCard">
+            <Setter Property="Background" Value="{DynamicResource BalatroRed}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        
+        <Style Selector="Button.BalatroCard:pointerover">
+            <Setter Property="Background" Value="{DynamicResource BalatroGold}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BalatroDark}"/>
+            <Setter Property="RenderTransform" Value="scale(1.05)"/>
+        </Style>
+        
+        <Style Selector="Button.JimboButton">
+            <Setter Property="Background" Value="{DynamicResource BalatroGold}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BalatroDark}"/>
+            <Setter Property="FontWeight" Value="Black"/>
+            <Setter Property="CornerRadius" Value="15"/>
+            <Setter Property="Padding" Value="25,15"/>
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+        
+        <Style Selector="Button.JimboButton:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+        </Style>
+        
+        <!-- 📝 TEXT STYLES -->
+        <Style Selector="TextBlock.CardTitle">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BalatroGold}"/>
+        </Style>
+        
+        <Style Selector="TextBlock.SuitHeader">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource BalatroLight}"/>
+        </Style>
+    </suki:SukiWindow.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 🎪 MAIN CASINO FLOOR 🎪 -->
+        <TabControl Grid.Row="0">
+            
+            <!-- 🎯 SETUP TAB -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="🎯" FontSize="18"/>
+                        <TextBlock Text="SETUP" FontWeight="Bold"/>
+                    </StackPanel>
+                </TabItem.Header>
+                
+                <Grid Margin="25">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="450"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 🎴 LEFT: SETUP CONTROLS -->
+                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="25">
+                            
+                            <!-- DECK & STAKES -->
+                            <suki:Expander Header="🎴 CHOOSE YOUR DECK" IsExpanded="True">
+                                <StackPanel Margin="0,20,0,0" Spacing="18">
+                                    
+                                    <suki:GlassCard Padding="15">
+                                        <StackPanel>
+                                            <TextBlock Text="🃏 Deck:" Classes="SuitHeader" Margin="0,0,0,10"/>
+                                            <ComboBox ItemsSource="{Binding AvailableDecks}"
+                                                     SelectedItem="{Binding Config.Deck}"
+                                                     HorizontalAlignment="Stretch"
+                                                     FontSize="14"/>
+                                        </StackPanel>
+                                    </suki:GlassCard>
+                                    
+                                    <suki:GlassCard Padding="15">
+                                        <StackPanel>
+                                            <TextBlock Text="🎯 Stake:" Classes="SuitHeader" Margin="0,0,0,10"/>
+                                            <ComboBox ItemsSource="{Binding AvailableStakes}"
+                                                     SelectedItem="{Binding Config.Stake}"
+                                                     HorizontalAlignment="Stretch"
+                                                     FontSize="14"/>
+                                        </StackPanel>
+                                    </suki:GlassCard>
+                                </StackPanel>
+                            </suki:Expander>
+
+                            <!-- CONFIG MANAGEMENT -->
+                            <suki:Expander Header="💾 SAVE YOUR HAND" IsExpanded="True">
+                                <StackPanel Margin="0,20,0,0" Spacing="15">
+                                    <TextBox Text="{Binding ConfigName}" 
+                                            Watermark="🎰 Name your configuration..."
+                                            FontSize="16"/>
+                                    
+                                    <UniformGrid Columns="3" HorizontalAlignment="Stretch">
+                                        <Button Content="💾 SAVE" 
+                                               Command="{Binding SaveConfigCommand}"
+                                               Classes="BalatroCard"
+                                               Margin="0,0,5,0"/>
+                                        <Button Content="📋 SAVE AS" 
+                                               Command="{Binding SaveAsConfigCommand}"
+                                               Classes="BalatroCard"
+                                               Margin="5,0"/>
+                                        <Button Content="📂 LOAD" 
+                                               Command="{Binding LoadConfigCommand}"
+                                               Classes="BalatroCard"
+                                               Margin="5,0,0,0"/>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </suki:Expander>
+
+                            <!-- SCORING BONUSES -->
+                            <suki:Expander Header="⚡ SCORING BONUSES" IsExpanded="False">
+                                <StackPanel Margin="0,20,0,0" Spacing="15">
+                                    <CheckBox Content="🔢 Score Natural Negatives"
+                                             IsChecked="{Binding Config.ScoreNaturalNegatives}"
+                                             FontSize="14"/>
+                                    
+                                    <CheckBox Content="🎯 Score Desired Negatives"
+                                             IsChecked="{Binding Config.ScoreDesiredNegatives}"
+                                             FontSize="14"/>
+                                </StackPanel>
+                            </suki:Expander>
+
+                            <!-- NEXT BUTTON -->
+                            <Button Content="🎰 NEXT: BUILD CRITERIA →" 
+                                   Command="{Binding NextToSearchCriteriaCommand}"
+                                   Classes="JimboButton"
+                                   HorizontalAlignment="Stretch"
+                                   Height="60"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- 🎴 RIGHT: PREVIEW -->
+                    <suki:GlassCard Grid.Column="1" Margin="25,0,0,0" Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="🎴 LIVE PREVIEW" Classes="CardTitle" Margin="0,0,0,20"/>
+                            <ScrollViewer>
+                                <TextBox Text="🎯 Configuration preview will appear here..."
+                                         AcceptsReturn="True"
+                                         IsReadOnly="True"
+                                         FontFamily="Consolas"
+                                         FontSize="13"/>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </suki:GlassCard>
+                </Grid>
+            </TabItem>
+
+            <!-- 🔍 CRITERIA TAB -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="🔍" FontSize="18"/>
+                        <TextBlock Text="CRITERIA" FontWeight="Bold"/>
+                    </StackPanel>
+                </TabItem.Header>
+                
+                <Grid Margin="25">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- QUICK ADD TOOLBAR -->
+                    <suki:GlassCard Grid.Row="0" Padding="15" Margin="0,0,0,20">
+                        <DockPanel>
+                            <TextBox DockPanel.Dock="Left" 
+                                    Width="300"
+                                    Watermark="🔍 Search items..."
+                                    FontSize="14"
+                                    Margin="0,0,20,0"/>
+                            
+                            <StackPanel DockPanel.Dock="Right" 
+                                       Orientation="Horizontal" 
+                                       Spacing="8">
+                                <TextBlock Text="Quick Add:" VerticalAlignment="Center" 
+                                          Classes="SuitHeader" Margin="0,0,10,0"/>
+                                <Button Content="🃏 Joker" Command="{Binding AddQuickJokerCommand}" Classes="BalatroCard"/>
+                                <Button Content="🌟 Tarot" Command="{Binding AddQuickTarotCommand}" Classes="BalatroCard"/>
+                                <Button Content="👻 Spectral" Command="{Binding AddQuickSpectralCommand}" Classes="BalatroCard"/>
+                                <Button Content="🏷️ Tag" Command="{Binding AddQuickTagCommand}" Classes="BalatroCard"/>
+                                <Button Content="🎫 Voucher" Command="{Binding AddQuickVoucherCommand}" Classes="BalatroCard"/>
+                                <Button Content="🂠 Card" Command="{Binding AddQuickCardCommand}" Classes="BalatroCard"/>
+                            </StackPanel>
+                            
+                            <TextBlock/>
+                        </DockPanel>
+                    </suki:GlassCard>
+
+                    <!-- CRITERIA LISTS -->
+                    <ScrollViewer Grid.Row="1">
+                        <StackPanel Spacing="25">
+                            
+                            <!-- NEEDS (REQUIRED) -->
+                            <suki:Expander Header="🎯 NEEDS (REQUIRED)" IsExpanded="True">
+                                <StackPanel Margin="0,20,0,0">
+                                    <TextBlock Text="No required items yet. Add some using the buttons above!"
+                                              IsVisible="{Binding !HasRequiredItems}"
+                                              HorizontalAlignment="Center"
+                                              Classes="SuitHeader"
+                                              Margin="0,20"/>
+                                    
+                                    <ItemsControl ItemsSource="{Binding RequiredItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <suki:GlassCard Padding="15" Margin="0,0,0,10">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                                        <TextBlock Grid.Column="0" 
+                                                                  Text="{Binding Icon}" 
+                                                                  FontSize="24"
+                                                                  VerticalAlignment="Center"
+                                                                  Margin="0,0,15,0"/>
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="16"/>
+                                                            <TextBlock Text="{Binding Details}" FontSize="12" Opacity="0.7"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="2" 
+                                                               Content="✕" 
+                                                               Command="{Binding $parent[ItemsControl].DataContext.RemoveCriteriaCommand}"
+                                                               CommandParameter="{Binding}"
+                                                               Classes="BalatroCard"
+                                                               Width="35" Height="35"/>
+                                                    </Grid>
+                                                </suki:GlassCard>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </suki:Expander>
+
+                            <!-- WANTS (OPTIONAL) -->
+                            <suki:Expander Header="✨ WANTS (NICE TO HAVE)" IsExpanded="True">
+                                <StackPanel Margin="0,20,0,0">
+                                    <TextBlock Text="No optional items yet. Add some using the buttons above!"
+                                              IsVisible="{Binding !HasOptionalItems}"
+                                              HorizontalAlignment="Center"
+                                              Classes="SuitHeader"
+                                              Margin="0,20"/>
+                                    
+                                    <ItemsControl ItemsSource="{Binding OptionalItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <suki:GlassCard Padding="15" Margin="0,0,0,10">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                                        <TextBlock Grid.Column="0" 
+                                                                  Text="{Binding Icon}" 
+                                                                  FontSize="24"
+                                                                  VerticalAlignment="Center"
+                                                                  Margin="0,0,15,0"/>
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="16"/>
+                                                            <TextBlock Text="{Binding Details}" FontSize="12" Opacity="0.7"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="2" 
+                                                               Content="✕" 
+                                                               Command="{Binding $parent[ItemsControl].DataContext.RemoveCriteriaCommand}"
+                                                               CommandParameter="{Binding}"
+                                                               Classes="BalatroCard"
+                                                               Width="35" Height="35"/>
+                                                    </Grid>
+                                                </suki:GlassCard>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </suki:Expander>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- BOTTOM ACTIONS -->
+                    <suki:GlassCard Grid.Row="2" Padding="20" Margin="0,20,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15">
+                            <Button Content="📁 Import" Classes="BalatroCard"/>
+                            <Button Content="💾 Export" Classes="BalatroCard"/>
+                            <Button Content="🗑️ Clear All" Classes="BalatroCard"/>
+                            <Button Content="🔥 RUN SEARCH →" 
+                                   Command="{Binding NextToRunCommand}"
+                                   Classes="JimboButton"
+                                   Padding="20,12"
+                                   FontSize="16"/>
+                        </StackPanel>
+                    </suki:GlassCard>
+                </Grid>
+            </TabItem>
+
+            <!-- 🔥 RUN TAB -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="🔥" FontSize="18"/>
+                        <TextBlock Text="RUN" FontWeight="Bold"/>
+                    </StackPanel>
+                </TabItem.Header>
+                
+                <Grid Margin="25">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="450"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- LEFT CONTROL PANEL -->
+                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="25">
+                            
+                            <!-- CONFIG SUMMARY -->
+                            <suki:Expander Header="📋 SEARCH SUMMARY" IsExpanded="True">
+                                <Grid Margin="0,15,0,0" ColumnDefinitions="Auto,*">
+                                    <StackPanel Grid.Column="0" Spacing="8">
+                                        <TextBlock Text="Config:" Classes="SuitHeader"/>
+                                        <TextBlock Text="Deck:" Classes="SuitHeader"/>
+                                        <TextBlock Text="Needs:" Classes="SuitHeader"/>
+                                        <TextBlock Text="Wants:" Classes="SuitHeader"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="8" Margin="15,0,0,0">
+                                        <TextBlock Text="{Binding ConfigName}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Config.Deck}"/>
+                                        <TextBlock Text="{Binding RequiredCount}"/>
+                                        <TextBlock Text="{Binding OptionalCount}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </suki:Expander>
+
+                            <!-- ENGINE SETTINGS -->
+                            <suki:Expander Header="⚙️ ENGINE SETTINGS" IsExpanded="True">
+                                <StackPanel Margin="0,15,0,0" Spacing="15">
+                                    <StackPanel>
+                                        <TextBlock Text="Engine:" Classes="SuitHeader" Margin="0,0,0,8"/>
+                                        <ComboBox ItemsSource="{Binding AvailableEngines}"
+                                                 SelectedItem="{Binding SelectedEngine}"
+                                                 HorizontalAlignment="Stretch"/>
+                                    </StackPanel>
+
+                                    <!-- GPU SETTINGS -->
+                                    <StackPanel IsVisible="{Binding IsGpuEngine}" Spacing="12">
+                                        <StackPanel>
+                                            <TextBlock Text="Batch Multiplier:" Classes="SuitHeader" Margin="0,0,0,5"/>
+                                            <ComboBox ItemsSource="{Binding AvailableBatchMultipliers}"
+                                                     SelectedItem="{Binding BatchMultiplier}"
+                                                     HorizontalAlignment="Stretch"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Thread Groups:" Classes="SuitHeader" Margin="0,0,0,5"/>
+                                            <ComboBox ItemsSource="{Binding AvailableThreadGroups}"
+                                                     SelectedItem="{Binding ThreadGroups}"
+                                                     HorizontalAlignment="Stretch"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- CPU SETTINGS -->
+                                    <StackPanel IsVisible="{Binding IsCpuEngine}" Spacing="12">
+                                        <StackPanel>
+                                            <TextBlock Text="CPU Threads:" Classes="SuitHeader" Margin="0,0,0,5"/>
+                                            <ComboBox ItemsSource="{Binding AvailableCpuThreads}"
+                                                     SelectedItem="{Binding CpuThreadCount}"
+                                                     HorizontalAlignment="Stretch"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Batched Digits:" Classes="SuitHeader" Margin="0,0,0,5"/>
+                                            <ComboBox ItemsSource="{Binding AvailableBatchedDigits}"
+                                                     SelectedItem="{Binding CpuBatchedDigits}"
+                                                     HorizontalAlignment="Stretch"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </suki:Expander>
+
+                            <!-- THE BIG BUTTON -->
+                            <suki:GlassCard Padding="20">
+                                <StackPanel Spacing="15">
+                                    <Button IsVisible="{Binding !IsSearching}"
+                                           Content="🔥 LET JIMBO COOK! 🔥" 
+                                           Classes="JimboButton"
+                                           Height="70"
+                                           HorizontalAlignment="Stretch"
+                                           Command="{Binding StartSearchCommand}"/>
+                                    
+                                    <Button IsVisible="{Binding IsSearching}"
+                                           Content="⏹ STOP SEARCH" 
+                                           Classes="BalatroCard"
+                                           Height="70"
+                                           HorizontalAlignment="Stretch"
+                                           Command="{Binding StopSearchCommand}"/>
+
+                                    <!-- PROGRESS -->
+                                    <StackPanel IsVisible="{Binding IsSearching}" Spacing="8">
+                                        <ProgressBar Value="{Binding SearchProgress}" 
+                                                    Maximum="100"
+                                                    Height="12"/>
+                                        <TextBlock Text="{Binding ProgressText}" 
+                                                  HorizontalAlignment="Center"
+                                                  FontFamily="Consolas"/>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Left" 
+                                                      Text="{Binding Runtime}" 
+                                                      Classes="SuitHeader"/>
+                                            <TextBlock DockPanel.Dock="Right"
+                                                      Text="{Binding SeedsPerSecond}" 
+                                                      Classes="SuitHeader"/>
+                                            <TextBlock/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </suki:GlassCard>
+
+                            <!-- CONSOLE -->
+                            <suki:Expander Header="📟 CONSOLE OUTPUT" IsExpanded="False">
+                                <Border Height="200" Margin="0,15,0,0">
+                                    <ScrollViewer>
+                                        <TextBox AcceptsReturn="True"
+                                                IsReadOnly="True"
+                                                FontFamily="Consolas"
+                                                FontSize="11"
+                                                Text="Ready to start search..."/>
+                                    </ScrollViewer>
+                                </Border>
+                            </suki:Expander>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- RIGHT RESULTS PANEL -->
+                    <Grid Grid.Column="1" Margin="25,0,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="220"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- PERFORMANCE CHART -->
+                        <suki:Expander Grid.Row="0" Header="📊 PERFORMANCE" IsExpanded="True">
+                            <ScottPlot:AvaPlot Name="PerformanceChart" Height="180" Margin="0,10,0,0"/>
+                        </suki:Expander>
+
+                        <!-- RESULTS TABLE -->
+                        <suki:Expander Grid.Row="1" Header="{Binding ResultsTitle}" IsExpanded="True" Margin="0,15,0,0">
+                            <DockPanel Margin="0,15,0,0">
+                                <!-- CONTROLS -->
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,15">
+                                    <Button Content="🔄 Refresh" 
+                                           Command="{Binding RefreshResultsCommand}"
+                                           Classes="BalatroCard"/>
+                                    <Button Content="💾 Export" 
+                                           Command="{Binding ExportResultsCommand}"
+                                           Classes="BalatroCard"/>
+                                    <Button Content="🗑️ Clear" Classes="BalatroCard"/>
+                                    
+                                    <TextBlock Text="Cutoff:" 
+                                              VerticalAlignment="Center"
+                                              Classes="SuitHeader"
+                                              Margin="20,0,8,0"/>
+                                    <TextBox Text="auto" Width="80" VerticalAlignment="Center"/>
+                                    <CheckBox Content="Auto?" IsChecked="True" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                
+                                <!-- RESULTS GRID -->
+                                <DataGrid ItemsSource="{Binding SearchResults}"
+                                         AutoGenerateColumns="False"
+                                         CanUserResizeColumns="True"
+                                         CanUserSortColumns="True"
+                                         GridLinesVisibility="Horizontal">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="🎯 Seed" 
+                                                           Binding="{Binding Seed}" 
+                                                           Width="120"/>
+                                        <DataGridTextColumn Header="⭐ Score" 
+                                                           Binding="{Binding Score}" 
+                                                           Width="80"/>
+                                        <DataGridTextColumn Header="➖ Natural Negs" 
+                                                           Binding="{Binding NaturalNegativeJokers}" 
+                                                           Width="120"/>
+                                        <DataGridTextColumn Header="🎯 Desired Negs" 
+                                                           Binding="{Binding DesiredNegativeJokers}" 
+                                                           Width="120"/>
+                                        <DataGridTextColumn Header="⏰ Found" 
+                                                           Binding="{Binding TimeAgo}" 
+                                                           Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </DockPanel>
+                        </suki:Expander>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- 🎰 STATUS BAR -->
+        <Border Grid.Row="1" 
+                Background="{DynamicResource BalatroDark}" 
+                Height="32"
+                BorderBrush="{DynamicResource BalatroGold}"
+                BorderThickness="0,2,0,0">
+            <DockPanel Margin="15,0">
+                <StackPanel DockPanel.Dock="Left" 
+                           Orientation="Horizontal" 
+                           VerticalAlignment="Center" 
+                           Spacing="10">
+                    <TextBlock Text="🃏" FontSize="16"/>
+                    <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold"/>
+                </StackPanel>
+                
+                <StackPanel DockPanel.Dock="Right"
+                           Orientation="Horizontal" 
+                           VerticalAlignment="Center"
+                           Spacing="20"
+                           IsVisible="{Binding IsSearching}">
+                    <TextBlock Text="{Binding Runtime}" Classes="SuitHeader"/>
+                    <TextBlock Text="{Binding SeedsPerSecond}" Classes="SuitHeader"/>
+                </StackPanel>
+                
+                <TextBlock/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</suki:SukiWindow>
