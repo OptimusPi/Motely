@@ -15,6 +15,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Shaders\balatro_background.sksl" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Shaders\balatro_background.sksl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
@@ -33,5 +43,6 @@
     <PackageReference Include="System.Text.Json" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+
   </ItemGroup>
 </Project>

@@ -71,8 +71,13 @@ public partial class SearchCriteriaItem : ObservableObject
 
     partial void OnIsRequiredChanged(bool value)
     {
-        // Property change notification is handled automatically by ObservableProperty
+        // Notify that the IsRequired property has changed
+        // This will trigger UI updates for RequiredItems and OptionalItems collections
+        RequiredStatusChanged?.Invoke(this, value);
     }
+
+    // Event to notify when IsRequired status changes
+    public event EventHandler<bool>? RequiredStatusChanged;
 
     public string GetFilterString()
     {

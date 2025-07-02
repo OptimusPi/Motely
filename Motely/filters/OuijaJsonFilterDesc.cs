@@ -71,12 +71,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             VectorMask mask = VectorMask.AllBitsSet;
 
-            // PHASE 1: Vector filtering for NEEDS (early exit for performance)
+            // PHASE 1: Vector filtering for NEEDS (filtering)
             var localConfig = Config; // Copy to avoid struct lambda capture issues
             mask = ProcessNeeds(ref searchContext, mask, localConfig);
             if (mask.IsAllFalse()) return mask;
 
-            // PHASE 2: Individual seed processing for WANTS (scoring and filtering)
+            // PHASE 2: Individual seed processing for WANTS (scoring)
             return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
                 return ProcessWantsAndScore(ref singleCtx, localConfig);
@@ -108,6 +108,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return mask;
         }
 
+        private static int CountBitsSet(VectorMask mask)
+        {
+            int count = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                if (mask[i]) count++;
+            }
+            return count;
+        }
+
         private static VectorMask ProcessNeedVector(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, 
             int ante, MotelyJoker[] jokerChoices, VectorMask mask)
         {
@@ -116,18 +126,20 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case "SmallBlindTag":
                     var tagStream = searchContext.CreateTagStream(ante);
                     var tag = searchContext.GetNextTag(ref tagStream);
-                    return mask & VectorEnum256.Equals(tag, ParseTag(need.Value));
+                    VectorMask tagMask = VectorEnum256.Equals(tag, ParseTag(need.Value));
+                    return mask & tagMask;
 
                 case "BigBlindTag":
                     var bigTagStream = searchContext.CreateTagStream(ante);
                     searchContext.GetNextTag(ref bigTagStream); // Skip small blind
                     var bigTag = searchContext.GetNextTag(ref bigTagStream); // Get big blind
-                    return mask & VectorEnum256.Equals(bigTag, ParseTag(need.Value));
+                    VectorMask bigTagMask = VectorEnum256.Equals(bigTag, ParseTag(need.Value));
+                    return mask & bigTagMask;
 
                 case "Joker":
                     var prng = searchContext.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
                     var jokerVec = searchContext.GetNextRandomElement(ref prng, jokerChoices);
-                    var jokerMask = VectorEnum256.Equals(jokerVec, ParseJoker(need.Value));
+                    VectorMask jokerMask = VectorEnum256.Equals(jokerVec, ParseJoker(need.Value));
                     
                     // Check edition if specified - simplified for now
                     if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
@@ -138,7 +150,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         var threshold = GetEditionThreshold(need.Edition);
                         var editionMask = Vector512.LessThan(editionRolls, Vector512.Create(threshold));
                         var editionMask256 = new VectorMask(MotelyVectorUtils.VectorMaskToIntMask(editionMask));
-                        jokerMask = new VectorMask(jokerMask.Value & editionMask256.Value);
+                        jokerMask &= editionMask256;
                     }
                     
                     return mask & jokerMask;
@@ -146,7 +158,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case "SoulJoker":
                     var soulPrng = searchContext.CreatePrngStream("soul_joker_" + ante);
                     var soulJokerVec = searchContext.GetNextRandomElement(ref soulPrng, jokerChoices);
-                    return mask & VectorEnum256.Equals(soulJokerVec, ParseJoker(need.Value));
+                    VectorMask soulJokerMask = VectorEnum256.Equals(soulJokerVec, ParseJoker(need.Value));
+                    return mask & soulJokerMask;
 
                 default:
                     Console.WriteLine($"⚠️  Unknown need type: {need.Type}");
@@ -180,11 +193,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 totalScore += wantScore;
             }
 
-            // Apply threshold filtering - pass if we have at least one want match
+            // Apply threshold filtering - NEVER allow seeds with score 0
             bool passes = totalScore >= GetMinimumScore(config);
-
-            // TODO: Store detailed scoring information somewhere accessible to search result generation
-            // For now, we rely on the basic pass/fail from this method
 
             return passes;
         }
@@ -230,8 +240,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 : singleCtx.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
             
             var joker = singleCtx.GetNextRandomElement(ref prng, jokerChoices);
+            var expectedJoker = ParseJoker(want.Value);
             
-            if (joker != ParseJoker(want.Value))
+            if (joker != expectedJoker)
                 return (0, false, false);
 
             // Check edition if specified
@@ -319,8 +330,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         private static int GetMinimumScore(OuijaConfig config)
         {
-            // Return 1 if any wants are specified, 0 otherwise
-            return (config.Wants?.Length ?? 0) > 0 ? 1 : 0;
+            // Always require at least score 1 to filter out zero scores
+            // Seeds with score 0 should never appear in output
+            return 1;
         }
 
         // Helper parsing methods

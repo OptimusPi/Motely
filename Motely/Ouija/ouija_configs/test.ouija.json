@@ -8,14 +8,14 @@
         "YEET"
     ],
     "filter_config": {
-        "numNeeds": 1,
+        "numNeeds": 0,
         "numWants": 1,
         "Needs": [
             {
                 "type": "Joker",
                 "value": "Blueprint",
                 "edition": "Negative",
-                "searchAntes": [1]
+                "searchAntes": [1,2,3,4]
             }
         ],
         "Wants": [
@@ -23,11 +23,11 @@
                 "type": "Joker",
                 "value": "Blueprint",
                 "edition": "Negative",
-                "searchAntes": [1,2,3,4,5,6,7,8]
+                "searchAntes": [1,2,3,4]
             }
         ],
         "minSearchAnte": 1,
-        "maxSearchAnte": 2,
+        "maxSearchAnte": 4,
         "deck": "AnaglyphDeck",
         "stake": "BlackStake",
         "scoreNaturalNegatives": true,

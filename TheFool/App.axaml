@@ -9,16 +9,26 @@
     <Application.Resources>
         <FontFamily x:Key="BalatroFont">avares://TheFool/m6x11plusplus.otf#m6x11plusplus</FontFamily>
         
-        <!-- Balatro Color Palette -->
-        <SolidColorBrush x:Key="BalatroBackground">#1A1A2E</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroCardBackground">#16213E</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroAccent">#E94560</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroSecondary">#F39C12</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroText">#EAEAEA</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroTextDark">#0F0F23</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroBorder">#E94560</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroHover">#FF6B7A</SolidColorBrush>
-        <SolidColorBrush x:Key="BalatroPressed">#C73650</SolidColorBrush>
+        <!-- Solo Jazz Cup Color Palette (90s aesthetic) -->
+        <SolidColorBrush x:Key="SoloJazzTeal">#00CED1</SolidColorBrush>
+        <SolidColorBrush x:Key="SoloJazzMagenta">#FF1493</SolidColorBrush>
+        <SolidColorBrush x:Key="SoloJazzPurple">#8A2BE2</SolidColorBrush>
+        <SolidColorBrush x:Key="SoloJazzNavy">#191970</SolidColorBrush>
+        <SolidColorBrush x:Key="SoloJazzWhite">#F8F8FF</SolidColorBrush>
+        
+        <!-- UI Color Palette mapped to Solo Jazz -->
+        <SolidColorBrush x:Key="BalatroBackground">#FF191970</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroCardBackground">#DD2F2F5F</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroAccent">#FF1493</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroSecondary">#00CED1</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroText">#F8F8FF</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroTextDark">#191970</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroBorder">#8A2BE2</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroHover">#FF69B4</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroPressed">#C71585</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroBlue">#00CED1</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroGreen">#40E0D0</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroPurple">#8A2BE2</SolidColorBrush>
     </Application.Resources>
     
     <Application.DataTemplates>
@@ -41,20 +51,36 @@
             <Setter Property="Background" Value="{StaticResource BalatroAccent}" />
             <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
             <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="BorderThickness" Value="3" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="20,14" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="FontSize" Value="16" />
-            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="MinHeight" Value="45" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" OffsetX="2" OffsetY="2" BlurRadius="4" Opacity="0.5"/>
+                </Setter.Value>
+            </Setter>
         </Style>
         
         <Style Selector="Button:pointerover">
             <Setter Property="Background" Value="{StaticResource BalatroHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BalatroSecondary}" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#FFD700" OffsetX="0" OffsetY="0" BlurRadius="8" Opacity="0.6"/>
+                </Setter.Value>
+            </Setter>
         </Style>
         
         <Style Selector="Button:pressed">
             <Setter Property="Background" Value="{StaticResource BalatroPressed}" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" OffsetX="1" OffsetY="1" BlurRadius="2" Opacity="0.8"/>
+                </Setter.Value>
+            </Setter>
         </Style>
         
         <!-- ComboBox Styling -->
@@ -63,11 +89,16 @@
             <Setter Property="Background" Value="{StaticResource BalatroCardBackground}" />
             <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
             <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="BorderThickness" Value="3" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="15,12" />
             <Setter Property="FontSize" Value="16" />
-            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="MinHeight" Value="45" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" OffsetX="1" OffsetY="1" BlurRadius="3" Opacity="0.4"/>
+                </Setter.Value>
+            </Setter>
         </Style>
         
         <!-- TextBox Styling -->
@@ -76,11 +107,16 @@
             <Setter Property="Background" Value="{StaticResource BalatroCardBackground}" />
             <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
             <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="BorderThickness" Value="3" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="15,12" />
             <Setter Property="FontSize" Value="16" />
-            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="MinHeight" Value="45" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" OffsetX="1" OffsetY="1" BlurRadius="3" Opacity="0.4"/>
+                </Setter.Value>
+            </Setter>
         </Style>
         
         <!-- TabControl Styling -->
@@ -93,18 +129,28 @@
             <Setter Property="Background" Value="{StaticResource BalatroCardBackground}" />
             <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
             <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
-            <Setter Property="BorderThickness" Value="2,2,2,0" />
-            <Setter Property="CornerRadius" Value="8,8,0,0" />
-            <Setter Property="Padding" Value="20,12" />
+            <Setter Property="BorderThickness" Value="3,3,3,0" />
+            <Setter Property="CornerRadius" Value="12,12,0,0" />
+            <Setter Property="Padding" Value="24,15" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="FontSize" Value="18" />
-            <Setter Property="Margin" Value="2,0" />
-            <Setter Property="MinHeight" Value="45" />
+            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="MinHeight" Value="50" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#000000" OffsetX="0" OffsetY="2" BlurRadius="4" Opacity="0.3"/>
+                </Setter.Value>
+            </Setter>
         </Style>
         
         <Style Selector="TabItem:selected">
             <Setter Property="Background" Value="{StaticResource BalatroAccent}" />
             <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#FFD700" OffsetX="0" OffsetY="0" BlurRadius="6" Opacity="0.4"/>
+                </Setter.Value>
+            </Setter>
         </Style>
         
         <!-- ListBox Styling -->

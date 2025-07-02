@@ -92,13 +92,52 @@ public partial class MainWindowViewModel : ObservableObject
         // Subscribe to collection changes
         SearchCriteria.CollectionChanged += (s, e) => 
         {
+            // Handle items being added or removed
+            if (e.NewItems != null)
+            {
+                foreach (SearchCriteriaItem item in e.NewItems)
+                {
+                    item.RequiredStatusChanged += OnItemRequiredStatusChanged;
+                }
+            }
+            
+            if (e.OldItems != null)
+            {
+                foreach (SearchCriteriaItem item in e.OldItems)
+                {
+                    item.RequiredStatusChanged -= OnItemRequiredStatusChanged;
+                }
+            }
+            
             OnPropertyChanged(nameof(RequiredItems));
             OnPropertyChanged(nameof(OptionalItems));
             OnPropertyChanged(nameof(HasRequiredItems));
             OnPropertyChanged(nameof(HasOptionalItems));
         };
+        
+        // Subscribe to existing items
+        foreach (var item in SearchCriteria)
+        {
+            item.RequiredStatusChanged += OnItemRequiredStatusChanged;
+        }
 
         Console.WriteLine("MainWindowViewModel initialized with test data");
+    }
+    
+    private void OnItemRequiredStatusChanged(object? sender, bool isRequired)
+    {
+        // Refresh the filtered collections when an item's required status changes
+        OnPropertyChanged(nameof(RequiredItems));
+        OnPropertyChanged(nameof(OptionalItems));
+        OnPropertyChanged(nameof(HasRequiredItems));
+        OnPropertyChanged(nameof(HasOptionalItems));
+        
+        if (sender is SearchCriteriaItem item)
+        {
+            var status = isRequired ? "Required" : "Optional";
+            StatusText = $"📋 {item.Name} moved to {status} section";
+            Console.WriteLine($"Item {item.Name} is now {status}");
+        }
     }
 
     [RelayCommand]
@@ -243,6 +282,7 @@ public partial class MainWindowViewModel : ObservableObject
                 SearchCriteria.Clear();
                 foreach (var item in userConfig.SearchItems)
                 {
+                    item.RequiredStatusChanged += OnItemRequiredStatusChanged;
                     SearchCriteria.Add(item);
                 }
                 
@@ -309,6 +349,22 @@ public partial class MainWindowViewModel : ObservableObject
         SearchCriteria.Remove(item);
         StatusText = $"✕ Removed {item.Name}! Total items: {SearchCriteria.Count}";
         Console.WriteLine($"Removed: {item.Name}");
+    }
+
+    [RelayCommand]
+    private void ToggleRequired(SearchCriteriaItem item)
+    {
+        item.IsRequired = !item.IsRequired;
+        
+        // Trigger property change notifications for the filtered collections
+        OnPropertyChanged(nameof(RequiredItems));
+        OnPropertyChanged(nameof(OptionalItems));
+        OnPropertyChanged(nameof(HasRequiredItems));
+        OnPropertyChanged(nameof(HasOptionalItems));
+        
+        var section = item.IsRequired ? "Required Items" : "Scoring Items";
+        StatusText = $"📋 Moved {item.Name} to {section}";
+        Console.WriteLine($"Toggled {item.Name} required status to: {item.IsRequired}");
     }
 
     [RelayCommand]

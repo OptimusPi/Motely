@@ -558,7 +558,17 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                                     seed += _digits[digit];
                             }
 
-                            Search._results.Enqueue(new MotelySearchResult { Seed = seed, Success = true });
+                            // TODO: Calculate actual scores instead of hardcoded placeholder
+                            int totalScore = 1; // Placeholder - should be calculated from actual wants matching
+                            int[] scoreWants = new int[1] { 1 }; // Placeholder
+
+                            Search._results.Enqueue(new MotelySearchResult 
+                            { 
+                                Seed = seed, 
+                                Success = true,
+                                TotalScore = totalScore,
+                                ScoreWants = scoreWants
+                            });
                         }
 
                         successMask >>= 1;

@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TheFool.ViewModels"
+        xmlns:controls="using:Motely.TheFool.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
@@ -8,14 +9,16 @@
         x:DataType="vm:MainWindowViewModel"
         Title="🃏 The Fool - Balatro Seed Oracle"
         Width="1200" Height="800"
-        WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BalatroBackground}">
+        WindowStartupLocation="CenterScreen">
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <!-- Balatro-style animated background -->
+        <controls:BalatroBkgnd />
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
         <!-- Main Content -->
         <TabControl Grid.Row="0">
@@ -28,9 +31,12 @@
                         <!-- Deck Configuration Card -->
                         <Border Background="{StaticResource BalatroCardBackground}"
                                 BorderBrush="{StaticResource BalatroBorder}"
-                                BorderThickness="3"
-                                CornerRadius="12"
-                                Padding="25">
+                                BorderThickness="4"
+                                CornerRadius="16"
+                                Padding="30">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" OffsetX="3" OffsetY="3" BlurRadius="8" Opacity="0.6"/>
+                            </Border.Effect>
                             <StackPanel Spacing="20">
                                 <TextBlock Text="🃏 DECK CONFIGURATION" 
                                           FontSize="28" 
@@ -102,9 +108,12 @@
                         <!-- Search Criteria Card -->
                         <Border Background="{StaticResource BalatroCardBackground}"
                                 BorderBrush="{StaticResource BalatroBorder}"
-                                BorderThickness="3"
-                                CornerRadius="12"
-                                Padding="25">
+                                BorderThickness="4"
+                                CornerRadius="16"
+                                Padding="30">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" OffsetX="3" OffsetY="3" BlurRadius="8" Opacity="0.6"/>
+                            </Border.Effect>
                             <StackPanel Spacing="20">
                                 <TextBlock Text="🎯 SEARCH CRITERIA" 
                                           FontSize="28" 
@@ -138,9 +147,12 @@
                                     <TextBlock Text="📋 Required Items:" FontWeight="Bold" FontSize="18"/>
                                     <Border Background="{StaticResource BalatroBackground}"
                                             BorderBrush="{StaticResource BalatroBorder}"
-                                            BorderThickness="2"
-                                            CornerRadius="8"
-                                            Padding="10">
+                                            BorderThickness="3"
+                                            CornerRadius="12"
+                                            Padding="15">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#000000" OffsetX="2" OffsetY="2" BlurRadius="4" Opacity="0.4"/>
+                                        </Border.Effect>
                                         <ListBox ItemsSource="{Binding RequiredItems}" 
                                                 Height="250"
                                                 Background="Transparent"
@@ -149,28 +161,113 @@
                                                 <DataTemplate>
                                                     <Border Background="{StaticResource BalatroCardBackground}"
                                                             BorderBrush="{StaticResource BalatroBorder}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="6"
-                                                            Padding="12,8"
-                                                            Margin="2">
-                                                        <StackPanel Orientation="Horizontal" Spacing="12">
-                                                            <TextBlock Text="{Binding Icon}" 
+                                                            BorderThickness="2"
+                                                            CornerRadius="10"
+                                                            Padding="15,10"
+                                                            Margin="3">
+                                                        <Border.Effect>
+                                                            <DropShadowEffect Color="#000000" OffsetX="1" OffsetY="1" BlurRadius="2" Opacity="0.3"/>
+                                                        </Border.Effect>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            
+                                                            <TextBlock Grid.Column="0" Text="{Binding Icon}" 
                                                                       FontSize="18"
-                                                                      VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding Name}" 
+                                                                      VerticalAlignment="Center"
+                                                                      Margin="0,0,8,0"/>
+                                                            
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" 
                                                                       FontSize="14"
                                                                       FontWeight="Bold"
                                                                       VerticalAlignment="Center"
                                                                       Foreground="{StaticResource BalatroText}"/>
-                                                            <Button Content="✕" 
-                                                                   Command="{Binding $parent[ListBox].DataContext.RemoveCriteriaCommand}"
-                                                                   CommandParameter="{Binding}"
-                                                                   Width="30" Height="30"
-                                                                   FontSize="12"
-                                                                   HorizontalAlignment="Right"
-                                                                   Background="{StaticResource BalatroAccent}"
-                                                                   CornerRadius="15"/>
-                                                        </StackPanel>
+                                                            
+                                                            <CheckBox Grid.Column="2" Content="Require" FontSize="12" 
+                                                                    Foreground="{StaticResource BalatroSecondary}" 
+                                                                    IsChecked="{Binding IsRequired, Mode=TwoWay}" 
+                                                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                            
+                                                            <TextBlock Grid.Column="3" Text="✕" 
+                                                                     FontSize="18"
+                                                                     FontWeight="Bold"
+                                                                     Foreground="#FF4444"
+                                                                     VerticalAlignment="Center"
+                                                                     HorizontalAlignment="Center"
+                                                                     Cursor="Hand"
+                                                                     ToolTip.Tip="Remove item">
+
+                                                            </TextBlock>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </StackPanel>
+                                
+                                <!-- Scoring Items List -->
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="⭐ Scoring Items:" FontWeight="Bold" FontSize="18"/>
+                                    <Border Background="{StaticResource BalatroBackground}"
+                                            BorderBrush="{StaticResource BalatroBorder}"
+                                            BorderThickness="2"
+                                            CornerRadius="8"
+                                            Padding="10">
+                                        <ListBox ItemsSource="{Binding OptionalItems}" 
+                                                Height="250"
+                                                Background="Transparent"
+                                                BorderThickness="0">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{StaticResource BalatroCardBackground}"
+                                                            BorderBrush="{StaticResource BalatroBorder}"
+                                                            BorderThickness="3"
+                                                            CornerRadius="12"
+                                                            Padding="16,12"
+                                                            Margin="4">
+                                                        <Border.Effect>
+                                                            <DropShadowEffect Color="Black" BlurRadius="8" OffsetX="3" OffsetY="3" Opacity="0.3"/>
+                                                        </Border.Effect>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            
+                                                            <TextBlock Grid.Column="0" Text="{Binding Icon}" 
+                                                                      FontSize="18"
+                                                                      VerticalAlignment="Center"
+                                                                      Margin="0,0,8,0"/>
+                                                            
+                                                            <TextBlock Grid.Column="1" Text="{Binding Name}" 
+                                                                      FontSize="14"
+                                                                      FontWeight="Bold"
+                                                                      VerticalAlignment="Center"
+                                                                      Foreground="{StaticResource BalatroText}"/>
+                                                            
+                                                            <CheckBox Grid.Column="2" Content="Require" FontSize="12" 
+                                                                    Foreground="{StaticResource BalatroSecondary}" 
+                                                                    IsChecked="{Binding IsRequired, Mode=TwoWay}" 
+                                                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                            
+                                                            <TextBlock Grid.Column="3" Text="✕" 
+                                                                     FontSize="18"
+                                                                     FontWeight="Bold"
+                                                                     Foreground="#FF4444"
+                                                                     VerticalAlignment="Center"
+                                                                     HorizontalAlignment="Center"
+                                                                     Cursor="Hand"
+                                                                     ToolTip.Tip="Remove item">
+
+                                                            </TextBlock>
+                                                        </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
@@ -317,5 +414,6 @@
                           Opacity="0.8"/>
             </Grid>
         </Border>
+        </Grid>
     </Grid>
 </Window>

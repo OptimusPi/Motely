@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Filters;
@@ -130,6 +130,8 @@ partial class Program
         string[] attempts = [
             configPath,
             Path.Combine(".", configPath),
+            Path.Combine("..", configPath),
+            Path.Combine("../Ouija/ouija_configs", configPath),
             Path.Combine("Ouija", "ouija_configs", configPath),
             Path.Combine("ouija_configs", configPath),
             Path.Combine(".", "ouija_configs", configPath),
