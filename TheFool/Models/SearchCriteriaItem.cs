@@ -71,8 +71,7 @@ public partial class SearchCriteriaItem : ObservableObject
 
     partial void OnIsRequiredChanged(bool value)
     {
-        // Notify parent collection that items have changed sections
-        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsRequired)));
+        // Property change notification is handled automatically by ObservableProperty
     }
 
     public string GetFilterString()

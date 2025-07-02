@@ -1,15 +1,32 @@
 <Application xmlns="https://github.com/avaloniaui"
+             xmlns:themes="using:Avalonia.Themes.Fluent"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="TheFool.App"
              xmlns:local="using:TheFool"
-             xmlns:suki="using:SukiUI"
+
              RequestedThemeVariant="Dark">
+    
+    <Application.Resources>
+        <FontFamily x:Key="BalatroFont">avares://TheFool/m6x11.ttf#m6x11</FontFamily>
+    </Application.Resources>
     
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
 
     <Application.Styles>
-        <suki:SukiTheme ThemeColor="Red" />
+        <FluentTheme />
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+        </Style>
     </Application.Styles>
 </Application>

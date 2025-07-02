@@ -43,15 +43,17 @@ public partial class App : Application
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 Console.WriteLine("Creating MainWindow...");
+                var mainViewModel = _serviceProvider.GetRequiredService<MainWindowViewModel>();
+                
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>()
+                    DataContext = mainViewModel
                 };
                 
                 // Handle app exit
                 desktop.ShutdownRequested += OnShutdownRequested;
                 
-                Console.WriteLine("MainWindow created successfully");
+                Console.WriteLine("MainWindow created successfully with DataContext");
             }
 
             base.OnFrameworkInitializationCompleted();
@@ -80,5 +82,7 @@ public partial class App : Application
         
         // Register ViewModels
         services.AddTransient<MainWindowViewModel>();
+        
+        Console.WriteLine("Services configured successfully");
     }
 }

@@ -15,13 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Views\*.axaml.cs">
-      <DependentUpon>%(Filename).axaml</DependentUpon>
-    </Compile>
-    <AvaloniaXaml Include="Views\*.axaml" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
@@ -32,7 +25,7 @@
     <PackageReference Include="DuckDB.NET.Data" />
     <PackageReference Include="DuckDB.NET.Data.Full" />
     <PackageReference Include="MessageBox.Avalonia" />
-
+    <PackageReference Include="SukiUI" />
     <PackageReference Include="ScottPlot.Avalonia" />
     <PackageReference Include="AvaloniaEdit" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
