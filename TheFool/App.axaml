@@ -121,7 +121,7 @@
         
         <!-- TabControl Styling -->
         <Style Selector="TabControl">
-            <Setter Property="Background" Value="{StaticResource BalatroBackground}" />
+            <Setter Property="Background" Value="Transparent" />
         </Style>
         
         <Style Selector="TabItem">

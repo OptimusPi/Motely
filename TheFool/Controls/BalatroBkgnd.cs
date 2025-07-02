@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -14,7 +15,7 @@ namespace Motely.TheFool.Controls;
 /// </summary>
 public class BalatroBkgnd : Control
 {
-    private DateTime _startTime = DateTime.Now;
+    private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
     private DispatcherTimer? _animationTimer;
     
     #region Properties
@@ -49,9 +50,10 @@ public class BalatroBkgnd : Control
     {
         base.OnAttachedToVisualTree(e);
         
+
         _animationTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(16) // ~60fps
+            Interval = TimeSpan.FromMilliseconds(15) // ~60fps for better performance
         };
         _animationTimer.Tick += (_, _) => InvalidateVisual();
         _animationTimer.Start();
@@ -66,95 +68,98 @@ public class BalatroBkgnd : Control
     
     public override void Render(DrawingContext context)
     {
-        // Dark background
-        context.FillRectangle(new SolidColorBrush(Color.FromRgb(22, 35, 37)), Bounds);
+        var elapsed = _stopwatch.Elapsed.TotalSeconds;
+        var width = (int)Bounds.Width;
+        var height = (int)Bounds.Height;
         
-        var elapsed = (DateTime.Now - _startTime).TotalSeconds;
-        var width = Bounds.Width;
-        var height = Bounds.Height;
-        var centerX = width / 2;
-        var centerY = height / 2;
+        if (width <= 0 || height <= 0) return;
         
-        // Create "paint blobs" using bezier curves
-        var blobCount = 12;
-        for (int i = 0; i < blobCount; i++)
+        // Optimized CPU-based Balatro background rendering
+        const double SPIN_ROTATION = -2.0;
+        const double SPIN_SPEED = 5.0;
+        const double CONTRAST = 3.5;
+        const double SPIN_AMOUNT = 0.2;
+        const double PIXEL_FILTER = 60.0; // Lower for better performance
+        const double SPIN_EASE = 1.0;
+        
+        // Balatro colors
+        var COLOR_1 = Color.FromRgb(222, 68, 59);   // Red
+        var COLOR_2 = Color.FromRgb(0, 107, 180);   // Blue  
+        var COLOR_3 = Color.FromRgb(22, 35, 37);    // Dark background
+        
+        var screenLength = Math.Sqrt(width * width + height * height);
+        var pixelSize = screenLength / PIXEL_FILTER;
+        var pixelStep = Math.Max(6, (int)Math.Ceiling(pixelSize)); // Larger pixels for better performance
+        
+        // Render pixelated blocks directly
+        for (int x = 0; x < width; x += pixelStep)
         {
-            var t = elapsed * MoveSpeed * 0.1 + i * (Math.PI * 2 / blobCount);
-            
-            // Create flowing paint paths
-            var pathFigure = new PathFigure();
-            
-            // Starting point with circular motion
-            var startRadius = Math.Min(width, height) * 0.3;
-            var startAngle = t + i * 0.5;
-            var startX = centerX + Math.Cos(startAngle) * startRadius;
-            var startY = centerY + Math.Sin(startAngle) * startRadius;
-            pathFigure.StartPoint = new Point(startX, startY);
-            
-            // Create flowing bezier segments
-            for (int j = 0; j < 4; j++)
+            for (int y = 0; y < height; y += pixelStep)
             {
-                var angle = startAngle + j * Math.PI / 2;
-                var radius = startRadius * (1 + Math.Sin(t * 2 + j) * 0.3);
+                // Convert to UV coordinates (normalized to [-0.5, 0.5])
+                var uvX = (x - width * 0.5) / screenLength;
+                var uvY = (y - height * 0.5) / screenLength;
                 
-                // Control points for smooth curves
-                var cp1X = centerX + Math.Cos(angle - 0.5) * radius * 1.5;
-                var cp1Y = centerY + Math.Sin(angle - 0.5) * radius * 1.5;
-                var cp2X = centerX + Math.Cos(angle + 0.5) * radius * 1.5;
-                var cp2Y = centerY + Math.Sin(angle + 0.5) * radius * 1.5;
+                var uvLen = Math.Sqrt(uvX * uvX + uvY * uvY);
                 
-                // End point
-                var endAngle = angle + Math.PI / 2;
-                var endX = centerX + Math.Cos(endAngle) * radius;
-                var endY = centerY + Math.Sin(endAngle) * radius;
+                // Spin calculation
+                var speed = (SPIN_ROTATION * SPIN_EASE * 0.2) + elapsed * 0.1;
+                var newPixelAngle = Math.Atan2(uvY, uvX) + speed - SPIN_EASE * 20.0 * (SPIN_AMOUNT * uvLen + (1.0 - SPIN_AMOUNT));
                 
-                // Add flowing distortion
-                cp1X += Math.Sin(t * 3 + i + j) * 30;
-                cp1Y += Math.Cos(t * 3 + i + j) * 30;
-                cp2X += Math.Sin(t * 2.5 + i + j) * 40;
-                cp2Y += Math.Cos(t * 2.5 + i + j) * 40;
+                uvX = uvLen * Math.Cos(newPixelAngle);
+                uvY = uvLen * Math.Sin(newPixelAngle);
                 
-                pathFigure.Segments.Add(new BezierSegment
+                // Scale and animate
+                uvX *= 30.0;
+                uvY *= 30.0;
+                var animSpeed = elapsed * SPIN_SPEED;
+                
+                var uv2X = uvX;
+                var uv2Y = uvY;
+                
+                // Ultra-simplified paint flow (2 iterations for maximum performance)
+                for (int i = 0; i < 2; i++)
                 {
-                    Point1 = new Point(cp1X, cp1Y),
-                    Point2 = new Point(cp2X, cp2Y),
-                    Point3 = new Point(endX, endY)
-                });
+                    var sinMax = Math.Sin(Math.Max(uvX, uvY));
+                    uv2X += sinMax * 0.5 + uvX * 0.05;
+                    uv2Y += sinMax * 0.5 + uvY * 0.05;
+                    
+                    var newUvX = uvX + 0.3 * Math.Cos(5.1 + 0.35 * uv2Y + animSpeed * 0.13);
+                    var newUvY = uvY + 0.3 * Math.Sin(uv2X - 0.11 * animSpeed);
+                    
+                    var cosUv = Math.Cos(uvX + uvY) * 0.5;
+                    var sinUv = Math.Sin(uvX * 0.7 - uvY) * 0.5;
+                    
+                    uvX = newUvX - cosUv + sinUv;
+                    uvY = newUvY - cosUv + sinUv;
+                }
+                
+                // Color calculation
+                var contrastMod = (0.25 * CONTRAST + 0.5 * SPIN_AMOUNT + 1.2);
+                var paintRes = Math.Min(2.0, Math.Max(0.0, Math.Sqrt(uvX * uvX + uvY * uvY) * 0.035 * contrastMod));
+                
+                var c1p = Math.Max(0.0, 1.0 - contrastMod * Math.Abs(1.0 - paintRes));
+                var c2p = Math.Max(0.0, 1.0 - contrastMod * Math.Abs(paintRes));
+                var c3p = 1.0 - Math.Min(1.0, c1p + c2p);
+                
+                // Final color mixing
+                var baseWeight = 0.3 / CONTRAST;
+                var mainWeight = 1.0 - baseWeight;
+                
+                var finalR = (byte)Math.Min(255, Math.Max(0, 
+                    baseWeight * COLOR_1.R + mainWeight * (COLOR_1.R * c1p + COLOR_2.R * c2p + COLOR_3.R * c3p)));
+                var finalG = (byte)Math.Min(255, Math.Max(0, 
+                    baseWeight * COLOR_1.G + mainWeight * (COLOR_1.G * c1p + COLOR_2.G * c2p + COLOR_3.G * c3p)));
+                var finalB = (byte)Math.Min(255, Math.Max(0, 
+                    baseWeight * COLOR_1.B + mainWeight * (COLOR_1.B * c1p + COLOR_2.B * c2p + COLOR_3.B * c3p)));
+                
+                var pixelColor = Color.FromRgb(finalR, finalG, finalB);
+                var brush = new SolidColorBrush(pixelColor);
+                
+                // Draw overlapping pixel block to eliminate grid lines
+                var pixelRect = new Rect(x, y, Math.Min(pixelStep + 1, width - x), Math.Min(pixelStep + 1, height - y));
+                context.FillRectangle(brush, pixelRect);
             }
-            
-            pathFigure.IsClosed = true;
-            
-            var pathGeometry = new PathGeometry();
-            pathGeometry.Figures.Add(pathFigure);
-            
-            // Choose color based on position
-            Color blobColor;
-            var colorChoice = (i + Math.Sin(t)) % 3;
-            if (colorChoice < 1)
-                blobColor = Color.FromArgb(150, 222, 68, 59);  // Red
-            else if (colorChoice < 2)
-                blobColor = Color.FromArgb(150, 0, 107, 180); // Blue
-            else
-                blobColor = Color.FromArgb(150, 100, 100, 100); // Gray
-            
-            var brush = new SolidColorBrush(blobColor);
-            
-            // Draw the blob
-            context.DrawGeometry(brush, null, pathGeometry);
-        }
-        
-        // Add some smaller, faster moving circles for more motion
-        for (int i = 0; i < 20; i++)
-        {
-            var t = elapsed * MoveSpeed * 0.5 + i;
-            var x = centerX + Math.Sin(t * 0.7 + i) * width * 0.4;
-            var y = centerY + Math.Cos(t * 0.5 + i) * height * 0.4;
-            var size = 10 + Math.Sin(t * 2) * 5;
-            
-            var alpha = (byte)(50 + Math.Sin(t) * 30);
-            var color = Color.FromArgb(alpha, 255, 255, 255);
-            
-            context.DrawEllipse(new SolidColorBrush(color), null, new Point(x, y), size, size);
         }
     }
 }
