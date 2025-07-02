@@ -8,6 +8,17 @@
     
     <Application.Resources>
         <FontFamily x:Key="BalatroFont">avares://TheFool/m6x11.ttf#m6x11</FontFamily>
+        
+        <!-- Balatro Color Palette -->
+        <SolidColorBrush x:Key="BalatroBackground">#1A1A2E</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroCardBackground">#16213E</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroAccent">#E94560</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroSecondary">#F39C12</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroText">#EAEAEA</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroTextDark">#0F0F23</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroBorder">#E94560</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroHover">#FF6B7A</SolidColorBrush>
+        <SolidColorBrush x:Key="BalatroPressed">#C73650</SolidColorBrush>
     </Application.Resources>
     
     <Application.DataTemplates>
@@ -16,17 +27,99 @@
 
     <Application.Styles>
         <FluentTheme />
+        
+        <!-- Global Text Styling -->
         <Style Selector="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+            <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
         </Style>
+        
+        <!-- Button Styling -->
         <Style Selector="Button">
             <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+            <Setter Property="Background" Value="{StaticResource BalatroAccent}" />
+            <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="14" />
         </Style>
+        
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="{StaticResource BalatroHover}" />
+        </Style>
+        
+        <Style Selector="Button:pressed">
+            <Setter Property="Background" Value="{StaticResource BalatroPressed}" />
+        </Style>
+        
+        <!-- ComboBox Styling -->
         <Style Selector="ComboBox">
             <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+            <Setter Property="Background" Value="{StaticResource BalatroCardBackground}" />
+            <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,6" />
         </Style>
+        
+        <!-- TextBox Styling -->
         <Style Selector="TextBox">
             <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+            <Setter Property="Background" Value="{StaticResource BalatroCardBackground}" />
+            <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,6" />
+        </Style>
+        
+        <!-- TabControl Styling -->
+        <Style Selector="TabControl">
+            <Setter Property="Background" Value="{StaticResource BalatroBackground}" />
+        </Style>
+        
+        <Style Selector="TabItem">
+            <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+            <Setter Property="Background" Value="{StaticResource BalatroCardBackground}" />
+            <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
+            <Setter Property="BorderThickness" Value="2,2,2,0" />
+            <Setter Property="CornerRadius" Value="8,8,0,0" />
+            <Setter Property="Padding" Value="15,8" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="2,0" />
+        </Style>
+        
+        <Style Selector="TabItem:selected">
+            <Setter Property="Background" Value="{StaticResource BalatroAccent}" />
+            <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
+        </Style>
+        
+        <!-- ListBox Styling -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{StaticResource BalatroCardBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BalatroBorder}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        
+        <Style Selector="ListBoxItem">
+            <Setter Property="FontFamily" Value="{StaticResource BalatroFont}" />
+            <Setter Property="Foreground" Value="{StaticResource BalatroText}" />
+            <Setter Property="Padding" Value="10,5" />
+        </Style>
+        
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{StaticResource BalatroAccent}" />
+        </Style>
+        
+        <!-- Border Styling -->
+        <Style Selector="Border">
+            <Setter Property="CornerRadius" Value="8" />
         </Style>
     </Application.Styles>
 </Application>

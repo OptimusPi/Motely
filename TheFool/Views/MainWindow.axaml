@@ -8,115 +8,314 @@
         x:DataType="vm:MainWindowViewModel"
         Title="🃏 The Fool - Balatro Seed Oracle"
         Width="1200" Height="800"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BalatroBackground}">
 
-    <Grid Background="#1F2937">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Main Content -->
-        <TabControl Grid.Row="0" Background="#374151">
+        <TabControl Grid.Row="0" Margin="10">
             
             <!-- Setup Tab -->
             <TabItem Header="🎯 SETUP">
-                <StackPanel Margin="20" Spacing="20" Background="#1F2937">
-                    
-                    <TextBlock Text="🃏 DECK CONFIGURATION" 
-                              FontSize="20" 
-                              FontWeight="Bold" 
-                              Foreground="#F59E0B" 
-                              Margin="0,0,0,15"/>
-                    
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Deck:" Foreground="White" FontWeight="Bold"/>
-                        <ComboBox ItemsSource="{Binding AvailableDecks}"
-                                 SelectedItem="{Binding Config.Deck}"
-                                 MinWidth="300"/>
+                <ScrollViewer Padding="20">
+                    <StackPanel Spacing="25">
+                        
+                        <!-- Deck Configuration Card -->
+                        <Border Background="{StaticResource BalatroCardBackground}"
+                                BorderBrush="{StaticResource BalatroBorder}"
+                                BorderThickness="3"
+                                CornerRadius="12"
+                                Padding="25">
+                            <StackPanel Spacing="20">
+                                <TextBlock Text="🃏 DECK CONFIGURATION" 
+                                          FontSize="24" 
+                                          FontWeight="Bold" 
+                                          Foreground="{StaticResource BalatroSecondary}"
+                                          HorizontalAlignment="Center"/>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Deck Selection -->
+                                    <StackPanel Grid.Column="0" Spacing="12">
+                                        <TextBlock Text="🎴 Deck:" FontWeight="Bold" FontSize="16"/>
+                                        <ComboBox ItemsSource="{Binding AvailableDecks}"
+                                                 SelectedItem="{Binding Config.Deck}"
+                                                 MinWidth="250"
+                                                 FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Stake Selection -->
+                                    <StackPanel Grid.Column="2" Spacing="12">
+                                        <TextBlock Text="⚡ Stake:" FontWeight="Bold" FontSize="16"/>
+                                        <ComboBox ItemsSource="{Binding AvailableStakes}"
+                                                 SelectedItem="{Binding Config.Stake}"
+                                                 MinWidth="250"
+                                                 FontSize="14"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Configuration Name -->
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="📝 Configuration Name:" FontWeight="Bold" FontSize="16"/>
+                                    <TextBox Text="{Binding ConfigName}" 
+                                            MinWidth="400"
+                                            FontSize="14"
+                                            Watermark="Enter your epic configuration name..."/>
+                                </StackPanel>
+                                
+                                <!-- Action Buttons -->
+                                <StackPanel Orientation="Horizontal" 
+                                           Spacing="15" 
+                                           HorizontalAlignment="Center"
+                                           Margin="0,10,0,0">
+                                    <Button Content="💾 SAVE CONFIG" 
+                                           Command="{Binding SaveConfigCommand}" 
+                                           Padding="20,12"
+                                           FontSize="16"/>
+                                    <Button Content="📂 LOAD CONFIG" 
+                                           Command="{Binding LoadConfigCommand}" 
+                                           Padding="20,12"
+                                           FontSize="16"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        
                     </StackPanel>
-                    
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Stake:" Foreground="White" FontWeight="Bold"/>
-                        <ComboBox ItemsSource="{Binding AvailableStakes}"
-                                 SelectedItem="{Binding Config.Stake}"
-                                 MinWidth="300"/>
-                    </StackPanel>
-                    
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Configuration Name:" Foreground="White" FontWeight="Bold"/>
-                        <TextBox Text="{Binding ConfigName}" 
-                                MinWidth="300"
-                                Watermark="Enter configuration name..."/>
-                    </StackPanel>
-                    
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Button Content="💾 SAVE" Command="{Binding SaveConfigCommand}" Padding="15,8"/>
-                        <Button Content="📂 LOAD" Command="{Binding LoadConfigCommand}" Padding="15,8"/>
-                    </StackPanel>
-                    
-                </StackPanel>
+                </ScrollViewer>
             </TabItem>
             
             <!-- Search Tab -->
             <TabItem Header="🔍 SEARCH">
-                <StackPanel Margin="20" Spacing="20" Background="#1F2937">
-                    <TextBlock Text="🎯 SEARCH CRITERIA" 
-                              FontSize="20" 
-                              FontWeight="Bold" 
-                              Foreground="#F59E0B"/>
-                    
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Button Content="🃏 Add Joker" Command="{Binding AddQuickJokerCommand}" Padding="10,5"/>
-                        <Button Content="🌟 Add Tarot" Command="{Binding AddQuickTarotCommand}" Padding="10,5"/>
-                        <Button Content="🎫 Add Voucher" Command="{Binding AddQuickVoucherCommand}" Padding="10,5"/>
-                    </StackPanel>
-                    
-                    <TextBlock Text="Required Items:" Foreground="White" FontWeight="Bold"/>
-                    <ListBox ItemsSource="{Binding RequiredItems}" Height="200">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <TextBlock Text="{Binding Icon}" FontSize="16"/>
-                                    <TextBlock Text="{Binding Name}" Foreground="White"/>
-                                    <Button Content="✕" 
-                                           Command="{Binding $parent[ListBox].DataContext.RemoveCriteriaCommand}"
-                                           CommandParameter="{Binding}"
-                                           Width="25" Height="25"/>
+                <ScrollViewer Padding="20">
+                    <StackPanel Spacing="25">
+                        
+                        <!-- Search Criteria Card -->
+                        <Border Background="{StaticResource BalatroCardBackground}"
+                                BorderBrush="{StaticResource BalatroBorder}"
+                                BorderThickness="3"
+                                CornerRadius="12"
+                                Padding="25">
+                            <StackPanel Spacing="20">
+                                <TextBlock Text="🎯 SEARCH CRITERIA" 
+                                          FontSize="24" 
+                                          FontWeight="Bold" 
+                                          Foreground="{StaticResource BalatroSecondary}"
+                                          HorizontalAlignment="Center"/>
+                                
+                                <!-- Quick Add Buttons -->
+                                <StackPanel Spacing="15">
+                                    <TextBlock Text="🎲 Quick Add Items:" FontWeight="Bold" FontSize="16"/>
+                                    <StackPanel Orientation="Horizontal" 
+                                               Spacing="15" 
+                                               HorizontalAlignment="Center">
+                                        <Button Content="🃏 Add Joker" 
+                                               Command="{Binding AddQuickJokerCommand}" 
+                                               Padding="15,10"
+                                               FontSize="14"/>
+                                        <Button Content="🌟 Add Tarot" 
+                                               Command="{Binding AddQuickTarotCommand}" 
+                                               Padding="15,10"
+                                               FontSize="14"/>
+                                        <Button Content="🎫 Add Voucher" 
+                                               Command="{Binding AddQuickVoucherCommand}" 
+                                               Padding="15,10"
+                                               FontSize="14"/>
+                                    </StackPanel>
                                 </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </StackPanel>
+                                
+                                <!-- Required Items List -->
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="📋 Required Items:" FontWeight="Bold" FontSize="16"/>
+                                    <Border Background="{StaticResource BalatroBackground}"
+                                            BorderBrush="{StaticResource BalatroBorder}"
+                                            BorderThickness="2"
+                                            CornerRadius="8"
+                                            Padding="10">
+                                        <ListBox ItemsSource="{Binding RequiredItems}" 
+                                                Height="250"
+                                                Background="Transparent"
+                                                BorderThickness="0">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{StaticResource BalatroCardBackground}"
+                                                            BorderBrush="{StaticResource BalatroBorder}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="6"
+                                                            Padding="12,8"
+                                                            Margin="2">
+                                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                                            <TextBlock Text="{Binding Icon}" 
+                                                                      FontSize="18"
+                                                                      VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding Name}" 
+                                                                      FontSize="14"
+                                                                      FontWeight="Bold"
+                                                                      VerticalAlignment="Center"
+                                                                      Foreground="{StaticResource BalatroText}"/>
+                                                            <Button Content="✕" 
+                                                                   Command="{Binding $parent[ListBox].DataContext.RemoveCriteriaCommand}"
+                                                                   CommandParameter="{Binding}"
+                                                                   Width="30" Height="30"
+                                                                   FontSize="12"
+                                                                   HorizontalAlignment="Right"
+                                                                   Background="{StaticResource BalatroAccent}"
+                                                                   CornerRadius="15"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             
             <!-- Run Tab -->
             <TabItem Header="🔥 RUN">
-                <StackPanel Margin="20" Spacing="20" Background="#1F2937" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="🔥 LET JIMBO COOK! 🔥" 
-                              FontSize="32" 
-                              FontWeight="Bold" 
-                              Foreground="#F59E0B"
-                              HorizontalAlignment="Center"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     
-                    <Button Content="🚀 START SEARCH" 
-                           Command="{Binding StartSearchCommand}"
-                           FontSize="18"
-                           Padding="30,15"
-                           HorizontalAlignment="Center"/>
-                </StackPanel>
+                    <!-- Main Launch Area -->
+                    <Border Grid.Row="1"
+                            Background="{StaticResource BalatroCardBackground}"
+                            BorderBrush="{StaticResource BalatroBorder}"
+                            BorderThickness="4"
+                            CornerRadius="20"
+                            Padding="40"
+                            Margin="50"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <StackPanel Spacing="30" HorizontalAlignment="Center">
+                            
+                            <!-- Epic Title -->
+                            <TextBlock Text="🔥 LET JIMBO COOK! 🔥" 
+                                      FontSize="36" 
+                                      FontWeight="Bold" 
+                                      Foreground="{StaticResource BalatroSecondary}"
+                                      HorizontalAlignment="Center"
+                                      TextAlignment="Center"/>
+                            
+                            <!-- Subtitle -->
+                            <TextBlock Text="Ready to find some epic seeds?" 
+                                      FontSize="18" 
+                                      FontWeight="Bold" 
+                                      Foreground="{StaticResource BalatroText}"
+                                      HorizontalAlignment="Center"
+                                      TextAlignment="Center"
+                                      Opacity="0.8"/>
+                            
+                            <!-- Launch Button -->
+                            <Button Content="🚀 START SEARCH" 
+                                   Command="{Binding StartSearchCommand}"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Padding="40,20"
+                                   HorizontalAlignment="Center"
+                                   Background="{StaticResource BalatroSecondary}"
+                                   Foreground="{StaticResource BalatroTextDark}"
+                                   BorderBrush="{StaticResource BalatroSecondary}"
+                                   CornerRadius="12"/>
+                            
+                            <!-- Fun Stats or Info -->
+                            <StackPanel Orientation="Horizontal" 
+                                       Spacing="20" 
+                                       HorizontalAlignment="Center"
+                                       Margin="0,20,0,0">
+                                <Border Background="{StaticResource BalatroBackground}"
+                                        BorderBrush="{StaticResource BalatroBorder}"
+                                        BorderThickness="2"
+                                        CornerRadius="8"
+                                        Padding="15,10">
+                                    <StackPanel Spacing="5" HorizontalAlignment="Center">
+                                        <TextBlock Text="🎯" FontSize="20" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Precision" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <Border Background="{StaticResource BalatroBackground}"
+                                        BorderBrush="{StaticResource BalatroBorder}"
+                                        BorderThickness="2"
+                                        CornerRadius="8"
+                                        Padding="15,10">
+                                    <StackPanel Spacing="5" HorizontalAlignment="Center">
+                                        <TextBlock Text="⚡" FontSize="20" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Speed" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <Border Background="{StaticResource BalatroBackground}"
+                                        BorderBrush="{StaticResource BalatroBorder}"
+                                        BorderThickness="2"
+                                        CornerRadius="8"
+                                        Padding="15,10">
+                                    <StackPanel Spacing="5" HorizontalAlignment="Center">
+                                        <TextBlock Text="🃏" FontSize="20" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Power" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                            
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </TabItem>
         </TabControl>
 
         <!-- Status Bar -->
         <Border Grid.Row="1" 
-                Background="#F59E0B" 
-                Height="30">
-            <TextBlock Text="{Binding StatusText}" 
-                      VerticalAlignment="Center" 
-                      Margin="10,0"
-                      Foreground="#1F2937"
-                      FontWeight="Bold"/>
+                Background="{StaticResource BalatroSecondary}" 
+                BorderBrush="{StaticResource BalatroBorder}"
+                BorderThickness="0,2,0,0"
+                Height="35"
+                Margin="10,0,10,10"
+                CornerRadius="0,0,8,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0"
+                          Text="🔮" 
+                          VerticalAlignment="Center" 
+                          Margin="15,0,10,0"
+                          FontSize="16"/>
+                          
+                <TextBlock Grid.Column="1"
+                          Text="{Binding StatusText}" 
+                          VerticalAlignment="Center" 
+                          Foreground="{StaticResource BalatroTextDark}"
+                          FontWeight="Bold"
+                          FontSize="14"/>
+                          
+                <TextBlock Grid.Column="2"
+                          Text="Ready to find some epic seeds!" 
+                          VerticalAlignment="Center" 
+                          Margin="10,0,15,0"
+                          Foreground="{StaticResource BalatroTextDark}"
+                          FontWeight="Bold"
+                          FontSize="12"
+                          Opacity="0.8"/>
+            </Grid>
         </Border>
     </Grid>
 </Window>
