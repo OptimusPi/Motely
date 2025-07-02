@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,6 +18,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IOuijaService _ouijaService;
     private readonly DatabaseService _databaseService;
     private readonly ConfigService _configService;
+    private readonly UserConfigService _userConfigService;
 
     [ObservableProperty]
     private string _configName = "My Awesome Balatro Config";
@@ -57,11 +60,13 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         IOuijaService ouijaService,
         DatabaseService databaseService,
-        ConfigService configService)
+        ConfigService configService,
+        UserConfigService userConfigService)
     {
         _ouijaService = ouijaService;
         _databaseService = databaseService;
         _configService = configService;
+        _userConfigService = userConfigService;
 
         // Set some default values to test the UI
         Config.Deck = AvailableDecks.First();
@@ -97,17 +102,163 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SaveConfig()
+    private async Task SaveConfigAsync()
     {
-        StatusText = $"🎯 Configuration '{ConfigName}' saved successfully!";
-        Console.WriteLine($"Save config: {ConfigName}");
+        try
+        {
+            // Get the main window to access the StorageProvider
+            var mainWindow = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+
+            if (mainWindow?.StorageProvider == null)
+            {
+                StatusText = "❌ Cannot access file system!";
+                return;
+            }
+
+            // Use ConfigName if provided, otherwise suggest a default name
+            var suggestedName = !string.IsNullOrWhiteSpace(ConfigName) 
+                ? ConfigName 
+                : $"config_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+            // Configure file picker options for saving
+            var filePickerOptions = new Avalonia.Platform.Storage.FilePickerSaveOptions
+            {
+                Title = "Save Configuration",
+                SuggestedFileName = $"{suggestedName}.json",
+                DefaultExtension = "json",
+                FileTypeChoices = new[]
+                {
+                    new Avalonia.Platform.Storage.FilePickerFileType("JSON Configuration")
+                    {
+                        Patterns = new[] { "*.json" }
+                    }
+                }
+            };
+
+            // Show save file dialog
+            var file = await mainWindow.StorageProvider.SaveFilePickerAsync(filePickerOptions);
+            
+            if (file == null)
+            {
+                StatusText = "💾 Save cancelled";
+                return;
+            }
+
+            var fileName = file.Name;
+            var configName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+            
+            // Update ConfigName to match the saved file
+            ConfigName = configName;
+
+            var userConfig = new UserConfiguration
+            {
+                Name = configName,
+                Deck = Config.Deck ?? "",
+                Stake = Config.Stake ?? "",
+                SearchItems = SearchCriteria.ToList(),
+                LastModified = DateTime.Now
+            };
+
+            var success = await _userConfigService.SaveConfigurationAsync(configName, userConfig);
+            
+            if (success)
+            {
+                StatusText = $"💾 Configuration '{configName}' saved successfully!";
+                Console.WriteLine($"Saved config: {configName}");
+            }
+            else
+            {
+                StatusText = "❌ Failed to save configuration!";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = "❌ Error saving configuration!";
+            Console.WriteLine($"Save error: {ex.Message}");
+        }
     }
 
     [RelayCommand]
-    private void LoadConfig()
+    private async Task LoadConfigAsync()
     {
-        StatusText = "📂 Load config functionality coming soon!";
-        Console.WriteLine("Load config clicked");
+        try
+        {
+            // Get the main window to access the StorageProvider
+            var mainWindow = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+
+            if (mainWindow?.StorageProvider == null)
+            {
+                StatusText = "❌ Cannot access file system!";
+                return;
+            }
+
+            // Configure file picker options
+            var filePickerOptions = new Avalonia.Platform.Storage.FilePickerOpenOptions
+            {
+                Title = "Load Configuration",
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                    new Avalonia.Platform.Storage.FilePickerFileType("JSON Configuration")
+                    {
+                        Patterns = new[] { "*.json" }
+                    },
+                    new Avalonia.Platform.Storage.FilePickerFileType("All Files")
+                    {
+                        Patterns = new[] { "*.*" }
+                    }
+                }
+            };
+
+            // Show file picker dialog
+            var files = await mainWindow.StorageProvider.OpenFilePickerAsync(filePickerOptions);
+            
+            if (files.Count == 0)
+            {
+                StatusText = "📂 No file selected";
+                return;
+            }
+
+            var selectedFile = files[0];
+            var fileName = selectedFile.Name;
+            
+            // Extract config name from filename (without extension)
+            var configName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+            
+            // Try to load the configuration
+            var userConfig = await _userConfigService.LoadConfigurationAsync(configName);
+            
+            if (userConfig != null)
+            {
+                // Update the UI with loaded configuration
+                Config.Deck = userConfig.Deck;
+                Config.Stake = userConfig.Stake;
+                ConfigName = userConfig.Name;
+                
+                // Clear existing search criteria and add loaded ones
+                SearchCriteria.Clear();
+                foreach (var item in userConfig.SearchItems)
+                {
+                    SearchCriteria.Add(item);
+                }
+                
+                StatusText = $"📂 Configuration '{userConfig.Name}' loaded successfully!";
+                Console.WriteLine($"Loaded config: {userConfig.Name} with {userConfig.SearchItems.Count} items");
+            }
+            else
+            {
+                StatusText = $"❌ Configuration '{configName}' not found!";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = "❌ Error loading configuration!";
+            Console.WriteLine($"Load error: {ex.Message}");
+        }
     }
 
     [RelayCommand]

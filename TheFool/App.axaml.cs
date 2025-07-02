@@ -77,6 +77,7 @@ public partial class App : Application
     {
         // Register services with appropriate lifetimes
         services.AddSingleton<ConfigService>();
+        services.AddSingleton<UserConfigService>();
         services.AddSingleton<DatabaseService>();
         services.AddSingleton<IOuijaService, OuijaService>();
         

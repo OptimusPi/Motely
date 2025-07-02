@@ -12,21 +12,22 @@
         "numWants": 1,
         "Needs": [
             {
-                "type": "SmallBlindTag",
-                "value": "NegativeTag",
-                "searchAntes": [2,3,4,5,6,7,8]
+                "type": "Joker",
+                "value": "Blueprint",
+                "edition": "Negative",
+                "searchAntes": [1]
             }
         ],
         "Wants": [
             {
                 "type": "Joker",
-                "value": "HangingChad",
-                "edition": "None",
-                "searchAntes": [1,2,3,4,5,6]
+                "value": "Blueprint",
+                "edition": "Negative",
+                "searchAntes": [1,2,3,4,5,6,7,8]
             }
         ],
         "minSearchAnte": 1,
-        "maxSearchAnte": 8,
+        "maxSearchAnte": 2,
         "deck": "AnaglyphDeck",
         "stake": "BlackStake",
         "scoreNaturalNegatives": true,

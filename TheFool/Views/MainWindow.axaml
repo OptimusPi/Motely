@@ -18,7 +18,7 @@
         </Grid.RowDefinitions>
 
         <!-- Main Content -->
-        <TabControl Grid.Row="0" Margin="10">
+        <TabControl Grid.Row="0">
             
             <!-- Setup Tab -->
             <TabItem Header="🎯 SETUP">
@@ -33,7 +33,7 @@
                                 Padding="25">
                             <StackPanel Spacing="20">
                                 <TextBlock Text="🃏 DECK CONFIGURATION" 
-                                          FontSize="24" 
+                                          FontSize="28" 
                                           FontWeight="Bold" 
                                           Foreground="{StaticResource BalatroSecondary}"
                                           HorizontalAlignment="Center"/>
@@ -47,7 +47,7 @@
                                     
                                     <!-- Deck Selection -->
                                     <StackPanel Grid.Column="0" Spacing="12">
-                                        <TextBlock Text="🎴 Deck:" FontWeight="Bold" FontSize="16"/>
+                                        <TextBlock Text="🎴 Deck:" FontWeight="Bold" FontSize="18"/>
                                         <ComboBox ItemsSource="{Binding AvailableDecks}"
                                                  SelectedItem="{Binding Config.Deck}"
                                                  MinWidth="250"
@@ -56,7 +56,7 @@
                                     
                                     <!-- Stake Selection -->
                                     <StackPanel Grid.Column="2" Spacing="12">
-                                        <TextBlock Text="⚡ Stake:" FontWeight="Bold" FontSize="16"/>
+                                        <TextBlock Text="⚡ Stake:" FontWeight="Bold" FontSize="18"/>
                                         <ComboBox ItemsSource="{Binding AvailableStakes}"
                                                  SelectedItem="{Binding Config.Stake}"
                                                  MinWidth="250"
@@ -66,7 +66,7 @@
                                 
                                 <!-- Configuration Name -->
                                 <StackPanel Spacing="12">
-                                    <TextBlock Text="📝 Configuration Name:" FontWeight="Bold" FontSize="16"/>
+                                    <TextBlock Text="📝 Configuration Name:" FontWeight="Bold" FontSize="18"/>
                                     <TextBox Text="{Binding ConfigName}" 
                                             MinWidth="400"
                                             FontSize="14"
@@ -80,12 +80,12 @@
                                            Margin="0,10,0,0">
                                     <Button Content="💾 SAVE CONFIG" 
                                            Command="{Binding SaveConfigCommand}" 
-                                           Padding="20,12"
-                                           FontSize="16"/>
+                                           Padding="24,14"
+                                           FontSize="18"/>
                                     <Button Content="📂 LOAD CONFIG" 
                                            Command="{Binding LoadConfigCommand}" 
-                                           Padding="20,12"
-                                           FontSize="16"/>
+                                           Padding="24,14"
+                                           FontSize="18"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -107,35 +107,35 @@
                                 Padding="25">
                             <StackPanel Spacing="20">
                                 <TextBlock Text="🎯 SEARCH CRITERIA" 
-                                          FontSize="24" 
+                                          FontSize="28" 
                                           FontWeight="Bold" 
                                           Foreground="{StaticResource BalatroSecondary}"
                                           HorizontalAlignment="Center"/>
                                 
                                 <!-- Quick Add Buttons -->
                                 <StackPanel Spacing="15">
-                                    <TextBlock Text="🎲 Quick Add Items:" FontWeight="Bold" FontSize="16"/>
+                                    <TextBlock Text="🎲 Quick Add Items:" FontWeight="Bold" FontSize="18"/>
                                     <StackPanel Orientation="Horizontal" 
                                                Spacing="15" 
                                                HorizontalAlignment="Center">
                                         <Button Content="🃏 Add Joker" 
                                                Command="{Binding AddQuickJokerCommand}" 
-                                               Padding="15,10"
-                                               FontSize="14"/>
+                                               Padding="18,12"
+                                               FontSize="16"/>
                                         <Button Content="🌟 Add Tarot" 
                                                Command="{Binding AddQuickTarotCommand}" 
-                                               Padding="15,10"
-                                               FontSize="14"/>
+                                               Padding="18,12"
+                                               FontSize="16"/>
                                         <Button Content="🎫 Add Voucher" 
                                                Command="{Binding AddQuickVoucherCommand}" 
-                                               Padding="15,10"
-                                               FontSize="14"/>
+                                               Padding="18,12"
+                                               FontSize="16"/>
                                     </StackPanel>
                                 </StackPanel>
                                 
                                 <!-- Required Items List -->
                                 <StackPanel Spacing="12">
-                                    <TextBlock Text="📋 Required Items:" FontWeight="Bold" FontSize="16"/>
+                                    <TextBlock Text="📋 Required Items:" FontWeight="Bold" FontSize="18"/>
                                     <Border Background="{StaticResource BalatroBackground}"
                                             BorderBrush="{StaticResource BalatroBorder}"
                                             BorderThickness="2"
@@ -207,7 +207,7 @@
                             
                             <!-- Epic Title -->
                             <TextBlock Text="🔥 LET JIMBO COOK! 🔥" 
-                                      FontSize="36" 
+                                      FontSize="42" 
                                       FontWeight="Bold" 
                                       Foreground="{StaticResource BalatroSecondary}"
                                       HorizontalAlignment="Center"
@@ -215,7 +215,7 @@
                             
                             <!-- Subtitle -->
                             <TextBlock Text="Ready to find some epic seeds?" 
-                                      FontSize="18" 
+                                      FontSize="20" 
                                       FontWeight="Bold" 
                                       Foreground="{StaticResource BalatroText}"
                                       HorizontalAlignment="Center"
@@ -225,9 +225,9 @@
                             <!-- Launch Button -->
                             <Button Content="🚀 START SEARCH" 
                                    Command="{Binding StartSearchCommand}"
-                                   FontSize="22"
+                                   FontSize="24"
                                    FontWeight="Bold"
-                                   Padding="40,20"
+                                   Padding="45,22"
                                    HorizontalAlignment="Center"
                                    Background="{StaticResource BalatroSecondary}"
                                    Foreground="{StaticResource BalatroTextDark}"
@@ -246,7 +246,7 @@
                                         Padding="15,10">
                                     <StackPanel Spacing="5" HorizontalAlignment="Center">
                                         <TextBlock Text="🎯" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Precision" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Precision" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
                                 
@@ -257,7 +257,7 @@
                                         Padding="15,10">
                                     <StackPanel Spacing="5" HorizontalAlignment="Center">
                                         <TextBlock Text="⚡" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Speed" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Speed" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
                                 
@@ -268,7 +268,7 @@
                                         Padding="15,10">
                                     <StackPanel Spacing="5" HorizontalAlignment="Center">
                                         <TextBlock Text="🃏" FontSize="20" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="Power" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Power" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -284,9 +284,9 @@
                 Background="{StaticResource BalatroSecondary}" 
                 BorderBrush="{StaticResource BalatroBorder}"
                 BorderThickness="0,2,0,0"
-                Height="35"
-                Margin="10,0,10,10"
-                CornerRadius="0,0,8,8">
+                Height="40"
+                Margin="0"
+                CornerRadius="0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -298,14 +298,14 @@
                           Text="🔮" 
                           VerticalAlignment="Center" 
                           Margin="15,0,10,0"
-                          FontSize="16"/>
+                          FontSize="18"/>
                           
                 <TextBlock Grid.Column="1"
                           Text="{Binding StatusText}" 
                           VerticalAlignment="Center" 
                           Foreground="{StaticResource BalatroTextDark}"
                           FontWeight="Bold"
-                          FontSize="14"/>
+                          FontSize="16"/>
                           
                 <TextBlock Grid.Column="2"
                           Text="Ready to find some epic seeds!" 
@@ -313,7 +313,7 @@
                           Margin="10,0,15,0"
                           Foreground="{StaticResource BalatroTextDark}"
                           FontWeight="Bold"
-                          FontSize="12"
+                          FontSize="14"
                           Opacity="0.8"/>
             </Grid>
         </Border>
