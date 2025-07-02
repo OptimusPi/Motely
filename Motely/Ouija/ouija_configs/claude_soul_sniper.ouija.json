@@ -1,0 +1,66 @@
+{
+    "name": "claude_soul_sniper", 
+    "description": "Claude's Soul Sniper - Precision targeting of soul pack opportunities for maximum value",
+    "author": "Claude",
+    "keywords": [
+        "soul_packs",
+        "spectral_cards", 
+        "legendary_hunt",
+        "precision_rng",
+        "value_maximization"
+    ],
+    "filter_config": {
+        "numNeeds": 2,
+        "numWants": 4,
+        "Needs": [
+            {
+                "type": "SmallBlindTag",
+                "value": "SpectralTag",
+                "searchAntes": [2],
+                "comment": "Spectral tag ante 2 - guarantees spectral pack access"
+            },
+            {
+                "type": "BigBlindTag",
+                "value": "NegativeTag", 
+                "searchAntes": [3],
+                "comment": "Big blind negative tag for extra joker slot when we need it"
+            }
+        ],
+        "Wants": [
+            {
+                "type": "SoulJoker",
+                "value": "Triboulet",
+                "searchAntes": [3, 4],
+                "comment": "Soul Triboulet - the king scaling legendary from soul packs"
+            },
+            {
+                "type": "SoulJoker", 
+                "value": "Yorick",
+                "searchAntes": [4, 5],
+                "comment": "Soul Yorick for discarding synergies and hand manipulation"
+            },
+            {
+                "type": "Joker",
+                "value": "Cartomancer",
+                "edition": "Foil",
+                "searchAntes": [2, 3],
+                "comment": "Foil Cartomancer creates spectral cards - perfect synergy"
+            },
+            {
+                "type": "Standard_Card",
+                "rank": "K",
+                "suit": "Hearts",
+                "enchantment": "Steel", 
+                "searchAntes": [2, 3],
+                "comment": "Steel King of Hearts - perfect for Triboulet if we get it"
+            }
+        ],
+        "minSearchAnte": 2,
+        "maxSearchAnte": 5,
+        "deck": "GhostDeck",
+        "stake": "BlueStake", 
+        "scoreNaturalNegatives": true,
+        "scoreDesiredNegatives": true,
+        "comment": "This build leverages spectral cards and soul packs for legendary joker access. Cartomancer generates spectrals, which can create souls, leading to legendary jokers. The Steel King synergizes perfectly with Triboulet if obtained. Very technical RNG manipulation!"
+    }
+}

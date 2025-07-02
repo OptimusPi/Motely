@@ -13,115 +13,350 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Cache tag streams for all antes in Needs/Wants
-        foreach (var need in Config.Needs)
-            ctx.CacheTagStream(need.DesireByAnte);
-        foreach (var want in Config.Wants)
-            ctx.CacheTagStream(want.DesireByAnte);
+        // Cache streams for all filter types and antes used in needs/wants
+        var allAntes = new HashSet<int>();
+        
+        foreach (var need in Config.Needs ?? [])
+        {
+            foreach (var ante in need.SearchAntes ?? [need.DesireByAnte])
+            {
+                allAntes.Add(ante);
+                CacheStreamForType(ctx, need.Type, ante);
+            }
+        }
+        
+        foreach (var want in Config.Wants ?? [])
+        {
+            foreach (var ante in want.SearchAntes ?? [want.DesireByAnte])
+            {
+                allAntes.Add(ante);
+                CacheStreamForType(ctx, want.Type, ante);
+            }
+        }
+
         return new OuijaJsonFilter(Config);
+    }
+
+    private static void CacheStreamForType(MotelyFilterCreationContext ctx, string type, int ante)
+    {
+        switch (type)
+        {
+            case "SmallBlindTag":
+            case "BigBlindTag":
+                ctx.CacheTagStream(ante);
+                break;
+            case "Joker":
+                ctx.CachePseudoHash(MotelyPrngKeys.JokerSoul + ante);
+                ctx.CachePseudoHash("edition_" + ante); // Cache edition stream
+                break;
+            case "SoulJoker":
+                ctx.CachePseudoHash("soul_joker_" + ante);
+                ctx.CachePseudoHash("edition_" + ante);
+                break;
+            case "Standard_Card":
+                ctx.CachePseudoHash("deck_cards_" + ante);
+                ctx.CachePseudoHash("card_edition_" + ante);
+                break;
+        }
     }
 
     public struct OuijaJsonFilter : IMotelySeedFilter
     {
         public OuijaConfig Config { get; }
+        
         public OuijaJsonFilter(OuijaConfig config) => Config = config;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            var jokerChoices = (MotelyJoker[])Enum.GetValues(typeof(MotelyJoker));
             VectorMask mask = VectorMask.AllBitsSet;
-            // Collect all antes for tag needs
-            var tagAntes = (Config.Needs ?? [])
-                .Where(n => n.Type == "SmallBlindTag" || n.Type == "BigBlindTag")
-                .SelectMany(n => n.SearchAntes)
-                .Distinct()
-                .OrderBy(a => a);
-            // For each ante, create the tag stream ONCE, then advance for each tag need in config order
-            foreach (var ante in tagAntes)
-            {
-                var tagStream = searchContext.CreateTagStream(ante);
-                foreach (var need in (Config.Needs ?? []).Where(n => (n.Type == "SmallBlindTag" || n.Type == "BigBlindTag") && n.SearchAntes.Contains(ante)))
-                {
-                    var tag = searchContext.GetNextTag(ref tagStream);
-                    if (need.Type == "BigBlindTag")
-                        tag = searchContext.GetNextTag(ref tagStream);
-                    mask &= VectorEnum256.Equals(tag, MotelyTagFromString(need.Value));
-                    if (mask.IsAllFalse()) return mask;
-                }
-            }
-            // Joker needs
-            var jokerNeedsByAnte = (Config.Needs ?? [])
-                .Where(n => n.Type != "SmallBlindTag" && n.Type != "BigBlindTag")
-                .SelectMany(n => n.SearchAntes.Select(ante => (ante, n)))
-                .GroupBy(x => x.ante, x => x.n)
-                .ToDictionary(g => g.Key, g => g.ToList());
-            // Process all antes in sorted order for determinism
-            var allAntes = jokerNeedsByAnte.Keys.OrderBy(a => a);
-            foreach (var ante in allAntes)
-            {
-                // Joker needs
-                if (jokerNeedsByAnte.TryGetValue(ante, out var jokerNeeds))
-                {
-                    foreach (var need in jokerNeeds)
-                    {
-                        if (Enum.TryParse<MotelyJoker>(need.Value, out var joker))
-                        {
-                            var prng = searchContext.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
-                            var jokerVec = searchContext.GetNextRandomElement(ref prng, jokerChoices);
-                            mask &= VectorEnum256.Equals(jokerVec, joker);
-                            if (mask.IsAllFalse()) return mask;
-                        }
-                    }
-                }
-            }
-            // Precompute wants grouped by ante for efficiency
-            var wantsByAnte = (Config.Wants ?? [])
-                .SelectMany(w => w.SearchAntes.Select(ante => (ante, w)))
-                .GroupBy(x => x.ante, x => x.w)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-            var antes = wantsByAnte.Keys.ToArray();
+
+            // PHASE 1: Vector filtering for NEEDS (early exit for performance)
+            var localConfig = Config; // Copy to avoid struct lambda capture issues
+            mask = ProcessNeeds(ref searchContext, mask, localConfig);
+            if (mask.IsAllFalse()) return mask;
+
+            // PHASE 2: Individual seed processing for WANTS (scoring and filtering)
             return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                int wantScore = 0;
-                int negativeEditionCount = 0;
-                foreach (var ante in antes)
-                {
-                    var prng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
-                    var wants = wantsByAnte[ante];
-                    foreach (var want in wants)
-                    {
-                        if (want.Type == "SmallBlindTag" || want.Type == "BigBlindTag")
-                        {
-                            var tagStream = singleCtx.CreateTagStream(ante);
-                            var tag = singleCtx.GetNextTag(ref tagStream);
-                            if (want.Type == "BigBlindTag")
-                                tag = singleCtx.GetNextTag(ref tagStream);
-                            if (tag.Equals(MotelyTagFromString(want.Value)))
-                                wantScore++;
-                        }
-                        else if (Enum.TryParse<MotelyJoker>(want.Value, out var wantJoker))
-                        {
-                            var joker = singleCtx.GetNextRandomElement(ref prng, jokerChoices);
-                            // TODO: Get edition if needed
-                            if (joker.Equals(wantJoker))
-                                wantScore++;
-                        }
-                        // Add more types as needed
-                    }
-                }
-                // Reconstruct seed string from context (if possible)
-                string seed = "(seed unavailable)";
-                Console.WriteLine($"Seed: {seed}, WantScore: {wantScore}, NegativeEditions: {negativeEditionCount}");
-                return true; // Accept all for now, add filtering logic as needed
+                return ProcessWantsAndScore(ref singleCtx, localConfig);
             });
         }
 
-        private static MotelyTag MotelyTagFromString(string value)
+        private static VectorMask ProcessNeeds(ref MotelyVectorSearchContext searchContext, VectorMask mask, OuijaConfig config)
         {
-            if (Enum.TryParse<MotelyTag>(value, out var tag))
-                return tag;
-            return default;
+            var jokerChoices = (MotelyJoker[])Enum.GetValues(typeof(MotelyJoker));
+
+            // Group needs by ante for efficient stream processing
+            var needsByAnte = (config.Needs ?? [])
+                .SelectMany(n => (n.SearchAntes ?? [n.DesireByAnte]).Select(ante => (ante, need: n)))
+                .GroupBy(x => x.ante)
+                .OrderBy(g => g.Key);
+
+            foreach (var anteGroup in needsByAnte)
+            {
+                int ante = anteGroup.Key;
+                
+                // Process all needs for this ante
+                foreach (var (_, need) in anteGroup)
+                {
+                    mask = ProcessNeedVector(ref searchContext, need, ante, jokerChoices, mask);
+                    if (mask.IsAllFalse()) return mask; // Early exit optimization
+                }
+            }
+
+            return mask;
+        }
+
+        private static VectorMask ProcessNeedVector(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, 
+            int ante, MotelyJoker[] jokerChoices, VectorMask mask)
+        {
+            switch (need.Type)
+            {
+                case "SmallBlindTag":
+                    var tagStream = searchContext.CreateTagStream(ante);
+                    var tag = searchContext.GetNextTag(ref tagStream);
+                    return mask & VectorEnum256.Equals(tag, ParseTag(need.Value));
+
+                case "BigBlindTag":
+                    var bigTagStream = searchContext.CreateTagStream(ante);
+                    searchContext.GetNextTag(ref bigTagStream); // Skip small blind
+                    var bigTag = searchContext.GetNextTag(ref bigTagStream); // Get big blind
+                    return mask & VectorEnum256.Equals(bigTag, ParseTag(need.Value));
+
+                case "Joker":
+                    var prng = searchContext.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
+                    var jokerVec = searchContext.GetNextRandomElement(ref prng, jokerChoices);
+                    var jokerMask = VectorEnum256.Equals(jokerVec, ParseJoker(need.Value));
+                    
+                    // Check edition if specified - simplified for now
+                    if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
+                    {
+                        // For needs, we'll do a simple probability check without full vector processing
+                        var editionPrng = searchContext.CreatePrngStream("edition_" + ante);
+                        var editionRolls = searchContext.GetNextRandom(ref editionPrng);
+                        var threshold = GetEditionThreshold(need.Edition);
+                        var editionMask = Vector512.LessThan(editionRolls, Vector512.Create(threshold));
+                        var editionMask256 = new VectorMask(MotelyVectorUtils.VectorMaskToIntMask(editionMask));
+                        jokerMask = new VectorMask(jokerMask.Value & editionMask256.Value);
+                    }
+                    
+                    return mask & jokerMask;
+
+                case "SoulJoker":
+                    var soulPrng = searchContext.CreatePrngStream("soul_joker_" + ante);
+                    var soulJokerVec = searchContext.GetNextRandomElement(ref soulPrng, jokerChoices);
+                    return mask & VectorEnum256.Equals(soulJokerVec, ParseJoker(need.Value));
+
+                default:
+                    Console.WriteLine($"⚠️  Unknown need type: {need.Type}");
+                    return mask;
+            }
+        }
+
+        private static bool ProcessWantsAndScore(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
+        {
+            int totalScore = 0;
+            int naturalNegatives = 0;
+            int desiredNegatives = 0;
+
+            var jokerChoices = (MotelyJoker[])Enum.GetValues(typeof(MotelyJoker));
+
+            // Process each want and accumulate scores
+            for (int wantIndex = 0; wantIndex < (config.Wants?.Length ?? 0); wantIndex++)
+            {
+                var want = config.Wants![wantIndex]; // Null-forgiving since we checked length above
+                int wantScore = 0;
+
+                foreach (var ante in want.SearchAntes ?? [want.DesireByAnte])
+                {
+                    var (score, isNaturalNeg, isDesiredNeg) = ProcessWantForAnte(ref singleCtx, want, ante, jokerChoices);
+                    wantScore += score;
+                    
+                    if (isNaturalNeg) naturalNegatives++;
+                    if (isDesiredNeg) desiredNegatives++;
+                }
+
+                totalScore += wantScore;
+            }
+
+            // Apply threshold filtering - pass if we have at least one want match
+            bool passes = totalScore >= GetMinimumScore(config);
+
+            // TODO: Store detailed scoring information somewhere accessible to search result generation
+            // For now, we rely on the basic pass/fail from this method
+
+            return passes;
+        }
+
+        private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessWantForAnte(
+            ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante, MotelyJoker[] jokerChoices)
+        {
+            switch (want.Type)
+            {
+                case "SmallBlindTag":
+                    var tagStream = singleCtx.CreateTagStream(ante);
+                    var tag = singleCtx.GetNextTag(ref tagStream);
+                    return tag == ParseTag(want.Value) ? (1, false, false) : (0, false, false);
+
+                case "BigBlindTag":
+                    var bigTagStream = singleCtx.CreateTagStream(ante);
+                    singleCtx.GetNextTag(ref bigTagStream); // Skip small blind
+                    var bigTag = singleCtx.GetNextTag(ref bigTagStream); // Get big blind
+                    return bigTag == ParseTag(want.Value) ? (1, false, false) : (0, false, false);
+
+                case "Joker":
+                    return ProcessJokerWant(ref singleCtx, want, ante, jokerChoices, false);
+
+                case "SoulJoker":
+                    return ProcessJokerWant(ref singleCtx, want, ante, jokerChoices, true);
+
+                case "Standard_Card":
+                    return ProcessCardWant(ref singleCtx, want, ante);
+
+                default:
+                    Console.WriteLine($"⚠️  Unknown want type: {want.Type}");
+                    return (0, false, false);
+            }
+        }
+
+        private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessJokerWant(
+            ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante, 
+            MotelyJoker[] jokerChoices, bool isSoulJoker)
+        {
+            // Get the joker
+            var prng = isSoulJoker 
+                ? singleCtx.CreatePrngStream("soul_joker_" + ante)
+                : singleCtx.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
+            
+            var joker = singleCtx.GetNextRandomElement(ref prng, jokerChoices);
+            
+            if (joker != ParseJoker(want.Value))
+                return (0, false, false);
+
+            // Check edition if specified
+            if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
+            {
+                var hasEdition = CheckJokerEdition(ref singleCtx, want.Edition, ante);
+                bool isNaturalNeg = want.Edition == "Negative" && hasEdition;
+                bool isDesiredNeg = want.Edition == "Negative" && hasEdition;
+                
+                return hasEdition ? (1, isNaturalNeg, isDesiredNeg) : (0, false, false);
+            }
+
+            return (1, false, false);
+        }
+
+        private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessCardWant(
+            ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante)
+        {
+            // Basic playing card implementation
+            var cardPrng = singleCtx.CreatePrngStream("deck_cards_" + ante);
+            
+            // Check rank if specified
+            if (!string.IsNullOrEmpty(want.Rank))
+            {
+                var rank = singleCtx.GetNextRandomInt(ref cardPrng, 1, 14); // A=1, K=13
+                var expectedRank = ParseCardRank(want.Rank);
+                if (rank != expectedRank) return (0, false, false);
+            }
+
+            // Check suit if specified
+            if (!string.IsNullOrEmpty(want.Suit))
+            {
+                var suit = singleCtx.GetNextRandomInt(ref cardPrng, 0, 4); // 0-3 for suits
+                var expectedSuit = ParseCardSuit(want.Suit);
+                if (suit != expectedSuit) return (0, false, false);
+            }
+
+            // Check enhancement/chip if specified
+            if (!string.IsNullOrEmpty(want.Enchantment))
+            {
+                var hasEnhancement = CheckCardEnhancement(ref singleCtx, want.Enchantment, ante);
+                if (!hasEnhancement) return (0, false, false);
+            }
+
+            return (1, false, false);
+        }
+
+        private static bool CheckJokerEdition(ref MotelySingleSearchContext singleCtx, string edition, int ante)
+        {
+            var editionPrng = singleCtx.CreatePrngStream("edition_" + ante);
+            var roll = singleCtx.GetNextRandom(ref editionPrng);
+            return roll < GetEditionThreshold(edition);
+        }
+
+        private static bool CheckCardEnhancement(ref MotelySingleSearchContext singleCtx, string enhancement, int ante)
+        {
+            var enhancementPrng = singleCtx.CreatePrngStream("card_enhancement_" + ante);
+            var roll = singleCtx.GetNextRandom(ref enhancementPrng);
+            
+            return enhancement.ToLowerInvariant() switch
+            {
+                "bonus" => roll < 0.2,        // 20% chance
+                "mult" => roll < 0.15,        // 15% chance
+                "wild" => roll < 0.05,        // 5% chance
+                "glass" => roll < 0.03,       // 3% chance
+                "steel" => roll < 0.03,       // 3% chance
+                "stone" => roll < 0.03,       // 3% chance
+                "gold" => roll < 0.01,        // 1% chance
+                "lucky" => roll < 0.01,       // 1% chance
+                _ => false
+            };
+        }
+
+        private static double GetEditionThreshold(string edition)
+        {
+            return edition.ToLowerInvariant() switch
+            {
+                "negative" => 0.1,     // 10% chance
+                "foil" => 0.05,        // 5% chance
+                "holographic" => 0.02, // 2% chance
+                "polychrome" => 0.01,  // 1% chance
+                _ => 0.0
+            };
+        }
+
+        private static int GetMinimumScore(OuijaConfig config)
+        {
+            // Return 1 if any wants are specified, 0 otherwise
+            return (config.Wants?.Length ?? 0) > 0 ? 1 : 0;
+        }
+
+        // Helper parsing methods
+        private static MotelyTag ParseTag(string value)
+        {
+            return Enum.TryParse<MotelyTag>(value, true, out var tag) ? tag : default;
+        }
+
+        private static MotelyJoker ParseJoker(string value)
+        {
+            return Enum.TryParse<MotelyJoker>(value, true, out var joker) ? joker : default;
+        }
+
+        private static int ParseCardRank(string rank)
+        {
+            return rank?.ToUpperInvariant() switch
+            {
+                "A" or "ACE" => 1,
+                "2" => 2, "3" => 3, "4" => 4, "5" => 5, "6" => 6, "7" => 7, "8" => 8, "9" => 9, "10" => 10,
+                "J" or "JACK" => 11,
+                "Q" or "QUEEN" => 12,
+                "K" or "KING" => 13,
+                _ => 0
+            };
+        }
+
+        private static int ParseCardSuit(string suit)
+        {
+            return suit?.ToUpperInvariant() switch
+            {
+                "SPADES" or "S" => 0,
+                "HEARTS" or "H" => 1,
+                "DIAMONDS" or "D" => 2,
+                "CLUBS" or "C" => 3,
+                _ => 0
+            };
         }
     }
 

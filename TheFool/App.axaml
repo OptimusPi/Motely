@@ -7,7 +7,7 @@
              RequestedThemeVariant="Dark">
     
     <Application.Resources>
-        <FontFamily x:Key="BalatroFont">avares://TheFool/m6x11.ttf#m6x11</FontFamily>
+        <FontFamily x:Key="BalatroFont">avares://TheFool/m6x11plusplus.otf#m6x11plusplus</FontFamily>
         
         <!-- Balatro Color Palette -->
         <SolidColorBrush x:Key="BalatroBackground">#1A1A2E</SolidColorBrush>

@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
-    <AvaloniaResource Include="m6x11.ttf" />
+    <AvaloniaResource Include="m6x11plusplus.otf" />
     <AvaloniaResource Include="The_Fool.webp" />
   </ItemGroup>
 

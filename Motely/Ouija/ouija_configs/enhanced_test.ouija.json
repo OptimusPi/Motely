@@ -1,0 +1,58 @@
+{
+    "name": "enhanced_test",
+    "description": "Enhanced test config showing all supported filter types",
+    "author": "Claude",
+    "keywords": [
+        "comprehensive",
+        "test",
+        "all_features"
+    ],
+    "filter_config": {
+        "numNeeds": 2,
+        "numWants": 4,
+        "Needs": [
+            {
+                "type": "SmallBlindTag",
+                "value": "NegativeTag",
+                "searchAntes": [2, 3, 4]
+            },
+            {
+                "type": "Joker",
+                "value": "HangingChad",
+                "edition": "None",
+                "searchAntes": [1]
+            }
+        ],
+        "Wants": [
+            {
+                "type": "SmallBlindTag",
+                "value": "NegativeTag",
+                "searchAntes": [5, 6, 7, 8]
+            },
+            {
+                "type": "Joker",
+                "value": "Perkeo",
+                "edition": "Negative",
+                "searchAntes": [1, 2, 3]
+            },
+            {
+                "type": "SoulJoker",
+                "value": "Canio",
+                "searchAntes": [2, 3]
+            },
+            {
+                "type": "Standard_Card",
+                "rank": "A",
+                "suit": "Spades",
+                "enchantment": "Gold",
+                "searchAntes": [1, 2]
+            }
+        ],
+        "minSearchAnte": 1,
+        "maxSearchAnte": 8,
+        "deck": "AnaglyphDeck",
+        "stake": "BlackStake",
+        "scoreNaturalNegatives": true,
+        "scoreDesiredNegatives": true
+    }
+}
