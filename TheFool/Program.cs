@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.ReactiveUI;
 using TheFool.Services;
+using Motely.TheFool.Controls;
 
 namespace TheFool;
 
@@ -13,6 +14,8 @@ class Program
         try
         {
             Console.WriteLine("Starting TheFool application...");
+            
+            
             
             // Set up global error handling
             ErrorHandler.SetupGlobalHandlers();
@@ -33,6 +36,8 @@ class Program
             throw;
         }
     }
+
+
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()

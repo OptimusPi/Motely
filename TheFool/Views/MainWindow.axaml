@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TheFool.ViewModels"
-        xmlns:controls="using:Motely.TheFool.Controls"
+        xmlns:controls="using:TheFool.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
@@ -12,11 +12,8 @@
         WindowStartupLocation="CenterScreen">
 
     <Grid>
-        <!-- GPU-accelerated Balatro-style animated background -->
-        <controls:BalatroBkgndGPU />
-         
-         <!-- Balatro-style animated background -->
-        <!-- <controls:BalatroBkgnd /> -->
+        <!-- Background Control -->
+        <controls:BalatroBkgndGPU Grid.Row="0" Grid.RowSpan="3" />
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>

@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="using:Motely.TheFool.Controls"
+        xmlns:controls="using:TheFool.Controls"
         x:Class="TheFool.Views.TestBalatroBkgnd"
         Title="Balatro Background Test"
         Width="800" Height="600"
@@ -11,7 +11,7 @@
     
     <Grid Background="Black">
         <!-- GPU-accelerated Balatro animated background -->
-        <controls:BalatroBkgndGPU x:Name="BalatroBkgnd" />
+        <controls:BalatroBkgndGPU x:Name="BalatroBkgndGPU" />
         
         <!-- Some content on top to see the effect -->
         <Border Background="#AA000000"

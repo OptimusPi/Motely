@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Motely.TheFool.Controls;
+using TheFool.Controls;
 
 namespace TheFool.Views;
 
@@ -22,12 +22,12 @@ public partial class TestBalatroBkgnd : Window
         AvaloniaXamlLoader.Load(this);
         
         // Find controls
-        _background = this.FindControl<BalatroBkgndGPU>("BalatroBkgnd");
+        _background = this.FindControl<BalatroBkgndGPU>("BalatroBkgndGPU");
         _slowMotionButton = this.FindControl<Button>("SlowMotionButton");
         _normalSpeedButton = this.FindControl<Button>("NormalSpeedButton");
         _hyperspeedButton = this.FindControl<Button>("HyperspeedButton");
         
-        // Wire up events
+        // Wire up events (GPU version doesn't expose speed controls, so these are placeholders)
         if (_slowMotionButton != null)
             _slowMotionButton.Click += SlowMotion_Click;
         if (_normalSpeedButton != null)
@@ -38,28 +38,19 @@ public partial class TestBalatroBkgnd : Window
     
     private void SlowMotion_Click(object? sender, RoutedEventArgs e)
     {
-        if (_background != null)
-        {
-            _background.SpinSpeed = 0.5;
-            _background.MoveSpeed = 2.0;
-        }
+        // GPU version handles animation internally - no external speed control needed
+        // The shader automatically animates at optimal GPU speed
     }
     
     private void NormalSpeed_Click(object? sender, RoutedEventArgs e)
     {
-        if (_background != null)
-        {
-            _background.SpinSpeed = 2.0;
-            _background.MoveSpeed = 7.0;
-        }
+        // GPU version handles animation internally - no external speed control needed
+        // The shader automatically animates at optimal GPU speed
     }
     
     private void Hyperspeed_Click(object? sender, RoutedEventArgs e)
     {
-        if (_background != null)
-        {
-            _background.SpinSpeed = 5.0;
-            _background.MoveSpeed = 15.0;
-        }
+        // GPU version handles animation internally - no external speed control needed
+        // The shader automatically animates at optimal GPU speed
     }
 }

@@ -21,10 +21,10 @@ public class BalatroBkgnd : Control
     #region Properties
     
     public static readonly StyledProperty<double> SpinSpeedProperty =
-        AvaloniaProperty.Register<BalatroBkgnd, double>(nameof(SpinSpeed), 2.0);
+        AvaloniaProperty.Register<BalatroBkgnd, double>(nameof(SpinSpeed), 1.0);
     
     public static readonly StyledProperty<double> MoveSpeedProperty =
-        AvaloniaProperty.Register<BalatroBkgnd, double>(nameof(MoveSpeed), 7.0);
+        AvaloniaProperty.Register<BalatroBkgnd, double>(nameof(MoveSpeed), 3.0);
     
     public double SpinSpeed
     {
@@ -53,7 +53,7 @@ public class BalatroBkgnd : Control
 
         _animationTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(33)
+            Interval = TimeSpan.FromMilliseconds(15)
         };
         _animationTimer.Tick += (_, _) => InvalidateVisual();
         _animationTimer.Start();
@@ -74,91 +74,73 @@ public class BalatroBkgnd : Control
         
         if (width <= 0 || height <= 0) return;
         
-        // Optimized CPU-based Balatro background rendering
-        const double SPIN_ROTATION = -2.0;
-        const double SPIN_SPEED = 5.0;
-        const double CONTRAST = 3.5;
-        const double SPIN_AMOUNT = 0.2;
-        const double PIXEL_FILTER = 45.0; // Lower for better performance
-        const double SPIN_EASE = 1.0;
+        // ULTRA-FAST simplified Balatro-style background
+        const double PIXEL_SIZE = 20.0; // Much larger pixels for speed
+        const double ANIMATION_SPEED = 0.5;
         
         // Balatro colors
         var COLOR_1 = Color.FromRgb(222, 68, 59);   // Red
         var COLOR_2 = Color.FromRgb(0, 107, 180);   // Blue  
         var COLOR_3 = Color.FromRgb(22, 35, 37);    // Dark background
         
-        var screenLength = Math.Sqrt(width * width + height * height);
-        var pixelSize = screenLength / PIXEL_FILTER;
-        var pixelStep = Math.Max(6, (int)Math.Ceiling(pixelSize)); // Larger pixels for better performance
+        var pixelStep = (int)PIXEL_SIZE;
+        var centerX = width * 0.5;
+        var centerY = height * 0.5;
+        var time = elapsed * ANIMATION_SPEED;
         
-        // Render pixelated blocks directly
+        // Pre-calculate common values
+        var sinTime = Math.Sin(time);
+        var cosTime = Math.Cos(time);
+        
+        // Render large pixelated blocks
         for (int x = 0; x < width; x += pixelStep)
         {
             for (int y = 0; y < height; y += pixelStep)
             {
-                // Convert to UV coordinates (normalized to [-0.5, 0.5])
-                var uvX = (x - width * 0.5) / screenLength;
-                var uvY = (y - height * 0.5) / screenLength;
+                // Simple distance-based pattern
+                var dx = (x - centerX) / width;
+                var dy = (y - centerY) / height;
+                var dist = Math.Sqrt(dx * dx + dy * dy);
                 
-                var uvLen = Math.Sqrt(uvX * uvX + uvY * uvY);
+                // Simple rotating pattern
+                var angle = Math.Atan2(dy, dx) + time * 0.3;
+                var wave = Math.Sin(dist * 8.0 + time * 2.0) * 0.5 + 0.5;
+                var spiral = Math.Sin(angle * 3.0 + dist * 10.0) * 0.5 + 0.5;
                 
-                // Spin calculation
-                var speed = (SPIN_ROTATION * SPIN_EASE * 0.2) + elapsed * 0.1;
-                var newPixelAngle = Math.Atan2(uvY, uvX) + speed - SPIN_EASE * 20.0 * (SPIN_AMOUNT * uvLen + (1.0 - SPIN_AMOUNT));
+                // Simple color mixing based on wave patterns
+                var colorMix = (wave + spiral) * 0.5;
                 
-                uvX = uvLen * Math.Cos(newPixelAngle);
-                uvY = uvLen * Math.Sin(newPixelAngle);
-                
-                // Scale and animate
-                uvX *= 25.0; // Reduced from 30.0 to make the pattern larger (zoom in effect)
-                uvY *= 25.0;
-                var animSpeed = elapsed * SPIN_SPEED;
-                
-                var uv2X = uvX;
-                var uv2Y = uvY;
-                
-                // Ultra-simplified paint flow (2 iterations for maximum performance)
-                for (int i = 0; i < 2; i++)
+                Color pixelColor;
+                if (colorMix < 0.33)
                 {
-                    var sinMax = Math.Sin(Math.Max(uvX, uvY));
-                    uv2X += sinMax * 0.5 + uvX * 0.05;
-                    uv2Y += sinMax * 0.5 + uvY * 0.05;
-                    
-                    var newUvX = uvX + 0.3 * Math.Cos(5.1 + 0.35 * uv2Y + animSpeed * 0.13);
-                    var newUvY = uvY + 0.3 * Math.Sin(uv2X - 0.11 * animSpeed);
-                    
-                    var cosUv = Math.Cos(uvX + uvY) * 0.5;
-                    var sinUv = Math.Sin(uvX * 0.7 - uvY) * 0.5;
-                    
-                    uvX = newUvX - cosUv + sinUv;
-                    uvY = newUvY - cosUv + sinUv;
+                    // Blend COLOR_3 and COLOR_1
+                    var t = colorMix * 3.0;
+                    pixelColor = Color.FromRgb(
+                        (byte)(COLOR_3.R + (COLOR_1.R - COLOR_3.R) * t),
+                        (byte)(COLOR_3.G + (COLOR_1.G - COLOR_3.G) * t),
+                        (byte)(COLOR_3.B + (COLOR_1.B - COLOR_3.B) * t));
+                }
+                else if (colorMix < 0.66)
+                {
+                    // Blend COLOR_1 and COLOR_2
+                    var t = (colorMix - 0.33) * 3.0;
+                    pixelColor = Color.FromRgb(
+                        (byte)(COLOR_1.R + (COLOR_2.R - COLOR_1.R) * t),
+                        (byte)(COLOR_1.G + (COLOR_2.G - COLOR_1.G) * t),
+                        (byte)(COLOR_1.B + (COLOR_2.B - COLOR_1.B) * t));
+                }
+                else
+                {
+                    // Blend COLOR_2 and COLOR_3
+                    var t = (colorMix - 0.66) * 3.0;
+                    pixelColor = Color.FromRgb(
+                        (byte)(COLOR_2.R + (COLOR_3.R - COLOR_2.R) * t),
+                        (byte)(COLOR_2.G + (COLOR_3.G - COLOR_2.G) * t),
+                        (byte)(COLOR_2.B + (COLOR_3.B - COLOR_2.B) * t));
                 }
                 
-                
-                // Color calculation
-                var contrastMod = (0.25 * CONTRAST + 0.5 * SPIN_AMOUNT + 1.2);
-                var paintRes = Math.Min(2.0, Math.Max(0.0, Math.Sqrt(uvX * uvX + uvY * uvY) * 0.035 * contrastMod));
-                
-                var c1p = Math.Max(0.0, 1.0 - contrastMod * Math.Abs(1.0 - paintRes));
-                var c2p = Math.Max(0.0, 1.0 - contrastMod * Math.Abs(paintRes));
-                var c3p = 1.0 - Math.Min(1.0, c1p + c2p);
-                
-                // Final color mixing
-                var baseWeight = 0.3 / CONTRAST;
-                var mainWeight = 1.0 - baseWeight;
-                
-                var finalR = (byte)Math.Min(255, Math.Max(0, 
-                    baseWeight * COLOR_1.R + mainWeight * (COLOR_1.R * c1p + COLOR_2.R * c2p + COLOR_3.R * c3p)));
-                var finalG = (byte)Math.Min(255, Math.Max(0, 
-                    baseWeight * COLOR_1.G + mainWeight * (COLOR_1.G * c1p + COLOR_2.G * c2p + COLOR_3.G * c3p)));
-                var finalB = (byte)Math.Min(255, Math.Max(0, 
-                    baseWeight * COLOR_1.B + mainWeight * (COLOR_1.B * c1p + COLOR_2.B * c2p + COLOR_3.B * c3p)));
-                
-                var pixelColor = Color.FromRgb(finalR, finalG, finalB);
                 var brush = new SolidColorBrush(pixelColor);
-                
-                // Draw overlapping pixel block to eliminate grid lines
-                var pixelRect = new Rect(x, y, Math.Min(pixelStep + 1, width - x), Math.Min(pixelStep + 1, height - y));
+                var pixelRect = new Rect(x, y, Math.Min(pixelStep, width - x), Math.Min(pixelStep, height - y));
                 context.FillRectangle(brush, pixelRect);
             }
         }

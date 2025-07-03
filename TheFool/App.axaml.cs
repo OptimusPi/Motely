@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TheFool.Services;
 using TheFool.ViewModels;
 using TheFool.Views;
+using Motely.TheFool.Controls;
 
 namespace TheFool;
 
@@ -35,6 +37,8 @@ public partial class App : Application
             
             Console.WriteLine("Initializing LogManager...");
             LogManager.Initialize(configService);
+            
+
 
             // Line below is needed to remove Avalonia data validation.
             // Without this line you will get duplicate validations from both Avalonia and CT
@@ -54,6 +58,8 @@ public partial class App : Application
                 desktop.ShutdownRequested += OnShutdownRequested;
                 
                 Console.WriteLine("MainWindow created successfully with DataContext");
+                
+
             }
 
             base.OnFrameworkInitializationCompleted();
