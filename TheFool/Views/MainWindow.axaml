@@ -12,8 +12,11 @@
         WindowStartupLocation="CenterScreen">
 
     <Grid>
-        <!-- Balatro-style animated background -->
-        <controls:BalatroBkgnd />
+        <!-- GPU-accelerated Balatro-style animated background -->
+        <controls:BalatroBkgndGPU />
+         
+         <!-- Balatro-style animated background -->
+        <!-- <controls:BalatroBkgnd /> -->
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>

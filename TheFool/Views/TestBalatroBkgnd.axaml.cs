@@ -7,7 +7,7 @@ namespace TheFool.Views;
 
 public partial class TestBalatroBkgnd : Window
 {
-    private BalatroBkgnd? _background;
+    private BalatroBkgndGPU? _background;
     private Button? _slowMotionButton;
     private Button? _normalSpeedButton;
     private Button? _hyperspeedButton;
@@ -22,7 +22,7 @@ public partial class TestBalatroBkgnd : Window
         AvaloniaXamlLoader.Load(this);
         
         // Find controls
-        _background = this.FindControl<BalatroBkgnd>("BalatroBkgnd");
+        _background = this.FindControl<BalatroBkgndGPU>("BalatroBkgnd");
         _slowMotionButton = this.FindControl<Button>("SlowMotionButton");
         _normalSpeedButton = this.FindControl<Button>("NormalSpeedButton");
         _hyperspeedButton = this.FindControl<Button>("HyperspeedButton");

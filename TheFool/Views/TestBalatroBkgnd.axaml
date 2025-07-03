@@ -10,8 +10,8 @@
         SystemDecorations="Full">
     
     <Grid Background="Black">
-        <!-- Balatro animated background -->
-        <controls:BalatroBkgnd x:Name="BalatroBkgnd" />
+        <!-- GPU-accelerated Balatro animated background -->
+        <controls:BalatroBkgndGPU x:Name="BalatroBkgnd" />
         
         <!-- Some content on top to see the effect -->
         <Border Background="#AA000000"

@@ -53,7 +53,7 @@ public class BalatroBkgnd : Control
 
         _animationTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(15) // ~60fps for better performance
+            Interval = TimeSpan.FromMilliseconds(33)
         };
         _animationTimer.Tick += (_, _) => InvalidateVisual();
         _animationTimer.Start();
@@ -79,7 +79,7 @@ public class BalatroBkgnd : Control
         const double SPIN_SPEED = 5.0;
         const double CONTRAST = 3.5;
         const double SPIN_AMOUNT = 0.2;
-        const double PIXEL_FILTER = 60.0; // Lower for better performance
+        const double PIXEL_FILTER = 45.0; // Lower for better performance
         const double SPIN_EASE = 1.0;
         
         // Balatro colors
@@ -110,8 +110,8 @@ public class BalatroBkgnd : Control
                 uvY = uvLen * Math.Sin(newPixelAngle);
                 
                 // Scale and animate
-                uvX *= 30.0;
-                uvY *= 30.0;
+                uvX *= 25.0; // Reduced from 30.0 to make the pattern larger (zoom in effect)
+                uvY *= 25.0;
                 var animSpeed = elapsed * SPIN_SPEED;
                 
                 var uv2X = uvX;
@@ -133,6 +133,7 @@ public class BalatroBkgnd : Control
                     uvX = newUvX - cosUv + sinUv;
                     uvY = newUvY - cosUv + sinUv;
                 }
+                
                 
                 // Color calculation
                 var contrastMod = (0.25 * CONTRAST + 0.5 * SPIN_AMOUNT + 1.2);
