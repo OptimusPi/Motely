@@ -139,7 +139,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case "Joker":
                     var prng = searchContext.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
                     var jokerVec = searchContext.GetNextRandomElement(ref prng, jokerChoices);
-                    VectorMask jokerMask = VectorEnum256.Equals(jokerVec, ParseJoker(need.Value));
+                    var jokerMask = new VectorMask(VectorEnum256.Equals(jokerVec, ParseJoker(need.Value)));
                     
                     // Check edition if specified - simplified for now
                     if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
@@ -151,6 +151,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         var editionMask = Vector512.LessThan(editionRolls, Vector512.Create(threshold));
                         var editionMask256 = new VectorMask(MotelyVectorUtils.VectorMaskToIntMask(editionMask));
                         jokerMask &= editionMask256;
+
                     }
                     
                     return mask & jokerMask;
