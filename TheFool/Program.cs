@@ -2,7 +2,6 @@ using System;
 using Avalonia;
 using Avalonia.ReactiveUI;
 using TheFool.Services;
-using Motely.TheFool.Controls;
 
 namespace TheFool;
 

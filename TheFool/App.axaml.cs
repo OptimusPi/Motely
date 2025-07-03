@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
@@ -8,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using TheFool.Services;
 using TheFool.ViewModels;
 using TheFool.Views;
-using Motely.TheFool.Controls;
 
 namespace TheFool;
 

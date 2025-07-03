@@ -7,29 +7,86 @@ using Avalonia.Skia;
 using Avalonia.Threading;
 using SkiaSharp;
 using System;
+using System.Diagnostics;
 
 namespace TheFool.Controls
 {
     public class BalatroBkgndGPU : Control
     {
+        private readonly DispatcherTimer _animationTimer;
+        private readonly Stopwatch _stopwatch;
+        internal static SKRuntimeShaderBuilder? _cachedShaderBuilder;
+        internal static readonly object _shaderLock = new object();
+        
+        public BalatroBkgndGPU()
+        {
+            _stopwatch = Stopwatch.StartNew();
+            
+            // Use a more conservative frame rate to reduce stuttering
+            _animationTimer = new DispatcherTimer(DispatcherPriority.Render)
+            {
+                Interval = TimeSpan.FromMilliseconds(20) // 50 FPS for smoother performance
+            };
+            _animationTimer.Tick += OnAnimationTick;
+        }
+        
+        private void OnAnimationTick(object? sender, EventArgs e)
+        {
+            // Only invalidate if the control is visible and has valid bounds
+            if (IsVisible && Bounds.Width > 0 && Bounds.Height > 0)
+            {
+                InvalidateVisual();
+            }
+        }
+        
+        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            _animationTimer.Start();
+        }
+        
+        protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnDetachedFromVisualTree(e);
+            _animationTimer.Stop();
+        }
+
         public override void Render(DrawingContext context)
         {
-            context.Custom(new BalatroBkgndGPUDrawOp(new Rect(0, 0, Bounds.Width, Bounds.Height)));
-            Dispatcher.UIThread.InvokeAsync(InvalidateVisual, DispatcherPriority.Background);
+            // Only render if we have valid bounds
+            if (Bounds.Width > 0 && Bounds.Height > 0)
+            {
+                var elapsed = _stopwatch.Elapsed.TotalSeconds;
+                context.Custom(new BalatroBkgndGPUDrawOp(new Rect(0, 0, Bounds.Width, Bounds.Height), elapsed));
+            }
         }
     }
 
     internal class BalatroBkgndGPUDrawOp : ICustomDrawOperation
     {
-        private SKRuntimeShaderBuilder? _shaderBuilder;
+        private readonly double _time;
+        private readonly SKSize _resolution;
 
-        public BalatroBkgndGPUDrawOp(Rect bounds)
+        public BalatroBkgndGPUDrawOp(Rect bounds, double time)
         {
             Bounds = bounds;
-            InitShader();
+            _time = time;
+            _resolution = new SKSize((float)bounds.Width, (float)bounds.Height);
+            
+            // Initialize shared shader if not already done
+            if (BalatroBkgndGPU._cachedShaderBuilder == null)
+            {
+                lock (BalatroBkgndGPU._shaderLock)
+                {
+                    if (BalatroBkgndGPU._cachedShaderBuilder == null)
+                    {
+                        InitShader();
+                    }
+                }
+            }
         }
 
-        private void InitShader()
+        private static void InitShader()
         {
             var sksl = @"
                 uniform float2 resolution;
@@ -98,26 +155,26 @@ namespace TheFool.Controls
             var effect = SKRuntimeEffect.CreateShader(sksl, out var str);
             if (effect != null)
             {
-                _shaderBuilder = new SKRuntimeShaderBuilder(effect);
+                BalatroBkgndGPU._cachedShaderBuilder = new SKRuntimeShaderBuilder(effect);
                 
                 // Set Balatro shader parameters - authentic Balatro colors
-                _shaderBuilder.Uniforms["spin_rotation"] = -2.0f;
-                _shaderBuilder.Uniforms["spin_speed"] = 5.0f;
-                _shaderBuilder.Uniforms["offset"] = new SKPoint(0.0f, 0.0f);
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["spin_rotation"] = -2.0f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["spin_speed"] = 5.0f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["offset"] = new SKPoint(0.0f, 0.0f);
                 
                 // Authentic Balatro color scheme
-                _shaderBuilder.Uniforms["colour_1"] = new float[] { 0.871f, 0.267f, 0.231f, 1.0f }; // Red-orange
-                _shaderBuilder.Uniforms["colour_2"] = new float[] { 0.0f, 0.42f, 0.706f, 1.0f }; // Blue
-                _shaderBuilder.Uniforms["colour_3"] = new float[] { 0.086f, 0.137f, 0.145f, 1.0f }; // Dark gray-green
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["colour_1"] = new float[] { 0.871f, 0.267f, 0.231f, 1.0f }; // Red-orange
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["colour_2"] = new float[] { 0.0f, 0.42f, 0.706f, 1.0f }; // Blue
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["colour_3"] = new float[] { 0.086f, 0.137f, 0.145f, 1.0f }; // Dark gray-green
 
-                _shaderBuilder.Uniforms["contrast"] = 3.5f;
-                _shaderBuilder.Uniforms["lighting"] = 0.4f;
-                _shaderBuilder.Uniforms["spin_amount"] = 0.2f;
-                _shaderBuilder.Uniforms["pixel_filter"] = 390.0f;
-                _shaderBuilder.Uniforms["polar_coordinates"] = 0f; // Disabled by default
-                _shaderBuilder.Uniforms["polar_center"] = new SKPoint(0.5f, 0.5f);
-                _shaderBuilder.Uniforms["polar_zoom"] = 1f;
-                _shaderBuilder.Uniforms["polar_repeat"] = 1f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["contrast"] = 3.5f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["lighting"] = 0.4f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["spin_amount"] = 0.2f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["pixel_filter"] = 1080.0f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["polar_coordinates"] = 0f; // Disabled by default
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["polar_center"] = new SKPoint(0.5f, 0.5f);
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["polar_zoom"] = 1f;
+                BalatroBkgndGPU._cachedShaderBuilder.Uniforms["polar_repeat"] = 1f;
             }
         }
 
@@ -140,25 +197,25 @@ namespace TheFool.Controls
                 var canvas = lease.SkCanvas;
                 canvas.Save();
 
-                if (_shaderBuilder != null)
+                if (BalatroBkgndGPU._cachedShaderBuilder != null)
                 {
-                    // Update time-based uniforms
-                    var time = Environment.TickCount / 1000.0f;
-                    _shaderBuilder.Uniforms["time"] = time;
-                    _shaderBuilder.Uniforms["resolution"] = new SKSize((float)Bounds.Width, (float)Bounds.Height);
-                    _shaderBuilder.Uniforms["spin_rotation"] = time * 0.5f; // Animate spin rotation
+                    // Update time-based uniforms with smooth timing
+                    var time = (float)_time;
+                    BalatroBkgndGPU._cachedShaderBuilder.Uniforms["time"] = time;
+                    BalatroBkgndGPU._cachedShaderBuilder.Uniforms["resolution"] = _resolution;
+                    BalatroBkgndGPU._cachedShaderBuilder.Uniforms["spin_rotation"] = time * 0.5f; // Animate spin rotation
                     
                     // Create the shader from the builder
-                    var shader = _shaderBuilder.Build();
-                    
-                    using var paint = new SKPaint
-                    {
-                        Shader = shader,
-                    };
-                    
-                    // Fill the entire bounds with the shader
-                    var rect = new SKRect(0, 0, (float)Bounds.Width, (float)Bounds.Height);
-                    canvas.DrawRect(rect, paint);
+                     using var shader = BalatroBkgndGPU._cachedShaderBuilder.Build();
+                     using var paint = new SKPaint
+                     {
+                         Shader = shader,
+                         IsAntialias = false // Disable antialiasing for better performance
+                     };
+                     
+                     // Fill the entire bounds with the shader
+                     var rect = new SKRect(0, 0, (float)Bounds.Width, (float)Bounds.Height);
+                     canvas.DrawRect(rect, paint);
                 }
 
                 canvas.Restore();
