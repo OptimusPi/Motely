@@ -45,6 +45,6 @@
     <!-- Additional Dependencies -->
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
-    <PackageVersion Include="SkiaSharp" Version="3.119.0-preview.1.2" />
+    <PackageVersion Include="SkiaSharp" Version="3.119.0" />
   </ItemGroup>
 </Project>

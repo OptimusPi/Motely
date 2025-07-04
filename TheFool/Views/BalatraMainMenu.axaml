@@ -1,0 +1,291 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="using:TheFool.Controls"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+             x:Class="TheFool.Views.BalatraMainMenu"
+             Background="Transparent">
+
+    <UserControl.Styles>
+        <!-- Dark dock background -->
+        <Style Selector="Border.dock-background">
+            <Setter Property="Background" Value="#1A1A1A"/>
+            <Setter Property="CornerRadius" Value="12"/>
+        </Style>
+        
+        <!-- Balatro Menu Button Style -->
+        <Style Selector="Button.balatro-menu">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FFAA00"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="35,20"/>
+            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        </Style>
+        
+        <Style Selector="Button.balatro-menu:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.03)"/>
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+        
+        <Style Selector="Button.balatro-menu:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
+        </Style>
+        
+        <!-- Primary button (SEARCH) - Balatro Blue -->
+        <Style Selector="Button.balatro-primary">
+            <Setter Property="Background" Value="#0080FF"/>
+            <Setter Property="FontSize" Value="32"/>
+            <Setter Property="Padding" Value="45,20"/>
+        </Style>
+        
+        <!-- Danger button (QUIT) - Balatro Red -->
+        <Style Selector="Button.balatro-danger">
+            <Setter Property="Background" Value="#E63946"/>
+        </Style>
+
+        <!-- Collection button - Balatro Green -->
+        <Style Selector="Button.balatro-collection">
+            <Setter Property="Background" Value="#2ECC71"/>
+            <Setter Property="FontSize" Value="30"/>
+            <Setter Property="Padding" Value="40,20"/>
+        </Style>
+        
+        <!-- Options button - Balatro Yellow/Orange -->
+        <Style Selector="Button.balatro-options">
+            <Setter Property="Background" Value="#F39C12"/>
+        </Style>
+        
+        <!-- Profile Button Style -->
+        <Style Selector="Border.profile-button">
+            <Setter Property="Background" Value="#4A4A4A"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20,15"/>
+            <Setter Property="Margin" Value="0,0,15,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinWidth" Value="150"/>
+        </Style>
+        
+        <!-- Help Button Style -->
+        <Style Selector="Border.help-button">
+            <Setter Property="Background" Value="#4A4A4A"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20,15"/>
+            <Setter Property="Margin" Value="15,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinWidth" Value="150"/>
+        </Style>
+        
+        <!-- Modal Style -->
+        <Style Selector="Border.modal">
+            <Setter Property="Background" Value="#1A1A1A"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="4"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="60"/>
+            <Setter Property="MinWidth" Value="900"/>
+            <Setter Property="MinHeight" Value="600"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/> <!-- Top space -->
+            <RowDefinition Height="Auto"/> <!-- Logo -->
+            <RowDefinition Height="2*"/> <!-- Middle space for modals -->
+            <RowDefinition Height="Auto"/> <!-- Bottom menu -->
+        </Grid.RowDefinitions>
+
+        <!-- Logo/Title -->
+        <Border Grid.Row="1" 
+                HorizontalAlignment="Center">
+            <TextBlock FontSize="100"
+                       FontWeight="Black"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center">
+                <TextBlock.Text>OUIJA</TextBlock.Text>
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="Black" 
+                                      BlurRadius="8" 
+                                      OffsetX="4" 
+                                      OffsetY="4" 
+                                      Opacity="0.8"/>
+                </TextBlock.Effect>
+            </TextBlock>
+        </Border>
+
+        <!-- Modal Container -->
+        <Grid x:Name="ModalContainer" 
+              Grid.Row="2"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              MaxWidth="800"
+              MaxHeight="600"/>
+
+        <!-- Bottom area with three separate docks -->
+        <Grid Grid.Row="3" 
+              VerticalAlignment="Bottom"
+              Margin="0,0,0,30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/> <!-- Left dock -->
+                <ColumnDefinition Width="*"/> <!-- Spacer -->
+                <ColumnDefinition Width="Auto"/> <!-- Center dock -->
+                <ColumnDefinition Width="*"/> <!-- Spacer -->
+                <ColumnDefinition Width="Auto"/> <!-- Right dock -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Dock - Profile -->
+            <Border Grid.Column="0" 
+                    Classes="dock-background"
+                    Margin="40,0,0,0"
+                    Height="70">
+                <Border Classes="profile-button"
+                        Margin="15"
+                        VerticalAlignment="Center">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="Profile"
+                                   FontSize="14"
+                                   Foreground="#B4B4B4"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="ProfileName"
+                                   Text="Jimbo"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Border>
+
+            <!-- Center Dock - Main buttons -->
+            <Border Grid.Column="2" 
+                    Classes="dock-background"
+                    Height="90">
+                <StackPanel Orientation="Horizontal" 
+                            Spacing="12"
+                            Margin="20,0"
+                            VerticalAlignment="Center">
+                    <Button x:Name="SearchButton"
+                            Classes="balatro-menu balatro-primary"
+                            Content="SEARCH"
+                            Click="OnSearchClick"/>
+
+                    <Button x:Name="OptionsButton"
+                            Classes="balatro-menu balatro-options"
+                            Content="OPTIONS"
+                            Click="OnOptionsClick"/>
+
+                    <Button x:Name="QuitButton"
+                            Classes="balatro-menu balatro-danger"
+                            Content="QUIT"
+                            Click="OnQuitClick"/>
+
+                    <Button x:Name="FunRunButton"
+                            Classes="balatro-menu balatro-collection"
+                            Content="FUN RUNS"
+                            Click="OnFunRunClick"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- Right Dock - Help -->
+            <Border Grid.Column="4" 
+                    Classes="dock-background"
+                    Margin="0,0,40,0"
+                    Height="70">
+                <Border Classes="help-button"
+                        Margin="15"
+                        VerticalAlignment="Center"
+                        PointerPressed="OnHelpClick">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="Info"
+                                   FontSize="14"
+                                   Foreground="#B4B4B4"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="HELP"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
+
+        <!-- Sample Search Modal (hidden by default) -->
+        <Border x:Name="SearchModal" 
+                Grid.Row="0"
+                Grid.RowSpan="4"
+                Classes="modal"
+                IsVisible="False"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                Margin="100,50">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" 
+                           Text="SEED SEARCH"
+                           FontSize="48"
+                           FontWeight="Bold"
+                           Foreground="#FFCC66"
+                           HorizontalAlignment="Center"
+                           Margin="0,30,0,50"/>
+
+                <StackPanel Grid.Row="1" 
+                            Spacing="40"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    <Button Classes="balatro-menu balatro-primary"
+                            Content="🔍 START SEARCHING"
+                            Click="OnStartSearchClick"
+                            HorizontalAlignment="Center"
+                            Width="600"
+                            Height="90"
+                            FontSize="32"/>
+                    
+                    <Button Classes="balatro-menu balatro-options"
+                            Content="📋 MANAGE FILTERS"
+                            Click="OnManageFiltersClick"
+                            HorizontalAlignment="Center"
+                            Width="600"
+                            Height="90"
+                            FontSize="32"/>
+                    
+                    <Button Classes="balatro-menu"
+                            Content="📊 VIEW RESULTS"
+                            HorizontalAlignment="Center"
+                            Width="600"
+                            Height="90"
+                            FontSize="32"
+                            IsEnabled="False"
+                            Opacity="0.5"/>
+                </StackPanel>
+
+                <Button Grid.Row="2" 
+                        Content="BACK"
+                        Classes="balatro-menu balatro-danger"
+                        Click="CloseModal"
+                        HorizontalAlignment="Center"
+                        Margin="0,50,0,30"
+                        Width="250"
+                        Height="70"
+                        FontSize="28"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

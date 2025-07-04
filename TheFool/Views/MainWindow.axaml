@@ -11,10 +11,10 @@
         Width="1200" Height="800"
         WindowStartupLocation="CenterScreen">
 
-    <Grid>
+    <Grid x:Name="MainGrid">
         <!-- Background Control -->
-        <controls:BalatroBkgndGPU Grid.Row="0" Grid.RowSpan="3" />
-        <Grid>
+        <controls:BalatroStyleBackground Grid.Row="0" Grid.RowSpan="3" />
+        <Grid x:Name="ContentGrid">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
