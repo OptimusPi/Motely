@@ -21,7 +21,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="#FFAA00"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderThickness" Value="2"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="35,20"/>
             <Setter Property="Margin" Value="4,0"/>
@@ -30,8 +30,23 @@
         </Style>
         
         <Style Selector="Button.balatro-menu:pointerover">
-            <Setter Property="RenderTransform" Value="scale(1.03)"/>
-            <Setter Property="Opacity" Value="0.9"/>
+            <!-- Darken effect will be handled by specific button types -->
+        </Style>
+
+        <Style Selector="Button.balatro-primary:pointerover">
+            <Setter Property="Background" Value="#0066CC"/>
+        </Style>
+
+        <Style Selector="Button.balatro-danger:pointerover">
+            <Setter Property="Background" Value="#B82E3A"/>
+        </Style>
+
+        <Style Selector="Button.balatro-collection:pointerover">
+            <Setter Property="Background" Value="#24A25F"/>
+        </Style>
+
+        <Style Selector="Button.balatro-options:pointerover">
+            <Setter Property="Background" Value="#C37E0F"/>
         </Style>
         
         <Style Selector="Button.balatro-menu:pressed">
@@ -60,6 +75,13 @@
         <!-- Options button - Balatro Yellow/Orange -->
         <Style Selector="Button.balatro-options">
             <Setter Property="Background" Value="#F39C12"/>
+            <Setter Property="Padding" Value="25,15"/>
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+
+        <Style Selector="Button.balatro-danger">
+            <Setter Property="Padding" Value="25,15"/>
+            <Setter Property="FontSize" Value="24"/>
         </Style>
         
         <!-- Profile Button Style -->
@@ -71,7 +93,7 @@
             <Setter Property="Padding" Value="20,15"/>
             <Setter Property="Margin" Value="0,0,15,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="MinWidth" Value="100"/>
         </Style>
         
         <!-- Help Button Style -->
@@ -83,7 +105,7 @@
             <Setter Property="Padding" Value="20,15"/>
             <Setter Property="Margin" Value="15,0,0,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="MinWidth" Value="100"/>
         </Style>
         
         <!-- Modal Style -->
@@ -107,14 +129,13 @@
         </Grid.RowDefinitions>
 
         <!-- Logo/Title -->
-        <Border Grid.Row="1" 
-                HorizontalAlignment="Center">
-            <TextBlock FontSize="100"
+        <Border Grid.Row="1">
+            <TextBlock FontSize="72"
                        FontWeight="Black"
                        Foreground="White"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center">
-                <TextBlock.Text>OUIJA</TextBlock.Text>
+                <TextBlock.Text>BALATRO SEED ORACLE</TextBlock.Text>
                 <TextBlock.Effect>
                     <DropShadowEffect Color="Black" 
                                       BlurRadius="8" 
@@ -135,6 +156,7 @@
 
         <!-- Bottom area with three separate docks -->
         <Grid Grid.Row="3" 
+              HorizontalAlignment="Center"
               VerticalAlignment="Bottom"
               Margin="0,0,0,30">
             <Grid.ColumnDefinitions>
@@ -148,18 +170,13 @@
             <!-- Left Dock - Profile -->
             <Border Grid.Column="0" 
                     Classes="dock-background"
-                    Margin="40,0,0,0"
+                    Margin="40,0,10,0"
                     Height="70">
                 <Border Classes="profile-button"
                         Margin="15"
                         VerticalAlignment="Center">
                     <StackPanel Spacing="3">
-                        <TextBlock Text="Profile"
-                                   FontSize="14"
-                                   Foreground="#B4B4B4"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="ProfileName"
-                                   Text="Jimbo"
+                        <TextBlock Text="SETUP"
                                    FontSize="20"
                                    FontWeight="Bold"
                                    Foreground="White"
@@ -171,19 +188,19 @@
             <!-- Center Dock - Main buttons -->
             <Border Grid.Column="2" 
                     Classes="dock-background"
-                    Height="90">
+                    Padding="25,10">
                 <StackPanel Orientation="Horizontal" 
                             Spacing="12"
-                            Margin="20,0"
-                            VerticalAlignment="Center">
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
                     <Button x:Name="SearchButton"
                             Classes="balatro-menu balatro-primary"
-                            Content="SEARCH"
+                            Content="SEED SEARCH"
                             Click="OnSearchClick"/>
 
                     <Button x:Name="OptionsButton"
                             Classes="balatro-menu balatro-options"
-                            Content="OPTIONS"
+                            Content="EDITOR"
                             Click="OnOptionsClick"/>
 
                     <Button x:Name="QuitButton"
@@ -201,18 +218,14 @@
             <!-- Right Dock - Help -->
             <Border Grid.Column="4" 
                     Classes="dock-background"
-                    Margin="0,0,40,0"
+                    Margin="10,0,40,0"
                     Height="70">
                 <Border Classes="help-button"
                         Margin="15"
                         VerticalAlignment="Center"
                         PointerPressed="OnHelpClick">
                     <StackPanel Spacing="3">
-                        <TextBlock Text="Info"
-                                   FontSize="14"
-                                   Foreground="#B4B4B4"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="HELP"
+                        <TextBlock Text="CREDITS"
                                    FontSize="20"
                                    FontWeight="Bold"
                                    Foreground="White"
@@ -280,10 +293,10 @@
                         Content="BACK"
                         Classes="balatro-menu balatro-danger"
                         Click="CloseModal"
-                        HorizontalAlignment="Center"
-                        Margin="0,50,0,30"
-                        Width="250"
-                        Height="70"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Bottom"
+                        Margin="0,20,0,0"
+                        Height="60"
                         FontSize="28"/>
             </Grid>
         </Border>
