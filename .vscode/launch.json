@@ -9,9 +9,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/TheFool/bin/Debug/net8.0/TheFool.dll",
+            "program": "${workspaceFolder}/Oracle/bin/Debug/net8.0/Oracle.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/TheFool",
+            "cwd": "${workspaceFolder}/Oracle",
             "console": "internalConsole",
             "stopAtEntry": false
         },

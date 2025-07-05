@@ -6,9 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TheFool.Models;
+using Oracle.Models;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public interface IDuckDbService
 {

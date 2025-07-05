@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.Versioning;
-using TheFool.Models;
+using Oracle.Models;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public class PerformanceMonitor
 {

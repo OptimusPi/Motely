@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using TheFool.Models;
+using Oracle.Models;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public class ConfigService
 {
@@ -14,7 +14,7 @@ public class ConfigService
     public SearchCriteria CurrentCriteria => _settings.DefaultSearchCriteria;
     public string DataDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TheFool");
+        "Oracle");
 
     public ConfigService()
     {

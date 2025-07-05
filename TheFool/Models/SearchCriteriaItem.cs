@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace TheFool.Models;
+namespace Oracle.Models;
 
 public partial class SearchCriteriaItem : ObservableObject
 {

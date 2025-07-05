@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace TheFool.Models;
+namespace Oracle.Models;
 
 public class SeedResult
 {

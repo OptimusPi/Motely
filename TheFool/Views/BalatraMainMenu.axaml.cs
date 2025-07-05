@@ -6,7 +6,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using System;
 
-namespace TheFool.Views
+namespace Oracle.Views
 {
     public partial class BalatraMainMenu : UserControl
     {

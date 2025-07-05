@@ -1,9 +1,9 @@
 using System;
 using Avalonia;
 using Avalonia.ReactiveUI;
-using TheFool.Services;
+using Oracle.Services;
 
-namespace TheFool;
+namespace Oracle;
 
 class Program
 {
@@ -12,7 +12,7 @@ class Program
     {
         try
         {
-            Console.WriteLine("Starting TheFool application...");
+            Console.WriteLine("Starting Oracle application...");
             
             
             

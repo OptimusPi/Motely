@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/TheFool/TheFool.csproj",
+                "${workspaceFolder}/Oracle/Oracle.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/TheFool/TheFool.csproj",
+                "${workspaceFolder}/Oracle/Oracle.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -33,7 +33,7 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/TheFool/TheFool.csproj"
+                "${workspaceFolder}/Oracle/Oracle.csproj"
             ],
             "problemMatcher": "$msCompile"
         }

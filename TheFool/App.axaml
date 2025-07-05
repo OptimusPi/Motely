@@ -1,13 +1,13 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:themes="using:Avalonia.Themes.Fluent"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="TheFool.App"
-             xmlns:local="using:TheFool"
+             x:Class="Oracle.App"
+             xmlns:local="using:Oracle"
 
              RequestedThemeVariant="Dark">
     
     <Application.Resources>
-        <FontFamily x:Key="BalatroFont">avares://TheFool/m6x11plusplus.otf#m6x11plusplus</FontFamily>
+        <FontFamily x:Key="BalatroFont">avares://Oracle/m6x11plusplus.otf#m6x11plusplus</FontFamily>
         
         <!-- Solo Jazz Cup Color Palette (90s aesthetic) -->
         <SolidColorBrush x:Key="SoloJazzTeal">#00CED1</SolidColorBrush>

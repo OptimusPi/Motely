@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using TheFool.Models;
+using Oracle.Models;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public class UserConfigService
 {
@@ -16,7 +16,7 @@ public class UserConfigService
     {
         _configDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TheFool",
+            "Oracle",
             "UserConfigs");
         
         Directory.CreateDirectory(_configDirectory);

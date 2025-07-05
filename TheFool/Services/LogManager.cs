@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public static class LogManager
 {
@@ -9,7 +9,7 @@ public static class LogManager
     
     public static void Initialize(ConfigService config)
     {
-        Console.WriteLine("TheFool initialized");
+        Console.WriteLine("Oracle initialized");
         Console.WriteLine($"Verbose logging: {_verboseLogging}");
         
         if (_verboseLogging)
@@ -20,7 +20,7 @@ public static class LogManager
 
     public static void Shutdown()
     {
-        Console.WriteLine("TheFool shutdown");
+        Console.WriteLine("Oracle shutdown");
     }
     
     public static void LogDebug(string message)

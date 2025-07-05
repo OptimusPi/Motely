@@ -4,11 +4,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
-using TheFool.Services;
-using TheFool.ViewModels;
-using TheFool.Views;
+using Oracle.Services;
+using Oracle.ViewModels;
+using Oracle.Views;
 
-namespace TheFool;
+namespace Oracle;
 
 public partial class App : Application
 {

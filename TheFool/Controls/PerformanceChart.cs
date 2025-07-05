@@ -6,10 +6,10 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using TheFool.Models;
-using TheFool.Services;
+using Oracle.Models;
+using Oracle.Services;
 
-namespace TheFool.Controls;
+namespace Oracle.Controls;
 
 public class PerformanceChart : UserControl
 {

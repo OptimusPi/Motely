@@ -7,7 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public static class ErrorHandler
 {

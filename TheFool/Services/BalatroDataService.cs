@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public static class BalatroDataService
 {

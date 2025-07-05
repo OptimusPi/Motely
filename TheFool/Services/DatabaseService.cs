@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DuckDB.NET.Data;
-using TheFool.Models;
+using Oracle.Models;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public class DatabaseService : IDisposable
 {

@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace TheFool.Views
+namespace Oracle.Views
 {
     public partial class ItemSelector : UserControl
     {

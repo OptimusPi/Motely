@@ -8,7 +8,7 @@ using Avalonia.Threading;
 using SkiaSharp;
 using System;
 
-namespace TheFool.Controls
+namespace Oracle.Controls
 {
     public class BalatroStyleBackground : Control
     {

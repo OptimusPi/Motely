@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace TheFool.ViewModels;
+namespace Oracle.ViewModels;
 
 public abstract partial class ViewModelBase : ObservableObject
 {

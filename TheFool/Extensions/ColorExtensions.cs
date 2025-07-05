@@ -1,7 +1,7 @@
 using System;
 using SkiaSharp;
 
-namespace Motely.TheFool.Extensions;
+namespace Motely.Oracle.Extensions;
 
 public static class ColorExtensions
 {

@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TheFool.Services;
+namespace Oracle.Services;
 
 public interface IProcessRunnerService
 {

@@ -8,10 +8,10 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using TheFool.Models;
-using TheFool.Services;
+using Oracle.Models;
+using Oracle.Services;
 
-namespace TheFool.ViewModels;
+namespace Oracle.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -169,7 +169,11 @@ public partial class MainWindowViewModel : ObservableObject
                 DefaultExtension = "json",
                 FileTypeChoices = new[]
                 {
-                    new Avalonia.Platform.Storage.FilePickerFileType("JSON Configuration")
+                    new Avalonia.Platform.Storage.FilePickerFileType("Ouija JSON Configuration")
+                    {
+                        Patterns = new[] { "*.json" }
+                    },
+                    new Avalonia.Platform.Storage.FilePickerFileType("User Configuration")
                     {
                         Patterns = new[] { "*.json" }
                     }
@@ -191,6 +195,7 @@ public partial class MainWindowViewModel : ObservableObject
             // Update ConfigName to match the saved file
             ConfigName = configName;
 
+            // Save both formats
             var userConfig = new UserConfiguration
             {
                 Name = configName,
@@ -200,12 +205,21 @@ public partial class MainWindowViewModel : ObservableObject
                 LastModified = DateTime.Now
             };
 
-            var success = await _userConfigService.SaveConfigurationAsync(configName, userConfig);
+            // Save user config
+            var userSuccess = await _userConfigService.SaveConfigurationAsync(configName, userConfig);
             
-            if (success)
+            // Also save as Ouija JSON format
+            var ouijaConfig = ConvertToOuijaConfig();
+            var ouijaSuccess = await SaveOuijaJsonAsync(file.Path.LocalPath, ouijaConfig);
+            
+            if (userSuccess && ouijaSuccess)
             {
-                StatusText = $"💾 Configuration '{configName}' saved successfully!";
-                Console.WriteLine($"Saved config: {configName}");
+                StatusText = $"💾 Configuration '{configName}' saved successfully as both formats!";
+                Console.WriteLine($"Saved config: {configName} (User + Ouija formats)");
+            }
+            else if (userSuccess)
+            {
+                StatusText = $"💾 Configuration '{configName}' saved as user format only!";
             }
             else
             {
@@ -242,7 +256,11 @@ public partial class MainWindowViewModel : ObservableObject
                 AllowMultiple = false,
                 FileTypeFilter = new[]
                 {
-                    new Avalonia.Platform.Storage.FilePickerFileType("JSON Configuration")
+                    new Avalonia.Platform.Storage.FilePickerFileType("Ouija JSON Configuration")
+                    {
+                        Patterns = new[] { "*.json" }
+                    },
+                    new Avalonia.Platform.Storage.FilePickerFileType("User Configuration")
                     {
                         Patterns = new[] { "*.json" }
                     },
@@ -264,11 +282,23 @@ public partial class MainWindowViewModel : ObservableObject
 
             var selectedFile = files[0];
             var fileName = selectedFile.Name;
+            var filePath = selectedFile.Path.LocalPath;
             
             // Extract config name from filename (without extension)
             var configName = System.IO.Path.GetFileNameWithoutExtension(fileName);
             
-            // Try to load the configuration
+            // Try to load as Ouija JSON first
+            var ouijaConfig = await LoadOuijaJsonAsync(filePath);
+            if (ouijaConfig != null)
+            {
+                ConfigName = configName;
+                LoadFromOuijaConfig(ouijaConfig);
+                StatusText = $"📂 Ouija configuration '{configName}' loaded successfully!";
+                Console.WriteLine($"Loaded Ouija config: {configName}");
+                return;
+            }
+            
+            // Fall back to user configuration format
             var userConfig = await _userConfigService.LoadConfigurationAsync(configName);
             
             if (userConfig != null)
@@ -286,12 +316,12 @@ public partial class MainWindowViewModel : ObservableObject
                     SearchCriteria.Add(item);
                 }
                 
-                StatusText = $"📂 Configuration '{userConfig.Name}' loaded successfully!";
-                Console.WriteLine($"Loaded config: {userConfig.Name} with {userConfig.SearchItems.Count} items");
+                StatusText = $"📂 User configuration '{userConfig.Name}' loaded successfully!";
+                Console.WriteLine($"Loaded user config: {userConfig.Name} with {userConfig.SearchItems.Count} items");
             }
             else
             {
-                StatusText = $"❌ Configuration '{configName}' not found!";
+                StatusText = "❌ Failed to load configuration - invalid format!";
             }
         }
         catch (Exception ex)
@@ -370,17 +400,312 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task StartSearchAsync()
     {
-        IsSearching = true;
-        StatusText = "🔥 JIMBO IS COOKING! 🔥";
-        
-        Console.WriteLine("Starting search simulation...");
-        
-        // Simulate search for demo
-        await Task.Delay(2000);
-        
-        IsSearching = false;
-        StatusText = "🎉 Search complete! Found some epic seeds!";
-        
-        Console.WriteLine("Search simulation complete");
+        try
+        {
+            IsSearching = true;
+            StatusText = "🔥 JIMBO IS COOKING! Starting Ouija search...";
+            
+            Console.WriteLine("Starting Ouija search...");
+            
+            // Convert our search criteria to Ouija format
+            var ouijaConfig = ConvertToOuijaConfig();
+            
+            // Start the actual Ouija search
+            // Convert OuijaConfig to SearchCriteria for the service call
+            var searchCriteria = new SearchCriteria
+            {
+                SeedCount = 1000,
+                ThreadCount = 4,
+                MinScore = 1,
+                Deck = Config.Deck ?? "",
+                Stake = Config.Stake ?? "",
+                Needs = SearchCriteria.Where(x => x.IsRequired).Select(x => x.Name).ToList(),
+                Wants = SearchCriteria.Where(x => !x.IsRequired).Select(x => x.Name).ToList()
+            };
+            
+            var progress = new Progress<SearchProgress>(p =>
+            {
+                StatusText = p.Message ?? "Searching...";
+            });
+            
+            await _ouijaService.StartSearchAsync(searchCriteria, "gpu", 1, 64, 4, 8, progress);
+            
+            StatusText = "🔍 Ouija search is running! Check the console for progress...";
+            Console.WriteLine("Ouija search started successfully");
+        }
+        catch (Exception ex)
+        {
+            IsSearching = false;
+            StatusText = $"❌ Search failed: {ex.Message}";
+            Console.WriteLine($"Search error: {ex.Message}");
+        }
     }
+    
+    private Motely.Filters.OuijaConfig ConvertToOuijaConfig()
+    {
+        var requiredItems = SearchCriteria.Where(x => x.IsRequired).ToList();
+        var optionalItems = SearchCriteria.Where(x => !x.IsRequired).ToList();
+        
+        var config = new Motely.Filters.OuijaConfig
+        {
+            NumNeeds = requiredItems.Count,
+            NumWants = optionalItems.Count,
+            Needs = requiredItems.Select(ConvertToOuijaDesire).ToArray(),
+            Wants = optionalItems.Select(ConvertToOuijaDesire).ToArray(),
+            MaxSearchAnte = 8,
+            Deck = ConvertToOuijaDeck(Config.Deck ?? ""),
+             Stake = ConvertToOuijaStake(Config.Stake ?? ""),
+            ScoreNaturalNegatives = false,
+            ScoreDesiredNegatives = true
+        };
+
+        return config;
+    }
+    
+    private Motely.Filters.OuijaConfig.Desire ConvertToOuijaDesire(SearchCriteriaItem item)
+    {
+        return new Motely.Filters.OuijaConfig.Desire
+         {
+             Type = item.Type,
+             Value = item.Name,
+             Edition = "",
+             DesireByAnte = 8,
+             SearchAntes = new[] { 1, 2, 3, 4, 5, 6, 7, 8 }
+         };
+     }
+     
+     private string ConvertToOuijaDeck(string displayDeck)
+     {
+         return displayDeck switch
+         {
+             "🔴 Red Deck" => "Red Deck",
+             "🔵 Blue Deck" => "Blue Deck",
+             "🟡 Yellow Deck" => "Yellow Deck",
+             "🟢 Green Deck" => "Green Deck",
+             "⚫ Black Deck" => "Black Deck",
+             "✨ Magic Deck" => "Magic Deck",
+             "🌌 Nebula Deck" => "Nebula Deck",
+             "👻 Ghost Deck" => "Ghost Deck",
+             "🏚️ Abandoned Deck" => "Abandoned Deck",
+             "♥️♠️ Checkered Deck" => "Checkered Deck",
+             "♈ Zodiac Deck" => "Zodiac Deck",
+             "🎨 Painted Deck" => "Painted Deck",
+             "🔴🔵 Anaglyph Deck" => "Anaglyph Deck",
+             "⚡ Plasma Deck" => "Plasma Deck",
+             "🎲 Erratic Deck" => "Erratic Deck",
+             _ => "Red Deck"
+         };
+     }
+     
+     private string ConvertToOuijaStake(string displayStake)
+     {
+         return displayStake switch
+         {
+             "⚪ White Stake" => "White Stake",
+             "🔴 Red Stake" => "Red Stake",
+             "🟢 Green Stake" => "Green Stake",
+             "⚫ Black Stake" => "Black Stake",
+             "🔵 Blue Stake" => "Blue Stake",
+             "🟣 Purple Stake" => "Purple Stake",
+             "🟠 Orange Stake" => "Orange Stake",
+             "🏆 Gold Stake" => "Gold Stake",
+             _ => "White Stake"
+         };
+     }
+    
+    private string ConvertFromOuijaDeck(string ouijaDeck)
+      {
+          return ouijaDeck switch
+          {
+              "Red Deck" => "🔴 Red Deck",
+              "Blue Deck" => "🔵 Blue Deck",
+              "Yellow Deck" => "🟡 Yellow Deck",
+              "Green Deck" => "🟢 Green Deck",
+              "Black Deck" => "⚫ Black Deck",
+              "Magic Deck" => "✨ Magic Deck",
+              "Nebula Deck" => "🌌 Nebula Deck",
+              "Ghost Deck" => "👻 Ghost Deck",
+              "Abandoned Deck" => "🏚️ Abandoned Deck",
+              "Checkered Deck" => "♥️♠️ Checkered Deck",
+              "Zodiac Deck" => "♈ Zodiac Deck",
+              "Painted Deck" => "🎨 Painted Deck",
+              "Anaglyph Deck" => "🔴🔵 Anaglyph Deck",
+              "Plasma Deck" => "⚡ Plasma Deck",
+              "Erratic Deck" => "🎲 Erratic Deck",
+              _ => "🔴 Red Deck"
+          };
+      }
+      
+      private string ConvertFromOuijaStake(string ouijaStake)
+      {
+          return ouijaStake switch
+          {
+              "White Stake" => "⚪ White Stake",
+              "Red Stake" => "🔴 Red Stake",
+              "Green Stake" => "🟢 Green Stake",
+              "Black Stake" => "⚫ Black Stake",
+              "Blue Stake" => "🔵 Blue Stake",
+              "Purple Stake" => "🟣 Purple Stake",
+              "Orange Stake" => "🟠 Orange Stake",
+              "Gold Stake" => "🏆 Gold Stake",
+              _ => "⚪ White Stake"
+          };
+      }
+      
+      private void AddItemToConfig(dynamic target, SearchCriteriaItem item)
+    {
+        switch (item.Type.ToLower())
+        {
+            case "joker":
+                if (target.Joker == null) target.Joker = new List<string>();
+                target.Joker.Add(item.Name);
+                break;
+            case "tarot":
+                if (target.Tarot == null) target.Tarot = new List<string>();
+                target.Tarot.Add(item.Name);
+                break;
+            case "voucher":
+                if (target.Voucher == null) target.Voucher = new List<string>();
+                target.Voucher.Add(item.Name);
+                break;
+            case "spectral":
+                if (target.Spectral == null) target.Spectral = new List<string>();
+                target.Spectral.Add(item.Name);
+                break;
+            case "card":
+                if (target.PlayingCard == null) target.PlayingCard = new List<string>();
+                target.PlayingCard.Add(item.GetFilterString());
+                break;
+        }
+    }
+    
+    private string ConvertDeckName(string displayName)
+    {
+        return displayName switch
+        {
+            "🔴 Red Deck" => "Red Deck",
+            "🔵 Blue Deck" => "Blue Deck",
+            "🟡 Yellow Deck" => "Yellow Deck",
+            "🟢 Green Deck" => "Green Deck",
+            "⚫ Black Deck" => "Black Deck",
+            "✨ Magic Deck" => "Magic Deck",
+            "🌌 Nebula Deck" => "Nebula Deck",
+            "👻 Ghost Deck" => "Ghost Deck",
+            "🏚️ Abandoned Deck" => "Abandoned Deck",
+            "♥️♠️ Checkered Deck" => "Checkered Deck",
+            "♈ Zodiac Deck" => "Zodiac Deck",
+            "🎨 Painted Deck" => "Painted Deck",
+            "🔴🔵 Anaglyph Deck" => "Anaglyph Deck",
+            "⚡ Plasma Deck" => "Plasma Deck",
+            "🎲 Erratic Deck" => "Erratic Deck",
+            _ => "Red Deck"
+        };
+    }
+    
+    private string ConvertStakeName(string displayName)
+    {
+        return displayName switch
+        {
+            "⚪ White Stake" => "White Stake",
+            "🔴 Red Stake" => "Red Stake",
+            "🟢 Green Stake" => "Green Stake",
+            "⚫ Black Stake" => "Black Stake",
+            "🔵 Blue Stake" => "Blue Stake",
+            "🟣 Purple Stake" => "Purple Stake",
+            "🟠 Orange Stake" => "Orange Stake",
+            "🏆 Gold Stake" => "Gold Stake",
+            _ => "White Stake"
+        };
+    }
+
+    private async Task<bool> SaveOuijaJsonAsync(string filePath, Motely.Filters.OuijaConfig ouijaConfig)
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(ouijaConfig, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            });
+            
+            await System.IO.File.WriteAllTextAsync(filePath, json);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving Ouija JSON: {ex.Message}");
+            return false;
+        }
+    }
+
+    private async Task<Motely.Filters.OuijaConfig?> LoadOuijaJsonAsync(string filePath)
+    {
+        try
+        {
+            var json = await System.IO.File.ReadAllTextAsync(filePath);
+            var ouijaConfig = System.Text.Json.JsonSerializer.Deserialize<Motely.Filters.OuijaConfig>(json, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            });
+            
+            return ouijaConfig;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading Ouija JSON: {ex.Message}");
+            return null;
+        }
+    }
+
+    private void LoadFromOuijaConfig(Motely.Filters.OuijaConfig ouijaConfig)
+    {
+        try
+        {
+            // Clear existing criteria
+            SearchCriteria.Clear();
+            
+            // Set deck and stake with proper conversion
+            Config.Deck = ConvertFromOuijaDeck(ouijaConfig.Deck ?? "Red Deck");
+            Config.Stake = ConvertFromOuijaStake(ouijaConfig.Stake ?? "White Stake");
+            
+            // Load needs (required items)
+            if (ouijaConfig.Needs != null)
+            {
+                foreach (var need in ouijaConfig.Needs)
+                {
+                    var item = new SearchCriteriaItem
+                    {
+                        Type = need.Type,
+                        Name = need.Value,
+                        IsRequired = true
+                    };
+                    item.RequiredStatusChanged += OnItemRequiredStatusChanged;
+                    SearchCriteria.Add(item);
+                }
+            }
+            
+            // Load wants (optional items)
+            if (ouijaConfig.Wants != null)
+            {
+                foreach (var want in ouijaConfig.Wants)
+                {
+                    var item = new SearchCriteriaItem
+                    {
+                        Type = want.Type,
+                        Name = want.Value,
+                        IsRequired = false
+                    };
+                    item.RequiredStatusChanged += OnItemRequiredStatusChanged;
+                    SearchCriteria.Add(item);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading from Ouija config: {ex.Message}");
+        }
+    }
+
+
+
 }

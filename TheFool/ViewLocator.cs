@@ -1,9 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using System;
-using TheFool.ViewModels;
+using Oracle.ViewModels;
 
-namespace TheFool;
+namespace Oracle;
 
 public class ViewLocator : IDataTemplate
 {

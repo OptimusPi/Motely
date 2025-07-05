@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using TheFool.Controls;
+using Oracle.Controls;
 
-namespace TheFool.Views;
+namespace Oracle.Views;
 
 public partial class MainWindow : Window
 {

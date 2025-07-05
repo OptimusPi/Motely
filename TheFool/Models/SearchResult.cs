@@ -1,6 +1,6 @@
 using System;
 
-namespace TheFool.Models;
+namespace Oracle.Models;
 
 public class SearchResult
 {

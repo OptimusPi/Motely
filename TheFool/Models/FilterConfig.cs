@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 
-namespace TheFool.Models;
+namespace Oracle.Models;
 
 public record FilterConfig(
     string name,
