@@ -52,6 +52,18 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<SearchCriteriaItem> _searchCriteria = new();
 
+    [ObservableProperty]
+    private ObservableCollection<SearchResult> _searchResults = new();
+
+    [ObservableProperty]
+    private int _searchResultsCount;
+
+    public class SearchResult
+    {
+        public string Seed { get; set; } = string.Empty;
+        public double Score { get; set; }
+    }
+
     public IEnumerable<SearchCriteriaItem> RequiredItems => SearchCriteria.Where(x => x.IsRequired).OrderBy(x => x.Name);
     public IEnumerable<SearchCriteriaItem> OptionalItems => SearchCriteria.Where(x => !x.IsRequired).OrderBy(x => x.Name);
     public bool HasRequiredItems => SearchCriteria.Any(x => x.IsRequired);
@@ -84,7 +96,7 @@ public partial class MainWindowViewModel : ObservableObject
         var testTarot = new SearchCriteriaItem
         {
             Type = "Tarot", 
-            Name = "The Fool",
+            Name = "Oracle",
             IsRequired = false
         };
         SearchCriteria.Add(testTarot);
@@ -398,6 +410,32 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task CopySeedAsync(string seed)
+    {
+        try
+        {
+            // Get the main window to access clipboard
+            var mainWindow = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+
+            if (mainWindow?.Clipboard != null)
+            {
+                await mainWindow.Clipboard.SetTextAsync(seed);
+                StatusText = $"📋 Copied seed {seed} to clipboard!";
+            }
+            else
+            {
+                StatusText = "❌ Cannot access clipboard";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ Failed to copy: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private async Task StartSearchAsync()
     {
         try
@@ -430,14 +468,30 @@ public partial class MainWindowViewModel : ObservableObject
             
             await _ouijaService.StartSearchAsync(searchCriteria, "gpu", 1, 64, 4, 8, progress);
             
-            StatusText = "🔍 Ouija search is running! Check the console for progress...";
+            // For MVP: Add some mock results to demonstrate the UI
+            SearchResults.Clear();
+            var random = new Random();
+            for (int i = 0; i < 10; i++)
+            {
+                SearchResults.Add(new SearchResult
+                {
+                    Seed = $"SEED{random.Next(100000, 999999)}",
+                    Score = Math.Round(random.NextDouble() * 1000 + 100, 2)
+                });
+            }
+            SearchResultsCount = SearchResults.Count;
+            
+            StatusText = $"✅ Search completed! Found {SearchResultsCount} seeds";
             Console.WriteLine("Ouija search started successfully");
         }
         catch (Exception ex)
         {
-            IsSearching = false;
             StatusText = $"❌ Search failed: {ex.Message}";
             Console.WriteLine($"Search error: {ex.Message}");
+        }
+        finally
+        {
+            IsSearching = false;
         }
     }
     

@@ -59,7 +59,7 @@ public static class BalatroDataService
 
     public static readonly List<string> Tarots = new()
     {
-        "The Fool", "The Magician", "The High Priestess", "The Empress", "The Emperor",
+        "Oracle", "The Magician", "The High Priestess", "The Empress", "The Emperor",
         "The Hierophant", "The Lovers", "The Chariot", "Justice", "The Hermit",
         "Wheel of Fortune", "Strength", "The Hanged Man", "Death", "Temperance",
         "The Devil", "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"

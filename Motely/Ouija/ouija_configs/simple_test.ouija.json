@@ -1,0 +1,32 @@
+{
+    "name": "simple_test",
+    "description": "Very simple test configuration",
+    "author": "test",
+    "keywords": ["TEST"],
+    "filter_config": {
+        "numNeeds": 1,
+        "numWants": 1,
+        "Needs": [
+            {
+                "type": "Joker",
+                "value": "FlashCard",
+                "edition": "None",
+                "searchAntes": [1]
+            }
+        ],
+        "Wants": [
+            {
+                "type": "Joker",
+                "value": "Hack",
+                "edition": "None",
+                "searchAntes": [1,2,3,4,5,6,7,8]
+            }
+        ],
+        "minSearchAnte": 1,
+        "maxSearchAnte": 4,
+        "deck": "RedDeck",
+        "stake": "WhiteStake",
+        "scoreNaturalNegatives": false,
+        "scoreDesiredNegatives": false
+    }
+}

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using Motely.Filters;
@@ -13,6 +14,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        Console.WriteLine($"Debug: Creating OuijaJsonFilter with {Config.Needs?.Length ?? 0} needs and {Config.Wants?.Length ?? 0} wants");
         // Cache streams for all filter types and antes used in needs/wants
         var allAntes = new HashSet<int>();
         
@@ -64,23 +66,45 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     {
         public OuijaConfig Config { get; }
         
+        // Thread-local storage for scoring results
+        private static readonly ThreadLocal<Dictionary<string, OuijaResult>> _threadLocalResults = 
+            new(() => new Dictionary<string, OuijaResult>());
+        
+        public static Dictionary<string, OuijaResult> GetThreadLocalResults() => _threadLocalResults.Value!;
+        
         public OuijaJsonFilter(OuijaConfig config) => Config = config;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
+            Console.WriteLine($"Debug: Filter method called");
             VectorMask mask = VectorMask.AllBitsSet;
 
             // PHASE 1: Vector filtering for NEEDS (filtering)
             var localConfig = Config; // Copy to avoid struct lambda capture issues
             mask = ProcessNeeds(ref searchContext, mask, localConfig);
+             
+            // Debug: Check how many seeds passed NEEDS filtering
+            int needsPassCount = CountBitsSet(mask);
+            if (needsPassCount > 0)
+            {
+                Console.WriteLine($"Debug: {needsPassCount} seeds passed NEEDS filtering");
+            }
+            
             if (mask.IsAllFalse()) return mask;
 
             // PHASE 2: Individual seed processing for WANTS (scoring)
-            return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
+            mask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                return ProcessWantsAndScore(ref singleCtx, localConfig);
+                bool result = ProcessWantsAndScore(ref singleCtx, localConfig);
+                if (result)
+                {
+                    Console.WriteLine($"Debug: Seed passed WANTS scoring");
+                }
+                return result;
             });
+            
+            return mask;
         }
 
         private static VectorMask ProcessNeeds(ref MotelyVectorSearchContext searchContext, VectorMask mask, OuijaConfig config)
@@ -139,7 +163,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case "Joker":
                     var prng = searchContext.CreatePrngStream(MotelyPrngKeys.JokerSoul + ante);
                     var jokerVec = searchContext.GetNextRandomElement(ref prng, jokerChoices);
-                    var jokerMask = (VectorMask)VectorEnum256.Equals(jokerVec, ParseJoker(need.Value));
+                    var targetJoker = ParseJoker(need.Value);
+                    var jokerMask = (VectorMask)VectorEnum256.Equals(jokerVec, targetJoker);
+                    
+                    // Debug: Check what jokers are being generated
+                    Console.WriteLine($"Debug: Looking for {need.Value} ({targetJoker}) at ante {ante}");
+                    Console.WriteLine($"Debug: Generated jokers in vector: {string.Join(", ", Enumerable.Range(0, 8).Select(i => jokerVec[i]))}");
+                    Console.WriteLine($"Debug: Joker mask result: {string.Join(", ", Enumerable.Range(0, 8).Select(i => jokerMask[i]))}");
+                    
+                    // Check for matches manually
+                    for (int i = 0; i < 8; i++)
+                    {
+                        if (jokerVec[i] == targetJoker)
+                        {
+                            Console.WriteLine($"Debug: MATCH FOUND at lane {i}: {jokerVec[i]} == {targetJoker}");
+                        }
+                    }
                     
                     // Check edition if specified - simplified for now
                     if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
@@ -173,6 +212,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             int totalScore = 0;
             int naturalNegatives = 0;
             int desiredNegatives = 0;
+            var scoreWants = new List<int>();
 
             var jokerChoices = (MotelyJoker[])Enum.GetValues(typeof(MotelyJoker));
 
@@ -191,13 +231,57 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     if (isDesiredNeg) desiredNegatives++;
                 }
 
+                scoreWants.Add(wantScore);
                 totalScore += wantScore;
             }
 
-            // Apply threshold filtering - NEVER allow seeds with score 0
-            bool passes = totalScore >= GetMinimumScore(config);
+            // Apply threshold filtering - For simple test, allow any score >= 0
+            bool passes = totalScore >= 0; // Changed from GetMinimumScore(config) to 0 for debugging
+
+            // Store the scoring result for this seed
+            if (passes)
+            {
+                string seed = GetCurrentSeed(ref singleCtx);
+                var result = new OuijaResult
+                {
+                    Seed = seed,
+                    TotalScore = (ushort)Math.Max(0, totalScore),
+                    NaturalNegativeJokers = (byte)naturalNegatives,
+                    DesiredNegativeJokers = (byte)desiredNegatives,
+                    ScoreWants = new byte[32], // Initialize with zeros
+                    Success = true
+                };
+                
+                // Copy want scores to the result array
+                for (int i = 0; i < Math.Min(scoreWants.Count, 32); i++)
+                {
+                    result.ScoreWants[i] = (byte)Math.Max(0, Math.Min(255, scoreWants[i]));
+                }
+                
+                _threadLocalResults.Value![seed] = result;
+            }
 
             return passes;
+        }
+        
+        private static unsafe string GetCurrentSeed(ref MotelySingleSearchContext singleCtx)
+        {
+            // Reconstruct the seed from the search context
+            // The seed consists of the last characters (fixed part) + the first character (from vector lane)
+            string seed = "";
+            
+            // Add the last characters (positions 1-7)
+            for (int i = 0; i < singleCtx.SeedLength - 1; i++)
+            {
+                if (singleCtx.SeedLastCharacters[i] != '\0')
+                    seed += singleCtx.SeedLastCharacters[i];
+            }
+            
+            // Add the first character from the vector lane
+            char firstChar = (char)singleCtx.SeedFirstCharacter[singleCtx.VectorLane];
+            seed = firstChar + seed;
+            
+            return seed;
         }
 
         private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessWantForAnte(

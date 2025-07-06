@@ -11,7 +11,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="m6x11plusplus.otf" />
-    <AvaloniaResource Include="The_Fool.webp" />
+    <AvaloniaResource Include="Oracle.webp" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,5 +35,9 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="SkiaSharp" />
 
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 </Project>

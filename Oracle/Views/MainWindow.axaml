@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="Oracle.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="🃏 The Fool - Balatro Seed Oracle"
+        Title="🃏 Oracle - Balatro Seed Oracle"
         Width="1200" Height="800"
         WindowStartupLocation="CenterScreen">
 
@@ -192,16 +192,19 @@
                                                                     IsChecked="{Binding IsRequired, Mode=TwoWay}" 
                                                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                             
-                                                            <TextBlock Grid.Column="3" Text="✕" 
-                                                                     FontSize="18"
-                                                                     FontWeight="Bold"
-                                                                     Foreground="#FF4444"
-                                                                     VerticalAlignment="Center"
-                                                                     HorizontalAlignment="Center"
-                                                                     Cursor="Hand"
-                                                                     ToolTip.Tip="Remove item">
-
-                                                            </TextBlock>
+                                                            <Button Grid.Column="3" Content="✕" 
+                                                                    FontSize="18"
+                                                                    FontWeight="Bold"
+                                                                    Foreground="#FF4444"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    VerticalAlignment="Center"
+                                                                    HorizontalAlignment="Center"
+                                                                    Cursor="Hand"
+                                                                    ToolTip.Tip="Remove item"
+                                                                    Command="{Binding $parent[Window].DataContext.RemoveCriteriaCommand}"
+                                                                    CommandParameter="{Binding}">
+                                                            </Button>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -257,16 +260,19 @@
                                                                     IsChecked="{Binding IsRequired, Mode=TwoWay}" 
                                                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                             
-                                                            <TextBlock Grid.Column="3" Text="✕" 
-                                                                     FontSize="18"
-                                                                     FontWeight="Bold"
-                                                                     Foreground="#FF4444"
-                                                                     VerticalAlignment="Center"
-                                                                     HorizontalAlignment="Center"
-                                                                     Cursor="Hand"
-                                                                     ToolTip.Tip="Remove item">
-
-                                                            </TextBlock>
+                                                            <Button Grid.Column="3" Content="✕" 
+                                                                    FontSize="18"
+                                                                    FontWeight="Bold"
+                                                                    Foreground="#FF4444"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    VerticalAlignment="Center"
+                                                                    HorizontalAlignment="Center"
+                                                                    Cursor="Hand"
+                                                                    ToolTip.Tip="Remove item"
+                                                                    Command="{Binding $parent[Window].DataContext.RemoveCriteriaCommand}"
+                                                                    CommandParameter="{Binding}">
+                                                            </Button>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -371,6 +377,96 @@
                             </StackPanel>
                             
                         </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+            
+            <!-- Results Tab -->
+            <TabItem Header="📊 RESULTS">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Results Header -->
+                    <Border Grid.Row="0"
+                            Background="{StaticResource BalatroCardBackground}"
+                            BorderBrush="{StaticResource BalatroBorder}"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="20,20,20,10">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="🎯 Search Results" 
+                                      FontSize="24" 
+                                      FontWeight="Bold" 
+                                      Foreground="{StaticResource BalatroSecondary}"
+                                      HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding SearchResultsCount, StringFormat='Found {0} seeds'}" 
+                                      FontSize="16" 
+                                      Foreground="{StaticResource BalatroText}"
+                                      HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Results List -->
+                    <Border Grid.Row="1"
+                            Background="{StaticResource BalatroBackground}"
+                            BorderBrush="{StaticResource BalatroBorder}"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Margin="20,10,20,20">
+                        <ListBox ItemsSource="{Binding SearchResults}" 
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="10">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource BalatroCardBackground}"
+                                            BorderBrush="{StaticResource BalatroBorder}"
+                                            BorderThickness="2"
+                                            CornerRadius="8"
+                                            Padding="15"
+                                            Margin="5">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <TextBlock Grid.Column="0" 
+                                                      Text="🌱" 
+                                                      FontSize="20"
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,15,0"/>
+                                            
+                                            <StackPanel Grid.Column="1" Spacing="5">
+                                                <TextBlock Text="{Binding Seed, StringFormat='Seed: {0}'}" 
+                                                          FontSize="16" 
+                                                          FontWeight="Bold" 
+                                                          Foreground="{StaticResource BalatroText}"/>
+                                                <TextBlock Text="{Binding Score, StringFormat='Score: {0}'}" 
+                                                          FontSize="14" 
+                                                          Foreground="{StaticResource BalatroSecondary}"/>
+                                            </StackPanel>
+                                            
+                                            <Button Grid.Column="2" 
+                                                   Content="📋 Copy" 
+                                                   FontSize="12"
+                                                   Padding="10,5"
+                                                   Background="{StaticResource BalatroSecondary}"
+                                                   Foreground="{StaticResource BalatroTextDark}"
+                                                   BorderBrush="{StaticResource BalatroSecondary}"
+                                                   CornerRadius="5"
+                                                   Command="{Binding $parent[Window].DataContext.CopySeedCommand}"
+                                                   CommandParameter="{Binding Seed}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </Border>
                 </Grid>
             </TabItem>

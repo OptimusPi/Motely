@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Filters;
@@ -45,6 +45,12 @@ partial class Program
             CommandOptionType.SingleValue);
         batchSizeOption.DefaultValue = 3;
 
+        var cutoffOption = app.Option<int>(
+            "--cutoff <SCORE>",
+            "Minimum TotalScore threshold for results (0 for no cutoff)",
+            CommandOptionType.SingleValue);
+        cutoffOption.DefaultValue = 0;
+
         app.OnExecute(() =>
         {
             var configName = configOption.Value()!;
@@ -52,15 +58,26 @@ partial class Program
             var endBatch = endBatchOption.ParsedValue;
             var threads = threadsOption.ParsedValue;
             var batchSize = batchSizeOption.ParsedValue;
+            var cutoff = cutoffOption.ParsedValue;
 
-            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize);
+            // Validate batchSize to prevent stack overflow
+            if (batchSize < 1 || batchSize > 8)
+            {
+                Console.WriteLine($"❌ Error: batchSize must be between 1 and 8 (got {batchSize})");
+                Console.WriteLine($"   batchSize represents the number of seed digits to process in parallel.");
+                Console.WriteLine($"   Valid range: 1-8 (Balatro seeds are 1-8 characters)");
+                Console.WriteLine($"   Recommended: 2-4 for optimal performance");
+                return 1;
+            }
+
+            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff);
             return 0;
         });
 
         return app.Execute(args);
     }
 
-    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize)
+    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff)
     {
         Console.WriteLine($"🔍 Motely Ouija Search Starting");
         Console.WriteLine($"   Config: {configPath}");
@@ -90,32 +107,29 @@ partial class Program
 
             // Process results as they come in
             int resultCount = 0;
+            int totalResultsProcessed = 0;
             while (!search.IsCompleted)
             {
                 while (search.Results.TryDequeue(out var result))
                 {
-                    if (result.Success)
+                    totalResultsProcessed++;
+                    if (result.Success && result.TotalScore >= cutoff)
                     {
                         PrintResult(result, config);
                         resultCount++;
                     }
+                    Thread.Sleep(1);
                 }
-                Thread.Sleep(100); // Don't hammer the CPU
+                Thread.Sleep(1);
             }
-
-            // Get any remaining results
-            while (search.Results.TryDequeue(out var result))
-            {
-                if (result.Success)
-                {
-                    PrintResult(result, config);
-                    resultCount++;
-                }
-            }
-
+  
             sw.Stop();
             Console.WriteLine();
-            Console.WriteLine($"🎯 Search Complete! Found {resultCount} matching seeds in {sw.Elapsed.TotalSeconds:F2}s");
+            
+            // Calculate total seeds searched
+            long totalSeeds = (long)search.TotalBatchCount * search.SeedsPerBatch;
+            Console.WriteLine($"Debug: Processed {totalResultsProcessed} result objects from search engine");
+            Console.WriteLine($"🎯 Search Complete! Found {resultCount} matching seeds out of {totalSeeds:N0} total seeds in {sw.Elapsed.TotalSeconds:F2}s");
         }
         catch (Exception ex)
         {
@@ -135,7 +149,8 @@ partial class Program
             Path.Combine("Ouija", "ouija_configs", configPath),
             Path.Combine("ouija_configs", configPath),
             Path.Combine(".", "ouija_configs", configPath),
-            configPath.EndsWith(".json") ? configPath : configPath + ".ouija.json"
+            configPath.EndsWith(".ouija.json") ? configPath : configPath + ".ouija.json",
+            Path.Combine("Ouija", "ouija_configs", configPath.EndsWith(".ouija.json") ? configPath : configPath + ".ouija.json")
         ];
 
         foreach (var path in attempts)
@@ -208,6 +223,8 @@ partial class Program
                 row += $",{result.ScoreWants[i]}";
             }
         }
+
+        // TODO - add custom columns that some filters may define
 
         Console.WriteLine(row);
     }

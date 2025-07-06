@@ -1,6 +1,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -188,6 +189,8 @@ public interface IMotelySearch : IDisposable
     public MotelySearchStatus Status { get; }
     public int BatchIndex { get; }
     public int CompletedBatchCount { get; }
+    public int TotalBatchCount { get; }
+    public int SeedsPerBatch { get; }
 
     public void Start();
     public void Pause();
@@ -259,6 +262,8 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
     private int _completedBatchCount;
     private static long _lastStatusUpdateTicks;
     public int CompletedBatchCount => _completedBatchCount;
+    public int TotalBatchCount => _batchCount;
+    public int SeedsPerBatch => _seedsPerBatch;
     private readonly Stopwatch _elapsedTime = new();
 
     public MotelySearch(MotelySearchSettings<TFilter> settings)
@@ -275,7 +280,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
         _nonBatchCharCount = Motely.MaxSeedLength - _batchCharCount;
         if (settings.EndBatchIndex != -1)
         {
-            _batchCount = settings.EndBatchIndex - _startBatchIndex;
+            _batchCount = settings.EndBatchIndex - _startBatchIndex + 1;
         }
         else
         {
@@ -558,9 +563,21 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                                     seed += _digits[digit];
                             }
 
-                            // TODO: Calculate actual scores instead of hardcoded placeholder
-                            int totalScore = 1; // Placeholder - should be calculated from actual wants matching
-                            int[] scoreWants = new int[1] { 1 }; // Placeholder
+                            // Get actual scoring data from OuijaJsonFilter if available
+                            int totalScore = 1; // Default fallback
+                            int[] scoreWants = new int[1] { 1 }; // Default fallback
+                            
+                            // Try to get actual scoring data from OuijaJsonFilter
+                            if (Search._filter is OuijaJsonFilterDesc.OuijaJsonFilter)
+                            {
+                                var threadResults = OuijaJsonFilterDesc.OuijaJsonFilter.GetThreadLocalResults();
+                                if (threadResults.TryGetValue(seed, out var ouijaResult))
+                                {
+                                    totalScore = ouijaResult.TotalScore;
+                                    scoreWants = ouijaResult.ScoreWants.Where(s => s > 0).Select(s => (int)s).ToArray();
+                                    if (scoreWants.Length == 0) scoreWants = new int[1] { 1 }; // Ensure at least one element
+                                }
+                            }
 
                             Search._results.Enqueue(new MotelySearchResult 
                             { 

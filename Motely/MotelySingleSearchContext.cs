@@ -91,9 +91,9 @@ public unsafe ref partial struct MotelySingleSearchContext
     private ref MotelySearchContextParams _params;
 
     private ref SeedHashCache SeedHashCache => ref _params.SeedHashCache;
-    private readonly int SeedLength => _params.SeedLength;
-    private readonly char* SeedLastCharacters => _params.SeedLastCharacters;
-    private readonly Vector512<double> SeedFirstCharacter => _params.SeedFirstCharacter;
+    public readonly int SeedLength => _params.SeedLength;
+    public readonly unsafe char* SeedLastCharacters => _params.SeedLastCharacters;
+    public readonly Vector512<double> SeedFirstCharacter => _params.SeedFirstCharacter;
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
