@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Oracle/bin/Debug/net8.0/Oracle.dll",
+            "program": "${workspaceFolder}/Oracle/bin/Debug/net9.0/Oracle.dll",
             "args": [],
             "cwd": "${workspaceFolder}/Oracle",
             "console": "internalConsole",
