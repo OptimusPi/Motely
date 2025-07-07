@@ -51,6 +51,11 @@ partial class Program
             CommandOptionType.SingleValue);
         cutoffOption.DefaultValue = 0;
 
+        var debugOption = app.Option(
+            "--debug",
+            "Enable debug output messages",
+            CommandOptionType.NoValue);
+
         app.OnExecute(() =>
         {
             var configName = configOption.Value()!;
@@ -59,6 +64,7 @@ partial class Program
             var threads = threadsOption.ParsedValue;
             var batchSize = batchSizeOption.ParsedValue;
             var cutoff = cutoffOption.ParsedValue;
+            var enableDebug = debugOption.HasValue();
 
             // Validate batchSize to prevent stack overflow
             if (batchSize < 1 || batchSize > 8)
@@ -70,20 +76,25 @@ partial class Program
                 return 1;
             }
 
-            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff);
+            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, enableDebug);
             return 0;
         });
 
         return app.Execute(args);
     }
 
-    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff)
+    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff, bool enableDebug)
     {
+        // Set debug output flag
+        DebugLogger.IsEnabled = enableDebug;
+        
         Console.WriteLine($"🔍 Motely Ouija Search Starting");
         Console.WriteLine($"   Config: {configPath}");
         Console.WriteLine($"   Threads: {threads}");
         Console.WriteLine($"   Batch Size: {batchSize} chars");
         Console.WriteLine($"   Range: {startBatch} to {endBatch}");
+        if (enableDebug)
+            Console.WriteLine($"   Debug: Enabled");
         Console.WriteLine();
 
         try
@@ -91,6 +102,17 @@ partial class Program
             // Load Ouija config - try multiple paths
             var config = LoadConfig(configPath);
             Console.WriteLine($"✅ Loaded config: {config.Needs?.Length ?? 0} needs, {config.Wants?.Length ?? 0} wants");
+
+            // Print the parsed config for debugging
+            Console.WriteLine("\n--- Parsed Ouija Config ---");
+            try {
+                var json = System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine(json);
+            } catch (Exception ex) {
+                Console.WriteLine($"[DEBUG] Could not serialize config: {ex.Message}");
+                Console.WriteLine(config.ToString());
+            }
+            Console.WriteLine("--- End Config ---\n");
 
             // Print CSV header for results
             PrintResultsHeader(config);
@@ -130,36 +152,33 @@ partial class Program
             long totalSeeds = (long)search.TotalBatchCount * search.SeedsPerBatch;
             Console.WriteLine($"Debug: Processed {totalResultsProcessed} result objects from search engine");
             Console.WriteLine($"🎯 Search Complete! Found {resultCount} matching seeds out of {totalSeeds:N0} total seeds in {sw.Elapsed.TotalSeconds:F2}s");
+            
+            // Flush any remaining debug messages
+            DebugLogger.ForceFlush();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error: {ex.Message}");
-            return;
+            DebugLogger.ForceFlush();
         }
     }
 
     static OuijaConfig LoadConfig(string configPath)
     {
-        // Try multiple locations for the config file
-        string[] attempts = [
-            configPath,
-            Path.Combine(".", configPath),
-            Path.Combine("..", configPath),
-            Path.Combine("../Ouija/ouija_configs", configPath),
-            Path.Combine("Ouija", "ouija_configs", configPath),
-            Path.Combine("ouija_configs", configPath),
-            Path.Combine(".", "ouija_configs", configPath),
-            configPath.EndsWith(".ouija.json") ? configPath : configPath + ".ouija.json",
-            Path.Combine("Ouija", "ouija_configs", configPath.EndsWith(".ouija.json") ? configPath : configPath + ".ouija.json")
-        ];
-
-        foreach (var path in attempts)
+        // If configPath is a rooted (absolute) path, use it directly
+        if (Path.IsPathRooted(configPath) && File.Exists(configPath))
         {
-            if (File.Exists(path))
-            {
-                Console.WriteLine($"📁 Loading config from: {path}");
-                return OuijaConfig.Load(path, OuijaConfig.GetOptions());
-            }
+            Console.WriteLine($"📁 Loading config from: {configPath}");
+            return OuijaConfig.Load(configPath, OuijaConfig.GetOptions());
+        }
+
+        // Always look in JsonItemFilters for configs
+        string fileName = configPath.EndsWith(".ouija.json") ? configPath : configPath + ".ouija.json";
+        string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
+        if (File.Exists(jsonItemFiltersPath))
+        {
+            Console.WriteLine($"📁 Loading config from: {jsonItemFiltersPath}");
+            return OuijaConfig.Load(jsonItemFiltersPath, OuijaConfig.GetOptions());
         }
 
         throw new FileNotFoundException($"Could not find config file: {configPath}");
