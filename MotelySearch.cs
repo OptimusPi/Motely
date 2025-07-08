@@ -298,7 +298,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        FancyConsole.WriteLine($"{seed}");
+        OuijaStyleConsole.WriteLine($"{seed}");
     }
 
     private void PrintReport()
@@ -313,20 +313,33 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
         double totalPortionFinished = _completedBatchCount / (double)_threads[0].MaxBatch;
         double thisPortionFinished = thisCompletedCount / (double)_threads[0].MaxBatch;
+
+        // Prevent division by zero or negative/NaN
+        if (thisPortionFinished <= 0 || double.IsNaN(thisPortionFinished) || double.IsInfinity(thisPortionFinished))
+            thisPortionFinished = 1e-9;
+
         double totalTimeEstimate = elapsedMS / thisPortionFinished;
-        double timeLeft = totalTimeEstimate - elapsedMS;
+        double timeLeft = Math.Max(0, totalTimeEstimate - elapsedMS);
 
-        TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(timeLeft);
-
-        double seedsPerMS = (thisCompletedCount * (double)_threads[0].SeedsPerBatch) / elapsedMS;
+        // 30 days in ms
+        double thirtyDaysMs = 30L * 24 * 60 * 60 * 1000;
 
         string timeLeftFormatted;
+        if (thisCompletedCount < 10 || elapsedMS < 2000) {
+            timeLeftFormatted = "--:--:--";
+        } else if (timeLeft > thirtyDaysMs || double.IsInfinity(timeLeft) || double.IsNaN(timeLeft)) {
+            timeLeftFormatted = "A long time!";
+        } else {
+            TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(timeLeft);
+            if (timeLeftSpan.TotalDays >= 1)
+                timeLeftFormatted = $"{(int)timeLeftSpan.TotalDays}d {timeLeftSpan:hh\\:mm\\:ss}";
+            else
+                timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+        }
 
-        if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-        else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+        double seedsPerMS = thisCompletedCount * ((double)_threads[0].SeedsPerBatch / Math.Max(1, elapsedMS));
 
-        FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
-
+        OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
     }
 
     public void Dispose()
@@ -377,6 +390,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
         public MotelySearchThread(MotelySearch<TFilter> search, int threadIndex)
         {
+
             Search = search;
             ThreadIndex = threadIndex;
 
@@ -418,11 +432,13 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                     return;
                 }
 
+
                 SearchBatch(batchIdx);
-                
+
                 Interlocked.Increment(ref Search._completedBatchCount);
 
-                Search.PrintReport();
+                OuijaStyleConsole.SetBottomLine($"Thread {ThreadIndex} completed batch {batchIdx}");
+
             }
 
         }
@@ -468,10 +484,6 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                     SearchSingleSeed(SeedProvider.NextSeed());
                 }
                 return;
-            }
-            else
-            {
-                SearchBatch(batchIdx);
             }
 
             // The length of all the seeds
@@ -710,7 +722,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
         }
 
 #if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
         private void SearchVector(int i, Vector512<double> seedDigitVector, Vector512<double>* nums, int numsLaneIndex)
         {
@@ -761,8 +773,6 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                                 if (_digits[digit] != '\0')
                                     seed[digit] = _digits[digit];
                             }
-
-                            Search.ReportSeed(seed);
                         }
 
                         successMask >>= 1;
@@ -783,6 +793,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                     }
                 }
             }
+            Search.PrintReport();
         }
 
         public new void Dispose()

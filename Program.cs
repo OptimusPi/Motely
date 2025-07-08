@@ -76,6 +76,7 @@ partial class Program
         }
         app.OnExecute(() =>
         {
+            Console.WriteLine("🔍 Starting Motely Ouija Search");
             var configName = configOption.Value()!;
             var startBatch = startBatchOption.ParsedValue;
             var endBatch = endBatchOption.ParsedValue;
@@ -137,9 +138,7 @@ partial class Program
             //using var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config))
             using var search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
                 .WithThreadCount(threads)
-                .WithSequentialSearch()
-                .WithBatchCharacterCount(batchSize)
-                .WithStartBatchIndex(startBatch)
+                .WithProviderSearch(new MotelyRandomSeedProvider(2000000000)) // Use a large seed range
                 .Start();
             Console.WriteLine($"✅ Search started successfully");
 
@@ -216,29 +215,6 @@ partial class Program
             parts.AddRange(want.JokerStickers);
 
         return string.Join("_", parts);
-    }
-
-    static void PrintResult(OuijaResult result, OuijaConfig config)
-    {
-        var row = $"{result.Seed},{result.TotalScore}";
-
-        if (config.ScoreNaturalNegatives)
-            row += $",{result.NaturalNegativeJokers}";
-        if (config.ScoreDesiredNegatives)
-            row += $",{result.DesiredNegativeJokers}";
-
-        // Add scores for each want
-        if (config.Wants != null && result.ScoreWants != null)
-        {
-            for (int i = 0; i < Math.Min(result.ScoreWants.Length, config.Wants.Length); i++)
-            {
-                row += $",{result.ScoreWants[i]}";
-            }
-        }
-
-        // TODO - add custom columns that some filters may define
-
-        Console.WriteLine(row);
     }
 }
 
