@@ -1,4 +1,3 @@
-
 using System.Runtime.Intrinsics;
 
 namespace Motely;

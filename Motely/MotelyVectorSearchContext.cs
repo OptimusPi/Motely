@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -311,7 +310,7 @@ public unsafe ref partial struct MotelyVectorSearchContext
 #endif
     private MotelyVectorPrngStream CreateResamplePrngStream(string key, int resample)
     {
-        return CreatePrngStream(key + MotelyPrngKeys.Resample + (resample + 2));
+        return CreatePrngStream(key + MotelyPrngKeys.Resample(resample));
     }
 
 #if !DEBUG
@@ -320,7 +319,7 @@ public unsafe ref partial struct MotelyVectorSearchContext
     private MotelyVectorPrngStream CreateResamplePrngStreamCached(string key, int resample)
     {
         // We don't cache resamples > 8 because they'd use an extra digit
-        if (resample < 8) return CreatePrngStreamCached(key + MotelyPrngKeys.Resample + (resample + 2));
+        if (resample < 8) return CreatePrngStreamCached(key + MotelyPrngKeys.Resample(resample));
         return CreateResamplePrngStream(key, resample);
     }
 

@@ -17,7 +17,7 @@ unsafe ref partial struct MotelySingleSearchContext
 
     public MotelySingleJokerFixedRarityStream CreateSoulJokerStream(int ante)
     {
-        return CreateJokerFixedRarityStream(MotelyPrngKeys.JokerSoul, ante, MotelyJokerRarity.Legendary);
+        return CreateJokerFixedRarityStream(MotelyPrngKeys.Soul, ante, MotelyJokerRarity.Legendary);
     }
 
 #if !DEBUG
@@ -70,75 +70,6 @@ unsafe ref partial struct MotelySingleSearchContext
 
         return NextJoker(stream.Rarity, edition, ref stream.JokerStream);
     }
-
-    // #if !DEBUG
-    //     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    // #endif
-    //     public MotelyItem NextJoker(ref MotelySingleJokerFixedRarityStream stream)
-    //     {
-    //         MotelyJokerRarity rarity;
-
-    //         switch (stream.Source)
-    //         {
-    //             case MotelyPrngKeys.JokerSoul:
-    //                 rarity = MotelyJokerRarity.Legendary;
-    //                 break;
-    //             default:
-    //                 double rarityPoll = GetNextRandom(ref stream.RarityPrngStream);
-
-    //                 if (rarityPoll > 0.95)
-    //                     rarity = MotelyJokerRarity.Rare;
-    //                 else if (rarityPoll > 0.7)
-    //                     rarity = MotelyJokerRarity.Uncommon;
-    //                 else
-    //                     rarity = MotelyJokerRarity.Common;
-    //                 break;
-    //         }
-
-    //         MotelyItemEdition edition;
-
-    //         {
-    //             int editionRate = 1;
-
-    //             double editionPoll = GetNextRandom(ref stream.EditionPrngStream);
-
-    //             if (editionPoll > 0.997)
-    //                 edition = MotelyItemEdition.Negative;
-    //             else if (editionPoll > 1 - 0.006 * editionRate)
-    //                 edition = MotelyItemEdition.Polychrome;
-    //             else if (editionPoll > 1 - 0.02 * editionRate)
-    //                 edition = MotelyItemEdition.Holographic;
-    //             else if (editionPoll > 1 - 0.04 * editionRate)
-    //                 edition = MotelyItemEdition.Foil;
-    //             else
-    //                 edition = MotelyItemEdition.None;
-    //         }
-
-    //         // Get next joker
-    //         MotelyJoker joker;
-
-    //         if (rarity == MotelyJokerRarity.Legendary)
-    //         {
-    //             joker = (MotelyJoker)((int)MotelyJokerRarity.Legendary | (int)NextJoker<MotelyJokerLegendary>(ref stream.JokerStream));
-    //         }
-    //         else if (rarity == MotelyJokerRarity.Rare)
-    //         {
-    //             joker = (MotelyJoker)((int)MotelyJokerRarity.Rare | (int)NextJoker<MotelyJokerRare>(ref stream.JokerStream));
-    //         }
-    //         else if (rarity == MotelyJokerRarity.Uncommon)
-    //         {
-    //             joker = (MotelyJoker)((int)MotelyJokerRarity.Uncommon | (int)NextJoker<MotelyJokerUncommon>(ref stream.JokerStream));
-    //         }
-    //         else
-    //         {
-    //             Debug.Assert(rarity == MotelyJokerRarity.Common);
-
-    //             joker = (MotelyJoker)((int)MotelyJokerRarity.Common | (int)NextJoker<MotelyJokerCommon>(ref stream.JokerStream));
-    //         }
-
-    //         return new(joker, edition);
-    //     }
-
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

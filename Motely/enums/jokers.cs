@@ -330,3 +330,34 @@ public enum MotelyJoker
     Chicot = MotelyJokerRarity.Legendary | MotelyJokerLegendary.Chicot,
     Perkeo = MotelyJokerRarity.Legendary | MotelyJokerLegendary.Perkeo,
 }
+
+public static class MotelyJokerUtil
+{
+    // Normalize a string for enum matching: remove spaces/underscores, PascalCase
+    public static string Normalize(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+        var chars = s.Where(c => c != ' ' && c != '_').ToArray();
+        return new string(chars);
+    }
+
+    // Try to parse a string to MotelyJoker (case-insensitive, tolerant)
+    public static bool TryParse(string input, out MotelyJoker result)
+    {
+        string norm = Normalize(input);
+        foreach (var name in Enum.GetNames(typeof(MotelyJoker)))
+        {
+            if (string.Equals(norm, name, StringComparison.OrdinalIgnoreCase))
+            {
+                result = (MotelyJoker)Enum.Parse(typeof(MotelyJoker), name);
+                return true;
+            }
+        }
+        result = default;
+        return false;
+    }
+
+    // For config output: always use PascalCase
+    public static string ToConfigString(MotelyJoker joker)
+        => joker.ToString();
+}

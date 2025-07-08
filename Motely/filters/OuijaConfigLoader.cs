@@ -26,6 +26,7 @@ public class OuijaConfig
         public string Chip { get; set; } = string.Empty;
         public int DesireByAnte { get; set; } = 8;
         public int[] SearchAntes { get; set; } = Array.Empty<int>();
+        public int Score { get; set; }
     }
 
     public override string ToString()

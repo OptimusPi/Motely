@@ -19,8 +19,8 @@ ref partial struct MotelySingleSearchContext
     public MotelySinglePlayingCardsStream CreateStandardPackPlayingCardsStream(int ante)
     {
         return new(ante, true,
-            CreateResampleStream(MotelyPrngKeys.PlayingCards + MotelyPrngKeys.StandardPack + ante),
-            CreatePrngStream(MotelyPrngKeys.FoilEffect + MotelyPrngKeys.PlayingCards + ante)
+            CreateResampleStream(MotelyPrngKeys.Card + ante),
+            CreatePrngStream(MotelyPrngKeys.StandardEdition + ante)
         );
     }
 

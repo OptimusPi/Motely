@@ -1,4 +1,3 @@
-
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
@@ -48,10 +47,10 @@ public ref struct MotelyFilterCreationContext
         CachePseudoHash(key.Length);
     }
 
-    private readonly void CacheResampleStream(string key)
+    private readonly void CacheResampleStream(string key, int x)
     {
         CachePseudoHash(key);
-        CachePseudoHash(key + MotelyPrngKeys.Resample + "X");
+        CachePseudoHash(key + MotelyPrngKeys.Resample(x));
         // We don't cache resamples > 8 because they'd use an extra digit
     }
 
@@ -59,12 +58,12 @@ public ref struct MotelyFilterCreationContext
 
     public readonly void CacheTagStream(int ante) => CachePseudoHash(MotelyPrngKeys.Tags + ante);
 
-    public readonly void CacheVoucherStream(int ante) => CacheResampleStream(MotelyPrngKeys.Voucher + ante);
+    public readonly void CacheVoucherStream(int ante) => CacheResampleStream(MotelyPrngKeys.Voucher,ante);
 
     public readonly void CacheTarotStream(int ante)
     {
-        CacheResampleStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante);
-        CachePseudoHash(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante);
+        CacheResampleStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaSource, ante);
+        CachePseudoHash(MotelyPrngKeys.Soul + MotelyPrngKeys.Tarot + ante);
     }
 
 }
