@@ -87,7 +87,7 @@ partial class Program
     {
         // Set debug output flag
         DebugLogger.IsEnabled = enableDebug;
-        
+
         Console.WriteLine($"🔍 Motely Ouija Search Starting");
         Console.WriteLine($"   Config: {configPath}");
         Console.WriteLine($"   Threads: {threads}");
@@ -160,10 +160,10 @@ partial class Program
 
                 Thread.Sleep(1);
             }
-  
+
             sw.Stop();
             Console.WriteLine();
-                        
+
             // Flush any remaining debug messages
             DebugLogger.ForceFlush();
         }
@@ -198,10 +198,10 @@ partial class Program
     static void PrintResultsHeader(OuijaConfig config)
     {
         var header = "Seed,TotalScore";
-        
-        if (config.ScoreNaturalNegatives) 
+
+        if (config.ScoreNaturalNegatives)
             header += ",NaturalNegatives";
-        if (config.ScoreDesiredNegatives) 
+        if (config.ScoreDesiredNegatives)
             header += ",DesiredNegatives";
 
         // Add column for each want
@@ -221,7 +221,7 @@ partial class Program
     static string FormatWantColumn(OuijaConfig.Desire want)
     {
         var parts = new List<string>();
-        
+
         if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
             parts.Add(want.Edition);
         if (!string.IsNullOrEmpty(want.Value))
@@ -239,10 +239,10 @@ partial class Program
     static void PrintResult(MotelySearchResult result, OuijaConfig config)
     {
         var row = $"{result.Seed},{result.TotalScore}";
-        
-        if (config.ScoreNaturalNegatives) 
+
+        if (config.ScoreNaturalNegatives)
             row += $",{result.NaturalNegativeJokers}";
-        if (config.ScoreDesiredNegatives) 
+        if (config.ScoreDesiredNegatives)
             row += $",{result.DesiredNegativeJokers}";
 
         // Add scores for each want
@@ -259,3 +259,16 @@ partial class Program
         Console.WriteLine(row);
     }
 }
+
+// IMotelySearch search = new MotelySearchSettings<LuckyCardFilterDesc.LuckyCardFilter>(new LuckyCardFilterDesc())
+// IMotelySearch search = new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc())
+//IMotelySearch search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
+    // await new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
+    // .WithThreadCount(Environment.ProcessorCount - 2)
+    // .WithThreadCount(1)
+    // .WithStartBatchIndex(41428)
+
+    // .WithListSearch(["811M2111"])
+    // .WithProviderSearch(new MotelyRandomSeedProvider(2000000000))
+    //.Start();
+
