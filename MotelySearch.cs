@@ -1,4 +1,3 @@
-
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -6,15 +5,6 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 
 namespace Motely;
-public struct MotelySearchResult
-{
-    public string Seed;
-    public bool Success;
-    public int TotalScore;
-    public int NaturalNegativeJokers;
-    public int DesiredNegativeJokers;
-    public int[] ScoreWants;
-}
 
 public ref struct MotelyFilterCreationContext
 {
@@ -195,7 +185,6 @@ public sealed class MotelySearchSettings<TFilter>(IMotelySeedFilterDesc<TFilter>
 
 public interface IMotelySearch : IDisposable
 {
-    ConcurrentQueue<MotelySearchResult> Results { get; }
     public MotelySearchStatus Status { get; }
     public int BatchIndex { get; }
     public int CompletedBatchCount { get; }
@@ -216,8 +205,6 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
     where TFilter : struct, IMotelySeedFilter
 {
     private readonly MotelySearchThread[] _threads;
-    private readonly ConcurrentQueue<MotelySearchResult> _results = new();
-    public ConcurrentQueue<MotelySearchResult> Results => _results;
     private readonly Barrier _pauseBarrier;
     private readonly Barrier _unpauseBarrier;
     private volatile MotelySearchStatus _status;
@@ -292,6 +279,8 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
         if (Interlocked.CompareExchange(ref _status, MotelySearchStatus.Running, MotelySearchStatus.Paused) != MotelySearchStatus.Paused)
             return;
 
+        _status = MotelySearchStatus.Running;
+
         _elapsedTime.Start();
         _unpauseBarrier.SignalAndWait();
     }
@@ -309,7 +298,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        // FancyConsole.WriteLine($"{seed}");
+        FancyConsole.WriteLine($"{seed}");
     }
 
     private void PrintReport()
@@ -478,13 +467,11 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                 {
                     SearchSingleSeed(SeedProvider.NextSeed());
                 }
-                else
-                {
-                    SearchBatch(batchIdx);
-                    LastCompletedBatch = batchIdx;
-                }
-
                 return;
+            }
+            else
+            {
+                SearchBatch(batchIdx);
             }
 
             // The length of all the seeds
@@ -496,8 +483,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
             for (int seedIdx = 0; seedIdx < Vector512<double>.Count; seedIdx++)
             {
                 ReadOnlySpan<char> seed = SeedProvider.NextSeed();
-                double seedsPerMS = thisCompletedCount * (double)Search._seedsPerBatch / elapsedMS;
-
+                
                 seedLengths[seedIdx] = seed.Length;
 
                 if (seedLengths[0] != seed.Length)
@@ -719,6 +705,8 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
             {
                 SearchVector(_batchCharCount - 1, SeedDigitVectors[vectorIndex], hashes, 0);
             }
+
+            LastCompletedBatch = batchIdx;
         }
 
 #if !DEBUG

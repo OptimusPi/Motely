@@ -9,17 +9,17 @@
         "Needs": [
             {
                 "type": "Joker",
-                "value": "HangingChad",
-                "edition": "None",
-                "searchAntes": [1,2],
+                "value": "Perkeo",
+                "edition": "Negative",
+                "searchAntes": [1],
                 "Score": 1
             }
         ],
         "Wants": [
             {
                 "type": "Joker",
-                "value": "HangingChad",
-                "edition": "None",
+                "value": "Perkeo",
+                "edition": "Negative",
                 "searchAntes": [1,2],
                 "Score": 1
             }

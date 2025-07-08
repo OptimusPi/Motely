@@ -85,12 +85,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     {
         public OuijaConfig Config { get; }
         
-        // Thread-local storage for scoring results
-        private static readonly ThreadLocal<Dictionary<string, OuijaResult>> _threadLocalResults = 
-            new(() => new Dictionary<string, OuijaResult>());
-        
-        public static Dictionary<string, OuijaResult> GetThreadLocalResults() => _threadLocalResults.Value!;
-        
         public OuijaJsonFilter(OuijaConfig config) => Config = config;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -115,12 +109,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // PHASE 2: Individual seed processing for WANTS (scoring)
             mask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                bool result = ProcessWantsAndScore(ref singleCtx, localConfig);
-                if (result)
+                var result = ProcessWantsAndScore(ref singleCtx, localConfig);
+
+                if (result.Success)
                 {
-                    DebugLogger.Log("Seed passed WANTS scoring");
+                    string seed = singleCtx.GetCurrentSeed();
+                    string csvLine = $"|{seed},{result.TotalScore},{result.NaturalNegativeJokers},{result.DesiredNegativeJokers},{string.Join(",", result.ScoreWants)}";
+                    FancyConsole.WriteLine($"{csvLine}");
                 }
-                return result;
+                
+                return result.Success;
             });
             
             return mask;
@@ -217,7 +215,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             }
         }
 
-        private static bool ProcessWantsAndScore(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
+        public static ConcurrentQueue<OuijaResult>? ResultsQueue { get; set; }
+
+        private static OuijaResult ProcessWantsAndScore(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
         {
             int totalScore = 0;
             int naturalNegatives = 0;
@@ -249,28 +249,18 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             bool passes = totalScore >= GetMinimumScore(config);
 
             // Store the scoring result for this seed
-            if (passes)
+            string seed = singleCtx.GetCurrentSeed();
+            var result = new OuijaResult
             {
-                string seed = GetCurrentSeed(ref singleCtx);
-                var result = new OuijaResult
-                {
-                    Seed = seed,
-                    TotalScore = (ushort)Math.Max(0, totalScore),
-                    NaturalNegativeJokers = (byte)naturalNegatives,
-                    DesiredNegativeJokers = (byte)desiredNegatives,
-                    ScoreWants = scoreWants,
-                    Success = true
-                };
-                _threadLocalResults.Value![seed] = result;
-            }
+                Seed = seed,
+                TotalScore = (ushort)Math.Max(0, totalScore),
+                NaturalNegativeJokers = (byte)naturalNegatives,
+                DesiredNegativeJokers = (byte)desiredNegatives,
+                ScoreWants = scoreWants,
+                Success = passes
+            };
 
-            return passes;
-        }
-
-        private static string GetCurrentSeed(ref MotelySingleSearchContext singleCtx)
-        {
-            // Use the public Seed property or method if available, otherwise expose SeedLastCharacters via an accessor.
-            return singleCtx.Seed;
+            return result;
         }
 
 
@@ -305,6 +295,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 ? singleCtx.CreatePrngStream(MotelyPrngKeys.TerrotSoul + ante)
                 : singleCtx.CreatePrngStream(MotelyPrngKeys.TerrotSoul + ante);
             
+            // TODO this is not right 
             var joker = singleCtx.GetNextRandomElement(ref prng, jokerChoices);
             var expectedJoker = ParseJoker(want.Value);
             

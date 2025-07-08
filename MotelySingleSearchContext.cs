@@ -95,6 +95,15 @@ public unsafe ref partial struct MotelySingleSearchContext
     public readonly int SeedFirstCharactersLength => _params.SeedFirstCharactersLength;
     private readonly char* SeedFirstCharacters => _params.SeedFirstCharacters;
     private readonly Vector512<double>* SeedLastCharacters => _params.SeedLastCharacters;
+    public string GetCurrentSeed()
+    {
+#if MOTELY_SAFE
+        if (SeedFirstCharacters == null || SeedLastCharacters == null)
+            throw new InvalidOperationException("Seed characters are not initialized.");
+#endif
+        return new string(SeedFirstCharacters, 0, SeedFirstCharactersLength) +
+               new string((char*)SeedLastCharacters + VectorLane * SeedLength, 0, SeedLength - SeedFirstCharactersLength);
+    }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

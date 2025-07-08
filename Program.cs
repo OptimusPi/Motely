@@ -43,7 +43,7 @@ partial class Program
             "--batchSize <CHARS>",
             "Batch character count (2-4 recommended)",
             CommandOptionType.SingleValue);
-        batchSizeOption.DefaultValue = 3;
+        batchSizeOption.DefaultValue = 4;
 
         var cutoffOption = app.Option<int>(
             "--cutoff <SCORE>",
@@ -56,6 +56,24 @@ partial class Program
             "Enable debug output messages",
             CommandOptionType.NoValue);
 
+        // .WithListSearch(["811M2111"])
+        
+        var seedOption = app.Option<string>(
+            "--seed <SEED>",
+            "Specific seed to search for (overrides batch options)",
+            CommandOptionType.SingleValue);
+        seedOption.DefaultValue = string.Empty;
+        
+
+        var seedInput = seedOption.Value()!;
+        
+        if (!string.IsNullOrEmpty(seedInput))
+        {
+            // If a seed is provided, run a single search for that seed
+            Console.WriteLine($"🔍 Searching for specific seed: {seedInput}");
+            RunOuijaSearch(configOption.Value()!, 0, 0, threadsOption.ParsedValue, batchSizeOption.ParsedValue, cutoffOption.ParsedValue, debugOption.HasValue());
+            return 0;
+        }
         app.OnExecute(() =>
         {
             var configName = configOption.Value()!;
@@ -120,46 +138,13 @@ partial class Program
             var sw = Stopwatch.StartNew();
 
             // Create and run the search
-            using var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config))
+            Console.WriteLine($"🔍 Starting search with {threads} threads, batch size {batchSize}, starting at batch index {startBatch}, cutoff score {cutoff}");
+            //using var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config))
+            using var search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
                 .WithThreadCount(threads)
-                .WithBatchCharacterCount(batchSize)
-                .WithStartBatchIndex(startBatch)
+                .WithSequentialSearch()
                 .Start();
-
-            // Process results as they come in
-            int resultCount = 0;
-            int totalResultsProcessed = 0;
-            while (search.Status is MotelySearchStatus.Running or MotelySearchStatus.Paused)
-            {
-                // Process results in the queue
-                while (search.Results.TryDequeue(out var result))
-                {
-                    totalResultsProcessed++;
-                    if (result.Success && result.TotalScore >= cutoff)
-                    {
-                        PrintResult(result, config);
-                        resultCount++;
-                    }
-                    Thread.Sleep(1);
-                }
-
-                // Sleep briefly to avoid busy-waiting
-                Thread.Sleep(1);
-            }
-            {
-                while (search.Results.TryDequeue(out var result))
-                {
-                    totalResultsProcessed++;
-                    if (result.Success && result.TotalScore >= cutoff)
-                    {
-                        PrintResult(result, config);
-                        resultCount++;
-                    }
-                    Thread.Sleep(1);
-                }
-
-                Thread.Sleep(1);
-            }
+            Console.WriteLine($"✅ Search started successfully");
 
             sw.Stop();
             Console.WriteLine();
@@ -236,7 +221,7 @@ partial class Program
         return string.Join("_", parts);
     }
 
-    static void PrintResult(MotelySearchResult result, OuijaConfig config)
+    static void PrintResult(OuijaResult result, OuijaConfig config)
     {
         var row = $"{result.Seed},{result.TotalScore}";
 
