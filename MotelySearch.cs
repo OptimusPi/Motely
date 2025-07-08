@@ -1,11 +1,18 @@
-
+using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 
 namespace Motely;
-
+public struct MotelySearchResult
+{
+    public string Seed;
+    public bool Success;
+    public int TotalScore;
+    public int NaturalNegativeJokers;
+    public int DesiredNegativeJokers;
+    public int[] ScoreWants;
+}
 
 public ref struct MotelyFilterCreationContext
 {
@@ -167,6 +174,7 @@ internal unsafe struct SeedHashCache(Vector512<double>* seedHashes, int* seedHas
 
 public interface IMotelySearch : IDisposable
 {
+    ConcurrentQueue<MotelySearchResult> Results { get; }
     public MotelySearchStatus Status { get; }
     public int BatchIndex { get; }
     public int CompletedBatchCount { get; }
@@ -215,6 +223,8 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
     }
 
     private readonly MotelySearchThread[] _threads;
+    private readonly ConcurrentQueue<MotelySearchResult> _results = new();
+    public ConcurrentQueue<MotelySearchResult> Results => _results;
     private readonly Barrier _pauseBarrier;
     private readonly Barrier _unpauseBarrier;
     private volatile MotelySearchStatus _status;

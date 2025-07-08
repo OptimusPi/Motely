@@ -124,13 +124,28 @@ partial class Program
                 .WithThreadCount(threads)
                 .WithBatchCharacterCount(batchSize)
                 .WithStartBatchIndex(startBatch)
-                .WithEndBatchIndex(endBatch)
                 .Start();
 
             // Process results as they come in
             int resultCount = 0;
             int totalResultsProcessed = 0;
-            while (!search.IsCompleted)
+            while (search.Status is MotelySearchStatus.Running or MotelySearchStatus.Paused)
+            {
+                // Process results in the queue
+                while (search.Results.TryDequeue(out var result))
+                {
+                    totalResultsProcessed++;
+                    if (result.Success && result.TotalScore >= cutoff)
+                    {
+                        PrintResult(result, config);
+                        resultCount++;
+                    }
+                    Thread.Sleep(1);
+                }
+
+                // Sleep briefly to avoid busy-waiting
+                Thread.Sleep(1);
+            }
             {
                 while (search.Results.TryDequeue(out var result))
                 {
@@ -142,17 +157,13 @@ partial class Program
                     }
                     Thread.Sleep(1);
                 }
+
                 Thread.Sleep(1);
             }
   
             sw.Stop();
             Console.WriteLine();
-            
-            // Calculate total seeds searched
-            long totalSeeds = (long)search.TotalBatchCount * search.SeedsPerBatch;
-            Console.WriteLine($"Debug: Processed {totalResultsProcessed} result objects from search engine");
-            Console.WriteLine($"🎯 Search Complete! Found {resultCount} matching seeds out of {totalSeeds:N0} total seeds in {sw.Elapsed.TotalSeconds:F2}s");
-            
+                        
             // Flush any remaining debug messages
             DebugLogger.ForceFlush();
         }
