@@ -52,7 +52,7 @@ public static class MotelyPrngKeys
     public const string HighPriestessSource = "pri";         // S_High_Priestess
     public const string JudgementSource = "jud";             // S_Judgement
     public const string WraithSource = "wra";                // S_Wraith
-    public const string ArcanaSource = "ar1";                // S_Arcana
+    public const string ArcanaPack = "ar1";                  // S_Arcana
     public const string CelestialSource = "pl1";             // S_Celestial
     public const string SpectralSource = "spe";              // S_Spectral
     public const string StandardSource = "sta";              // S_Standard
@@ -72,5 +72,8 @@ public static class MotelyPrngKeys
     public const string CartomancerSource = "car";           // S_Cartomancer
 
     // Resample node (see resample_str in cache.cl)
-    public static string Resample(int n) => n == 0 ? "" : $"_resample{n+1}";
+    public static string Resample(int n) => n == 0 ? "" : $"_resample{n}";
+
+    // Resample node for single digit resamples (see resample_single_digit_str in cache.cl)
+    public static string ResampleSingleDigit => "_resampleX";
 }

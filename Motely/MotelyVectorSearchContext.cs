@@ -319,8 +319,7 @@ public unsafe ref partial struct MotelyVectorSearchContext
     private MotelyVectorPrngStream CreateResamplePrngStreamCached(string key, int resample)
     {
         // We don't cache resamples > 8 because they'd use an extra digit
-        // TODO should this say <= 8?
-        if (resample < 8) return CreatePrngStreamCached(key + MotelyPrngKeys.Resample(resample));
+        if (resample < 8) return CreatePrngStreamCached(key + MotelyPrngKeys.Resample(resample + 2));
         return CreateResamplePrngStream(key, resample);
     }
 

@@ -232,7 +232,7 @@ public unsafe ref partial struct MotelySingleSearchContext
     private MotelySinglePrngStream CreateResamplePrngStreamCached(string key, int resample)
     {
         // We don't cache resamples > 8 because they'd use an extra digit
-        if (resample < 8) return CreatePrngStreamCached(key + MotelyPrngKeys.Resample(resample));
+        if (resample < 8) return CreatePrngStreamCached(key + MotelyPrngKeys.Resample(resample + 2));
         return CreateResamplePrngStream(key, resample);
     }
 
@@ -241,7 +241,7 @@ public unsafe ref partial struct MotelySingleSearchContext
 #endif
     private MotelySinglePrngStream CreateResamplePrngStream(string key, int resample)
     {
-        return CreatePrngStream(key + MotelyPrngKeys.Resample(resample));
+        return CreatePrngStream(key + MotelyPrngKeys.Resample(resample + 2));
     }
 
 #if !DEBUG
