@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -106,5 +105,29 @@ unsafe ref partial struct MotelySingleSearchContext
         Debug.Assert(sizeof(T) == 4);
         int value = GetNextRandomInt(ref stream, 0, MotelyEnum<T>.ValueCount);
         return Unsafe.As<int, T>(ref value);
+    }
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelySingleJokerFixedRarityStream CreateShopJokerStream(int ante, MotelyJokerRarity rarity)
+    {
+        // This matches next_joker_with_info in OpenCL: PRNG key is rarity+source+ante
+        string prngKey = rarity switch
+        {
+            MotelyJokerRarity.Legendary => MotelyPrngKeys.JokerLegendary + MotelyPrngKeys.ShopSource + ante,
+            MotelyJokerRarity.Rare      => MotelyPrngKeys.JokerRare + MotelyPrngKeys.ShopSource + ante,
+            MotelyJokerRarity.Uncommon  => MotelyPrngKeys.JokerUncommon + MotelyPrngKeys.ShopSource + ante,
+            MotelyJokerRarity.Common    => MotelyPrngKeys.JokerCommon + MotelyPrngKeys.ShopSource + ante,
+            _ => throw new NotSupportedException($"Unknown rarity: {rarity}")
+        };
+        MotelySingleJokerFixedRarityStream stream = new()
+        {
+            Ante = ante,
+            Rarity = rarity,
+            EditionPrngStream = CreatePrngStream(MotelyPrngKeys.JokerEdition + MotelyPrngKeys.ShopSource + ante),
+            JokerStream = CreatePrngStream(prngKey)
+        };
+        return stream;
     }
 }

@@ -465,14 +465,16 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                 else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
 
                 long lastTicks = Interlocked.Read(ref _lastStatusUpdateTicks);
-                    long currentTicks = Environment.TickCount64;
-                    if (currentTicks - lastTicks > 500)
+                long currentTicks = Environment.TickCount64;
+                if (currentTicks - lastTicks > 500)
+                {
+                    if (Interlocked.CompareExchange(ref _lastStatusUpdateTicks, currentTicks, lastTicks) == lastTicks)
                     {
-                        if (Interlocked.CompareExchange(ref _lastStatusUpdateTicks, currentTicks, lastTicks) == lastTicks)
-                        {
-                            FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
-                        }
+                        // Clamp totalPortionFinished to [0,1] to prevent >100% progress
+                        double clampedPortion = Math.Min(Math.Max(totalPortionFinished, 0.0), 1.0);
+                        FancyConsole.SetBottomLine($"{Math.Round(clampedPortion * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
                     }
+                }
             }
         }
 

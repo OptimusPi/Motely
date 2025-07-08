@@ -181,9 +181,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case MotelyItemTypeCategory.Joker:
                     // Handle SoulJoker as a special case (legendary jokers from TheSoul)
                     bool isSoulJoker = string.Equals(need.Type, "SoulJoker", StringComparison.OrdinalIgnoreCase);
-                    var prng = isSoulJoker
-                        ? searchContext.CreatePrngStream(MotelyPrngKeys.Soul + ante)
-                        : searchContext.CreatePrngStream(MotelyPrngKeys.Soul + ante);
+                    string prngKey = isSoulJoker
+                        ? MotelyPrngKeys.Soul + ante
+                        : MotelyPrngKeys.JokerCommon + ante; // Use canonical key for regular jokers
+                    var prng = searchContext.CreatePrngStream(prngKey);
                     var jokerVec = searchContext.GetNextRandomElement(ref prng, jokerChoices);
                     var targetJoker = ParseJoker(need.Value);
                     var jokerMask = (VectorMask)VectorEnum256.Equals(jokerVec, targetJoker);
@@ -205,7 +206,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     // Check edition if specified - simplified for now
                     if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
                     {
-                        var editionPrng = searchContext.CreatePrngStream("edition_" + ante);
+                        var editionPrng = searchContext.CreatePrngStream(MotelyPrngKeys.JokerEdition + ante);
                         var editionRolls = searchContext.GetNextRandom(ref editionPrng);
                         var threshold = GetEditionThreshold(need.Edition);
                         var editionMask = Vector512.LessThan(editionRolls, Vector512.Create(threshold));
@@ -229,7 +230,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             int totalScore = 0;
             int naturalNegatives = 0;
             int desiredNegatives = 0;
-            var scoreWants = new List<int>();
+            byte[] scoreWants = new byte[32];
 
             var jokerChoices = (MotelyJoker[])Enum.GetValues(typeof(MotelyJoker));
 
@@ -243,17 +244,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 {
                     var (score, isNaturalNeg, isDesiredNeg) = ProcessWantForAnte(ref singleCtx, want, ante, jokerChoices);
                     wantScore += score;
-                    
                     if (isNaturalNeg) naturalNegatives++;
                     if (isDesiredNeg) desiredNegatives++;
                 }
 
-                scoreWants.Add(wantScore);
+                // Directly populate the ScoreWants array
+                scoreWants[wantIndex] = (byte)Math.Max(0, Math.Min(255, wantScore));
                 totalScore += wantScore;
             }
 
             // Apply threshold filtering - For simple test, allow any score >= 0
-            bool passes = totalScore >= 0; // Changed from GetMinimumScore(config) to 0 for debugging
+            bool passes = totalScore >= GetMinimumScore(config);
 
             // Store the scoring result for this seed
             if (passes)
@@ -265,16 +266,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     TotalScore = (ushort)Math.Max(0, totalScore),
                     NaturalNegativeJokers = (byte)naturalNegatives,
                     DesiredNegativeJokers = (byte)desiredNegatives,
-                    ScoreWants = new byte[32], // Initialize with zeros
+                    ScoreWants = scoreWants,
                     Success = true
                 };
-                
-                // Copy want scores to the result array
-                for (int i = 0; i < Math.Min(scoreWants.Count, 32); i++)
-                {
-                    result.ScoreWants[i] = (byte)Math.Max(0, Math.Min(255, scoreWants[i]));
-                }
-                
                 _threadLocalResults.Value![seed] = result;
             }
 
