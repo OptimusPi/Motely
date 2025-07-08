@@ -478,6 +478,11 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                 {
                     SearchSingleSeed(SeedProvider.NextSeed());
                 }
+                else
+                {
+                    SearchBatch(batchIdx);
+                    LastCompletedBatch = batchIdx;
+                }
 
                 return;
             }
@@ -491,6 +496,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
             for (int seedIdx = 0; seedIdx < Vector512<double>.Count; seedIdx++)
             {
                 ReadOnlySpan<char> seed = SeedProvider.NextSeed();
+                double seedsPerMS = thisCompletedCount * (double)Search._seedsPerBatch / elapsedMS;
 
                 seedLengths[seedIdx] = seed.Length;
 
@@ -748,6 +754,8 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
                 MotelyVectorSearchContext searchContext = new(ref searchContextParams);
                 uint successMask = Search._filter.Filter(ref searchContext).Value;
+                //TODO return the scores as a mask...?
+
 
                 if (successMask != 0)
                 {

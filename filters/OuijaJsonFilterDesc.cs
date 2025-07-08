@@ -11,12 +11,6 @@ namespace Motely;
 
 public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.OuijaJsonFilter>
 {
-    // Track unknown/invalid enum values for reporting
-    public static ConcurrentBag<string> UnknownJokerValues = new();
-    public static ConcurrentBag<string> UnknownTagValues = new();
-    public static ConcurrentBag<string> UnknownTypeValues = new();
-    // Add more bags for other enums as needed
-
     public OuijaConfig Config { get; }
 
     public OuijaJsonFilterDesc(OuijaConfig config) => Config = config;
@@ -53,7 +47,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     {
         if (MotelyEnumUtil.TryParseEnum<MotelyItemTypeCategory>(value, out type))
             return true;
-        UnknownTypeValues.Add(value);
         return false;
     }
 
@@ -66,21 +59,21 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         switch (parsedType)
         {
             case MotelyItemTypeCategory.Joker:
-                ctx.CachePseudoHash(MotelyPrngKeys.Soul + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.TerrotSoul + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.JokerEdition + ante);
                 break;
             case MotelyItemTypeCategory.PlayingCard:
-                ctx.CachePseudoHash(MotelyPrngKeys.Card + ante);
-                ctx.CachePseudoHash(MotelyPrngKeys.StandardEdition + ante);
+                //ctx.CachePseudoHash(MotelyPrngKeys.Card + ante); TODO
+                //ctx.CachePseudoHash(MotelyPrngKeys.StandardEdition + ante); TODO
                 break;
             case MotelyItemTypeCategory.TarotCard:
                 ctx.CachePseudoHash(MotelyPrngKeys.Tarot + ante);
                 break;
             case MotelyItemTypeCategory.PlanetCard:
-                ctx.CachePseudoHash(MotelyPrngKeys.Planet + ante);
+                //ctx.CachePseudoHash(MotelyPrngKeys.Planet + ante); TODO
                 break;
             case MotelyItemTypeCategory.SpectralCard:
-                ctx.CachePseudoHash(MotelyPrngKeys.Spectral + ante);
+                //ctx.CachePseudoHash(MotelyPrngKeys.Spectral + ante); TODO
                 break;
             default:
                 DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unhandled canonical type '{0}' (ante {1}) - no PRNG key used", parsedType, ante);
@@ -151,7 +144,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 foreach (var (_, need) in anteGroup)
                 {
                     mask = ProcessNeedVector(ref searchContext, need, ante, jokerChoices, mask);
-                    if (mask.IsAllFalse()) return mask; // Early exit optimization
+                    if (mask.IsAllFalse()) return default; // Early exit optimization
                 }
             }
 
@@ -181,10 +174,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case MotelyItemTypeCategory.Joker:
                     // Handle SoulJoker as a special case (legendary jokers from TheSoul)
                     bool isSoulJoker = string.Equals(need.Type, "SoulJoker", StringComparison.OrdinalIgnoreCase);
-                    string prngKey = isSoulJoker
-                        ? MotelyPrngKeys.Soul + ante
-                        : MotelyPrngKeys.JokerCommon + ante; // Use canonical key for regular jokers
-                    var prng = searchContext.CreatePrngStream(prngKey);
+                        
+                    var prng = isSoulJoker ? searchContext.CreatePrngStream(MotelyPrngKeys.TerrotSoul + ante)
+                                           : searchContext.CreatePrngStream(MotelyPrngKeys.TerrotSoul + ante);
                     var jokerVec = searchContext.GetNextRandomElement(ref prng, jokerChoices);
                     var targetJoker = ParseJoker(need.Value);
                     var jokerMask = (VectorMask)VectorEnum256.Equals(jokerVec, targetJoker);
@@ -274,26 +266,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
             return passes;
         }
-        
-        private static unsafe string GetCurrentSeed(ref MotelySingleSearchContext singleCtx)
+
+        private static string GetCurrentSeed(ref MotelySingleSearchContext singleCtx)
         {
-            // Reconstruct the seed from the search context
-            // The seed consists of the last characters (fixed part) + the first character (from vector lane)
-            string seed = "";
-            
-            // Add the last characters (positions 1-7)
-            for (int i = 0; i < singleCtx.SeedLength - 1; i++)
-            {
-                if (singleCtx.SeedLastCharacters[i] != '\0')
-                    seed += singleCtx.SeedLastCharacters[i];
-            }
-            
-            // Add the first character from the vector lane
-            char firstChar = (char)singleCtx.SeedFirstCharacter[singleCtx.VectorLane];
-            seed = firstChar + seed;
-            
-            return seed;
+            // Use the public Seed property or method if available, otherwise expose SeedLastCharacters via an accessor.
+            return singleCtx.Seed;
         }
+
 
         private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessWantForAnte(
             ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante, MotelyJoker[] jokerChoices)
@@ -323,8 +302,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             // Get the joker
             var prng = isJoker 
-                ? singleCtx.CreatePrngStream(MotelyPrngKeys.Soul + ante)
-                : singleCtx.CreatePrngStream(MotelyPrngKeys.Soul + ante);
+                ? singleCtx.CreatePrngStream(MotelyPrngKeys.TerrotSoul + ante)
+                : singleCtx.CreatePrngStream(MotelyPrngKeys.TerrotSoul + ante);
             
             var joker = singleCtx.GetNextRandomElement(ref prng, jokerChoices);
             var expectedJoker = ParseJoker(want.Value);
@@ -428,7 +407,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             if (MotelyEnumUtil.TryParseEnum<MotelyTag>(value, out var tag))
                 return tag;
-            UnknownTagValues.Add(value);
             return default;
         }
 
@@ -437,7 +415,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             if (MotelyEnumUtil.TryParseEnum<MotelyJoker>(value, out var joker))
                 return joker;
-            UnknownJokerValues.Add(value);
             return default;
         }
 
@@ -445,7 +422,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             if (MotelyEnumUtil.TryParseEnum<MotelyItemTypeCategory>(value, out var type))
                 return type;
-            UnknownTypeValues.Add(value);
             return null;
         }
 
