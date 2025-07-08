@@ -115,7 +115,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 {
                     string seed = singleCtx.GetCurrentSeed();
                     string csvLine = $"|{seed},{result.TotalScore},{result.NaturalNegativeJokers},{result.DesiredNegativeJokers},{string.Join(",", result.ScoreWants)}";
-                    FancyConsole.WriteLine($"{csvLine}");
+                    OuijaStyleConsole.WriteLine($"{csvLine}");
                 }
                 
                 return result.Success;
@@ -257,10 +257,35 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 NaturalNegativeJokers = (byte)naturalNegatives,
                 DesiredNegativeJokers = (byte)desiredNegatives,
                 ScoreWants = scoreWants,
-                Success = passes
+                Success = true
             };
 
+            PrintResult(result, config);
+
             return result;
+        }
+
+        static void PrintResult(OuijaResult result, OuijaConfig config)
+        {
+            var row = $"{result.Seed},{result.TotalScore}";
+
+            if (config.ScoreNaturalNegatives)
+                row += $",{result.NaturalNegativeJokers}";
+            if (config.ScoreDesiredNegatives)
+                row += $",{result.DesiredNegativeJokers}";
+
+            // Add scores for each want
+            if (config.Wants != null && result.ScoreWants != null)
+            {
+                for (int i = 0; i < Math.Min(result.ScoreWants.Length, config.Wants.Length); i++)
+                {
+                    row += $",{result.ScoreWants[i]}";
+                }
+            }
+
+            // TODO - add custom columns that some filters may define
+
+            Console.WriteLine(row);
         }
 
 
