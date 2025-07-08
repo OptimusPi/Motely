@@ -8,27 +8,27 @@
         "numWants": 1,
         "Needs": [
             {
-                "type": "Joker",
-                "value": "HangingChad",
+                "type": "SoulJoker",
+                "value": "Perkeo",
                 "edition": "None",
-                "searchAntes": [1,2],
+                "searchAntes": [1],
                 "Score": 1
             }
         ],
         "Wants": [
             {
-                "type": "Joker",
-                "value": "HangingChad",
+                "type": "SoulJoker",
+                "value": "Perkeo",
                 "edition": "None",
-                "searchAntes": [1,2],
-                "Score": 1
+                "searchAntes": [1,2,3,4,5,6,7,8],
+                "Score": 5
             }
         ],
         "minSearchAnte": 1,
-        "maxSearchAnte": 2,
+        "maxSearchAnte": 4,
         "deck": "GhostDeck",
         "stake": "WhiteStake",
-        "scoreNaturalNegatives": true,
-        "scoreDesiredNegatives": true
+        "scoreNaturalNegatives": false,
+        "scoreDesiredNegatives": false
     }
 }
