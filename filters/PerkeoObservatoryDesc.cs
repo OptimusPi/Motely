@@ -24,7 +24,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             VectorMask matching = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
 
             if (matching.IsAllFalse())
-                return Vector512<double>.Zero;
+                return matching;
 
             MotelyVectorRunStateVoucher voucherState = new();
             voucherState.ActivateVoucher(MotelyVoucher.Telescope);

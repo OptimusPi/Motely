@@ -101,8 +101,56 @@ public unsafe ref partial struct MotelySingleSearchContext
         if (SeedFirstCharacters == null || SeedLastCharacters == null)
             throw new InvalidOperationException("Seed characters are not initialized.");
 #endif
-        return new string(SeedFirstCharacters, 0, SeedFirstCharactersLength) +
-               new string((char*)SeedLastCharacters + VectorLane * SeedLength, 0, SeedLength - SeedFirstCharactersLength);
+        
+        // Sequential search stores:
+        // - First character: in SeedLastCharacters[0][VectorLane]
+        // - Characters 1-7: in SeedFirstCharacters[0..6]
+        
+        if (SeedFirstCharactersLength == SeedLength - 1)
+        {
+            // Sequential search layout
+            Span<char> seedBuffer = stackalloc char[SeedLength];
+            
+            // First character comes from the vector
+            seedBuffer[0] = (char)SeedLastCharacters[0][VectorLane];
+            
+            // Rest come from SeedFirstCharacters
+            for (int i = 0; i < SeedFirstCharactersLength; i++)
+            {
+                seedBuffer[i + 1] = SeedFirstCharacters[i];
+                if (SeedFirstCharacters[i] == '\0') 
+                {
+                    // Null terminator found, actual seed is shorter
+                    return new string(seedBuffer[..(i + 1)]);
+                }
+            }
+            
+            return new string(seedBuffer);
+        }
+        else if (SeedFirstCharactersLength == 0)
+        {
+            // Provider search layout - all chars in vectors
+            Span<char> seedBuffer = stackalloc char[SeedLength];
+            int actualLength = SeedLength;
+            
+            for (int i = 0; i < SeedLength; i++)
+            {
+                char c = (char)SeedLastCharacters[i][VectorLane];
+                if (c == '\0')
+                {
+                    actualLength = i;
+                    break;
+                }
+                seedBuffer[i] = c;
+            }
+            
+            return new string(seedBuffer[..actualLength]);
+        }
+        else
+        {
+            // Generic case - shouldn't happen in practice
+            throw new NotImplementedException($"Unexpected layout: FirstCharactersLength={SeedFirstCharactersLength}, SeedLength={SeedLength}");
+        }
     }
 
 #if !DEBUG
@@ -144,19 +192,56 @@ public unsafe ref partial struct MotelySingleSearchContext
             return PseudoHashCached(key);
         }
 
-        int seedLastCharacterLength = SeedLength - SeedFirstCharactersLength;
         double num = 1;
-
-        // First we do the first characters of the seed which are the same between all vector lanes
-        for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
+        
+        // Handle different layouts
+        if (SeedFirstCharactersLength == SeedLength - 1)
         {
-            num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + key.Length + seedLastCharacterLength + 1)) % 1;
+            // Sequential search layout: first char in vector, rest in array
+            // Process in correct order: full seed from end to beginning
+            
+            // Process the seed backwards from the last character
+            for (int i = SeedLength - 1; i >= 0; i--)
+            {
+                char ch;
+                if (i == 0)
+                {
+                    // First character is in the vector
+                    ch = (char)SeedLastCharacters[0][VectorLane];
+                }
+                else
+                {
+                    // Rest are in SeedFirstCharacters (offset by 1)
+                    ch = SeedFirstCharacters[i - 1];
+                }
+                num = (1.1239285023 / num * ch * Math.PI + Math.PI * (i + key.Length + 1)) % 1;
+            }
         }
-
-        // Then we get the characters for our lane
-        for (int i = seedLastCharacterLength - 1; i >= 0; i--)
+        else if (SeedFirstCharactersLength == 0)
         {
-            num = (1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI + Math.PI * (key.Length + i + 1)) % 1;
+            // Provider search layout: all chars in vectors
+            for (int i = SeedLength - 1; i >= 0; i--)
+            {
+                char ch = (char)SeedLastCharacters[i][VectorLane];
+                num = (1.1239285023 / num * ch * Math.PI + Math.PI * (i + key.Length + 1)) % 1;
+            }
+        }
+        else
+        {
+            // Generic layout (original code)
+            int seedLastCharacterLength = SeedLength - SeedFirstCharactersLength;
+            
+            // First we do the first characters of the seed which are the same between all vector lanes
+            for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
+            {
+                num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + key.Length + seedLastCharacterLength + 1)) % 1;
+            }
+
+            // Then we get the characters for our lane
+            for (int i = seedLastCharacterLength - 1; i >= 0; i--)
+            {
+                num = (1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI + Math.PI * (key.Length + i + 1)) % 1;
+            }
         }
 
         // Then the actual key

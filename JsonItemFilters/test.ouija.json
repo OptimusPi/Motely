@@ -1,34 +1,78 @@
 {
     "name": "test",
-    "description": "Very simple test configuration",
+    "description": "Test configuration - Perkeo as want only (not required)",
     "author": "test",
     "keywords": ["TEST"],
     "filter_config": {
-        "numNeeds": 1,
-        "numWants": 1,
-        "Needs": [
+        "numNeeds": 0,
+        "numWants": 3,
+        "Needs": 
+        [
             {
                 "type": "Joker",
-                "value": "Perkeo",
-                "edition": "None",
-                "searchAntes": [1,2,3],
+                "value": "HangingChad",
+                "edition": "Negative",
+                "searchAntes": [1],
+                "desireByAnte": 1,
                 "Score": 1
             }
         ],
         "Wants": [
             {
                 "type": "Joker",
+                "value": "OopsAll6s",
+                "edition": "None",
+                "searchAntes": [1],
+                "desireByAnte": 1,
+                "Score": 1
+            },
+            {
+                "type": "Joker",
+                "value": "OopsAll6s",
+                "edition": "None",
+                "searchAntes": [2],
+                "desireByAnte": 2,
+                "Score": 1
+            },
+            {
+                "type": "Joker",
                 "value": "Perkeo",
                 "edition": "None",
-                "searchAntes": [1,2,3],
+                "searchAntes": [3],
+                "desireByAnte": 1,
+                "Score": 1
+            },
+            {
+                "type": "Joker",
+                "value": "Perkeo",
+                "edition": "None",
+                "searchAntes": [4],
+                "desireByAnte": 2,
+                "Score": 1
+            },
+            {
+                "type": "Joker",
+                "value": "Perkeo",
+                "edition": "None",
+                "searchAntes": [5],
+                "desireByAnte": 2,
+                "Score": 1
+            },
+            {
+                "type": "Joker",
+                "value": "Perkeo",
+                "edition": "None",
+                "searchAntes": [6],
+                "desireByAnte": 2,
                 "Score": 1
             }
+
         ],
         "minSearchAnte": 1,
-        "maxSearchAnte": 1,
+        "maxSearchAnte": 6,
         "deck": "GhostDeck",
         "stake": "WhiteStake",
-        "scoreNaturalNegatives": true,
-        "scoreDesiredNegatives": true
+        "scoreNaturalNegatives": false,
+        "scoreDesiredNegatives": false
     }
 }

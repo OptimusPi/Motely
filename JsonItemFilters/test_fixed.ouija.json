@@ -1,0 +1,52 @@
+{
+    "name": "test",
+    "description": "Very simple test configuration",
+    "author": "test",
+    "keywords": ["TEST"],
+    "filter_config": {
+        "numNeeds": 1,
+        "numWants": 3,
+        "Needs": [
+            {
+                "type": "Joker",
+                "value": "Perkeo",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 1
+            }
+        ],
+        "Wants": [
+            {
+                "type": "Joker",
+                "value": "Perkeo",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 1
+            },
+            {
+                "type": "Joker",
+                "value": "OopsAll6s",
+                "edition": "None",
+                "searchAntes": [1],
+                "desireByAnte": 1,
+                "Score": 1
+            },
+            {
+                "type": "Joker",
+                "value": "OopsAll6s",
+                "edition": "None",
+                "searchAntes": [2],
+                "desireByAnte": 2,
+                "Score": 1
+            }
+        ],
+        "minSearchAnte": 1,
+        "maxSearchAnte": 2,
+        "deck": "GhostDeck",
+        "stake": "WhiteStake",
+        "scoreNaturalNegatives": true,
+        "scoreDesiredNegatives": true
+    }
+}

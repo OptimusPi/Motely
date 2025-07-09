@@ -298,7 +298,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        Console.WriteLine(seed.ToString());
+        OuijaStyleConsole.WriteLine($"{seed}");
     }
 
     private void PrintReport()
@@ -771,6 +771,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                                 if (_digits[digit] != '\0')
                                     seed[digit] = _digits[digit];
                             }
+                            Search.ReportSeed(seed);
                         }
 
                         successMask >>= 1;
