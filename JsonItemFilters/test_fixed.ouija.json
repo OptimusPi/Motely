@@ -1,52 +1,27 @@
 {
-    "name": "test",
-    "description": "Very simple test configuration",
-    "author": "test",
-    "keywords": ["TEST"],
-    "filter_config": {
-        "numNeeds": 1,
-        "numWants": 3,
-        "Needs": [
-            {
-                "type": "Joker",
-                "value": "Perkeo",
-                "edition": "None",
-                "searchAntes": [1, 2],
-                "desireByAnte": 2,
-                "Score": 1
-            }
-        ],
-        "Wants": [
-            {
-                "type": "Joker",
-                "value": "Perkeo",
-                "edition": "None",
-                "searchAntes": [1, 2],
-                "desireByAnte": 2,
-                "Score": 1
-            },
-            {
-                "type": "Joker",
-                "value": "OopsAll6s",
-                "edition": "None",
-                "searchAntes": [1],
-                "desireByAnte": 1,
-                "Score": 1
-            },
-            {
-                "type": "Joker",
-                "value": "OopsAll6s",
-                "edition": "None",
-                "searchAntes": [2],
-                "desireByAnte": 2,
-                "Score": 1
-            }
-        ],
-        "minSearchAnte": 1,
-        "maxSearchAnte": 2,
-        "deck": "GhostDeck",
-        "stake": "WhiteStake",
-        "scoreNaturalNegatives": true,
-        "scoreDesiredNegatives": true
-    }
+  "maxSearchAnte": 8,
+  "deck": "GhostDeck",
+  "stake": "WhiteStake",
+  "scoreNaturalNegatives": false,
+  "scoreDesiredNegatives": false,
+  "needs": [
+    { "type": "SoulJoker", "value": "Perkeo", "searchAntes": [1, 2, 3, 4], "score": 1 },
+    { "type": "Voucher", "value": "Grabber", "searchAntes": [1], "score": 1 },
+    { "type": "Tag", "value": "BossTag", "searchAntes": [1], "score": 1 },
+    { "type": "Tag", "value": "DoubleTag", "searchAntes": [1], "score": 1 },
+    { "type": "Planet", "value": "Mercury", "searchAntes": [1], "score": 1 },
+    { "type": "Planet", "value": "Pluto", "searchAntes": [1], "score": 1 },
+    { "type": "Joker", "value": "TradingCard", "searchAntes": [1], "score": 1 },
+    { "type": "Joker", "value": "GreenJoker", "searchAntes": [1], "score": 1 },
+    { "type": "Planet", "value": "Earth", "searchAntes": [1], "score": 1 },
+    { "type": "Joker", "value": "MailInRebate", "searchAntes": [1], "score": 1 },
+    { "type": "Tarot", "value": "TheEmperor", "searchAntes": [1], "score": 1 },
+    { "type": "Spectral", "value": "Trance", "searchAntes": [1], "score": 1 },
+    { "type": "Joker", "value": "Bootstraps", "searchAntes": [1], "score": 1 },
+    { "type": "Joker", "value": "RaisedFist", "searchAntes": [1], "score": 1 },
+    { "type": "Spectral", "value": "Wraith", "searchAntes": [1], "score": 1 },
+    { "type": "Tarot", "value": "TheHighPriestess", "searchAntes": [1], "score": 1 },
+    { "type": "Joker", "value": "Hiker", "searchAntes": [1], "score": 1 }
+  ],
+  "wants": []
 }

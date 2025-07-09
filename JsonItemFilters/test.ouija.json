@@ -1,44 +1,43 @@
 {
-    "name": "test",
-    "description": "Test configuration - Perkeo as want only (not required)",
-    "author": "test",
-    "keywords": ["TEST"],
-    "filter_config": {
-        "numNeeds": 2,
-        "numWants": 3,
-        "Needs": [
-            {
-                "type": "SoulJoker",
-                "JokerEnum": "Perkeo",
-                "edition": "None",
-                "searchAntes": [1],
-                "desireByAnte": 1,
-                "Score": 1
-            },
-            {
-                "type": "TarotCard",
-                "TarotEnum": "TheSun",
-                "edition": "None",
-                "searchAntes": [1],
-                "desireByAnte": 1,
-                "Score": 1
-            }
-        ],
-        "Wants": [
-            {
-                "type": "SoulJoker",
-                "JokerEnum": "Perkeo",
-                "edition": "None",
-                "searchAntes": [1],
-                "desireByAnte": 1,
-                "Score": 1
-            }
-        ],
-        "minSearchAnte": 1,
-        "maxSearchAnte": 6,
-        "deck": "GhostDeck",
-        "stake": "WhiteStake",
-        "scoreNaturalNegatives": false,
-        "scoreDesiredNegatives": false
-    }
+  "name": "huge_test",
+  "description": "Full config with items per ante",
+  "author": "you",
+  "keywords": ["HUGE", "ANTE", "TEST"],
+  "filter_config": {
+    "NumNeeds": 24,
+    "NumWants": 0,
+    "Needs": [
+      { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [1, 2, 3, 4] },
+      { "Type": "Voucher", "Value": "Grabber", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Tag", "Value": "BossTag", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Tag", "Value": "DoubleTag", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Planet", "Value": "Mercury", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Planet", "Value": "Pluto", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Voucher", "Value": "Grabber", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Tag", "Value": "BossTag", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Tag", "Value": "DoubleTag", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Planet", "Value": "Mercury", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Planet", "Value": "Pluto", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "TradingCard", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Planet", "Value": "Pluto", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "GreenJoker", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Planet", "Value": "Earth", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "MailInRebate", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Tarot", "Value": "TheEmperor", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Spectral", "Value": "Trance", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "Bootstraps", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "RaisedFist", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Spectral", "Value": "Wraith", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Tarot", "Value": "TheHighPriestess", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Planet", "Value": "Pluto", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "WeeJoker", "SearchAntes": [1], "Score": 1 }
+    ],
+    "Wants": [],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
 }

@@ -134,7 +134,7 @@ partial class Program
             catch (Exception ex)
             {
                 Console.WriteLine($"[DEBUG] Could not pretty-print config: {ex.Message}");
-                Console.WriteLine(config.ToString());
+                Console.WriteLine(config.ToJson());
             }
             Console.WriteLine("--- End Config ---\n");
 
@@ -191,7 +191,7 @@ partial class Program
         if (Path.IsPathRooted(configPath) && File.Exists(configPath))
         {
             Console.WriteLine($"📁 Loading config from: {configPath}");
-            return OuijaConfig.Load(configPath, OuijaConfig.GetOptions());
+            return OuijaConfigLoader.Load(configPath);
         }
 
         // Always look in JsonItemFilters for configs
@@ -200,7 +200,7 @@ partial class Program
         if (File.Exists(jsonItemFiltersPath))
         {
             Console.WriteLine($"📁 Loading config from: {jsonItemFiltersPath}");
-            return OuijaConfig.Load(jsonItemFiltersPath, OuijaConfig.GetOptions());
+            return OuijaConfigLoader.Load(jsonItemFiltersPath);
         }
 
         throw new FileNotFoundException($"Could not find config file: {configPath}");

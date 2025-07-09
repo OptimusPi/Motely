@@ -1,35 +1,9 @@
 {
-    "name": "simple_test",
-    "description": "Simple test - looking for regular jokers",
-    "author": "test",
-    "keywords": ["TEST", "SIMPLE"],
-    "filter_config": {
-        "numNeeds": 0,
-        "numWants": 2,
-        "Needs": [],
-        "Wants": [
-            {
-                "type": "Joker",
-                "value": "OopsAll6s",
-                "edition": "None",
-                "searchAntes": [1],
-                "desireByAnte": 1,
-                "Score": 1
-            },
-            {
-                "type": "Joker",
-                "value": "WeeJoker",
-                "edition": "None",
-                "searchAntes": [1, 2],
-                "desireByAnte": 2,
-                "Score": 1
-            }
-        ],
-        "minSearchAnte": 1,
-        "maxSearchAnte": 2,
-        "deck": "RedDeck",
-        "stake": "WhiteStake",
-        "scoreNaturalNegatives": false,
-        "scoreDesiredNegatives": false
-    }
+  "maxSearchAnte": 2,
+  "deck": "RedDeck",
+  "stake": "WhiteStake",
+  "needs": [
+    { "type": "SoulJoker", "value": "Perkeo", "searchAntes": [1, 2], "score": 100 }
+  ],
+  "wants": []
 }
