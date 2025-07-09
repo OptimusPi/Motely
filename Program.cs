@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
 using Motely;
 using Motely.Filters;
@@ -133,22 +133,17 @@ partial class Program
             }
             Console.WriteLine("--- End Config ---\n");
 
-            // Print CSV header for results
-            PrintResultsHeader(config);
-
-            var sw = Stopwatch.StartNew();
-
             // Create and run the search
             Console.WriteLine($"🔍 Starting search with {threads} threads, batch size {batchSize}, starting at batch index {startBatch}, cutoff score {cutoff}");
             //using var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config))
             using var search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
                 .WithThreadCount(threads)
-                .WithSequentialSearch()
+                .WithProviderSearch(new MotelyRandomSeedProvider(2000000000)) // Use a large seed range
                 .Start();
             Console.WriteLine($"✅ Search started successfully");
 
-            sw.Stop();
-            Console.WriteLine();
+            // Print CSV header for results
+            PrintResultsHeader(config);
 
             // Flush any remaining debug messages
             DebugLogger.ForceFlush();
