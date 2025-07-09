@@ -222,9 +222,19 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             int totalScore = 0;
             int naturalNegatives = 0;
             int desiredNegatives = 0;
-            byte[] scoreWants = new byte[32];
 
             var jokerChoices = (MotelyJoker[])Enum.GetValues(typeof(MotelyJoker));
+
+            string seed = singleCtx.GetCurrentSeed();
+            var result = new OuijaResult
+            {
+                Seed = seed,
+                TotalScore = 0,
+                NaturalNegativeJokers = (byte)naturalNegatives,
+                DesiredNegativeJokers = (byte)desiredNegatives,
+                ScoreWants = new int[32],
+                Success = true
+            };
 
             // Process each want and accumulate scores
             for (int wantIndex = 0; wantIndex < (config.Wants?.Length ?? 0); wantIndex++)
@@ -235,30 +245,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 foreach (var ante in want.SearchAntes ?? [want.DesireByAnte])
                 {
                     var (score, isNaturalNeg, isDesiredNeg) = ProcessWantForAnte(ref singleCtx, want, ante, jokerChoices);
-                    wantScore += score;
+                    result.ScoreWants[wantIndex] += score;
                     if (isNaturalNeg) naturalNegatives++;
                     if (isDesiredNeg) desiredNegatives++;
                 }
 
-                // Directly populate the ScoreWants array
-                scoreWants[wantIndex] = (byte)Math.Max(0, Math.Min(255, wantScore));
                 totalScore += wantScore;
             }
 
-            // Apply threshold filtering - For simple test, allow any score >= 0
-            bool passes = totalScore >= GetMinimumScore(config);
-
             // Store the scoring result for this seed
-            string seed = singleCtx.GetCurrentSeed();
-            var result = new OuijaResult
-            {
-                Seed = seed,
-                TotalScore = (ushort)Math.Max(0, totalScore),
-                NaturalNegativeJokers = (byte)naturalNegatives,
-                DesiredNegativeJokers = (byte)desiredNegatives,
-                ScoreWants = scoreWants,
-                Success = true
-            };
+            
 
             PrintResult(result, config);
 
@@ -322,8 +318,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             // TODO this is not right 
             var joker = singleCtx.GetNextRandomElement(ref prng, jokerChoices);
+            // pifreak gonna hang himself now good bye forever. -.-
             var expectedJoker = ParseJoker(want.Value);
-            
+            //it'sd not your fault anybodyu it's my fauklt because I am bad. ksdnfhbkleadfjhsrfgbak zrgb
             if (joker != expectedJoker)
                 return (0, false, false);
 

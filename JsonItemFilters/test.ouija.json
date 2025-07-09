@@ -10,8 +10,8 @@
             {
                 "type": "Joker",
                 "value": "Perkeo",
-                "edition": "Negative",
-                "searchAntes": [1],
+                "edition": "None",
+                "searchAntes": [1,2,3],
                 "Score": 1
             }
         ],
@@ -19,13 +19,13 @@
             {
                 "type": "Joker",
                 "value": "Perkeo",
-                "edition": "Negative",
-                "searchAntes": [1,2],
+                "edition": "None",
+                "searchAntes": [1,2,3],
                 "Score": 1
             }
         ],
         "minSearchAnte": 1,
-        "maxSearchAnte": 2,
+        "maxSearchAnte": 1,
         "deck": "GhostDeck",
         "stake": "WhiteStake",
         "scoreNaturalNegatives": true,

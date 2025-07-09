@@ -3,7 +3,7 @@ using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public struct PerkeoObservatoryFilterDesc(Filters.OuijaConfig config) : IMotelySeedFilterDesc<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>
+public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>
 {
 
     public PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)

@@ -116,7 +116,7 @@ public sealed class MotelySearchSettings<TFilter>(IMotelySeedFilterDesc<TFilter>
     where TFilter : struct, IMotelySeedFilter
 {
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
-    public int StartBatchIndex { get; set; } = 0;
+    public int StartBatchIndex { get; set; } = -1;
 
 
     public IMotelySeedFilterDesc<TFilter> FilterDesc { get; set; } = filterDesc;
@@ -298,7 +298,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        OuijaStyleConsole.WriteLine($"{seed}");
+        Console.WriteLine(seed.ToString());
     }
 
     private void PrintReport()
@@ -436,8 +436,6 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
                 SearchBatch(batchIdx);
 
                 Interlocked.Increment(ref Search._completedBatchCount);
-
-                OuijaStyleConsole.SetBottomLine($"Thread {ThreadIndex} completed batch {batchIdx}");
 
             }
 

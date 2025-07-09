@@ -7,11 +7,11 @@ public class OuijaResult
     // Total score for this result
     public ushort TotalScore { get; set; }
     // Number of natural negative jokers
-    public byte NaturalNegativeJokers { get; set; }
+    public int NaturalNegativeJokers { get; set; }
     // Number of desired negative jokers
-    public byte DesiredNegativeJokers { get; set; }
+    public int DesiredNegativeJokers { get; set; }
     // Score for each want (up to MAX_DESIRES_HOST)
-    public byte[] ScoreWants { get; set; } = new byte[32]; // 32 = MAX_DESIRES_HOST
+    public int[] ScoreWants { get; set; } = new int[32];
     // Success flag for Motely output (not in C struct, but useful for filtering)
     public bool Success { get; set; }
 }
