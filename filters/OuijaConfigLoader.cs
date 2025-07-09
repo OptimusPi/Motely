@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Motely.Filters;
 
@@ -27,27 +28,27 @@ public class OuijaConfig
         public int DesireByAnte { get; set; } = 8;
         public int[] SearchAntes { get; set; } = Array.Empty<int>();
         public int Score { get; set; }
+
+        // Strongly-typed enum properties for fast, validated config
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelyJoker? JokerEnum { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelyPlanetCard? PlanetEnum { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelySpectralCard? SpectralEnum { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelyItemTypeCategory? TypeEnum { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelyVoucher? VoucherEnum { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelyTag? TagEnum { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelyTarotCard? TarotEnum { get; set; }
     }
 
     public override string ToString()
     {
-        static string FormatDesire(Desire d) {
-            if (d.Type == "Joker" || d.Type == "SoulJoker")
-                return $"Type='{d.Type}', Value='{d.Value}', Edition='{d.Edition}', JokerStickers=[{string.Join(",", d.JokerStickers)}], DesireByAnte={d.DesireByAnte}";
-            if (d.Type == "Standard_Card")
-                return $"Type='{d.Type}', Value='{d.Value}', Rank='{d.Rank}', Suit='{d.Suit}', Enchantment='{d.Enchantment}', Chip='{d.Chip}', DesireByAnte={d.DesireByAnte}";
-            return $"Type='{d.Type}', Value='{d.Value}', DesireByAnte={d.DesireByAnte}";
-        }
-        return "OuijaConfig: " +
-            $"NumNeeds={NumNeeds}, " +
-            $"\tNeeds: [{string.Join(", ", Needs.Select(FormatDesire))}]" +
-            $"NumWants={NumWants}, " +
-            $"\tWants: [{string.Join(", ", Wants.Select(FormatDesire))}]" +
-            $"MaxSearchAnte={MaxSearchAnte}, " +
-            $"Deck='{Deck}', " +
-            $"Stake='{Stake}', " +
-            $"ScoreNaturalNegatives={ScoreNaturalNegatives}, " +
-            $"ScoreDesiredNegatives={ScoreDesiredNegatives}";
+        return JsonSerializer.Serialize(this, GetOptions());
     }
 
     public static JsonSerializerOptions GetOptions()
@@ -84,6 +85,7 @@ public class OuijaConfig
                     {
                         if (string.IsNullOrEmpty(config.Deck)) config.Deck = string.Empty;
                         if (string.IsNullOrEmpty(config.Stake)) config.Stake = string.Empty;
+                        ValidateDesires(config);
                         return config;
                     }
                 }
@@ -95,11 +97,72 @@ public class OuijaConfig
                         if (string.IsNullOrEmpty(config.Deck)) config.Deck = string.Empty;
                         if (string.IsNullOrEmpty(config.Stake)) config.Stake = string.Empty;
                         if (config.MaxSearchAnte > 8) config.MaxSearchAnte = 8;
+                        ValidateDesires(config);
                         return config;
                     }
                 }
             }
         }
         throw new FileNotFoundException($"Could not find Ouija config: {configName}");
+    }
+
+    // Validates that all required enum properties are present and valid in Needs and Wants
+    private static void ValidateDesires(OuijaConfig config)
+    {
+        void ValidateDesire(OuijaConfig.Desire d, int idx, string listName)
+        {
+            string type = d.Type?.Trim() ?? string.Empty;
+            // Add checks for each type that requires a specific enum
+            switch (type)
+            {
+                case "SoulJoker":
+                case "Joker":
+                    if (d.JokerEnum == null)
+                        throw new InvalidOperationException($"OuijaConfig error: {listName}[{idx}] (Type='{type}') is missing required JokerEnum property.");
+                    break;
+                case "Planet":
+                    if (d.PlanetEnum == null)
+                        throw new InvalidOperationException($"OuijaConfig error: {listName}[{idx}] (Type='{type}') is missing required PlanetEnum property.");
+                    break;
+                case "Spectral":
+                    if (d.SpectralEnum == null)
+                        throw new InvalidOperationException($"OuijaConfig error: {listName}[{idx}] (Type='{type}') is missing required SpectralEnum property.");
+                    break;
+                case "Voucher":
+                    if (d.VoucherEnum == null)
+                        throw new InvalidOperationException($"OuijaConfig error: {listName}[{idx}] (Type='{type}') is missing required VoucherEnum property.");
+                    break;
+                case "Tag":
+                    if (d.TagEnum == null)
+                        throw new InvalidOperationException($"OuijaConfig error: {listName}[{idx}] (Type='{type}') is missing required TagEnum property.");
+                    break;
+                case "Tarot":
+                    if (d.TarotEnum == null)
+                        throw new InvalidOperationException($"OuijaConfig error: {listName}[{idx}] (Type='{type}') is missing required TarotEnum property.");
+                    break;
+                case "Type":
+                case "ItemType":
+                    if (d.TypeEnum == null)
+                        throw new InvalidOperationException($"OuijaConfig error: {listName}[{idx}] (Type='{type}') is missing required TypeEnum property.");
+                    break;
+                // Add more cases as needed for other types
+            }
+        }
+        if (config.Needs != null)
+        {
+            for (int i = 0; i < config.Needs.Length; i++)
+            {
+                if (config.Needs[i] != null)
+                    ValidateDesire(config.Needs[i], i, "Needs");
+            }
+        }
+        if (config.Wants != null)
+        {
+            for (int i = 0; i < config.Wants.Length; i++)
+            {
+                if (config.Wants[i] != null)
+                    ValidateDesire(config.Wants[i], i, "Wants");
+            }
+        }
     }
 }

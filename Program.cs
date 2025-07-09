@@ -59,16 +59,16 @@ partial class Program
             CommandOptionType.NoValue);
 
         // .WithListSearch(["811M2111"])
-        
+
         var seedOption = app.Option<string>(
             "--seed <SEED>",
             "Specific seed to search for (overrides batch options)",
             CommandOptionType.SingleValue);
         seedOption.DefaultValue = string.Empty;
-        
+
 
         var seedInput = seedOption.Value()!;
-        
+
         if (!string.IsNullOrEmpty(seedInput))
         {
             // If a seed is provided, run a single search for that seed
@@ -129,12 +129,11 @@ partial class Program
             Console.WriteLine("\n--- Parsed Ouija Config ---");
             try
             {
-                var json = System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine(json);
+                PrintOuijaConfigDebug(config);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DEBUG] Could not serialize config: {ex.Message}");
+                Console.WriteLine($"[DEBUG] Could not pretty-print config: {ex.Message}");
                 Console.WriteLine(config.ToString());
             }
             Console.WriteLine("--- End Config ---\n");
@@ -146,9 +145,24 @@ partial class Program
             // uncomment for OuijaFilter
             var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config))
                 .WithThreadCount(threads)
-                .WithStartBatchIndex(startBatch)
-                .WithBatchCharacterCount(batchSize)
-                .WithSequentialSearch()
+                //.WithSequentialSearch()
+                .WithListSearch(["D9FUJ7VX"])
+                    // "D9FTADTT",
+                    // "D9FTBIZH",
+                    // "D9FTFEG1",
+                    // "D9FTVQHE",
+                    // "D9FU3U3O",
+                    // "D9FU3XYT",
+                    // "D9FU84RQ",
+                    // "D9FUDGOU",
+                    // "D9FUIT2N",
+                    // "D9FUJ7VX",
+                    // "D9FUMBOF",
+                    // "D9FUOF64",
+                    // "D9FUVAQ1",
+                    // "D9FVA9AO",
+                    // "D9FVF61C",
+                    // "D9FTJ4VJ"])
                 .Start();
             Console.WriteLine($"✅ Search started successfully");
 
@@ -157,7 +171,7 @@ partial class Program
 
             // Flush any remaining debug messages
             DebugLogger.ForceFlush();
-            
+
             while (search.Status == MotelySearchStatus.Running)
             {
                 // Wait for search to complete
@@ -232,20 +246,62 @@ partial class Program
 
         return string.Join("_", parts);
     }
+
+    static void PrintOuijaConfigDebug(OuijaConfig config)
+    {
+        if (config == null)
+        {
+            Console.WriteLine("<null config>");
+            return;
+        }
+        Console.WriteLine($"NumNeeds: {config.Needs?.Length ?? 0}, NumWants: {config.Wants?.Length ?? 0}");
+        if (config.Needs != null && config.Needs.Length > 0)
+        {
+            Console.WriteLine("Needs:");
+            foreach (var need in config.Needs)
+            {
+                if (need == null) continue;
+                Console.WriteLine($"  - Type: {need.Type}, Value: '{need.Value}', JokerEnum: {need.JokerEnum?.ToString() ?? "<MISSING_ENUM>"}, PlanetEnum: {need.PlanetEnum?.ToString() ?? "<MISSING_ENUM>"}, SpectralEnum: {need.SpectralEnum?.ToString() ?? "<MISSING_ENUM>"}, VoucherEnum: {need.VoucherEnum?.ToString() ?? "<MISSING_ENUM>"}, TagEnum: {need.TagEnum?.ToString() ?? "<MISSING_ENUM>"}, TarotEnum: {need.TarotEnum?.ToString() ?? "<MISSING_ENUM>"}, Edition: {need.Edition}, Score: {need.Score}, DesireByAnte: {need.DesireByAnte}, SearchAntes: [{string.Join(",", need.SearchAntes ?? new int[0])}] ");
+            }
+        }
+        if (config.Wants != null && config.Wants.Length > 0)
+        {
+            Console.WriteLine("Wants:");
+            foreach (var want in config.Wants)
+            {
+                if (want == null) continue;
+                Console.WriteLine($"  - Type: {want.Type}, Value: '{want.Value}', JokerEnum: {want.JokerEnum?.ToString() ?? "<MISSING_ENUM>"}, PlanetEnum: {want.PlanetEnum?.ToString() ?? "<MISSING_ENUM>"}, SpectralEnum: {want.SpectralEnum?.ToString() ?? "<MISSING_ENUM>"}, VoucherEnum: {want.VoucherEnum?.ToString() ?? "<MISSING_ENUM>"}, TagEnum: {want.TagEnum?.ToString() ?? "<MISSING_ENUM>"}, TarotEnum: {want.TarotEnum?.ToString() ?? "<MISSING_ENUM>"}, Edition: {want.Edition}, Score: {want.Score}, DesireByAnte: {want.DesireByAnte}, SearchAntes: [{string.Join(",", want.SearchAntes ?? new int[0])}] ");
+            }
+        }
+    }
 }
 
-// IMotelySearch search = new MotelySearchSettings<LuckyCardFilterDesc.LuckyCardFilter>(new LuckyCardFilterDesc())
-// IMotelySearch search = new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc())
-//IMotelySearch search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
-    // await new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
-    //.WithThreadCount(Environment.ProcessorCount - 2)
-    //.WithSequentialSearch()
-    // .WithThreadCount(1)
-    // .WithStartBatchIndex(41428)
-
-    // .WithListSearch(["811M2111"])
+//IMotelySearch search = new MotelySearchSettings<LuckyCardFilterDesc.LuckyCardFilter>(new LuckyCardFilterDesc())
+//IMotelySearch search = new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc())
+//IMotelySearch search = new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
+// IMotelySearch search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config: OuijaConfig.Load("JsonItemFilters/test.ouija.json", OuijaConfig.GetOptions())))
+//     .WithThreadCount(Environment.ProcessorCount - 1)
+//     .WithListSearch([
+// "D9FTADTT",
+// "D9FTBIZH",
+// "D9FTFEG1",
+// "D9FTVQHE",
+// "D9FU3U3O",
+// "D9FU3XYT",
+// "D9FU84RQ",
+// "D9FUDGOU",
+// "D9FUIT2N",
+// "D9FUJ7VX",
+// "D9FUMBOF",
+// "D9FUOF64",
+// "D9FUVAQ1",
+// "D9FVA9AO",
+// "D9FVF61C",
+// "D9FTJ4VJ"])
     // .WithProviderSearch(new MotelyRandomSeedProvider(2000000000))
+    //.WithSequentialSearch()
     //.Start();
+
 // var search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
 //                 .WithProviderSearch(new MotelyRandomSeedProvider(2100000000))
 //                 .WithThreadCount(16)

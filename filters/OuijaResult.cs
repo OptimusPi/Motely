@@ -5,7 +5,7 @@ public class OuijaResult
     // Seed string (8 chars + null terminator in C, just use string in C#)
     public string Seed { get; set; } = string.Empty;
     // Total score for this result
-    public ushort TotalScore { get; set; }
+    public int TotalScore { get; set; }
     // Number of natural negative jokers
     public int NaturalNegativeJokers { get; set; }
     // Number of desired negative jokers

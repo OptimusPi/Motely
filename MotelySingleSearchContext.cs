@@ -101,11 +101,12 @@ public unsafe ref partial struct MotelySingleSearchContext
         if (SeedFirstCharacters == null || SeedLastCharacters == null)
             throw new InvalidOperationException("Seed characters are not initialized.");
 #endif
+
         
         // Sequential search stores:
         // - First character: in SeedLastCharacters[0][VectorLane]
         // - Characters 1-7: in SeedFirstCharacters[0..6]
-        
+
         if (SeedFirstCharactersLength == SeedLength - 1)
         {
             // Sequential search layout

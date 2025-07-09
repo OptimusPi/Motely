@@ -1,0 +1,59 @@
+{
+    "name": "spectral_test",
+    "description": "Test spectral card filtering including Soul",
+    "author": "test",
+    "keywords": ["SPECTRAL", "SOUL", "TEST"],
+    "filter_config": {
+        "numNeeds": 0,
+        "numWants": 5,
+        "Needs": [],
+        "Wants": [
+            {
+                "type": "SpectralCard",
+                "value": "Ankh",
+                "edition": "None",
+                "searchAntes": [1],
+                "desireByAnte": 1,
+                "Score": 5
+            },
+            {
+                "type": "SpectralCard",
+                "value": "Wraith",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 5
+            },
+            {
+                "type": "SpectralCard",
+                "value": "Soul",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 50
+            },
+            {
+                "type": "SpectralCard",
+                "value": "BlackHole",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 50
+            },
+            {
+                "type": "SpectralCard",
+                "value": "Hex",
+                "edition": "None",
+                "searchAntes": [2],
+                "desireByAnte": 2,
+                "Score": 3
+            }
+        ],
+        "minSearchAnte": 1,
+        "maxSearchAnte": 2,
+        "deck": "GhostDeck",
+        "stake": "WhiteStake",
+        "scoreNaturalNegatives": false,
+        "scoreDesiredNegatives": false
+    }
+}

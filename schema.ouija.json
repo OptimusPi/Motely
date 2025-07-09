@@ -63,12 +63,12 @@
                 "searchAntes": [1,2,3,4,5,6]
             },
             {
-                "type": "Tarot",
+                "type": "TarotCard",
                 "value": "TheMagician",
                 "searchAntes": [1,2,3,4,5,6]
             },
             {
-                "type": "Spectral",
+                "type": "SpectralCard",
                 "value": "Immolate",
                 "searchAntes": [1,2]
             },
@@ -104,5 +104,61 @@
         "stake": "BlackStake",
         "scoreNaturalNegatives": true,
         "scoreDesiredNegatives": true
+    },
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Ouija Balatro Seed filter config schema",
+    "type": "object",
+    "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "author": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "filter_config": {
+            "type": "object",
+            "properties": {
+                "numNeeds": { "type": "integer" },
+                "numWants": { "type": "integer" },
+                "Needs": {
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/desire" }
+                },
+                "Wants": {
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/desire" }
+                },
+                "minSearchAnte": { "type": "integer" },
+                "maxSearchAnte": { "type": "integer" },
+                "deck": { "type": "string" },
+                "stake": { "type": "string" },
+                "scoreNaturalNegatives": { "type": "boolean" },
+                "scoreDesiredNegatives": { "type": "boolean" }
+            },
+            "required": ["Needs", "Wants"]
+        }
+    },
+    "definitions": {
+        "desire": {
+            "type": "object",
+            "properties": {
+                "type": { "type": "string" },
+                "value": { "type": "string" },
+                "edition": { "type": "string" },
+                "jokerStickers": { "type": "array", "items": { "type": "string" } },
+                "rank": { "type": "string" },
+                "suit": { "type": "string" },
+                "enchantment": { "type": "string" },
+                "chip": { "type": "string" },
+                "desireByAnte": { "type": "integer" },
+                "searchAntes": { "type": "array", "items": { "type": "integer" } },
+                "Score": { "type": "integer" },
+                "JokerEnum": { "type": "string" },
+                "PlanetEnum": { "type": "string" },
+                "SpectralEnum": { "type": "string" },
+                "TypeEnum": { "type": "string" },
+                "VoucherEnum": { "type": "string" },
+                "TagEnum": { "type": "string" },
+                "TarotEnum": { "type": "string" }
+            }
+        }
     }
 }

@@ -9,6 +9,15 @@ using Motely.Filters;
 
 namespace Motely;
 
+// Source constants matching Immolate's source_str() function
+internal static class OuijaSourceConstants
+{
+    public const string SHOP = "sho";
+    public const string ARCANA = "ar1";
+    public const string BUFFOON = "buf";
+    public const string SOUL = "sou";
+}
+
 public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.OuijaJsonFilter>
 {
     public OuijaConfig Config { get; }
@@ -90,23 +99,23 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // Handle special cases that don't map directly to MotelyItemTypeCategory
             if (string.Equals(type, "SoulJoker", StringComparison.OrdinalIgnoreCase))
             {
-                // Soul jokers come from The Soul card in Arcana/Spectral packs
-                // Need to cache tarot streams and soul joker streams
-                ctx.CacheTarotStream(ante);
-                ctx.CachePseudoHash(MotelyPrngKeys.JokerSoul + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.ShopPack + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.ArcanaPack + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.JokerSoul + ante);
+                ctx.CacheTarotStream(ante);
+                if (ante >= 2)
+                {
+                    ctx.CacheVoucherStream(1);
+                    ctx.CacheVoucherStream(2);
+                }
                 return;
             }
-            
             DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unknown type '{0}' (ante {1}) - no canonical PRNG key used", type, ante);
             return;
         }
-        
         switch (parsedType)
         {
             case MotelyItemTypeCategory.Joker:
-                // Regular jokers need different streams based on rarity
-                // Regular jokers need different streams based on rarity WITH SOURCE
                 ctx.CachePseudoHash(MotelyPrngKeys.JokerCommon + "sho" + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.JokerUncommon + "sho" + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.JokerRare + "sho" + ante);
@@ -114,19 +123,20 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 ctx.CachePseudoHash(MotelyPrngKeys.JokerEdition + "sho" + ante);
                 break;
             case MotelyItemTypeCategory.PlayingCard:
-                // TODO: Implement when playing card streams are available
                 DebugLogger.LogFormat("[OuijaJsonFilterDesc] PlayingCard streams not yet implemented for ante {0}", ante);
                 break;
             case MotelyItemTypeCategory.TarotCard:
                 ctx.CacheTarotStream(ante);
                 break;
             case MotelyItemTypeCategory.PlanetCard:
-                // TODO: Implement when planet card streams are available
-                DebugLogger.LogFormat("[OuijaJsonFilterDesc] PlanetCard streams not yet implemented for ante {0}", ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.Planet + MotelyPrngKeys.Shop + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.Planet + MotelyPrngKeys.CelestialPack + ante);
+                // Removed MotelyPrngKeys.PlanetSoul (does not exist)
                 break;
             case MotelyItemTypeCategory.SpectralCard:
-                // TODO: Implement when spectral card streams are available
-                DebugLogger.LogFormat("[OuijaJsonFilterDesc] SpectralCard streams not yet implemented for ante {0}", ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.Spectral + MotelyPrngKeys.Shop + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.Spectral + MotelyPrngKeys.SpectralPack + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.SpectralSoul + MotelyPrngKeys.Spectral + ante);
                 break;
             default:
                 DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unhandled canonical type '{0}' (ante {1}) - no PRNG key used", parsedType, ante);
@@ -136,12 +146,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
     public struct OuijaJsonFilter : IMotelySeedFilter
     {
-        // Source constants matching Immolate's source_str() function
-        private const string SOURCE_SHOP = "sho";
-        private const string SOURCE_ARCANA = "ar1";
-        private const string SOURCE_BUFFOON = "buf";
-        private const string SOURCE_SOUL = "sou";
-        
         private readonly OuijaConfig _config;
         
         public OuijaJsonFilter(OuijaConfig config)
@@ -154,43 +158,34 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             try
             {
-                DebugLogger.Log("Filter method called");
                 VectorMask mask = VectorMask.AllBitsSet;
-
                 if (_config == null)
                 {
                     DebugLogger.Log("ERROR: Config is null in Filter method");
                     return default;
                 }
-
-                // Copy config to local variable to avoid struct member access in lambda
                 var localConfig = _config;
-
-                // PHASE 1: Vector filtering for NEEDS (hard requirements)
                 mask = ProcessNeeds(ref searchContext, mask, localConfig);
-                 
                 int needsPassCount = CountBitsSet(mask);
-                DebugLogger.LogFormat("After ProcessNeeds: {0} seeds passed (mask value: {1})", needsPassCount, mask.Value);
-                
-                if (mask.IsAllFalse()) 
+                if (mask.IsAllFalse())
                 {
-                    DebugLogger.Log("All seeds filtered out by NEEDS - no seeds passed requirements");
                     return mask;
                 }
-
-                // PHASE 2: Individual seed processing for WANTS (scoring)
+                // Clear results queue before batch
+                ResultsQueue = new ConcurrentQueue<OuijaResult>();
                 mask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
                 {
                     var result = ProcessWantsAndScore(ref singleCtx, localConfig);
-
                     if (result.Success)
-                    {
-                        PrintResult(result, localConfig);
-                    }
-                    
+                        ResultsQueue.Enqueue(result);
                     return result.Success;
                 });
-                
+                // Print all results after batch
+                if (ResultsQueue != null)
+                {
+                    foreach (var result in ResultsQueue)
+                        PrintResult(result, localConfig);
+                }
                 return mask;
             }
             catch (Exception ex)
@@ -208,31 +203,39 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return mask;
             }
 
-            DebugLogger.LogFormat("Processing {0} needs", config.Needs.Length);
+            //DebugLogger.LogFormat("Processing {0} needs", config.Needs.Length);
 
-            // Group needs by ante for efficient stream processing
-            var needsByAnte = config.Needs
-                .Where(n => n != null)
-                .SelectMany(n => 
-                {
-                    var antes = n.SearchAntes?.Length > 0 ? n.SearchAntes : new[] { n.DesireByAnte };
-                    return antes.Select(ante => (ante, need: n));
-                })
-                .GroupBy(x => x.ante)
-                .OrderBy(g => g.Key);
-
-            foreach (var anteGroup in needsByAnte)
+            // Process each need
+            foreach (var need in config.Needs.Where(n => n != null))
             {
-                int ante = anteGroup.Key;
-                
-                // Process all needs for this ante
-                foreach (var (_, need) in anteGroup)
+                var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
+                // For each need, we want to find seeds that have it in ANY of the specified antes (OR logic)
+                VectorMask needMask = new VectorMask(0); // AllBitsClear
+                foreach (var ante in searchAntes)
                 {
-                    mask = ProcessNeedVector(ref searchContext, need, ante, mask);
-                    if (mask.IsAllFalse()) return default; // Early exit optimization
+                    var anteMask = ProcessNeedVector(ref searchContext, need, ante, VectorMask.AllBitsSet);
+                    needMask |= anteMask; // OR operation - seed passes if found in ANY ante
+                }
+                // After collecting all antes for this need, mask is ANDed with needMask (all needs must be satisfied)
+                mask &= needMask;
+                int passing = CountBitsSet(mask);
+                // Print the relevant enum property for debug clarity
+                string itemStr = need.Type switch {
+                    "SoulJoker" or "Joker" => need.JokerEnum.HasValue ? need.JokerEnum.Value.ToString() : "<MISSING_ENUM>",
+                    "Planet" => need.PlanetEnum.HasValue ? need.PlanetEnum.Value.ToString() : "<MISSING_ENUM>",
+                    "Spectral" => need.SpectralEnum.HasValue ? need.SpectralEnum.Value.ToString() : "<MISSING_ENUM>",
+                    "Voucher" => need.VoucherEnum.HasValue ? need.VoucherEnum.Value.ToString() : "<MISSING_ENUM>",
+                    "Tag" => need.TagEnum.HasValue ? need.TagEnum.Value.ToString() : "<MISSING_ENUM>",
+                    "Tarot" => need.TarotEnum.HasValue ? need.TarotEnum.Value.ToString() : "<MISSING_ENUM>",
+                    _ => need.Value
+                };
+                DebugLogger.LogFormat("After need (type={0}, item={1}): {2} seeds passing", need.Type, itemStr, passing);
+                if (mask.IsAllFalse()) 
+                {
+                    DebugLogger.Log("All seeds filtered out by need - no seeds passed requirements");
+                    return mask;
                 }
             }
-
             return mask;
         }
 
@@ -275,6 +278,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case MotelyItemTypeCategory.TarotCard:
                     return ProcessTarotNeed(ref searchContext, need, ante, mask);
 
+                case MotelyItemTypeCategory.PlanetCard:
+                    return ProcessPlanetNeed(ref searchContext, need, ante, mask);
+
+                case MotelyItemTypeCategory.SpectralCard:
+                    return ProcessSpectralNeed(ref searchContext, need, ante, mask);
+
                 case MotelyItemTypeCategory.PlayingCard:
                     // TODO: Implement when playing card support is added
                     DebugLogger.LogFormat("PlayingCard needs not yet implemented");
@@ -289,17 +298,15 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static VectorMask ProcessJokerNeed(ref MotelyVectorSearchContext searchContext, 
             OuijaConfig.Desire need, int ante, VectorMask mask)
         {
-            if (string.IsNullOrEmpty(need.Value))
-            {
-                DebugLogger.Log("Empty joker value in need");
-                return mask;
-            }
-
-            var targetJoker = ParseJoker(need.Value);
+            var targetJoker = ParseJoker(need);
             if (targetJoker == default)
             {
                 DebugLogger.LogFormat("❌ Unknown joker: {0}", need.Value);
                 return mask;
+            }
+            else 
+            {
+                DebugLogger.LogFormat("Processing Joker need: {0} (ante {1})", targetJoker, ante);
             }
 
             var jokerRarity = GetJokerRarity(targetJoker);
@@ -310,13 +317,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.LogFormat("🔍 Legendary joker {0} requires Soul detection - using individual seed processing", need.Value);
                 var legendaryMask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    return ProcessLegendaryJokerFromSoul(ref singleCtx, targetJoker, ante);
+                    bool found = ProcessLegendaryJokerFromSoul(ref singleCtx, targetJoker, ante);
+                    DebugLogger.LogFormat("[DEBUG] (Need) Legendary Joker: Checking for {0} in seed {1} => {2}", need.Value, singleCtx.GetCurrentSeed(), found);
+                    return found;
                 });
                 DebugLogger.LogFormat("Legendary joker search complete - {0} seeds found with {1}", CountBitsSet(legendaryMask), need.Value);
                 return legendaryMask;
             }
-            
-            // Non-legendary jokers use regular shop streams
+
             string prngKey = jokerRarity switch
             {
                 MotelyJokerRarity.Common => MotelyPrngKeys.JokerCommon,
@@ -326,8 +334,31 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             };
 
             // Include source in the key! Shop jokers come from shop source
-            var prng = searchContext.CreatePrngStreamCached(prngKey + SOURCE_SHOP + ante);
-            
+            var prng = searchContext.CreatePrngStreamCached(prngKey + OuijaSourceConstants.SHOP + ante);
+            if (jokerRarity == MotelyJokerRarity.Common)
+            {
+                var choices = MotelyEnum<MotelyJokerCommon>.Values;
+                var jv = searchContext.GetNextRandomElement(ref prng, choices);
+                var targetInRarity = GetJokerInRarityEnum<MotelyJokerCommon>(targetJoker);
+                DebugLogger.LogFormat("[DEBUG] (Need) Joker PRNG: key={0}, ante={1}, generated vector={2}, target={3} ({4})",
+                    prngKey + OuijaSourceConstants.SHOP + ante, ante, jv, targetInRarity, (int)targetJoker);
+            }
+            else if (jokerRarity == MotelyJokerRarity.Uncommon)
+            {
+                var choices = MotelyEnum<MotelyJokerUncommon>.Values;
+                var jv = searchContext.GetNextRandomElement(ref prng, choices);
+                var targetInRarity = GetJokerInRarityEnum<MotelyJokerUncommon>(targetJoker);
+                DebugLogger.LogFormat("[DEBUG] (Need) Joker PRNG: key={0}, ante={1}, generated vector={2}, target={3} ({4})",
+                    prngKey + OuijaSourceConstants.SHOP + ante, ante, jv, targetInRarity, (int)targetJoker);
+            }
+            else if (jokerRarity == MotelyJokerRarity.Rare)
+            {
+                var choices = MotelyEnum<MotelyJokerRare>.Values;
+                var jv = searchContext.GetNextRandomElement(ref prng, choices);
+                var targetInRarity = GetJokerInRarityEnum<MotelyJokerRare>(targetJoker);
+                DebugLogger.LogFormat("[DEBUG] (Need) Joker PRNG: key={0}, ante={1}, generated vector={2}, target={3} ({4})",
+                    prngKey + OuijaSourceConstants.SHOP + ante, ante, jv, targetInRarity, (int)targetJoker);
+            }
             VectorMask jokerMask = jokerRarity switch
             {
                 MotelyJokerRarity.Common => ProcessJokerRarityVector<MotelyJokerCommon>(ref searchContext, ref prng, targetJoker),
@@ -335,62 +366,136 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 MotelyJokerRarity.Rare => ProcessJokerRarityVector<MotelyJokerRare>(ref searchContext, ref prng, targetJoker),
                 _ => default
             };
-            
-            DebugLogger.LogFormat("Looking for {0} (rarity: {1}) at ante {2} with key: {3}", 
-                need.Value, jokerRarity, ante, prngKey + SOURCE_SHOP + ante);
-            
+    
             // Check edition if specified
             if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
             {
-                // Edition also needs source!
-                var editionPrng = searchContext.CreatePrngStreamCached(MotelyPrngKeys.JokerEdition + SOURCE_SHOP + ante);
+                var editionPrng = searchContext.CreatePrngStreamCached(MotelyPrngKeys.JokerEdition + OuijaSourceConstants.SHOP + ante);
                 var editionRolls = searchContext.GetNextRandom(ref editionPrng);
                 var threshold = GetEditionThreshold(need.Edition);
                 var editionMask = Vector512.LessThan(editionRolls, Vector512.Create(threshold));
+                DebugLogger.LogFormat("[DEBUG] (Need) Joker Edition: {0}, rolls={1}, threshold={2}", need.Edition, editionRolls, threshold);
                 jokerMask &= editionMask;
             }
-            
+    
             return mask & jokerMask;
         }
-        
-        private static bool ProcessLegendaryJokerFromSoul(ref MotelySingleSearchContext singleCtx, MotelyJoker targetJoker, int ante)
-        {
-            // Use Perkeo-style logic for legendary/soul jokers
-            return PerkeoStyleSoulJokerCheck(ref singleCtx, targetJoker);
-        }
 
-        private static VectorMask ProcessSoulJokerNeed(ref MotelyVectorSearchContext searchContext, 
-            OuijaConfig.Desire need, int ante, VectorMask mask)
+        // --- MISSING NEED HELPERS ---
+        private static VectorMask ProcessSoulJokerNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
         {
-            if (string.IsNullOrEmpty(need.Value))
+            if (!need.JokerEnum.HasValue)
             {
-                DebugLogger.Log("Empty value for SoulJoker need");
+                DebugLogger.Log("Missing JokerEnum for SoulJoker need");
                 return mask;
             }
-
-            // Soul jokers come from arcana packs - this is more complex and might need individual seed processing
+            var targetJoker = need.JokerEnum.Value;
+            string? requiredEdition = need.Edition;
+            // Soul jokers require individual seed processing
             return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                return ProcessSoulJokerIndividual(ref singleCtx, need, ante);
+                return ProcessLegendaryJokerFromSoul(ref singleCtx, targetJoker, ante, requiredEdition);
             });
         }
 
-        private static bool ProcessSoulJokerIndividual(ref MotelySingleSearchContext singleCtx, 
-            OuijaConfig.Desire need, int ante)
+        private static VectorMask ProcessTarotNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
         {
-            var targetJoker = ParseJoker(need.Value);
-            return PerkeoStyleSoulJokerCheck(ref singleCtx, targetJoker);
-        }
-
-        private static VectorMask ProcessTarotNeed(ref MotelyVectorSearchContext searchContext, 
-            OuijaConfig.Desire need, int ante, VectorMask mask)
-        {
-            // TODO: Implement tarot card filtering
             DebugLogger.LogFormat("Tarot card needs not yet implemented");
             return mask;
         }
 
-        public static ConcurrentQueue<OuijaResult>? ResultsQueue { get; set; }
+        private static VectorMask ProcessPlanetNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
+        {
+            if (!need.PlanetEnum.HasValue)
+            {
+                DebugLogger.Log("Missing PlanetEnum for Planet need");
+                return mask;
+            }
+            var planetMask = searchContext.FilterPlanetCard(ante, need.PlanetEnum.Value, MotelyPrngKeys.Shop);
+            return mask & planetMask;
+        }
+
+        private static VectorMask ProcessSpectralNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
+        {
+            if (!need.SpectralEnum.HasValue)
+            {
+                DebugLogger.Log("Missing SpectralEnum for Spectral need");
+                return mask;
+            }
+            var spectralMask = searchContext.FilterSpectralCard(ante, need.SpectralEnum.Value, MotelyPrngKeys.Shop);
+            return mask & spectralMask;
+        }
+
+        private static bool ProcessLegendaryJokerFromSoul(ref MotelySingleSearchContext singleCtx, MotelyJoker targetJoker, int ante, string? requiredEdition = null)
+        {
+            // This logic matches PerkeoStyleSoulJokerCheck for legendary jokers
+            MotelySingleBoosterPackStream boosterPackStream = singleCtx.CreateBoosterPackStream(ante, true);
+            MotelyBoosterPack pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+            {
+                var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante);
+                if (singleCtx.GetArcanaPackContents(ref tarotStream, pack.GetPackSize()).Contains(MotelyItemType.Soul))
+                {
+                    var soulJokerStream = singleCtx.CreateSoulJokerStream(ante);
+                    var joker = singleCtx.NextJoker(ref soulJokerStream);
+                    int legendaryJokerBase = (int)targetJoker & ~(Motely.JokerRarityMask << Motely.JokerRarityOffset);
+                    int rarityBits = (int)targetJoker & (Motely.JokerRarityMask << Motely.JokerRarityOffset);
+                    MotelyItemType targetItemType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | legendaryJokerBase | rarityBits);
+                    bool typeMatch = joker.Type == targetItemType;
+                    bool editionMatch = true;
+                    if (!string.IsNullOrEmpty(requiredEdition) && requiredEdition != "None")
+                    {
+                        editionMatch = CheckJokerEdition(ref singleCtx, requiredEdition, ante);
+                    }
+                    DebugLogger.LogFormat("[DEBUG] SoulJoker: Found={0} ({1}), Target={2} ({3}), EditionOK={4}, Seed={5}", joker.Type, (int)joker.Type, targetItemType, (int)targetItemType, editionMatch, singleCtx.GetCurrentSeed());
+                    if (typeMatch && editionMatch)
+                        return true;
+                }
+            }
+            if (ante == 2)
+            {
+                var voucher1 = singleCtx.GetAnteFirstVoucher(1);
+                var voucher2 = singleCtx.GetAnteFirstVoucher(2);
+                if (voucher1 == MotelyVoucher.Telescope && voucher2 == MotelyVoucher.Observatory)
+                {
+                    boosterPackStream = singleCtx.CreateBoosterPackStream(2);
+                    bool tarotStreamInit = false;
+                    MotelySingleTarotStream tarotStream2 = default;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+                        if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                        {
+                            if (!tarotStreamInit)
+                            {
+                                tarotStreamInit = true;
+                                tarotStream2 = singleCtx.CreateArcanaPackTarotStream(2);
+                            }
+                            if (singleCtx.GetArcanaPackContents(ref tarotStream2, pack.GetPackSize()).Contains(MotelyItemType.Soul))
+                            {
+                                var soulJokerStream = singleCtx.CreateSoulJokerStream(2);
+                                var joker = singleCtx.NextJoker(ref soulJokerStream);
+                                int legendaryJokerBase = (int)targetJoker & ~(Motely.JokerRarityMask << Motely.JokerRarityOffset);
+                                int rarityBits = (int)targetJoker & (Motely.JokerRarityMask << Motely.JokerRarityOffset);
+                                MotelyItemType targetItemType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | legendaryJokerBase | rarityBits);
+                                bool typeMatch = joker.Type == targetItemType;
+                                bool editionMatch = true;
+                                if (!string.IsNullOrEmpty(requiredEdition) && requiredEdition != "None")
+                                {
+                                    editionMatch = CheckJokerEdition(ref singleCtx, requiredEdition, ante);
+                                }
+                                DebugLogger.LogFormat("[DEBUG] SoulJoker: Found={0} ({1}), Target={2} ({3}), EditionOK={4}, Seed={5}", joker.Type, (int)joker.Type, targetItemType, (int)targetItemType, editionMatch, singleCtx.GetCurrentSeed());
+                                if (typeMatch && editionMatch)
+                                    return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        public static ConcurrentQueue<OuijaResult>? ResultsQueue { get; set; } = new ConcurrentQueue<OuijaResult>();
 
         private static OuijaResult ProcessWantsAndScore(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
         {
@@ -398,11 +503,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var result = new OuijaResult
             {
                 Seed = seed,
-                TotalScore = 0,
+                TotalScore = 1,
                 NaturalNegativeJokers = 0,
                 DesiredNegativeJokers = 0,
                 ScoreWants = new int[32],
-                Success = false
+                Success = true
             };
 
             // Process each want and accumulate scores
@@ -422,17 +527,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         if (isDesiredNeg) result.DesiredNegativeJokers++;
                     }
                 }
+                for (int i = 0; i < 32; i++)
+                {
+                    result.TotalScore += result.ScoreWants[i];
+                }
             }
-
-            // Total score is just the sum of all want scores
-            int totalScore = 0;
-            for (int i = 0; i < 32; i++)
-            {
-                totalScore += result.ScoreWants[i];
-            }
-
-            result.TotalScore = (ushort)totalScore;
-            result.Success = totalScore >= GetMinimumScore(config);
 
             return result;
         }
@@ -444,6 +543,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 Console.WriteLine($"|{result.Seed},{result.TotalScore}");
                 return;
             }
+
+            // DEBUG: Print every result, even if not successful, for troubleshooting
+            DebugLogger.LogFormat("[RESULT DEBUG] Seed: {0}, TotalScore: {1}, Success: {2}", result.Seed, result.TotalScore, result.Success);
 
             var row = $"|{result.Seed},{result.TotalScore}";
 
@@ -493,6 +595,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 case MotelyItemTypeCategory.PlayingCard:
                     return ProcessCardWant(ref singleCtx, want, ante);
 
+                case MotelyItemTypeCategory.PlanetCard:
+                    return ProcessPlanetWant(ref singleCtx, want, ante);
+
+                case MotelyItemTypeCategory.SpectralCard:
+                    return ProcessSpectralWant(ref singleCtx, want, ante);
+
                 default:
                     DebugLogger.LogFormat("❌ Unhandled want type: {0}", want.Type);
                     return (0, false, false);
@@ -502,10 +610,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessJokerWant(
             ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante)
         {
-            if (string.IsNullOrEmpty(want.Value))
-                return (0, false, false);
-
-            var targetJoker = ParseJoker(want.Value);
+            var targetJoker = ParseJoker(want);
             if (targetJoker == default)
                 return (0, false, false);
 
@@ -515,6 +620,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             if (jokerRarity == MotelyJokerRarity.Legendary)
             {
                 bool found = PerkeoStyleSoulJokerCheck(ref singleCtx, targetJoker);
+                DebugLogger.LogFormat("[DEBUG] (Want) Legendary Joker: Checking for {0} in seed {1} => {2}", want.Value, singleCtx.GetCurrentSeed(), found);
                 return found ? (want.Score, false, false) : (0, false, false);
             }
 
@@ -527,26 +633,43 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             };
 
             // Include source!
-            var prng = singleCtx.CreatePrngStream(prngKey + SOURCE_SHOP + ante);
-            
-            bool jokerMatches = jokerRarity switch
+            var prng = singleCtx.CreatePrngStream(prngKey + OuijaSourceConstants.SHOP + ante);
+            bool jokerMatches = false;
+            if (jokerRarity == MotelyJokerRarity.Common)
             {
-                MotelyJokerRarity.Common => ProcessJokerRaritySingle<MotelyJokerCommon>(ref singleCtx, ref prng, targetJoker),
-                MotelyJokerRarity.Uncommon => ProcessJokerRaritySingle<MotelyJokerUncommon>(ref singleCtx, ref prng, targetJoker),
-                MotelyJokerRarity.Rare => ProcessJokerRaritySingle<MotelyJokerRare>(ref singleCtx, ref prng, targetJoker),
-                _ => false
-            };
-            
-            if (!jokerMatches)
-                return (0, false, false);
-
+                var choices = MotelyEnum<MotelyJokerCommon>.Values;
+                var j = singleCtx.GetNextRandomElement(ref prng, choices);
+                var generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Common + (int)j);
+                DebugLogger.LogFormat("[DEBUG] (Want) Joker PRNG: key={0}, ante={1}, generated={2} ({3}), target={4} ({5}), seed={6}",
+                    prngKey + OuijaSourceConstants.SHOP + ante, ante, generatedJoker, (int)generatedJoker, targetJoker, (int)targetJoker, singleCtx.GetCurrentSeed());
+                jokerMatches = generatedJoker.Equals(targetJoker);
+            }
+            else if (jokerRarity == MotelyJokerRarity.Uncommon)
+            {
+                var choices = MotelyEnum<MotelyJokerUncommon>.Values;
+                var j = singleCtx.GetNextRandomElement(ref prng, choices);
+                var generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Uncommon + (int)j);
+                DebugLogger.LogFormat("[DEBUG] (Want) Joker PRNG: key={0}, ante={1}, generated={2} ({3}), target={4} ({5}), seed={6}",
+                    prngKey + OuijaSourceConstants.SHOP + ante, ante, generatedJoker, (int)generatedJoker, targetJoker, (int)targetJoker, singleCtx.GetCurrentSeed());
+                jokerMatches = generatedJoker.Equals(targetJoker);
+            }
+            else if (jokerRarity == MotelyJokerRarity.Rare)
+            {
+                var choices = MotelyEnum<MotelyJokerRare>.Values;
+                var j = singleCtx.GetNextRandomElement(ref prng, choices);
+                var generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Rare + (int)j);
+                DebugLogger.LogFormat("[DEBUG] (Want) Joker PRNG: key={0}, ante={1}, generated={2} ({3}), target={4} ({5}), seed={6}",
+                    prngKey + OuijaSourceConstants.SHOP + ante, ante, generatedJoker, (int)generatedJoker, targetJoker, (int)targetJoker, singleCtx.GetCurrentSeed());
+                jokerMatches = generatedJoker.Equals(targetJoker);
+            }
+    
             // Check edition if specified
             if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
             {
                 var hasEdition = CheckJokerEdition(ref singleCtx, want.Edition, ante);
+                DebugLogger.LogFormat("[DEBUG] (Want) Joker Edition: {0}, hasEdition={1}", want.Edition, hasEdition);
                 bool isNaturalNeg = want.Edition == "Negative" && hasEdition;
                 bool isDesiredNeg = want.Edition == "Negative" && hasEdition;
-                
                 return hasEdition ? (want.Score, isNaturalNeg, isDesiredNeg) : (0, false, false);
             }
 
@@ -559,7 +682,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             if (string.IsNullOrEmpty(want.Value))
                 return (0, false, false);
 
-            var targetJoker = ParseJoker(want.Value);
+            var targetJoker = ParseJoker(want);
             if (targetJoker == default)
                 return (0, false, false);
 
@@ -578,7 +701,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckJokerEdition(ref MotelySingleSearchContext singleCtx, string edition, int ante)
         {
             // Include source!
-            var editionPrng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerEdition + SOURCE_SHOP + ante);
+            var editionPrng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerEdition + OuijaSourceConstants.SHOP + ante);
             var roll = singleCtx.GetNextRandom(ref editionPrng);
             return roll < GetEditionThreshold(edition);
         }
@@ -601,13 +724,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         }
 
         // Helper methods for joker processing
-        private static MotelyJoker ParseJoker(string value)
+        private static MotelyJoker ParseJoker(OuijaConfig.Desire desire)
         {
-            if (string.IsNullOrEmpty(value))
-                return default;
-                
-            if (MotelyEnumUtil.TryParseEnum<MotelyJoker>(value, out var joker))
-                return joker;
+            // Only use the parsed enum property for performance and type safety
+            if (desire.JokerEnum.HasValue)
+                return desire.JokerEnum.Value;
             return default;
         }
 
@@ -651,6 +772,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             bool hasTelescope = voucher1 == MotelyVoucher.Telescope;
             bool hasObservatory = voucher2 == MotelyVoucher.Observatory;
             
+            // Convert MotelyJoker to the corresponding MotelyItemType for proper comparison
+            int legendaryJokerBase = (int)targetJoker & ~(Motely.JokerRarityMask << Motely.JokerRarityOffset);
+            MotelyItemType targetItemType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | legendaryJokerBase);
+            
             // ANTE 1: Check first booster pack for Arcana/Soul/targetJoker
             MotelySingleBoosterPackStream boosterPackStream = singleCtx.CreateBoosterPackStream(1, true);
             MotelyBoosterPack pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
@@ -661,8 +786,15 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 {
                     var soulJokerStream = singleCtx.CreateSoulJokerStream(1);
                     var joker = singleCtx.NextJoker(ref soulJokerStream);
-                    if (joker.Type == (MotelyItemType)(int)targetJoker)
+                    
+                    DebugLogger.LogFormat("[DEBUG] Joker comparison - Found: {0} ({1}), Target: {2} ({3}), Seed: {4}", 
+                        joker.Type, (int)joker.Type, targetItemType, (int)targetItemType, singleCtx.GetCurrentSeed());
+                    
+                    if (joker.Type == targetItemType)
+                    {
+                        DebugLogger.LogFormat("[DEBUG] PerkeoStyleSoulJokerCheck: MATCH! Seed: {0}", singleCtx.GetCurrentSeed());
                         return true;
+                    }
                 }
             }
 
@@ -686,8 +818,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         {
                             var soulJokerStream = singleCtx.CreateSoulJokerStream(2);
                             var joker = singleCtx.NextJoker(ref soulJokerStream);
-                            if (joker.Type == (MotelyItemType)(int)targetJoker)
+                            if (joker.Type == targetItemType)
+                            {
+                                DebugLogger.LogFormat("[DEBUG] PerkeoStyleSoulJokerCheck: MATCH! Seed: {0}", singleCtx.GetCurrentSeed());
                                 return true;
+                            }
                         }
                     }
                 }
@@ -705,11 +840,70 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         var soulJokerStream = singleCtx.CreateSoulJokerStream(2);
                         var joker = singleCtx.NextJoker(ref soulJokerStream);
                         if (joker.Type == (MotelyItemType)(int)targetJoker)
+                        {
+                            DebugLogger.LogFormat("[DEBUG] PerkeoStyleSoulJokerCheck: MATCH! Seed: {0}", singleCtx.GetCurrentSeed());
                             return true;
+                        }
                     }
                 }
             }
             return false;
+        }
+
+        // Helper methods for Planet and Spectral card checking
+        private static bool CheckForBlackHole(ref MotelySingleSearchContext singleCtx, int ante)
+        {
+            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, true);
+            var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+            if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
+            {
+                var planetStream = singleCtx.CreateCelestialPackPlanetStream(ante);
+                var contents = singleCtx.GetCelestialPackContents(ref planetStream, pack.GetPackSize());
+                return contents.Contains(MotelyItemType.BlackHole);
+            }
+            return false;
+        }
+
+        private static bool CheckForSpectralSpecial(ref MotelySingleSearchContext singleCtx, string specialType, int ante)
+        {
+            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, true);
+            var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+            if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+            {
+                var spectralStream = singleCtx.CreateSpectralPackStream(ante);
+                var contents = singleCtx.GetSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                if (string.Equals(specialType, "Soul", StringComparison.OrdinalIgnoreCase))
+                    return contents.Contains(MotelyItemType.Soul);
+                else if (string.Equals(specialType, "BlackHole", StringComparison.OrdinalIgnoreCase))
+                    return contents.Contains(MotelyItemType.BlackHole);
+            }
+            return false;
+        }
+
+        private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessPlanetWant(
+            ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante)
+        {
+            if (!want.PlanetEnum.HasValue)
+                return (0, false, false);
+
+            var planetStream = singleCtx.CreateShopPlanetStream(ante);
+            var planet = singleCtx.GetNextShopPlanet(ref planetStream);
+            DebugLogger.LogFormat("[DEBUG] (Want) Planet PRNG: ante={0}, generated={1}, target={2}, seed={3}", ante, planet.Type, ((MotelyItemType)MotelyItemTypeCategory.PlanetCard | (MotelyItemType)want.PlanetEnum.Value), singleCtx.GetCurrentSeed());
+            bool matches = planet.Type == ((MotelyItemType)MotelyItemTypeCategory.PlanetCard | (MotelyItemType)want.PlanetEnum.Value);
+            return matches ? (want.Score, false, false) : (0, false, false);
+        }
+
+        private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessSpectralWant(
+            ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante)
+        {
+            if (!want.SpectralEnum.HasValue)
+                return (0, false, false);
+
+            var spectralStream = singleCtx.CreateShopSpectralStream(ante);
+            var spectral = singleCtx.GetNextShopSpectral(ref spectralStream);
+            DebugLogger.LogFormat("[DEBUG] (Want) Spectral PRNG: ante={0}, generated={1}, target={2}, seed={3}", ante, spectral.Type, ((MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)want.SpectralEnum.Value), singleCtx.GetCurrentSeed());
+            bool matches = spectral.Type == ((MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)want.SpectralEnum.Value);
+            return matches ? (want.Score, false, false) : (0, false, false);
         }
     }
 

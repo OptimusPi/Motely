@@ -8,7 +8,7 @@ public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterD
 
     public NegativeTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        for (int ante = 2; ante <= 5; ante++)
+        for (int ante = 2; ante <= 8; ante++)
             ctx.CacheTagStream(ante);
 
         return new NegativeTagFilter();
@@ -50,7 +50,7 @@ public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterD
                 if (mask.IsAllFalse()) break;
 
                 // Big blind
-                mask &= VectorEnum256.Equals(searchContext.GetNextTag(ref tagStream), MotelyTag.NegativeTag);
+                mask &= VectorEnum256.Equals(searchContext.GetNextTag(ref tagStream), MotelyTag.RareTag);
 
                 if (mask.IsAllFalse()) break;
             }

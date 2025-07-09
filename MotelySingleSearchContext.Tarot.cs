@@ -24,7 +24,7 @@ ref partial struct MotelySingleSearchContext
     {
         return new(ante, true,
             CreateResampleStreamCached(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante),
-            CreatePrngStreamCached(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante)
+            CreatePrngStreamCached(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante)
         );
     }
 
@@ -35,7 +35,7 @@ ref partial struct MotelySingleSearchContext
     {
         return new(ante, true,
             CreateResampleStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante),
-            CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante)
+            CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante)
         );
     }
 

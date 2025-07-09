@@ -34,6 +34,7 @@ unsafe ref partial struct MotelySingleSearchContext
         switch (rarity)
         {
             case MotelyJokerRarity.Legendary:
+                // Legendary jokers don't use source/ante in Immolate (version > 1.0.0.99)
                 stream.JokerStream = CreatePrngStream(MotelyPrngKeys.JokerLegendary);
                 break;
             default:
@@ -186,8 +187,8 @@ unsafe ref partial struct MotelySingleSearchContext
 
     public ShopJokerInfo GetNextShopJokerWithInfo(int ante, MotelyItem stake)
     {
-        // 1. Rarity PRNG
-        var rarityPrng = CreatePrngStream(MotelyPrngKeys.JokerRarity + ante);
+        // 1. Rarity PRNG - order is: rarity + ante + source
+        var rarityPrng = CreatePrngStream(MotelyPrngKeys.JokerRarity + ante + MotelyPrngKeys.Shop);
         double rarityPoll = GetNextRandom(ref rarityPrng);
         MotelyJokerRarity rarity;
         if (rarityPoll > 0.95)
@@ -197,21 +198,21 @@ unsafe ref partial struct MotelySingleSearchContext
         else
             rarity = MotelyJokerRarity.Common;
 
-        // 2. Joker PRNG
+        // 2. Joker PRNG - needs source and ante
         MotelySinglePrngStream jokerPrng;
         switch (rarity)
         {
             case MotelyJokerRarity.Legendary:
-                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerLegendary + ante);
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerLegendary + MotelyPrngKeys.Shop + ante);
                 break;
             case MotelyJokerRarity.Rare:
-                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerRare + ante);
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerRare + MotelyPrngKeys.Shop + ante);
                 break;
             case MotelyJokerRarity.Uncommon:
-                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerUncommon + ante);
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerUncommon + MotelyPrngKeys.Shop + ante);
                 break;
             default:
-                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerCommon + ante);
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerCommon + MotelyPrngKeys.Shop + ante);
                 break;
         }
         MotelyJoker joker;
@@ -231,8 +232,8 @@ unsafe ref partial struct MotelySingleSearchContext
                 break;
         }
 
-        // 3. Edition PRNG
-        var editionPrng = CreatePrngStream(MotelyPrngKeys.JokerEdition + ante);
+        // 3. Edition PRNG - needs source and ante
+        var editionPrng = CreatePrngStream(MotelyPrngKeys.JokerEdition + MotelyPrngKeys.Shop + ante);
         double editionPoll = GetNextRandom(ref editionPrng);
         MotelyItemEdition edition;
         if (editionPoll > 0.997)
