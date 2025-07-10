@@ -1,0 +1,25 @@
+{
+  "name": "SUPER LUCKY",
+  "description": "Oops All 6s Galore!",
+  "author": "pifreak",
+  "keywords": ["PI", "314", "PIE"],
+  "filter_config": {
+    "NumNeeds": 2,
+    "NumWants": 8,
+    "Needs": [
+     
+      { "Type": "Joker", "Value": "Blueprint", "Edition": "Negative", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Perkeo", "Edition": "None", "SearchAntes": [1,2], "Score": 1 }
+    ],
+    "Wants": [
+        { "Type": "Joker", "Value": "Blueprint", "Edition": "None", "SearchAntes": [1], "Score": 1 }
+
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

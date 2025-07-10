@@ -63,6 +63,11 @@ partial class Program
             "Suppress progress and status output",
             CommandOptionType.NoValue);
 
+        var wordlistOption = app.Option<string>(
+            "--wordlist <WL>",
+            "Wordlist file (loads WordLists/<WL>.txt, one 8-char seed per line)",
+            CommandOptionType.SingleValue);
+
         // .WithListSearch(["811M2111"])
 
         var seedOption = app.Option<string>(
@@ -71,6 +76,11 @@ partial class Program
             CommandOptionType.SingleValue);
         seedOption.DefaultValue = string.Empty;
 
+        var keywordOption = app.Option<string>(
+            "--keyword <KEYWORD>",
+            "Generate seeds from keyword with padding variations",
+            CommandOptionType.SingleValue);
+        keywordOption.DefaultValue = string.Empty;
 
         var seedInput = seedOption.Value()!;
 
@@ -92,6 +102,8 @@ partial class Program
             var cutoff = cutoffOption.ParsedValue;
             var enableDebug = debugOption.HasValue();
             var quiet = quietOption.HasValue();
+            var wordlist = wordlistOption.Value();
+            var keyword = keywordOption.Value();
 
             // Validate batchSize to prevent stack overflow
             if (batchSize < 1 || batchSize > 8)
@@ -103,7 +115,7 @@ partial class Program
                 return 1;
             }
 
-            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, enableDebug, quiet);
+            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, enableDebug, quiet, wordlist, keyword);
             Console.WriteLine("🔍 Search completed");
             return 0;
         });
@@ -111,10 +123,43 @@ partial class Program
         return app.Execute(args);
     }
 
-    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff, bool enableDebug, bool quiet)
+    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff, bool enableDebug, bool quiet, string? wordlist = null, string? keyword = null)
     {
         // Set debug output flag
         DebugLogger.IsEnabled = enableDebug;
+
+        List<string>? seeds = null;
+        
+        // Handle keyword generation
+        if (!string.IsNullOrEmpty(keyword))
+        {
+            seeds = SeedGenerator.GenerateSeedsFromKeyword(keyword);
+            if (!quiet)
+            {
+                Console.WriteLine($"🎯 Generated {seeds.Count} seeds from keyword: {keyword}");
+                if (seeds.Count <= 10)
+                {
+                    Console.WriteLine($"   Seeds: {string.Join(", ", seeds)}");
+                }
+                else
+                {
+                    Console.WriteLine($"   First 10: {string.Join(", ", seeds.Take(10))}...");
+                }
+            }
+        }
+        // Handle wordlist loading
+        else if (!string.IsNullOrEmpty(wordlist))
+        {
+            var wordlistPath = Path.Combine("WordLists", wordlist + ".txt");
+            if (!File.Exists(wordlistPath))
+                throw new FileNotFoundException($"Wordlist file not found: {wordlistPath}");
+            seeds = File.ReadAllLines(wordlistPath)
+                .Select(line => line.Trim())
+                .Where(line => line.Length == 8)
+                .ToList();
+            if (!quiet)
+                Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
+        }
 
         if (!quiet)
         {
@@ -158,12 +203,14 @@ partial class Program
             //var search = new MotelySearchSettings<PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
             // uncomment for OuijaFilter
             var ouijaDesc = new OuijaJsonFilterDesc(config) { Cutoff = cutoff };
-            var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
+            var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
                 .WithThreadCount(threads)
-                .WithSequentialSearch()
-                .WithListSearch(["D9FUJ7VX"])
-                .WithQuiet(quiet)
-                .Start();
+                .WithQuiet(quiet);
+            if (seeds != null)
+                searchSettings = searchSettings.WithListSearch(seeds);
+            else
+                searchSettings = searchSettings.WithSequentialSearch();
+            var search = searchSettings.Start();
             if (!quiet)
                 Console.WriteLine($"✅ Search started successfully");
 

@@ -1,0 +1,27 @@
+{
+  "name": "luck",
+  "description": "Full config with items per ante",
+  "author": "you",
+  "keywords": ["HUGE", "ANTE", "TEST"],
+  "filter_config": {
+    "NumNeeds": 24,
+    "NumWants": 0,
+    "Needs": [
+      { "Type": "SoulJoker", "Value": "Canio", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 },
+      
+      { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 }
+     
+    ],
+    "Wants": [
+         { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [1,2,3,4], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Canio", "SearchAntes": [1,2,3,4,5], "Score": 1 },
+      { "Type": "Joker", "Value": "Pareidolia", "SearchAntes": [1,2,3,4,5,6,7], "Score": 1 }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

@@ -271,7 +271,7 @@ public class OuijaConfig
         {
             config = JsonSerializer.Deserialize<OuijaConfig>(json, options);
             Console.WriteLine($"[DEBUG] Direct parse: Found {config?.Needs?.Length ?? 0} needs");
-            if (config != null && (config.Needs == null || config.Needs.Length == 0))
+            if ((config?.Needs?.Length ?? 0) == 0)
             {
                 // Direct parse didn't work, force wrapper parse
                 throw new Exception("Direct parse returned empty config, trying wrapper");

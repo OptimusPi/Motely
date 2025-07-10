@@ -973,69 +973,74 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         .Where(x => x.want != null && (x.want.SearchAntes?.Length > 0 ? x.want.SearchAntes : [x.want.DesireByAnte]).Contains(ante))
                         .ToList();
 
-                    // --- Joker wants: group by rarity ---
+                    // --- Joker wants ---
                     var jokerWants = wantsForAnte
-                        .Where(x => (x.want.TypeCategory == MotelyItemTypeCategory.Joker) || (x.want.TypeCategory == null && (x.want.Type != null && x.want.Type.ToLower().Contains("joker"))))
-                        .GroupBy(x => GetJokerRarity(ParseJoker(x.want)))
+                        .Where(x => (x.want.TypeCategory == MotelyItemTypeCategory.Joker) || 
+                                   (x.want.TypeCategory == null && 
+                                    x.want.Type != null && 
+                                    x.want.Type.ToLower().Contains("joker") && 
+                                    !x.want.Type.Equals("SoulJoker", StringComparison.OrdinalIgnoreCase)))
                         .ToList();
-                    foreach (var rarityGroup in jokerWants)
+                        
+                    // For joker wants, we need to check the actual shop generation to get editions right
+                    if (jokerWants.Any())
                     {
-                        var rarity = rarityGroup.Key;
-                        string prngKey = rarity switch
+                        // Generate the shop to find jokers with correct editions
+                        var shopJokers = singleCtx.GetShopJokersForAnte(ante);
+                        
+                        foreach (var shopJoker in shopJokers)
                         {
-                            MotelyJokerRarity.Common => MotelyPrngKeys.JokerCommon,
-                            MotelyJokerRarity.Uncommon => MotelyPrngKeys.JokerUncommon,
-                            MotelyJokerRarity.Rare => MotelyPrngKeys.JokerRare,
-                            _ => MotelyPrngKeys.JokerCommon
-                        };
-                        var prng = singleCtx.CreatePrngStream(prngKey + OuijaSourceConstants.SHOP + ante);
-                        foreach (var tuple in rarityGroup)
-                        {
-                            var want = tuple.want;
-                            var wantIndex = tuple.idx;
-                            MotelyJoker generatedJoker;
-                            switch (rarity)
+                            foreach (var tuple in jokerWants)
                             {
-                                case MotelyJokerRarity.Common:
+                                var want = tuple.want;
+                                var wantIndex = tuple.idx;
+                                var targetJoker = ParseJoker(want);
+                                
+                                if (shopJoker.Joker == targetJoker)
                                 {
-                                    var choices = MotelyEnum<MotelyJokerCommon>.Values;
-                                    var j = singleCtx.GetNextRandomElement<MotelyJokerCommon>(ref prng, choices);
-                                    generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Common + Convert.ToInt32(j));
-                                    break;
-                                }
-                                case MotelyJokerRarity.Uncommon:
-                                {
-                                    var choices = MotelyEnum<MotelyJokerUncommon>.Values;
-                                    var j = singleCtx.GetNextRandomElement<MotelyJokerUncommon>(ref prng, choices);
-                                    generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Uncommon + Convert.ToInt32(j));
-                                    break;
-                                }
-                                case MotelyJokerRarity.Rare:
-                                {
-                                    var choices = MotelyEnum<MotelyJokerRare>. Values;
-                                    var j = singleCtx.GetNextRandomElement<MotelyJokerRare>(ref prng, choices);
-                                    generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Rare + Convert.ToInt32(j));
-                                    break;
-                                }
-                                default:
-                                {
-                                    var choices = MotelyEnum<MotelyJokerCommon>.Values;
-                                    var j = singleCtx.GetNextRandomElement<MotelyJokerCommon>(ref prng, choices);
-                                    generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Common + Convert.ToInt32(j));
-                                    break;
+                                    // Joker type matches, now check edition
+                                    if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
+                                    {
+                                        // Convert MotelyItemEdition to string for comparison
+                                        string actualEdition = shopJoker.Edition switch
+                                        {
+                                            MotelyItemEdition.Negative => "Negative",
+                                            MotelyItemEdition.Polychrome => "Polychrome",
+                                            MotelyItemEdition.Holographic => "Holographic",
+                                            MotelyItemEdition.Foil => "Foil",
+                                            _ => "None"
+                                        };
+                                        
+                                        DebugLogger.LogFormat("[DEBUG] (Want) Shop Joker: {0} with edition {1} (wanted: {2})", 
+                                            shopJoker.Joker, actualEdition, want.Edition);
+                                        
+                                        if (want.Edition.Equals(actualEdition, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            result.ScoreWants[wantIndex] += want.Score;
+                                            if (actualEdition == "Negative")
+                                            {
+                                                result.DesiredNegativeJokers++;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // No edition requirement
+                                        result.ScoreWants[wantIndex] += want.Score;
+                                    }
                                 }
                             }
-                            bool jokerMatches = generatedJoker.Equals(ParseJoker(want));
-                            bool editionOk = true;
-                            if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
-                                editionOk = CheckJokerEdition(ref singleCtx, want.Edition, ante);
-                            if (jokerMatches && editionOk)
-                                result.ScoreWants[wantIndex] += want.Score;
                         }
+                        
+                        // TODO: Also check Buffoon packs for joker wants with editions
                     }
 
-                    // --- Legendary/SoulJoker wants ---
-                    foreach (var tuple in wantsForAnte.Where(x => GetJokerRarity(ParseJoker(x.want)) == MotelyJokerRarity.Legendary))
+                    // --- SoulJoker wants ---
+                    var soulJokerWants = wantsForAnte
+                        .Where(x => x.want.Type != null && x.want.Type.Equals("SoulJoker", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    foreach (var tuple in soulJokerWants)
                     {
                         var want = tuple.want;
                         var wantIndex = tuple.idx;
@@ -1110,10 +1115,19 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         static void PrintResult(OuijaResult result, OuijaConfig config, int cutoff = 0)
         {
+            // Check if the result meets the cutoff scor
+            // bool is_cool = false;
+            // if (result.Seed.ToString().Contains("TACO"))
+            // {
+            //    is_cool = true;
+            // }
+            // if (!is_cool) return;
+
             if (result.TotalScore < cutoff) return;
             if (config == null)
             {
-                Console.WriteLine($"|{result.Seed},{result.TotalScore}");
+
+                Console.WriteLine($"[noconfig]|{result.Seed},{result.TotalScore}");
                 return;
             }
 
@@ -1192,85 +1206,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             }
         }
 
+        // This method is no longer used for wants - we process joker wants directly in ProcessWantsAndScore
+        // to properly handle editions based on which shop slot contains the joker
         private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessJokerWant(
             ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire want, int ante)
         {
-            var targetJoker = ParseJoker(want);
-            if (targetJoker == default)
-                return (0, false, false);
-
-            var jokerRarity = GetJokerRarity(targetJoker);
-            
-            // Handle legendary jokers specially (they come from Soul cards)
-            if (jokerRarity == MotelyJokerRarity.Legendary)
-            {
-                bool found = PerkeoStyleSoulJokerCheck(ref singleCtx, targetJoker);
-                DebugLogger.LogFormat("[DEBUG] (Want) Legendary Joker: Checking for {0} in seed {1} => {2}", targetJoker, singleCtx.GetCurrentSeed(), found);
-                return found ? (want.Score, false, false) : (0, false, false);
-            }
-            
-            // DEBUG: Show ALL shop jokers for this ante
-            DebugLogger.LogFormat("[DEBUG] === SHOP JOKERS FOR ANTE {0}, SEED {1} ===", ante, singleCtx.GetCurrentSeed());
-            var shopJokers = singleCtx.GetShopJokersForAnte(ante);
-            for (int i = 0; i < shopJokers.Count; i++)
-            {
-                var shopJoker = shopJokers[i];
-                DebugLogger.LogFormat("[DEBUG]   Shop Slot with Joker: {0} [{1}] {2}", 
-                    shopJoker.Joker, shopJoker.Rarity, 
-                    shopJoker.Edition != MotelyItemEdition.None ? shopJoker.Edition.ToString() : "");
-            }
-            DebugLogger.LogFormat("[DEBUG] === END SHOP JOKERS ===");
-
-            string prngKey = jokerRarity switch
-            {
-                MotelyJokerRarity.Common => MotelyPrngKeys.JokerCommon,
-                MotelyJokerRarity.Uncommon => MotelyPrngKeys.JokerUncommon,
-                MotelyJokerRarity.Rare => MotelyPrngKeys.JokerRare,
-                _ => MotelyPrngKeys.JokerCommon
-            };
-
-            // Include source!
-            var prng = singleCtx.CreatePrngStream(prngKey + OuijaSourceConstants.SHOP + ante);
-            bool jokerMatches = false;
-            if (jokerRarity == MotelyJokerRarity.Common)
-            {
-                var choices = MotelyEnum<MotelyJokerCommon>.Values;
-                var j = singleCtx.GetNextRandomElement(ref prng, choices);
-                var generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Common + (int)j);
-                DebugLogger.LogFormat("[DEBUG] (Want) Joker PRNG: key={0}, ante={1}, generated={2} ({3}), target={4} ({5}), seed={6}",
-                    prngKey + OuijaSourceConstants.SHOP + ante, ante, generatedJoker, (int)generatedJoker, targetJoker, (int)targetJoker, singleCtx.GetCurrentSeed());
-                jokerMatches = generatedJoker.Equals(targetJoker);
-            }
-            else if (jokerRarity == MotelyJokerRarity.Uncommon)
-            {
-                var choices = MotelyEnum<MotelyJokerUncommon>.Values;
-                var j = singleCtx.GetNextRandomElement(ref prng, choices);
-                var generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Uncommon + (int)j);
-                DebugLogger.LogFormat("[DEBUG] (Want) Joker PRNG: key={0}, ante={1}, generated={2} ({3}), target={4} ({5}), seed={6}",
-                    prngKey + OuijaSourceConstants.SHOP + ante, ante, generatedJoker, (int)generatedJoker, targetJoker, (int)targetJoker, singleCtx.GetCurrentSeed());
-                jokerMatches = generatedJoker.Equals(targetJoker);
-            }
-            else if (jokerRarity == MotelyJokerRarity.Rare)
-            {
-                var choices = MotelyEnum<MotelyJokerRare>.Values;
-                var j = singleCtx.GetNextRandomElement(ref prng, choices);
-                var generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Rare + (int)j);
-                DebugLogger.LogFormat("[DEBUG] (Want) Joker PRNG: key={0}, ante={1}, generated={2} ({3}), target={4} ({5}), seed={6}",
-                    prngKey + OuijaSourceConstants.SHOP + ante, ante, generatedJoker, (int)generatedJoker, targetJoker, (int)targetJoker, singleCtx.GetCurrentSeed());
-                jokerMatches = generatedJoker.Equals(targetJoker);
-            }
-    
-            // Check edition if specified
-            if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
-            {
-                var hasEdition = CheckJokerEdition(ref singleCtx, want.Edition, ante);
-                DebugLogger.LogFormat("[DEBUG] (Want) Joker Edition: {0}, hasEdition={1}", want.Edition, hasEdition);
-                bool isNaturalNeg = want.Edition == "Negative" && hasEdition;
-                bool isDesiredNeg = want.Edition == "Negative" && hasEdition;
-                return hasEdition ? (want.Score, isNaturalNeg, isDesiredNeg) : (0, false, false);
-            }
-
-            return jokerMatches ? (want.Score, false, false) : (0, false, false);
+            // This shouldn't be called anymore
+            DebugLogger.LogFormat("[WARNING] ProcessJokerWant called but should use shop generation instead");
+            return (0, false, false);
         }
 
         private static (int score, bool isNaturalNegative, bool isDesiredNegative) ProcessSoulJokerWant(
