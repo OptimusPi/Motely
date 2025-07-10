@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -406,4 +405,36 @@ public unsafe ref partial struct MotelySingleSearchContext
         }
     }
 
+    // Helper: Generate the shop jokers for a given ante (filtering out non-joker items)
+    public List<ShopJokerInfo> GetShopJokersForAnte(int ante)
+    {
+        var jokers = new List<ShopJokerInfo>();
+        
+        // Generate all 8 shop items using card type RNG
+        for (int slotIndex = 0; slotIndex < 8; slotIndex++)
+        {
+            // Get shop rates (default: 20 joker, 4 tarot, 4 planet)
+            double totalRate = 28; // 20 + 4 + 4
+            
+            // Generate card type roll - this needs to increment for each slot!
+            var cardTypePrng = CreatePrngStream(MotelyPrngKeys.CardType + ante);
+            
+            // Advance the RNG to the correct position for this slot
+            for (int i = 0; i < slotIndex; i++)
+            {
+                GetNextRandom(ref cardTypePrng);
+            }
+            
+            double cardTypeRoll = GetNextRandom(ref cardTypePrng) * totalRate;
+            
+            // Check if it's a joker (first 20 out of 28)
+            if (cardTypeRoll < 20)
+            {
+                var jokerInfo = GetNextShopJokerWithInfo(ante, MotelyStake.WhiteStake);
+                jokers.Add(jokerInfo);
+            }
+        }
+        
+        return jokers;
+    }
 }

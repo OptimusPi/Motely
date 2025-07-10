@@ -1,27 +1,45 @@
 {
-  "maxSearchAnte": 8,
-  "deck": "GhostDeck",
-  "stake": "WhiteStake",
-  "scoreNaturalNegatives": false,
-  "scoreDesiredNegatives": false,
-  "needs": [
-    { "type": "SoulJoker", "value": "Perkeo", "searchAntes": [1, 2, 3, 4], "score": 1 },
-    { "type": "Voucher", "value": "Grabber", "searchAntes": [1], "score": 1 },
-    { "type": "Tag", "value": "BossTag", "searchAntes": [1], "score": 1 },
-    { "type": "Tag", "value": "DoubleTag", "searchAntes": [1], "score": 1 },
-    { "type": "Planet", "value": "Mercury", "searchAntes": [1], "score": 1 },
-    { "type": "Planet", "value": "Pluto", "searchAntes": [1], "score": 1 },
-    { "type": "Joker", "value": "TradingCard", "searchAntes": [1], "score": 1 },
-    { "type": "Joker", "value": "GreenJoker", "searchAntes": [1], "score": 1 },
-    { "type": "Planet", "value": "Earth", "searchAntes": [1], "score": 1 },
-    { "type": "Joker", "value": "MailInRebate", "searchAntes": [1], "score": 1 },
-    { "type": "Tarot", "value": "TheEmperor", "searchAntes": [1], "score": 1 },
-    { "type": "Spectral", "value": "Trance", "searchAntes": [1], "score": 1 },
-    { "type": "Joker", "value": "Bootstraps", "searchAntes": [1], "score": 1 },
-    { "type": "Joker", "value": "RaisedFist", "searchAntes": [1], "score": 1 },
-    { "type": "Spectral", "value": "Wraith", "searchAntes": [1], "score": 1 },
-    { "type": "Tarot", "value": "TheHighPriestess", "searchAntes": [1], "score": 1 },
-    { "type": "Joker", "value": "Hiker", "searchAntes": [1], "score": 1 }
-  ],
-  "wants": []
+  "name": "huge_test",
+  "description": "Full config with items per ante",
+  "author": "you",
+  "keywords": ["HUGE", "ANTE", "TEST"],
+  "filter_config": {
+    "numNeeds": 20,
+    "numWants": 0,
+    "needs": [
+      { "type": "SoulJoker", "value": "Perkeo", "searchAntes": [1] },
+
+      { "type": "Voucher", "value": "Grabber", "searchAntes": [1], "score": 1 },
+
+      { "type": "Tag", "value": "BossTag", "searchAntes": [1], "score": 1 },
+      { "type": "Tag", "value": "DoubleTag", "searchAntes": [1], "score": 1 },
+      
+      { "type": "Planet", "value": "Mercury", "searchAntes": [1], "score": 1 },
+      { "type": "Planet", "value": "Mars", "searchAntes": [1], "score": 1 },
+      { "type": "Planet", "value": "Pluto", "searchAntes": [1], "score": 1 },
+      { "type": "Planet", "value": "Neptune", "searchAntes": [1], "score": 1 },
+      
+      { "type": "Joker", "value": "TradingCard", "searchAntes": [1], "score": 1 },
+      { "type": "Joker", "value": "GreenJoker", "searchAntes": [1], "score": 1 },
+      { "type": "Joker", "value": "GoldenTicket", "searchAntes": [1], "score": 1 },
+      { "type": "Joker", "value": "SquareJoker", "searchAntes": [1], "score": 1 },
+
+      { "type": "TarotCard", "value": "TheSun", "searchAntes": [1], "score": 1 },
+      { "type": "TarotCard", "value": "TheTower", "searchAntes": [1], "score": 1 },
+      { "type": "TarotCard", "value": "TheLovers", "searchAntes": [1], "score": 1 },
+      { "type": "TarotCard", "value": "Judgement", "searchAntes": [1], "score": 1 },
+      { "type": "TarotCard", "value": "TheHermit", "searchAntes": [1], "score": 1 },
+      { "type": "TarotCard", "value": "Justice", "searchAntes": [1], "score": 1 },
+      { "type": "TarotCard", "value": "TheStar", "searchAntes": [1], "score": 1 },
+
+      { "type": "SpectralCard", "value": "Trance", "searchAntes": [1], "score": 1 }
+    ],
+    "wants": [],
+    "minSearchAnte": 1,
+    "maxSearchAnte": 8,
+    "deck": "GhostDeck",
+    "stake": "WhiteStake",
+    "scoreNaturalNegatives": false,
+    "scoreDesiredNegatives": false
+  }
 }

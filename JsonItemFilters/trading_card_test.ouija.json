@@ -1,0 +1,13 @@
+{
+  "Needs": [
+    {
+      "Type": "Joker",
+      "Value": "TradingCard",
+      "DesireByAnte": 1,
+      "Score": 10
+    }
+  ],
+  "Wants": [],
+  "ScoreNaturalNegatives": false,
+  "ScoreDesiredNegatives": false
+}

@@ -1,0 +1,15 @@
+{
+  "Deck": "GhostDeck",
+  "Stake": "GoldStake",
+  "Needs": [],
+  "Wants": [
+    {
+      "Type": "Joker",
+      "Value": "Triboulet",
+      "DesireByAnte": 8,
+      "Score": 10
+    }
+  ],
+  "ScoreNaturalNegatives": false,
+  "ScoreDesiredNegatives": false
+}

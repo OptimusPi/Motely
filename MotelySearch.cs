@@ -184,6 +184,13 @@ public sealed class MotelySearchSettings<TFilter>(IMotelySeedFilterDesc<TFilter>
     /// </summary>
     public int SequentialBatchCharacterCount { get; set; } = 3;
 
+    public bool Quiet { get; private set; } = false;
+    public MotelySearchSettings<TFilter> WithQuiet(bool quiet)
+    {
+        Quiet = quiet;
+        return this;
+    }
+
     public MotelySearchSettings<TFilter> WithThreadCount(int threadCount)
     {
         ThreadCount = threadCount;
@@ -282,10 +289,13 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
     private readonly Stopwatch _elapsedTime = new();
 
+    private readonly bool _quiet;
+
     public MotelySearch(MotelySearchSettings<TFilter> settings)
     {
         MotelyFilterCreationContext filterCreationContext = new();
         _filter = settings.FilterDesc.CreateFilter(ref filterCreationContext);
+        _quiet = settings.Quiet;
 
         _startBatchIndex = settings.StartBatchIndex;
         _batchIndex = _startBatchIndex;
@@ -354,7 +364,7 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
         //if (seed.ToString().Contains("PI"))
-            OuijaStyleConsole.WriteLine($"{seed}");
+            //OuijaStyleConsole.WriteLine($"{seed}");
     }
 
     private void PrintReport()
@@ -395,7 +405,10 @@ public unsafe sealed class MotelySearch<TFilter> : IMotelySearch
 
         double seedsPerMS = thisCompletedCount * ((double)_threads[0].SeedsPerBatch / Math.Max(1, elapsedMS));
 
-        OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+        if (!_quiet)
+        {
+            OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+        }
     }
 
     public void Dispose()

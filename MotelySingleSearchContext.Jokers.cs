@@ -185,7 +185,7 @@ unsafe ref partial struct MotelySingleSearchContext
         // TODO: Add sticker fields (Eternal, Perishable, Rental) when logic is ready
     }
 
-    public ShopJokerInfo GetNextShopJokerWithInfo(int ante, MotelyItem stake)
+    public ShopJokerInfo GetNextShopJokerWithInfo(int ante, MotelyStake stake)
     {
         // 1. Rarity PRNG - order is: rarity + ante + source
         var rarityPrng = CreatePrngStream(MotelyPrngKeys.JokerRarity + ante + MotelyPrngKeys.Shop);

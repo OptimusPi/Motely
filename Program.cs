@@ -58,6 +58,11 @@ partial class Program
             "Enable debug output messages",
             CommandOptionType.NoValue);
 
+        var quietOption = app.Option(
+            "--quiet",
+            "Suppress progress and status output",
+            CommandOptionType.NoValue);
+
         // .WithListSearch(["811M2111"])
 
         var seedOption = app.Option<string>(
@@ -73,7 +78,7 @@ partial class Program
         {
             // If a seed is provided, run a single search for that seed
             Console.WriteLine($"🔍 Searching for specific seed: {seedInput}");
-            RunOuijaSearch(configOption.Value()!, 0, 0, threadsOption.ParsedValue, batchSizeOption.ParsedValue, cutoffOption.ParsedValue, debugOption.HasValue());
+            RunOuijaSearch(configOption.Value()!, 0, 0, threadsOption.ParsedValue, batchSizeOption.ParsedValue, cutoffOption.ParsedValue, debugOption.HasValue(), quietOption.HasValue());
             return 0;
         }
         app.OnExecute(() =>
@@ -86,6 +91,7 @@ partial class Program
             var batchSize = batchSizeOption.ParsedValue;
             var cutoff = cutoffOption.ParsedValue;
             var enableDebug = debugOption.HasValue();
+            var quiet = quietOption.HasValue();
 
             // Validate batchSize to prevent stack overflow
             if (batchSize < 1 || batchSize > 8)
@@ -97,7 +103,7 @@ partial class Program
                 return 1;
             }
 
-            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, enableDebug);
+            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, enableDebug, quiet);
             Console.WriteLine("🔍 Search completed");
             return 0;
         });
@@ -105,69 +111,65 @@ partial class Program
         return app.Execute(args);
     }
 
-    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff, bool enableDebug)
+    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff, bool enableDebug, bool quiet)
     {
         // Set debug output flag
         DebugLogger.IsEnabled = enableDebug;
 
-        Console.WriteLine($"🔍 Motely Ouija Search Starting");
-        Console.WriteLine($"   Config: {configPath}");
-        Console.WriteLine($"   Threads: {threads}");
-        Console.WriteLine($"   Batch Size: {batchSize} chars");
-        Console.WriteLine($"   Range: {startBatch} to {endBatch}");
-        if (enableDebug)
-            Console.WriteLine($"   Debug: Enabled");
-        Console.WriteLine();
+        if (!quiet)
+        {
+            Console.WriteLine($"🔍 Motely Ouija Search Starting");
+            Console.WriteLine($"   Config: {configPath}");
+            Console.WriteLine($"   Threads: {threads}");
+            Console.WriteLine($"   Batch Size: {batchSize} chars");
+            Console.WriteLine($"   Range: {startBatch} to {endBatch}");
+            if (enableDebug)
+                Console.WriteLine($"   Debug: Enabled");
+            Console.WriteLine();
+        }
 
         try
         {
             // Load Ouija config - try multiple paths
             var config = LoadConfig(configPath);
-            Console.WriteLine($"✅ Loaded config: {config.Needs?.Length ?? 0} needs, {config.Wants?.Length ?? 0} wants");
+            if (!quiet)
+                Console.WriteLine($"✅ Loaded config: {config.Needs?.Length ?? 0} needs, {config.Wants?.Length ?? 0} wants");
 
             // Print the parsed config for debugging
-            Console.WriteLine("\n--- Parsed Ouija Config ---");
-            try
+            if (!quiet)
             {
-                PrintOuijaConfigDebug(config);
+                Console.WriteLine("\n--- Parsed Ouija Config ---");
+                try
+                {
+                    PrintOuijaConfigDebug(config);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG] Could not pretty-print config: {ex.Message}");
+                    Console.WriteLine(config.ToJson());
+                }
+                Console.WriteLine("--- End Config ---\n");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DEBUG] Could not pretty-print config: {ex.Message}");
-                Console.WriteLine(config.ToJson());
-            }
-            Console.WriteLine("--- End Config ---\n");
 
             // Create and run the search
-            Console.WriteLine($"🔍 Starting search with {threads} threads, batch size {batchSize}, starting at batch index {startBatch}, cutoff score {cutoff}");
+            if (!quiet)
+                Console.WriteLine($"🔍 Starting search with {threads} threads, batch size {batchSize}, starting at batch index {startBatch}, cutoff score {cutoff}");
             // uncomment for Perkeo Observatory filter
             //var search = new MotelySearchSettings<PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
             // uncomment for OuijaFilter
-            var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config))
+            var ouijaDesc = new OuijaJsonFilterDesc(config) { Cutoff = cutoff };
+            var search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
                 .WithThreadCount(threads)
-                //.WithSequentialSearch()
+                .WithSequentialSearch()
                 .WithListSearch(["D9FUJ7VX"])
-                    // "D9FTADTT",
-                    // "D9FTBIZH",
-                    // "D9FTFEG1",
-                    // "D9FTVQHE",
-                    // "D9FU3U3O",
-                    // "D9FU3XYT",
-                    // "D9FU84RQ",
-                    // "D9FUDGOU",
-                    // "D9FUIT2N",
-                    // "D9FUJ7VX",
-                    // "D9FUMBOF",
-                    // "D9FUOF64",
-                    // "D9FUVAQ1",
-                    // "D9FVA9AO",
-                    // "D9FVF61C",
-                    // "D9FTJ4VJ"])
+                .WithQuiet(quiet)
                 .Start();
-            Console.WriteLine($"✅ Search started successfully");
+            if (!quiet)
+                Console.WriteLine($"✅ Search started successfully");
 
             // Print CSV header for results
-            PrintResultsHeader(config);
+            if (!quiet)
+                PrintResultsHeader(config);
 
             // Flush any remaining debug messages
             DebugLogger.ForceFlush();

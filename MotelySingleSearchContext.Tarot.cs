@@ -82,7 +82,7 @@ ref partial struct MotelySingleSearchContext
 
             tarot = (MotelyItemType)MotelyItemTypeCategory.TarotCard | (MotelyItemType)GetNextRandomInt(
                 ref GetResamplePrngStream(ref tarotStream.ResampleStream, MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + tarotStream.Ante, resampleCount),
-                0, MotelyEnum<MotelyVoucher>.ValueCount
+                0, MotelyEnum<MotelyTarotCard>.ValueCount
             );
 
             ++resampleCount;
