@@ -379,108 +379,37 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // First check shop slots
             var shopJokerMask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                // Check all 8 shop slots
-                var cardTypePrng = singleCtx.CreatePrngStream(MotelyPrngKeys.CardType + ante);
+                // Generate the full shop
+                var shop = singleCtx.GenerateFullShop(ante);
                 
-                // We need separate PRNG streams for each rarity that could appear
-                var rarityPrng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerRarity + ante + OuijaSourceConstants.SHOP);
-                var commonPrng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerCommon + OuijaSourceConstants.SHOP + ante);
-                var uncommonPrng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerUncommon + OuijaSourceConstants.SHOP + ante);
-                var rarePrng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerRare + OuijaSourceConstants.SHOP + ante);
-                
-                for (int slot = 0; slot < 8; slot++)
+                // Check all shop items for matching joker
+                for (int i = 0; i < ShopState.ShopSlots; i++)
                 {
-                    double totalRate = 28; // 20 joker + 4 tarot + 4 planet
-                    double cardTypeRoll = singleCtx.GetNextRandom(ref cardTypePrng) * totalRate;
-                    
-                    // Is this slot a joker?
-                    if (cardTypeRoll < 20)
+                    ref var item = ref shop.Items[i];
+                    if (item.Type == ShopState.ShopItem.ShopItemType.Joker)
                     {
-                        // Yes! Now check rarity
-                        double rarityRoll = singleCtx.GetNextRandom(ref rarityPrng);
+                        DebugLogger.LogFormat("[DEBUG] Shop slot {0}: Joker {1} (target: {2})", 
+                            i + 1, item.Joker, targetJoker);
                         
-                        MotelyJokerRarity slotRarity;
-                        if (rarityRoll > 0.95)
-                            slotRarity = MotelyJokerRarity.Rare;
-                        else if (rarityRoll > 0.7)
-                            slotRarity = MotelyJokerRarity.Uncommon;
-                        else
-                            slotRarity = MotelyJokerRarity.Common;
-                            
-                        // Does this slot's rarity match our target?
-                        if (slotRarity == jokerRarity)
+                        if (item.Joker == targetJoker)
                         {
-                            // Yes! Now check the specific joker
-                            MotelyJoker generatedJoker;
-                            switch (jokerRarity)
+                            // Found it! Check edition if needed
+                            if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
                             {
-                                case MotelyJokerRarity.Common:
-                                    var commonChoice = singleCtx.GetNextRandomElement(ref commonPrng, MotelyEnum<MotelyJokerCommon>.Values);
-                                    generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Common + (int)commonChoice);
-                                    break;
-                                    
-                                case MotelyJokerRarity.Uncommon:
-                                    var uncommonChoice = singleCtx.GetNextRandomElement(ref uncommonPrng, MotelyEnum<MotelyJokerUncommon>.Values);
-                                    generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Uncommon + (int)uncommonChoice);
-                                    break;
-                                    
-                                case MotelyJokerRarity.Rare:
-                                    var rareChoice = singleCtx.GetNextRandomElement(ref rarePrng, MotelyEnum<MotelyJokerRare>.Values);
-                                    generatedJoker = (MotelyJoker)((int)MotelyJokerRarity.Rare + (int)rareChoice);
-                                    break;
-                                    
-                                default:
-                                    continue;
-                            }
-                            
-                            DebugLogger.LogFormat("[DEBUG] Shop slot {0}: Joker {1} (target: {2})", 
-                                slot + 1, generatedJoker, targetJoker);
-                                
-                            if (generatedJoker == targetJoker)
-                            {
-                                // Found it! Check edition if needed
-                                if (!string.IsNullOrEmpty(need.Edition) && need.Edition != "None")
+                                double threshold = GetEditionThreshold(need.Edition);
+                                bool hasEdition = need.Edition.ToLowerInvariant() switch
                                 {
-                                    var editionPrng = singleCtx.CreatePrngStream(MotelyPrngKeys.JokerEdition + OuijaSourceConstants.SHOP + ante);
-                                    
-                                    // Advance edition PRNG to the correct slot (only advances for joker slots)
-                                    // We need to count how many jokers we've seen so far
-                                    var tempCardTypePrng = singleCtx.CreatePrngStream(MotelyPrngKeys.CardType + ante);
-                                    int jokerCount = 0;
-                                    for (int i = 0; i < slot; i++)
-                                    {
-                                        double tempRoll = singleCtx.GetNextRandom(ref tempCardTypePrng) * totalRate;
-                                        if (tempRoll < 20) // Is joker
-                                        {
-                                            jokerCount++;
-                                            singleCtx.GetNextRandom(ref editionPrng); // Advance edition PRNG
-                                        }
-                                    }
-                                    
-                                    double editionRoll = singleCtx.GetNextRandom(ref editionPrng);
-                                    double threshold = GetEditionThreshold(need.Edition);
-                                    DebugLogger.LogFormat("[DEBUG] Edition check: roll={0:F4}, threshold={1}, passes={2}", 
-                                        editionRoll, threshold, editionRoll < threshold);
-                                    return editionRoll < threshold;
-                                }
-                                return true;
+                                    "negative" => item.Edition == MotelyItemEdition.Negative,
+                                    "foil" => item.Edition == MotelyItemEdition.Foil,
+                                    "holographic" => item.Edition == MotelyItemEdition.Holographic,
+                                    "polychrome" => item.Edition == MotelyItemEdition.Polychrome,
+                                    _ => false
+                                };
+                                DebugLogger.LogFormat("[DEBUG] Edition check: has={0}, wanted={1}", 
+                                    item.Edition, need.Edition);
+                                return hasEdition;
                             }
-                        }
-                        else
-                        {
-                            // Wrong rarity, but we still need to advance the appropriate PRNG
-                            switch (slotRarity)
-                            {
-                                case MotelyJokerRarity.Common:
-                                    singleCtx.GetNextRandom(ref commonPrng);
-                                    break;
-                                case MotelyJokerRarity.Uncommon:
-                                    singleCtx.GetNextRandom(ref uncommonPrng);
-                                    break;
-                                case MotelyJokerRarity.Rare:
-                                    singleCtx.GetNextRandom(ref rarePrng);
-                                    break;
-                            }
+                            return true;
                         }
                     }
                 }
@@ -986,47 +915,51 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     if (jokerWants.Any())
                     {
                         // Generate the shop to find jokers with correct editions
-                        var shopJokers = singleCtx.GetShopJokersForAnte(ante);
+                        var shop = singleCtx.GenerateFullShop(ante);
                         
-                        foreach (var shopJoker in shopJokers)
+                        for (int i = 0; i < ShopState.ShopSlots; i++)
                         {
-                            foreach (var tuple in jokerWants)
+                            ref var item = ref shop.Items[i];
+                            if (item.Type == ShopState.ShopItem.ShopItemType.Joker)
                             {
-                                var want = tuple.want;
-                                var wantIndex = tuple.idx;
-                                var targetJoker = ParseJoker(want);
-                                
-                                if (shopJoker.Joker == targetJoker)
+                                foreach (var tuple in jokerWants)
                                 {
-                                    // Joker type matches, now check edition
-                                    if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
+                                    var want = tuple.want;
+                                    var wantIndex = tuple.idx;
+                                    var targetJoker = ParseJoker(want);
+                                    
+                                    if (item.Joker == targetJoker)
                                     {
-                                        // Convert MotelyItemEdition to string for comparison
-                                        string actualEdition = shopJoker.Edition switch
+                                        // Joker type matches, now check edition
+                                        if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
                                         {
-                                            MotelyItemEdition.Negative => "Negative",
-                                            MotelyItemEdition.Polychrome => "Polychrome",
-                                            MotelyItemEdition.Holographic => "Holographic",
-                                            MotelyItemEdition.Foil => "Foil",
-                                            _ => "None"
-                                        };
-                                        
-                                        DebugLogger.LogFormat("[DEBUG] (Want) Shop Joker: {0} with edition {1} (wanted: {2})", 
-                                            shopJoker.Joker, actualEdition, want.Edition);
-                                        
-                                        if (want.Edition.Equals(actualEdition, StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            result.ScoreWants[wantIndex] += want.Score;
-                                            if (actualEdition == "Negative")
+                                            // Convert MotelyItemEdition to string for comparison
+                                            string actualEdition = item.Edition switch
                                             {
-                                                result.DesiredNegativeJokers++;
+                                                MotelyItemEdition.Negative => "Negative",
+                                                MotelyItemEdition.Polychrome => "Polychrome",
+                                                MotelyItemEdition.Holographic => "Holographic",
+                                                MotelyItemEdition.Foil => "Foil",
+                                                _ => "None"
+                                            };
+                                            
+                                            DebugLogger.LogFormat("[DEBUG] (Want) Shop Joker: {0} with edition {1} (wanted: {2})", 
+                                                item.Joker, actualEdition, want.Edition);
+                                            
+                                            if (want.Edition.Equals(actualEdition, StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                result.ScoreWants[wantIndex] += want.Score;
+                                                if (actualEdition == "Negative")
+                                                {
+                                                    result.DesiredNegativeJokers++;
+                                                }
                                             }
                                         }
-                                    }
-                                    else
-                                    {
-                                        // No edition requirement
-                                        result.ScoreWants[wantIndex] += want.Score;
+                                        else
+                                        {
+                                            // No edition requirement
+                                            result.ScoreWants[wantIndex] += want.Score;
+                                        }
                                     }
                                 }
                             }
@@ -1298,8 +1231,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         // Helper methods for joker processing
         private static MotelyJoker ParseJoker(OuijaConfig.Desire desire)
         {
-            // Use cached enum for performance
-            return desire.JokerEnum ?? default;
+            // Prefer cached enum for performance
+            if (desire.JokerEnum.HasValue)
+                return desire.JokerEnum.Value;
+            // Try to parse Value as MotelyJoker (case-insensitive)
+            if (!string.IsNullOrEmpty(desire.Value))
+            {
+                if (Enum.TryParse<MotelyJoker>(desire.Value, true, out var parsed))
+                    return parsed;
+            }
+            return default;
         }
 
         private static MotelyJokerRarity GetJokerRarity(MotelyJoker joker)

@@ -4,18 +4,19 @@
   "author": "you",
   "keywords": ["HUGE", "ANTE", "TEST"],
   "filter_config": {
-    "NumNeeds": 24,
-    "NumWants": 0,
+    "NumNeeds": 1,
+    "NumWants": 5,
     "Needs": [
-      { "Type": "SoulJoker", "Value": "Canio", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 },
-      
-      { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 }
+      { "Type": "SoulJoker", "Value": "Perkeo", "JokerEnum": "Perkeo", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "Showman", "JokerEnum": "Showman", "SearchAntes": [1], "Score": 1 }
      
     ],
     "Wants": [
-         { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [1,2,3,4], "Score": 1 },
-      { "Type": "SoulJoker", "Value": "Canio", "SearchAntes": [1,2,3,4,5], "Score": 1 },
-      { "Type": "Joker", "Value": "Pareidolia", "SearchAntes": [1,2,3,4,5,6,7], "Score": 1 }
+      { "Type": "Joker", "Value": "OopsAll6s", "JokerEnum": "OopsAll6s", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "OopsAll6s", "JokerEnum": "OopsAll6s", "SearchAntes": [2], "Score": 1 },
+      { "Type": "Joker", "Value": "OopsAll6s", "JokerEnum": "OopsAll6s", "SearchAntes": [3], "Score": 1 },
+      { "Type": "Joker", "Value": "OopsAll6s", "JokerEnum": "OopsAll6s", "SearchAntes": [4], "Score": 1 },
+      { "Type": "Joker", "Value": "OopsAll6s", "JokerEnum": "OopsAll6s", "SearchAntes": [5], "Score": 1 }
     ],
     "MinSearchAnte": 1,
     "MaxSearchAnte": 8,
