@@ -48,7 +48,14 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                     if (searchContext.GetArcanaPackContents(ref tarotStream, pack.GetPackSize()).Contains(MotelyItemType.Soul))
                     {
                         MotelySingleJokerFixedRarityStream stream = searchContext.CreateSoulJokerStream(1);
-                        return searchContext.NextJoker(ref stream).Type == MotelyItemType.Perkeo;
+                        var nJoker = searchContext.NextJoker(ref stream);
+                        if (nJoker.Edition > 0 && nJoker.Type == MotelyItemType.Perkeo)
+                            Console.WriteLine("[PerkeoObservatoryFilter] Found Perkeo in Soul Joker stream: {0} {1} looking for {2}", (int)nJoker.Edition, nJoker.Type, (int)MotelyItemEdition.Negative);
+
+                            if (((int)nJoker.Edition << Motely.ItemEditionOffset) == (int)MotelyItemEdition.Negative)
+                            {
+                                return nJoker.Type == MotelyItemType.Perkeo;
+                            }
                     }
                 }
 
@@ -70,7 +77,16 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                         if (searchContext.GetArcanaPackContents(ref tarotStream, pack.GetPackSize()).Contains(MotelyItemType.Soul))
                         {
                             MotelySingleJokerFixedRarityStream stream = searchContext.CreateSoulJokerStream(2);
-                            return searchContext.NextJoker(ref stream).Type == MotelyItemType.Perkeo;
+                            var nJoker = searchContext.NextJoker(ref stream);
+
+                            if (nJoker.Edition > 0 && nJoker.Type == MotelyItemType.Perkeo)
+                                Console.WriteLine("[PerkeoObservatoryFilter] Found Perkeo in Soul Joker stream: {0} {1} looking for {2}", ((int)nJoker.Edition << Motely.ItemEditionOffset), nJoker.Type,  (int)MotelyItemEdition.Negative);
+
+
+                            if (((int)nJoker.Edition << Motely.ItemEditionOffset) == (int)MotelyItemEdition.Negative)
+                            {
+                                return nJoker.Type == MotelyItemType.Perkeo;
+                            }
                         }
                     }
                 }

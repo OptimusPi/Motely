@@ -1,0 +1,21 @@
+{
+  "name": "pi ouija json config",
+  "description": "config to test Editions on a LEgendary SoulJoker such as Perkeo",
+  "author": "you",
+  "keywords": ["HUGE", "ANTE", "TEST"],
+  "filter_config": {
+    "NumNeeds": 1,
+    "NumWants": 0,
+    "Needs": [
+      { "Type": "SoulJoker", "Value": "Perkeo", "Edition": "None", "SearchAntes": [2], "Score": 1 }
+    ],
+    "Wants": [
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

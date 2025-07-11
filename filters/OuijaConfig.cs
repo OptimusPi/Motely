@@ -19,6 +19,12 @@ public class OuijaConfig
     public string Stake { get; set; } = string.Empty;
     public bool ScoreNaturalNegatives { get; set; }
     public bool ScoreDesiredNegatives { get; set; }
+    
+    // Parsed enum values (set by OuijaConfigLoader)
+    [JsonIgnore]
+    public MotelyDeck ParsedDeck { get; set; } = MotelyDeck.RedDeck;
+    [JsonIgnore]
+    public MotelyStake ParsedStake { get; set; } = MotelyStake.WhiteStake;
 
     public class Desire
     {
@@ -55,13 +61,20 @@ public class OuijaConfig
 
         // Cached strongly-typed values (populated during validation)
         [JsonIgnore]
-        public MotelyItemTypeCategory? TypeCategory { get; private set; }
+        public MotelyItemTypeCategory? TypeCategory { get; set; }
+        [JsonIgnore]
+        public MotelyItemEdition? ParsedEdition { get; set; }
 
         /// <summary>
         /// Validates and caches the strongly-typed enums from string values
         /// </summary>
         public void ValidateAndCache()
         {
+            // Debug logging for edition
+            if (!string.IsNullOrEmpty(Edition))
+            {
+                DebugLogger.LogFormat("[Desire.ValidateAndCache] Type={0}, Value={1}, Edition={2}", Type, Value, Edition);
+            }
             // If enums are already provided directly, we just need to ensure type is set
             if (JokerEnum.HasValue && string.IsNullOrEmpty(Type))
             {
@@ -284,8 +297,17 @@ public class OuijaConfig
             using var doc = JsonDocument.Parse(json);
             if (doc.RootElement.TryGetProperty("filter_config", out var filterConfig))
             {
+                Console.WriteLine("[DEBUG] Found filter_config wrapper, parsing...");
                 config = filterConfig.Deserialize<OuijaConfig>(options);
                 Console.WriteLine($"[DEBUG] Wrapper parse: Found {config?.Needs?.Length ?? 0} needs");
+                
+                // Debug: Print the first need if it exists
+                if (config?.Needs?.Length > 0)
+                {
+                    var firstNeed = config.Needs[0];
+                    DebugLogger.LogFormat("[LoadFromJson] First need: Type={0}, Value={1}, Edition={2}", 
+                        firstNeed.Type, firstNeed.Value, firstNeed.Edition ?? "null");
+                }
             }
             else
             {
