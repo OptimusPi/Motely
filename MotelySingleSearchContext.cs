@@ -233,7 +233,7 @@ public unsafe ref partial struct MotelySingleSearchContext
         else
         {
             // Generic layout (original code)
-            int seedLastCharacterLength = SeedLength - SeedFirstCharactersLength;
+            seedLastCharacterLength = SeedLength - SeedFirstCharactersLength;
             
             // First we do the first characters of the seed which are the same between all vector lanes
             for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
