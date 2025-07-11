@@ -60,7 +60,7 @@ public ref struct MotelyFilterCreationContext
     public readonly void CacheTarotStream(int ante, bool force = false)
     {
         CacheResampleStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante, force);
-        CachePseudoHash(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante, force);
+        CachePseudoHash(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, force);
     }
 
 }
@@ -128,7 +128,7 @@ public sealed class MotelySeedListProvider(IEnumerable<string> seeds) : IMotelyS
     internal long _currentSeed = -1;
     
     // For thread coordination
-    private readonly object _lockObject = new object();
+    private readonly Lock _lockObject = new();
     private bool _hasBeenRead = false;
     
     public void Reset()
@@ -175,6 +175,7 @@ public sealed class MotelySeedListProvider(IEnumerable<string> seeds) : IMotelyS
 public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBaseFilter> baseFilterDesc)
     where TBaseFilter : struct, IMotelySeedFilter
 {
+    public bool UseQuiet { get; set; } = false;
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
     public int StartBatchIndex { get; set; } = -1;
 
@@ -201,6 +202,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
         ThreadCount = threadCount;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithQuiet(bool useQuiet)
+    {
+        UseQuiet = useQuiet;
         return this;
     }
 
@@ -278,6 +285,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
     private readonly Barrier _unpauseBarrier;
     private volatile MotelySearchStatus _status;
     public MotelySearchStatus Status => _status;
+    public bool _quiet;
 
     private readonly TBaseFilter _baseFilter;
 
@@ -424,8 +432,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
         double seedsPerMS = 0;
         if (elapsedMS > 1)
             seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-
-        double seedsPerMS = thisCompletedCount * ((double)_threads[0].SeedsPerBatch / Math.Max(1, elapsedMS));
+        else
+            seedsPerMS = thisCompletedCount * ((double)_threads[0].SeedsPerBatch / Math.Max(1, elapsedMS));
 
         if (!_quiet)
         {
@@ -598,7 +606,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
         }
 
-        protected abstract void SearchBatch(int batchIdx);
+        protected abstract void SearchBatch(long batchIdx);
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
