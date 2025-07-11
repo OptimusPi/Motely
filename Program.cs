@@ -63,6 +63,11 @@ partial class Program
             "Suppress progress and status output",
             CommandOptionType.NoValue);
 
+         var noFancyOption = app.Option(
+            "--nofancy",
+            "Suppress fancy console output",
+            CommandOptionType.NoValue);
+
         var wordlistOption = app.Option<string>(
             "--wordlist <WL>",
             "Wordlist file (loads WordLists/<WL>.txt, one 8-char seed per line)",
@@ -104,6 +109,7 @@ partial class Program
             var quiet = quietOption.HasValue();
             var wordlist = wordlistOption.Value();
             var keyword = keywordOption.Value();
+            var nofancy = noFancyOption.HasValue();
 
             // Validate batchSize to prevent stack overflow
             if (batchSize < 1 || batchSize > 8)
@@ -115,7 +121,7 @@ partial class Program
                 return 1;
             }
 
-            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, enableDebug, quiet, wordlist, keyword);
+            RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, enableDebug, quiet, wordlist, keyword, nofancy);
             Console.WriteLine("🔍 Search completed");
             return 0;
         });
@@ -123,10 +129,11 @@ partial class Program
         return app.Execute(args);
     }
 
-    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff, bool enableDebug, bool quiet, string? wordlist = null, string? keyword = null)
+    static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads, int batchSize, int cutoff, bool enableDebug, bool quiet, string? wordlist = null, string? keyword = null, bool nofancy = false)
     {
         // Set debug output flag
         DebugLogger.IsEnabled = enableDebug;
+        FancyConsole.IsEnabled = !nofancy;
 
         List<string>? seeds = null;
         
