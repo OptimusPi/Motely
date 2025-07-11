@@ -189,12 +189,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         ResultsQueue.Enqueue(result);
                     return result.Success && result.TotalScore >= cutoff;
                 });
-                // Print all results after batch
-                if (ResultsQueue != null)
-                {
-                    foreach (var result in ResultsQueue)
-                        PrintResult(result, localConfig, _cutoff);
-                }
                 return mask;
             }
             catch (Exception ex)
@@ -536,8 +530,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
                             if (ProcessLegendaryJokerFromSoul(ref singleCtx, need.JokerEnum.Value, ante, need.ParsedEdition))
                             {
-                                Console.WriteLine("[CheckNonVectorizedNeeds] Found legendary joker {0} with edition {1} in ante {2}",
-                                    need.JokerEnum.Value, need.ParsedEdition?.ToString() ?? "None", ante);
                                 foundInAnyAnte = true;
                                 break;
                             }

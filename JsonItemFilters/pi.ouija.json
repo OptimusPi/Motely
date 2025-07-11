@@ -1,15 +1,30 @@
 {
   "name": "pi ouija json config",
-  "description": "config to test Editions on a LEgendary SoulJoker such as Perkeo",
+  "description": "config to test Editions on a Legendary SoulJoker such as Perkeo",
   "author": "you",
   "keywords": ["HUGE", "ANTE", "TEST"],
   "filter_config": {
     "NumNeeds": 1,
-    "NumWants": 0,
+    "NumWants": 10,
     "Needs": [
-      { "Type": "SoulJoker", "Value": "Perkeo", "Edition": "None", "SearchAntes": [2], "Score": 1 }
+      { "Type": "SoulJoker", "Value": "Perkeo", "Edition": "Negative", "SearchAntes": [1,24,5,6,7,8,9,10], "Score": 1 }
     ],
     "Wants": [
+      { "Type": "SoulJoker", "Value": "Perkeo", "Edition": "Negative", "SearchAntes": [1,2,3,4], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Perkeo", "Edition": "Negative", "SearchAntes": [5,6,7,8], "Score": 1 },
+    
+      { "Type": "SoulJoker", "Value": "Triboulet", "Edition": "Negative", "SearchAntes": [1,2,3,4], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Triboulet", "Edition": "Negative", "SearchAntes": [5,6,7,8], "Score": 1 },
+
+      { "Type": "SoulJoker", "Value": "Chicot", "Edition": "Negative", "SearchAntes": [1,2,3,4], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Chicot", "Edition": "Negative", "SearchAntes": [5,6,7,8], "Score": 1 },
+      
+      { "Type": "SoulJoker", "Value": "Yorick", "Edition": "Negative", "SearchAntes": [1,2,3,4], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Yorick", "Edition": "Negative", "SearchAntes": [5,6,7,8], "Score": 1 },
+
+      { "Type": "SoulJoker", "Value": "Canio", "Edition": "Negative", "SearchAntes": [1,2,3,4], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Canio", "Edition": "Negative", "SearchAntes": [5,6,7,8], "Score": 1 }
+
     ],
     "MinSearchAnte": 1,
     "MaxSearchAnte": 8,

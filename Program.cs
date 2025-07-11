@@ -96,6 +96,7 @@ partial class Program
             RunOuijaSearch(configOption.Value()!, 0, 0, threadsOption.ParsedValue, batchSizeOption.ParsedValue, cutoffOption.ParsedValue, debugOption.HasValue(), quietOption.HasValue());
             return 0;
         }
+
         app.OnExecute(() =>
         {
             Console.WriteLine("🔍 Starting Motely Ouija Search");
@@ -207,24 +208,28 @@ partial class Program
             if (!quiet)
                 Console.WriteLine($"🔍 Starting search with {threads} threads, batch size {batchSize}, starting at batch index {startBatch}, cutoff score {cutoff}");
             // uncomment for Perkeo Observatory filter
-            //var search = new MotelySearchSettings<PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
+            //var searchSettings = new MotelySearchSettings<PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
             // uncomment for OuijaFilter
             var ouijaDesc = new OuijaJsonFilterDesc(config) { Cutoff = cutoff };
             var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
+                .WithSequentialSearch()
+                .WithBatchCharacterCount(4)
                 .WithThreadCount(threads)
+                .WithStartBatchIndex(startBatch)
                 .WithQuiet(quiet);
             if (seeds != null)
                 searchSettings = searchSettings.WithListSearch(seeds);
             else
                 searchSettings = searchSettings.WithSequentialSearch();
-            var search = searchSettings.Start();
+
             if (!quiet)
-                Console.WriteLine($"✅ Search started successfully");
+                Console.WriteLine($"✅ Search started");
 
             // Print CSV header for results
-            if (!quiet)
-                PrintResultsHeader(config);
+            PrintResultsHeader(config);
 
+            var search = searchSettings.Start();
+            
             // Flush any remaining debug messages
             DebugLogger.ForceFlush();
 

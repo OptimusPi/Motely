@@ -6,6 +6,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.Collections.Concurrent;
 
 
 namespace Motely;
@@ -99,6 +100,7 @@ public interface IMotelySeedProvider
 
 public sealed class MotelyRandomSeedProvider(long count) : IMotelySeedProvider
 {
+    
     public long SeedCount { get; } = count;
 
     private readonly ThreadLocal<Random> _randomInstances = new();
@@ -301,9 +303,11 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
     private long _completedBatchCount;
     public long CompletedBatchCount => _completedBatchCount;
 
-    private double _lastReportMS;
+    private double _lastReportMS = 0.0;
+    private readonly Stopwatch _elapsedTime = new Stopwatch(); // Remove StartNew(), just create instance
+    private volatile bool _timerStarted = false;
 
-    private readonly Stopwatch _elapsedTime = new();
+    private readonly ConcurrentDictionary<string, byte> _reportedSeeds = new();
 
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
@@ -369,6 +373,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
         // The threads all immediatly enter a paused state
         _pauseBarrier.SignalAndWait();
+        _quiet = settings.UseQuiet;
     }
 
     public void Start()
@@ -378,7 +383,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
         if (Interlocked.CompareExchange(ref _status, MotelySearchStatus.Running, MotelySearchStatus.Paused) != MotelySearchStatus.Paused)
             return;
 
-        _elapsedTime.Start();
+        // Removed _elapsedTime.Start(); to avoid double-starting the timer
         _unpauseBarrier.SignalAndWait();
     }
 
@@ -395,27 +400,24 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        FancyConsole.WriteLine($"{seed}");
+        string seedStr = seed.ToString();
+        FancyConsole.WriteLine($"{seedStr}");
+        // else: already reported, skip
     }
 
     private void PrintReport()
     {
-        double elapsedMS = _elapsedTime.ElapsedMilliseconds;
-
-        if (elapsedMS - _lastReportMS < 900) return;
-
+        if (_quiet) return; // Suppress all output in quiet mode
+        double elapsedMS = Math.Max(1.0, _elapsedTime.ElapsedMilliseconds); // Clamp to at least 1ms
+        if (elapsedMS - _lastReportMS < 500) return;
         _lastReportMS = elapsedMS;
-
-        long thisCompletedCount = _completedBatchCount - _startBatchIndex;
-
-        double totalPortionFinished = _completedBatchCount / (double)_threads[0].MaxBatch;
-        double thisPortionFinished = thisCompletedCount / (double)_threads[0].MaxBatch;
-        double totalTimeEstimate = elapsedMS / thisPortionFinished;
-        double timeLeft = totalTimeEstimate - elapsedMS;
-
+        long completedCount = _completedBatchCount;
+        long totalBatches = _threads[0].MaxBatch;
+        double totalPortionFinished = completedCount / (double)totalBatches;
+        double timeEstimate = elapsedMS / Math.Max(0.001, totalPortionFinished);
+        double timeLeft = timeEstimate - elapsedMS;
         string timeLeftFormatted;
         bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
-        // Clamp to max TimeSpan if too large - for very slow searches
         if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
         {
             timeLeftFormatted = "--:--:--";
@@ -426,19 +428,11 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
             if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
             else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
         }
-
-        // Calculate seeds per millisecond
-        // Avoid divide by zero for a very fast find
         double seedsPerMS = 0;
-        if (elapsedMS > 1)
-            seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-        else
-            seedsPerMS = thisCompletedCount * ((double)_threads[0].SeedsPerBatch / Math.Max(1, elapsedMS));
-
-        if (!_quiet)
-        {
-            OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
-        }
+        if (completedCount > 0)
+            seedsPerMS = completedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
+        string seedsPerMSStr = seedsPerMS > 0 ? Math.Round(seedsPerMS).ToString() : "--";
+        OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMSStr} seeds/ms)");
     }
 
     public void Dispose()
@@ -539,6 +533,13 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
             while (true)
             {
 
+                // Start the timer at the beginning of the first batch
+                if (!Search._timerStarted)
+                {
+                    Search._elapsedTime.Start();
+                    Search._timerStarted = true;
+                }
+
                 switch (Search._status)
                 {
                     case MotelySearchStatus.Paused:
@@ -579,7 +580,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
                 SearchBatch(batchIdx);
 
-                Interlocked.Increment(ref Search._completedBatchCount);
+                long newCompleted = Interlocked.Increment(ref Search._completedBatchCount);
+                DebugLogger.LogFormat("[BATCH] Thread {0} completed batchIdx={1}, completedCount={2}, MaxBatch={3}", ThreadIndex, batchIdx, newCompleted, MaxBatch);
 
                 if (Search._additionalFilters.Length != 0)
                 {

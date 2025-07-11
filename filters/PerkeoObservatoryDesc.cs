@@ -50,8 +50,6 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                         MotelySingleJokerFixedRarityStream stream = searchContext.CreateSoulJokerStream(1);
                         var nJoker = searchContext.NextJoker(ref stream);
                         if (nJoker.Edition > 0 && nJoker.Type == MotelyItemType.Perkeo)
-                            Console.WriteLine("[PerkeoObservatoryFilter] Found Perkeo in Soul Joker stream: {0} {1} looking for {2}", (int)nJoker.Edition, nJoker.Type, (int)MotelyItemEdition.Negative);
-
                             if (((int)nJoker.Edition << Motely.ItemEditionOffset) == (int)MotelyItemEdition.Negative)
                             {
                                 return nJoker.Type == MotelyItemType.Perkeo;
@@ -78,10 +76,6 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                         {
                             MotelySingleJokerFixedRarityStream stream = searchContext.CreateSoulJokerStream(2);
                             var nJoker = searchContext.NextJoker(ref stream);
-
-                            if (nJoker.Edition > 0 && nJoker.Type == MotelyItemType.Perkeo)
-                                Console.WriteLine("[PerkeoObservatoryFilter] Found Perkeo in Soul Joker stream: {0} {1} looking for {2}", ((int)nJoker.Edition << Motely.ItemEditionOffset), nJoker.Type,  (int)MotelyItemEdition.Negative);
-
 
                             if (((int)nJoker.Edition << Motely.ItemEditionOffset) == (int)MotelyItemEdition.Negative)
                             {
