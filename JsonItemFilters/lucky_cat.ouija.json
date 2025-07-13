@@ -1,22 +1,14 @@
 {
-  "name": "luck",
-  "description": "Full config with items per ante",
-  "author": "you",
-  "keywords": ["HUGE", "ANTE", "TEST"],
-  "filter_config": {
-    "NumNeeds": 1,
-    "NumWants": 1,
-    "Needs": [
-      { "Type": "Joker", "Value": "LuckyCat", "JokerEnum": "LuckyCat", "SearchAntes": [1], "Score": 1 }
-    ],
-    "Wants": [
-       
-    ],
-    "MinSearchAnte": 1,
-    "MaxSearchAnte": 8,
-    "Deck": "GhostDeck",
-    "Stake": "WhiteStake",
-    "ScoreNaturalNegatives": false,
-    "ScoreDesiredNegatives": false
-  }
+  "MaxSearchAnte": 4,
+  "Deck": "AnaglyphDeck",
+  "Stake": "GoldStake",
+  "Needs": [
+    { 
+      "Type": "Joker", 
+      "Value": "LuckyCat",
+      "SearchAntes": [1, 2, 3, 4],
+      "Score": 20
+    }
+  ],
+  "Wants": []
 }

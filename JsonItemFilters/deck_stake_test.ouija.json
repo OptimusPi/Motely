@@ -1,15 +1,20 @@
 {
+  "MaxSearchAnte": 8,
   "Deck": "GhostDeck",
-  "Stake": "GoldStake",
+  "Stake": "PurpleStake",
   "Needs": [],
   "Wants": [
-    {
-      "Type": "Joker",
-      "Value": "Triboulet",
-      "DesireByAnte": 8,
+    { 
+      "Type": "Joker", 
+      "Value": "Blueprint",
+      "SearchAntes": [1, 2, 3],
       "Score": 10
+    },
+    {
+      "Type": "Tag",
+      "Value": "NegativeTag",
+      "SearchAntes": [1, 2, 3, 4],
+      "Score": 20
     }
-  ],
-  "ScoreNaturalNegatives": false,
-  "ScoreDesiredNegatives": false
+  ]
 }

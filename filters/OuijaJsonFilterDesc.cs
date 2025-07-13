@@ -30,8 +30,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         }
 
         DebugLogger.LogFormat("Creating OuijaJsonFilter with {0} needs and {1} wants", 
-            Config.Needs?.Length ?? 0, 
-            Config.Wants?.Length ?? 0);
+        Config.Needs?.Length ?? 0, 
+        Config.Wants?.Length ?? 0);
+        DebugLogger.LogFormat("[OuijaJsonFilter] Deck: {0}, Stake: {1}", Config.Deck, Config.Stake);
         
         // Cache streams for all filter types and antes used in needs/wants
         var allAntes = new HashSet<int>();
@@ -95,8 +96,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 ctx.CacheVoucherStream(ante);
                 return;
             }
-            DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unknown type '{0}' (ante {1}) - no canonical PRNG key used", desire.Type, ante);
-            return;
+            else if (string.Equals(desire.Type, "Boss", StringComparison.OrdinalIgnoreCase))
+            {
+                // TODO: Boss blind generation not yet implemented in Motely
+                // Bosses have their own RNG stream (R_Boss) separate from tags
+                // ctx.CachePseudoHash(MotelyPrngKeys.Boss); // Need to add Boss key
+                return;
+            }
+            else if (string.Equals(desire.Type, "PlayingCard", StringComparison.OrdinalIgnoreCase))
+            {
+                    // Playing cards can appear in many places
+                    ctx.CachePseudoHash(MotelyPrngKeys.Shop + ante);
+                    // TODO: Add more caching as playing card generation is implemented
+                    return;
+                }
+                DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unknown type '{0}' (ante {1}) - no canonical PRNG key used", desire.Type, ante);
+                return;
         }
         
         var parsedType = typeCategory.Value;
@@ -139,7 +154,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private readonly int _cutoff;
         private readonly MotelyDeck _deck;
         private readonly MotelyStake _stake;
-        
+
         public OuijaJsonFilter(OuijaConfig config, int cutoff = 0)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -164,29 +179,31 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     return default;
                 }
                 var localConfig = _config;
-                mask = ProcessNeeds(ref searchContext, mask, localConfig);
+                // Remove per-thread header printing - this is now handled by the main search
+                mask = ProcessNeeds(ref searchContext, mask, localConfig!);
                 if (mask.IsAllFalse())
                 {
                     DebugLogger.Log("All needs failed to match");
                     return mask;
                 }
                 DebugLogger.LogFormat("After needs, {0} seeds passing", CountBitsSet(mask));
-                // Clear results queue before batch
-                ResultsQueue = new ConcurrentQueue<OuijaResult>();
                 int cutoff = _cutoff;
+                // Process results immediately as they are found
+                var searchInstance = searchContext.SearchInstance;
                 mask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    // First check any needs that couldn't be vectorized
-                    if (!CheckNonVectorizedNeeds(ref singleCtx, localConfig))
+                    if (!CheckNonVectorizedNeeds(ref singleCtx, localConfig!))
                     {
                         DebugLogger.Log("Non-vectorized needs failed to match");
                         return false;
                     }
-                        
-                    // Then process wants and score
-                        var result = ProcessWantsAndScore(ref singleCtx, localConfig);
+                    var result = ProcessWantsAndScore(ref singleCtx, localConfig!);
                     if (result.Success && result.TotalScore >= cutoff)
-                        ResultsQueue.Enqueue(result);
+                    {
+                        // Print CSV directly with limited columns
+                        var wantColumns = OuijaJsonFilterDesc.GetWantsColumnNames(localConfig!);
+                        FancyConsole.WriteLine(result.ToCsvRow(wantColumns.Length));
+                    }
                     return result.Success && result.TotalScore >= cutoff;
                 });
                 return mask;
@@ -299,6 +316,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 {
                     return ProcessVoucherNeed(ref searchContext, need, ante, mask);
                 }
+                if (string.Equals(need.Type, "Boss", StringComparison.OrdinalIgnoreCase))
+                {
+                    return ProcessBossNeed(ref searchContext, need, ante, mask);
+                }
                 Console.WriteLine("⚠️  Unknown need type: {0}", need.Type);
                 return mask;
             }
@@ -318,9 +339,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     return ProcessSpectralNeed(ref searchContext, need, ante, mask);
 
                 case MotelyItemTypeCategory.PlayingCard:
-                    // TODO: Implement when playing card support is added
-                    DebugLogger.LogFormat("PlayingCard needs not yet implemented");
-                    return mask;
+                    // Playing cards are complex - handled in individual seed processing
+                    DebugLogger.LogFormat("[WARNING] PlayingCard filtering not yet vectorized");
+                    return mask; // Return original mask for now
 
                 default:
                     DebugLogger.LogFormat("❌ Unhandled need type: {0}", need.Type);
@@ -445,6 +466,15 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return VectorEnum256.Equals(voucherVec, targetVoucher) & mask;
         }
 
+        private static VectorMask ProcessBossNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
+        {
+            // TODO: Boss blind generation not yet implemented in Motely
+            // According to Immolate source, bosses have their own RNG stream (R_Boss) separate from tags
+            // For now, return original mask (no filtering)
+            DebugLogger.LogFormat("[WARNING] Boss blind filtering not yet implemented");
+            return mask;
+        }
+
         private static bool ProcessLegendaryJokerFromSoul(ref MotelySingleSearchContext singleCtx, MotelyJoker targetJoker, int ante, MotelyItemEdition? requiredEdition = null)
         {
             // Just cast MotelyJoker to MotelyItemType - the enum already handles the conversion!
@@ -492,6 +522,36 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
             }
             return false;
+        }
+
+        private static bool CheckPlayingCard(ref MotelySingleSearchContext singleCtx, 
+            OuijaConfig.Desire need, int ante)
+        {
+            // TODO: Playing card checking is not yet implemented
+            // Shops don't contain booster packs - only jokers, tarots, and planets
+            // Playing cards would need to check standard packs (not in shops) and starting deck
+            return false;
+        }
+        
+        private static bool MatchesPlayingCardCriteria(MotelyPlayingCard card, 
+            OuijaConfig.Desire need)
+        {
+            // Extract rank and suit from the card enum
+            var cardRank = (MotelyPlayingCardRank)((int)card & 0xF);
+            var cardSuit = (MotelyPlayingCardSuit)((int)card & (0b11 << Motely.PlayingCardSuitOffset));
+            
+            // Check rank
+            if (!need.AnyRank && need.RankEnum.HasValue && cardRank != need.RankEnum.Value)
+                return false;
+                
+            // Check suit  
+            if (!need.AnySuit && need.SuitEnum.HasValue && cardSuit != need.SuitEnum.Value)
+                return false;
+            
+            // TODO: Check enhancement, seal, edition
+            // This requires accessing the full card state, not just the base enum
+            
+            return true;
         }
 
         // Check needs that couldn't be vectorized
@@ -573,6 +633,21 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             break;
                         }
                     }
+                    else if (typeCat == MotelyItemTypeCategory.PlayingCard)
+                    {
+                        // Check playing cards in various locations
+                        if (CheckPlayingCard(ref singleCtx, need, ante))
+                        {
+                            foundInAnyAnte = true;
+                            break;
+                        }
+                    }
+                    else if (string.Equals(need.Type, "Boss", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Boss blind checking would go here
+                        // TODO: Implement when boss blind generation is added to Motely
+                        DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Boss blind checking not yet implemented");
+                    }
                 }
                 
                 if (!foundInAnyAnte)
@@ -599,10 +674,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 if (item.Type == ShopState.ShopItem.ShopItemType.Joker && item.Joker == targetJoker)
                 {
                     // Check edition if needed
-                    if (need.ParsedEdition.HasValue)
+                    if (need.ParsedEdition.HasValue && item.Edition != need.ParsedEdition.Value)
+                        continue;
+                        
+                    // Check stickers if needed
+                    if (need.ParsedStickers.Count > 0)
                     {
-                        return item.Edition == need.ParsedEdition.Value;
+                        // TODO: Check if ShopState.ShopItem has sticker information
+                        // For now, assume stickers aren't tracked in shop state
+                        DebugLogger.LogFormat("[CheckShopJoker] Sticker checking not yet implemented");
                     }
+                    
                     return true;
                 }
             }
@@ -812,11 +894,21 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     }
                     else if (string.Equals(want.Type, "Voucher", StringComparison.OrdinalIgnoreCase))
                     {
-                        foundInThisAnte = CheckVoucherForAnte(ref singleCtx, want, ante);
+                    foundInThisAnte = CheckVoucherForAnte(ref singleCtx, want, ante);
+                    if (foundInThisAnte) result.ScoreWants[wantIndex] += want.Score;
+                    }
+                        else if (string.Equals(want.Type, "Boss", StringComparison.OrdinalIgnoreCase))
+                            {
+                    foundInThisAnte = CheckBossForAnte(ref singleCtx, want, ante);
+                    if (foundInThisAnte) result.ScoreWants[wantIndex] += want.Score;
+                }
+                    else if (typeCat == MotelyItemTypeCategory.PlayingCard)
+                    {
+                        foundInThisAnte = CheckPlayingCard(ref singleCtx, want, ante);
                         if (foundInThisAnte) result.ScoreWants[wantIndex] += want.Score;
                     }
-                }
             }
+        }
             
             // Calculate total score
             for (int i = 0; i < 32; i++)
@@ -898,41 +990,18 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return voucher == targetVoucher;
         }
 
-        static void PrintResult(OuijaResult result, OuijaConfig config, int cutoff = 0)
+        private static bool CheckBossForAnte(ref MotelySingleSearchContext singleCtx, 
+            OuijaConfig.Desire want, int ante)
         {
-            // Check if the result meets the cutoff score
-            if (result.TotalScore < cutoff) 
-            {
-                DebugLogger.LogFormat("[PrintResult] Skipping seed {0} - score {1} < cutoff {2}", result.Seed, result.TotalScore, cutoff);
-                return;
-            }
-            if (config == null)
-            {
-                Console.WriteLine($"[noconfig]|{result.Seed},{result.TotalScore}");
-                return;
-            }
-
-            // DEBUG: Print every result, even if not successful, for troubleshooting
-            DebugLogger.LogFormat("[RESULT DEBUG] Seed: {0}, TotalScore: {1}, Success: {2}", result.Seed, result.TotalScore, result.Success);
-
-            var row = $"|{result.Seed},{result.TotalScore}";
-
-            if (config.ScoreNaturalNegatives)
-                row += $",{result.NaturalNegativeJokers}";
-            if (config.ScoreDesiredNegatives)
-                row += $",{result.DesiredNegativeJokers}";
-
-            // Add scores for each want
-            if (config.Wants != null && result.ScoreWants != null)
-            {
-                for (int i = 0; i < Math.Min(result.ScoreWants.Length, config.Wants.Length); i++)
-                {
-                    row += $",{result.ScoreWants[i]}";
-                }
-            }
-
-            Console.WriteLine(row);
+            // TODO: Boss blind generation not yet implemented in Motely
+            // According to Immolate source, bosses have their own RNG stream (R_Boss) separate from tags
+            DebugLogger.LogFormat("[WARNING] Boss blind checking not yet implemented");
+            return false;
         }
+
+        // Reporting of results is now handled externally via Search.ReportResult(result).
+        // This method only returns the OuijaResult object for reporting.
+        // The obsolete PrintResult method has been removed.
 
         private static int GetMinimumScore(OuijaConfig? config)
         {
@@ -1019,5 +1088,19 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     {
         var config = OuijaConfigLoader.Load(configFileName);
         return new OuijaJsonFilterDesc(config);
+    }
+
+    public static string[] GetWantsColumnNames(OuijaConfig config)
+    {
+        if (config?.Wants == null || config.Wants.Length == 0)
+            return Array.Empty<string>();
+        var names = new List<string>();
+        foreach (var want in config.Wants)
+        {
+            if (want == null) continue;
+            // Use GetDisplayString for user-friendly name
+            names.Add(want.GetDisplayString());
+        }
+        return names.ToArray();
     }
 }

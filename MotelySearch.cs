@@ -309,6 +309,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
     private readonly ConcurrentDictionary<string, byte> _reportedSeeds = new();
 
+    private bool _ouijaReportingActive = false;
+    private bool _ouijaHeaderPrinted = false;
+    private string[] _ouijaWantsColumns = Array.Empty<string>();
+
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
         MotelyFilterCreationContext filterCreationContext = new()
@@ -398,11 +402,29 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
         _elapsedTime.Stop();
     }
 
+    private void PrintOuijaCsvHeader()
+    {
+        if (_ouijaHeaderPrinted) return;
+        _ouijaHeaderPrinted = true;
+        // Print header: Seed,TotalScore,<wants columns>
+        var header = "Seed,TotalScore";
+        if (_ouijaWantsColumns.Length > 0)
+            header += "," + string.Join(",", _ouijaWantsColumns);
+        FancyConsole.WriteLine(header);
+    }
+
+    public void ActivateOuijaReporting(string[] wantsColumns)
+    {
+        _ouijaReportingActive = true;
+        _ouijaWantsColumns = wantsColumns;
+        PrintOuijaCsvHeader();
+    }
+
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        string seedStr = seed.ToString();
-        FancyConsole.WriteLine($"{seedStr}");
-        // else: already reported, skip
+        // Always suppress seed-only output when using Ouija filters - they handle their own CSV output
+        // The base filter will have already called OuijaJsonFilter which prints the full CSV row
+        return;
     }
 
     private void PrintReport()
@@ -435,12 +457,32 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
         OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMSStr} seeds/ms)");
     }
 
+    private void ReportResult(object result)
+    {
+        // Only report when Ouija reporting is active
+        if (!_ouijaReportingActive) return;
+        
+        // Always pass the correct numWants to limit columns
+        var numWants = _ouijaWantsColumns?.Length ?? 0;
+        var toCsvRowMethod = result?.GetType().GetMethod("ToCsvRow");
+        
+        if (toCsvRowMethod != null)
+        {
+            // Always pass numWants parameter to limit output columns
+            var csvRow = toCsvRowMethod.Invoke(result, new object[] { numWants }) as string;
+            if (!string.IsNullOrEmpty(csvRow))
+            {
+                FancyConsole.WriteLine(csvRow);
+            }
+        }
+    }
+
+    // Call this after search completes (e.g., after threads join or status is set to Completed)
     public void Dispose()
     {
         Pause();
 
         // Atomically replace paused state with Disposed state
-
         MotelySearchStatus oldStatus = Interlocked.Exchange(ref _status, MotelySearchStatus.Disposed);
 
         if (oldStatus == MotelySearchStatus.Paused)
@@ -452,7 +494,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
             Debug.Assert(oldStatus == MotelySearchStatus.Completed);
         }
 
-
         foreach (MotelySearchThread thread in _threads)
         {
             thread.Dispose();
@@ -460,6 +501,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
         Marshal.FreeHGlobal((nint)_pseudoHashKeyLengths);
         Marshal.FreeHGlobal((nint)_pseudoHashReverseMap);
+
+        // Removed obsolete ReportOuijaResults() call
 
         GC.SuppressFinalize(this);
     }
@@ -619,6 +662,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
             Debug.Assert(!searchParams.IsAdditionalFilter);
 
             MotelyVectorSearchContext searchContext = new(in searchParams);
+            searchContext.SearchInstance = Search;
 
             VectorMask searchResultMask = Search._baseFilter.Filter(ref searchContext);
 
@@ -754,6 +798,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
             );
 
             MotelyVectorSearchContext searchContext = new(in searchParams);
+            searchContext.SearchInstance = Search;
 
             VectorMask searchResultMask = Search._additionalFilters[filterIndex].Filter(ref searchContext);
 

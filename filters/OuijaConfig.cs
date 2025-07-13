@@ -46,13 +46,38 @@ public class OuijaConfig
         public MotelyTag? TagEnum { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public MotelyTarotCard? TarotEnum { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MotelyBossBlind? BossEnum { get; set; }
         
         // Additional string properties for complex filters
         public List<string> JokerStickers { get; set; } = new();
         public string Rank { get; set; } = string.Empty;
         public string Suit { get; set; } = string.Empty;
-        public string Enchantment { get; set; } = string.Empty;
+        public string Enhancement { get; set; } = string.Empty;
+        public string Seal { get; set; } = string.Empty;
         public string Chip { get; set; } = string.Empty;
+        
+        // Playing card specific parsed values
+        [JsonIgnore]
+        public MotelyPlayingCardRank? RankEnum { get; set; }
+        [JsonIgnore]
+        public MotelyPlayingCardSuit? SuitEnum { get; set; }
+        [JsonIgnore]
+        public MotelyItemEnhancement? EnhancementEnum { get; set; }
+        [JsonIgnore]
+        public MotelyItemSeal? SealEnum { get; set; }
+        [JsonIgnore]
+        public bool AnyRank { get; set; }
+        [JsonIgnore]
+        public bool AnySuit { get; set; }
+        [JsonIgnore]
+        public bool AnyEnhancement { get; set; }
+        [JsonIgnore]
+        public bool AnySeal { get; set; }
+        
+        // Parsed joker stickers
+        [JsonIgnore]
+        public List<MotelyJokerSticker> ParsedStickers { get; set; } = new();
         
         // Scoring properties
         public int DesireByAnte { get; set; } = 8;
@@ -174,6 +199,69 @@ public class OuijaConfig
                     if (MotelyEnumUtil.TryParseEnum<MotelyVoucher>(Value, out var voucher))
                         VoucherEnum = voucher;
                 }
+                else if (Type.Equals("Boss", StringComparison.OrdinalIgnoreCase) && !BossEnum.HasValue)
+                {
+                    if (MotelyEnumUtil.TryParseEnum<MotelyBossBlind>(Value, out var boss))
+                        BossEnum = boss;
+                }
+                else if (Type.Equals("PlayingCard", StringComparison.OrdinalIgnoreCase))
+                {
+                    TypeCategory = MotelyItemTypeCategory.PlayingCard;
+                    
+                    // Parse rank
+                    if (!string.IsNullOrEmpty(Rank))
+                    {
+                        if (Rank.Equals("any", StringComparison.OrdinalIgnoreCase))
+                            AnyRank = true;
+                        else if (MotelyEnumUtil.TryParseEnum<MotelyPlayingCardRank>(Rank, out var rank))
+                            RankEnum = rank;
+                    }
+                    
+                    // Parse suit
+                    if (!string.IsNullOrEmpty(Suit))
+                    {
+                        if (Suit.Equals("any", StringComparison.OrdinalIgnoreCase))
+                            AnySuit = true;
+                        else if (MotelyEnumUtil.TryParseEnum<MotelyPlayingCardSuit>(Suit, out var suit))
+                            SuitEnum = suit;
+                    }
+                    
+                    // Parse enhancement
+                    if (!string.IsNullOrEmpty(Enhancement))
+                    {
+                        if (Enhancement.Equals("any", StringComparison.OrdinalIgnoreCase))
+                            AnyEnhancement = true;
+                        else if (MotelyEnumUtil.TryParseEnum<MotelyItemEnhancement>(Enhancement, out var enh))
+                            EnhancementEnum = enh;
+                    }
+                    
+                    // Parse seal
+                    if (!string.IsNullOrEmpty(Seal))
+                    {
+                        if (Seal.Equals("any", StringComparison.OrdinalIgnoreCase))
+                            AnySeal = true;
+                        else if (MotelyEnumUtil.TryParseEnum<MotelyItemSeal>(Seal, out var seal))
+                            SealEnum = seal;
+                    }
+                }
+            }
+            
+            // Parse edition for all item types
+            if (!string.IsNullOrEmpty(Edition) && !ParsedEdition.HasValue)
+            {
+                if (MotelyEnumUtil.TryParseEnum<MotelyItemEdition>(Edition, out var ed))
+                    ParsedEdition = ed;
+            }
+            
+            // Parse joker stickers
+            if (JokerStickers != null && JokerStickers.Count > 0)
+            {
+                ParsedStickers.Clear();
+                foreach (var sticker in JokerStickers)
+                {
+                    if (MotelyEnumUtil.TryParseEnum<MotelyJokerSticker>(sticker, out var s))
+                        ParsedStickers.Add(s);
+                }
             }
         }
 
@@ -190,8 +278,33 @@ public class OuijaConfig
                 "TarotCard" or "Tarot" => TarotEnum?.ToString() ?? Value,
                 "Tag" => TagEnum?.ToString() ?? Value,
                 "Voucher" => VoucherEnum?.ToString() ?? Value,
+                "Boss" => BossEnum?.ToString() ?? Value,
+                "PlayingCard" => FormatPlayingCardDisplay(),
                 _ => Value
             };
+        }
+        
+        private string FormatPlayingCardDisplay()
+        {
+            var parts = new List<string>();
+            
+            if (AnyRank) parts.Add("Any Rank");
+            else if (RankEnum.HasValue) parts.Add(RankEnum.Value.ToString());
+            else if (!string.IsNullOrEmpty(Rank)) parts.Add(Rank);
+            
+            if (AnySuit) parts.Add("Any Suit");
+            else if (SuitEnum.HasValue) parts.Add(SuitEnum.Value.ToString());
+            else if (!string.IsNullOrEmpty(Suit)) parts.Add(Suit);
+            
+            if (AnyEnhancement) parts.Add("Any Enhancement");
+            else if (EnhancementEnum.HasValue) parts.Add(EnhancementEnum.Value.ToString());
+            
+            if (AnySeal) parts.Add("Any Seal");
+            else if (SealEnum.HasValue) parts.Add(SealEnum.Value.ToString());
+            
+            if (ParsedEdition.HasValue) parts.Add(ParsedEdition.Value.ToString());
+            
+            return parts.Count > 0 ? string.Join(" ", parts) : "Playing Card";
         }
     }
 
@@ -205,7 +318,13 @@ public class OuijaConfig
         if (string.IsNullOrEmpty(Stake)) Stake = "WhiteStake";
         if (MaxSearchAnte > 8) MaxSearchAnte = 8;
 
-        // Validate and cache all desires
+        // Parse deck and stake enums
+            if (MotelyEnumUtil.TryParseEnum<MotelyDeck>(Deck, out var parsedDeck))
+                ParsedDeck = parsedDeck;
+            if (MotelyEnumUtil.TryParseEnum<MotelyStake>(Stake, out var parsedStake))
+                ParsedStake = parsedStake;
+            
+            // Validate and cache all desires
         if (Needs != null)
         {
             NumNeeds = Needs.Length;
@@ -243,6 +362,9 @@ public class OuijaConfig
             "Tarot" or "TarotCard" => desire.TarotEnum.HasValue,
             "Tag" => desire.TagEnum.HasValue,
             "Voucher" => desire.VoucherEnum.HasValue,
+            "Boss" => desire.BossEnum.HasValue,
+            "PlayingCard" => (desire.AnyRank || desire.RankEnum.HasValue) && 
+                              (desire.AnySuit || desire.SuitEnum.HasValue),
             _ => false
         };
     }
