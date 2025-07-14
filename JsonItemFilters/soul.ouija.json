@@ -1,0 +1,21 @@
+{
+  "name": "soul card finder",
+  "description": "look for friggen soul cards bruh",
+  "author": "pifreak",
+  "filter_config": {
+    "NumNeeds": 1,
+    "NumWants": 8,
+    "Needs": [
+      { "Type": "Joker", "Value": "Showman", "SearchAntes": [1] }
+    ],
+    "Wants": [
+      { "Type": "SpectralCard", "Value": "Soul", "SearchAntes": [1], "Score": 1 }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "RedDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

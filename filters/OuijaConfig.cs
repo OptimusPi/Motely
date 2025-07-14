@@ -19,7 +19,7 @@ public class OuijaConfig
     public string Stake { get; set; } = string.Empty;
     public bool ScoreNaturalNegatives { get; set; }
     public bool ScoreDesiredNegatives { get; set; }
-    
+
     // Parsed enum values (set by OuijaConfigLoader)
     [JsonIgnore]
     public MotelyDeck ParsedDeck { get; set; } = MotelyDeck.RedDeck;
@@ -32,7 +32,7 @@ public class OuijaConfig
         public string Type { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
         public string Edition { get; set; } = string.Empty;
-        
+
         // Direct enum properties for backward compatibility
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public MotelyJoker? JokerEnum { get; set; }
@@ -48,7 +48,7 @@ public class OuijaConfig
         public MotelyTarotCard? TarotEnum { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public MotelyBossBlind? BossEnum { get; set; }
-        
+
         // Additional string properties for complex filters
         [JsonPropertyName("Stickers")]
         public List<string> JokerStickers { get; set; } = new();
@@ -57,7 +57,7 @@ public class OuijaConfig
         public string Enhancement { get; set; } = string.Empty;
         public string Seal { get; set; } = string.Empty;
         public string Chip { get; set; } = string.Empty;
-        
+
         // Playing card specific parsed values
         [JsonIgnore]
         public MotelyPlayingCardRank? RankEnum { get; set; }
@@ -75,14 +75,13 @@ public class OuijaConfig
         public bool AnyEnhancement { get; set; }
         [JsonIgnore]
         public bool AnySeal { get; set; }
-        
+
         // Parsed joker stickers
         [JsonIgnore]
         public List<MotelyJokerSticker> ParsedStickers { get; set; } = new();
-        
+
         // Scoring properties
-        public int DesireByAnte { get; set; } = 8;
-        public int[] SearchAntes { get; set; } = Array.Empty<int>();
+        public int[] SearchAntes { get; set; } = [];
         public int Score { get; set; } = 1;
 
         // Cached strongly-typed values (populated during validation)
@@ -136,7 +135,7 @@ public class OuijaConfig
                 Type = "Voucher";
                 return;
             }
-            
+
             // Parse type category from string
             if (!string.IsNullOrEmpty(Type))
             {
@@ -148,7 +147,7 @@ public class OuijaConfig
                     normalizedType = "SpectralCard";
                 else if (Type.Equals("Tarot", StringComparison.OrdinalIgnoreCase))
                     normalizedType = "TarotCard";
-                
+
                 if (MotelyEnumUtil.TryParseEnum<MotelyItemTypeCategory>(normalizedType, out var cat))
                 {
                     TypeCategory = cat;
@@ -208,7 +207,7 @@ public class OuijaConfig
                 else if (Type.Equals("PlayingCard", StringComparison.OrdinalIgnoreCase))
                 {
                     TypeCategory = MotelyItemTypeCategory.PlayingCard;
-                    
+
                     // Parse rank
                     if (!string.IsNullOrEmpty(Rank))
                     {
@@ -217,7 +216,7 @@ public class OuijaConfig
                         else if (MotelyEnumUtil.TryParseEnum<MotelyPlayingCardRank>(Rank, out var rank))
                             RankEnum = rank;
                     }
-                    
+
                     // Parse suit
                     if (!string.IsNullOrEmpty(Suit))
                     {
@@ -226,7 +225,7 @@ public class OuijaConfig
                         else if (MotelyEnumUtil.TryParseEnum<MotelyPlayingCardSuit>(Suit, out var suit))
                             SuitEnum = suit;
                     }
-                    
+
                     // Parse enhancement
                     if (!string.IsNullOrEmpty(Enhancement))
                     {
@@ -235,7 +234,7 @@ public class OuijaConfig
                         else if (MotelyEnumUtil.TryParseEnum<MotelyItemEnhancement>(Enhancement, out var enh))
                             EnhancementEnum = enh;
                     }
-                    
+
                     // Parse seal
                     if (!string.IsNullOrEmpty(Seal))
                     {
@@ -246,14 +245,14 @@ public class OuijaConfig
                     }
                 }
             }
-            
+
             // Parse edition for all item types
             if (!string.IsNullOrEmpty(Edition) && !ParsedEdition.HasValue)
             {
                 if (MotelyEnumUtil.TryParseEnum<MotelyItemEdition>(Edition, out var ed))
                     ParsedEdition = ed;
             }
-            
+
             // Parse joker stickers
             if (JokerStickers != null && JokerStickers.Count > 0)
             {
@@ -278,27 +277,27 @@ public class OuijaConfig
             var display = stickers + editionPrefix + baseName;
             return display;
         }
-        
+
         private string FormatPlayingCardDisplay()
         {
             var parts = new List<string>();
-            
+
             if (AnyRank) parts.Add("Any Rank");
             else if (RankEnum.HasValue) parts.Add(RankEnum.Value.ToString());
             else if (!string.IsNullOrEmpty(Rank)) parts.Add(Rank);
-            
+
             if (AnySuit) parts.Add("Any Suit");
             else if (SuitEnum.HasValue) parts.Add(SuitEnum.Value.ToString());
             else if (!string.IsNullOrEmpty(Suit)) parts.Add(Suit);
-            
+
             if (AnyEnhancement) parts.Add("Any Enhancement");
             else if (EnhancementEnum.HasValue) parts.Add(EnhancementEnum.Value.ToString());
-            
+
             if (AnySeal) parts.Add("Any Seal");
             else if (SealEnum.HasValue) parts.Add(SealEnum.Value.ToString());
-            
+
             if (ParsedEdition.HasValue) parts.Add(ParsedEdition.Value.ToString());
-            
+
             return parts.Count > 0 ? string.Join(" ", parts) : "Playing Card";
         }
     }
@@ -314,12 +313,12 @@ public class OuijaConfig
         if (MaxSearchAnte > 8) MaxSearchAnte = 8;
 
         // Parse deck and stake enums
-            if (MotelyEnumUtil.TryParseEnum<MotelyDeck>(Deck, out var parsedDeck))
-                ParsedDeck = parsedDeck;
-            if (MotelyEnumUtil.TryParseEnum<MotelyStake>(Stake, out var parsedStake))
-                ParsedStake = parsedStake;
-            
-            // Validate and cache all desires
+        if (MotelyEnumUtil.TryParseEnum<MotelyDeck>(Deck, out var parsedDeck))
+            ParsedDeck = parsedDeck;
+        if (MotelyEnumUtil.TryParseEnum<MotelyStake>(Stake, out var parsedStake))
+            ParsedStake = parsedStake;
+
+        // Validate and cache all desires
         if (Needs != null)
         {
             NumNeeds = Needs.Length;
@@ -358,7 +357,7 @@ public class OuijaConfig
             "Tag" => desire.TagEnum.HasValue,
             "Voucher" => desire.VoucherEnum.HasValue,
             "Boss" => desire.BossEnum.HasValue,
-            "PlayingCard" => (desire.AnyRank || desire.RankEnum.HasValue) && 
+            "PlayingCard" => (desire.AnyRank || desire.RankEnum.HasValue) &&
                               (desire.AnySuit || desire.SuitEnum.HasValue),
             _ => false
         };
@@ -395,7 +394,7 @@ public class OuijaConfig
         };
 
         OuijaConfig? config = null;
-        
+
         // Try to parse directly first
         try
         {
@@ -417,12 +416,12 @@ public class OuijaConfig
                 Console.WriteLine("[DEBUG] Found filter_config wrapper, parsing...");
                 config = filterConfig.Deserialize<OuijaConfig>(options);
                 Console.WriteLine($"[DEBUG] Wrapper parse: Found {config?.Needs?.Length ?? 0} needs");
-                
+
                 // Debug: Print the first need if it exists
                 if (config?.Needs?.Length > 0)
                 {
                     var firstNeed = config.Needs[0];
-                    DebugLogger.LogFormat("[LoadFromJson] First need: Type={0}, Value={1}, Edition={2}", 
+                    DebugLogger.LogFormat("[LoadFromJson] First need: Type={0}, Value={1}, Edition={2}",
                         firstNeed.Type, firstNeed.Value, firstNeed.Edition ?? "null");
                 }
             }
@@ -444,55 +443,5 @@ public class OuijaConfig
         config.Validate();
         Console.WriteLine($"[DEBUG] After validate: {config.NumNeeds} needs, {config.NumWants} wants");
         return config;
-    }
-
-    /// <summary>
-    /// Creates an example configuration for reference
-    /// </summary>
-    public static OuijaConfig CreateExample()
-    {
-        return new OuijaConfig
-        {
-            MaxSearchAnte = 8,
-            Deck = "RedDeck",
-            Stake = "WhiteStake",
-            ScoreNaturalNegatives = true,
-            ScoreDesiredNegatives = false,
-            Needs = new[]
-            {
-                new Desire
-                {
-                    Type = "Joker",
-                    Value = "Perkeo",
-                    DesireByAnte = 2,
-                    Score = 10
-                },
-                new Desire
-                {
-                    Type = "Tag",
-                    Value = "NegativeTag",
-                    DesireByAnte = 3,
-                    Score = 5
-                }
-            },
-            Wants = new[]
-            {
-                new Desire
-                {
-                    Type = "Joker",
-                    Value = "Blueprint",
-                    Edition = "Negative",
-                    DesireByAnte = 4,
-                    Score = 3
-                },
-                new Desire
-                {
-                    Type = "Planet",
-                    Value = "Pluto",
-                    SearchAntes = new[] { 1, 2, 3 },
-                    Score = 2
-                }
-            }
-        };
     }
 }

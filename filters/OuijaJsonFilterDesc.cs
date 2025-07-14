@@ -43,8 +43,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 if (need == null) continue;
                 if (string.Equals(need.Type, "Tag", StringComparison.OrdinalIgnoreCase)) cacheTagStream = true;
-                var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
-                foreach (var ante in searchAntes)
+                foreach (var ante in need.SearchAntes)
                 {
                     allAntes.Add(ante);
                     CacheStreamForType(ctx, need, ante);
@@ -57,8 +56,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 if (want == null) continue;
                 if (string.Equals(want.Type, "Tag", StringComparison.OrdinalIgnoreCase)) cacheTagStream = true;
-                var searchAntes = want.SearchAntes?.Length > 0 ? want.SearchAntes : new[] { want.DesireByAnte };
-                foreach (var ante in searchAntes)
+                foreach (var ante in want.SearchAntes)
                 {
                     allAntes.Add(ante);
                     CacheStreamForType(ctx, want, ante);
@@ -229,15 +227,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return mask;
             }
 
-            // Perkeo-style: If any voucher need is present in any ante, activate/pass
             var voucherNeeds = config.Needs.Where(n => n != null && string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)).ToArray();
             if (voucherNeeds.Length > 0)
             {
                 VectorMask voucherMask = VectorMask.AllBitsClear;
                 foreach (var need in voucherNeeds)
                 {
-                    var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
-                    foreach (var ante in searchAntes)
+                    foreach (var ante in need.SearchAntes)
                     {
                         var voucherVec = searchContext.GetAnteFirstVoucher(ante);
                         if (!need.VoucherEnum.HasValue)
@@ -256,7 +252,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     }
                 }
                 int passing = CountBitsSet(voucherMask);
-                DebugLogger.LogFormat("[PerkeoStyle] After voucher needs (OR): {0} seeds passing", passing);
                 mask &= voucherMask;
                 if (mask.IsAllFalse())
                 {
@@ -296,10 +291,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     continue;
                 }
                 
-                var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
                 // For each need, we want to find seeds that have it in ANY of the specified antes (OR logic)
                 VectorMask needMask = VectorMask.AllBitsClear;
-                foreach (var ante in searchAntes)
+                foreach (var ante in need.SearchAntes)
                 {
                     var anteMask = ProcessNeedVector(ref searchContext, need, ante, VectorMask.AllBitsSet);
                     needMask |= anteMask; // OR operation - seed passes if found in ANY ante
@@ -457,13 +451,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return mask;
             }
             
-            // Use vectorized shop spectral filter!
-            var shopSpectralMask = searchContext.FilterSpectralCard(ante, need.SpectralEnum.Value, MotelyPrngKeys.Shop);
-            
-            // Spectral packs can't be vectorized yet
-            DebugLogger.LogFormat("[WARNING] Spectral pack filtering not yet vectorized - only checking shop spectrals");
-            
-            return mask & shopSpectralMask;
+            // Use vectorized spectral pack filter!
+            var spectralPackMask = searchContext.FilterSpectralPack(ante, need.SpectralEnum.Value);
+            return mask & spectralPackMask;
         }
 
         private static VectorMask ProcessTagNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
@@ -595,15 +585,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             if (config?.Needs == null || config.Needs.Length == 0)
                 return true;
 
-            // Perkeo-style: If any voucher need is present in any ante, activate/pass
             var voucherNeeds = config.Needs.Where(n => n != null && string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)).ToArray();
             if (voucherNeeds.Length > 0)
             {
                 bool foundAnyVoucher = false;
                 foreach (var need in voucherNeeds)
                 {
-                    var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
-                    foreach (var ante in searchAntes)
+                    foreach (var ante in need.SearchAntes)
                     {
                         if (need.VoucherEnum.HasValue)
                         {
@@ -641,16 +629,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
             foreach (var need in nonVectorizableNeeds)
             {
-                var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
                 bool foundInAnyAnte = false;
                 
-                DebugLogger.LogFormat("[Search Antes.......]  {0}", searchAntes.Length);
-
-                foreach (int ante in searchAntes)
-                {
-                    DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Processing ante {0} for need {1}", ante, need.Value);
-                }
-                foreach (var ante in searchAntes)
+                foreach (var ante in need.SearchAntes)
                 {
                     DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Checking ante {0} for need {1}", ante, need.Value);
                     // Check needs that require individual processing
@@ -726,25 +707,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         // Boss blind checking would go here
                         // TODO: Implement when boss blind generation is added to Motely
                         DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Boss blind checking not yet implemented");
-                    }
-                    else if (string.Equals(need.Type, "Voucher", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Non-vectorized voucher need check
-                        if (need.VoucherEnum.HasValue)
-                        {
-                            var voucher = singleCtx.GetAnteFirstVoucher(ante);
-                            DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Voucher check ante {0}: Found={1}, Target={2}", ante, voucher, need.VoucherEnum.Value);
-                            if (voucher == need.VoucherEnum.Value)
-                            {
-                                DebugLogger.LogFormat("[CheckNonVectorizedNeeds] MATCH: Voucher {0} found at ante {1}", voucher, ante);
-                                foundInAnyAnte = true;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            DebugLogger.LogFormat("[CheckNonVectorizedNeeds] VoucherEnum missing for need {0}", need.Value);
-                        }
                     }
                 }
                 
@@ -856,30 +818,27 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckSpectralInPacks(ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire need, int ante)
         {
             if (!need.SpectralEnum.HasValue)
-                return false;
-                
+            {
+                DebugLogger.Log("Missing SpectralEnum for Spectral need");
+                throw new ArgumentException("SpectralEnum must be provided for spectral needs", nameof(need));
+            }
             var targetSpectral = (MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)need.SpectralEnum.Value;
             int packsToCheck = ante == 1 ? 4 : 6;
-            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, false);
-            
-            bool spectralStreamInit = false;
-            MotelySingleSpectralStream spectralStream = default;
-            
             for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
             {
-                var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
-                
-                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                var spectralStream = singleCtx.CreateSpectralPackStream(ante);
+                var packContents = singleCtx.GetSpectralPackContents(ref spectralStream, MotelySingleItemSet.MaxLength); // Use correct pack size if available
+                string spectralContentsStr = "";
+                for (int i = 0; i < packContents.Length; i++)
                 {
-                    if (!spectralStreamInit)
-                    {
-                        spectralStreamInit = true;
-                        spectralStream = singleCtx.CreateSpectralPackStream(ante);
-                    }
-                    
-                    var packContents = singleCtx.GetSpectralPackContents(ref spectralStream, pack.GetPackSize());
-                    if (packContents.Contains(targetSpectral))
-                        return true;
+                    if (i > 0) spectralContentsStr += ",";
+                    spectralContentsStr += packContents.GetItem(i).ToString();
+                }
+                DebugLogger.LogFormat("[DEBUG][CheckSpectralInPacks] Spectral pack ante={0}, packIndex={1}, contents=[{2}]", ante, packIndex + 1, spectralContentsStr);
+                if (packContents.Contains(targetSpectral))
+                {
+                    DebugLogger.LogFormat("[DEBUG][CheckSpectralInPacks] Found targetSpectral={0} in Spectral pack ante={1}, packIndex={2}", targetSpectral, ante, packIndex + 1);
+                    return true;
                 }
             }
             return false;
@@ -909,7 +868,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 var want = config.Wants[wantIndex];
                 if (want == null) continue;
                 
-                var searchAntes = want.SearchAntes?.Length > 0 ? want.SearchAntes : new[] { want.DesireByAnte };
+                var searchAntes = want.SearchAntes;
                 
                 foreach (var ante in searchAntes)
                 {
@@ -928,6 +887,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             
                         if (foundInThisAnte)
                         {
+                            DebugLogger.LogFormat("[DEBUG][WantsMatch] wantIndex={0}, type={1}, value={2}, ante={3}, SCORE={4}", wantIndex, want.Type, want.Value, ante, want.Score);
                             result.ScoreWants[wantIndex] += want.Score;
                             if (want.ParsedEdition == MotelyItemEdition.Negative)
                                 result.DesiredNegativeJokers++;
@@ -983,6 +943,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     else if (typeCat == MotelyItemTypeCategory.SpectralCard)
                     {
                         foundInThisAnte = CheckSpectralInShopOrPacks(ref singleCtx, want, ante);
+                        if (foundInThisAnte) {
+                            DebugLogger.LogFormat("[DEBUG][WantsMatch] wantIndex={0}, type={1}, value={2}, ante={3}, SCORE={4} | foundInThisAnte={5}", wantIndex, want.Type, want.Value, ante, want.Score, foundInThisAnte);
+                            // For SpectralCard wants, log pack contents for this ante
+                            DebugLogger.LogFormat("[DEBUG][WantsMatch][Spectral] wantIndex={0}, ante={1}, foundInThisAnte={2}", wantIndex, ante, foundInThisAnte);
+                        }
                         if (foundInThisAnte) result.ScoreWants[wantIndex] += want.Score;
                     }
                     else if (string.Equals(want.Type, "Tag", StringComparison.OrdinalIgnoreCase))
@@ -1050,13 +1015,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return false;
                 
             var targetSpectral = (MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)want.SpectralEnum.Value;
+            DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] Checking spectral {0} in ante {1}", targetSpectral, ante);
             
             // Check shop first
             var spectralStream = singleCtx.CreateShopSpectralStream(ante);
+
+
             var spectral = singleCtx.GetNextShopSpectral(ref spectralStream);
+
+            DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] Shop spectral: {0}", spectral.Type);
+            // If spectral matches, return true
             if (spectral.Type == targetSpectral)
+            {
+                DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] Found matching spectral: {0}", spectral.Type);
                 return true;
-                
+            }
+            DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] No matching spectral in shop, checking packs");
             // Check packs
             return CheckSpectralInPacks(ref singleCtx, want, ante);
         }
@@ -1094,15 +1068,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // According to Immolate source, bosses have their own RNG stream (R_Boss) separate from tags
             DebugLogger.LogFormat("[WARNING] Boss blind checking not yet implemented");
             return false;
-        }
-
-        // Reporting of results is now handled externally via Search.ReportResult(result).
-        // This method only returns the OuijaResult object for reporting.
-        // The obsolete PrintResult method has been removed.
-
-        private static int GetMinimumScore(OuijaConfig? config)
-        {
-            return 1; // Require at least score 1 to filter out zero scores
         }
 
         private static MotelyJokerRarity GetJokerRarity(MotelyJoker joker)

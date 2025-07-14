@@ -139,6 +139,43 @@ public static class OuijaConfigLoader
             DebugLogger.LogFormat("[ParseDesireEnums] Parsed edition '{0}' to {1}", 
                 desire.Edition, desire.ParsedEdition?.ToString() ?? "null");
         }
+
+        // Parse PlayingCard fields
+        if (desire.Type?.Equals("PlayingCard", StringComparison.OrdinalIgnoreCase) == true || desire.TypeCategory == MotelyItemTypeCategory.PlayingCard)
+        {
+            // Rank
+            if (!string.IsNullOrEmpty(desire.Rank))
+            {
+                if (desire.Rank.Equals("any", StringComparison.OrdinalIgnoreCase))
+                    desire.AnyRank = true;
+                else if (MotelyEnumUtil.TryParseEnum<MotelyPlayingCardRank>(desire.Rank, out var rank))
+                    desire.RankEnum = rank;
+            }
+            // Suit
+            if (!string.IsNullOrEmpty(desire.Suit))
+            {
+                if (desire.Suit.Equals("any", StringComparison.OrdinalIgnoreCase))
+                    desire.AnySuit = true;
+                else if (MotelyEnumUtil.TryParseEnum<MotelyPlayingCardSuit>(desire.Suit, out var suit))
+                    desire.SuitEnum = suit;
+            }
+            // Enhancement
+            if (!string.IsNullOrEmpty(desire.Enhancement))
+            {
+                if (desire.Enhancement.Equals("any", StringComparison.OrdinalIgnoreCase))
+                    desire.AnyEnhancement = true;
+                else if (MotelyEnumUtil.TryParseEnum<MotelyItemEnhancement>(desire.Enhancement, out var enh))
+                    desire.EnhancementEnum = enh;
+            }
+            // Seal
+            if (!string.IsNullOrEmpty(desire.Seal))
+            {
+                if (desire.Seal.Equals("any", StringComparison.OrdinalIgnoreCase))
+                    desire.AnySeal = true;
+                else if (MotelyEnumUtil.TryParseEnum<MotelyItemSeal>(desire.Seal, out var seal))
+                    desire.SealEnum = seal;
+            }
+        }
     }
 
     public static bool TryParseTypeCategory(string value, out MotelyItemTypeCategory type)
@@ -200,14 +237,5 @@ public static class OuijaConfigLoader
         var json = config.ToJson();
         File.WriteAllText(path, json);
         Console.WriteLine($"Saved config to: {path}");
-    }
-
-    /// <summary>
-    /// Create and save an example config
-    /// </summary>
-    public static void CreateExampleConfig(string path = "example.ouija.json")
-    {
-        var example = OuijaConfig.CreateExample();
-        Save(example, path);
     }
 }

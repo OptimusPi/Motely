@@ -24,7 +24,6 @@ public struct TypedOuijaConfig
     public struct TypedDesire
     {
         public DesireType Type;
-        public int DesireByAnte;
         public int[] SearchAntes;
         public int Score;
         
@@ -133,8 +132,7 @@ public struct TypedOuijaConfig
     {
         var typed = new TypedDesire
         {
-            DesireByAnte = desire.DesireByAnte,
-            SearchAntes = desire.SearchAntes ?? Array.Empty<int>(),
+            SearchAntes = desire.SearchAntes ?? [],
             Score = desire.Score,
             RequiredEdition = MotelyItemEdition.None
         };
