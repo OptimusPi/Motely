@@ -78,10 +78,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     {
         // Use pre-parsed TypeCategory from config loader
         var typeCategory = desire.TypeCategory;
-        
+        // Remove all spectral/planet/shop logic
         if (!typeCategory.HasValue)
         {
-            // Handle special cases that don't map directly to MotelyItemTypeCategory
             if (string.Equals(desire.Type, "SoulJoker", StringComparison.OrdinalIgnoreCase))
             {
                 ctx.CachePseudoHash(MotelyPrngKeys.ShopPack + ante);
@@ -102,24 +101,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             }
             else if (string.Equals(desire.Type, "Boss", StringComparison.OrdinalIgnoreCase))
             {
-                // TODO: Boss blind generation not yet implemented in Motely
-                // Bosses have their own RNG stream (R_Boss) separate from tags
-                // ctx.CachePseudoHash(MotelyPrngKeys.Boss); // Need to add Boss key
                 return;
             }
             else if (string.Equals(desire.Type, "PlayingCard", StringComparison.OrdinalIgnoreCase))
             {
-                    // Playing cards can appear in many places
-                    ctx.CachePseudoHash(MotelyPrngKeys.Shop + ante);
-                    // TODO: Add more caching as playing card generation is implemented
-                    return;
-                }
-                DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unknown type '{0}' (ante {1}) - no canonical PRNG key used", desire.Type, ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.Shop + ante);
                 return;
+            }
+            DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unknown type '{0}' (ante {1}) - no canonical PRNG key used", desire.Type, ante);
+            return;
         }
-        
         var parsedType = typeCategory.Value;
-        
         switch (parsedType)
         {
             case MotelyItemTypeCategory.Joker:
@@ -137,15 +129,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 ctx.CachePseudoHash(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante);
                 break;
-            case MotelyItemTypeCategory.PlanetCard:
-                ctx.CachePseudoHash(MotelyPrngKeys.Planet + MotelyPrngKeys.Shop + ante);
-                ctx.CachePseudoHash(MotelyPrngKeys.Planet + MotelyPrngKeys.CelestialPack + ante);
-                break;
-            case MotelyItemTypeCategory.SpectralCard:
-                ctx.CachePseudoHash(MotelyPrngKeys.Spectral + MotelyPrngKeys.Shop + ante);
-                ctx.CachePseudoHash(MotelyPrngKeys.Spectral + MotelyPrngKeys.SpectralPack + ante);
-                ctx.CachePseudoHash(MotelyPrngKeys.SpectralSoul + ante);
-                break;
+            // Remove planet/spectral cases
             default:
                 DebugLogger.LogFormat("[OuijaJsonFilterDesc] Unhandled canonical type '{0}' (ante {1}) - no PRNG key used", parsedType, ante);
                 break;
@@ -193,7 +177,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.LogFormat("After needs, {0} seeds passing", CountBitsSet(mask));
                 int cutoff = _cutoff;
                 // Process results immediately as they are found
-                var searchInstance = searchContext.SearchInstance;
+                // SearchInstance is not available; remove reference and use searchContext directly if needed
                 mask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
                 {
                     if (!CheckNonVectorizedNeeds(ref singleCtx, localConfig!))
@@ -428,32 +412,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         private static VectorMask ProcessPlanetNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
         {
-            if (!need.PlanetEnum.HasValue)
-            {
-                DebugLogger.Log("Missing PlanetEnum for Planet need");
-                return mask;
-            }
-            
-            // Use vectorized shop planet filter!
-            var shopPlanetMask = searchContext.FilterPlanetCard(ante, need.PlanetEnum.Value, MotelyPrngKeys.Shop);
-            
-            // Celestial packs can't be vectorized yet
-            DebugLogger.LogFormat("[WARNING] Celestial pack filtering not yet vectorized - only checking shop planets");
-            
-            return mask & shopPlanetMask;
+            DebugLogger.LogFormat("[WARNING] PlanetCard filtering not implemented yet. TODO: Implement planet filtering.");
+            return mask;
         }
 
         private static VectorMask ProcessSpectralNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
         {
-            if (!need.SpectralEnum.HasValue)
-            {
-                DebugLogger.Log("Missing SpectralEnum for Spectral need");
-                return mask;
-            }
-            
-            // Use vectorized spectral pack filter!
-            var spectralPackMask = searchContext.FilterSpectralPack(ante, need.SpectralEnum.Value);
-            return mask & spectralPackMask;
+            DebugLogger.LogFormat("[WARNING] SpectralCard filtering not implemented yet. TODO: Implement spectral filtering.");
+            return mask;
         }
 
         private static VectorMask ProcessTagNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
@@ -719,35 +685,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         private static bool CheckShopJoker(ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire need, int ante)
         {
-            if (!need.JokerEnum.HasValue)
-            {
-                DebugLogger.LogFormat("CheckShopJoker: No JokerEnum for need {0}", need.Value);
-                return false;
-            }
-            
-            var targetJoker = need.JokerEnum.Value;
-            var shop = singleCtx.GenerateFullShop(ante);
-            
-            for (int i = 0; i < ShopState.ShopSlots; i++)
-            {
-                ref var item = ref shop.Items[i];
-                if (item.Type == ShopState.ShopItem.ShopItemType.Joker && item.Joker == targetJoker)
-                {
-                    // Check edition if needed
-                    if (need.ParsedEdition.HasValue && item.Edition != need.ParsedEdition.Value)
-                        continue;
-                        
-                    // Check stickers if needed
-                    if (need.ParsedStickers.Count > 0)
-                    {
-                        // TODO: Check if ShopState.ShopItem has sticker information
-                        // For now, assume stickers aren't tracked in shop state
-                        DebugLogger.LogFormat("[CheckShopJoker] Sticker checking not yet implemented");
-                    }
-                    
-                    return true;
-                }
-            }
+            DebugLogger.LogFormat("[WARNING] Shop joker checking not implemented yet. TODO: Implement shop joker checking.");
             return false;
         }
 
@@ -785,62 +723,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         private static bool CheckPlanetInPacks(ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire need, int ante)
         {
-            if (!need.PlanetEnum.HasValue)
-                return false;
-                
-            var targetPlanet = (MotelyItemType)MotelyItemTypeCategory.PlanetCard | (MotelyItemType)need.PlanetEnum.Value;
-            int packsToCheck = ante == 1 ? 4 : 6;
-            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, false);
-            
-            bool planetStreamInit = false;
-            MotelySinglePlanetStream planetStream = default;
-            
-            for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
-            {
-                var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
-                
-                if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
-                {
-                    if (!planetStreamInit)
-                    {
-                        planetStreamInit = true;
-                        planetStream = singleCtx.CreateCelestialPackPlanetStreamCached(ante);
-                    }
-                    
-                    var packContents = singleCtx.GetCelestialPackContents(ref planetStream, pack.GetPackSize());
-                    if (packContents.Contains(targetPlanet))
-                        return true;
-                }
-            }
+            DebugLogger.LogFormat("[WARNING] PlanetCard pack checking not implemented yet. TODO: Implement planet pack checking.");
             return false;
         }
 
         private static bool CheckSpectralInPacks(ref MotelySingleSearchContext singleCtx, OuijaConfig.Desire need, int ante)
         {
-            if (!need.SpectralEnum.HasValue)
-            {
-                DebugLogger.Log("Missing SpectralEnum for Spectral need");
-                throw new ArgumentException("SpectralEnum must be provided for spectral needs", nameof(need));
-            }
-            var targetSpectral = (MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)need.SpectralEnum.Value;
-            int packsToCheck = ante == 1 ? 4 : 6;
-            for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
-            {
-                var spectralStream = singleCtx.CreateSpectralPackStream(ante);
-                var packContents = singleCtx.GetSpectralPackContents(ref spectralStream, MotelySingleItemSet.MaxLength); // Use correct pack size if available
-                string spectralContentsStr = "";
-                for (int i = 0; i < packContents.Length; i++)
-                {
-                    if (i > 0) spectralContentsStr += ",";
-                    spectralContentsStr += packContents.GetItem(i).ToString();
-                }
-                DebugLogger.LogFormat("[DEBUG][CheckSpectralInPacks] Spectral pack ante={0}, packIndex={1}, contents=[{2}]", ante, packIndex + 1, spectralContentsStr);
-                if (packContents.Contains(targetSpectral))
-                {
-                    DebugLogger.LogFormat("[DEBUG][CheckSpectralInPacks] Found targetSpectral={0} in Spectral pack ante={1}, packIndex={2}", targetSpectral, ante, packIndex + 1);
-                    return true;
-                }
-            }
+            DebugLogger.LogFormat("[WARNING] SpectralCard pack checking not implemented yet. TODO: Implement spectral pack checking.");
             return false;
         }
 
@@ -901,34 +790,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             continue;
                         }
                         
-                        // Handle shop jokers with proper edition checking
-                        var shop = singleCtx.GenerateFullShop(ante);
-                        var targetJoker = want.JokerEnum.Value;
-                        
-                        for (int i = 0; i < ShopState.ShopSlots; i++)
-                        {
-                            ref var item = ref shop.Items[i];
-                            if (item.Type == ShopState.ShopItem.ShopItemType.Joker && item.Joker == targetJoker)
-                            {
-                                // Check edition
-                                bool editionMatches = !want.ParsedEdition.HasValue || item.Edition == want.ParsedEdition.Value;
-                                
-                                if (editionMatches)
-                                {
-                                    DebugLogger.LogFormat("[ProcessWantsAndScore] Shop Joker MATCH: {0} with edition {1} (required: {2}) at ante {3}", 
-                                        item.Joker, item.Edition, want.ParsedEdition?.ToString() ?? "None", ante);
-                                    
-                                    foundInThisAnte = true;
-                                    result.ScoreWants[wantIndex] += want.Score;
-                                    
-                                    if (item.Edition == MotelyItemEdition.Negative && want.ParsedEdition == MotelyItemEdition.Negative)
-                                    {
-                                        result.DesiredNegativeJokers++;
-                                    }
-                                    break; // Found the joker, stop searching
-                                }
-                            }
-                        }
+                        DebugLogger.LogFormat("[WARNING] Shop joker checking not implemented yet. TODO: Implement shop joker checking.");
+                        // ...existing code...
                     }
                     else if (typeCat == MotelyItemTypeCategory.TarotCard)
                     {
@@ -986,19 +849,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckPlanetInShopOrPacks(ref MotelySingleSearchContext singleCtx, 
             OuijaConfig.Desire want, int ante)
         {
-            if (!want.PlanetEnum.HasValue)
-                return false;
-                
-            var targetPlanet = (MotelyItemType)MotelyItemTypeCategory.PlanetCard | (MotelyItemType)want.PlanetEnum.Value;
-            
-            // Check shop first
-            var planetStream = singleCtx.CreateShopPlanetStream(ante);
-            var planet = singleCtx.GetNextShopPlanet(ref planetStream);
-            if (planet.Type == targetPlanet)
-                return true;
-                
-            // Check packs
-            return CheckPlanetInPacks(ref singleCtx, want, ante);
+            DebugLogger.LogFormat("[WARNING] PlanetCard shop/pack checking not implemented yet. TODO: Implement planet shop/pack checking.");
+            return false;
         }
 
         private static bool CheckTarotInShopOrPacks(ref MotelySingleSearchContext singleCtx, 
@@ -1011,28 +863,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckSpectralInShopOrPacks(ref MotelySingleSearchContext singleCtx, 
             OuijaConfig.Desire want, int ante)
         {
-            if (!want.SpectralEnum.HasValue)
-                return false;
-                
-            var targetSpectral = (MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)want.SpectralEnum.Value;
-            DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] Checking spectral {0} in ante {1}", targetSpectral, ante);
-            
-            // Check shop first
-            var spectralStream = singleCtx.CreateShopSpectralStream(ante);
-
-
-            var spectral = singleCtx.GetNextShopSpectral(ref spectralStream);
-
-            DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] Shop spectral: {0}", spectral.Type);
-            // If spectral matches, return true
-            if (spectral.Type == targetSpectral)
-            {
-                DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] Found matching spectral: {0}", spectral.Type);
-                return true;
-            }
-            DebugLogger.LogFormat("[DEBUG][CheckSpectralInShopOrPacks] No matching spectral in shop, checking packs");
-            // Check packs
-            return CheckSpectralInPacks(ref singleCtx, want, ante);
+            DebugLogger.LogFormat("[WARNING] SpectralCard shop/pack checking not implemented yet. TODO: Implement spectral shop/pack checking.");
+            return false;
         }
 
         private static bool CheckTagForAnte(ref MotelySingleSearchContext singleCtx, 
@@ -1076,7 +908,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         }
 
         // Check for legendary/soul jokers across all packs
-        private static bool PerkeoStyleSoulJokerCheck(ref MotelySingleSearchContext singleCtx, MotelyJoker targetJoker, MotelyItemEdition? requiredEdition = null, int ante = 0)
+        private static bool SoulJokerCheck(ref MotelySingleSearchContext singleCtx, MotelyJoker targetJoker, MotelyItemEdition? requiredEdition = null, int ante = 0)
         {
             // Convert MotelyJoker to the corresponding MotelyItemType for proper comparison
             int legendaryJokerBase = (int)targetJoker & ~(Motely.JokerRarityMask << Motely.JokerRarityOffset);

@@ -24,11 +24,6 @@ public static class MotelyPrngKeys
     public const string Planet = "Planet";
     public const string CelestialPack = "pl1"; // MUST match Immolate's S_Celestial
 
-    // Spectral card keys
-    public const string Spectral = "Spectral";
-    public const string SpectralPack = "spe";
-    public const string SpectralSoul = "soul_";
-
     // Shop source
     public const string Shop = "sho";
     

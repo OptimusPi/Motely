@@ -733,7 +733,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
             Debug.Assert(!searchParams.IsAdditionalFilter);
 
             MotelyVectorSearchContext searchContext = new(in searchParams);
-            searchContext.SearchInstance = Search;
+            // SearchInstance is not available; remove reference and use searchContext directly if needed
 
             VectorMask searchResultMask = Search._baseFilter.Filter(ref searchContext);
 
@@ -869,7 +869,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
             );
 
             MotelyVectorSearchContext searchContext = new(in searchParams);
-            searchContext.SearchInstance = Search;
+            // SearchInstance is not available; remove reference and use searchContext directly if needed
 
             VectorMask searchResultMask = Search._additionalFilters[filterIndex].Filter(ref searchContext);
 
