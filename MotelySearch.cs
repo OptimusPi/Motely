@@ -424,9 +424,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        // Always suppress seed-only output when using Ouija filters - they handle their own CSV output
-        // The base filter will have already called OuijaJsonFilter which prints the full CSV row
-        return;
+        // Only suppress output if Ouija reporting is active
+        if (_ouijaReportingActive) return;
+        // Only print seed if not Ouija reporting
+        FancyConsole.WriteLine($"{seed}");
     }
 
     private static readonly string[] coolList = new[] {

@@ -210,10 +210,10 @@ namespace Motely
                 if (!quiet)
                     Console.WriteLine($"🔍 Starting search with {threads} threads, batch size {batchSize}, starting at batch index {startBatch}, cutoff score {cutoff}");
                 // uncomment for Perkeo Observatory filter
-                var searchSettings = new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
+                //var searchSettings = new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
                 // uncomment for OuijaFilter
-                //var ouijaDesc = new OuijaJsonFilterDesc(config) { Cutoff = cutoff };
-                //var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
+                var ouijaDesc = new OuijaJsonFilterDesc(config) { Cutoff = cutoff };
+                var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
                     .WithSequentialSearch()
                     .WithBatchCharacterCount(4)
                     .WithThreadCount(threads)
@@ -231,9 +231,11 @@ namespace Motely
                 PrintResultsHeader(config);
 
                 // Create search but don't start yet
-                //var search = new MotelySearch<OuijaJsonFilterDesc.OuijaJsonFilter>(searchSettings);
-                var search = new MotelySearch<NegativeTagFilterDesc.NegativeTagFilter>(searchSettings);
-                
+                var search = new MotelySearch<OuijaJsonFilterDesc.OuijaJsonFilter>(searchSettings);
+
+                // Activate Ouija reporting to suppress duplicate output
+                search.ActivateOuijaReporting(OuijaJsonFilterDesc.GetWantsColumnNames(config));
+
                 // Now start the search
                 search.Start();
                 

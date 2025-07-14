@@ -7,15 +7,19 @@
     "NumNeeds": 3,
     "NumWants": 5,
     "Needs": [
-      { "Type": "Tag", "Value": "NegativeTag", "SearchAntes": [2], "Score": 1}
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [2], "Score": 1 }
+
 
     ],
     "Wants": [
-      { "Type": "Joker", "Value": "Mime", "Edition": "None", "SearchAntes": [2,3,4,5,6,7], "Score": 1 },
-      { "Type": "Joker", "Value": "Baron", "Edition": "None", "SearchAntes": [2,3,4,5,6,7], "Score": 1 },
-      { "Type": "Joker", "Value": "HangingChad", "Edition": "None", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 },
-      { "Type": "Joker", "Value": "Mime", "Edition": "Negative", "SearchAntes": [6,7], "Score": 1 },
-      { "Type": "Joker", "Value": "Baron", "Edition": "Negative", "SearchAntes": [6,7], "Score": 1 }
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [2], "Score": 1 },
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [3], "Score": 1 },
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [4], "Score": 1 },
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [5], "Score": 1 },
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [6], "Score": 1 },
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [7], "Score": 1 },
+      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [8], "Score": 1 }
+
     ],
     "MinSearchAnte": 1,
     "MaxSearchAnte": 8,

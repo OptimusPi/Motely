@@ -474,19 +474,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return mask;
             }
             var targetTag = need.TagEnum.Value;
-            MotelyVectorTagStream tagStream = searchContext.CreateTagStream(ante);
-            VectorMask hasTag = VectorMask.AllBitsClear;
-            int tagsToCheck = 2; // Default: small blind and big blind, but future-proof for more
-            for (int i = 0; i < tagsToCheck; i++)
-            {
-                var blindTag = searchContext.GetNextTag(ref tagStream);
-                DebugLogger.LogFormat("[DEBUG] Tag check ante {0}, blind {1}: BlindTag={2} Target={3}", ante, i, blindTag, targetTag);
-                var match = VectorEnum256.Equals(blindTag, targetTag);
-                DebugLogger.LogFormat("[DEBUG] Tag match ante {0}, blind {1}: Match={2}", ante, i, match);
-                hasTag |= match;
-            }
-            DebugLogger.LogFormat("[DEBUG] Tag final mask ante {0}: HasTag={1}", ante, hasTag);
-            return mask & hasTag;
+            MotelyVectorTagStream tagStream = searchContext.CreateTagStreamCached(ante);
+            var smallBlindTag = searchContext.GetNextTag(ref tagStream);
+            var bigBlindTag = searchContext.GetNextTag(ref tagStream);
+            var smallBlindMatch = VectorEnum256.Equals(smallBlindTag, targetTag);
+            // Only require small blind to match
+            DebugLogger.LogFormat("[DEBUG] Tag check ante {0}: SmallBlind={1} BigBlind={2} Target={3}", ante, smallBlindTag, bigBlindTag, targetTag);
+            DebugLogger.LogFormat("[DEBUG] Tag match ante {0}: SmallMatch={1} FinalMask={2}", ante, smallBlindMatch, smallBlindMatch);
+            return mask & smallBlindMatch;
         }
 
         private static VectorMask ProcessVoucherNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
@@ -630,7 +625,21 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     return false; // No voucher need satisfied
             }
 
-            foreach (var need in config.Needs.Where(n => n != null && !string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)))
+            // Only process truly non-vectorizable needs
+            var nonVectorizableNeeds = config.Needs.Where(n => n != null && (
+                string.Equals(n.Type, "SoulJoker", StringComparison.OrdinalIgnoreCase) ||
+                n.TypeCategory == MotelyItemTypeCategory.Joker ||
+                n.TypeCategory == MotelyItemTypeCategory.TarotCard ||
+                n.TypeCategory == MotelyItemTypeCategory.PlanetCard ||
+                n.TypeCategory == MotelyItemTypeCategory.SpectralCard ||
+                n.TypeCategory == MotelyItemTypeCategory.PlayingCard ||
+                string.Equals(n.Type, "Boss", StringComparison.OrdinalIgnoreCase)
+            )).ToArray();
+
+            if (nonVectorizableNeeds.Length == 0)
+                return true; // No non-vectorizable needs, always pass
+
+            foreach (var need in nonVectorizableNeeds)
             {
                 var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
                 bool foundInAnyAnte = false;
@@ -1059,13 +1068,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return false;
                 
             var targetTag = want.TagEnum.Value;
-            var tagStream = singleCtx.CreateTagStream(ante);
+            var tagStream = singleCtx.CreateTagStreamCached(ante);
             
-            // Check if EITHER blind has the tag
+            // Only require small blind to match
             var smallBlindTag = singleCtx.GetNextTag(ref tagStream);
             var bigBlindTag = singleCtx.GetNextTag(ref tagStream);
-            
-            return smallBlindTag == targetTag || bigBlindTag == targetTag;
+            return smallBlindTag == targetTag;
         }
 
         private static bool CheckVoucherForAnte(ref MotelySingleSearchContext singleCtx, 
