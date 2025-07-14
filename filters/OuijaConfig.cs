@@ -50,6 +50,7 @@ public class OuijaConfig
         public MotelyBossBlind? BossEnum { get; set; }
         
         // Additional string properties for complex filters
+        [JsonPropertyName("Stickers")]
         public List<string> JokerStickers { get; set; } = new();
         public string Rank { get; set; } = string.Empty;
         public string Suit { get; set; } = string.Empty;
@@ -270,18 +271,12 @@ public class OuijaConfig
         /// </summary>
         public string GetDisplayString()
         {
-            return Type switch
-            {
-                "Joker" or "SoulJoker" => JokerEnum?.ToString() ?? Value,
-                "PlanetCard" or "Planet" => PlanetEnum?.ToString() ?? Value,
-                "SpectralCard" or "Spectral" => SpectralEnum?.ToString() ?? Value,
-                "TarotCard" or "Tarot" => TarotEnum?.ToString() ?? Value,
-                "Tag" => TagEnum?.ToString() ?? Value,
-                "Voucher" => VoucherEnum?.ToString() ?? Value,
-                "Boss" => BossEnum?.ToString() ?? Value,
-                "PlayingCard" => FormatPlayingCardDisplay(),
-                _ => Value
-            };
+            // Stickers first, then edition, then base name, no spaces
+            var stickers = (JokerStickers != null && JokerStickers.Count > 0) ? string.Join("", JokerStickers) : string.Empty;
+            var editionPrefix = (!string.IsNullOrEmpty(Edition) && !Edition.Equals("None", StringComparison.OrdinalIgnoreCase)) ? Edition : string.Empty;
+            var baseName = JokerEnum?.ToString() ?? VoucherEnum?.ToString() ?? Value;
+            var display = stickers + editionPrefix + baseName;
+            return display;
         }
         
         private string FormatPlayingCardDisplay()

@@ -15,19 +15,20 @@ public class OuijaResult
     // Success flag for Motely output (not in C struct, but useful for filtering)
     public bool Success { get; set; }
 
-    public string ToCsvRow(int numWants = -1)
+    public string ToCsvRow(OuijaConfig config, int numWants = -1)
     {
         // Start with seed and total score
         var row = $"{Seed},{TotalScore}";
         
         // Add scores for each want, limited by numWants parameter
-        if (ScoreWants != null)
+        if (ScoreWants != null && config?.Wants != null)
         {
             // If numWants is -1 (default), show all; if 0 or positive, limit to that number
             int wantsToShow = numWants == -1 ? ScoreWants.Length : Math.Min(numWants, ScoreWants.Length);
-            for (int i = 0; i < wantsToShow; i++)
+            for (int i = 0; i < wantsToShow && i < config.Wants.Length; i++)
             {
-                row += $",{ScoreWants[i]}";
+                var score = ScoreWants[i];
+                row += $",{score}";
             }
         }
         return row;

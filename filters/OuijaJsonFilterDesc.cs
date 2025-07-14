@@ -208,7 +208,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     {
                         // Print CSV directly with limited columns
                         var wantColumns = OuijaJsonFilterDesc.GetWantsColumnNames(localConfig!);
-                        FancyConsole.WriteLine(result.ToCsvRow(wantColumns.Length));
+                        FancyConsole.WriteLine(result.ToCsvRow(localConfig!, wantColumns.Length));
                     }
                     return result.Success && result.TotalScore >= cutoff;
                 });

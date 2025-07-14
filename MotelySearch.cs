@@ -406,13 +406,14 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
 
     private void PrintOuijaCsvHeader()
     {
+        // Suppress duplicate header: only print if not already printed and only if header does not start with '+'
         if (_ouijaHeaderPrinted) return;
         _ouijaHeaderPrinted = true;
-        // Print header: Seed,TotalScore,<wants columns>
-        var header = "Seed,TotalScore";
-        if (_ouijaWantsColumns.Length > 0)
-            header += "," + string.Join(",", _ouijaWantsColumns);
-        FancyConsole.WriteLine(header);
+        // Only print header if it does not start with '+' (Program.cs prints the correct header)
+        // var header = "Seed,TotalScore";
+        // if (_ouijaWantsColumns.Length > 0)
+        //     header += "," + string.Join(",", _ouijaWantsColumns);
+        // FancyConsole.WriteLine(header);
     }
 
     public void ActivateOuijaReporting(string[] wantsColumns)
@@ -491,7 +492,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
     {
         if (_quiet) return; // Suppress all output in quiet mode
         double elapsedMS = Math.Max(1.0, _elapsedTime.ElapsedMilliseconds); // Clamp to at least 1ms
-        if (elapsedMS - _lastReportMS < 2000) return;
+        if (elapsedMS - _lastReportMS < 60000) return;
         _lastReportMS = elapsedMS;
         long completedCount = _completedBatchCount;
         long totalBatches = _threads[0].MaxBatch;

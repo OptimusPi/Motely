@@ -11,133 +11,93 @@
     {
       "type": "Voucher",
       "value": "Overstock",
-      "searchAntes": [1,2,3,4],
-      "score": 1
+      "searchAntes": [1,2,3,4]
     },
                 {
       "type": "Voucher", 
       "value": "DirectorsCut",
-      "searchAntes": [1,2,3,4],
-      "score": 1
+      "searchAntes": [1,2,3,4]
     },
     {
       "type": "Voucher",
       "value": "Retcon",
-      "searchAntes": [3,4,5,6],
-      "score": 1
+      "searchAntes": [3,4,5,6]
     },
     {
       "type": "Joker",
       "value": "InvisibleJoker",
       "edition": "None", 
-      "searchAntes": [2,3,4,5],
-      "score": 1
+      "searchAntes": [2,3,4,5]
     },
     {
       "type": "Joker",
       "value": "Chicot",
       "edition": "Negative",
-      "searchAntes": [1, 2, 3,4,5,6],
-      "score": 10
-    },
-    {
-      "type": "Joker",
-      "value": "Blueprint",
-      "edition": "None",
-      "searchAntes": [1, 2, 3],
-      "score": 10
-    },
-    {
-      "type": "Joker",
-      "value": "Chicot",
-      "edition": "Positive",
-      "searchAntes": [1, 2, 3],
-      "score": 10
-    },
-    {
-      "type": "Joker",
-      "value": "Chicot",
-      "edition": "Neutral",
-      "searchAntes": [1, 2, 3],
-      "score": 10
+      "searchAntes": [1,2,3,4,5,6]
     }
   ],
   "wants": [
-        {
-      "type": "Joker",
-      "value": "InvisibleJoker",
-      "edition": "Negative",
-      "searchAntes": [2, 3],
-      "score": 1
-    },
-    {
-      "type": "SoulJoker",
-      "value": "Perkeo",
-      "edition": "None",
-      "searchAntes": [1, 2, 3, 4, 5, 6, 7],
-      "score": 1
-    },
-        {
-      "type": "SoulJoker",
-      "value": "Perkeo",
-      "edition": "Negative",
-      "searchAntes": [1, 2, 3, 4, 5, 6, 7],
-      "score": 1
-    },
     {
       "type": "Joker",
       "value": "Blueprint",
       "edition": "None",
-      "searchAntes": [3, 4, 5],
+      "searchAntes": [1, 2, 3, 4, 5, 6, 7,8],
       "score": 1
     },
         {
       "type": "Joker",
       "value": "Blueprint",
       "edition": "Negative",
-      "searchAntes": [3, 4, 5],
+      "searchAntes": [1,2,3,4,5,6,7,8],
       "score": 1
     },
     {
       "type": "Joker",
       "value": "Troubadour",
       "edition": "Negative",
-      "searchAntes": [6, 7],
+      "searchAntes": [1,2,3,4,5,6,7,8],
       "score": 1
     },
-        {
+    {
       "type": "Joker",
       "value": "TurtleBean",
       "edition": "Negative",
-      "searchAntes": [7, 8, 9, 10],
+      "searchAntes": [1,2,3,4,5,6,7,8],
       "score": 1
     },
-            {
+  {
+      "type": "Joker",
+      "value": "Juggler",
+      "edition": "Negative",
+      "searchAntes": [1,2,3,4,5,6,7,8],
+      "score": 1
+    },
+    {
       "type": "Joker",
       "value": "HangingChad",
       "edition": "Negative",
-      "searchAntes": [7, 8],
+      "searchAntes": [1,2,3,4,5,6,7,8],
       "score": 1
     },
             {
       "type": "Joker",
       "value": "Baron",
       "edition": "Negative",
-      "searchAntes": [6,7],
+      "searchAntes": [1,2,3,4,5,6,7,8],
       "score": 1
     },
-            {
+    {
       "type": "Joker",
       "value": "Mime",
       "edition": "Negative",
-      "searchAntes": [5,6,7],
+      "searchAntes": [1,2,3,4,5,6,7,8],
       "score": 1
     },
     {
       "type": "Joker",
       "value": "Brainstorm",
       "edition": "Negative",
-      "searchAntes": [3, 4, 5, 6, 7],
+      "searchAntes": [1,2,3,4,5,6,7,8],
       "score": 1
     }
   ],

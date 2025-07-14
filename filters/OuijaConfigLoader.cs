@@ -53,6 +53,17 @@ public static class OuijaConfigLoader
     {
         if (desire == null) return;
 
+        // Support 'Stickers' as alias for 'JokerStickers' if present
+        if (desire.JokerStickers.Count == 0 && desire.GetType().GetProperty("Stickers") != null)
+        {
+            var stickersProp = desire.GetType().GetProperty("Stickers");
+            var stickersValue = stickersProp?.GetValue(desire) as IEnumerable<string>;
+            if (stickersValue != null)
+            {
+                desire.JokerStickers.AddRange(stickersValue);
+            }
+        }
+
         // Parse type to TypeCategory
         if (!string.IsNullOrEmpty(desire.Type) && !desire.TypeCategory.HasValue)
         {

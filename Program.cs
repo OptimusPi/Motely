@@ -281,118 +281,40 @@ namespace Motely
             // Print deck/stake info as comments
             Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
             Console.WriteLine($"# Max Ante: {config.MaxSearchAnte}");
-            
+            // Print CSV header only once, with + prefix
             var header = "+Seed,TotalScore";
-
             if (config.ScoreNaturalNegatives)
                 header += ",NaturalNegatives";
             if (config.ScoreDesiredNegatives)
                 header += ",DesiredNegatives";
-
             // Add column for each want
             if (config.Wants != null)
             {
-                for (int i = 0; i < config.Wants.Length; i++)
+                foreach (var want in config.Wants)
                 {
-                    var want = config.Wants[i];
                     var col = FormatWantColumn(want);
                     header += $",{col}";
                 }
             }
-
             Console.WriteLine(header);
         }
 
-        static string FormatWantColumn(OuijaConfig.Desire want)
-        {
-            var parts = new List<string>();
-
-            if (!string.IsNullOrEmpty(want.Edition) && want.Edition != "None")
-                parts.Add(want.Edition);
-            if (!string.IsNullOrEmpty(want.Value))
-                parts.Add(want.Value);
-            if (!string.IsNullOrEmpty(want.Rank))
-                parts.Add(want.Rank);
-            if (!string.IsNullOrEmpty(want.Suit))
-                parts.Add(want.Suit);
-            if (want.JokerStickers?.Count > 0)
-                parts.AddRange(want.JokerStickers);
-
-            return string.Join("_", parts);
-        }
-
+        // Helper to pretty-print OuijaConfig for debug
         static void PrintOuijaConfigDebug(OuijaConfig config)
         {
             if (config == null)
             {
-                Console.WriteLine("<null config>");
+                Console.WriteLine("[DEBUG] Config is null");
                 return;
             }
-            Console.WriteLine($"NumNeeds: {config.Needs?.Length ?? 0}, NumWants: {config.Wants?.Length ?? 0}");
-            if (config.Needs != null && config.Needs.Length > 0)
-            {
-                Console.WriteLine("Needs:");
-                foreach (var need in config.Needs)
-                {
-                    if (need == null) continue;
-                    Console.WriteLine($"  - Type: {need.Type}, Value: '{need.Value}', JokerEnum: {need.JokerEnum?.ToString() ?? "<MISSING_ENUM>"}, PlanetEnum: {need.PlanetEnum?.ToString() ?? "<MISSING_ENUM>"}, SpectralEnum: {need.SpectralEnum?.ToString() ?? "<MISSING_ENUM>"}, VoucherEnum: {need.VoucherEnum?.ToString() ?? "<MISSING_ENUM>"}, TagEnum: {need.TagEnum?.ToString() ?? "<MISSING_ENUM>"}, TarotEnum: {need.TarotEnum?.ToString() ?? "<MISSING_ENUM>"}, Edition: {need.Edition}, Score: {need.Score}, DesireByAnte: {need.DesireByAnte}, SearchAntes: [{string.Join(",", need.SearchAntes ?? new int[0])}] ");
-                }
-            }
-            if (config.Wants != null && config.Wants.Length > 0)
-            {
-                Console.WriteLine("Wants:");
-                foreach (var want in config.Wants)
-                {
-                    if (want == null) continue;
-                    Console.WriteLine($"  - Type: {want.Type}, Value: '{want.Value}', JokerEnum: {want.JokerEnum?.ToString() ?? "<MISSING_ENUM>"}, PlanetEnum: {want.PlanetEnum?.ToString() ?? "<MISSING_ENUM>"}, SpectralEnum: {want.SpectralEnum?.ToString() ?? "<MISSING_ENUM>"}, VoucherEnum: {want.VoucherEnum?.ToString() ?? "<MISSING_ENUM>"}, TagEnum: {want.TagEnum?.ToString() ?? "<MISSING_ENUM>"}, TarotEnum: {want.TarotEnum?.ToString() ?? "<MISSING_ENUM>"}, Edition: {want.Edition}, Score: {want.Score}, DesireByAnte: {want.DesireByAnte}, SearchAntes: [{string.Join(",", want.SearchAntes ?? new int[0])}] ");
-                }
-            }
+            Console.WriteLine(config.ToJson());
+        }
+
+        // Helper to format a want column for the CSV header
+        static string FormatWantColumn(OuijaConfig.Desire want)
+        {
+            if (want == null) return "Want";
+            return want.GetDisplayString();
         }
     }
 }
-
-//IMotelySearch search = new MotelySearchSettings<LuckyCardFilterDesc.LuckyCardFilter>(new LuckyCardFilterDesc())
-//IMotelySearch search = new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc())
-//IMotelySearch search = new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
-// IMotelySearch search = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(new OuijaJsonFilterDesc(config: OuijaConfig.Load("JsonItemFilters/test.ouija.json", OuijaConfig.GetOptions())))
-//     .WithThreadCount(Environment.ProcessorCount - 1)
-//     .WithListSearch([
-// "D9FTADTT",
-// "D9FTBIZH",
-// "D9FTFEG1",
-// "D9FTVQHE",
-// "D9FU3U3O",
-// "D9FU3XYT",
-// "D9FU84RQ",
-// "D9FUDGOU",
-// "D9FUIT2N",
-// "D9FUJ7VX",
-// "D9FUMBOF",
-// "D9FUOF64",
-// "D9FUVAQ1",
-// "D9FVA9AO",
-// "D9FVF61C",
-// "D9FTJ4VJ"])
-    // .WithProviderSearch(new MotelyRandomSeedProvider(2000000000))
-    //.WithSequentialSearch()
-    //.Start();
-//IMotelySearch search = new MotelySearchSettings<LuckyCardFilterDesc.LuckyCardFilter>(new LuckyCardFilterDesc())
-// IMotelySearch search = new MotelySearchSettings<ShuffleFinderFilterDesc.ShuffleFinderFilter>(new ShuffleFinderFilterDesc())
-// IMotelySearch search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
-// IMotelySearch search = new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
-    //.WithThreadCount(Environment.ProcessorCount - 2)
-    // .WithThreadCount(1)
-    // .WithStartBatchIndex(41428)
-
-    // .WithListSearch(["ES6B2111"])
-    // .WithProviderSearch(new MotelyRandomSeedProvider(2000000000))
-    // .WithAdditionalFilter(new LuckyCardFilterDesc())
-    //.WithAdditionalFilter(new PerkeoObservatoryFilterDesc())
-    //.Start();
-
-// var search = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
-//                 .WithProviderSearch(new MotelyRandomSeedProvider(2100000000))
-//                 .WithThreadCount(16)
-//                 .WithSequentialSearch()
-//                 .WithStartBatchIndex(0)
-//                 .Start();

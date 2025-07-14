@@ -4,22 +4,16 @@
   "author": "you",
   "keywords": ["HUGE", "ANTE", "TEST"],
   "filter_config": {
-    "NumNeeds": 3,
-    "NumWants": 5,
+    "NumNeeds": 2,
+    "NumWants": 2,
     "Needs": [
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [2], "Score": 1 }
-
-
+      { "Type": "Joker", "Value": "JokerStencil", "Edition": "Negative", "Stickers": ["Eternal"], "SearchAntes": [1], "Score": 1 }
     ],
     "Wants": [
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [2], "Score": 1 },
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [3], "Score": 1 },
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [4], "Score": 1 },
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [5], "Score": 1 },
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [6], "Score": 1 },
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [7], "Score": 1 },
-      { "Type": "Tag", "Value": "NegativeTag", "TagEnum": "NegativeTag", "SearchAntes": [8], "Score": 1 }
-
+      { "Type": "Joker", "Value": "Blueprint", "Edition": "Negative", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 },
+      { "Type": "Joker", "Value": "Blueprint", "Edition": "None", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 },
+      { "Type": "Joker", "Value": "Blueprint", "Edition": "None", "Stickers": ["Eternal"], "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 },
+      { "Type": "Joker", "Value": "Blueprint", "Edition": "Negative", "Stickers": ["Eternal"], "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 }
     ],
     "MinSearchAnte": 1,
     "MaxSearchAnte": 8,
