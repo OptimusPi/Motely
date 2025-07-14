@@ -101,8 +101,15 @@ public static class OuijaConfigLoader
             // Parse Voucher
             else if (desire.Type?.Equals("Voucher", StringComparison.OrdinalIgnoreCase) == true)
             {
-                if (Enum.TryParse<MotelyVoucher>(desire.Value, true, out var voucher))
+                if (MotelyEnumUtil.TryParseEnum<MotelyVoucher>(desire.Value, out var voucher))
+                {
                     desire.VoucherEnum = voucher;
+                }
+                else
+                {
+                    var validNames = string.Join(", ", MotelyEnumUtil.GetAllCanonicalNames<MotelyVoucher>());
+                    Console.WriteLine($"[WARNING] Could not map voucher '{desire.Value}' to MotelyVoucher enum. Valid values: {validNames}");
+                }
             }
         }
 

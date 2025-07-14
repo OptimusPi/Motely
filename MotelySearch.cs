@@ -313,6 +313,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
     private bool _ouijaHeaderPrinted = false;
     private string[] _ouijaWantsColumns = Array.Empty<string>();
 
+    private long _lastSeedsProcessed = -1;
+
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
         MotelyFilterCreationContext filterCreationContext = new()
@@ -427,34 +429,101 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IMotelySearch
         return;
     }
 
+    private static readonly string[] coolList = new[] {
+        "You are the seed whisperer!",
+        "Balatro gods are watching.",
+        "May your runs be legendary.",
+        "Don't forget to hydrate!",
+        "The Joker is wild today.",
+        "Tarot cards fear you.",
+        "Spectrals wish they were you.",
+        "Vouchers envy your luck.",
+        "Shuffle responsibly.",
+        "Perkeo approves this message.",
+        "Ouija boards can't keep up.",
+        "Seed hash cache: 100% vibes.",
+        "DebugLogger is proud of you.",
+        "Motely: now with extra chaos.",
+        "Your luck stat is over 9000!",
+        "pifreak loves you! (and so do I)",
+        "You found the secret message!",
+        "This line is intentionally funny.",
+        "Balatro devs are jealous.",
+        "You are the chosen seedling.",
+        "tacodiva is a taco diva for sure!",
+        "May your seeds be ever in your favor.",
+        "Your RNG is blessed today.",
+        "Spectrals wish they were you.",
+        "Vouchers envy your luck.",
+        "MATH IS FUN!. MATHISFUN mathisfun_",
+        "You are the chosen seedling.",
+        "You are the seed whisperer!",
+        "Balatro gods are watching.",
+        "May your runs be legendary.",
+        "Don't forget to hydrate!",
+        "The Joker is wild today.",
+        "Tarot cards fear you.",
+        "Spectrals wish they were you.",
+        "Vouchers envy your luck.",
+        "Shuffle responsibly.",
+        "Perkeo approves this message.",
+        "Ouija boards can't keep up.",
+        "Seed hash cache: 100% vibes.",
+        "DebugLogger is proud of you.",
+        "Motely: now with extra chaos.",
+        "Your luck stat is over 9000!",
+        "pifreak loves you! (and so do I)",
+        "You found the secret message!",
+        "This line is intentionally funny.",
+        "Object Neference rot set ao tn onstance of an Inject.",
+        "Skibidi toilet is the future.",
+    };
+    private bool _motdPrinted = false;
+    private static string GetMotd()
+    {
+        var rand = new Random(DateTime.Now.Minute);
+        var pick = coolList[rand.Next(coolList.Length)];
+        return $"!pifreak loves you! {pick}";
+    }
+
     private void PrintReport()
     {
         if (_quiet) return; // Suppress all output in quiet mode
         double elapsedMS = Math.Max(1.0, _elapsedTime.ElapsedMilliseconds); // Clamp to at least 1ms
-        if (elapsedMS - _lastReportMS < 500) return;
+        if (elapsedMS - _lastReportMS < 2000) return;
         _lastReportMS = elapsedMS;
         long completedCount = _completedBatchCount;
         long totalBatches = _threads[0].MaxBatch;
-        double totalPortionFinished = completedCount / (double)totalBatches;
-        double timeEstimate = elapsedMS / Math.Max(0.001, totalPortionFinished);
-        double timeLeft = timeEstimate - elapsedMS;
-        string timeLeftFormatted;
-        bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
-        if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
+        long seedsProcessed = completedCount * _threads[0].SeedsPerBatch;
+        // Only print if seedsProcessed has changed
+        if (seedsProcessed == _lastSeedsProcessed) return;
+        _lastSeedsProcessed = seedsProcessed;
+        // If no seeds have been searched, print motd once and suppress status
+        if (seedsProcessed == 0)
         {
-            timeLeftFormatted = "--:--:--";
+            if (!_motdPrinted)
+            {
+                FancyConsole.WriteLine(GetMotd());
+                _motdPrinted = true;
+            }
+            return;
         }
-        else
-        {
-            TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
-            if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-            else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
-        }
+        long totalSeeds = totalBatches * _threads[0].SeedsPerBatch;
+        long seedsRemaining = Math.Max(0, totalSeeds - seedsProcessed);
+        double elapsedSeconds = Math.Max(1.0, elapsedMS / 1000.0);
+        double rate = seedsProcessed / elapsedSeconds; // seeds per second
+        double minRate = 1000.0; // Clamp to avoid wild swings
+        double etaSeconds = seedsRemaining / Math.Max(rate, minRate);
+        if (etaSeconds < 0 || double.IsNaN(etaSeconds) || double.IsInfinity(etaSeconds)) etaSeconds = 0;
+        TimeSpan timeLeftSpan = TimeSpan.FromSeconds(etaSeconds);
+        string timeLeftFormatted = timeLeftSpan.Days == 0 ? $"{timeLeftSpan:hh\\:mm\\:ss}" : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
         double seedsPerMS = 0;
         if (completedCount > 0)
-            seedsPerMS = completedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
+            seedsPerMS = seedsProcessed / elapsedMS;
         string seedsPerMSStr = seedsPerMS > 0 ? Math.Round(seedsPerMS).ToString() : "--";
-        OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMSStr} seeds/ms)");
+        double totalPortionFinished = completedCount / (double)totalBatches;
+        // Add total seeds searched to status output
+        OuijaStyleConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMSStr} seeds/ms) | {seedsProcessed:N0} seeds searched");
     }
 
     private void ReportResult(object result)
