@@ -11,12 +11,6 @@ namespace Motely
     {
         static int Main(string[] args)
         {
-            // Quick check for test mode without full parsing
-            if (args.Length > 0 && (args[0] == "--test" || args[0] == "-t"))
-            {
-                RunTestMenu();
-                return 0;
-            }
             
             var app = new CommandLineApplication
             {
@@ -82,13 +76,6 @@ namespace Motely
                 "Wordlist file (loads WordLists/<WL>.txt, one 8-char seed per line)",
                 CommandOptionType.SingleValue);
 
-            // .WithListSearch(["811M2111"])
-
-            var testOption = app.Option(
-                "--test|-t",
-                "Run interactive test menu",
-                CommandOptionType.NoValue);
-
             var seedOption = app.Option<string>(
                 "--seed <SEED>",
                 "Specific seed to search for (overrides batch options)",
@@ -113,12 +100,6 @@ namespace Motely
 
             app.OnExecute(() =>
             {
-                // Check for test mode first
-                if (testOption.HasValue())
-                {
-                    RunTestMenu();
-                    return 0;
-                }
                 
                 Console.WriteLine("🔍 Starting Motely Ouija Search");
                 var configName = configOption.Value()!;
@@ -229,10 +210,10 @@ namespace Motely
                 if (!quiet)
                     Console.WriteLine($"🔍 Starting search with {threads} threads, batch size {batchSize}, starting at batch index {startBatch}, cutoff score {cutoff}");
                 // uncomment for Perkeo Observatory filter
-                //var searchSettings = new MotelySearchSettings<PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
+                var searchSettings = new MotelySearchSettings<NegativeTagFilterDesc.NegativeTagFilter>(new NegativeTagFilterDesc())
                 // uncomment for OuijaFilter
-                var ouijaDesc = new OuijaJsonFilterDesc(config) { Cutoff = cutoff };
-                var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
+                //var ouijaDesc = new OuijaJsonFilterDesc(config) { Cutoff = cutoff };
+                //var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(ouijaDesc)
                     .WithSequentialSearch()
                     .WithBatchCharacterCount(4)
                     .WithThreadCount(threads)
@@ -250,7 +231,8 @@ namespace Motely
                 PrintResultsHeader(config);
 
                 // Create search but don't start yet
-                var search = new MotelySearch<OuijaJsonFilterDesc.OuijaJsonFilter>(searchSettings);
+                //var search = new MotelySearch<OuijaJsonFilterDesc.OuijaJsonFilter>(searchSettings);
+                var search = new MotelySearch<NegativeTagFilterDesc.NegativeTagFilter>(searchSettings);
                 
                 // Now start the search
                 search.Start();

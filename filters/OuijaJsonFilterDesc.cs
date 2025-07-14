@@ -36,13 +36,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         // Cache streams for all filter types and antes used in needs/wants
         var allAntes = new HashSet<int>();
-        
+        bool cacheTagStream = false;
         if (Config.Needs != null)
         {
             foreach (var need in Config.Needs)
             {
                 if (need == null) continue;
-                
+                if (string.Equals(need.Type, "Tag", StringComparison.OrdinalIgnoreCase)) cacheTagStream = true;
                 var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
                 foreach (var ante in searchAntes)
                 {
@@ -51,13 +51,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
             }
         }
-        
         if (Config.Wants != null)
         {
             foreach (var want in Config.Wants)
             {
                 if (want == null) continue;
-                
+                if (string.Equals(want.Type, "Tag", StringComparison.OrdinalIgnoreCase)) cacheTagStream = true;
                 var searchAntes = want.SearchAntes?.Length > 0 ? want.SearchAntes : new[] { want.DesireByAnte };
                 foreach (var ante in searchAntes)
                 {
@@ -66,7 +65,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
             }
         }
-
+        // Cache tag streams for all antes if any need/want is a tag
+        if (cacheTagStream)
+        {
+            foreach (var ante in allAntes)
+            {
+                ctx.CacheTagStream(ante);
+            }
+        }
         return new OuijaJsonFilter(Config, Cutoff);
     }
 
@@ -223,37 +229,44 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return mask;
             }
 
-            // If only one need and it's a voucher, use Perkeo-style logic
-            if (config.Needs.Length == 1 && string.Equals(config.Needs[0].Type, "Voucher", StringComparison.OrdinalIgnoreCase))
+            // Perkeo-style: If any voucher need is present in any ante, activate/pass
+            var voucherNeeds = config.Needs.Where(n => n != null && string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (voucherNeeds.Length > 0)
             {
-                var need = config.Needs[0];
-                var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
-                VectorMask needMask = VectorMask.AllBitsClear;
-                foreach (var ante in searchAntes)
+                VectorMask voucherMask = VectorMask.AllBitsClear;
+                foreach (var need in voucherNeeds)
                 {
-                    var voucherVec = searchContext.GetAnteFirstVoucher(ante);
-                    if (!need.VoucherEnum.HasValue)
+                    var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
+                    foreach (var ante in searchAntes)
                     {
-                        DebugLogger.Log("Missing VoucherEnum for Voucher need");
-                        continue;
+                        var voucherVec = searchContext.GetAnteFirstVoucher(ante);
+                        if (!need.VoucherEnum.HasValue)
+                        {
+                            DebugLogger.Log("Missing VoucherEnum for Voucher need");
+                            continue;
+                        }
+                        var targetVoucher = need.VoucherEnum.Value;
+                        var matchMask = VectorEnum256.Equals(voucherVec, targetVoucher);
+                        for (int lane = 0; lane < Vector512<double>.Count; lane++)
+                        {
+                            var foundVoucher = voucherVec[lane];
+                            DebugLogger.LogFormat("[DEBUG] Voucher check ante {0}, lane {1}: Found={2}, Target={3}", ante, lane, foundVoucher, targetVoucher);
+                        }
+                        voucherMask |= matchMask;
                     }
-                    var targetVoucher = need.VoucherEnum.Value;
-                    var matchMask = VectorEnum256.Equals(voucherVec, targetVoucher);
-                    // Debug output for each lane
-                    for (int lane = 0; lane < Vector512<double>.Count; lane++)
-                    {
-                        var foundVoucher = voucherVec[lane];
-                        DebugLogger.LogFormat("[DEBUG] Voucher check ante {0}, lane {1}: Found={2}, Target={3}", ante, lane, foundVoucher, targetVoucher);
-                    }
-                    needMask |= matchMask;
                 }
-                int passing = CountBitsSet(needMask);
-                DebugLogger.LogFormat("[PerkeoStyle] After voucher need: {0} seeds passing", passing);
-                return needMask;
+                int passing = CountBitsSet(voucherMask);
+                DebugLogger.LogFormat("[PerkeoStyle] After voucher needs (OR): {0} seeds passing", passing);
+                mask &= voucherMask;
+                if (mask.IsAllFalse())
+                {
+                    DebugLogger.Log("All seeds filtered out by voucher needs - no seeds passed requirements");
+                    return mask;
+                }
             }
 
             // Process each need
-            foreach (var need in config.Needs.Where(n => n != null))
+            foreach (var need in config.Needs.Where(n => n != null && !string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)))
             {
                 // Check if this is a non-vectorizable need
                 bool isNonVectorizable = false;
@@ -462,24 +475,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             }
             var targetTag = need.TagEnum.Value;
             MotelyVectorTagStream tagStream = searchContext.CreateTagStream(ante);
-            
-            // Check if EITHER blind has the tag (OR logic)
-            var smallBlindTag = searchContext.GetNextTag(ref tagStream);
-            var bigBlindTag = searchContext.GetNextTag(ref tagStream);
-            
-            var smallMatch = VectorEnum256.Equals(smallBlindTag, targetTag);
-            var bigMatch = VectorEnum256.Equals(bigBlindTag, targetTag);
-            var hasTag = smallMatch | bigMatch;
-            
-            // Debug output for single seed case
-            if (CountBitsSet(mask) == 1)
+            VectorMask hasTag = VectorMask.AllBitsClear;
+            int tagsToCheck = 2; // Default: small blind and big blind, but future-proof for more
+            for (int i = 0; i < tagsToCheck; i++)
             {
-                DebugLogger.LogFormat("[DEBUG] Tag check ante {0}: Looking for {1}", ante, targetTag);
-                DebugLogger.LogFormat("[DEBUG]   Small blind tags: {0}", smallBlindTag);
-                DebugLogger.LogFormat("[DEBUG]   Big blind tags: {0}", bigBlindTag);
-                DebugLogger.LogFormat("[DEBUG]   Match result: {0}", hasTag);
+                var blindTag = searchContext.GetNextTag(ref tagStream);
+                DebugLogger.LogFormat("[DEBUG] Tag check ante {0}, blind {1}: BlindTag={2} Target={3}", ante, i, blindTag, targetTag);
+                var match = VectorEnum256.Equals(blindTag, targetTag);
+                DebugLogger.LogFormat("[DEBUG] Tag match ante {0}, blind {1}: Match={2}", ante, i, match);
+                hasTag |= match;
             }
-            
+            DebugLogger.LogFormat("[DEBUG] Tag final mask ante {0}: HasTag={1}", ante, hasTag);
             return mask & hasTag;
         }
 
@@ -593,13 +599,43 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             if (config?.Needs == null || config.Needs.Length == 0)
                 return true;
-                
-            foreach (var need in config.Needs.Where(n => n != null))
+
+            // Perkeo-style: If any voucher need is present in any ante, activate/pass
+            var voucherNeeds = config.Needs.Where(n => n != null && string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (voucherNeeds.Length > 0)
+            {
+                bool foundAnyVoucher = false;
+                foreach (var need in voucherNeeds)
+                {
+                    var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
+                    foreach (var ante in searchAntes)
+                    {
+                        if (need.VoucherEnum.HasValue)
+                        {
+                            var voucher = singleCtx.GetAnteFirstVoucher(ante);
+                            DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Voucher check ante {0}: Found={1}, Target={2}", ante, voucher, need.VoucherEnum.Value);
+                            if (voucher == need.VoucherEnum.Value)
+                            {
+                                DebugLogger.LogFormat("[CheckNonVectorizedNeeds] MATCH: Voucher {0} found at ante {1}", voucher, ante);
+                                foundAnyVoucher = true;
+                            }
+                        }
+                        else
+                        {
+                            DebugLogger.LogFormat("[CheckNonVectorizedNeeds] VoucherEnum missing for need {0}", need.Value);
+                        }
+                    }
+                }
+                if (!foundAnyVoucher)
+                    return false; // No voucher need satisfied
+            }
+
+            foreach (var need in config.Needs.Where(n => n != null && !string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)))
             {
                 var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : new[] { need.DesireByAnte };
                 bool foundInAnyAnte = false;
                 
-                DebugLogger.LogFormat("[Search Antes.......]  {0}", searchAntes.Count());
+                DebugLogger.LogFormat("[Search Antes.......]  {0}", searchAntes.Length);
 
                 foreach (int ante in searchAntes)
                 {
