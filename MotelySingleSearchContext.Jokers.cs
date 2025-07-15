@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -35,6 +34,7 @@ unsafe ref partial struct MotelySingleSearchContext
         switch (rarity)
         {
             case MotelyJokerRarity.Legendary:
+                // Legendary jokers don't use source/ante in Immolate (version > 1.0.0.99)
                 stream.JokerStream = CreatePrngStream(MotelyPrngKeys.JokerLegendary);
                 break;
             default:
@@ -175,5 +175,87 @@ unsafe ref partial struct MotelySingleSearchContext
         Debug.Assert(sizeof(T) == 4);
         int value = GetNextRandomInt(ref stream, 0, MotelyEnum<T>.ValueCount);
         return Unsafe.As<int, T>(ref value);
+    }
+
+    public struct ShopJokerInfo
+    {
+        public MotelyJoker Joker;
+        public MotelyJokerRarity Rarity;
+        public MotelyItemEdition Edition;
+        // TODO: Add sticker fields (Eternal, Perishable, Rental) when logic is ready
+    }
+
+    public ShopJokerInfo GetNextShopJokerWithInfo(int ante, MotelyStake stake)
+    {
+        // 1. Rarity PRNG - order is: rarity + ante + source
+        var rarityPrng = CreatePrngStream(MotelyPrngKeys.JokerRarity + ante + MotelyPrngKeys.Shop);
+        double rarityPoll = GetNextRandom(ref rarityPrng);
+        MotelyJokerRarity rarity;
+        if (rarityPoll > 0.95)
+            rarity = MotelyJokerRarity.Rare;
+        else if (rarityPoll > 0.7)
+            rarity = MotelyJokerRarity.Uncommon;
+        else
+            rarity = MotelyJokerRarity.Common;
+
+        // 2. Joker PRNG - needs source and ante
+        MotelySinglePrngStream jokerPrng;
+        switch (rarity)
+        {
+            case MotelyJokerRarity.Legendary:
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerLegendary + MotelyPrngKeys.Shop + ante);
+                break;
+            case MotelyJokerRarity.Rare:
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerRare + MotelyPrngKeys.Shop + ante);
+                break;
+            case MotelyJokerRarity.Uncommon:
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerUncommon + MotelyPrngKeys.Shop + ante);
+                break;
+            default:
+                jokerPrng = CreatePrngStream(MotelyPrngKeys.JokerCommon + MotelyPrngKeys.Shop + ante);
+                break;
+        }
+        MotelyJoker joker;
+        switch (rarity)
+        {
+            case MotelyJokerRarity.Legendary:
+                joker = (MotelyJoker)((int)MotelyJokerRarity.Legendary | (int)NextJoker<MotelyJokerLegendary>(ref jokerPrng));
+                break;
+            case MotelyJokerRarity.Rare:
+                joker = (MotelyJoker)((int)MotelyJokerRarity.Rare | (int)NextJoker<MotelyJokerRare>(ref jokerPrng));
+                break;
+            case MotelyJokerRarity.Uncommon:
+                joker = (MotelyJoker)((int)MotelyJokerRarity.Uncommon | (int)NextJoker<MotelyJokerUncommon>(ref jokerPrng));
+                break;
+            default:
+                joker = (MotelyJoker)((int)MotelyJokerRarity.Common | (int)NextJoker<MotelyJokerCommon>(ref jokerPrng));
+                break;
+        }
+
+        // 3. Edition PRNG - needs source and ante
+        var editionPrng = CreatePrngStream(MotelyPrngKeys.JokerEdition + MotelyPrngKeys.Shop + ante);
+        double editionPoll = GetNextRandom(ref editionPrng);
+        MotelyItemEdition edition;
+        if (editionPoll > 0.997)
+            edition = MotelyItemEdition.Negative;
+        else if (editionPoll > 0.994)
+            edition = MotelyItemEdition.Polychrome;
+        else if (editionPoll > 0.98)
+            edition = MotelyItemEdition.Holographic;
+        else if (editionPoll > 0.96)
+            edition = MotelyItemEdition.Foil;
+        else
+            edition = MotelyItemEdition.None;
+
+        // TODO: Stickers (Eternal, Perishable, Rental) - see immolate OpenCL logic
+        // jokerstickers nextStickers = {false, false, false};
+
+        return new ShopJokerInfo
+        {
+            Joker = joker,
+            Rarity = rarity,
+            Edition = edition
+            // TODO: Add sticker fields when logic is ready
+        };
     }
 }

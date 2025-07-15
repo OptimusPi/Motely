@@ -24,7 +24,7 @@ ref partial struct MotelySingleSearchContext
     {
         return new(ante, true,
             CreateResampleStreamCached(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante),
-            CreatePrngStreamCached(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante)
+            CreatePrngStreamCached(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante)
         );
     }
 
@@ -35,7 +35,7 @@ ref partial struct MotelySingleSearchContext
     {
         return new(ante, true,
             CreateResampleStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante),
-            CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante)
+            CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante)
         );
     }
 
@@ -82,7 +82,7 @@ ref partial struct MotelySingleSearchContext
 
             tarot = (MotelyItemType)MotelyItemTypeCategory.TarotCard | (MotelyItemType)GetNextRandomInt(
                 ref GetResamplePrngStream(ref tarotStream.ResampleStream, MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + tarotStream.Ante, resampleCount),
-                0, MotelyEnum<MotelyVoucher>.ValueCount
+                0, MotelyEnum<MotelyTarotCard>.ValueCount
             );
 
             ++resampleCount;

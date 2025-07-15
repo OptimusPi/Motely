@@ -5,13 +5,20 @@ namespace Motely;
 
 public static class FancyConsole
 {
+    private static volatile bool _isEnabled = true;
 
-
+    public static bool IsEnabled
+    {
+        get => _isEnabled;
+        set => _isEnabled = value;
+    }
     private static string? _bottomLine;
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     private static void WriteBottomLine(string bottomLine)
     {
+        if (!IsEnabled)
+            return;
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
         Console.SetCursorPosition(0, Console.BufferHeight - 1);
         Console.Write(new string(' ', Console.BufferWidth));
@@ -23,6 +30,8 @@ public static class FancyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     private static void ClearBottomLine()
     {
+        if (!IsEnabled)
+            return;
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
         Console.SetCursorPosition(0, Console.BufferHeight - 1);
         Console.Write(new string(' ', Console.BufferWidth));
@@ -32,6 +41,8 @@ public static class FancyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void SetBottomLine(string? bottomLine)
     {
+        if (!IsEnabled)
+            return;
         _bottomLine = bottomLine;
 
         if (_bottomLine != null)
@@ -47,6 +58,8 @@ public static class FancyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void WriteLine<T>(T message)
     {
+        if (!IsEnabled)
+            return;
         WriteLine(message?.ToString() ?? null);
     }
 
@@ -54,6 +67,8 @@ public static class FancyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void WriteLine(string? message)
     {
+        if (!IsEnabled)
+            return;
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
 
         if (oldTop == Console.BufferHeight - 1)

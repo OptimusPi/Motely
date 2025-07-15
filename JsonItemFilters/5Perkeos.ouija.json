@@ -1,0 +1,30 @@
+{
+  "name": "huge_test",
+  "description": "Full config with items per ante",
+  "author": "you",
+  "keywords": ["HUGE", "ANTE", "TEST"],
+  "filter_config": {
+    "NumNeeds": 24,
+    "NumWants": 0,
+    "Needs": [
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [1] },
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [2] },
+    
+
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [5] }
+    ],
+    "Wants": [
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [1] },
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [2] },
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [3] },
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [4] },
+    { "Type": "SoulJoker", "Value": "Perkeo", "SearchAntes": [5] }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

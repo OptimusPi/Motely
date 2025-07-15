@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -96,6 +95,64 @@ public unsafe ref partial struct MotelySingleSearchContext
     private readonly int SeedLastCharactersLength => _params.SeedLastCharactersLength;
     private readonly char* SeedFirstCharacters => _params.SeedFirstCharacters;
     private readonly Vector512<double>* SeedLastCharacters => _params.SeedLastCharacters;
+    public string GetCurrentSeed()
+    {
+#if MOTELY_SAFE
+        if (SeedFirstCharacters == null || SeedLastCharacters == null)
+            throw new InvalidOperationException("Seed characters are not initialized.");
+#endif
+
+        
+        // Sequential search stores:
+        // - First character: in SeedLastCharacters[0][VectorLane]
+        // - Characters 1-7: in SeedFirstCharacters[0..6]
+
+        if (SeedFirstCharactersLength == SeedLength - 1)
+        {
+            // Sequential search layout
+            Span<char> seedBuffer = stackalloc char[SeedLength];
+            
+            // First character comes from the vector
+            seedBuffer[0] = (char)SeedLastCharacters[0][VectorLane];
+            
+            // Rest come from SeedFirstCharacters
+            for (int i = 0; i < SeedFirstCharactersLength; i++)
+            {
+                seedBuffer[i + 1] = SeedFirstCharacters[i];
+                if (SeedFirstCharacters[i] == '\0') 
+                {
+                    // Null terminator found, actual seed is shorter
+                    return new string(seedBuffer[..(i + 1)]);
+                }
+            }
+            
+            return new string(seedBuffer);
+        }
+        else if (SeedFirstCharactersLength == 0)
+        {
+            // Provider search layout - all chars in vectors
+            Span<char> seedBuffer = stackalloc char[SeedLength];
+            int actualLength = SeedLength;
+            
+            for (int i = 0; i < SeedLength; i++)
+            {
+                char c = (char)SeedLastCharacters[i][VectorLane];
+                if (c == '\0')
+                {
+                    actualLength = i;
+                    break;
+                }
+                seedBuffer[i] = c;
+            }
+            
+            return new string(seedBuffer[..actualLength]);
+        }
+        else
+        {
+            // Generic case - shouldn't happen in practice
+            throw new NotImplementedException($"Unexpected layout: FirstCharactersLength={SeedFirstCharactersLength}, SeedLength={SeedLength}");
+        }
+    }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -138,18 +195,57 @@ public unsafe ref partial struct MotelySingleSearchContext
         }
 
         int seedLastCharacterLength = SeedLastCharactersLength;
+
         double num = 1;
-
-        // First we do the first characters of the seed which are the same between all vector lanes
-        for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
+        
+        // Handle different layouts
+        if (SeedFirstCharactersLength == SeedLength - 1)
         {
-            num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + key.Length + seedLastCharacterLength + 1)) % 1;
+            // Sequential search layout: first char in vector, rest in array
+            // Process in correct order: full seed from end to beginning
+            
+            // Process the seed backwards from the last character
+            for (int i = SeedLength - 1; i >= 0; i--)
+            {
+                char ch;
+                if (i == 0)
+                {
+                    // First character is in the vector
+                    ch = (char)SeedLastCharacters[0][VectorLane];
+                }
+                else
+                {
+                    // Rest are in SeedFirstCharacters (offset by 1)
+                    ch = SeedFirstCharacters[i - 1];
+                }
+                num = (1.1239285023 / num * ch * Math.PI + Math.PI * (i + key.Length + 1)) % 1;
+            }
         }
-
-        // Then we get the characters for our lane
-        for (int i = seedLastCharacterLength - 1; i >= 0; i--)
+        else if (SeedFirstCharactersLength == 0)
         {
-            num = (1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI + Math.PI * (key.Length + i + 1)) % 1;
+            // Provider search layout: all chars in vectors
+            for (int i = SeedLength - 1; i >= 0; i--)
+            {
+                char ch = (char)SeedLastCharacters[i][VectorLane];
+                num = (1.1239285023 / num * ch * Math.PI + Math.PI * (i + key.Length + 1)) % 1;
+            }
+        }
+        else
+        {
+            // Generic layout (original code)
+            seedLastCharacterLength = SeedLength - SeedFirstCharactersLength;
+            
+            // First we do the first characters of the seed which are the same between all vector lanes
+            for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
+            {
+                num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + key.Length + seedLastCharacterLength + 1)) % 1;
+            }
+
+            // Then we get the characters for our lane
+            for (int i = seedLastCharacterLength - 1; i >= 0; i--)
+            {
+                num = (1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI + Math.PI * (key.Length + i + 1)) % 1;
+            }
         }
 
         // Then the actual key
@@ -313,4 +409,36 @@ public unsafe ref partial struct MotelySingleSearchContext
         }
     }
 
+    // Helper: Generate the shop jokers for a given ante (filtering out non-joker items)
+    public List<ShopJokerInfo> GetShopJokersForAnte(int ante)
+    {
+        var jokers = new List<ShopJokerInfo>();
+        
+        // Generate all 8 shop items using card type RNG
+        for (int slotIndex = 0; slotIndex < 8; slotIndex++)
+        {
+            // Get shop rates (default: 20 joker, 4 tarot, 4 planet)
+            double totalRate = 28; // 20 + 4 + 4
+            
+            // Generate card type roll - this needs to increment for each slot!
+            var cardTypePrng = CreatePrngStream(MotelyPrngKeys.CardType + ante);
+            
+            // Advance the RNG to the correct position for this slot
+            for (int i = 0; i < slotIndex; i++)
+            {
+                GetNextRandom(ref cardTypePrng);
+            }
+            
+            double cardTypeRoll = GetNextRandom(ref cardTypePrng) * totalRate;
+            
+            // Check if it's a joker (first 20 out of 28)
+            if (cardTypeRoll < 20)
+            {
+                var jokerInfo = GetNextShopJokerWithInfo(ante, MotelyStake.WhiteStake);
+                jokers.Add(jokerInfo);
+            }
+        }
+        
+        return jokers;
+    }
 }

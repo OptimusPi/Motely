@@ -1,0 +1,39 @@
+{
+  "name": "pi ouija json config",
+  "description": "config to test Editions on a Legendary SoulJoker such as Perkeo",
+  "author": "you",
+  "keywords": ["HUGE", "ANTE", "TEST"],
+  "filter_config": {
+    "NumNeeds": 2,
+    "NumWants": 2,
+    "Needs": [
+
+    ],
+    "Wants": [
+      { "Type": "SpectralCard", "Value": "Immolate", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Familiar", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Grim", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Incantation", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Talisman", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Aura", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Wraith", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Sigil", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Ouija", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Ectoplasm", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Immolate", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Ankh", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "DejaVu", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Hex", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Trance", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Medium", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Cryptid", "SearchAntes": [1], "Score": 1 },
+      { "Type": "SpectralCard", "Value": "Soul", "SearchAntes": [1], "Score": 1 }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

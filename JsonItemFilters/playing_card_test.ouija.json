@@ -1,0 +1,33 @@
+{
+  "MaxSearchAnte": 4,
+  "Deck": "RedDeck",
+  "Stake": "WhiteStake",
+  "Needs": [
+    { 
+      "Type": "PlayingCard", 
+      "Rank": "Ace",
+      "Suit": "Heart",
+      "Seal": "Red",
+      "SearchAntes": [1, 2, 3, 4],
+      "Score": 20
+    }
+  ],
+  "Wants": [
+    {
+      "Type": "PlayingCard",
+      "Rank": "any",
+      "Suit": "any",
+      "Enhancement": "Lucky",
+      "SearchAntes": [1, 2, 3],
+      "Score": 5
+    },
+    {
+      "Type": "PlayingCard",
+      "Rank": "King",
+      "Suit": "Spade",
+      "Edition": "Polychrome",
+      "SearchAntes": [2, 3, 4],
+      "Score": 10
+    }
+  ]
+}

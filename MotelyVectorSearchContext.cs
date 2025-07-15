@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -58,6 +57,7 @@ internal unsafe struct MotelySearchContextParams(in SeedHashCache seedHashCache,
 public unsafe ref partial struct MotelyVectorSearchContext
 {
     private readonly ref readonly MotelySearchContextParams _params;
+    public object? SearchInstance { get; set; }
 
     private readonly ref readonly SeedHashCache SeedHashCache => ref _params.SeedHashCache;
     private readonly int SeedLength => _params.SeedLength;
@@ -118,6 +118,7 @@ public unsafe ref partial struct MotelyVectorSearchContext
                     results |= 1u << lane;
                 }
             }
+            
 
             maskShift >>= 1;
         }

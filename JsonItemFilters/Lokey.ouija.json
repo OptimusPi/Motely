@@ -1,0 +1,25 @@
+{
+  "name": "lokey_combo",
+  "description": "Ante 1 Negative Chicot, early Ankh from pack, Overstock/Retcon by Ante 8, 4+ Invisible Jokers in first 100 cards of first 10 antes",
+  "author": "Lokey",
+  "keywords": ["Chicot", "Ankh", "Overstock", "Retcon", "Invisible", "Combo", "Test"],
+  "filter_config": {
+    "NumNeeds": 4,
+    "NumWants": 1,
+    "Needs": [
+      { "Type": "Joker", "Value": "Chicot", "Edition": "Negative", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Spectral", "Value": "Ankh", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Voucher", "Value": "Overstock", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 },
+      { "Type": "Voucher", "Value": "Retcon", "SearchAntes": [1,2,3,4,5,6,7,8], "Score": 1 }
+    ],
+    "Wants": [
+        { "Type": "Joker", "Value": "Invisible", "SearchAntes": [1,2,3,4,5,6,7,8,9,10], "Score": 1 }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 10,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

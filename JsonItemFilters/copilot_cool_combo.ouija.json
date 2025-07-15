@@ -1,0 +1,32 @@
+{
+  "name": "Copilot's Ultimate Balatro Combo",
+  "description": "A wild, high-synergy config for Balatro: insane combos, rare synergies, and big score potential.",
+  "author": "GitHub Copilot",
+  "keywords": ["synergy", "legendary", "combo", "score", "chaos"],
+  "filter_config": {
+    "NumNeeds": 5,
+    "NumWants": 8,
+    "Needs": [
+      { "Type": "Joker", "Value": "Perkeo", "SearchAntes": [1], "Score": 1 },
+      { "Type": "Joker", "Value": "OopsAll6s", "SearchAntes": [2], "Score": 1 },
+      { "Type": "Joker", "Value": "Brainstorm", "Edition": "Negative", "SearchAntes": [4], "Score": 2 },
+      { "Type": "Joker", "Value": "TheIdol", "Edition": "Negative", "SearchAntes": [5], "Score": 2 }
+    ],
+    "Wants": [
+      { "Type": "Joker", "Value": "Blueprint", "SearchAntes": [6,7,8], "Score": 1 },
+      { "Type": "Joker", "Value": "Bloodstone", "SearchAntes": [6,7,8], "Score": 1 },
+      { "Type": "Joker", "Value": "Showman", "SearchAntes": [6,7,8], "Score": 1 },
+      { "Type": "Joker", "Value": "Perkeo", "Edition": "Negative", "SearchAntes": [9,10], "Score": 3 },
+      { "Type": "SpectralCard", "Value": "Immolate", "SearchAntes": [9,10], "Score": 2 },
+      { "Type": "Joker", "Value": "OopsAll6s", "Edition": "Negative", "SearchAntes": [9,10], "Score": 2 },
+      { "Type": "Joker", "Value": "Brainstorm", "SearchAntes": [9,10], "Score": 1 },
+      { "Type": "Joker", "Value": "TheIdol", "SearchAntes": [9,10], "Score": 1 }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 10,
+    "Deck": "RedDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": true,
+    "ScoreDesiredNegatives": true
+  }
+}

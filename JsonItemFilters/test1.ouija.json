@@ -1,0 +1,9 @@
+{
+  "maxSearchAnte": 1,
+  "deck": "RedDeck", 
+  "stake": "WhiteStake",
+  "needs": [],
+  "wants": [
+    { "type": "Joker", "value": "Joker", "searchAntes": [1], "score": 10 }
+  ]
+}
