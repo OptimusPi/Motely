@@ -1,0 +1,32 @@
+{
+  "name": "huge_test",
+  "description": "Full config with items per ante",
+  "author": "you",
+  "keywords": ["HUGE", "ANTE", "TEST"],
+  "filter_config": {
+    "NumNeeds": 24,
+    "NumWants": 0,
+    "Needs": [
+      { "Type": "Joker", "Value": "Showman", "SearchAntes": [2], "Score": 1 },
+      { "Type": "SoulJoker", "Value": "Perkeo", "Edition": "Negative", "SearchAntes": [1], "Score": 1 }
+
+    ],
+    "Wants": [
+        { "Type": "Joker", "Value": "Dusk", "SearchAntes": [2,3], "Score": 1 },
+        { "Type": "Joker", "Value": "HangingChad", "SearchAntes": [1,2,3], "Score": 1 },
+        { "Type": "Joker", "Value": "SockAndBuskin", "SearchAntes": [3,4,5,6], "Score": 2 },
+        { "Type": "Joker", "Value": "Blueprint", "SearchAntes": [1,2,3,4,5,6], "Score": 3 },
+        { "Type": "Joker", "Value": "Brainstorm", "SearchAntes": [3,4], "Score": 3 },
+        { "Type": "Joker", "Value": "OopsAll6s", "SearchAntes": [1], "Score": 3 },
+        { "Type": "Joker", "Value": "OopsAll6s", "SearchAntes": [2], "Score": 3 },
+
+        { "Type": "Tag", "Value": "NegativeTag", "SearchAntes": [8], "Score": 3 }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "GhostDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Copilot's Glass King of Hearts Red Polychrome Hunt",
+  "description": "Find a Glass King of Hearts with Red Seal and Polychrome in ante 1.",
+  "author": "GitHub Copilot",
+  "keywords": ["glass", "king", "hearts", "redseal", "polychrome", "ante1"],
+  "filter_config": {
+    "NumNeeds": 1,
+    "NumWants": 2,
+    "Needs": [
+      { "Type": "PlayingCard", "Value": "KingOfHearts", "Edition": "Polychrome", "Seal": "Red", "SearchAntes": [1], "Score": 1 }
+    ],
+    "Wants": [
+
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 1,
+    "Deck": "RedDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}

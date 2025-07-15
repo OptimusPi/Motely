@@ -26,7 +26,6 @@ ref partial struct MotelySingleSearchContext
         MotelyTag.OrbitalTag
     ];
 
-
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif

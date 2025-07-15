@@ -1,0 +1,22 @@
+{
+  "name": "Copilot's Lucky Cat Synergy Hunt",
+  "description": "Find OopsAll6s and Ankh in ante 1, TheMagician in ante 2, Lucky Cat in ante 3, and score big for OopsAll6s, Blueprints, and their negatives!",
+  "author": "GitHub Copilot",
+  "keywords": ["cat", "luck", "magician", "synergy", "combo", "oopsall6s", "ankh", "blueprint"],
+  "filter_config": {
+    "NumNeeds":1,
+    "NumWants": 1,
+    "Needs": [
+      { "Type": "Joker", "Value": "Showman", "SearchAntes": [1], "Score": 1 }
+    ],
+    "Wants": [
+      { "Type": "Tag", "Value": "NegativeTag", "SearchAntes": [2,3,4,5,6,7,8], "Score": 1 }
+    ],
+    "MinSearchAnte": 1,
+    "MaxSearchAnte": 8,
+    "Deck": "RedDeck",
+    "Stake": "WhiteStake",
+    "ScoreNaturalNegatives": false,
+    "ScoreDesiredNegatives": false
+  }
+}
