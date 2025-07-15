@@ -562,9 +562,19 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckPlayingCard(ref MotelySingleSearchContext singleCtx, 
             OuijaConfig.Desire need, int ante)
         {
-            // TODO: Playing card checking is not yet implemented
-            // Shops don't contain booster packs - only jokers, tarots, and planets
-            // Playing cards would need to check standard packs (not in shops) and starting deck
+            // For now, only check the starting deck for a matching card
+            if (singleCtx.StartingDeck == null || singleCtx.StartingDeck.Count == 0)
+                return false;
+
+            foreach (var card in singleCtx.StartingDeck)
+            {
+                if (MatchesPlayingCardCriteria(card, need))
+                {
+                    DebugLogger.LogFormat("[CheckPlayingCard] Matched card in starting deck: {0}", card);
+                    return true;
+                }
+            }
+            DebugLogger.LogFormat("[CheckPlayingCard] No match found in starting deck for need: Rank={0}, Suit={1}, Edition={2}, Seal={3}", need.Rank, need.Suit, need.Edition, need.Seal);
             return false;
         }
         
