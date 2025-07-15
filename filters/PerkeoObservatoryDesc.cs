@@ -24,7 +24,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             VectorMask matching = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
 
             if (matching.IsAllFalse())
-                return Vector512<double>.Zero;
+                return matching;
 
             MotelyVectorRunStateVoucher voucherState = new();
             voucherState.ActivateVoucher(MotelyVoucher.Telescope);
@@ -48,7 +48,12 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                     if (searchContext.GetArcanaPackContents(ref tarotStream, pack.GetPackSize()).Contains(MotelyItemType.Soul))
                     {
                         MotelySingleJokerFixedRarityStream stream = searchContext.CreateSoulJokerStream(1);
-                        return searchContext.NextJoker(ref stream).Type == MotelyItemType.Perkeo;
+                        var nJoker = searchContext.NextJoker(ref stream);
+                        if (nJoker.Edition > 0 && nJoker.Type == MotelyItemType.Perkeo)
+                            if (((int)nJoker.Edition << Motely.ItemEditionOffset) == (int)MotelyItemEdition.Negative)
+                            {
+                                return nJoker.Type == MotelyItemType.Perkeo;
+                            }
                     }
                 }
 
@@ -70,7 +75,12 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                         if (searchContext.GetArcanaPackContents(ref tarotStream, pack.GetPackSize()).Contains(MotelyItemType.Soul))
                         {
                             MotelySingleJokerFixedRarityStream stream = searchContext.CreateSoulJokerStream(2);
-                            return searchContext.NextJoker(ref stream).Type == MotelyItemType.Perkeo;
+                            var nJoker = searchContext.NextJoker(ref stream);
+
+                            if (((int)nJoker.Edition << Motely.ItemEditionOffset) == (int)MotelyItemEdition.Negative)
+                            {
+                                return nJoker.Type == MotelyItemType.Perkeo;
+                            }
                         }
                     }
                 }

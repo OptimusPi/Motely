@@ -1,0 +1,59 @@
+{
+    "name": "legendary_test",
+    "description": "Test all legendary soul jokers",
+    "author": "test",
+    "keywords": ["LEGENDARY", "SOUL"],
+    "filter_config": {
+        "numNeeds": 0,
+        "numWants": 5,
+        "Needs": [],
+        "Wants": [
+            {
+                "type": "SoulJoker",
+                "value": "Perkeo",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 10
+            },
+            {
+                "type": "SoulJoker",
+                "value": "Canio",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 10
+            },
+            {
+                "type": "SoulJoker",
+                "value": "Triboulet",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 10
+            },
+            {
+                "type": "SoulJoker",
+                "value": "Yorick",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 10
+            },
+            {
+                "type": "SoulJoker",
+                "value": "Chicot",
+                "edition": "None",
+                "searchAntes": [1, 2],
+                "desireByAnte": 2,
+                "Score": 10
+            }
+        ],
+        "minSearchAnte": 1,
+        "maxSearchAnte": 2,
+        "deck": "GhostDeck",
+        "stake": "WhiteStake",
+        "scoreNaturalNegatives": false,
+        "scoreDesiredNegatives": false
+    }
+}

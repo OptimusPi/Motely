@@ -259,5 +259,20 @@ public enum MotelyItemType
     Yorick = MotelyItemTypeCategory.Joker | MotelyJoker.Yorick,
     Chicot = MotelyItemTypeCategory.Joker | MotelyJoker.Chicot,
     Perkeo = MotelyItemTypeCategory.Joker | MotelyJoker.Perkeo,
+
+    // Planet Cards
+    Mercury = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Mercury,
+    Venus = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Venus,
+    Earth = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Earth,
+    Mars = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Mars,
+    Jupiter = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Jupiter,
+    Saturn = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Saturn,
+    Uranus = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Uranus,
+    Neptune = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Neptune,
+    Pluto = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Pluto,
+    PlanetX = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.PlanetX,
+    Ceres = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Ceres,
+    Eris = MotelyItemTypeCategory.PlanetCard | MotelyPlanetCard.Eris,
+    BlackHole = MotelyItemTypeCategory.PlanetCard | 0x0D, // Special planet card (13th item)
 }
 
