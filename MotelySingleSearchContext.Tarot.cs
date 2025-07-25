@@ -6,63 +6,110 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySingleTarotStream(int ante, bool soulable, MotelySingleResampleStream resampleStream, MotelySinglePrngStream soulStream)
+public ref struct MotelySingleTarotStream(string resampleKey, MotelySingleResampleStream resampleStream, MotelySinglePrngStream soulStream)
 {
-    public readonly bool Soulable = soulable;
-    public readonly int Ante = ante;
+    public readonly bool IsNull => ResampleKey == null;
+    public readonly string ResampleKey = resampleKey;
     public MotelySingleResampleStream ResampleStream = resampleStream;
     public MotelySinglePrngStream SoulPrngStream = soulStream;
+    public readonly bool IsSoulable => !SoulPrngStream.IsInvalid;
 }
 
 ref partial struct MotelySingleSearchContext
 {
-
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelySingleTarotStream CreateArcanaPackTarotStreamCached(int ante)
+    private MotelySingleTarotStream CreateTarotStream(string source, int ante, bool searchTarot, bool soulable)
     {
-        return new(ante, true,
-            CreateResampleStreamCached(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante),
-            CreatePrngStreamCached(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante)
+        return new(
+            MotelyPrngKeys.Tarot + source + ante,
+            searchTarot ?
+                CreateResampleStream(MotelyPrngKeys.Tarot + source + ante) :
+                MotelySingleResampleStream.Invalid,
+            soulable ?
+                CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante) :
+                MotelySinglePrngStream.Invalid
         );
     }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelySingleTarotStream CreateArcanaPackTarotStream(int ante)
+    private MotelySingleTarotStream CreateTarotStreamCached(string source, int ante, bool searchTarot, bool searchSoul)
     {
-        return new(ante, true,
-            CreateResampleStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + ante),
-            CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante)
+        return new(
+            MotelyPrngKeys.Tarot + source + ante,
+            searchTarot ?
+                CreateResampleStreamCached(MotelyPrngKeys.Tarot + source + ante) :
+                MotelySingleResampleStream.Invalid,
+            searchSoul ?
+                CreatePrngStreamCached(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante) :
+                MotelySinglePrngStream.Invalid
         );
     }
 
-    public MotelySingleItemSet GetArcanaPackContents(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size)
-        => GetArcanaPackContents(ref tarotStream, size switch
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelySingleTarotStream CreateArcanaPackTarotStreamCached(int ante, bool soulOnly = false) =>
+        CreateTarotStreamCached(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true);
+
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelySingleTarotStream CreateArcanaPackTarotStream(int ante, bool soulOnly = false) =>
+        CreateTarotStream(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true);
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelySingleTarotStream CreateShopTarotStreamCached(int ante) =>
+        CreateTarotStreamCached(MotelyPrngKeys.ShopItemSource, ante, true, false);
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelySingleTarotStream CreateShopTarotStream(int ante) =>
+        CreateTarotStream(MotelyPrngKeys.ShopItemSource, ante, true, false);
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public bool GetNextArcanaPackHasTheSoul(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size)
+    {
+        Debug.Assert(tarotStream.IsSoulable, "Tarot pack does not have the soul.");
+        Debug.Assert(tarotStream.ResampleStream.IsInvalid, "This method is only valid for arcana packs created with soul only.");
+
+        int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
+
+        for (int i = 0; i < cardCount; i++)
         {
-            MotelyBoosterPackSize.Normal => 3,
-            MotelyBoosterPackSize.Jumbo => 5,
-            MotelyBoosterPackSize.Mega => 5,
-            _ => throw new InvalidEnumArgumentException()
-        });
+            if (GetNextRandom(ref tarotStream.SoulPrngStream) > 0.997)
+            {
+                return true;
+            }
+        }
 
-    public MotelySingleItemSet GetArcanaPackContents(ref MotelySingleTarotStream tarotStream, int size)
+        return false;
+    }
+
+    public MotelySingleItemSet GetNextArcanaPackContents(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size)
     {
-        Debug.Assert(size <= MotelySingleItemSet.MaxLength);
-
+        int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
         MotelySingleItemSet pack = new();
 
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < cardCount; i++)
             pack.Append(GetNextTarot(ref tarotStream, pack));
 
         return pack;
     }
 
-    public MotelyItem GetNextTarot(ref MotelySingleTarotStream tarotStream, in MotelySingleItemSet itemSet)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelyItem GetNextTarot(ref MotelySingleTarotStream tarotStream)
     {
-        if (tarotStream.Soulable && !itemSet.Contains(MotelyItemType.Soul))
+        if (tarotStream.IsSoulable)
         {
             if (GetNextRandom(ref tarotStream.SoulPrngStream) > 0.997)
             {
@@ -70,7 +117,32 @@ ref partial struct MotelySingleSearchContext
             }
         }
 
-        MotelyItemType tarot = (MotelyItemType)MotelyItemTypeCategory.TarotCard | (MotelyItemType)GetNextRandomInt(ref tarotStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyTarotCard>.ValueCount);
+        if (tarotStream.ResampleStream.IsInvalid)
+        {
+            return new(MotelyItemType.TarotExcludedByStream);
+        }
+
+        return (MotelyItemType)MotelyItemTypeCategory.TarotCard |
+            (MotelyItemType)GetNextRandomInt(ref tarotStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyTarotCard>.ValueCount);
+    }
+
+    public MotelyItem GetNextTarot(ref MotelySingleTarotStream tarotStream, in MotelySingleItemSet itemSet)
+    {
+        if (tarotStream.IsSoulable && !itemSet.Contains(MotelyItemType.Soul))
+        {
+            if (GetNextRandom(ref tarotStream.SoulPrngStream) > 0.997)
+            {
+                return MotelyItemType.Soul;
+            }
+        }
+
+        if (tarotStream.ResampleStream.IsInvalid)
+        {
+            return new(MotelyItemType.TarotExcludedByStream);
+        }
+
+        MotelyItemType tarot = (MotelyItemType)MotelyItemTypeCategory.TarotCard |
+            (MotelyItemType)GetNextRandomInt(ref tarotStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyTarotCard>.ValueCount);
         int resampleCount = 0;
 
         while (true)
@@ -81,8 +153,8 @@ ref partial struct MotelySingleSearchContext
             }
 
             tarot = (MotelyItemType)MotelyItemTypeCategory.TarotCard | (MotelyItemType)GetNextRandomInt(
-                ref GetResamplePrngStream(ref tarotStream.ResampleStream, MotelyPrngKeys.Tarot + MotelyPrngKeys.ArcanaPack + tarotStream.Ante, resampleCount),
-                0, MotelyEnum<MotelyTarotCard>.ValueCount
+                ref GetResamplePrngStream(ref tarotStream.ResampleStream, tarotStream.ResampleKey, resampleCount),
+                0, MotelyEnum<MotelyVoucher>.ValueCount
             );
 
             ++resampleCount;
