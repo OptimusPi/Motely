@@ -8,10 +8,8 @@ public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterD
 
     public NegativeTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        for (int ante = 2; ante <= 3; ante++)
-        {
+        for (int ante = 2; ante <= 4; ante++)
             ctx.CacheTagStream(ante);
-        }
 
         return new NegativeTagFilter();
     }
@@ -24,7 +22,7 @@ public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterD
             MotelyVectorTagStream tagStream;
             VectorMask mask = VectorMask.AllBitsSet;
 
-            for (int ante = 2; ante <= 3; ante++)
+            for (int ante = 2; ante <= 4; ante++)
             {
                 tagStream = searchContext.CreateTagStreamCached(ante);
 
