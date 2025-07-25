@@ -1,3 +1,4 @@
+
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -6,12 +7,18 @@ namespace Motely;
 
 public struct MotelySinglePrngStream(double state)
 {
+    public static MotelySinglePrngStream Invalid => new(-1);
+
     public double State = state;
+    public readonly bool IsInvalid => State < 0;
 }
 
 public ref struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngStream, bool isCached)
 {
-    public const int StackResampleCount = 16;
+
+    public static MotelySingleResampleStream Invalid => new(MotelySinglePrngStream.Invalid, false);
+
+    public const int StackResampleCount = 4;
 
     [InlineArray(StackResampleCount)]
     public struct MotelyResampleStreams
@@ -24,156 +31,70 @@ public ref struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngS
     public int ResamplePrngStreamInitCount;
     public List<object>? HighResamplePrngStreams;
     public bool IsCached = isCached;
+
+    public readonly bool IsInvalid => InitialPrngStream.IsInvalid;
 }
 
-public ref struct MotelySingleItemSet
-{
-    public const int MaxLength = 5;
-
-    [InlineArray(MaxLength)]
-    public struct MotelyItems
-    {
-        public MotelyItem Card;
-    }
-
-    public MotelyItems Items;
-    public int Length;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ref MotelyItem GetItemRef(ref MotelySingleItemSet set, int index)
-    {
-#if DEBUG
-        return ref set.Items[index];
-#else
-        // Be fast and skip the bounds check
-        return ref Unsafe.Add<MotelyItem>(ref Unsafe.As<MotelyItems, MotelyItem>(ref set.Items), index);
-#endif
-    }
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    public MotelyItem GetItem(int index)
-    {
-        return GetItemRef(ref this, index);
-    }
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    public void Append(MotelyItem item)
-    {
-        GetItemRef(ref this, Length++) = item;
-    }
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    public bool Contains(MotelyItemType item)
-    {
-        for (int i = 0; i < Length; i++)
-        {
-            if (GetItemRef(ref this, i).Type == item)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-}
 
 public unsafe ref partial struct MotelySingleSearchContext
 {
     public readonly int VectorLane;
 
-    private readonly ref readonly MotelySearchContextParams _params;
+    private readonly ref readonly MotelySearchParameters _searchParameters;
+    private readonly ref readonly MotelySearchContextParams _contextParams;
 
-    private readonly ref readonly SeedHashCache SeedHashCache => ref _params.SeedHashCache;
-    private readonly int SeedLength => _params.SeedLength;
-    private readonly int SeedFirstCharactersLength => _params.SeedFirstCharactersLength;
-    private readonly int SeedLastCharactersLength => _params.SeedLastCharactersLength;
-    private readonly char* SeedFirstCharacters => _params.SeedFirstCharacters;
-    private readonly Vector512<double>* SeedLastCharacters => _params.SeedLastCharacters;
-    public string GetCurrentSeed()
-    {
-#if MOTELY_SAFE
-        if (SeedFirstCharacters == null || SeedLastCharacters == null)
-            throw new InvalidOperationException("Seed characters are not initialized.");
-#endif
+    public readonly MotelyStake Stake => _searchParameters.Stake;
+    public readonly MotelyDeck Deck => _searchParameters.Deck;
 
-        
-        // Sequential search stores:
-        // - First character: in SeedLastCharacters[0][VectorLane]
-        // - Characters 1-7: in SeedFirstCharacters[0..6]
-
-        if (SeedFirstCharactersLength == SeedLength - 1)
-        {
-            // Sequential search layout
-            Span<char> seedBuffer = stackalloc char[SeedLength];
-            
-            // First character comes from the vector
-            seedBuffer[0] = (char)SeedLastCharacters[0][VectorLane];
-            
-            // Rest come from SeedFirstCharacters
-            for (int i = 0; i < SeedFirstCharactersLength; i++)
-            {
-                seedBuffer[i + 1] = SeedFirstCharacters[i];
-                if (SeedFirstCharacters[i] == '\0') 
-                {
-                    // Null terminator found, actual seed is shorter
-                    return new string(seedBuffer[..(i + 1)]);
-                }
-            }
-            
-            return new string(seedBuffer);
-        }
-        else if (SeedFirstCharactersLength == 0)
-        {
-            // Provider search layout - all chars in vectors
-            Span<char> seedBuffer = stackalloc char[SeedLength];
-            int actualLength = SeedLength;
-            
-            for (int i = 0; i < SeedLength; i++)
-            {
-                char c = (char)SeedLastCharacters[i][VectorLane];
-                if (c == '\0')
-                {
-                    actualLength = i;
-                    break;
-                }
-                seedBuffer[i] = c;
-            }
-            
-            return new string(seedBuffer[..actualLength]);
-        }
-        else
-        {
-            // Generic case - shouldn't happen in practice
-            throw new NotImplementedException($"Unexpected layout: FirstCharactersLength={SeedFirstCharactersLength}, SeedLength={SeedLength}");
-        }
-    }
+    private readonly ref readonly SeedHashCache SeedHashCache => ref _contextParams.SeedHashCache;
+    private readonly int SeedLength => _contextParams.SeedLength;
+    private readonly int SeedFirstCharactersLength => _contextParams.SeedFirstCharactersLength;
+    private readonly int SeedLastCharactersLength => _contextParams.SeedLastCharactersLength;
+    private readonly char* SeedFirstCharacters => _contextParams.SeedFirstCharacters;
+    private readonly Vector512<double>* SeedLastCharacters => _contextParams.SeedLastCharacters;
+    private readonly bool IsAdditionalFilter => _contextParams.IsAdditionalFilter;
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    internal MotelySingleSearchContext(ref readonly MotelySearchContextParams @params, int lane)
+    internal MotelySingleSearchContext(ref readonly MotelySearchParameters searchParameters, ref readonly MotelySearchContextParams contextParams, int lane)
     {
-        _params = ref @params;
+        _contextParams = ref contextParams;
+        _searchParameters = ref searchParameters;
         VectorLane = lane;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly string GetSeed() => _contextParams.GetSeed(VectorLane);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly int GetSeed(char* output) => _contextParams.GetSeed(VectorLane, output);
+
+#if !DEBUG
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public double PseudoHashCached(string key)
     {
-        
+        if (IsAdditionalFilter)
+        {
+            // If we are an additional filter, we can't guarantee that our cached pseudo hashes are actually cached
+            if (!SeedHashCache.HasPartialHash(key.Length))
+                return InternalPseudoHash(key);
+        }
+
 #if DEBUG
         if (!SeedHashCache.HasPartialHash(key.Length))
             throw new KeyNotFoundException("Cache does not contain key :c");
 #endif
 
+        return InternalPseudoHashCached(key);
+    }
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    private readonly double InternalPseudoHashCached(string key)
+    {
         double num = SeedHashCache.GetPartialHash(key.Length, VectorLane);
 
         for (int i = key.Length - 1; i >= 0; i--)
@@ -184,6 +105,7 @@ public unsafe ref partial struct MotelySingleSearchContext
         return num;
     }
 
+
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
@@ -191,61 +113,30 @@ public unsafe ref partial struct MotelySingleSearchContext
     {
         if (SeedHashCache.HasPartialHash(key.Length))
         {
-            return PseudoHashCached(key);
+            return InternalPseudoHashCached(key);
         }
 
+        return InternalPseudoHash(key);
+    }
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    private double InternalPseudoHash(string key)
+    {
         int seedLastCharacterLength = SeedLastCharactersLength;
-
         double num = 1;
-        
-        // Handle different layouts
-        if (SeedFirstCharactersLength == SeedLength - 1)
-        {
-            // Sequential search layout: first char in vector, rest in array
-            // Process in correct order: full seed from end to beginning
-            
-            // Process the seed backwards from the last character
-            for (int i = SeedLength - 1; i >= 0; i--)
-            {
-                char ch;
-                if (i == 0)
-                {
-                    // First character is in the vector
-                    ch = (char)SeedLastCharacters[0][VectorLane];
-                }
-                else
-                {
-                    // Rest are in SeedFirstCharacters (offset by 1)
-                    ch = SeedFirstCharacters[i - 1];
-                }
-                num = (1.1239285023 / num * ch * Math.PI + Math.PI * (i + key.Length + 1)) % 1;
-            }
-        }
-        else if (SeedFirstCharactersLength == 0)
-        {
-            // Provider search layout: all chars in vectors
-            for (int i = SeedLength - 1; i >= 0; i--)
-            {
-                char ch = (char)SeedLastCharacters[i][VectorLane];
-                num = (1.1239285023 / num * ch * Math.PI + Math.PI * (i + key.Length + 1)) % 1;
-            }
-        }
-        else
-        {
-            // Generic layout (original code)
-            seedLastCharacterLength = SeedLength - SeedFirstCharactersLength;
-            
-            // First we do the first characters of the seed which are the same between all vector lanes
-            for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
-            {
-                num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + key.Length + seedLastCharacterLength + 1)) % 1;
-            }
 
-            // Then we get the characters for our lane
-            for (int i = seedLastCharacterLength - 1; i >= 0; i--)
-            {
-                num = (1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI + Math.PI * (key.Length + i + 1)) % 1;
-            }
+        // First we do the first characters of the seed which are the same between all vector lanes
+        for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
+        {
+            num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + key.Length + seedLastCharacterLength + 1)) % 1;
+        }
+
+        // Then we get the characters for our lane
+        for (int i = seedLastCharacterLength - 1; i >= 0; i--)
+        {
+            num = (1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI + Math.PI * (key.Length + i + 1)) % 1;
         }
 
         // Then the actual key
@@ -287,6 +178,7 @@ public unsafe ref partial struct MotelySingleSearchContext
 #endif
     public double GetNextPrngState(ref MotelySinglePrngStream stream)
     {
+        Debug.Assert(!stream.IsInvalid, "Invalid stream.");
         return stream.State = IteratePRNG(stream.State);
     }
 
@@ -409,36 +301,4 @@ public unsafe ref partial struct MotelySingleSearchContext
         }
     }
 
-    // Helper: Generate the shop jokers for a given ante (filtering out non-joker items)
-    public List<ShopJokerInfo> GetShopJokersForAnte(int ante)
-    {
-        var jokers = new List<ShopJokerInfo>();
-        
-        // Generate all 8 shop items using card type RNG
-        for (int slotIndex = 0; slotIndex < 8; slotIndex++)
-        {
-            // Get shop rates (default: 20 joker, 4 tarot, 4 planet)
-            double totalRate = 28; // 20 + 4 + 4
-            
-            // Generate card type roll - this needs to increment for each slot!
-            var cardTypePrng = CreatePrngStream(MotelyPrngKeys.CardType + ante);
-            
-            // Advance the RNG to the correct position for this slot
-            for (int i = 0; i < slotIndex; i++)
-            {
-                GetNextRandom(ref cardTypePrng);
-            }
-            
-            double cardTypeRoll = GetNextRandom(ref cardTypePrng) * totalRate;
-            
-            // Check if it's a joker (first 20 out of 28)
-            if (cardTypeRoll < 20)
-            {
-                var jokerInfo = GetNextShopJokerWithInfo(ante, MotelyStake.WhiteStake);
-                jokers.Add(jokerInfo);
-            }
-        }
-        
-        return jokers;
-    }
 }

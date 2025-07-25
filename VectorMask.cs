@@ -11,7 +11,7 @@ public struct VectorMask(uint mask)
     public const int Length = 8;
 
     public static readonly VectorMask AllBitsSet = new(0xFF);
-    public static readonly VectorMask AllBitsClear = new(0x00);
+    public static readonly VectorMask NoBitsSet = new(0);
 
     public uint Value = mask;
 
