@@ -624,7 +624,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             OuijaConfig.Desire need, int ante)
         {
             // For now, only check the starting deck for a matching card
-            if (singleCtx.StartingDeck == null || singleCtx.StartingDeck.Count == 0)
+            // TODO: StartingDeck not yet implemented in upstream
+            if (true) // singleCtx.StartingDeck == null || singleCtx.StartingDeck.Count == 0)
                 return false;
 
             // TODO: Fix type conversion from MotelyItem to MotelyPlayingCard
@@ -1012,7 +1013,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         private static OuijaResult ProcessWantsAndScore(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
         {
-            string seed = singleCtx.GetCurrentSeed();
+            string seed = singleCtx.GetSeed();
             var result = new OuijaResult
             {
                 Seed = seed,
@@ -1344,7 +1345,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     {
                         if (requiredEdition.HasValue && joker.Edition != requiredEdition.Value)
                             return false;
-                        DebugLogger.LogFormat("[DEBUG] PerkeoStyleSoulJokerCheck: MATCH! Seed: {0}", singleCtx.GetCurrentSeed());
+                        DebugLogger.LogFormat("[DEBUG] PerkeoStyleSoulJokerCheck: MATCH! Seed: {0}", singleCtx.GetSeed());
                         return true;
                     }
                 }
@@ -1372,7 +1373,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         {
                             if (requiredEdition.HasValue && joker.Edition != requiredEdition.Value)
                                 continue;
-                            DebugLogger.LogFormat("[DEBUG] PerkeoStyleSoulJokerCheck: MATCH! Seed: {0}", singleCtx.GetCurrentSeed());
+                            DebugLogger.LogFormat("[DEBUG] PerkeoStyleSoulJokerCheck: MATCH! Seed: {0}", singleCtx.GetSeed());
                             return true;
                         }
                     }
