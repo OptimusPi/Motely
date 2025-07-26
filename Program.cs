@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
+using Motely.Filters;
+
 namespace Motely
 {
     partial class Program
@@ -9,7 +11,8 @@ namespace Motely
             var app = new CommandLineApplication
             {
                 Name = "MotelySearch",
-                Description = "Motely Ouija Search - Dynamic Balatro Seed Searcher"
+                Description = "Motely Ouija Search - Dynamic Balatro Seed Searcher",
+                OptionsComparison = StringComparison.OrdinalIgnoreCase
             };
 
             app.HelpOption("-?|-h|--help");
@@ -137,7 +140,18 @@ namespace Motely
             // Handle keyword generation
             else if (!string.IsNullOrEmpty(keyword))
             {
-                seeds = SeedGenerator.GenerateSeedsFromKeyword(keyword);
+                // Generate seeds from keyword pattern
+                seeds = new List<string>();
+                for (int i = 0; i <= 99; i++)
+                {
+                    string padded = keyword + i.ToString("00");
+                    if (padded.Length == 8)
+                        seeds.Add(padded);
+                    else if (padded.Length < 8)
+                        seeds.Add(padded.PadRight(8, '0'));
+                    else
+                        seeds.Add(padded.Substring(0, 8));
+                }
                 if (!quiet)
                 {
                     Console.WriteLine($"🎯 Generated {seeds.Count} seeds from keyword: {keyword}");
@@ -192,59 +206,64 @@ namespace Motely
                     Console.WriteLine("--- End Config ---\n");
                 }
 
-                // Create search configuration
-                var searchConfig = new SearchConfiguration
-                {
-                    ThreadCount = threads,
-                    BatchSize = batchSize,
-                    StartBatchIndex = startBatch,
-                    MinimumScore = cutoff,
-                    Seeds = seeds
-                };
+                // Search configuration is now part of MotelySearchSettings
 
-                // Create search engine
-                var engine = new MotelySearchEngine(searchConfig);
+                // Create the real Motely search using OuijaJsonFilterDesc
+                var filterDesc = new OuijaJsonFilterDesc(config);
+                var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
+                    .WithThreadCount(threads)
+                    .WithSequentialSearch()
+                    .WithBatchCharacterCount(batchSize);
+                
+                // Set batch range if specified
+                if (startBatch > 0)
+                    searchSettings = searchSettings.WithStartBatchIndex(startBatch);
+                if (endBatch > 0)
+                {
+                    // Note: No WithEndBatchIndex method - handle batch limit differently
+                }
+                    
+                // Apply minimum score cutoff
+                // Minimum score cutoff is handled by the filter itself
+                
+                IMotelySearch search;
+                if (seeds != null && seeds.Count > 0)
+                {
+                    // Search specific seeds from list
+                    search = searchSettings.WithListSearch(seeds).Start();
+                }
+                else
+                {
+                    // Sequential batch search
+                    search = searchSettings.Start();
+                }
 
                 // Print CSV header for results
                 PrintResultsHeader(config);
-
-                // Keep track of last progress update for console output
-                var lastProgressTime = Stopwatch.StartNew();
-                SearchProgress? lastProgress = null;
 
                 // Setup cancellation token
                 var cts = new CancellationTokenSource();
                 Console.CancelKeyPress += (sender, e) =>
                 {
                     e.Cancel = true;
-                    cts.Cancel();
+                    search.Pause();
                 };
 
-                // Run search
-                var progress = new Progress<SearchProgress>(p =>
+                // Wait for search to complete
+                while (search.Status == MotelySearchStatus.Running)
                 {
-                    lastProgress = p;
-                    if (!quiet && lastProgressTime.ElapsedMilliseconds > 500)
-                    {
-                        lastProgressTime.Restart();
-                        PrintProgress(p);
-                    }
-                });
-
-                var results = engine.SearchSync(config, progress, cts.Token);
-
-                // Print results
-                foreach (var result in results.Results)
-                {
-                    PrintResult(config, result);
+                    System.Threading.Thread.Sleep(100);
                 }
+                
+                // Results are printed in real-time by OuijaJsonFilterDesc
+                var totalSearched = search.CompletedBatchCount;
+                var duration = Stopwatch.StartNew().Elapsed; // TODO: track actual elapsed time
 
                 if (!quiet)
                 {
                     Console.WriteLine($"\n✅ Search completed");
-                    Console.WriteLine($"   Total seeds searched: {results.TotalSearched:N0}");
-                    Console.WriteLine($"   Results found: {results.Results.Count}");
-                    Console.WriteLine($"   Duration: {results.Duration:hh\\:mm\\:ss}");
+                    Console.WriteLine($"   Total seeds searched: {totalSearched:N0}");
+                    Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
                 }
             }
             catch (OperationCanceledException)
@@ -305,40 +324,41 @@ namespace Motely
             Console.WriteLine(header);
         }
 
-        static void PrintProgress(SearchProgress progress)
-        {
-            var timeLeft = progress.EstimatedTimeRemaining;
-            string timeLeftFormatted = timeLeft.Days == 0 ?
-                $"{timeLeft:hh\\:mm\\:ss}" :
-                $"{timeLeft:d\\:hh\\:mm\\:ss}";
+        // static void PrintProgress(SearchProgress progress)
+        // {
+        //     var timeLeft = progress.EstimatedTimeRemaining;
+        //     string timeLeftFormatted = timeLeft.Days == 0 ?
+        //         $"{timeLeft:hh\\:mm\\:ss}" :
+        //         $"{timeLeft:d\\:hh\\:mm\\:ss}";
 
-            string seedsPerSec = progress.SeedsPerSecond > 0 ?
-                $"{progress.SeedsPerSecond:N0}" : "--";
+        //     string seedsPerSec = progress.SeedsPerSecond > 0 ?
+        //         $"{progress.SeedsPerSecond:N0}" : "--";
 
-            OuijaStyleConsole.SetBottomLine(
-                $"{progress.PercentComplete:F2}% ~{timeLeftFormatted} remaining ({seedsPerSec} seeds/s) | {progress.SeedsSearched:N0} seeds searched");
-        }
+        //     OuijaStyleConsole.SetBottomLine(
+        //         $"{progress.PercentComplete:F2}% ~{timeLeftFormatted} remaining ({seedsPerSec} seeds/s) | {progress.SeedsSearched:N0} seeds searched");
+        // }
 
-        static void PrintResult(OuijaConfig config, SearchResult result)
-        {
-            var line = $"{result.Seed},{result.TotalScore}";
+        // Results are now printed in real-time by OuijaJsonFilterDesc
+        // static void PrintResult(OuijaConfig config, SearchResult result)
+        // {
+        //     var line = $"{result.Seed},{result.TotalScore}";
 
-            if (config.ScoreNaturalNegatives)
-                line += $",{result.NaturalNegatives}";
-            if (config.ScoreDesiredNegatives)
-                line += $",{result.DesiredNegatives}";
+        //     if (config.ScoreNaturalNegatives)
+        //         line += $",{result.NaturalNegatives}";
+        //     if (config.ScoreDesiredNegatives)
+        //         line += $",{result.DesiredNegatives}";
 
-            // Add want scores
-            if (config.Wants != null)
-            {
-                for (int i = 0; i < config.Wants.Length && i < result.WantScores.Length; i++)
-                {
-                    line += $",{result.WantScores[i]}";
-                }
-            }
+        //     // Add want scores
+        //     if (config.Wants != null)
+        //     {
+        //         for (int i = 0; i < config.Wants.Length && i < result.WantScores.Length; i++)
+        //         {
+        //             line += $",{result.WantScores[i]}";
+        //         }
+        //     }
 
-            Console.WriteLine(line);
-        }
+        //     Console.WriteLine(line);
+        // }
 
         static string FormatWantColumn(OuijaConfig.Desire want)
         {

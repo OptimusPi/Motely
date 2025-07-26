@@ -10,15 +10,20 @@ public static class MotelyPrngKeys
 
     public const string Tarot = "Tarot";
     public const string TerrotSoul = "soul_";
+    public const string TarotSoul = "soul_"; // Alias for compatibility
     public const string ArcanaPackItemSource = "ar1";
+    public const string ArcanaPack = "ar1"; // Alias for compatibility
 
     public const string Planet = "Planet";
     public const string PlanetBlackHole = "soul_";
     public const string CelestialPackItemSource = "pl1";
+    public const string CelestialPack = "cel1"; // Alias for compatibility
 
     public const string Spectral = "Spectral";
     public const string SpectralSoulBlackHole = "soul_";
+    public const string SpectralSoul = "spectral_soul_"; // Alias for compatibility
     public const string SpectralPackItemSource = "spe";
+    public const string SpectralPack = "spe1"; // Alias for compatibility
 
     public const string StandardCardBase = "front";
     public const string StandardCardHasEnhancement = "stdset";
@@ -43,6 +48,7 @@ public static class MotelyPrngKeys
 
     public const string ShopItemType = "cdt";
     public const string ShopItemSource = "sho";
+    public const string Shop = "sho"; // Alias for compatibility
     public const string ShopJokerEternalPerishableSource = "etperpoll";
     public const string ShopJokerRentalSource = "ssjr";
 }

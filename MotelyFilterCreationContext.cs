@@ -51,6 +51,14 @@ public ref struct MotelyFilterCreationContext
     public readonly void CacheTagStream(int ante, bool force = false) => CachePseudoHash(MotelyPrngKeys.Tags + ante, force);
 
     public readonly void CacheVoucherStream(int ante, bool force = false) => CacheResampleStream(MotelyPrngKeys.Voucher + ante, force);
+    
+    // Public overload for OuijaJsonFilterDesc compatibility
+    public readonly void CacheTarotStream(int ante, bool force = false)
+    {
+        // Cache both shop and arcana pack tarot streams for general purpose
+        CacheShopTarotStream(ante, force);
+        CacheArcanaPackTarotStream(ante, false, force);
+    }
 
     private readonly void CacheTarotStream(int ante, string source, bool cacheTarot, bool cacheResample, bool cacheSoul, bool force)
     {

@@ -97,6 +97,8 @@ public struct TypedOuijaConfig
         Spectral,
         Tarot,
         Tag,
+        SmallBlindTag,
+        BigBlindTag,
         Voucher,
         PlayingCard // Future support
     }
@@ -108,8 +110,8 @@ public struct TypedOuijaConfig
     public static TypedOuijaConfig FromOuijaConfig(OuijaConfig config)
     {
         // Parse deck and stake ONCE
-        var deck = MotelyDeck.RedDeck;
-        var stake = MotelyStake.WhiteStake;
+        var deck = MotelyDeck.Red;
+        var stake = MotelyStake.White;
         
         if (!string.IsNullOrEmpty(config.Deck))
             Enum.TryParse<MotelyDeck>(config.Deck, true, out deck);
@@ -174,7 +176,12 @@ public struct TypedOuijaConfig
         }
         else if (desire.TagEnum.HasValue)
         {
-            typed.Type = DesireType.Tag;
+            if (desire.Type?.Equals("SmallBlindTag", StringComparison.OrdinalIgnoreCase) == true)
+                typed.Type = DesireType.SmallBlindTag;
+            else if (desire.Type?.Equals("BigBlindTag", StringComparison.OrdinalIgnoreCase) == true)
+                typed.Type = DesireType.BigBlindTag;
+            else
+                typed.Type = DesireType.Tag;
             typed.TagValue = desire.TagEnum.Value;
         }
         else if (desire.VoucherEnum.HasValue)

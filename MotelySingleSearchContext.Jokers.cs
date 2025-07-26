@@ -178,6 +178,10 @@ unsafe ref partial struct MotelySingleSearchContext
 
         return ApplyNextStickers(joker, ref stream.EternalPerishablePrngStream, ref stream.RentalPrngStream);
     }
+    
+    // Alias for compatibility with OuijaJsonFilterDesc
+    public MotelyItem NextJoker(ref MotelySingleJokerFixedRarityStream stream)
+        => GetNextJoker(ref stream);
 
 #if !DEBUG
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

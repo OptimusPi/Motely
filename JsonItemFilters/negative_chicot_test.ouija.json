@@ -1,9 +1,0 @@
-{
-  "maxSearchAnte": 1,
-  "deck": "GhostDeck",
-  "stake": "WhiteStake",
-  "needs": [
-    { "type": "SoulJoker", "value": "Chicot", "edition": "Negative", "searchAntes": [1], "score": 1 }
-  ],
-  "wants": []
-}
