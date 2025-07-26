@@ -10,8 +10,6 @@ namespace Motely.Filters;
 /// </summary>
 public class OuijaConfig
 {
-    public int NumNeeds { get; set; }
-    public int NumWants { get; set; }
     public Desire[] Needs { get; set; } = [];
     public Desire[] Wants { get; set; } = [];
     public int MaxSearchAnte { get; set; } = 8;
@@ -81,9 +79,13 @@ public class OuijaConfig
         public List<MotelyJokerSticker> ParsedStickers { get; set; } = new();
         
         // Scoring properties
-        public int DesireByAnte { get; set; } = 8;
         public int[] SearchAntes { get; set; } = Array.Empty<int>();
         public int Score { get; set; } = 1;
+
+        // Source filtering options
+        public bool IncludeShopStream { get; set; } = true;
+        public bool IncludeBoosterPacks { get; set; } = true;
+        public bool IncludeSkipTags { get; set; } = true;
 
         // Cached strongly-typed values (populated during validation)
         [JsonIgnore]
@@ -332,7 +334,6 @@ public class OuijaConfig
             // Validate and cache all desires
         if (Needs != null)
         {
-            NumNeeds = Needs.Length;
             foreach (var need in Needs)
             {
                 need?.ValidateAndCache();
@@ -349,7 +350,6 @@ public class OuijaConfig
 
         if (Wants != null)
         {
-            NumWants = Wants.Length;
             foreach (var want in Wants)
             {
                 want?.ValidateAndCache();
@@ -457,7 +457,7 @@ public class OuijaConfig
 
         Console.WriteLine($"[DEBUG] Before validate: {config.Needs?.Length ?? 0} needs, {config.Wants?.Length ?? 0} wants");
         config.Validate();
-        Console.WriteLine($"[DEBUG] After validate: {config.NumNeeds} needs, {config.NumWants} wants");
+        Console.WriteLine($"[DEBUG] After validate: {config.Needs?.Length ?? 0} needs, {config.Wants?.Length ?? 0} wants");
         return config;
     }
 
@@ -479,14 +479,14 @@ public class OuijaConfig
                 {
                     Type = "Joker",
                     Value = "Perkeo",
-                    DesireByAnte = 2,
+                    SearchAntes = new[] { 1, 2 },
                     Score = 10
                 },
                 new Desire
                 {
                     Type = "Tag",
                     Value = "NegativeTag",
-                    DesireByAnte = 3,
+                    SearchAntes = new[] { 1, 2, 3 },
                     Score = 5
                 }
             },
@@ -497,7 +497,7 @@ public class OuijaConfig
                     Type = "Joker",
                     Value = "Blueprint",
                     Edition = "Negative",
-                    DesireByAnte = 4,
+                    SearchAntes = new[] { 1, 2, 3, 4 },
                     Score = 3
                 },
                 new Desire
