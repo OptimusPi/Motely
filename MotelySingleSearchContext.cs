@@ -45,6 +45,9 @@ public unsafe ref partial struct MotelySingleSearchContext
 
     public readonly MotelyStake Stake => _searchParameters.Stake;
     public readonly MotelyDeck Deck => _searchParameters.Deck;
+    
+    // Stub for compatibility - StartingDeck should return the initial deck of playing cards
+    public readonly List<MotelyItem>? StartingDeck => null;
 
     private readonly ref readonly SeedHashCache SeedHashCache => ref _contextParams.SeedHashCache;
     private readonly int SeedLength => _contextParams.SeedLength;
@@ -66,6 +69,9 @@ public unsafe ref partial struct MotelySingleSearchContext
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly string GetSeed() => _contextParams.GetSeed(VectorLane);
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public readonly string GetCurrentSeed() => GetSeed(); // Alias for compatibility
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly int GetSeed(char* output) => _contextParams.GetSeed(VectorLane, output);

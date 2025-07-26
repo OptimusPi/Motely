@@ -92,7 +92,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 ctx.CacheTarotStream(ante);
                 return;
             }
-            else if (string.Equals(desire.Type, "Tag", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(desire.Type, "Tag", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(desire.Type, "SmallBlindTag", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(desire.Type, "BigBlindTag", StringComparison.OrdinalIgnoreCase))
             {
                 ctx.CacheTagStream(ante);
                 return;
@@ -350,7 +352,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     // This is because we can't check soul jokers in vector context
                     return mask;
                 }
-                if (string.Equals(need.Type, "Tag", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(need.Type, "Tag", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(need.Type, "SmallBlindTag", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(need.Type, "BigBlindTag", StringComparison.OrdinalIgnoreCase))
                 {
                     return ProcessTagNeed(ref searchContext, need, ante, mask);
                 }
@@ -477,11 +481,32 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             MotelyVectorTagStream tagStream = searchContext.CreateTagStreamCached(ante);
             var smallBlindTag = searchContext.GetNextTag(ref tagStream);
             var bigBlindTag = searchContext.GetNextTag(ref tagStream);
-            var smallBlindMatch = VectorEnum256.Equals(smallBlindTag, targetTag);
-            // Only require small blind to match
-            DebugLogger.LogFormat("[DEBUG] Tag check ante {0}: SmallBlind={1} BigBlind={2} Target={3}", ante, smallBlindTag, bigBlindTag, targetTag);
-            DebugLogger.LogFormat("[DEBUG] Tag match ante {0}: SmallMatch={1} FinalMask={2}", ante, smallBlindMatch, smallBlindMatch);
-            return mask & smallBlindMatch;
+            
+            VectorMask matchMask = VectorMask.NoBitsSet;
+            
+            // Check based on the type
+            if (string.Equals(need.Type, "SmallBlindTag", StringComparison.OrdinalIgnoreCase))
+            {
+                matchMask = VectorEnum256.Equals(smallBlindTag, targetTag);
+                DebugLogger.LogFormat("[DEBUG] SmallBlindTag check ante {0}: SmallBlind={1} Target={2} Match={3}", 
+                    ante, smallBlindTag, targetTag, matchMask);
+            }
+            else if (string.Equals(need.Type, "BigBlindTag", StringComparison.OrdinalIgnoreCase))
+            {
+                matchMask = VectorEnum256.Equals(bigBlindTag, targetTag);
+                DebugLogger.LogFormat("[DEBUG] BigBlindTag check ante {0}: BigBlind={1} Target={2} Match={3}", 
+                    ante, bigBlindTag, targetTag, matchMask);
+            }
+            else // Default "Tag" matches either
+            {
+                var smallMatch = VectorEnum256.Equals(smallBlindTag, targetTag);
+                var bigMatch = VectorEnum256.Equals(bigBlindTag, targetTag);
+                matchMask = smallMatch | bigMatch;
+                DebugLogger.LogFormat("[DEBUG] Tag check ante {0}: SmallBlind={1} BigBlind={2} Target={3} Match={4}", 
+                    ante, smallBlindTag, bigBlindTag, targetTag, matchMask);
+            }
+            
+            return mask & matchMask;
         }
 
         private static VectorMask ProcessVoucherNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
@@ -566,15 +591,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             if (singleCtx.StartingDeck == null || singleCtx.StartingDeck.Count == 0)
                 return false;
 
-            foreach (var card in singleCtx.StartingDeck)
-            {
-                if (MatchesPlayingCardCriteria(card, need))
-                {
-                    DebugLogger.LogFormat("[CheckPlayingCard] Matched card in starting deck: {0}", card);
-                    return true;
-                }
-            }
-            DebugLogger.LogFormat("[CheckPlayingCard] No match found in starting deck for need: Rank={0}, Suit={1}, Edition={2}, Seal={3}", need.Rank, need.Suit, need.Edition, need.Seal);
+            // TODO: Fix type conversion from MotelyItem to MotelyPlayingCard
+            // foreach (var card in singleCtx.StartingDeck)
+            // {
+            //     if (MatchesPlayingCardCriteria(card, need))
+            //     {
+            //         DebugLogger.LogFormat("[CheckPlayingCard] Matched card in starting deck: {0}", card);
+            //         return true;
+            //     }
+            // }
+            DebugLogger.LogFormat("[CheckPlayingCard] PlayingCard check not yet implemented - StartingDeck support needed");
             return false;
         }
         
@@ -1003,7 +1029,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         foundInThisAnte = CheckSpectralInShopOrPacks(ref singleCtx, want, ante);
                         if (foundInThisAnte) result.ScoreWants[wantIndex] += want.Score;
                     }
-                    else if (string.Equals(want.Type, "Tag", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(want.Type, "Tag", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(want.Type, "SmallBlindTag", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(want.Type, "BigBlindTag", StringComparison.OrdinalIgnoreCase))
                     {
                         foundInThisAnte = CheckTagForAnte(ref singleCtx, want, ante);
                         if (foundInThisAnte) result.ScoreWants[wantIndex] += want.Score;
@@ -1089,10 +1117,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var targetTag = want.TagEnum.Value;
             var tagStream = singleCtx.CreateTagStreamCached(ante);
             
-            // Only require small blind to match
             var smallBlindTag = singleCtx.GetNextTag(ref tagStream);
             var bigBlindTag = singleCtx.GetNextTag(ref tagStream);
-            return smallBlindTag == targetTag;
+            
+            // Check based on the type
+            if (string.Equals(want.Type, "SmallBlindTag", StringComparison.OrdinalIgnoreCase))
+            {
+                return smallBlindTag == targetTag;
+            }
+            else if (string.Equals(want.Type, "BigBlindTag", StringComparison.OrdinalIgnoreCase))
+            {
+                return bigBlindTag == targetTag;
+            }
+            else // Default "Tag" matches either
+            {
+                return smallBlindTag == targetTag || bigBlindTag == targetTag;
+            }
         }
 
         private static bool CheckVoucherForAnte(ref MotelySingleSearchContext singleCtx, 
