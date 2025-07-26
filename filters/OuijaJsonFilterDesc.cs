@@ -245,8 +245,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         var wantColumns = OuijaJsonFilterDesc.GetWantsColumnNames(localConfig!);
                         FancyConsole.WriteLine(result.ToCsvRow(localConfig!, wantColumns.Length));
                         
-                        // Also enqueue the result for external consumers
-                        ResultsQueue?.Enqueue(result);
+                        // Also enqueue the result for external consumers (unless cancelled)
+                        if (!IsCancelled)
+                        {
+                            ResultsQueue?.Enqueue(result);
+                        }
                     }
                     return result.Success && result.TotalScore >= cutoff;
                 });
@@ -1010,6 +1013,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         }
 
         public static ConcurrentQueue<OuijaResult>? ResultsQueue { get; set; } = new ConcurrentQueue<OuijaResult>();
+        public static bool IsCancelled { get; set; } = false;
 
         private static OuijaResult ProcessWantsAndScore(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
         {
