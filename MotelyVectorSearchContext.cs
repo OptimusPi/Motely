@@ -96,6 +96,7 @@ public unsafe ref partial struct MotelyVectorSearchContext
 {
     private readonly ref readonly MotelySearchParameters _searchParameters;
     private readonly ref readonly MotelySearchContextParams _contextParams;
+    public object? SearchInstance { get; set; }
 
     public readonly MotelyStake Stake => _searchParameters.Stake;
     public readonly MotelyDeck Deck => _searchParameters.Deck;

@@ -105,6 +105,19 @@ ref partial struct MotelySingleSearchContext
 
         return pack;
     }
+    
+    // Alias for compatibility with OuijaJsonFilterDesc
+    public MotelySingleItemSet GetArcanaPackContents(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size)
+        => GetNextArcanaPackContents(ref tarotStream, size);
+    
+    public MotelySingleItemSet GetArcanaPackContents(ref MotelySingleTarotStream tarotStream, int size)
+    {
+        Debug.Assert(size <= MotelySingleItemSet.MaxLength);
+        MotelySingleItemSet pack = new();
+        for (int i = 0; i < size; i++)
+            pack.Append(GetNextTarot(ref tarotStream, pack));
+        return pack;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem GetNextTarot(ref MotelySingleTarotStream tarotStream)

@@ -20,6 +20,14 @@ public class OuijaResult
         // Start with seed and total score
         var row = $"{Seed},{TotalScore}";
         
+        // Add NaturalNegatives if configured
+        if (config.ScoreNaturalNegatives)
+            row += $",{NaturalNegativeJokers}";
+            
+        // Add DesiredNegatives if configured
+        if (config.ScoreDesiredNegatives)
+            row += $",{DesiredNegativeJokers}";
+        
         // Add scores for each want, limited by numWants parameter
         if (ScoreWants != null && config?.Wants != null)
         {

@@ -22,9 +22,9 @@ public class OuijaConfig
     
     // Parsed enum values (set by OuijaConfigLoader)
     [JsonIgnore]
-    public MotelyDeck ParsedDeck { get; set; } = MotelyDeck.RedDeck;
+    public MotelyDeck ParsedDeck { get; set; } = MotelyDeck.Red;
     [JsonIgnore]
-    public MotelyStake ParsedStake { get; set; } = MotelyStake.WhiteStake;
+    public MotelyStake ParsedStake { get; set; } = MotelyStake.White;
 
     public class Desire
     {
@@ -165,6 +165,14 @@ public class OuijaConfig
                 {
                     // Voucher is also a special case
                 }
+                else if (Type.Equals("SmallBlindTag", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Small blind tag is a special case - searching for tags on small blinds
+                }
+                else if (Type.Equals("BigBlindTag", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Big blind tag is a special case - searching for tags on big blinds
+                }
             }
 
             // Parse value based on type (only if enum not already set)
@@ -190,7 +198,9 @@ public class OuijaConfig
                     if (MotelyEnumUtil.TryParseEnum<MotelyTarotCard>(Value, out var tarot))
                         TarotEnum = tarot;
                 }
-                else if (Type.Equals("Tag", StringComparison.OrdinalIgnoreCase) && !TagEnum.HasValue)
+                else if ((Type.Equals("Tag", StringComparison.OrdinalIgnoreCase) || 
+                          Type.Equals("SmallBlindTag", StringComparison.OrdinalIgnoreCase) || 
+                          Type.Equals("BigBlindTag", StringComparison.OrdinalIgnoreCase)) && !TagEnum.HasValue)
                 {
                     if (MotelyEnumUtil.TryParseEnum<MotelyTag>(Value, out var tag))
                         TagEnum = tag;
@@ -359,6 +369,8 @@ public class OuijaConfig
             "Spectral" or "SpectralCard" => desire.SpectralEnum.HasValue,
             "Tarot" or "TarotCard" => desire.TarotEnum.HasValue,
             "Tag" => desire.TagEnum.HasValue,
+            "SmallBlindTag" => desire.TagEnum.HasValue,
+            "BigBlindTag" => desire.TagEnum.HasValue,
             "Voucher" => desire.VoucherEnum.HasValue,
             "Boss" => desire.BossEnum.HasValue,
             "PlayingCard" => (desire.AnyRank || desire.RankEnum.HasValue) && 

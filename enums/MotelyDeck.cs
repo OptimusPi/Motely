@@ -1,7 +1,7 @@
 
 namespace Motely;
 
-public enum MotelyDeck 
+public enum MotelyDeck
 {
     Red,
     Blue,

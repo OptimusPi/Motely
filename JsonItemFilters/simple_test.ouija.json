@@ -1,9 +1,0 @@
-{
-  "maxSearchAnte": 2,
-  "deck": "RedDeck",
-  "stake": "WhiteStake",
-  "needs": [
-    { "type": "SoulJoker", "value": "Perkeo", "searchAntes": [1, 2], "score": 100 }
-  ],
-  "wants": []
-}

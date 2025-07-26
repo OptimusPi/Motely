@@ -1,6 +1,6 @@
 namespace Motely;
 
-public class Motely
+public static class Motely
 {
     public const int MaxCachedPseudoHashKeyLength = 20;
 

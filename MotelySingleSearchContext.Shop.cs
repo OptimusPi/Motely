@@ -31,6 +31,45 @@ public enum MotelyShopStreamFlags
     ExcludeSpectrals = 1 << 4
 }
 
+/// <summary>
+/// Complete shop state for an ante
+/// </summary>
+public struct ShopState
+{
+    public const int ShopSlots = 6;
+    public const int ShopSlotsAnteOne = 4; 
+
+    [InlineArray(ShopSlots)]
+    public struct ShopItems
+    {
+        public ShopItem Item;
+    }
+    
+    public ShopItems Items;
+    
+    public struct ShopItem
+    {
+        public ShopItemType Type;
+        public MotelyItem Item;
+        
+        // Type-specific data
+        public MotelyJoker Joker;
+        public MotelyJokerRarity JokerRarity;
+        public MotelyPlanetCard Planet;
+        public MotelyTarotCard Tarot;
+        public MotelyItemEdition Edition;
+        // TODO: Stickers
+        
+        public enum ShopItemType : byte
+        {
+            Empty,
+            Joker,
+            Planet,
+            Tarot
+        }
+    }
+}
+
 unsafe ref partial struct MotelySingleSearchContext
 {
 
@@ -128,5 +167,48 @@ unsafe ref partial struct MotelySingleSearchContext
 
         return GetNextSpectral(ref stream.SpectralStream);
 
+    }
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public ShopState GenerateFullShop(int ante)
+    {
+        ShopState shop = new();
+        var stream = CreateShopItemStream(ante);
+        
+        int numSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
+        
+        for (int slot = 0; slot < numSlots; slot++)
+        {
+            ref var item = ref shop.Items[slot];
+            var shopItem = GetNextShopItem(ref stream);
+            
+            // Determine type based on MotelyItem
+            if (shopItem.TypeCategory == MotelyItemTypeCategory.Joker)
+            {
+                item.Type = ShopState.ShopItem.ShopItemType.Joker;
+                item.Joker = (MotelyJoker)(shopItem.Value & ~Motely.ItemTypeCategoryMask);
+                item.Edition = shopItem.Edition;
+            }
+            else if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
+            {
+                item.Type = ShopState.ShopItem.ShopItemType.Planet;
+                item.Planet = (MotelyPlanetCard)(shopItem.Value & ~Motely.ItemTypeCategoryMask);
+            }
+            else if (shopItem.TypeCategory == MotelyItemTypeCategory.TarotCard)
+            {
+                item.Type = ShopState.ShopItem.ShopItemType.Tarot;
+                item.Tarot = (MotelyTarotCard)(shopItem.Value & ~Motely.ItemTypeCategoryMask);
+            }
+            else
+            {
+                item.Type = ShopState.ShopItem.ShopItemType.Empty;
+            }
+            
+            item.Item = shopItem;
+        }
+        
+        return shop;
     }
 }
