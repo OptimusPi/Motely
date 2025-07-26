@@ -1,159 +1,18 @@
 {
-    "name": "schema",
-    "description": "Example schema for Ouija Balatro Seed filter config",
-    "author": "pifreak",
-    "filter_config": {
-        "numNeeds": 2,
-        "numWants": 12,
-        "Needs": [
-            {
-                "type": "SmallBlindTag",
-                "value": "NegativeTag",
-                "searchAntes": [2,3,4,5,6,7,8]
-            },
-            {
-                "type": "BigBlindTag",
-                "value": "NegativeTag",
-                "searchAntes": [3,4,5,6,7]
-            },
-            {
-                "type": "Joker",
-                "value": "HangingChad",
-                "edition": "None",
-                "stickers": [],
-                "searchAntes": [1,2]
-            },
-            {
-                "type": "SoulJoker",
-                "value": "Perkeo",
-                "edition": "None",
-                "searchAntes": [2,3,4]
-            }
-        ],
-        "Wants": [
-            {
-                "type": "Joker",
-                "value": "HangingChad",
-                "edition": "Negative",
-                "jokerstickers": [
-                    "Perishable",
-                    "Rental"
-                ],
-                "searchAntes": [1,2,3,4,5,6]
-            },
-            {
-                "type": "Joker",
-                "value": "HangingChad",
-                "edition": "Negative",
-                "jokerstickers": [
-                    "Eternal"
-                ],
-                "searchAntes": [1,2,3,4,5,6]
-            },
-            {
-                "type": "Joker",
-                "value": "HangingChad",
-                "edition": "Negative",
-                "jokerstickers": [],
-                "searchAntes": [1,2,3,4,5,6]
-            },
-            {
-                "type": "TarotCard",
-                "value": "TheMagician",
-                "searchAntes": [1,2,3,4,5,6]
-            },
-            {
-                "type": "SpectralCard",
-                "value": "Immolate",
-                "searchAntes": [1,2]
-            },
-            {
-                "type": "Voucher",
-                "value": "Blank",
-                "searchAntes": [1,2,3,4,5,6,7,8]
-            },
-            {
-                "type": "PlayingCard",
-                "rank": "Ace",
-                "suit": "Heart",
-                "searchAntes": [1,2,3,4,5,6]
-            },
-            {
-                "type": "PlayingCard",
-                "rank": "Two",
-                "suit": "Heart",
-                "edition": "Polychrome",
-                "enchantment": "Glass",
-                "chip": "RedChip",
-                "searchAntes": [1,2,3,4,5,6]
-            },
-            {
-                "type": "Boss",
-                "value": "TheNeedle",
-                "searchAntes": [1]
-            }
-        ],
-        "minSearchAnte": 1,
-        "maxSearchAnte": 8,
-        "deck": "AnaglyphDeck",
-        "stake": "BlackStake",
-        "scoreNaturalNegatives": true,
-        "scoreDesiredNegatives": true
-    },
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Ouija Balatro Seed filter config schema",
-    "type": "object",
-    "properties": {
-        "name": { "type": "string" },
-        "description": { "type": "string" },
-        "author": { "type": "string" },
-        "keywords": { "type": "array", "items": { "type": "string" } },
-        "filter_config": {
-            "type": "object",
-            "properties": {
-                "numNeeds": { "type": "integer" },
-                "numWants": { "type": "integer" },
-                "Needs": {
-                    "type": "array",
-                    "items": { "$ref": "#/definitions/desire" }
-                },
-                "Wants": {
-                    "type": "array",
-                    "items": { "$ref": "#/definitions/desire" }
-                },
-                "minSearchAnte": { "type": "integer" },
-                "maxSearchAnte": { "type": "integer" },
-                "deck": { "type": "string" },
-                "stake": { "type": "string" },
-                "scoreNaturalNegatives": { "type": "boolean" },
-                "scoreDesiredNegatives": { "type": "boolean" }
-            },
-            "required": ["Needs", "Wants"]
-        }
-    },
-    "definitions": {
-        "desire": {
-            "type": "object",
-            "properties": {
-                "type": { "type": "string" },
-                "value": { "type": "string" },
-                "edition": { "type": "string" },
-                "jokerStickers": { "type": "array", "items": { "type": "string" } },
-                "rank": { "type": "string" },
-                "suit": { "type": "string" },
-                "enchantment": { "type": "string" },
-                "chip": { "type": "string" },
-                "desireByAnte": { "type": "integer" },
-                "searchAntes": { "type": "array", "items": { "type": "integer" } },
-                "Score": { "type": "integer" },
-                "JokerEnum": { "type": "string" },
-                "PlanetEnum": { "type": "string" },
-                "SpectralEnum": { "type": "string" },
-                "TypeEnum": { "type": "string" },
-                "VoucherEnum": { "type": "string" },
-                "TagEnum": { "type": "string" },
-                "TarotEnum": { "type": "string" }
-            }
-        }
-    }
+  "name": "schema",
+  "description": "Example schema for Ouija Balatro Seed filter config",
+  "author": "pifreak",
+  "filter_config": {
+    "Needs": [
+        { "type": "Joker", "value": "HangingChad", "edition": "Negative", "searchAntes": [1], "score": 1 }
+      
+    ],
+    "Wants": [
+      { "type": "SoulJoker", "value": "Perkeo", "searchAntes": [1] }
+    ],
+    "deck": "GhostDeck",
+    "stake": "BlackStake",
+    "scoreNaturalNegatives": true,
+    "scoreDesiredNegatives": true
+  }
 }

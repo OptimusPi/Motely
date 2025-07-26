@@ -209,7 +209,10 @@ namespace Motely
                 // Search configuration is now part of MotelySearchSettings
 
                 // Create the real Motely search using OuijaJsonFilterDesc
-                var filterDesc = new OuijaJsonFilterDesc(config);
+                var filterDesc = new OuijaJsonFilterDesc(config)
+                {
+                    Cutoff = cutoff
+                };
                 var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
                     .WithThreadCount(threads)
                     .WithSequentialSearch()
@@ -246,7 +249,9 @@ namespace Motely
                 Console.CancelKeyPress += (sender, e) =>
                 {
                     e.Cancel = true;
-                    search.Pause();
+                    Console.WriteLine("\n🛑 Stopping search (waiting for current batch to complete)...");
+                    search.Dispose();
+                    Console.WriteLine("✅ Search stopped gracefully");
                 };
 
                 // Wait for search to complete

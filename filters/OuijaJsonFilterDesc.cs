@@ -802,12 +802,30 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var targetJoker = need.JokerEnum.Value;
             var shop = singleCtx.GenerateFullShop(ante);
             
+            DebugLogger.LogFormat("[CheckShopJoker] Checking shop in ante {0} for {1} with edition {2}", 
+                ante, targetJoker, need.ParsedEdition?.ToString() ?? "any");
+            
             int maxShopSlots = (ante == 1) ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
             for (int i = 0; i < maxShopSlots; i++)
             {
                 ref var item = ref shop.Items[i];
-                if (item.Type == ShopState.ShopItem.ShopItemType.Joker && item.Joker == targetJoker)
+                if (item.Type == ShopState.ShopItem.ShopItemType.Joker)
                 {
+                    var jokerItem = new MotelyItem(item.Joker, item.Edition);
+                    var itemJokerBaseDebug = (MotelyJokerCommon)((int)item.Joker & ~Motely.JokerRarityMask);
+                    var targetJokerBaseDebug = (MotelyJokerCommon)((int)targetJoker & ~Motely.JokerRarityMask);
+                    DebugLogger.LogFormat("[CheckShopJoker] Shop slot {0}: {1} ({2}) base={3} ({4}) vs target base={5} ({6}), edition {7}, mask={8}", 
+                        i, item.Joker, (int)item.Joker, itemJokerBaseDebug, (int)itemJokerBaseDebug, targetJokerBaseDebug, (int)targetJokerBaseDebug, item.Edition, Motely.JokerRarityMask);
+                }
+                // Create MotelyItem wrappers for proper comparison
+                var itemMotelyItem = new MotelyItem(item.Joker, item.Edition);
+                var targetMotelyItem = new MotelyItem(targetJoker, MotelyItemEdition.None);
+                
+                if (item.Type == ShopState.ShopItem.ShopItemType.Joker && itemMotelyItem.Type == targetMotelyItem.Type)
+                {
+                    DebugLogger.LogFormat("[CheckShopJoker] Found {0} with edition {1} (looking for {2})", 
+                        item.Joker, item.Edition, need.ParsedEdition?.ToString() ?? "any");
+                    
                     // Check edition if needed
                     if (need.ParsedEdition.HasValue && item.Edition != need.ParsedEdition.Value)
                         continue;
@@ -820,6 +838,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         DebugLogger.LogFormat("[CheckShopJoker] Sticker checking not yet implemented");
                     }
                     
+                    DebugLogger.LogFormat("[CheckShopJoker] MATCH! Found {0} with required edition {1}!", 
+                        targetJoker, need.ParsedEdition?.ToString() ?? "any");
                     return true;
                 }
             }
@@ -992,7 +1012,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         for (int i = 0; i < ShopState.ShopSlots; i++)
                         {
                             ref var item = ref shop.Items[i];
-                            if (item.Type == ShopState.ShopItem.ShopItemType.Joker && item.Joker == targetJoker)
+                            // Strip rarity bits for comparison
+                            var itemJokerBase = (MotelyJokerCommon)((int)item.Joker & ~Motely.JokerRarityMask);
+                            var targetJokerBase = (MotelyJokerCommon)((int)targetJoker & ~Motely.JokerRarityMask);
+                            
+                            if (item.Type == ShopState.ShopItem.ShopItemType.Joker && itemJokerBase == targetJokerBase)
                             {
                                 // Check edition
                                 bool editionMatches = !want.ParsedEdition.HasValue || item.Edition == want.ParsedEdition.Value;
