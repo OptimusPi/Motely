@@ -17,8 +17,8 @@ public class OuijaResult
 
     public string ToCsvRow(OuijaConfig config, int numWants = -1)
     {
-        // Start with seed and total score
-        var row = $"{Seed},{TotalScore}";
+        // Start with pipe marker, then seed and total score
+        var row = $"|{Seed},{TotalScore}";
         
         // Add NaturalNegatives if configured
         if (config.ScoreNaturalNegatives)

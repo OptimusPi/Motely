@@ -7,9 +7,6 @@ using System.Runtime.Intrinsics;
 namespace Motely;
 
 
-#if !DEBUG
-[method:MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
 internal unsafe struct PartialSeedHashCache : IDisposable
 {
     // A map of pseudohash key length => pointer to cached partial hash
