@@ -29,54 +29,25 @@ public struct TestFilterDesc() : IMotelySeedFilterDesc<TestFilterDesc.TestFilter
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
 
-            return searchContext.SearchIndividualSeeds((ref MotelySingleSearchContext searchContext) =>
-            {
+            MotelyVectorJokerStream jokerStream = searchContext.CreateShopJokerStream(1);
 
-                int ante = 2;
+            for (int i = 0; i < 10; i++)
+                Console.WriteLine(searchContext.GetNextJoker(ref jokerStream));
 
-                MotelySingleBoosterPackStream packStream = searchContext.CreateBoosterPackStream(ante);
-
-                MotelySingleTarotStream tarotStream = searchContext.CreateArcanaPackTarotStream(ante);
-                MotelySinglePlanetStream planetStream = searchContext.CreateCelestialPackPlanetStream(ante);
-                MotelySingleSpectralStream spectralStream = searchContext.CreateSpectralPackSpectralStream(ante);
-                MotelySingleStandardCardStream standardCardStream = searchContext.CreateStandardPackCardStream(ante);
-
-                for (int i = 0; i < 6; i++)
-                {
-                    MotelyBoosterPack pack = searchContext.GetNextBoosterPack(ref packStream);
-
-                    Console.WriteLine(pack);
-
-                    switch (pack.GetPackType())
-                    {
-                        case MotelyBoosterPackType.Arcana:
-                            Console.WriteLine(searchContext.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize()).ToString());
-                            break;
-                        case MotelyBoosterPackType.Celestial:
-                            Console.WriteLine(searchContext.GetNextCelestialPackContents(ref planetStream, pack.GetPackSize()).ToString());
-                            break;
-                        case MotelyBoosterPackType.Spectral:
-                            Console.WriteLine(searchContext.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize()).ToString());
-                            break;
-                        case MotelyBoosterPackType.Standard:
-                            Console.WriteLine(searchContext.GetNextStandardPackContents(ref standardCardStream, pack.GetPackSize()).ToString());
-                            break;
-                    }
-                }
+            return VectorMask.NoBitsSet;
 
 
-                // var stream = searchContext.CreateShopItemStream(1, ShopFlags, JokerFlags);
+            // return searchContext.SearchIndividualSeeds((ref MotelySingleSearchContext searchContext) =>
+            // {
+            //     Console.WriteLine($"\n{searchContext.GetSeed()}\n");
 
-                // for (int i = 0; i < 2; i++)
-                // {
-                //     MotelyItem item = searchContext.GetNextShopItem(ref stream);
+            //     MotelySingleJokerStream jokerStream = searchContext.CreateShopJokerStream(1);
 
-                //     if (item.Type != MotelyItemType.Blueprint)
-                //         return false;
-                // }
+            //     for (int i = 0; i < 10; i++)
+            //         Console.WriteLine(searchContext.GetNextJoker(ref jokerStream));
 
-                return true;
-            });
+            //     return false;
+            // });
         }
     }
 }
