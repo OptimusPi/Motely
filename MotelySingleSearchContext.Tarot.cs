@@ -1,6 +1,5 @@
 
 
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -20,15 +19,15 @@ ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private MotelySingleTarotStream CreateTarotStream(string source, int ante, bool searchTarot, bool soulable)
+    private MotelySingleTarotStream CreateTarotStream(string source, int ante, bool searchTarot, bool soulable, bool isCached)
     {
         return new(
             MotelyPrngKeys.Tarot + source + ante,
             searchTarot ?
-                CreateResampleStream(MotelyPrngKeys.Tarot + source + ante) :
+                CreateResampleStream(MotelyPrngKeys.Tarot + source + ante, isCached) :
                 MotelySingleResampleStream.Invalid,
             soulable ?
-                CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante) :
+                CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
                 MotelySinglePrngStream.Invalid
         );
     }
@@ -36,43 +35,14 @@ ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private MotelySingleTarotStream CreateTarotStreamCached(string source, int ante, bool searchTarot, bool searchSoul)
-    {
-        return new(
-            MotelyPrngKeys.Tarot + source + ante,
-            searchTarot ?
-                CreateResampleStreamCached(MotelyPrngKeys.Tarot + source + ante) :
-                MotelySingleResampleStream.Invalid,
-            searchSoul ?
-                CreatePrngStreamCached(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante) :
-                MotelySinglePrngStream.Invalid
-        );
-    }
+    public MotelySingleTarotStream CreateArcanaPackTarotStream(int ante, bool soulOnly = false, bool isCached = false) =>
+        CreateTarotStream(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true, isCached);
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelySingleTarotStream CreateArcanaPackTarotStreamCached(int ante, bool soulOnly = false) =>
-        CreateTarotStreamCached(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true);
-
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    public MotelySingleTarotStream CreateArcanaPackTarotStream(int ante, bool soulOnly = false) =>
-        CreateTarotStream(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true);
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    public MotelySingleTarotStream CreateShopTarotStreamCached(int ante) =>
-        CreateTarotStreamCached(MotelyPrngKeys.ShopItemSource, ante, true, false);
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    public MotelySingleTarotStream CreateShopTarotStream(int ante) =>
-        CreateTarotStream(MotelyPrngKeys.ShopItemSource, ante, true, false);
+    public MotelySingleTarotStream CreateShopTarotStream(int ante, bool isCached = false) =>
+        CreateTarotStream(MotelyPrngKeys.ShopItemSource, ante, true, false, isCached);
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -80,7 +50,7 @@ ref partial struct MotelySingleSearchContext
     public bool GetNextArcanaPackHasTheSoul(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size)
     {
         Debug.Assert(tarotStream.IsSoulable, "Tarot pack does not have the soul.");
-        Debug.Assert(tarotStream.ResampleStream.IsInvalid, "This method is only valid for arcana packs created with soul only.");
+        Debug.Assert(tarotStream.ResampleStream.IsInvalid, "This method is only valid for tarot streams created with soul only.");
 
         int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
 

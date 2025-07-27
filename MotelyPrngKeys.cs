@@ -1,4 +1,6 @@
 
+using System.ComponentModel;
+
 namespace Motely;
 
 public static class MotelyPrngKeys
@@ -36,7 +38,7 @@ public static class MotelyPrngKeys
     public const string BuffoonJokerEternalPerishableSource = "packetper";
     public const string BuffoonJokerRentalSource = "packssjr";
 
-    public const string JokerSoul = "sou";
+    public const string JokerSoulSource = "sou";
     public const string JokerRarity = "rarity";
     public const string JokerEdition = "edi";
     public const string JokerCommon = "Joker1";
@@ -51,4 +53,19 @@ public static class MotelyPrngKeys
     public const string Shop = "sho"; // Alias for compatibility
     public const string ShopJokerEternalPerishableSource = "etperpoll";
     public const string ShopJokerRentalSource = "ssjr";
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public static string FixedRarityJoker(MotelyJokerRarity rarity, string source, int ante)
+    {
+        return rarity switch
+        {
+            MotelyJokerRarity.Common => JokerCommon + source + ante,
+            MotelyJokerRarity.Uncommon => JokerUncommon + source + ante,
+            MotelyJokerRarity.Rare => JokerRare + source + ante,
+            MotelyJokerRarity.Legendary => JokerLegendary,
+            _ => throw new InvalidEnumArgumentException()
+        };
+    }
 }

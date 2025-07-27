@@ -5,24 +5,21 @@ public struct MotelyVectorBoosterPackStream(MotelyVectorPrngStream prngStream, b
 {
     public MotelyVectorPrngStream PrngStream = prngStream;
     public bool GeneratedFirstPack = generatedFirstPack;
+
+    public readonly MotelySingleBoosterPackStream CreateSingleStream(int lane)
+    {
+        return new(PrngStream.CreateSingleStream(lane), GeneratedFirstPack);
+    }
 }
 
 ref partial struct MotelyVectorSearchContext
 {
-    public MotelyVectorBoosterPackStream CreateBoosterPackStreamCached(int ante)
-    => CreateBoosterPackStream(ante, ante != 1);
+    public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false)
+        => CreateBoosterPackStream(ante, ante != 1, isCached);
 
-    public MotelyVectorBoosterPackStream CreateBoosterPackStreamCached(int ante, bool generatedFirstPack)
+    public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool generatedFirstPack, bool isCached = false)
     {
-        return new(CreatePrngStreamCached(MotelyPrngKeys.ShopPack + ante), generatedFirstPack);
-    }
-
-    public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante)
-        => CreateBoosterPackStream(ante, ante != 1);
-
-    public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool generatedFirstPack)
-    {
-        return new(CreatePrngStream(MotelyPrngKeys.ShopPack + ante), generatedFirstPack);
+        return new(CreatePrngStream(MotelyPrngKeys.ShopPack + ante, isCached), generatedFirstPack);
     }
 
     public VectorEnum256<MotelyBoosterPack> GetNextBoosterPack(ref MotelyVectorBoosterPackStream stream)
