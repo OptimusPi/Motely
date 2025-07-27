@@ -1,18 +1,22 @@
 {
-  "name": "schema",
-  "description": "Example schema for Ouija Balatro Seed filter config",
+  "name": "Negative Perkeo and Triboulet )",
+  "description": "pifreak loves you!",
   "author": "pifreak",
   "filter_config": {
     "Needs": [
-        { "type": "Joker", "value": "HangingChad", "edition": "Negative", "searchAntes": [1], "score": 1 }
-      
+       { "type": "Joker", "value": "Blueprint", "sources": ["BoosterPacks"], "SearchAntes": [1] }
+       ,{ "type": "Spectral", "value": "Ankh", "SearchAntes": [1] }
+       ,{ "type": "SoulJoker", "value": "Perkeo", "SearchAntes": [2,3] }
+       ,{ "type": "Joker", "value": "InvisibleJoker", "SearchAntes": [2,3] }
     ],
     "Wants": [
-      { "type": "SoulJoker", "value": "Perkeo", "searchAntes": [1] }
+      { "type": "Joker", "value": "SockAndBuskin", "SearchAntes": [2,3,4], "score": 1 }
+      ,{ "type": "Joker", "value": "HangingChad", "SearchAntes": [2,3,4], "score": 1 }
+      ,{ "type": "Joker", "value": "Dusk", "SearchAntes": [2,3,4], "score": 1 }
     ],
-    "deck": "GhostDeck",
-    "stake": "BlackStake",
-    "scoreNaturalNegatives": true,
-    "scoreDesiredNegatives": true
+    "deck": "Black",
+    "stake": "White",
+    "scoreNaturalNegatives": false,
+    "scoreDesiredNegatives": false
   }
 }

@@ -904,8 +904,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         private readonly Vector512<double>* _hashes;
         private readonly PartialSeedHashCache* _hashCache;
 
-        public int LastCompletedBatch;
-
         public MotelySequentialSearchThread(MotelySearch<TBaseFilter> search, MotelySearchSettings<TBaseFilter> settings, int index) : base(search, index)
         {
             _digits = (char*)Marshal.AllocHGlobal(sizeof(char) * Motely.MaxSeedLength);

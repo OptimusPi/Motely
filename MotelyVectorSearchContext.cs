@@ -215,11 +215,8 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     {
         if (SeedHashCache->HasPartialHash(key.Length))
         {
-            Console.WriteLine("has partial hash");
             return InternalPseudoHashCached(key);
         }
-
-        Console.WriteLine("caching pseudo hash");
         return InternalPseudoHash(key);
     }
 
