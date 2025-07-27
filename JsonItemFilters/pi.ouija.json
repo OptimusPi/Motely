@@ -4,15 +4,12 @@
   "author": "pifreak",
   "filter_config": {
     "Needs": [
-       { "type": "Joker", "value": "Blueprint", "sources": ["BoosterPacks"], "SearchAntes": [1] }
-       ,{ "type": "Spectral", "value": "Ankh", "SearchAntes": [1] }
-       ,{ "type": "SoulJoker", "value": "Perkeo", "SearchAntes": [2,3] }
-       ,{ "type": "Joker", "value": "InvisibleJoker", "SearchAntes": [2,3] }
+       { "type": "SoulJoker", "value": "Perkeo", "SearchAntes": [1] }
+      ,{ "type": "Voucher", "value": "Telescope", "SearchAntes": [2] }
+      ,{ "type": "Voucher", "value": "Observatory", "SearchAntes": [3] }
     ],
     "Wants": [
-      { "type": "Joker", "value": "SockAndBuskin", "SearchAntes": [2,3,4], "score": 1 }
-      ,{ "type": "Joker", "value": "HangingChad", "SearchAntes": [2,3,4], "score": 1 }
-      ,{ "type": "Joker", "value": "Dusk", "SearchAntes": [2,3,4], "score": 1 }
+      { "type": "Joker", "value": "any", "Edition": "Negative", "SearchAntes": [2,3,4,5,6], "score": 1 }
     ],
     "deck": "Black",
     "stake": "White",
