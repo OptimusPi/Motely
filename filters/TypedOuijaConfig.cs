@@ -41,14 +41,29 @@ public struct TypedOuijaConfig
         // Cached item type for fast filtering
         public MotelyItemType ItemType;
         
+        // Source options
+        public bool IncludeSkipTags;
+        public bool IncludeBoosterPacks;
+        public bool IncludeShopStream;
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool MatchesJoker(MotelyJoker joker, MotelyItemEdition edition)
         {
             if (Type != DesireType.Joker && Type != DesireType.SoulJoker)
                 return false;
                 
-            if (joker != JokerValue)
+            // Special handling for "any" joker (JokerValue = 0)
+            if (JokerValue != (MotelyJoker)0 && joker != JokerValue)
                 return false;
+                
+            // For SoulJoker type, only match legendary jokers
+            if (Type == DesireType.SoulJoker)
+            {
+                // Check if this joker is legendary (has the legendary flag)
+                var rarity = (int)joker & 0xFF00;
+                if (rarity != (int)MotelyJokerRarity.Legendary)
+                    return false;
+            }
                 
             // Check edition if required
             if (RequiredEdition != MotelyItemEdition.None && edition != RequiredEdition)
@@ -136,7 +151,10 @@ public struct TypedOuijaConfig
         {
             SearchAntes = desire.SearchAntes ?? Array.Empty<int>(),
             Score = desire.Score,
-            RequiredEdition = MotelyItemEdition.None
+            RequiredEdition = MotelyItemEdition.None,
+            IncludeSkipTags = desire.IncludeSkipTags,
+            IncludeBoosterPacks = desire.IncludeBoosterPacks,
+            IncludeShopStream = desire.IncludeShopStream
         };
         
         // Parse edition if specified
@@ -153,6 +171,22 @@ public struct TypedOuijaConfig
                 : DesireType.Joker;
             typed.JokerValue = desire.JokerEnum.Value;
             typed.ItemType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)typed.JokerValue);
+        }
+        else if (desire.Type?.Equals("Joker", StringComparison.OrdinalIgnoreCase) == true && 
+                 desire.Value?.Equals("any", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // Special case: "any" joker - set type but leave JokerValue as default (0)
+            typed.Type = DesireType.Joker;
+            typed.JokerValue = (MotelyJoker)0; // Use 0 as a marker for "any"
+            typed.ItemType = (MotelyItemType)0; // Use 0 to indicate "any" joker
+        }
+        else if (desire.Type?.Equals("SoulJoker", StringComparison.OrdinalIgnoreCase) == true && 
+                 desire.Value?.Equals("any", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // Special case: "any" soul joker - set type but leave JokerValue as default (0)
+            typed.Type = DesireType.SoulJoker;
+            typed.JokerValue = (MotelyJoker)0; // Use 0 as a marker for "any"
+            typed.ItemType = (MotelyItemType)0; // Use 0 to indicate "any" soul joker
         }
         else if (desire.PlanetEnum.HasValue)
         {

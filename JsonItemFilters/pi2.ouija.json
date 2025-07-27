@@ -1,0 +1,17 @@
+{
+  "name": "schema",
+  "description": "Example schema for Ouija Balatro Seed filter config",
+  "author": "pifreak",
+  "filter_config": {
+    "Needs": [
+      { "type": "Joker", "value": "Mime", "searchAntes": [1] }
+      ,{ "type": "Joker", "value": "Baron", "searchAntes": [1] }
+    ],
+    "Wants": [
+    ],
+    "deck": "Anaglyph",
+    "stake": "Black",
+    "scoreNaturalNegatives": false,
+    "scoreDesiredNegatives": false
+  }
+}

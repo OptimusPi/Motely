@@ -1,0 +1,11 @@
+{
+  "name": "Test Any Negative Joker in Need",
+  "description": "Testing any joker support in needs",
+  "filter_config": {
+    "Needs": [
+      { "type": "Joker", "value": "any", "Edition": "Negative", "searchAntes": [1] }
+    ],
+    "deck": "RedDeck",
+    "stake": "WhiteStake"
+  }
+}

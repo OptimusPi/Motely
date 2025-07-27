@@ -88,8 +88,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 ctx.CachePseudoHash(MotelyPrngKeys.ShopPack + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.ArcanaPack + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.CelestialPack + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.JokerSoul + ante);
                 ctx.CacheTarotStream(ante);
+                ctx.CacheCelestialPackPlanetStream(ante);
                 return;
             }
             else if (string.Equals(desire.Type, "Tag", StringComparison.OrdinalIgnoreCase) ||
@@ -192,6 +194,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     public struct OuijaJsonFilter : IMotelySeedFilter
     {
         private readonly OuijaConfig _config;
+        private readonly TypedOuijaConfig _typedConfig;
         private readonly int _cutoff;
         private readonly MotelyDeck _deck;
         private readonly MotelyStake _stake;
@@ -204,6 +207,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // Use pre-parsed enums from config
             _deck = config.ParsedDeck;
             _stake = config.ParsedStake;
+            
+            // Convert to typed config ONCE here to avoid string comparisons in hot path
+            _typedConfig = TypedOuijaConfig.FromOuijaConfig(config);
             
             DebugLogger.LogFormat("[OuijaJsonFilter] Using deck: {0}, stake: {1}", _deck, _stake);
         }
@@ -221,7 +227,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
                 var localConfig = _config;
                 // Remove per-thread header printing - this is now handled by the main search
-                mask = ProcessNeeds(ref searchContext, mask, localConfig!);
+                mask = ProcessNeedsTyped(ref searchContext, mask, _typedConfig);
                 if (mask.IsAllFalse())
                 {
                     DebugLogger.Log("All needs failed to match");
@@ -231,14 +237,15 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 int cutoff = _cutoff;
                 // Process results immediately as they are found
                 var searchInstance = searchContext.SearchInstance;
+                var typedConfigCopy = _typedConfig; // Copy to local variable for lambda
                 mask = searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    if (!CheckNonVectorizedNeeds(ref singleCtx, localConfig!))
+                    if (!CheckNonVectorizedNeedsTyped(ref singleCtx, typedConfigCopy))
                     {
                         DebugLogger.Log("Non-vectorized needs failed to match");
                         return false;
                     }
-                    var result = ProcessWantsAndScore(ref singleCtx, localConfig!);
+                    var result = ProcessWantsAndScoreTyped(ref singleCtx, typedConfigCopy, localConfig!);
                     if (result.Success && result.TotalScore >= cutoff)
                     {
                         // Print CSV directly with limited columns
@@ -262,16 +269,24 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             }
         }
 
+        // Keep original ProcessNeeds for backward compatibility
         private static VectorMask ProcessNeeds(ref MotelyVectorSearchContext searchContext, VectorMask mask, OuijaConfig config)
         {
-            if (config?.Needs == null || config.Needs.Length == 0)
+            // Convert to typed config and delegate
+            var typedConfig = TypedOuijaConfig.FromOuijaConfig(config);
+            return ProcessNeedsTyped(ref searchContext, mask, typedConfig);
+        }
+
+        private static VectorMask ProcessNeedsTyped(ref MotelyVectorSearchContext searchContext, VectorMask mask, TypedOuijaConfig config)
+        {
+            if (config.Needs == null || config.Needs.Length == 0)
             {
                 DebugLogger.Log("No needs to process - returning full mask");
                 return mask;
             }
 
             // Perkeo-style: If any voucher need is present in any ante, activate/pass
-            var voucherNeeds = config.Needs.Where(n => n != null && string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var voucherNeeds = config.Needs.Where(n => n.Type == TypedOuijaConfig.DesireType.Voucher).ToArray();
             if (voucherNeeds.Length > 0)
             {
                 VectorMask voucherMask = VectorMask.AllBitsClear;
@@ -281,12 +296,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     foreach (var ante in searchAntes)
                     {
                         var voucherVec = searchContext.GetAnteFirstVoucher(ante);
-                        if (!need.VoucherEnum.HasValue)
-                        {
-                            DebugLogger.Log("Missing VoucherEnum for Voucher need");
-                            continue;
-                        }
-                        var targetVoucher = need.VoucherEnum.Value;
+                        var targetVoucher = need.VoucherValue;
                         var matchMask = VectorEnum256.Equals(voucherVec, targetVoucher);
                         for (int lane = 0; lane < Vector512<double>.Count; lane++)
                         {
@@ -307,24 +317,24 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             }
 
             // Process each need
-            foreach (var need in config.Needs.Where(n => n != null && !string.Equals(n.Type, "Voucher", StringComparison.OrdinalIgnoreCase)))
+            foreach (var need in config.Needs.Where(n => n.Type != TypedOuijaConfig.DesireType.Voucher))
             {
                 // Check if this is a non-vectorizable need
                 bool isNonVectorizable = false;
                 
                 // SoulJoker needs can't be vectorized
-                if (string.Equals(need.Type, "SoulJoker", StringComparison.OrdinalIgnoreCase))
+                if (need.Type == TypedOuijaConfig.DesireType.SoulJoker)
                 {
-                    DebugLogger.LogFormat("SoulJoker need {0} can't be vectorized", need.Value);
+                    DebugLogger.LogFormat("SoulJoker need can't be vectorized");
                     isNonVectorizable = true;
                 }
                 // ALL Joker needs currently can't be vectorized (shop generation not vectorized)
-                else if (need.TypeCategory == MotelyItemTypeCategory.Joker)
+                else if (need.Type == TypedOuijaConfig.DesireType.Joker)
                 {
                     isNonVectorizable = true;
                 }
                 // Tarot needs can't be vectorized (pack checking not vectorized)
-                else if (need.TypeCategory == MotelyItemTypeCategory.TarotCard)
+                else if (need.Type == TypedOuijaConfig.DesireType.Tarot)
                 {
                     isNonVectorizable = true;
                 }
@@ -342,15 +352,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 VectorMask needMask = VectorMask.AllBitsClear;
                 foreach (var ante in searchAntes)
                 {
-                    var anteMask = ProcessNeedVector(ref searchContext, need, ante, VectorMask.AllBitsSet);
+                    var anteMask = ProcessNeedVectorTyped(ref searchContext, need, ante, VectorMask.AllBitsSet);
                     needMask |= anteMask; // OR operation - seed passes if found in ANY ante
                 }
                 // After collecting all antes for this need, mask is ANDed with needMask (all needs must be satisfied)
                 mask &= needMask;
                 int passing = CountBitsSet(mask);
                 // Print the relevant enum property for debug clarity
-                string itemStr = need.GetDisplayString();
-                DebugLogger.LogFormat("After need (type={0}, item={1}): {2} seeds passing", need.Type, itemStr, passing);
+                DebugLogger.LogFormat("After need (type={0}): {1} seeds passing", need.Type, passing);
                 if (mask.IsAllFalse()) 
                 {
                     DebugLogger.Log("All seeds filtered out by need - no seeds passed requirements");
@@ -358,6 +367,62 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
             }
             return mask;
+        }
+
+        private static VectorMask ProcessNeedVectorTyped(ref MotelyVectorSearchContext searchContext, 
+            TypedOuijaConfig.TypedDesire need, int ante, VectorMask mask)
+        {
+            switch (need.Type)
+            {
+                case TypedOuijaConfig.DesireType.SoulJoker:
+                    // Soul jokers can't be vectorized but we still need to filter!
+                    // Return original mask - individual processing will happen in CheckNonVectorizedNeeds
+                    return mask;
+                    
+                case TypedOuijaConfig.DesireType.Joker:
+                    // For shop jokers, we need vectorized shop generation which isn't available yet
+                    DebugLogger.LogFormat("[WARNING] Shop joker filtering not yet vectorized for {0}", need.JokerValue);
+                    return mask;
+                    
+                case TypedOuijaConfig.DesireType.Tag:
+                case TypedOuijaConfig.DesireType.SmallBlindTag:
+                case TypedOuijaConfig.DesireType.BigBlindTag:
+                    return ProcessTagNeedTyped(ref searchContext, need, ante, mask);
+                    
+                case TypedOuijaConfig.DesireType.Voucher:
+                    return ProcessVoucherNeedTyped(ref searchContext, need, ante, mask);
+                    
+                case TypedOuijaConfig.DesireType.Tarot:
+                    // Tarot cards in Arcana packs can't be vectorized yet
+                    DebugLogger.LogFormat("[WARNING] Tarot pack filtering not yet vectorized");
+                    return mask;
+                    
+                case TypedOuijaConfig.DesireType.Planet:
+                    // Use vectorized shop planet filter!
+                    var shopPlanetMask = searchContext.FilterPlanetCard(ante, need.PlanetValue, MotelyPrngKeys.Shop);
+                    // Celestial packs can't be vectorized yet
+                    DebugLogger.LogFormat("[WARNING] Celestial pack filtering not yet vectorized - only checking shop planets");
+                    return mask & shopPlanetMask;
+                    
+                case TypedOuijaConfig.DesireType.Spectral:
+                    // Use vectorized shop spectral filter!
+                    var shopSpectralMask = searchContext.FilterSpectralCard(ante, need.SpectralValue, MotelyPrngKeys.Shop);
+                    // Spectral packs can't be vectorized yet
+                    DebugLogger.LogFormat("[WARNING] Spectral pack filtering not yet vectorized - only checking shop spectrals");
+                    return mask & shopSpectralMask;
+                    
+                // Boss type doesn't exist in TypedOuijaConfig.DesireType yet
+                // TODO: Add Boss to TypedOuijaConfig.DesireType when boss blind generation is implemented
+                    
+                case TypedOuijaConfig.DesireType.PlayingCard:
+                    // Playing cards are complex - handled in individual seed processing
+                    DebugLogger.LogFormat("[WARNING] PlayingCard filtering not yet vectorized");
+                    return mask;
+                    
+                default:
+                    DebugLogger.LogFormat("❌ Unhandled need type: {0}", need.Type);
+                    return mask;
+            }
         }
 
         private static int CountBitsSet(VectorMask mask)
@@ -574,6 +639,60 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return mask;
         }
 
+        private static VectorMask ProcessTagNeedTyped(ref MotelyVectorSearchContext searchContext, 
+            TypedOuijaConfig.TypedDesire need, int ante, VectorMask mask)
+        {
+            var targetTag = need.TagValue;
+            MotelyVectorTagStream tagStream = searchContext.CreateTagStreamCached(ante);
+            var smallBlindTag = searchContext.GetNextTag(ref tagStream);
+            var bigBlindTag = searchContext.GetNextTag(ref tagStream);
+            
+            VectorMask matchMask = VectorMask.NoBitsSet;
+            
+            // Check based on the type
+            switch (need.Type)
+            {
+                case TypedOuijaConfig.DesireType.SmallBlindTag:
+                    matchMask = VectorEnum256.Equals(smallBlindTag, targetTag);
+                    DebugLogger.LogFormat("[DEBUG] SmallBlindTag check ante {0}: Target={1} Match={2}", 
+                        ante, targetTag, matchMask);
+                    break;
+                    
+                case TypedOuijaConfig.DesireType.BigBlindTag:
+                    matchMask = VectorEnum256.Equals(bigBlindTag, targetTag);
+                    DebugLogger.LogFormat("[DEBUG] BigBlindTag check ante {0}: Target={1} Match={2}", 
+                        ante, targetTag, matchMask);
+                    break;
+                    
+                default: // Regular Tag matches either
+                    var smallMatch = VectorEnum256.Equals(smallBlindTag, targetTag);
+                    var bigMatch = VectorEnum256.Equals(bigBlindTag, targetTag);
+                    matchMask = smallMatch | bigMatch;
+                    DebugLogger.LogFormat("[DEBUG] Tag check ante {0}: Target={1} Match={2}", 
+                        ante, targetTag, matchMask);
+                    break;
+            }
+            
+            return mask & matchMask;
+        }
+
+        private static VectorMask ProcessVoucherNeedTyped(ref MotelyVectorSearchContext searchContext, 
+            TypedOuijaConfig.TypedDesire need, int ante, VectorMask mask)
+        {
+            var targetVoucher = need.VoucherValue;
+            var voucherVec = searchContext.GetAnteFirstVoucher(ante);
+            
+            // Debug output for each lane
+            for (int lane = 0; lane < Vector512<double>.Count; lane++)
+            {
+                var foundVoucher = voucherVec[lane];
+                DebugLogger.LogFormat("[DEBUG] Voucher check ante {0}, lane {1}: Found={2}, Target={3}", 
+                    ante, lane, foundVoucher, targetVoucher);
+            }
+            
+            return VectorEnum256.Equals(voucherVec, targetVoucher) & mask;
+        }
+
         private static bool ProcessLegendaryJokerFromSoul(ref MotelySingleSearchContext singleCtx, MotelyJoker targetJoker, int ante, MotelyItemEdition? requiredEdition = null)
         {
             // Just cast MotelyJoker to MotelyItemType - the enum already handles the conversion!
@@ -590,7 +709,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 DebugLogger.LogFormat("===ProcessLegendaryJokerFromSoul] Processing booster pack {0} in ante {1}", i + 1, ante);
                 var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
-                if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                var packType = pack.GetPackType();
+                
+                if (packType == MotelyBoosterPackType.Arcana)
                 {
                     if (!tarotStreamInit)
                     {
@@ -609,13 +730,97 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             DebugLogger.LogFormat("[ProcessLegendaryJokerFromSoul] Found legendary joker {0} in ante {1}",
                                 joker, ante);
                             if (requiredEdition.HasValue)
-                                return ((int)joker.Edition << Motely.ItemEditionOffset) == (int)requiredEdition.Value;
+                            {
+                                DebugLogger.LogFormat("[ProcessLegendaryJokerFromSoul] Checking edition: joker has {0}, required {1}",
+                                    joker.Edition, requiredEdition.Value);
+                                return joker.Edition == requiredEdition.Value;
+                            }
                             return true;
                         }
                         else
                         {
                             DebugLogger.LogFormat("[----------------] Joker {0} does not match target {1} in ante {2}",
                                 (int)joker.Type, (int)targetItemType, ante);
+                        }
+                    }
+                }
+                else if (packType == MotelyBoosterPackType.Celestial)
+                {
+                    // Celestial packs can also contain Soul cards
+                    var celestialStream = singleCtx.CreateCelestialPackPlanetStream(ante);
+                    var contents = singleCtx.GetCelestialPackContents(ref celestialStream, pack.GetPackSize());
+                    
+                    // Check if Soul card is in the pack
+                    if (contents.Contains(MotelyItemType.Soul))
+                    {
+                        DebugLogger.LogFormat("[=ProcessLegendaryJokerFromSoul] Found Soul card in Celestial pack in ante {0}", ante);
+                        var stream = singleCtx.CreateSoulJokerStream(ante);
+                        var joker = singleCtx.NextJoker(ref stream);
+                        
+                        // Check like PerkeoObservatoryDesc does
+                        if (joker.Type == (targetItemType | MotelyItemType.Joker))
+                        {
+                            DebugLogger.LogFormat("[ProcessLegendaryJokerFromSoul] Found legendary joker {0} from Celestial Soul in ante {1}",
+                                joker, ante);
+                            if (requiredEdition.HasValue)
+                            {
+                                DebugLogger.LogFormat("[ProcessLegendaryJokerFromSoul] Checking edition: joker has {0}, required {1}",
+                                    joker.Edition, requiredEdition.Value);
+                                return joker.Edition == requiredEdition.Value;
+                            }
+                            return true;
+                        }
+                        else
+                        {
+                            DebugLogger.LogFormat("[----------------] Joker {0} does not match target {1} in ante {2} from Celestial pack",
+                                (int)joker.Type, (int)targetItemType, ante);
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckForAnySoulJokerWithEdition(ref MotelySingleSearchContext singleCtx, int ante, MotelyItemEdition? requiredEdition)
+        {
+            int totalPacks = ante == 1 ? 4 : 6;
+            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante);
+            
+            bool spectralStreamInit = false;
+            MotelySingleSpectralStream spectralStream = default;
+
+            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Looking for any soul joker with edition {0} in ante {1}",
+                requiredEdition?.ToString() ?? "None", ante);
+            
+            for (int i = 0; i < totalPacks; i++)
+            {
+                var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+                var packType = pack.GetPackType();
+                
+                if (packType == MotelyBoosterPackType.Spectral)
+                {
+                    if (!spectralStreamInit)
+                    {
+                        spectralStreamInit = true;
+                        spectralStream = singleCtx.CreateSpectralPackStream(ante);
+                    }
+                    if (singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    {
+                        DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Found Soul card in Spectral pack in ante {0}", ante);
+                        var stream = singleCtx.CreateSoulJokerStream(ante);
+                        var joker = singleCtx.NextJoker(ref stream);
+                        
+                        // We found a soul joker - check if edition matches (if required)
+                        if (!requiredEdition.HasValue || joker.Edition == requiredEdition.Value)
+                        {
+                            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Found soul joker {0} with matching edition {1}",
+                                joker.Type, joker.Edition);
+                            return true;
+                        }
+                        else
+                        {
+                            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Soul joker {0} has edition {1}, but required {2}",
+                                joker.Type, joker.Edition, requiredEdition.Value);
                         }
                     }
                 }
@@ -628,6 +833,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             // For now, only check the starting deck for a matching card
             // TODO: StartingDeck not yet implemented in upstream
+            DebugLogger.LogFormat("[CheckPlayingCard] PlayingCard check not yet implemented - StartingDeck support needed");
             if (true) // singleCtx.StartingDeck == null || singleCtx.StartingDeck.Count == 0)
                 return false;
 
@@ -640,8 +846,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             //         return true;
             //     }
             // }
-            DebugLogger.LogFormat("[CheckPlayingCard] PlayingCard check not yet implemented - StartingDeck support needed");
-            return false;
+            // return false;
         }
         
         private static bool MatchesPlayingCardCriteria(MotelyPlayingCard card, 
@@ -665,7 +870,479 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return true;
         }
 
-        // Check needs that couldn't be vectorized
+        // Typed versions of check methods for hot path optimization
+        private static bool CheckShopJokerTyped(ref MotelySingleSearchContext singleCtx, 
+            TypedOuijaConfig.TypedDesire need, int ante)
+        {
+            // Only check shop if IncludeShopStream is true
+            if (!need.IncludeShopStream)
+                return false;
+            
+            var shop = singleCtx.GenerateFullShop(ante);
+            int maxShopSlots = (ante == 1) ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
+            
+            var targetJoker = need.JokerValue;
+            bool isAnyJoker = ((int)targetJoker == 0); // 0 means "any" joker
+            
+            DebugLogger.LogFormat("[CheckShopJokerTyped] Checking shop in ante {0} for {1} with edition {2}", 
+                ante, isAnyJoker ? "ANY joker" : targetJoker.ToString(), need.RequiredEdition);
+                
+            for (int i = 0; i < maxShopSlots; i++)
+            {
+                ref var item = ref shop.Items[i];
+                if (item.Type == ShopState.ShopItem.ShopItemType.Joker)
+                {
+                    // For "any" joker, just check edition
+                    if (isAnyJoker)
+                    {
+                        // Check edition if required
+                        if (need.RequiredEdition != MotelyItemEdition.None && item.Edition != need.RequiredEdition)
+                            continue;
+                            
+                        DebugLogger.LogFormat("[CheckShopJokerTyped] MATCH! Found ANY joker {0} with required edition {1}!", 
+                            item.Joker, need.RequiredEdition);
+                        return true;
+                    }
+                    else
+                    {
+                        // Check specific joker
+                        var itemMotelyItem = new MotelyItem(item.Joker, item.Edition);
+                        var targetMotelyItem = new MotelyItem(targetJoker, MotelyItemEdition.None);
+                        
+                        if (itemMotelyItem.Type == targetMotelyItem.Type)
+                        {
+                            // Check edition if required
+                            if (need.RequiredEdition != MotelyItemEdition.None && item.Edition != need.RequiredEdition)
+                                continue;
+                                
+                            DebugLogger.LogFormat("[CheckShopJokerTyped] MATCH! Found {0} with required edition {1}!", 
+                                targetJoker, need.RequiredEdition);
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckJokerInBuffoonPacks(ref MotelySingleSearchContext singleCtx,
+            TypedOuijaConfig.TypedDesire need, int ante)
+        {
+            // For now, just return false - buffoon pack checking needs to be implemented
+            // TODO: Implement when buffoon pack joker stream methods are available
+            DebugLogger.LogFormat("[CheckJokerInBuffoonPacks] Buffoon pack checking not yet implemented for ante {0}", ante);
+            return false;
+        }
+
+        private static bool CheckJokerInTags(ref MotelySingleSearchContext singleCtx,
+            TypedOuijaConfig.TypedDesire need, int ante)
+        {
+            var targetJoker = need.JokerValue;
+            bool isAnyJoker = ((int)targetJoker == 0); // 0 means "any" joker
+            
+            // Check tags that can spawn jokers
+            var tagStream = singleCtx.CreateTagStream(ante);
+            
+            // Check small blind tag
+            var smallBlindTag = singleCtx.GetNextTag(ref tagStream);
+            if (smallBlindTag == MotelyTag.RareTag || smallBlindTag == MotelyTag.UncommonTag)
+            {
+                // These tags spawn jokers - check if they match
+                var jokerRarity = smallBlindTag == MotelyTag.RareTag ? MotelyJokerRarity.Rare : MotelyJokerRarity.Uncommon;
+                
+                // We'd need to check what joker the tag would spawn
+                // For now, return true if we're looking for any joker
+                if (isAnyJoker)
+                {
+                    DebugLogger.LogFormat("[CheckJokerInTags] Found joker-spawning tag {0} in ante {1}", smallBlindTag, ante);
+                    return true;
+                }
+            }
+            
+            // Check big blind tag
+            var bigBlindTag = singleCtx.GetNextTag(ref tagStream);
+            if (bigBlindTag == MotelyTag.RareTag || bigBlindTag == MotelyTag.UncommonTag)
+            {
+                if (isAnyJoker)
+                {
+                    DebugLogger.LogFormat("[CheckJokerInTags] Found joker-spawning tag {0} in ante {1}", bigBlindTag, ante);
+                    return true;
+                }
+            }
+            
+            // Check boss blind tag (if applicable)
+            if (ante % 3 == 0)
+            {
+                var bossBlindTag = singleCtx.GetNextTag(ref tagStream);
+                if (bossBlindTag == MotelyTag.RareTag || bossBlindTag == MotelyTag.UncommonTag)
+                {
+                    if (isAnyJoker)
+                    {
+                        DebugLogger.LogFormat("[CheckJokerInTags] Found joker-spawning tag {0} in ante {1}", bossBlindTag, ante);
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        private static bool CheckTarotInShopOrPacksTyped(ref MotelySingleSearchContext singleCtx, 
+            TypedOuijaConfig.TypedDesire need, int ante)
+        {
+            bool found = false;
+            
+            // Check shop if enabled
+            if (need.IncludeShopStream)
+            {
+                // TODO: Implement shop tarot checking
+                // found = CheckTarotInShop(ref singleCtx, need.TarotValue, ante);
+            }
+            
+            // Check packs if enabled and not found yet
+            if (!found && need.IncludeBoosterPacks)
+            {
+                found = CheckTarotInPacks(ref singleCtx, need.TarotValue, ante);
+            }
+            
+            // Check tags if enabled and not found yet
+            if (!found && need.IncludeSkipTags)
+            {
+                // TODO: Check if tarot tags exist
+            }
+            
+            return found;
+        }
+
+        private static bool CheckTarotInPacks(ref MotelySingleSearchContext singleCtx, 
+            MotelyTarotCard targetTarot, int ante)
+        {
+            var targetTarotType = (MotelyItemType)MotelyItemTypeCategory.TarotCard | (MotelyItemType)targetTarot;
+            int packsToCheck = ante == 1 ? 4 : 6;
+            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, false);
+            
+            bool tarotStreamInit = false;
+            MotelySingleTarotStream tarotStream = default;
+            
+            for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
+            {
+                var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+                
+                if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                {
+                    if (!tarotStreamInit)
+                    {
+                        tarotStreamInit = true;
+                        tarotStream = singleCtx.CreateArcanaPackTarotStream(ante);
+                    }
+                    
+                    var packContents = singleCtx.GetArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                    if (packContents.Contains(targetTarotType))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckPlanetInShopOrPacksTyped(ref MotelySingleSearchContext singleCtx, 
+            TypedOuijaConfig.TypedDesire need, int ante)
+        {
+            bool found = false;
+            
+            // Check shop if enabled
+            if (need.IncludeShopStream)
+            {
+                // TODO: Implement shop planet checking
+                // found = CheckPlanetInShop(ref singleCtx, need.PlanetValue, ante);
+            }
+            
+            // Check packs if enabled and not found yet
+            if (!found && need.IncludeBoosterPacks)
+            {
+                found = CheckPlanetInPacks(ref singleCtx, need.PlanetValue, ante);
+            }
+            
+            // Check tags if enabled and not found yet
+            if (!found && need.IncludeSkipTags)
+            {
+                // TODO: Check if planet tags exist (e.g., Meteor tag)
+            }
+            
+            return found;
+        }
+
+        private static bool CheckPlanetInPacks(ref MotelySingleSearchContext singleCtx, 
+            MotelyPlanetCard targetPlanet, int ante)
+        {
+            var targetPlanetType = (MotelyItemType)MotelyItemTypeCategory.PlanetCard | (MotelyItemType)targetPlanet;
+            int packsToCheck = ante == 1 ? 4 : 6;
+            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, false);
+            
+            bool planetStreamInit = false;
+            MotelySinglePlanetStream planetStream = default;
+            
+            for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
+            {
+                var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+                
+                if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                {
+                    if (!planetStreamInit)
+                    {
+                        planetStreamInit = true;
+                        planetStream = singleCtx.CreateCelestialPackPlanetStreamCached(ante);
+                    }
+                    
+                    var packContents = singleCtx.GetCelestialPackContents(ref planetStream, pack.GetPackSize());
+                    if (packContents.Contains(targetPlanetType))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckSpectralInShopOrPacksTyped(ref MotelySingleSearchContext singleCtx, 
+            TypedOuijaConfig.TypedDesire need, int ante)
+        {
+            bool found = false;
+            
+            // Check shop if enabled
+            if (need.IncludeShopStream)
+            {
+                // TODO: Implement shop spectral checking
+                // found = CheckSpectralInShop(ref singleCtx, need.SpectralValue, ante);
+            }
+            
+            // Check packs if enabled and not found yet
+            if (!found && need.IncludeBoosterPacks)
+            {
+                found = CheckSpectralInPacks(ref singleCtx, need.SpectralValue, ante);
+            }
+            
+            // Check tags if enabled and not found yet
+            if (!found && need.IncludeSkipTags)
+            {
+                // TODO: Check if spectral tags exist
+            }
+            
+            return found;
+        }
+
+        private static bool CheckSpectralInPacks(ref MotelySingleSearchContext singleCtx, 
+            MotelySpectralCard targetSpectral, int ante)
+        {
+            var targetSpectralType = (MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)targetSpectral;
+            int packsToCheck = ante == 1 ? 4 : 6;
+            var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, false);
+            
+            bool spectralStreamInit = false;
+            MotelySingleSpectralStream spectralStream = default;
+            
+            for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
+            {
+                var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+                
+                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                {
+                    if (!spectralStreamInit)
+                    {
+                        spectralStreamInit = true;
+                        spectralStream = singleCtx.CreateSpectralPackStream(ante);
+                    }
+                    
+                    var packContents = singleCtx.GetSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                    if (packContents.Contains(targetSpectralType))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckPlayingCardTyped(ref MotelySingleSearchContext singleCtx, 
+            TypedOuijaConfig.TypedDesire need, int ante)
+        {
+            // TODO: Implement playing card checking when deck access is available
+            DebugLogger.LogFormat("[CheckPlayingCardTyped] PlayingCard check not yet implemented");
+            return false;
+        }
+
+        // Check needs that couldn't be vectorized - typed version for hot path
+        private static bool CheckNonVectorizedNeedsTyped(ref MotelySingleSearchContext singleCtx, TypedOuijaConfig config)
+        {
+            if (config.Needs == null || config.Needs.Length == 0)
+                return true;
+
+            // Perkeo-style: If any voucher need is present in any ante, activate/pass
+            var voucherNeeds = config.Needs.Where(n => n.Type == TypedOuijaConfig.DesireType.Voucher).ToArray();
+            if (voucherNeeds.Length > 0)
+            {
+                bool foundAnyVoucher = false;
+                foreach (var need in voucherNeeds)
+                {
+                    var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : Array.Empty<int>();
+                    foreach (var ante in searchAntes)
+                    {
+                        var voucher = singleCtx.GetAnteFirstVoucher(ante);
+                        DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Voucher check ante {0}: Found={1}, Target={2}", 
+                            ante, voucher, need.VoucherValue);
+                        if (voucher == need.VoucherValue)
+                        {
+                            DebugLogger.LogFormat("[CheckNonVectorizedNeeds] MATCH: Voucher {0} found at ante {1}", voucher, ante);
+                            foundAnyVoucher = true;
+                        }
+                    }
+                }
+                if (!foundAnyVoucher)
+                    return false; // No voucher need satisfied
+            }
+
+            // Only process truly non-vectorizable needs
+            var nonVectorizableNeeds = config.Needs.Where(n => 
+                n.Type == TypedOuijaConfig.DesireType.SoulJoker ||
+                n.Type == TypedOuijaConfig.DesireType.Joker ||
+                n.Type == TypedOuijaConfig.DesireType.Tarot ||
+                n.Type == TypedOuijaConfig.DesireType.Planet ||
+                n.Type == TypedOuijaConfig.DesireType.Spectral ||
+                n.Type == TypedOuijaConfig.DesireType.PlayingCard ||
+false // Boss type doesn't exist yet
+            ).ToArray();
+
+            if (nonVectorizableNeeds.Length == 0)
+                return true; // No non-vectorizable needs, always pass
+
+            foreach (var need in nonVectorizableNeeds)
+            {
+                var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : Array.Empty<int>();
+                bool foundInAnyAnte = false;
+                
+                DebugLogger.LogFormat("[Search Antes.......]  {0}", searchAntes.Length);
+
+                foreach (var ante in searchAntes)
+                {
+                    DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Checking ante {0} for need type {1}", ante, need.Type);
+                    
+                    switch (need.Type)
+                    {
+                        case TypedOuijaConfig.DesireType.SoulJoker:
+                        case TypedOuijaConfig.DesireType.Joker when GetJokerRarity(need.JokerValue) == MotelyJokerRarity.Legendary:
+                            DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Processing SoulJoker {0} with edition {1} in ante {2}",
+                                need.JokerValue, need.RequiredEdition, ante);
+                            
+                            // Special handling for "any" soul joker (JokerValue = 0)
+                            if (need.JokerValue == (MotelyJoker)0)
+                            {
+                                // Check if The Soul card appears and generates ANY legendary joker with the required edition
+                                if (CheckForAnySoulJokerWithEdition(ref singleCtx, ante, need.RequiredEdition))
+                                {
+                                    foundInAnyAnte = true;
+                                }
+                            }
+                            else
+                            {
+                                if (ProcessLegendaryJokerFromSoul(ref singleCtx, need.JokerValue, ante, need.RequiredEdition))
+                                {
+                                    foundInAnyAnte = true;
+                                }
+                            }
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Joker:
+                            bool foundJoker = false;
+                            
+                            // Check shop jokers if enabled
+                            if (need.IncludeShopStream && CheckShopJokerTyped(ref singleCtx, need, ante))
+                            {
+                                DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Found shop joker {0} with edition {1} in ante {2}",
+                                    need.JokerValue, need.RequiredEdition, ante);
+                                foundJoker = true;
+                            }
+                            
+                            // Check buffoon packs if enabled
+                            if (!foundJoker && need.IncludeBoosterPacks)
+                            {
+                                if (CheckJokerInBuffoonPacks(ref singleCtx, need, ante))
+                                {
+                                    DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Found joker {0} with edition {1} in buffoon pack in ante {2}",
+                                        need.JokerValue, need.RequiredEdition, ante);
+                                    foundJoker = true;
+                                }
+                            }
+                            
+                            // Check tags if enabled (for regular jokers in tags like Rare Tag, Uncommon Tag, etc.)
+                            if (!foundJoker && need.IncludeSkipTags)
+                            {
+                                if (CheckJokerInTags(ref singleCtx, need, ante))
+                                {
+                                    DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Found joker {0} with edition {1} from tag in ante {2}",
+                                        need.JokerValue, need.RequiredEdition, ante);
+                                    foundJoker = true;
+                                }
+                            }
+                            
+                            if (foundJoker)
+                                foundInAnyAnte = true;
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Tarot:
+                            // Check tarot in shop or packs based on source filters
+                            if (CheckTarotInShopOrPacksTyped(ref singleCtx, need, ante))
+                            {
+                                foundInAnyAnte = true;
+                            }
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Planet:
+                            // Check planet in shop or packs based on source filters
+                            if (CheckPlanetInShopOrPacksTyped(ref singleCtx, need, ante))
+                            {
+                                foundInAnyAnte = true;
+                            }
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Spectral:
+                            // Check spectral in shop or packs based on source filters
+                            if (CheckSpectralInShopOrPacksTyped(ref singleCtx, need, ante))
+                            {
+                                foundInAnyAnte = true;
+                            }
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.PlayingCard:
+                            // Check playing cards in various locations
+                            if (CheckPlayingCardTyped(ref singleCtx, need, ante))
+                            {
+                                foundInAnyAnte = true;
+                            }
+                            break;
+                            
+                        // Boss type doesn't exist in TypedOuijaConfig.DesireType yet
+                        // TODO: Add Boss case when boss blind generation is implemented
+                            
+                        case TypedOuijaConfig.DesireType.Voucher:
+                            // Non-vectorized voucher need check
+                            var voucher = singleCtx.GetAnteFirstVoucher(ante);
+                            DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Voucher check ante {0}: Found={1}, Target={2}", 
+                                ante, voucher, need.VoucherValue);
+                            if (voucher == need.VoucherValue)
+                            {
+                                DebugLogger.LogFormat("[CheckNonVectorizedNeeds] MATCH: Voucher {0} found at ante {1}", voucher, ante);
+                                foundInAnyAnte = true;
+                            }
+                            break;
+                    }
+                    
+                    if (foundInAnyAnte)
+                        break;
+                }
+                
+                if (!foundInAnyAnte)
+                    return false; // Need not satisfied
+            }
+            
+            return true;
+        }
+
+        // Check needs that couldn't be vectorized - original version for backward compatibility
         private static bool CheckNonVectorizedNeeds(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
         {
             if (config?.Needs == null || config.Needs.Length == 0)
@@ -1014,6 +1691,136 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         public static ConcurrentQueue<OuijaResult>? ResultsQueue { get; set; } = new ConcurrentQueue<OuijaResult>();
         public static bool IsCancelled { get; set; } = false;
+
+        private static OuijaResult ProcessWantsAndScoreTyped(ref MotelySingleSearchContext singleCtx, 
+            TypedOuijaConfig typedConfig, OuijaConfig originalConfig)
+        {
+            string seed = singleCtx.GetSeed();
+            var result = new OuijaResult
+            {
+                Seed = seed,
+                TotalScore = 1,
+                NaturalNegativeJokers = 0,
+                DesiredNegativeJokers = 0,
+                ScoreWants = new int[32],
+                Success = true
+            };
+
+            if (typedConfig.Wants == null || typedConfig.Wants.Length == 0)
+                return result;
+
+            // Process each want individually
+            for (int wantIndex = 0; wantIndex < typedConfig.Wants.Length && wantIndex < 32; wantIndex++)
+            {
+                var want = typedConfig.Wants[wantIndex];
+                var searchAntes = want.SearchAntes?.Length > 0 ? want.SearchAntes : Array.Empty<int>();
+                
+                foreach (var ante in searchAntes)
+                {
+                    bool foundInThisAnte = false;
+                    
+                    switch (want.Type)
+                    {
+                        case TypedOuijaConfig.DesireType.Joker:
+                        case TypedOuijaConfig.DesireType.SoulJoker:
+                            // Check for jokers using typed methods
+                            if (want.Type == TypedOuijaConfig.DesireType.SoulJoker || 
+                                GetJokerRarity(want.JokerValue) == MotelyJokerRarity.Legendary)
+                            {
+                                // Special handling for "any" soul joker (JokerValue = 0)
+                                if (want.JokerValue == (MotelyJoker)0)
+                                {
+                                    foundInThisAnte = CheckForAnySoulJokerWithEdition(ref singleCtx, ante, want.RequiredEdition);
+                                }
+                                else
+                                {
+                                    foundInThisAnte = ProcessLegendaryJokerFromSoul(ref singleCtx, want.JokerValue, ante, want.RequiredEdition);
+                                }
+                            }
+                            else
+                            {
+                                // Check shop if enabled
+                                if (want.IncludeShopStream)
+                                {
+                                    foundInThisAnte = CheckShopJokerTyped(ref singleCtx, want, ante);
+                                }
+                                
+                                // Check buffoon packs if enabled and not found yet
+                                if (!foundInThisAnte && want.IncludeBoosterPacks)
+                                {
+                                    foundInThisAnte = CheckJokerInBuffoonPacks(ref singleCtx, want, ante);
+                                }
+                                
+                                // Check tags if enabled and not found yet
+                                if (!foundInThisAnte && want.IncludeSkipTags)
+                                {
+                                    foundInThisAnte = CheckJokerInTags(ref singleCtx, want, ante);
+                                }
+                            }
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Tarot:
+                            foundInThisAnte = CheckTarotInShopOrPacksTyped(ref singleCtx, want, ante);
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Planet:
+                            foundInThisAnte = CheckPlanetInShopOrPacksTyped(ref singleCtx, want, ante);
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Spectral:
+                            foundInThisAnte = CheckSpectralInShopOrPacksTyped(ref singleCtx, want, ante);
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Tag:
+                        case TypedOuijaConfig.DesireType.SmallBlindTag:
+                        case TypedOuijaConfig.DesireType.BigBlindTag:
+                            // Check tags
+                            var tagStream = singleCtx.CreateTagStream(ante);
+                            var smallBlindTag = singleCtx.GetNextTag(ref tagStream);
+                            var bigBlindTag = singleCtx.GetNextTag(ref tagStream);
+                            
+                            if (want.Type == TypedOuijaConfig.DesireType.SmallBlindTag)
+                                foundInThisAnte = smallBlindTag == want.TagValue;
+                            else if (want.Type == TypedOuijaConfig.DesireType.BigBlindTag)
+                                foundInThisAnte = bigBlindTag == want.TagValue;
+                            else
+                                foundInThisAnte = smallBlindTag == want.TagValue || bigBlindTag == want.TagValue;
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.Voucher:
+                            var voucher = singleCtx.GetAnteFirstVoucher(ante);
+                            foundInThisAnte = voucher == want.VoucherValue;
+                            break;
+                            
+                        case TypedOuijaConfig.DesireType.PlayingCard:
+                            foundInThisAnte = CheckPlayingCardTyped(ref singleCtx, want, ante);
+                            break;
+                    }
+                    
+                    if (foundInThisAnte)
+                    {
+                        result.ScoreWants[wantIndex] += want.Score;
+                        result.TotalScore += want.Score;
+                        
+                        // Count negative jokers if configured
+                        if ((want.Type == TypedOuijaConfig.DesireType.Joker || want.Type == TypedOuijaConfig.DesireType.SoulJoker) && 
+                            want.RequiredEdition == MotelyItemEdition.Negative)
+                        {
+                            if (typedConfig.ScoreDesiredNegatives)
+                                result.DesiredNegativeJokers++;
+                        }
+                    }
+                }
+            }
+            
+            // Check for natural negative jokers if configured
+            if (typedConfig.ScoreNaturalNegatives)
+            {
+                // TODO: Implement natural negative joker counting
+            }
+            
+            return result;
+        }
 
         private static OuijaResult ProcessWantsAndScore(ref MotelySingleSearchContext singleCtx, OuijaConfig config)
         {

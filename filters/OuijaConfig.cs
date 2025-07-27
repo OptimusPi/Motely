@@ -258,6 +258,7 @@ public class OuijaConfig
                     }
                 }
             }
+    
             
             // Parse edition for all item types
             if (!string.IsNullOrEmpty(Edition) && !ParsedEdition.HasValue)
@@ -373,10 +374,10 @@ public class OuijaConfig
             "BigBlindTag" => desire.TagEnum.HasValue,
             "Voucher" => desire.VoucherEnum.HasValue,
             "Boss" => desire.BossEnum.HasValue,
-            "PlayingCard" => (desire.AnyRank || desire.RankEnum.HasValue) && 
+            "PlayingCard" => (desire.AnyRank || desire.RankEnum.HasValue) &&
                               (desire.AnySuit || desire.SuitEnum.HasValue),
             _ => false
-        };
+        } || desire.Value?.Equals("any", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     /// <summary>
