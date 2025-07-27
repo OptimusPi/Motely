@@ -42,6 +42,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             foreach (var need in Config.Needs)
             {
                 if (need == null) continue;
+                
+                // Debug log for soul joker needs
+                if (string.Equals(need.Type, "SoulJoker", StringComparison.OrdinalIgnoreCase))
+                {
+                    DebugLogger.LogFormat("[CreateFilter] Found SoulJoker need: Value='{0}', JokerEnum={1}, SearchAntes={2}",
+                        need.Value ?? "null", 
+                        need.JokerEnum?.ToString() ?? "null",
+                        need.SearchAntes != null ? string.Join(",", need.SearchAntes) : "none");
+                }
+                
                 if (string.Equals(need.Type, "Tag", StringComparison.OrdinalIgnoreCase)) cacheTagStream = true;
                 var searchAntes = need.SearchAntes?.Length > 0 ? need.SearchAntes : Array.Empty<int>();
                 foreach (var ante in searchAntes)
@@ -89,7 +99,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 ctx.CachePseudoHash(MotelyPrngKeys.ShopPack + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.ArcanaPack + ante);
                 ctx.CachePseudoHash(MotelyPrngKeys.CelestialPack + ante);
-                ctx.CachePseudoHash(MotelyPrngKeys.JokerSoul + ante);
+                ctx.CachePseudoHash(MotelyPrngKeys.JokerSoulSource + ante);
                 ctx.CacheTarotStream(ante);
                 ctx.CacheCelestialPackPlanetStream(ante);
                 return;
@@ -405,11 +415,31 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     return mask & shopPlanetMask;
                     
                 case TypedOuijaConfig.DesireType.Spectral:
-                    // Use vectorized shop spectral filter!
-                    var shopSpectralMask = searchContext.FilterSpectralCard(ante, need.SpectralValue, MotelyPrngKeys.Shop);
-                    // Spectral packs can't be vectorized yet
-                    DebugLogger.LogFormat("[WARNING] Spectral pack filtering not yet vectorized - only checking shop spectrals");
-                    return mask & shopSpectralMask;
+                    // Soul cards ONLY appear in packs (Spectral and Arcana), never in shops
+                    if (need.SpectralValue == MotelySpectralCard.Soul)
+                    {
+                        // Soul cards require pack checking which can't be vectorized yet
+                        DebugLogger.LogFormat("[WARNING] Soul card filtering requires pack checking - marking all seeds for individual processing");
+                        return mask; // Return original mask to force individual processing
+                    }
+                    
+                    // Check if we need to look in packs
+                    if (need.IncludeBoosterPacks)
+                    {
+                        // Spectral packs can't be vectorized yet - mark all seeds as non-vectorizable
+                        DebugLogger.LogFormat("[WARNING] Spectral pack filtering not yet vectorized - marking all seeds for individual processing");
+                        return mask; // Return original mask to force individual processing
+                    }
+                    
+                    // If only shop search is needed, use vectorized filter (but not for Soul cards)
+                    if (need.IncludeShopStream)
+                    {
+                        var shopSpectralMask = searchContext.FilterSpectralCard(ante, need.SpectralValue, MotelyPrngKeys.Shop);
+                        return mask & shopSpectralMask;
+                    }
+                    
+                    // No valid sources to check
+                    return VectorMask.NoBitsSet;
                     
                 // Boss type doesn't exist in TypedOuijaConfig.DesireType yet
                 // TODO: Add Boss to TypedOuijaConfig.DesireType when boss blind generation is implemented
@@ -565,13 +595,31 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return mask;
             }
             
-            // Use vectorized shop spectral filter!
-            var shopSpectralMask = searchContext.FilterSpectralCard(ante, need.SpectralEnum.Value, MotelyPrngKeys.Shop);
+            // Soul cards ONLY appear in packs (Spectral and Arcana), never in shops
+            if (need.SpectralEnum.Value == MotelySpectralCard.Soul)
+            {
+                // Soul cards require pack checking which can't be vectorized yet
+                DebugLogger.LogFormat("[WARNING] Soul card filtering requires pack checking - marking all seeds for individual processing");
+                return mask; // Return original mask to force individual processing
+            }
             
-            // Spectral packs can't be vectorized yet
-            DebugLogger.LogFormat("[WARNING] Spectral pack filtering not yet vectorized - only checking shop spectrals");
+            // Check if we need to look in packs
+            if (need.IncludeBoosterPacks)
+            {
+                // Spectral packs can't be vectorized yet - mark all seeds as non-vectorizable
+                DebugLogger.LogFormat("[WARNING] Spectral pack filtering not yet vectorized - marking all seeds for individual processing");
+                return mask; // Return original mask to force individual processing
+            }
             
-            return mask & shopSpectralMask;
+            // If only shop search is needed, use vectorized filter (but not for Soul cards)
+            if (need.IncludeShopStream)
+            {
+                var shopSpectralMask = searchContext.FilterSpectralCard(ante, need.SpectralEnum.Value, MotelyPrngKeys.Shop);
+                return mask & shopSpectralMask;
+            }
+            
+            // No valid sources to check
+            return VectorMask.NoBitsSet;
         }
 
         private static VectorMask ProcessTagNeed(ref MotelyVectorSearchContext searchContext, OuijaConfig.Desire need, int ante, VectorMask mask)
@@ -582,7 +630,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return mask;
             }
             var targetTag = need.TagEnum.Value;
-            MotelyVectorTagStream tagStream = searchContext.CreateTagStreamCached(ante);
+            MotelyVectorTagStream tagStream = searchContext.CreateTagStream(ante, true);
             var smallBlindTag = searchContext.GetNextTag(ref tagStream);
             var bigBlindTag = searchContext.GetNextTag(ref tagStream);
             
@@ -643,7 +691,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             TypedOuijaConfig.TypedDesire need, int ante, VectorMask mask)
         {
             var targetTag = need.TagValue;
-            MotelyVectorTagStream tagStream = searchContext.CreateTagStreamCached(ante);
+            MotelyVectorTagStream tagStream = searchContext.CreateTagStream(ante, true);
             var smallBlindTag = searchContext.GetNextTag(ref tagStream);
             var bigBlindTag = searchContext.GetNextTag(ref tagStream);
             
@@ -787,33 +835,55 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var boosterPackStream = singleCtx.CreateBoosterPackStream(ante);
             
             bool spectralStreamInit = false;
+            bool tarotStreamInit = false;
+            bool celestialStreamInit = false;
             MotelySingleSpectralStream spectralStream = default;
+            MotelySingleTarotStream tarotStream = default;
+            MotelySinglePlanetStream celestialStream = default;
 
-            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Looking for any soul joker with edition {0} in ante {1}",
-                requiredEdition?.ToString() ?? "None", ante);
+            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Looking for any soul joker with edition {0} in ante {1}, checking {2} packs",
+                requiredEdition?.ToString() ?? "None", ante, totalPacks);
+            
+            int spectralPackCount = 0;
+            int arcanaPackCount = 0;
+            int celestialPackCount = 0;
             
             for (int i = 0; i < totalPacks; i++)
             {
                 var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
                 var packType = pack.GetPackType();
                 
+                DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Pack {0}: Type = {1}, Size = {2}", 
+                    i + 1, packType, pack.GetPackSize());
+                
                 if (packType == MotelyBoosterPackType.Spectral)
                 {
+                    spectralPackCount++;
                     if (!spectralStreamInit)
                     {
                         spectralStreamInit = true;
-                        spectralStream = singleCtx.CreateSpectralPackStream(ante);
+                        spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante);
+                        DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Initialized spectral stream. IsSoulBlackHoleable = {0}", 
+                            spectralStream.IsSoulBlackHoleable);
                     }
-                    if (singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    
+                    bool hasSoul = singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+                    DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Spectral pack {0} has Soul card: {1}", 
+                        spectralPackCount, hasSoul);
+                    
+                    if (hasSoul)
                     {
                         DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Found Soul card in Spectral pack in ante {0}", ante);
                         var stream = singleCtx.CreateSoulJokerStream(ante);
                         var joker = singleCtx.NextJoker(ref stream);
                         
+                        DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Soul generated: {0} (ID: {1}) with edition {2}",
+                            joker.Type, (int)joker.Type, joker.Edition);
+                        
                         // We found a soul joker - check if edition matches (if required)
                         if (!requiredEdition.HasValue || joker.Edition == requiredEdition.Value)
                         {
-                            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Found soul joker {0} with matching edition {1}",
+                            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] MATCH! Found soul joker {0} with matching edition {1}",
                                 joker.Type, joker.Edition);
                             return true;
                         }
@@ -824,7 +894,66 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         }
                     }
                 }
+                else if (packType == MotelyBoosterPackType.Arcana)
+                {
+                    arcanaPackCount++;
+                    if (!tarotStreamInit)
+                    {
+                        tarotStreamInit = true;
+                        tarotStream = singleCtx.CreateArcanaPackTarotStream(ante);
+                    }
+                    
+                    var contents = singleCtx.GetArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                    if (contents.Contains(MotelyItemType.Soul))
+                    {
+                        DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Found Soul card in Arcana pack in ante {0}", ante);
+                        var stream = singleCtx.CreateSoulJokerStream(ante);
+                        var joker = singleCtx.NextJoker(ref stream);
+                        
+                        DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Soul generated: {0} (ID: {1}) with edition {2}",
+                            joker.Type, (int)joker.Type, joker.Edition);
+                        
+                        // We found a soul joker - check if edition matches (if required)
+                        if (!requiredEdition.HasValue || joker.Edition == requiredEdition.Value)
+                        {
+                            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] MATCH! Found soul joker {0} with matching edition {1}",
+                                joker.Type, joker.Edition);
+                            return true;
+                        }
+                    }
+                }
+                else if (packType == MotelyBoosterPackType.Celestial)
+                {
+                    celestialPackCount++;
+                    if (!celestialStreamInit)
+                    {
+                        celestialStreamInit = true;
+                        celestialStream = singleCtx.CreateCelestialPackPlanetStream(ante);
+                    }
+                    
+                    var contents = singleCtx.GetCelestialPackContents(ref celestialStream, pack.GetPackSize());
+                    if (contents.Contains(MotelyItemType.Soul))
+                    {
+                        DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Found Soul card in Celestial pack in ante {0}", ante);
+                        var stream = singleCtx.CreateSoulJokerStream(ante);
+                        var joker = singleCtx.NextJoker(ref stream);
+                        
+                        DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Soul generated: {0} (ID: {1}) with edition {2}",
+                            joker.Type, (int)joker.Type, joker.Edition);
+                        
+                        // We found a soul joker - check if edition matches (if required)
+                        if (!requiredEdition.HasValue || joker.Edition == requiredEdition.Value)
+                        {
+                            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] MATCH! Found soul joker {0} with matching edition {1}",
+                                joker.Type, joker.Edition);
+                            return true;
+                        }
+                    }
+                }
             }
+            
+            DebugLogger.LogFormat("[CheckForAnySoulJokerWithEdition] Finished checking ante {0}. Found {1} spectral, {2} arcana, {3} celestial packs, no matching soul jokers",
+                ante, spectralPackCount, arcanaPackCount, celestialPackCount);
             return false;
         }
 
@@ -1090,7 +1219,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     if (!planetStreamInit)
                     {
                         planetStreamInit = true;
-                        planetStream = singleCtx.CreateCelestialPackPlanetStreamCached(ante);
+                        planetStream = singleCtx.CreateCelestialPackPlanetStream(ante, true);
                     }
                     
                     var packContents = singleCtx.GetCelestialPackContents(ref planetStream, pack.GetPackSize());
@@ -1104,6 +1233,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckSpectralInShopOrPacksTyped(ref MotelySingleSearchContext singleCtx, 
             TypedOuijaConfig.TypedDesire need, int ante)
         {
+            DebugLogger.LogFormat("[CheckSpectralInShopOrPacksTyped] Looking for spectral {0} in ante {1}", need.SpectralValue, ante);
             bool found = false;
             
             // Check shop if enabled
@@ -1111,18 +1241,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 // TODO: Implement shop spectral checking
                 // found = CheckSpectralInShop(ref singleCtx, need.SpectralValue, ante);
+                DebugLogger.LogFormat("[CheckSpectralInShopOrPacksTyped] Shop spectral checking not implemented");
             }
             
             // Check packs if enabled and not found yet
             if (!found && need.IncludeBoosterPacks)
             {
+                DebugLogger.LogFormat("[CheckSpectralInShopOrPacksTyped] Checking packs for spectral {0}", need.SpectralValue);
                 found = CheckSpectralInPacks(ref singleCtx, need.SpectralValue, ante);
+                DebugLogger.LogFormat("[CheckSpectralInShopOrPacksTyped] Pack check result: {0}", found);
             }
             
             // Check tags if enabled and not found yet
             if (!found && need.IncludeSkipTags)
             {
                 // TODO: Check if spectral tags exist
+                DebugLogger.LogFormat("[CheckSpectralInShopOrPacksTyped] Spectral tag checking not implemented");
             }
             
             return found;
@@ -1135,26 +1269,68 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             int packsToCheck = ante == 1 ? 4 : 6;
             var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, false);
             
+            DebugLogger.LogFormat("[CheckSpectralInPacks] Looking for {0} in ante {1}, checking {2} packs", targetSpectral, ante, packsToCheck);
+            
             bool spectralStreamInit = false;
+            bool tarotStreamInit = false;
             MotelySingleSpectralStream spectralStream = default;
+            MotelySingleTarotStream tarotStream = default;
             
             for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
             {
                 var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+                var packType = pack.GetPackType();
                 
-                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                DebugLogger.LogFormat("[CheckSpectralInPacks] Pack {0}: Type = {1}, Size = {2}", packIndex + 1, packType, pack.GetPackSize());
+                
+                if (packType == MotelyBoosterPackType.Spectral)
                 {
                     if (!spectralStreamInit)
                     {
                         spectralStreamInit = true;
-                        spectralStream = singleCtx.CreateSpectralPackStream(ante);
+                        spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante);
                     }
                     
                     var packContents = singleCtx.GetSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                    
+                    // Debug: show pack contents
+                    var packTypes = new string[packContents.Length];
+                    for (int i = 0; i < packContents.Length; i++)
+                        packTypes[i] = packContents.GetItem(i).Type.ToString();
+                    DebugLogger.LogFormat("[CheckSpectralInPacks] Spectral pack contents: {0}", string.Join(", ", packTypes));
+                    
                     if (packContents.Contains(targetSpectralType))
+                    {
+                        DebugLogger.LogFormat("[CheckSpectralInPacks] Found {0} in Spectral pack!", targetSpectral);
                         return true;
+                    }
+                }
+                else if (targetSpectral == MotelySpectralCard.Soul && packType == MotelyBoosterPackType.Arcana)
+                {
+                    // Soul cards can also appear in Arcana packs
+                    if (!tarotStreamInit)
+                    {
+                        tarotStreamInit = true;
+                        tarotStream = singleCtx.CreateArcanaPackTarotStream(ante);
+                    }
+                    
+                    var packContents = singleCtx.GetArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                    
+                    // Debug: show pack contents
+                    var packTypes = new string[packContents.Length];
+                    for (int i = 0; i < packContents.Length; i++)
+                        packTypes[i] = packContents.GetItem(i).Type.ToString();
+                    DebugLogger.LogFormat("[CheckSpectralInPacks] Arcana pack contents: {0}", string.Join(", ", packTypes));
+                    
+                    if (packContents.Contains(MotelyItemType.Soul))
+                    {
+                        DebugLogger.LogFormat("[CheckSpectralInPacks] Found Soul card in Arcana pack in ante {0}", ante);
+                        return true;
+                    }
                 }
             }
+            
+            DebugLogger.LogFormat("[CheckSpectralInPacks] Did not find {0} in any packs in ante {1}", targetSpectral, ante);
             return false;
         }
 
@@ -1231,14 +1407,21 @@ false // Boss type doesn't exist yet
                             // Special handling for "any" soul joker (JokerValue = 0)
                             if (need.JokerValue == (MotelyJoker)0)
                             {
+                                DebugLogger.LogFormat("[CheckNonVectorizedNeeds] This is an 'any' soul joker search (JokerValue = 0)");
                                 // Check if The Soul card appears and generates ANY legendary joker with the required edition
                                 if (CheckForAnySoulJokerWithEdition(ref singleCtx, ante, need.RequiredEdition))
                                 {
+                                    DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Found 'any' soul joker in ante {0}!", ante);
                                     foundInAnyAnte = true;
+                                }
+                                else
+                                {
+                                    DebugLogger.LogFormat("[CheckNonVectorizedNeeds] No 'any' soul joker found in ante {0}", ante);
                                 }
                             }
                             else
                             {
+                                DebugLogger.LogFormat("[CheckNonVectorizedNeeds] Looking for specific soul joker: {0}", need.JokerValue);
                                 if (ProcessLegendaryJokerFromSoul(ref singleCtx, need.JokerValue, ante, need.RequiredEdition))
                                 {
                                     foundInAnyAnte = true;
@@ -1639,7 +1822,7 @@ false // Boss type doesn't exist yet
                     if (!planetStreamInit)
                     {
                         planetStreamInit = true;
-                        planetStream = singleCtx.CreateCelestialPackPlanetStreamCached(ante);
+                        planetStream = singleCtx.CreateCelestialPackPlanetStream(ante, true);
                     }
                     
                     var packContents = singleCtx.GetCelestialPackContents(ref planetStream, pack.GetPackSize());
@@ -1660,7 +1843,9 @@ false // Boss type doesn't exist yet
             var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, false);
             
             bool spectralStreamInit = false;
+            bool tarotStreamInit = false;
             MotelySingleSpectralStream spectralStream = default;
+            MotelySingleTarotStream tarotStream = default;
             
             for (int packIndex = 0; packIndex < packsToCheck; packIndex++)
             {
@@ -1671,7 +1856,7 @@ false // Boss type doesn't exist yet
                     if (!spectralStreamInit)
                     {
                         spectralStreamInit = true;
-                        spectralStream = singleCtx.CreateSpectralPackStream(ante);
+                        spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante);
                     }
                     var packContents = singleCtx.GetSpectralPackContents(ref spectralStream, pack.GetPackSize());
 
@@ -1684,6 +1869,22 @@ false // Boss type doesn't exist yet
                     // Check if the target spectral is in the pack contents
                     if (packContents.Contains(targetSpectral))
                         return true;
+                }
+                else if (need.SpectralEnum.Value == MotelySpectralCard.Soul && pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                {
+                    // Soul cards can also appear in Arcana packs
+                    if (!tarotStreamInit)
+                    {
+                        tarotStreamInit = true;
+                        tarotStream = singleCtx.CreateArcanaPackTarotStream(ante);
+                    }
+                    
+                    var packContents = singleCtx.GetArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                    if (packContents.Contains(MotelyItemType.Soul))
+                    {
+                        DebugLogger.LogFormat("[CheckSpectralInPacks] Found Soul card in Arcana pack in ante {0}", ante);
+                        return true;
+                    }
                 }
             }
             return false;
@@ -2082,7 +2283,7 @@ false // Boss type doesn't exist yet
                 return false;
                 
             var targetTag = want.TagEnum.Value;
-            var tagStream = singleCtx.CreateTagStreamCached(ante);
+            var tagStream = singleCtx.CreateTagStream(ante, true);
             
             var smallBlindTag = singleCtx.GetNextTag(ref tagStream);
             var bigBlindTag = singleCtx.GetNextTag(ref tagStream);

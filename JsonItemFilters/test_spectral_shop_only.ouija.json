@@ -1,0 +1,11 @@
+{
+  "name": "Test Spectral Shop Only", 
+  "description": "Test searching for Soul in shop only",
+  "author": "Test",
+  "filter_config": {
+    "Needs": [
+      { "Type": "Spectral", "Value": "Soul", "SearchAntes": [1,2,3,4,5,6,7,8], "IncludeShopStream": true, "IncludeBoosterPacks": false }
+    ],
+    "Wants": []
+  }
+}
