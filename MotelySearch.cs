@@ -224,8 +224,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private int _completedBatchCount;
     public int CompletedBatchCount => _completedBatchCount;
 
-
-
     private double _lastReportMS;
 
     private readonly Stopwatch _elapsedTime = new();
