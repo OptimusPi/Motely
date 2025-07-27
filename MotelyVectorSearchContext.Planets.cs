@@ -9,7 +9,7 @@ ref partial struct MotelyVectorSearchContext
 #endif
     private MotelyVectorPrngStream CreatePlanetStreamCached(int ante, string source)
     {
-        return CreatePrngStreamCached(MotelyPrngKeys.Planet + source + ante);
+        return CreatePrngStream(MotelyPrngKeys.Planet + source + ante, true);
     }
 
 #if !DEBUG
