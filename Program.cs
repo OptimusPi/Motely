@@ -221,6 +221,16 @@ namespace Motely
                     .WithThreadCount(threads)
                     .WithSequentialSearch()
                     .WithBatchCharacterCount(batchSize);
+                    
+                // Apply deck and stake from config
+                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
+                {
+                    searchSettings = searchSettings.WithDeck(deck);
+                }
+                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse<MotelyStake>(config.Stake, true, out var stake))
+                {
+                    searchSettings = searchSettings.WithStake(stake);
+                }
                 
                 // Set batch range if specified
                 if (startBatch > 0)
@@ -240,11 +250,15 @@ namespace Motely
                 if (seeds != null && seeds.Count > 0)
                 {
                     // Search specific seeds from list
+                    if (!quiet && enableDebug)
+                        Console.WriteLine($"[DEBUG] Starting list search with {seeds.Count} seeds");
                     search = searchSettings.WithListSearch(seeds).Start();
                 }
                 else
                 {
                     // Sequential batch search
+                    if (!quiet && enableDebug)
+                        Console.WriteLine($"[DEBUG] Starting sequential batch search");
                     search = searchSettings.Start();
                 }
 
