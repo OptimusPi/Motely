@@ -1,21 +1,76 @@
 {
-  "name": "Negative Perkeo and Triboulet )",
-  "description": "pifreak loves you!",
-  "author": "pifreak",
-  "filter_config": {
-    "Needs": [
-       { "type": "SoulJoker", "value": "Perkeo", "Edition": "Negative", "SearchAntes": [1,2,3,4,5,6,7,8] }
-    ],
-    "Wants": [
-       { "type": "SoulJoker", "value": "Perkeo", "Edition": "Negative","SearchAntes": [1,2,3,4,5,6,7,8] }
-       ,{ "type": "SoulJoker", "value": "Triboulet", "SearchAntes": [1,2,3,4,5,6,7,8] }
-       ,{ "type": "SoulJoker", "value": "Yorick", "SearchAntes": [1,2,3,4,5,6,7,8] }
-       ,{ "type": "SoulJoker", "value": "Chicot", "SearchAntes": [1,2,3,4,5,6,7,8] }
-       ,{ "type": "SoulJoker", "value": "Canio", "SearchAntes": [1,2,3,4,5,6,7,8] }
-    ],
-    "deck": "Black",
+  "must": [
+    {
+        "item": {
+        "type": "joker",
+        "name": "Perkeo",
+        "edition": "Negative"
+        },
+        "antes": [1],
+        "sources": ["packs"]
+    },
+    {
+        "item": {
+        "type": "SmallBlindTag",
+        "name": "CharmTag"
+        },
+        "antes": [1]
+    }
+
+  ],
+  "should": [
+   {
+      "item": {
+        "type": "joker",
+        "name": "Chicot",
+        "edition": "Negative"
+      },
+      "antes": [1,2,3,4,5,6,7,8],
+      "sources": ["tags", "packs"]
+    },
+    {
+      "item": {
+        "type": "joker",
+        "name": "Perkeo",
+        "edition": "Negative"
+      },
+      "antes": [2,3,4,5,6,7,8],
+      "sources": ["tags", "packs"]
+    }
+    ,
+    {
+      "item": {
+        "type": "joker",
+        "name": "Yorick",
+        "edition": "Negative"
+      },
+      "antes": [1,2,3,4,5,6,7,8],
+      "sources": ["tags", "packs"]
+    }
+    ,{
+      "item": {
+        "type": "joker",
+        "name": "Canio",
+        "edition": "Negative"
+      },
+      "antes": [1,2,3,4,5,6,7,8],
+      "sources": ["tags", "packs"]
+    }
+    ,{
+      "item": {
+        "type": "joker",
+        "name": "Triboulet",
+        "edition": "Negative"
+      },
+      "antes": [1,2,3,4,5,6,7,8],
+      "sources": ["tags", "packs"]
+    }
+  ],
+  "mustNot": [],
+  "filter": {
+    "deck": "Red",
     "stake": "White",
-    "scoreNaturalNegatives": false,
-    "scoreDesiredNegatives": false
-  }
+    "maxAnte": 8
+  },
+  "minimumScore": 0
 }

@@ -23,6 +23,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        DebugLogger.Log("[OuijaJsonFilterDesc] CreateFilter called!");
+        DebugLogger.Log($"[OuijaJsonFilterDesc] Config has {Config.Must.Count} MUST clauses");
+        
         // Cache streams for all antes we need
         var allAntes = new HashSet<int>();
         
@@ -61,6 +64,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 
         public OuijaJsonFilter(OuijaConfig config, int cutoff)
         {
+            DebugLogger.Log("[OuijaJsonFilter] Constructor called!");
+            DebugLogger.Log($"[OuijaJsonFilter] Must clauses: {config.Must.Count}");
             _config = config;
             _cutoff = cutoff;
         }
@@ -68,7 +73,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            if (IsCancelled) return VectorMask.AllBitsClear;
+            DebugLogger.Log($"[Filter] ============= VECTOR FILTER CALLED =============");
+            DebugLogger.Log($"[Filter] Config has {_config.Must.Count} MUST clauses");
+            if (IsCancelled) 
+            {
+                DebugLogger.Log($"[Filter] Cancelled, returning AllBitsClear");
+                return VectorMask.AllBitsClear;
+            }
             
             VectorMask mask = VectorMask.AllBitsSet;
             
@@ -76,6 +87,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // Process MUST clauses - all must match
             foreach (var must in _config.Must)
             {
+                DebugLogger.Log($"[Filter] Processing MUST clause: {must.Type} = {must.Value}");
                 mask &= ProcessClause(ref searchContext, must, true);
                 if (mask.IsAllFalse()) return mask;
             }
@@ -83,6 +95,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // Process MUST NOT clauses - none can match
             foreach (var mustNot in _config.MustNot)
             {
+                DebugLogger.Log($"[Filter] Processing MUST NOT clause: {mustNot.Type} = {mustNot.Value}");
                 mask &= ProcessClause(ref searchContext, mustNot, true) ^ VectorMask.AllBitsSet;
                 if (mask.IsAllFalse()) return mask;
             }
@@ -93,13 +106,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
+                DebugLogger.Log($"[Filter] Processing individual seed: {singleCtx.GetSeed()}");
                 if (IsCancelled) return false;
+                
+                var currentSeed = singleCtx.GetSeed();
+                DebugLogger.Log($"[SEARCH] ========== CHECKING SEED: {currentSeed} ==========");
                 
                 // Check MUST clauses first - all must match
                 foreach (var must in config.Must)
                 {
+                    DebugLogger.Log($"[SEARCH] Looking for: {must.Type} = {must.Value}, Edition = {must.Edition}");
                     if (!CheckSingleClause(ref singleCtx, must, config.MaxSearchAnte))
+                    {
+                        DebugLogger.Log($"[SEARCH] NOT FOUND!");
                         return false;
+                    }
+                    DebugLogger.Log($"[SEARCH] FOUND!");
                 }
                 
                 // Check MUST NOT clauses - none can match
@@ -115,6 +137,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 // Calculate scores from SHOULD clauses
                 foreach (var should in config.Should)
                 {
+                    DebugLogger.Log($"[Filter] Seed {currentSeed}: Checking SHOULD clause: {should.Type} = {should.Value}");
                     if (CheckSingleClause(ref singleCtx, should, config.MaxSearchAnte))
                     {
                         totalScore += should.Score;
@@ -216,10 +239,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckSingleClause(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int maxSearchAnte)
         {
+            DebugLogger.Log($"[CheckSingleClause] Checking antes: {string.Join(",", clause.SearchAntes)} (max: {maxSearchAnte})");
             foreach (var ante in clause.SearchAntes)
             {
-                if (ante > maxSearchAnte) continue;
+                if (ante > maxSearchAnte) 
+                {
+                    DebugLogger.Log($"[CheckSingleClause] Skipping ante {ante} (> max {maxSearchAnte})");
+                    continue;
+                }
                 
+                DebugLogger.Log($"[CheckSingleClause] Checking ante {ante}...");
                 bool found = false;
                 
                 switch (clause.Type.ToLower())
@@ -267,11 +296,26 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckJoker(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
+            DebugLogger.Log($"[CheckJoker] Searching for: Value={clause.Value}, Edition={clause.Edition}, Ante={ante}, Sources={string.Join(",", clause.Sources ?? new List<string>())}");
+            
             if (!Enum.TryParse<MotelyJoker>(clause.Value, true, out var targetJoker))
+            {
+                DebugLogger.Log($"[CheckJoker] Failed to parse joker name: {clause.Value}");
                 return false;
+            }
+            
+            // Debug logging
+            DebugLogger.Log($"[CheckJoker] Looking for {targetJoker} in ante {ante}");
                 
-            // Check shop
-            if (clause.IncludeShopStream)
+            // Check if this is a legendary joker
+            bool isLegendary = targetJoker == MotelyJoker.Perkeo || 
+                               targetJoker == MotelyJoker.Canio || 
+                               targetJoker == MotelyJoker.Triboulet || 
+                               targetJoker == MotelyJoker.Yorick || 
+                               targetJoker == MotelyJoker.Chicot;
+                
+            // Check shop (legendary jokers don't appear in shop)
+            if (clause.IncludeShopStream && !isLegendary)
             {
                 var shop = ctx.GenerateFullShop(ante);
                 int maxSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
@@ -290,67 +334,124 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // Check booster packs
             if (clause.IncludeBoosterPacks)
             {
-                var packStream = ctx.CreateBoosterPackStream(ante);
+                DebugLogger.Log($"[CheckJoker] Checking booster packs in ante {ante}...");
                 
-                // Check up to 3 packs available in the ante
-                for (int i = 0; i < 3; i++)
+                // First print what's in the shop
+                DebugLogger.Log($"[CheckJoker] === SHOP CONTENTS FOR ANTE {ante} ===");
+                var shop = ctx.GenerateFullShop(ante);
+                int maxSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
+                for (int i = 0; i < maxSlots; i++)
+                {
+                    ref var item = ref shop.Items[i];
+                    if (item.Type == ShopState.ShopItem.ShopItemType.Joker)
+                    {
+                        DebugLogger.Log($"[CheckJoker] Shop slot {i}: Joker = {item.Joker}, Edition = {item.Edition}");
+                    }
+                    else
+                    {
+                        DebugLogger.Log($"[CheckJoker] Shop slot {i}: {item.Type}");
+                    }
+                }
+                DebugLogger.Log($"[CheckJoker] === END SHOP CONTENTS ===");
+                
+                var packStream = ctx.CreateBoosterPackStream(ante);
+                MotelySingleTarotStream tarotStream = default;
+                MotelySingleSpectralStream spectralStream = default;
+                MotelySingleJokerFixedRarityStream soulStream = default;
+                bool tarotStreamInit = false;
+                bool spectralStreamInit = false;
+                bool soulStreamInit = false;
+                
+                // Check ALL available packs
+                // The user can control which antes to search via the JSON
+                int packCount = ante == 1 ? 4 : 6; // Ante 1 has 4 packs, others have 6
+                
+                for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
+                    DebugLogger.Log($"[CheckJoker] Pack #{i+1}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
                     
-                    // Check Buffoon packs for jokers
-                    if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
-                    {
-                        // Buffoon packs appear to be generated via tags, not direct joker streams
-                        // The Buffoon Tag creates jokers when skipped
-                        // For now, we'll skip this as it requires tag simulation
-                        continue;
-                    }
-                    
-                    // Check if Arcana/Spectral pack has The Soul
                     if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                     {
-                        var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
-                        if (ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                        DebugLogger.Log($"[CheckJoker] Found Arcana pack #{i+1} at ante {ante}, checking for The Soul...");
+                        if (!tarotStreamInit)
                         {
-                            var soulStream = ctx.CreateSoulJokerStream(ante);
-                            var soulJoker = ctx.GetNextJoker(ref soulStream);
-                            if (soulJoker.Type == (MotelyItemType)(int)targetJoker)
+                            tarotStreamInit = true;
+                            tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
+                        }
+                        
+                        var hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+                        DebugLogger.Log($"[CheckJoker] Arcana pack has The Soul: {hasSoul}");
+                        if (hasSoul)
+                        {
+                            if (!soulStreamInit)
                             {
+                                soulStreamInit = true;
+                                soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
+                            }
+                            DebugLogger.Log($"[CheckJoker] Soul stream - DoesProvideEdition: {soulStream.DoesProvideEdition}");
+                            var soulJoker = ctx.GetNextJoker(ref soulStream);
+                            DebugLogger.Log($"[CheckJoker] The Soul gives: {soulJoker.Type}, Edition={soulJoker.Edition}");
+                            
+                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)targetJoker);
+                            DebugLogger.Log($"[CheckJoker] Soul joker type={soulJoker.Type}, Target={targetType}, Edition={soulJoker.Edition}");
+                            
+                            if (soulJoker.Type == targetType)
+                            {
+                                DebugLogger.Log($"[CheckJoker] Match! Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
                                 if (CheckEditionAndStickers(soulJoker, clause))
+                                {
+                                    DebugLogger.Log($"[CheckJoker] Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}");
                                     return true;
+                                }
+                                else
+                                {
+                                    DebugLogger.Log($"[CheckJoker] Edition check FAILED! Found {targetJoker} but edition {soulJoker.Edition} != {clause.Edition}");
+                                }
                             }
                         }
                     }
                     else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                     {
-                        var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true);
+                        DebugLogger.Log($"[CheckJoker] Found Spectral pack #{i+1}, checking for The Soul...");
+                        if (!spectralStreamInit)
+                        {
+                            spectralStreamInit = true;
+                            spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true);
+                        }
+                        
                         if (ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                         {
-                            var soulStream = ctx.CreateSoulJokerStream(ante);
-                            var soulJoker = ctx.GetNextJoker(ref soulStream);
-                            if (soulJoker.Type == (MotelyItemType)(int)targetJoker)
+                            DebugLogger.Log($"[CheckJoker] Spectral pack has The Soul!");
+                            if (!soulStreamInit)
                             {
+                                soulStreamInit = true;
+                                soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
+                            }
+                            var soulJoker = ctx.GetNextJoker(ref soulStream);
+                            DebugLogger.Log($"[CheckJoker] Found joker from The Soul (Spectral): {soulJoker.Type}, Edition={soulJoker.Edition}");
+                            
+                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)targetJoker);
+                            DebugLogger.Log($"[CheckJoker] Spectral Soul joker type={soulJoker.Type}, Target={targetType}, Edition={soulJoker.Edition}");
+                            
+                            if (soulJoker.Type == targetType)
+                            {
+                                DebugLogger.Log($"[CheckJoker] Spectral Match! Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
                                 if (CheckEditionAndStickers(soulJoker, clause))
+                                {
+                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}");
                                     return true;
+                                }
+                                else
+                                {
+                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check FAILED! Found {targetJoker} but edition {soulJoker.Edition} != {clause.Edition}");
+                                }
                             }
                         }
                     }
                 }
             }
             
-            // Check soul jokers (from tags)
-            if (clause.IncludeSkipTags && clause.Type.Equals("SoulJoker", StringComparison.OrdinalIgnoreCase))
-            {
-                var soulStream = ctx.CreateSoulJokerStream(ante);
-                var soul1 = ctx.GetNextJoker(ref soulStream);
-                var soul2 = ctx.GetNextJoker(ref soulStream);
-                
-                // MotelyItem encodes joker in Type property
-                if (soul1.Type == (MotelyItemType)(int)targetJoker)
-                    return true;
-                if (soul2.Type == (MotelyItemType)(int)targetJoker)  
-                    return true;
-            }
             
             return false;
         }
@@ -629,5 +730,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             return true;
         }
+        
     }
 }
