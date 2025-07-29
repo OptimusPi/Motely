@@ -196,23 +196,27 @@ namespace Motely
                 // Load Ouija config
                 var config = LoadConfig(configPath);
                 if (!quiet)
-                    Console.WriteLine($"✅ Loaded config: {config.Needs?.Length ?? 0} needs, {config.Wants?.Length ?? 0} wants");
+                    Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
 
                 // Print the parsed config for debugging
                 if (!quiet && enableDebug)
                 {
-                    Console.WriteLine("\n--- Parsed Ouija Config ---");
-                    Console.WriteLine(config.ToJson());
-                    Console.WriteLine("--- End Config ---\n");
+                    DebugLogger.Log("\n--- Parsed Ouija Config ---");
+                    DebugLogger.Log(config.ToJson());
+                    DebugLogger.Log("--- End Config ---\n");
                 }
 
                 // Search configuration is now part of MotelySearchSettings
 
-                // Create the real Motely search using OuijaJsonFilterDesc
-                var filterDesc = new OuijaJsonFilterDesc(config)
-                {
-                    Cutoff = cutoff
-                };
+                // The config loader now handles both formats automatically
+                // It will convert new format to legacy format internally
+                var filterDesc = new OuijaJsonFilterDesc(config);
+                filterDesc.Cutoff = cutoff;
+                
+                if (!quiet)
+                    Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
+                
+                // Create the search using OuijaJsonFilterDesc
                 var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
                     .WithThreadCount(threads)
                     .WithSequentialSearch()
@@ -229,6 +233,9 @@ namespace Motely
                 // Apply minimum score cutoff
                 // Minimum score cutoff is handled by the filter itself
                 
+                // Start timing before search begins
+                var searchStopwatch = Stopwatch.StartNew();
+                
                 IMotelySearch search;
                 if (seeds != null && seeds.Count > 0)
                 {
@@ -243,6 +250,9 @@ namespace Motely
 
                 // Print CSV header for results
                 PrintResultsHeader(config);
+                
+                // Clear results queue before starting (static queue persists between runs)
+                while (OuijaJsonFilterDesc.OuijaJsonFilter.ResultsQueue.TryDequeue(out _)) { }
 
                 // Setup cancellation token
                 var cts = new CancellationTokenSource();
@@ -254,15 +264,46 @@ namespace Motely
                     Console.WriteLine("✅ Search stopped gracefully");
                 };
 
+                // Process results while search is running
+                var resultsTask = System.Threading.Tasks.Task.Run(() =>
+                {
+                    while (search.Status == MotelySearchStatus.Running || !OuijaJsonFilterDesc.OuijaJsonFilter.ResultsQueue.IsEmpty)
+                    {
+                        if (OuijaJsonFilterDesc.OuijaJsonFilter.ResultsQueue.TryDequeue(out var result))
+                        {
+                            // Print result as CSV row
+                            var row = $"{result.Seed},{result.TotalScore}";
+                            if (result.ScoreWants != null)
+                            {
+                                foreach (var score in result.ScoreWants)
+                                {
+                                    row += $",{score}";
+                                }
+                            }
+                            Console.WriteLine(row);
+                        }
+                        else
+                        {
+                            System.Threading.Thread.Sleep(10);
+                        }
+                    }
+                });
+                
                 // Wait for search to complete
                 while (search.Status == MotelySearchStatus.Running)
                 {
                     System.Threading.Thread.Sleep(100);
                 }
                 
+                // Wait for results processing to complete
+                resultsTask.Wait();
+                
+                // Stop timing
+                searchStopwatch.Stop();
+                
                 // Results are printed in real-time by OuijaJsonFilterDesc
                 var totalSearched = search.CompletedBatchCount;
-                var duration = Stopwatch.StartNew().Elapsed; // TODO: track actual elapsed time
+                var duration = searchStopwatch.Elapsed;
 
                 if (!quiet)
                 {
@@ -279,7 +320,7 @@ namespace Motely
             {
                 Console.WriteLine($"❌ Error: {ex.Message}");
                 if (enableDebug)
-                    Console.WriteLine(ex.StackTrace);
+                    DebugLogger.Log(ex.StackTrace ?? "No stack trace available");
             }
         }
 
@@ -288,8 +329,8 @@ namespace Motely
             // If configPath is a rooted (absolute) path, use it directly
             if (Path.IsPathRooted(configPath) && File.Exists(configPath))
             {
-                Console.WriteLine($"📁 Loading config from: {configPath}");
-                return OuijaConfigLoader.Load(configPath);
+                DebugLogger.Log($"📁 Loading config from: {configPath}");
+                return OuijaConfig.LoadFromJson(configPath);
             }
 
             // Always look in JsonItemFilters for configs
@@ -297,8 +338,8 @@ namespace Motely
             string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
             if (File.Exists(jsonItemFiltersPath))
             {
-                Console.WriteLine($"📁 Loading config from: {jsonItemFiltersPath}");
-                return OuijaConfigLoader.Load(jsonItemFiltersPath);
+                DebugLogger.Log($"📁 Loading config from: {jsonItemFiltersPath}");
+                return OuijaConfig.LoadFromJson(jsonItemFiltersPath);
             }
 
             throw new FileNotFoundException($"Could not find config file: {configPath}");
@@ -312,63 +353,27 @@ namespace Motely
 
             // Print CSV header only once, with + prefix
             var header = "+Seed,TotalScore";
-            if (config.ScoreNaturalNegatives)
-                header += ",NaturalNegatives";
-            if (config.ScoreDesiredNegatives)
-                header += ",DesiredNegatives";
 
-            // Add column for each want
-            if (config.Wants != null)
+            // Add column for each should clause
+            if (config.Should != null)
             {
-                foreach (var want in config.Wants)
+                foreach (var should in config.Should)
                 {
-                    var col = FormatWantColumn(want);
+                    var col = FormatShouldColumn(should);
                     header += $",{col}";
                 }
             }
             Console.WriteLine(header);
         }
 
-        // static void PrintProgress(SearchProgress progress)
-        // {
-        //     var timeLeft = progress.EstimatedTimeRemaining;
-        //     string timeLeftFormatted = timeLeft.Days == 0 ?
-        //         $"{timeLeft:hh\\:mm\\:ss}" :
-        //         $"{timeLeft:d\\:hh\\:mm\\:ss}";
-
-        //     string seedsPerSec = progress.SeedsPerSecond > 0 ?
-        //         $"{progress.SeedsPerSecond:N0}" : "--";
-
-        //     OuijaStyleConsole.SetBottomLine(
-        //         $"{progress.PercentComplete:F2}% ~{timeLeftFormatted} remaining ({seedsPerSec} seeds/s) | {progress.SeedsSearched:N0} seeds searched");
-        // }
-
-        // Results are now printed in real-time by OuijaJsonFilterDesc
-        // static void PrintResult(OuijaConfig config, SearchResult result)
-        // {
-        //     var line = $"{result.Seed},{result.TotalScore}";
-
-        //     if (config.ScoreNaturalNegatives)
-        //         line += $",{result.NaturalNegatives}";
-        //     if (config.ScoreDesiredNegatives)
-        //         line += $",{result.DesiredNegatives}";
-
-        //     // Add want scores
-        //     if (config.Wants != null)
-        //     {
-        //         for (int i = 0; i < config.Wants.Length && i < result.WantScores.Length; i++)
-        //         {
-        //             line += $",{result.WantScores[i]}";
-        //         }
-        //     }
-
-        //     Console.WriteLine(line);
-        // }
-
-        static string FormatWantColumn(OuijaConfig.Desire want)
+        static string FormatShouldColumn(OuijaConfig.FilterItem should)
         {
-            if (want == null) return "Want";
-            return want.GetDisplayString();
+            if (should == null) return "Should";
+            // Format as Type:Value or just Value if type is obvious
+            var name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
+            if (!string.IsNullOrEmpty(should.Edition))
+                name = should.Edition + name;
+            return name;
         }
     }
 }

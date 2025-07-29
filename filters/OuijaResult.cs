@@ -20,20 +20,12 @@ public class OuijaResult
         // Start with pipe marker, then seed and total score
         var row = $"|{Seed},{TotalScore}";
         
-        // Add NaturalNegatives if configured
-        if (config.ScoreNaturalNegatives)
-            row += $",{NaturalNegativeJokers}";
-            
-        // Add DesiredNegatives if configured
-        if (config.ScoreDesiredNegatives)
-            row += $",{DesiredNegativeJokers}";
-        
-        // Add scores for each want, limited by numWants parameter
-        if (ScoreWants != null && config?.Wants != null)
+        // Add scores for each should clause, limited by numWants parameter
+        if (ScoreWants != null && config?.Should != null)
         {
             // If numWants is -1 (default), show all; if 0 or positive, limit to that number
             int wantsToShow = numWants == -1 ? ScoreWants.Length : Math.Min(numWants, ScoreWants.Length);
-            for (int i = 0; i < wantsToShow && i < config.Wants.Length; i++)
+            for (int i = 0; i < wantsToShow && i < config.Should.Count; i++)
             {
                 var score = ScoreWants[i];
                 row += $",{score}";
