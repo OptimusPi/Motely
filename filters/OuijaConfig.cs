@@ -110,6 +110,8 @@ public class OuijaConfig
             {
                 Type = Item.Type ?? "";
                 Value = Item.Name ?? "";
+                if (!string.IsNullOrEmpty(Item.Edition))
+                    Edition = Item.Edition;
             }
             
             if (Antes != null)
@@ -133,6 +135,9 @@ public class OuijaConfig
         
         [JsonPropertyName("name")]
         public string? Name { get; set; }
+        
+        [JsonPropertyName("edition")]
+        public string? Edition { get; set; }
     }
     
     /// <summary>
