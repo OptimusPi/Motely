@@ -101,9 +101,7 @@
         "minSearchAnte": 1,
         "maxSearchAnte": 8,
         "deck": "AnaglyphDeck",
-        "stake": "BlackStake",
-        "scoreNaturalNegatives": true,
-        "scoreDesiredNegatives": true
+        "stake": "BlackStake"
     },
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Ouija Balatro Seed filter config schema",
@@ -129,9 +127,7 @@
                 "minSearchAnte": { "type": "integer" },
                 "maxSearchAnte": { "type": "integer" },
                 "deck": { "type": "string" },
-                "stake": { "type": "string" },
-                "scoreNaturalNegatives": { "type": "boolean" },
-                "scoreDesiredNegatives": { "type": "boolean" }
+                "stake": { "type": "string" }
             },
             "required": ["Needs", "Wants"]
         }
