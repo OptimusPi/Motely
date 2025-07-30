@@ -219,18 +219,19 @@ unsafe ref partial struct MotelySingleSearchContext
             if (shopItem.TypeCategory == MotelyItemTypeCategory.Joker)
             {
                 item.Type = ShopState.ShopItem.ShopItemType.Joker;
-                item.Joker = (MotelyJoker)(shopItem.Value & ~Motely.ItemTypeCategoryMask);
+                // Extract joker type by masking out type category, edition, and other flags
+                item.Joker = (MotelyJoker)(shopItem.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
                 item.Edition = shopItem.Edition;
             }
             else if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
             {
                 item.Type = ShopState.ShopItem.ShopItemType.Planet;
-                item.Planet = (MotelyPlanetCard)(shopItem.Value & ~Motely.ItemTypeCategoryMask);
+                item.Planet = (MotelyPlanetCard)(shopItem.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
             }
             else if (shopItem.TypeCategory == MotelyItemTypeCategory.TarotCard)
             {
                 item.Type = ShopState.ShopItem.ShopItemType.Tarot;
-                item.Tarot = (MotelyTarotCard)(shopItem.Value & ~Motely.ItemTypeCategoryMask);
+                item.Tarot = (MotelyTarotCard)(shopItem.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
             }
             else
             {
