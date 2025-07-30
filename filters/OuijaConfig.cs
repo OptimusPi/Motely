@@ -3,8 +3,30 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 namespace Motely.Filters;
+
+/// <summary>
+/// Filter item types for fast enum comparison
+/// </summary>
+public enum FilterItemType
+{
+    Unknown,
+    Joker,
+    SoulJoker,
+    Tarot,
+    TarotCard,
+    Spectral,
+    SpectralCard,
+    Planet,
+    PlanetCard,
+    Tag,
+    SmallBlindTag,
+    BigBlindTag,
+    Voucher,
+    PlayingCard
+}
 
 /// <summary>
 /// Valid item sources for filtering
@@ -121,13 +143,73 @@ public class OuijaConfig
         [JsonPropertyName("sources")]
         public List<string>? Sources { get; set; }
         
+        // === PARSED ENUM VALUES FOR PERFORMANCE ===
+        // These are populated during Initialize() to avoid string comparisons in hot path
+        
+        [JsonIgnore]
+        public FilterItemType ItemType { get; set; } = FilterItemType.Unknown;
+        
+        [JsonIgnore]
+        public MotelyJoker? JokerEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyTarotCard? TarotEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelySpectralCard? SpectralEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyPlanetCard? PlanetEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyTag? TagEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyVoucher? VoucherEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyItemEdition? EditionEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyPlayingCardRank? RankEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyPlayingCardSuit? SuitEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyItemEnhancement? EnhancementEnum { get; set; }
+        
+        [JsonIgnore]
+        public MotelyItemSeal? SealEnum { get; set; }
+        
         // Initialize from nested format if present
         public void Initialize()
         {
             if (Item != null)
             {
                 Type = Item.Type ?? "";
-                Value = Item.Name ?? "";
+                
+                // Handle different item types
+                if (Type.ToLower() == "playingcard")
+                {
+                    // For playing cards, use rank/suit from nested item
+                    if (!string.IsNullOrEmpty(Item.Rank))
+                        Rank = Item.Rank;
+                    if (!string.IsNullOrEmpty(Item.Value)) // Support "value" as alternative to "rank"
+                        Rank = Item.Value;
+                    if (!string.IsNullOrEmpty(Item.Suit))
+                        Suit = Item.Suit;
+                    if (!string.IsNullOrEmpty(Item.Enhancement))
+                        Enhancement = Item.Enhancement;
+                    if (!string.IsNullOrEmpty(Item.Seal))
+                        Seal = Item.Seal;
+                }
+                else
+                {
+                    // For other types (jokers, etc), use name
+                    Value = Item.Name ?? Item.Value ?? "";
+                }
+                
                 if (!string.IsNullOrEmpty(Item.Edition))
                     Edition = Item.Edition;
             }
@@ -155,6 +237,151 @@ public class OuijaConfig
                 IncludeBoosterPacks = lowerSources.Contains(ValidItemSources.Packs);
                 IncludeSkipTags = lowerSources.Contains(ValidItemSources.Tags);
             }
+            
+            // === PARSE STRINGS TO ENUMS FOR PERFORMANCE ===
+            ParseEnums();
+        }
+        
+        private void ParseEnums()
+        {
+            // Parse ItemType enum
+            switch (Type.ToLower())
+            {
+                case "joker":
+                    ItemType = FilterItemType.Joker;
+                    break;
+                case "souljoker":
+                    ItemType = FilterItemType.SoulJoker;
+                    break;
+                case "tarot":
+                    ItemType = FilterItemType.Tarot;
+                    break;
+                case "tarotcard":
+                    ItemType = FilterItemType.TarotCard;
+                    break;
+                case "spectral":
+                    ItemType = FilterItemType.Spectral;
+                    break;
+                case "spectralcard":
+                    ItemType = FilterItemType.SpectralCard;
+                    break;
+                case "planet":
+                    ItemType = FilterItemType.Planet;
+                    break;
+                case "planetcard":
+                    ItemType = FilterItemType.PlanetCard;
+                    break;
+                case "tag":
+                    ItemType = FilterItemType.Tag;
+                    break;
+                case "smallblindtag":
+                    ItemType = FilterItemType.SmallBlindTag;
+                    break;
+                case "bigblindtag":
+                    ItemType = FilterItemType.BigBlindTag;
+                    break;
+                case "voucher":
+                    ItemType = FilterItemType.Voucher;
+                    break;
+                case "playingcard":
+                    ItemType = FilterItemType.PlayingCard;
+                    break;
+                default:
+                    ItemType = FilterItemType.Unknown;
+                    break;
+            }
+            
+            // Parse specific item enum based on type
+            switch (ItemType)
+            {
+                case FilterItemType.Joker:
+                case FilterItemType.SoulJoker:
+                    if (!string.IsNullOrEmpty(Value) && 
+                        !Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                        !Value.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                        Enum.TryParse<MotelyJoker>(Value, true, out var joker))
+                    {
+                        JokerEnum = joker;
+                    }
+                    break;
+                    
+                case FilterItemType.Tarot:
+                case FilterItemType.TarotCard:
+                    if (Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
+                        TarotEnum = tarot;
+                    break;
+                    
+                case FilterItemType.Spectral:
+                case FilterItemType.SpectralCard:
+                    if (Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral))
+                        SpectralEnum = spectral;
+                    break;
+                    
+                case FilterItemType.Planet:
+                case FilterItemType.PlanetCard:
+                    if (Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
+                        PlanetEnum = planet;
+                    break;
+                    
+                case FilterItemType.Tag:
+                case FilterItemType.SmallBlindTag:
+                case FilterItemType.BigBlindTag:
+                    if (Enum.TryParse<MotelyTag>(Value, true, out var tag))
+                        TagEnum = tag;
+                    break;
+                    
+                case FilterItemType.Voucher:
+                    if (Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
+                        VoucherEnum = voucher;
+                    break;
+                    
+                case FilterItemType.PlayingCard:
+                    // Parse rank with normalization
+                    if (!string.IsNullOrEmpty(Rank))
+                    {
+                        var normalizedRank = NormalizeRank(Rank);
+                        if (Enum.TryParse<MotelyPlayingCardRank>(normalizedRank, true, out var rank))
+                            RankEnum = rank;
+                    }
+                    
+                    // Parse suit
+                    if (!string.IsNullOrEmpty(Suit) && Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit))
+                        SuitEnum = suit;
+                    
+                    // Parse enhancement
+                    if (!string.IsNullOrEmpty(Enhancement) && Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enhancement))
+                        EnhancementEnum = enhancement;
+                    
+                    // Parse seal
+                    if (!string.IsNullOrEmpty(Seal) && Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal))
+                        SealEnum = seal;
+                    break;
+            }
+            
+            // Parse edition (common to all item types)
+            if (!string.IsNullOrEmpty(Edition) && Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
+                EditionEnum = edition;
+        }
+        
+        private static string NormalizeRank(string rank)
+        {
+            return rank?.ToLower() switch
+            {
+                "2" or "two" => "Two",
+                "3" or "three" => "Three",
+                "4" or "four" => "Four",
+                "5" or "five" => "Five",
+                "6" or "six" => "Six",
+                "7" or "seven" => "Seven",
+                "8" or "eight" => "Eight",
+                "9" or "nine" => "Nine",
+                "10" or "ten" => "Ten",
+                "j" or "jack" => "Jack",
+                "q" or "queen" => "Queen",
+                "k" or "king" => "King",
+                "a" or "ace" => "Ace",
+                _ => rank
+            };
         }
     }
     
@@ -168,6 +395,22 @@ public class OuijaConfig
         
         [JsonPropertyName("edition")]
         public string? Edition { get; set; }
+        
+        // Playing card specific
+        [JsonPropertyName("rank")]
+        public string? Rank { get; set; }
+        
+        [JsonPropertyName("suit")]
+        public string? Suit { get; set; }
+        
+        [JsonPropertyName("enhancement")]
+        public string? Enhancement { get; set; }
+        
+        [JsonPropertyName("seal")]
+        public string? Seal { get; set; }
+        
+        [JsonPropertyName("value")]
+        public string? Value { get; set; } // Alternative to name for backward compatibility
     }
     
     /// <summary>
@@ -179,6 +422,10 @@ public class OuijaConfig
             throw new FileNotFoundException($"Config file not found: {jsonPath}");
 
         var json = File.ReadAllText(jsonPath);
+        
+        // Validate JSON structure first
+        StrictJsonValidator.ValidateJson(json, jsonPath);
+        
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
