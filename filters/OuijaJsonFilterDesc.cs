@@ -138,10 +138,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 foreach (var should in config.Should)
                 {
                     DebugLogger.Log($"[Filter] Seed {currentSeed}: Checking SHOULD clause: {should.Type} = {should.Value}");
-                    if (CheckSingleClause(ref singleCtx, should, config.MaxSearchAnte))
+                    int occurrences = CountOccurrences(ref singleCtx, should, config.MaxSearchAnte);
+                    if (occurrences > 0)
                     {
-                        totalScore += should.Score;
-                        scoreDetails.Add(should.Score);
+                        int clauseScore = should.Score * occurrences;
+                        totalScore += clauseScore;
+                        scoreDetails.Add(clauseScore);
+                        DebugLogger.Log($"[Filter] Found {occurrences} occurrences, score = {should.Score} * {occurrences} = {clauseScore}");
                     }
                     else
                     {
@@ -214,7 +217,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var bigTag = ctx.GetNextTag(ref tagStream);
             
             if (!Enum.TryParse<MotelyTag>(clause.Value, true, out var targetTag))
-                return VectorMask.AllBitsClear;
+            {
+                var validTags = string.Join(", ", Enum.GetNames(typeof(MotelyTag)));
+                throw new ArgumentException($"INVALID TAG NAME: '{clause.Value}' is not a valid tag!\nValid tags are: {validTags}");
+            }
             
             var isSmall = clause.Type.Contains("Small", StringComparison.OrdinalIgnoreCase);
             var isBig = clause.Type.Contains("Big", StringComparison.OrdinalIgnoreCase);
@@ -232,9 +238,73 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var voucher = ctx.GetAnteFirstVoucher(ante);
             
             if (!Enum.TryParse<MotelyVoucher>(clause.Value, true, out var targetVoucher))
-                return VectorMask.AllBitsClear;
+            {
+                var validVouchers = string.Join(", ", Enum.GetNames(typeof(MotelyVoucher)));
+                throw new ArgumentException($"INVALID VOUCHER NAME: '{clause.Value}' is not a valid voucher!\nValid vouchers are: {validVouchers}");
+            }
                 
             return VectorEnum256.Equals(voucher, targetVoucher);
+        }
+        
+        private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int maxSearchAnte)
+        {
+            int totalCount = 0;
+            DebugLogger.Log($"[CountOccurrences] Counting occurrences in antes: {string.Join(",", clause.SearchAntes)} (max: {maxSearchAnte})");
+            
+            foreach (var ante in clause.SearchAntes)
+            {
+                if (ante > maxSearchAnte) continue;
+                
+                DebugLogger.Log($"[CountOccurrences] Checking ante {ante}...");
+                int anteCount = 0;
+                
+                switch (clause.Type.ToLower())
+                {
+                    case "joker":
+                    case "souljoker":
+                        anteCount = CheckJoker(ref ctx, clause, ante);
+                        break;
+                        
+                    // For other types, just return 1 if found (for now)
+                    case "tarot":
+                    case "tarotcard":
+                        anteCount = CheckTarot(ref ctx, clause, ante) ? 1 : 0;
+                        break;
+                        
+                    case "planet":
+                    case "planetcard":
+                        anteCount = CheckPlanet(ref ctx, clause, ante) ? 1 : 0;
+                        break;
+                        
+                    case "spectral":
+                    case "spectralcard":
+                        anteCount = CheckSpectral(ref ctx, clause, ante) ? 1 : 0;
+                        break;
+                        
+                    case "tag":
+                    case "smallblindtag":
+                    case "bigblindtag":
+                        anteCount = CheckTagSingle(ref ctx, clause, ante) ? 1 : 0;
+                        break;
+                        
+                    case "voucher":
+                        anteCount = CheckVoucherSingle(ref ctx, clause, ante) ? 1 : 0;
+                        break;
+                        
+                    case "playingcard":
+                        anteCount = CheckPlayingCard(ref ctx, clause, ante) ? 1 : 0;
+                        break;
+                }
+                
+                totalCount += anteCount;
+                if (anteCount > 0)
+                {
+                    DebugLogger.Log($"[CountOccurrences] Found {anteCount} in ante {ante}");
+                }
+            }
+            
+            DebugLogger.Log($"[CountOccurrences] Total occurrences: {totalCount}");
+            return totalCount;
         }
         
         private static bool CheckSingleClause(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int maxSearchAnte)
@@ -255,7 +325,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 {
                     case "joker":
                     case "souljoker":
-                        found = CheckJoker(ref ctx, clause, ante);
+                        found = CheckJoker(ref ctx, clause, ante) > 0;
                         break;
                         
                     case "tarot":
@@ -294,15 +364,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return false;
         }
         
-        private static bool CheckJoker(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
+        private static int CheckJoker(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             DebugLogger.Log($"[CheckJoker] Searching for: Value={clause.Value}, Edition={clause.Edition}, Ante={ante}, Sources={string.Join(",", clause.Sources ?? new List<string>())}");
             
             if (!Enum.TryParse<MotelyJoker>(clause.Value, true, out var targetJoker))
             {
-                DebugLogger.Log($"[CheckJoker] Failed to parse joker name: {clause.Value}");
-                return false;
+                var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
+                throw new ArgumentException($"INVALID JOKER NAME: '{clause.Value}' is not a valid joker!\nValid jokers are: {validJokers}");
             }
+            
+            int foundCount = 0;
             
             // Debug logging
             DebugLogger.Log($"[CheckJoker] Looking for {targetJoker} in ante {ante}");
@@ -326,7 +398,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     if (item.Type == ShopState.ShopItem.ShopItemType.Joker && item.Joker == targetJoker)
                     {
                         if (CheckEditionAndStickers(item, clause))
-                            return true;
+                        {
+                            foundCount++;
+                            DebugLogger.Log($"[CheckJoker] Found {targetJoker} in shop! Total count: {foundCount}");
+                        }
                     }
                 }
             }
@@ -401,8 +476,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                 DebugLogger.Log($"[CheckJoker] Match! Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
                                 if (CheckEditionAndStickers(soulJoker, clause))
                                 {
-                                    DebugLogger.Log($"[CheckJoker] Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}");
-                                    return true;
+                                    foundCount++;
+                                    DebugLogger.Log($"[CheckJoker] Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}. Total count: {foundCount}");
                                 }
                                 else
                                 {
@@ -439,8 +514,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                 DebugLogger.Log($"[CheckJoker] Spectral Match! Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
                                 if (CheckEditionAndStickers(soulJoker, clause))
                                 {
-                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}");
-                                    return true;
+                                    foundCount++;
+                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}. Total count: {foundCount}");
                                 }
                                 else
                                 {
@@ -452,14 +527,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
             }
             
-            
-            return false;
+            DebugLogger.Log($"[CheckJoker] Total {targetJoker} found: {foundCount}");
+            return foundCount;
         }
         
         private static bool CheckTarot(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             if (!Enum.TryParse<MotelyTarotCard>(clause.Value, true, out var targetTarot))
-                return false;
+            {
+                var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
+                throw new ArgumentException($"INVALID TAROT NAME: '{clause.Value}' is not a valid tarot!\nValid tarots are: {validTarots}");
+            }
                 
             // Check shop
             if (clause.IncludeShopStream)
@@ -507,7 +585,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckPlanet(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             if (!Enum.TryParse<MotelyPlanetCard>(clause.Value, true, out var targetPlanet))
-                return false;
+            {
+                var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
+                throw new ArgumentException($"INVALID PLANET NAME: '{clause.Value}' is not a valid planet!\nValid planets are: {validPlanets}");
+            }
                 
             // Check shop
             if (clause.IncludeShopStream)
@@ -555,7 +636,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckSpectral(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             if (!Enum.TryParse<MotelySpectralCard>(clause.Value, true, out var targetSpectral))
-                return false;
+            {
+                var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
+                throw new ArgumentException($"INVALID SPECTRAL NAME: '{clause.Value}' is not a valid spectral!\nValid spectrals are: {validSpectrals}");
+            }
                 
             // Spectral cards appear only in packs, not in shop
             if (clause.IncludeBoosterPacks)
@@ -589,7 +673,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckTagSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             if (!Enum.TryParse<MotelyTag>(clause.Value, true, out var targetTag))
-                return false;
+            {
+                var validTags = string.Join(", ", Enum.GetNames(typeof(MotelyTag)));
+                throw new ArgumentException($"INVALID TAG NAME: '{clause.Value}' is not a valid tag!\nValid tags are: {validTags}");
+            }
                 
             var tagStream = ctx.CreateTagStream(ante);
             var smallTag = ctx.GetNextTag(ref tagStream);
@@ -609,7 +696,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             if (!Enum.TryParse<MotelyVoucher>(clause.Value, true, out var targetVoucher))
-                return false;
+            {
+                var validVouchers = string.Join(", ", Enum.GetNames(typeof(MotelyVoucher)));
+                throw new ArgumentException($"INVALID VOUCHER NAME: '{clause.Value}' is not a valid voucher!\nValid vouchers are: {validVouchers}");
+            }
                 
             var voucher = ctx.GetAnteFirstVoucher(ante);
             return voucher == targetVoucher;
