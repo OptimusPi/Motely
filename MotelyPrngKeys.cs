@@ -12,7 +12,6 @@ public static class MotelyPrngKeys
     public const string ShopPack = "shop_pack";
 
     public const string Tarot = "Tarot";
-    public const string TerrotSoul = "soul_";
     public const string TarotSoul = "soul_"; // Alias for compatibility
     public const string ArcanaPackItemSource = "ar1";
     public const string ArcanaPack = "ar1"; // Alias for compatibility
@@ -20,13 +19,13 @@ public static class MotelyPrngKeys
     public const string Planet = "Planet";
     public const string PlanetBlackHole = "soul_";
     public const string CelestialPackItemSource = "pl1";
-    public const string CelestialPack = "cel1"; // Alias for compatibility
+    public const string CelestialPack = "pl1"; // Alias for compatibility
 
     public const string Spectral = "Spectral";
     public const string SpectralSoulBlackHole = "soul_";
-    public const string SpectralSoul = "spectral_soul_"; // Alias for compatibility
+    public const string SpectralSoul = "soul_"; // Alias for compatibility
     public const string SpectralPackItemSource = "spe";
-    public const string SpectralPack = "spe1"; // Alias for compatibility
+    public const string SpectralPack = "spe"; // Alias for compatibility
 
     public const string StandardCardBase = "front";
     public const string StandardCardHasEnhancement = "stdset";
@@ -36,6 +35,7 @@ public static class MotelyPrngKeys
     public const string StandardCardSeal = "stdsealtype";
     public const string StandardPackItemSource = "sta";
 
+    public const string BuffoonPackItemSource = "buf";
     public const string BuffoonJokerEternalPerishableSource = "packetper";
     public const string BuffoonJokerRentalSource = "packssjr";
 
@@ -54,6 +54,42 @@ public static class MotelyPrngKeys
     public const string Shop = "sho"; // Alias for compatibility
     public const string ShopJokerEternalPerishableSource = "etperpoll";
     public const string ShopJokerRentalSource = "ssjr";
+
+    // Additional source keys from cache.cl
+    public const string Emperor = "emp";
+    public const string HighPriestess = "pri";
+    public const string Judgement = "jud";
+    public const string Wraith = "wra";
+    public const string Vagabond = "vag";
+    public const string Superposition = "sup";
+    public const string EightBall = "8ba";
+    public const string Seance = "sea";
+    public const string SixthSense = "sixth";
+    public const string TopUp = "top";
+    public const string RareTag = "rta";
+    public const string UncommonTag = "uta";
+    public const string BlueSeal = "blusl";
+    public const string PurpleSeal = "8ba"; // Same as 8ball
+    public const string Soul = "sou";
+    public const string RiffRaff = "rif";
+    public const string Cartomancer = "car";
+
+    // Additional type keys from cache.cl  
+    public const string Misprint = "misprint";
+    public const string ShuffleNewRound = "nr";
+    public const string LuckyMult = "lucky_mult";
+    public const string LuckyMoney = "lucky_money";
+    public const string Sigil = "sigil";
+    public const string Ouija = "ouija";
+    public const string WheelOfFortune = "wheel_of_fortune";
+    public const string GrosMichel = "gros_michel";
+    public const string Cavendish = "cavendish";
+    public const string VoucherFromTag = "Voucher_fromtag";
+    public const string OrbitalTag = "orbital";
+    public const string Erratic = "erratic";
+    public const string EternalStake = "stake_shop_joker_eternal";
+    public const string Perishable = "ssjp";
+    public const string Boss = "boss";
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

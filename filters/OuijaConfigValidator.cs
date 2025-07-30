@@ -69,10 +69,15 @@ namespace Motely.Filters
                 {
                     case "joker":
                     case "souljoker":
-                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
+                        // Allow "any", "*", or empty for searching any joker with specific edition
+                        bool isAnyJoker = string.IsNullOrEmpty(item.Value) || 
+                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase);
+                        
+                        if (!isAnyJoker && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
-                            errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}");
+                            errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nUse 'any', '*', or leave empty to match any joker.");
                         }
                         break;
                         

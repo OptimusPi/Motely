@@ -34,7 +34,7 @@ ref partial struct MotelyVectorSearchContext
                 CreateResampleStream(MotelyPrngKeys.Tarot + source + ante, isCached) :
                 MotelyVectorResampleStream.Invalid,
             soulable ?
-                CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
+                CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
                 MotelyVectorPrngStream.Invalid
         );
     }

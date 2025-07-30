@@ -3,14 +3,38 @@
     {
       "item": {
         "type": "joker",
-        "name": "Blueprint",
-        "edition": "Negative"
+        "name": "any",
+        "edition": "negative"
+      },
+      "antes": [
+        1
+      ],
+      "sources": [
+        "packs"
+      ]
+    },
+    {
+      "item": {
+        "type": "joker",
+        "name": "perkeo"
+      },
+      "antes": [
+        1,2,3
+      ],
+      "sources": [
+        "packs", "tags"
+      ]
+    },
+    {
+      "item": {
+        "type": "joker",
+        "name": "showman"
       },
       "antes": [
         1,2
       ],
       "sources": [
-        "packs", "shop", "tags"
+        "packs", "tags"
       ]
     }
   ],
@@ -18,21 +42,37 @@
     {
       "item": {
         "type": "joker",
+        "name": "blueprint",
+        "edition": "negative"
+      },
+      "antes": [
+        1,2,3,4,6,7,8
+      ],
+        "sources": [
+          "packs", "shop"
+      ],
+      "score": 10
+    },
+    {
+      "item": {
+        "type": "joker",
         "name": "blueprint"
       },
       "antes": [
-        1,2,3,4,5,6,7,8
+        1,2,3,4,6,7,8
       ],
       "sources": [
-        "packs", "shop"
-      ]
+        "packs", "tags"
+      ],
+      "score": 1
     }
   ],
-  "mustNot": [],
+  "mustNot": [
+  ],
   "filter": {
     "deck": "Ghost",
     "stake": "White",
-    "maxAnte": 2
+    "maxAnte": 8
   },
   "minimumScore": 0
 }
