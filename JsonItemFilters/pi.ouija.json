@@ -3,51 +3,28 @@
     {
       "item": {
         "type": "joker",
-        "name": "Triboulet"
+        "name": "Blueprint",
+        "edition": "Negative"
       },
       "antes": [
-        1
+        1,2
       ],
       "sources": [
-        "packs"
+        "packs", "shop", "tags"
       ]
     }
   ],
   "should": [
     {
       "item": {
-        "type": "spectral",
-        "name": "soul"
-      },
-      "antes": [
-        1
-      ],
-      "sources": [
-        "packs","tags"
-      ]
-    },
-    {
-      "item": {
         "type": "joker",
-        "name": "Triboulet"
+        "name": "blueprint"
       },
       "antes": [
-        1
+        1,2,3,4,5,6,7,8
       ],
       "sources": [
-        "packs","tags"
-      ]
-    },
-    {
-      "item": {
-        "type": "spectral",
-        "name": "soul"
-      },
-      "antes": [
-        1
-      ],
-      "sources": [
-        "packs","tags"
+        "packs", "shop"
       ]
     }
   ],
