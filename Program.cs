@@ -195,6 +195,18 @@ namespace Motely
             {
                 // Load Ouija config
                 var config = LoadConfig(configPath);
+                
+                // Validate config IMMEDIATELY after loading
+                try
+                {
+                    OuijaConfigValidator.ValidateConfig(config);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.WriteLine($"❌ CONFIG VALIDATION FAILED:\n{ex.Message}");
+                    return;
+                }
+                
                 if (!quiet)
                     Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
 
@@ -267,13 +279,17 @@ namespace Motely
                 
                 // Clear results queue before starting (static queue persists between runs)
                 while (OuijaJsonFilterDesc.OuijaJsonFilter.ResultsQueue.TryDequeue(out _)) { }
+                
+                // Reset cancellation flag
+                OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = false;
 
                 // Setup cancellation token
                 var cts = new CancellationTokenSource();
                 Console.CancelKeyPress += (sender, e) =>
                 {
                     e.Cancel = true;
-                    Console.WriteLine("\n🛑 Stopping search (waiting for current batch to complete)...");
+                    Console.WriteLine("\n🛑 Stopping search...");
+                    OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = true;
                     search.Dispose();
                     Console.WriteLine("✅ Search stopped gracefully");
                 };
