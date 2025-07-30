@@ -21,7 +21,7 @@ ref partial struct MotelyVectorSearchContext
     }
 
     // Helper method for filtering planet cards in vector context
-    public VectorMask FilterPlanetCard(int ante, MotelyPlanetCard targetPlanet, string source = MotelyPrngKeys.Shop)
+    public VectorMask FilterPlanetCard(int ante, MotelyPlanetCard targetPlanet, string source = MotelyPrngKeys.ShopItemSource)
     {
         var planetStream = CreatePlanetStreamCached(ante, source);
         var planetChoices = MotelyEnum<MotelyPlanetCard>.Values;

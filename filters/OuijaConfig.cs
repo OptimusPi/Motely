@@ -302,6 +302,7 @@ public class OuijaConfig
                         Enum.TryParse<MotelyJoker>(Value, true, out var joker))
                     {
                         JokerEnum = joker;
+                        
                     }
                     break;
                     
@@ -380,7 +381,7 @@ public class OuijaConfig
                 "q" or "queen" => "Queen",
                 "k" or "king" => "King",
                 "a" or "ace" => "Ace",
-                _ => rank
+                _ => throw new ArgumentException($"Invalid rank: '{rank}'. Valid ranks are: 2-10, J, Q, K, A (or spelled out: Two-Ten, Jack, Queen, King, Ace)")
             };
         }
     }

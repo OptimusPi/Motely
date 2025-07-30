@@ -21,7 +21,7 @@ ref partial struct MotelyVectorSearchContext
     }
 
     // Helper method for filtering spectral cards in vector context
-    public VectorMask FilterSpectralCard(int ante, MotelySpectralCard targetSpectral, string source = MotelyPrngKeys.Shop)
+    public VectorMask FilterSpectralCard(int ante, MotelySpectralCard targetSpectral, string source = MotelyPrngKeys.ShopItemSource)
     {
         var spectralStream = CreateSpectralStreamCached(ante, source);
         var spectralChoices = MotelyEnum<MotelySpectralCard>.Values;
