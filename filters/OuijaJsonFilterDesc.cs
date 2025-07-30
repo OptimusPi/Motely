@@ -100,14 +100,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            DebugLogger.Log($"[Filter] ============= VECTOR FILTER CALLED =============");
-            DebugLogger.Log($"[Filter] Config has {_config.Must.Count} MUST clauses");
-            if (IsCancelled) 
-            {
-                DebugLogger.Log($"[Filter] Cancelled, returning AllBitsClear");
-                return VectorMask.AllBitsClear;
-            }
-            
             VectorMask mask = VectorMask.AllBitsSet;
             
             
@@ -406,8 +398,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             int foundCount = 0;
             
-            // Debug logging
-            DebugLogger.Log($"[CheckJoker] Looking for {targetJoker} in ante {ante}");
+            
                 
             // Check if this is a legendary joker
             bool isLegendary = targetJoker == MotelyJoker.Perkeo || 
@@ -415,13 +406,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                targetJoker == MotelyJoker.Triboulet || 
                                targetJoker == MotelyJoker.Yorick || 
                                targetJoker == MotelyJoker.Chicot;
+                               
+            // Debug logging
+            DebugLogger.Log($"[CheckJoker] Looking for {targetJoker} in ante {ante} Legendary? {isLegendary} SearchAnyJoker: {searchAnyJoker}");
                 
             // Check shop (legendary jokers don't appear in shop)
             if (clause.IncludeShopStream && !isLegendary)
             {
                 var shop = ctx.GenerateFullShop(ante);
                 int maxSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
-                
+
                 // Debug: Print shop contents
                 DebugLogger.Log($"[CheckJoker] === SHOP CONTENTS FOR ANTE {ante} ===  ");
                 for (int i = 0; i < maxSlots; i++)
@@ -439,7 +433,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     }
                 }
                 DebugLogger.Log($"[CheckJoker] === END SHOP CONTENTS ===");
-                
+
                 for (int i = 0; i < maxSlots; i++)
                 {
                     ref var item = ref shop.Items[i];
@@ -447,10 +441,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     {
                         // Extract joker without edition bits for comparison
                         var shopJoker = (MotelyJoker)(item.Item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                        
+
                         // Check if we're looking for any joker or a specific one
                         bool jokerMatches = searchAnyJoker || shopJoker == targetJoker;
-                        
+
                         if (jokerMatches && CheckEditionAndStickers(item, clause))
                         {
                             foundCount++;
