@@ -61,6 +61,33 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         public static ConcurrentQueue<OuijaResult> ResultsQueue = new();
         public static bool IsCancelled = false;
+        
+        private static string GetFilterDescription(OuijaConfig.FilterItem item)
+        {
+            var parts = new List<string>();
+            parts.Add($"{item.ItemType}");
+            
+            if (item.ItemType == FilterItemType.PlayingCard)
+            {
+                if (item.RankEnum.HasValue)
+                    parts.Add($"rank={item.RankEnum.Value}");
+                if (item.SuitEnum.HasValue)
+                    parts.Add($"suit={item.SuitEnum.Value}");
+            }
+            else if (!string.IsNullOrEmpty(item.Value))
+            {
+                parts.Add($"name={item.Value}");
+            }
+            
+            if (item.EditionEnum.HasValue)
+                parts.Add($"edition={item.EditionEnum.Value}");
+            if (item.EnhancementEnum.HasValue)
+                parts.Add($"enhancement={item.EnhancementEnum.Value}");
+            if (item.SealEnum.HasValue)
+                parts.Add($"seal={item.SealEnum.Value}");
+                
+            return string.Join(", ", parts);
+        }
 
         public OuijaJsonFilter(OuijaConfig config, int cutoff)
         {
@@ -115,7 +142,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 // Check MUST clauses first - all must match
                 foreach (var must in config.Must)
                 {
-                    DebugLogger.Log($"[SEARCH] Looking for: {must.Type} = {must.Value}, Edition = {must.Edition}");
+                    string searchDesc = GetFilterDescription(must);
+                    DebugLogger.Log($"[SEARCH] Looking for: {searchDesc}");
                     if (!CheckSingleClause(ref singleCtx, must, config.MaxSearchAnte))
                     {
                         DebugLogger.Log($"[SEARCH] NOT FOUND!");
@@ -182,16 +210,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 
                 VectorMask anteMask = VectorMask.AllBitsClear;
                 
-                // Handle different types
-                switch (clause.Type.ToLower())
+                // Handle different types using pre-parsed enums
+                switch (clause.ItemType)
                 {
-                    case "tag":
-                    case "smallblindtag":
-                    case "bigblindtag":
+                    case FilterItemType.Tag:
+                    case FilterItemType.SmallBlindTag:
+                    case FilterItemType.BigBlindTag:
                         anteMask = CheckTag(ref ctx, clause, ante);
                         break;
                         
-                    case "voucher":
+                    case FilterItemType.Voucher:
                         anteMask = CheckVoucher(ref ctx, clause, ante);
                         break;
                         
@@ -216,34 +244,38 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var smallTag = ctx.GetNextTag(ref tagStream);
             var bigTag = ctx.GetNextTag(ref tagStream);
             
-            if (!Enum.TryParse<MotelyTag>(clause.Value, true, out var targetTag))
+            // Use pre-parsed enum
+            if (!clause.TagEnum.HasValue)
             {
                 var validTags = string.Join(", ", Enum.GetNames(typeof(MotelyTag)));
                 throw new ArgumentException($"INVALID TAG NAME: '{clause.Value}' is not a valid tag!\nValid tags are: {validTags}");
             }
             
-            var isSmall = clause.Type.Contains("Small", StringComparison.OrdinalIgnoreCase);
-            var isBig = clause.Type.Contains("Big", StringComparison.OrdinalIgnoreCase);
+            var targetTag = clause.TagEnum.Value;
             
-            if (isSmall && !isBig)
-                return VectorEnum256.Equals(smallTag, targetTag);
-            else if (isBig && !isSmall)
-                return VectorEnum256.Equals(bigTag, targetTag);
-            else
-                return VectorEnum256.Equals(smallTag, targetTag) | VectorEnum256.Equals(bigTag, targetTag);
+            switch (clause.ItemType)
+            {
+                case FilterItemType.SmallBlindTag:
+                    return VectorEnum256.Equals(smallTag, targetTag);
+                case FilterItemType.BigBlindTag:
+                    return VectorEnum256.Equals(bigTag, targetTag);
+                default: // FilterItemType.Tag
+                    return VectorEnum256.Equals(smallTag, targetTag) | VectorEnum256.Equals(bigTag, targetTag);
+            }
         }
         
         private VectorMask CheckVoucher(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             var voucher = ctx.GetAnteFirstVoucher(ante);
             
-            if (!Enum.TryParse<MotelyVoucher>(clause.Value, true, out var targetVoucher))
+            // Use pre-parsed enum
+            if (!clause.VoucherEnum.HasValue)
             {
                 var validVouchers = string.Join(", ", Enum.GetNames(typeof(MotelyVoucher)));
                 throw new ArgumentException($"INVALID VOUCHER NAME: '{clause.Value}' is not a valid voucher!\nValid vouchers are: {validVouchers}");
             }
                 
-            return VectorEnum256.Equals(voucher, targetVoucher);
+            return VectorEnum256.Equals(voucher, clause.VoucherEnum.Value);
         }
         
         private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int maxSearchAnte)
@@ -258,40 +290,40 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.Log($"[CountOccurrences] Checking ante {ante}...");
                 int anteCount = 0;
                 
-                switch (clause.Type.ToLower())
+                switch (clause.ItemType)
                 {
-                    case "joker":
-                    case "souljoker":
+                    case FilterItemType.Joker:
+                    case FilterItemType.SoulJoker:
                         anteCount = CheckJoker(ref ctx, clause, ante);
                         break;
                         
                     // For other types, just return 1 if found (for now)
-                    case "tarot":
-                    case "tarotcard":
+                    case FilterItemType.Tarot:
+                    case FilterItemType.TarotCard:
                         anteCount = CheckTarot(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case "planet":
-                    case "planetcard":
+                    case FilterItemType.Planet:
+                    case FilterItemType.PlanetCard:
                         anteCount = CheckPlanet(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case "spectral":
-                    case "spectralcard":
+                    case FilterItemType.Spectral:
+                    case FilterItemType.SpectralCard:
                         anteCount = CheckSpectral(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case "tag":
-                    case "smallblindtag":
-                    case "bigblindtag":
+                    case FilterItemType.Tag:
+                    case FilterItemType.SmallBlindTag:
+                    case FilterItemType.BigBlindTag:
                         anteCount = CheckTagSingle(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case "voucher":
+                    case FilterItemType.Voucher:
                         anteCount = CheckVoucherSingle(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case "playingcard":
+                    case FilterItemType.PlayingCard:
                         anteCount = CheckPlayingCard(ref ctx, clause, ante) ? 1 : 0;
                         break;
                 }
@@ -321,39 +353,38 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.Log($"[CheckSingleClause] Checking ante {ante}...");
                 bool found = false;
                 
-                switch (clause.Type.ToLower())
+                switch (clause.ItemType)
                 {
-                    case "joker":
-                    case "souljoker":
+                    case FilterItemType.Joker:
                         found = CheckJoker(ref ctx, clause, ante) > 0;
                         break;
                         
-                    case "tarot":
-                    case "tarotcard":
+                    case FilterItemType.Tarot:
+                    case FilterItemType.TarotCard:
                         found = CheckTarot(ref ctx, clause, ante);
                         break;
                         
-                    case "planet":
-                    case "planetcard":
+                    case FilterItemType.Planet:
+                    case FilterItemType.PlanetCard:
                         found = CheckPlanet(ref ctx, clause, ante);
                         break;
                         
-                    case "spectral":
-                    case "spectralcard":
+                    case FilterItemType.Spectral:
+                    case FilterItemType.SpectralCard:
                         found = CheckSpectral(ref ctx, clause, ante);
                         break;
                         
-                    case "tag":
-                    case "smallblindtag":
-                    case "bigblindtag":
+                    case FilterItemType.Tag:
+                    case FilterItemType.SmallBlindTag:
+                    case FilterItemType.BigBlindTag:
                         found = CheckTagSingle(ref ctx, clause, ante);
                         break;
                         
-                    case "voucher":
+                    case FilterItemType.Voucher:
                         found = CheckVoucherSingle(ref ctx, clause, ante);
                         break;
                         
-                    case "playingcard":
+                    case FilterItemType.PlayingCard:
                         found = CheckPlayingCard(ref ctx, clause, ante);
                         break;
                 }
@@ -369,16 +400,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             DebugLogger.Log($"[CheckJoker] Searching for: Value={clause.Value}, Edition={clause.Edition}, Ante={ante}, Sources={string.Join(",", clause.Sources ?? new List<string>())}");
             
             // Check if searching for "any" joker with specific edition
-            bool searchAnyJoker = string.IsNullOrEmpty(clause.Value) || 
-                                  clause.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                  clause.Value.Equals("*", StringComparison.OrdinalIgnoreCase);
+            bool searchAnyJoker = !clause.JokerEnum.HasValue;
             
-            MotelyJoker targetJoker = MotelyJoker.Joker;
-            if (!searchAnyJoker && !Enum.TryParse<MotelyJoker>(clause.Value, true, out targetJoker))
-            {
-                var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
-                throw new ArgumentException($"INVALID JOKER NAME: '{clause.Value}' is not a valid joker!\nValid jokers are: {validJokers}\nUse 'any', '*', or leave empty to match any joker.");
-            }
+            MotelyJoker targetJoker = searchAnyJoker ? MotelyJoker.Joker : clause.JokerEnum.Value;
             
             int foundCount = 0;
             
@@ -639,11 +663,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckTarot(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            if (!Enum.TryParse<MotelyTarotCard>(clause.Value, true, out var targetTarot))
+            if (!clause.TarotEnum.HasValue)
             {
                 var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
                 throw new ArgumentException($"INVALID TAROT NAME: '{clause.Value}' is not a valid tarot!\nValid tarots are: {validTarots}");
             }
+            
+            var targetTarot = clause.TarotEnum.Value;
                 
             // Check shop
             if (clause.IncludeShopStream)
@@ -690,11 +716,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckPlanet(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            if (!Enum.TryParse<MotelyPlanetCard>(clause.Value, true, out var targetPlanet))
+            if (!clause.PlanetEnum.HasValue)
             {
                 var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
                 throw new ArgumentException($"INVALID PLANET NAME: '{clause.Value}' is not a valid planet!\nValid planets are: {validPlanets}");
             }
+            
+            var targetPlanet = clause.PlanetEnum.Value;
                 
             // Check shop
             if (clause.IncludeShopStream)
@@ -741,11 +769,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckSpectral(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            if (!Enum.TryParse<MotelySpectralCard>(clause.Value, true, out var targetSpectral))
+            if (!clause.SpectralEnum.HasValue)
             {
                 var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
                 throw new ArgumentException($"INVALID SPECTRAL NAME: '{clause.Value}' is not a valid spectral!\nValid spectrals are: {validSpectrals}");
             }
+            
+            var targetSpectral = clause.SpectralEnum.Value;
                 
             // Spectral cards appear only in packs, not in shop
             if (clause.IncludeBoosterPacks)
@@ -778,37 +808,38 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckTagSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            if (!Enum.TryParse<MotelyTag>(clause.Value, true, out var targetTag))
+            if (!clause.TagEnum.HasValue)
             {
                 var validTags = string.Join(", ", Enum.GetNames(typeof(MotelyTag)));
                 throw new ArgumentException($"INVALID TAG NAME: '{clause.Value}' is not a valid tag!\nValid tags are: {validTags}");
             }
-                
+            
+            var targetTag = clause.TagEnum.Value;
             var tagStream = ctx.CreateTagStream(ante);
             var smallTag = ctx.GetNextTag(ref tagStream);
             var bigTag = ctx.GetNextTag(ref tagStream);
             
-            var isSmall = clause.Type.Contains("Small", StringComparison.OrdinalIgnoreCase);
-            var isBig = clause.Type.Contains("Big", StringComparison.OrdinalIgnoreCase);
-            
-            if (isSmall && !isBig)
-                return smallTag == targetTag;
-            else if (isBig && !isSmall)
-                return bigTag == targetTag;
-            else
-                return smallTag == targetTag || bigTag == targetTag;
+            switch (clause.ItemType)
+            {
+                case FilterItemType.SmallBlindTag:
+                    return smallTag == targetTag;
+                case FilterItemType.BigBlindTag:
+                    return bigTag == targetTag;
+                default: // FilterItemType.Tag
+                    return smallTag == targetTag || bigTag == targetTag;
+            }
         }
         
         private static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            if (!Enum.TryParse<MotelyVoucher>(clause.Value, true, out var targetVoucher))
+            if (!clause.VoucherEnum.HasValue)
             {
                 var validVouchers = string.Join(", ", Enum.GetNames(typeof(MotelyVoucher)));
                 throw new ArgumentException($"INVALID VOUCHER NAME: '{clause.Value}' is not a valid voucher!\nValid vouchers are: {validVouchers}");
             }
                 
             var voucher = ctx.GetAnteFirstVoucher(ante);
-            return voucher == targetVoucher;
+            return voucher == clause.VoucherEnum.Value;
         }
         
         private static bool CheckPlayingCard(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
@@ -834,52 +865,28 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             var item = contents.GetItem(j);
                             if (item.TypeCategory == MotelyItemTypeCategory.PlayingCard)
                             {
+                                DebugLogger.Log($"[CheckPlayingCard] Pack card: rank={item.PlayingCardRank}, suit={item.PlayingCardSuit}, seal={item.Seal}, enhancement={item.Enhancement}, edition={item.Edition}");
                                 // For playing cards, we need to check the specific properties
                                 
                                 // Check suit if specified
-                                if (!string.IsNullOrEmpty(clause.Suit))
-                                {
-                                    if (!Enum.TryParse<MotelyPlayingCardSuit>(clause.Suit, true, out var targetSuit))
-                                        continue;
-                                    if (item.PlayingCardSuit != targetSuit)
-                                        continue;
-                                }
+                                if (clause.SuitEnum.HasValue && item.PlayingCardSuit != clause.SuitEnum.Value)
+                                    continue;
                                 
                                 // Check rank if specified
-                                if (!string.IsNullOrEmpty(clause.Rank))
-                                {
-                                    if (!Enum.TryParse<MotelyPlayingCardRank>(clause.Rank, true, out var targetRank))
-                                        continue;
-                                    if (item.PlayingCardRank != targetRank)
-                                        continue;
-                                }
+                                if (clause.RankEnum.HasValue && item.PlayingCardRank != clause.RankEnum.Value)
+                                    continue;
                                 
                                 // Check enhancement if specified
-                                if (!string.IsNullOrEmpty(clause.Enhancement))
-                                {
-                                    if (!Enum.TryParse<MotelyItemEnhancement>(clause.Enhancement, true, out var targetEnhancement))
-                                        continue;
-                                    if (item.Enhancement != targetEnhancement)
-                                        continue;
-                                }
+                                if (clause.EnhancementEnum.HasValue && item.Enhancement != clause.EnhancementEnum.Value)
+                                    continue;
                                 
                                 // Check seal if specified
-                                if (!string.IsNullOrEmpty(clause.Seal))
-                                {
-                                    if (!Enum.TryParse<MotelyItemSeal>(clause.Seal, true, out var targetSeal))
-                                        continue;
-                                    if (item.Seal != targetSeal)
-                                        continue;
-                                }
+                                if (clause.SealEnum.HasValue && item.Seal != clause.SealEnum.Value)
+                                    continue;
                                 
                                 // Check edition if specified
-                                if (!string.IsNullOrEmpty(clause.Edition))
-                                {
-                                    if (!Enum.TryParse<MotelyItemEdition>(clause.Edition, true, out var targetEdition))
-                                        continue;
-                                    if (item.Edition != targetEdition)
-                                        continue;
-                                }
+                                if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+                                    continue;
                                 
                                 // If we get here, all specified criteria match
                                 return true;
@@ -895,15 +902,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckEditionAndStickers(in ShopState.ShopItem item, OuijaConfig.FilterItem clause)
         {
-            // Check edition
-            if (!string.IsNullOrEmpty(clause.Edition))
-            {
-                if (!Enum.TryParse<MotelyItemEdition>(clause.Edition, true, out var targetEdition))
-                    return false;
-                    
-                if (item.Edition != targetEdition)
-                    return false;
-            }
+            // Check edition using pre-parsed enum
+            if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+                return false;
             
             // TODO: Check stickers
             
@@ -912,15 +913,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckEditionAndStickers(in MotelyItem item, OuijaConfig.FilterItem clause)
         {
-            // Check edition
-            if (!string.IsNullOrEmpty(clause.Edition))
-            {
-                if (!Enum.TryParse<MotelyItemEdition>(clause.Edition, true, out var targetEdition))
-                    return false;
-                    
-                if (item.Edition != targetEdition)
-                    return false;
-            }
+            // Check edition using pre-parsed enum
+            if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+                return false;
             
             // TODO: Check stickers
             
