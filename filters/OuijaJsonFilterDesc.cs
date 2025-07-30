@@ -392,6 +392,24 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 var shop = ctx.GenerateFullShop(ante);
                 int maxSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
                 
+                // Debug: Print shop contents
+                DebugLogger.Log($"[CheckJoker] === SHOP CONTENTS FOR ANTE {ante} ===  ");
+                for (int i = 0; i < maxSlots; i++)
+                {
+                    ref var shopItem = ref shop.Items[i];
+                    if (shopItem.Type == ShopState.ShopItem.ShopItemType.Joker)
+                    {
+                        DebugLogger.Log($"[CheckJoker] Shop slot {i}: Joker = {shopItem.Joker}, Edition = {shopItem.Edition}");
+                        // Also log the raw item value for debugging
+                        DebugLogger.Log($"[CheckJoker]   -> Raw Item: Type={shopItem.Item.Type}, Value={shopItem.Item.Value:X8}, TypeCategory={shopItem.Item.TypeCategory}");
+                    }
+                    else
+                    {
+                        DebugLogger.Log($"[CheckJoker] Shop slot {i}: {shopItem.Type}");
+                    }
+                }
+                DebugLogger.Log($"[CheckJoker] === END SHOP CONTENTS ===");
+                
                 for (int i = 0; i < maxSlots; i++)
                 {
                     ref var item = ref shop.Items[i];
@@ -421,6 +439,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     if (item.Type == ShopState.ShopItem.ShopItemType.Joker)
                     {
                         DebugLogger.Log($"[CheckJoker] Shop slot {i}: Joker = {item.Joker}, Edition = {item.Edition}");
+                        // Also log the raw item value for debugging
+                        DebugLogger.Log($"[CheckJoker]   -> Raw Item: Type={item.Item.Type}, Value={item.Item.Value:X8}, TypeCategory={item.Item.TypeCategory}");
                     }
                     else
                     {
