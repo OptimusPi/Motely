@@ -7,6 +7,24 @@ using System.Linq;
 namespace Motely.Filters;
 
 /// <summary>
+/// Valid item sources for filtering
+/// </summary>
+public static class ValidItemSources
+{
+    public const string Shop = "shop";   // Items in the shop
+    public const string Packs = "packs"; // Items from booster packs
+    public const string Tags = "tags";   // Items from skip tags
+    
+    public static readonly HashSet<string> AllSources = new()
+    {
+        Shop, Packs, Tags
+    };
+    
+    public static bool IsValid(string source) => 
+        AllSources.Contains(source?.ToLowerInvariant() ?? "");
+}
+
+/// <summary>
 /// MongoDB compound Operator-style Ouija configuration
 /// </summary>
 public class OuijaConfig
@@ -121,9 +139,21 @@ public class OuijaConfig
             
             if (Sources != null)
             {
-                IncludeShopStream = Sources.Contains("shop");
-                IncludeBoosterPacks = Sources.Contains("packs");
-                IncludeSkipTags = Sources.Contains("tags");
+                // Validate sources
+                foreach (var source in Sources)
+                {
+                    if (!ValidItemSources.IsValid(source))
+                    {
+                        var validSources = string.Join(", ", ValidItemSources.AllSources.Select(s => $"'{s}'"));
+                        throw new ArgumentException($"Invalid source '{source}'. Valid sources are: {validSources}");
+                    }
+                }
+                
+                // Process sources (case-insensitive)
+                var lowerSources = Sources.Select(s => s.ToLowerInvariant()).ToList();
+                IncludeShopStream = lowerSources.Contains(ValidItemSources.Shop);
+                IncludeBoosterPacks = lowerSources.Contains(ValidItemSources.Packs);
+                IncludeSkipTags = lowerSources.Contains(ValidItemSources.Tags);
             }
         }
     }

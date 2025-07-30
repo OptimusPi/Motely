@@ -338,7 +338,17 @@ namespace Motely
                 if (!quiet)
                 {
                     Console.WriteLine($"\n✅ Search completed");
-                    Console.WriteLine($"   Total seeds searched: {totalSearched:N0}");
+                    if (seeds != null && seeds.Count > 0)
+                    {
+                        // For list search, it's the actual number of seeds
+                        Console.WriteLine($"   Total seeds searched: {totalSearched:N0}");
+                    }
+                    else
+                    {
+                        // For sequential search, it's batches - this is misleading
+                        Console.WriteLine($"   Total batches processed: {totalSearched:N0}");
+                        Console.WriteLine($"   (Note: Sequential search processes batch patterns, not individual seeds)");
+                    }
                     Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
                 }
             }

@@ -368,10 +368,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             DebugLogger.Log($"[CheckJoker] Searching for: Value={clause.Value}, Edition={clause.Edition}, Ante={ante}, Sources={string.Join(",", clause.Sources ?? new List<string>())}");
             
-            if (!Enum.TryParse<MotelyJoker>(clause.Value, true, out var targetJoker))
+            // Check if searching for "any" joker with specific edition
+            bool searchAnyJoker = string.IsNullOrEmpty(clause.Value) || 
+                                  clause.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                  clause.Value.Equals("*", StringComparison.OrdinalIgnoreCase);
+            
+            MotelyJoker targetJoker = MotelyJoker.Joker;
+            if (!searchAnyJoker && !Enum.TryParse<MotelyJoker>(clause.Value, true, out targetJoker))
             {
                 var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
-                throw new ArgumentException($"INVALID JOKER NAME: '{clause.Value}' is not a valid joker!\nValid jokers are: {validJokers}");
+                throw new ArgumentException($"INVALID JOKER NAME: '{clause.Value}' is not a valid joker!\nValid jokers are: {validJokers}\nUse 'any', '*', or leave empty to match any joker.");
             }
             
             int foundCount = 0;
@@ -413,12 +419,19 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 for (int i = 0; i < maxSlots; i++)
                 {
                     ref var item = ref shop.Items[i];
-                    if (item.Type == ShopState.ShopItem.ShopItemType.Joker && item.Joker == targetJoker)
+                    if (item.Type == ShopState.ShopItem.ShopItemType.Joker)
                     {
-                        if (CheckEditionAndStickers(item, clause))
+                        // Extract joker without edition bits for comparison
+                        var shopJoker = (MotelyJoker)(item.Item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+                        
+                        // Check if we're looking for any joker or a specific one
+                        bool jokerMatches = searchAnyJoker || shopJoker == targetJoker;
+                        
+                        if (jokerMatches && CheckEditionAndStickers(item, clause))
                         {
                             foundCount++;
-                            DebugLogger.Log($"[CheckJoker] Found {targetJoker} in shop! Total count: {foundCount}");
+                            string jokerName = searchAnyJoker ? $"any joker ({shopJoker})" : targetJoker.ToString();
+                            DebugLogger.Log($"[CheckJoker] Found {jokerName} in shop! Shop reports: {item.Joker}, Extracted: {shopJoker}, Total count: {foundCount}");
                         }
                     }
                 }
@@ -461,6 +474,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 // The user can control which antes to search via the JSON
                 int packCount = ante == 1 ? 4 : 6; // Ante 1 has 4 packs, others have 6
                 
+                DebugLogger.Log($"[CheckJoker] === BOOSTER PACK CONTENTS FOR ANTE {ante} ===");
+                
                 for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
@@ -491,17 +506,69 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)targetJoker);
                             DebugLogger.Log($"[CheckJoker] Soul joker type={soulJoker.Type}, Target={targetType}, Edition={soulJoker.Edition}");
                             
-                            if (soulJoker.Type == targetType)
+                            // Extract joker type without edition bits (same fix as shop)
+                            var soulJokerType = (MotelyItemType)(soulJoker.Value & Motely.ItemTypeMask);
+                            
+                            // Check if we're looking for any joker or a specific one
+                            bool jokerMatches = searchAnyJoker || soulJokerType == targetType;
+                            
+                            if (jokerMatches)
                             {
-                                DebugLogger.Log($"[CheckJoker] Match! Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
+                                string jokerName = searchAnyJoker ? $"any joker (The Soul)" : targetJoker.ToString();
+                                DebugLogger.Log($"[CheckJoker] Match! {jokerName} Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
                                 if (CheckEditionAndStickers(soulJoker, clause))
                                 {
                                     foundCount++;
-                                    DebugLogger.Log($"[CheckJoker] Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}. Total count: {foundCount}");
+                                    DebugLogger.Log($"[CheckJoker] Edition check PASSED! Found {jokerName} with edition {soulJoker.Edition}. Total count: {foundCount}");
                                 }
                                 else
                                 {
-                                    DebugLogger.Log($"[CheckJoker] Edition check FAILED! Found {targetJoker} but edition {soulJoker.Edition} != {clause.Edition}");
+                                    DebugLogger.Log($"[CheckJoker] Edition check FAILED! Found {jokerName} but edition {soulJoker.Edition} != {clause.Edition}");
+                                }
+                            }
+                        }
+                    }
+                    else if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                    {
+                        DebugLogger.Log($"[CheckJoker] Found Buffoon pack #{i+1}, checking for jokers...");
+
+                        // Use the proper method to get Buffoon pack contents
+                        // IMPORTANT: Pack number should be i (0-based) not i+1
+                        var contents = ctx.GetNextBuffoonPackContents(ante, i, pack.GetPackSize());
+                        
+                        DebugLogger.Log($"[CheckJoker] Buffoon pack size: {pack.GetPackSize()}, contains {contents.Length} jokers");
+                        
+                        // Check each joker in the pack
+                        for (int j = 0; j < contents.Length; j++)
+                        {
+                            var joker = contents.GetItem(j);
+                            // Extract the actual joker enum value
+                            var extractedJoker = (MotelyJoker)(joker.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+                            DebugLogger.Log($"[CheckJoker]   Buffoon pack slot {j}: ExtractedJoker={extractedJoker}, Edition={joker.Edition}");
+                            DebugLogger.Log($"[CheckJoker]     -> Raw: Value={joker.Value:X8}, TypeCategory={joker.TypeCategory}");
+                            
+                            // Extract joker type without edition bits (same fix as shop)
+                            var jokerType = (MotelyItemType)(joker.Value & Motely.ItemTypeMask);
+                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)targetJoker);
+                            
+                            // Check if we're looking for any joker or a specific one
+                            bool jokerMatches = searchAnyJoker || jokerType == targetType;
+                            
+                            if (jokerMatches)
+                            {
+                                string jokerName = searchAnyJoker ? $"any joker (Buffoon)" : targetJoker.ToString();
+                                DebugLogger.Log($"[CheckJoker] Buffoon Match! {jokerName} Edition={joker.Edition}, Required Edition={clause.Edition}");
+                                DebugLogger.Log($"[CheckJoker]   -> Actual Joker: {extractedJoker}, Target: {targetJoker}, Match: {extractedJoker == targetJoker}");
+                                if (CheckEditionAndStickers(joker, clause))
+                                {
+                                    foundCount++;
+                                    string foundJokerName = searchAnyJoker ? $"any joker ({extractedJoker})" : extractedJoker.ToString();
+                                    DebugLogger.Log($"[CheckJoker] Buffoon Edition check PASSED! Found {foundJokerName} with edition {joker.Edition}. Total count: {foundCount}");
+                                    DebugLogger.Log($">>> FOUND IN PACK: Ante={ante}, Pack=#{i+1}, Slot={j}, Joker={extractedJoker}, Edition={joker.Edition}");
+                                }
+                                else
+                                {
+                                    DebugLogger.Log($"[CheckJoker] Buffoon Edition check FAILED! Found {jokerName} but edition {joker.Edition} != {clause.Edition}");
                                 }
                             }
                         }
@@ -529,25 +596,44 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)targetJoker);
                             DebugLogger.Log($"[CheckJoker] Spectral Soul joker type={soulJoker.Type}, Target={targetType}, Edition={soulJoker.Edition}");
                             
-                            if (soulJoker.Type == targetType)
+                            // Extract joker type without edition bits (same fix as shop)
+                            var soulJokerType = (MotelyItemType)(soulJoker.Value & Motely.ItemTypeMask);
+                            
+                            // Check if we're looking for any joker or a specific one
+                            bool jokerMatches = searchAnyJoker || soulJokerType == targetType;
+                            
+                            if (jokerMatches)
                             {
-                                DebugLogger.Log($"[CheckJoker] Spectral Match! Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
+                                string jokerName = searchAnyJoker ? $"any joker (Black Hole)" : targetJoker.ToString();
+                                DebugLogger.Log($"[CheckJoker] Spectral Match! {jokerName} Edition={soulJoker.Edition}, Required Edition={clause.Edition}");
                                 if (CheckEditionAndStickers(soulJoker, clause))
                                 {
                                     foundCount++;
-                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check PASSED! Found {targetJoker} with edition {soulJoker.Edition}. Total count: {foundCount}");
+                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check PASSED! Found {jokerName} with edition {soulJoker.Edition}. Total count: {foundCount}");
                                 }
                                 else
                                 {
-                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check FAILED! Found {targetJoker} but edition {soulJoker.Edition} != {clause.Edition}");
+                                    DebugLogger.Log($"[CheckJoker] Spectral Edition check FAILED! Found {jokerName} but edition {soulJoker.Edition} != {clause.Edition}");
                                 }
                             }
                         }
                     }
+                    else if (pack.GetPackType() == MotelyBoosterPackType.Standard)
+                    {
+                        DebugLogger.Log($"[CheckJoker]   Standard pack - contains playing cards");
+                    }
+                    else if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                    {
+                        DebugLogger.Log($"[CheckJoker]   Celestial pack - contains planet cards");
+                    }
                 }
+                
+                DebugLogger.Log($"[CheckJoker] === END BOOSTER PACK CONTENTS ===");
             }
             
-            DebugLogger.Log($"[CheckJoker] Total {targetJoker} found: {foundCount}");
+            string searchDescription = searchAnyJoker ? "any jokers" : targetJoker.ToString();
+            DebugLogger.Log($"[CheckJoker] === FINAL COUNT for {searchDescription} in ante {ante}: {foundCount} ===");
+            DebugLogger.Log($"[CheckJoker] Sources checked: Shop={clause.IncludeShopStream}, Packs={clause.IncludeBoosterPacks}, Tags={clause.IncludeSkipTags}");
             return foundCount;
         }
         
