@@ -7,26 +7,7 @@ using System.IO;
 
 namespace Motely.Filters;
 
-/// <summary>
-/// Filter item types for fast enum comparison
-/// </summary>
-public enum FilterItemType
-{
-    Unknown,
-    Joker,
-    SoulJoker,
-    Tarot,
-    TarotCard,
-    Spectral,
-    SpectralCard,
-    Planet,
-    PlanetCard,
-    Tag,
-    SmallBlindTag,
-    BigBlindTag,
-    Voucher,
-    PlayingCard
-}
+// REMOVED FilterItemType enum - use Motely enums directly!
 
 /// <summary>
 /// Valid item sources for filtering
@@ -147,9 +128,6 @@ public class OuijaConfig
         // These are populated during Initialize() to avoid string comparisons in hot path
         
         [JsonIgnore]
-        public FilterItemType ItemType { get; set; } = FilterItemType.Unknown;
-        
-        [JsonIgnore]
         public MotelyJoker? JokerEnum { get; set; }
         
         [JsonIgnore]
@@ -244,124 +222,143 @@ public class OuijaConfig
         
         private void ParseEnums()
         {
-            // Parse ItemType enum
-            switch (Type.ToLower())
+            var typeLower = Type.ToLower();
+            
+            // Parse based on type - directly to Motely enums
+            switch (typeLower)
             {
                 case "joker":
-                    ItemType = FilterItemType.Joker;
-                    break;
                 case "souljoker":
-                    ItemType = FilterItemType.SoulJoker;
-                    break;
-                case "tarot":
-                    ItemType = FilterItemType.Tarot;
-                    break;
-                case "tarotcard":
-                    ItemType = FilterItemType.TarotCard;
-                    break;
-                case "spectral":
-                    ItemType = FilterItemType.Spectral;
-                    break;
-                case "spectralcard":
-                    ItemType = FilterItemType.SpectralCard;
-                    break;
-                case "planet":
-                    ItemType = FilterItemType.Planet;
-                    break;
-                case "planetcard":
-                    ItemType = FilterItemType.PlanetCard;
-                    break;
-                case "tag":
-                    ItemType = FilterItemType.Tag;
-                    break;
-                case "smallblindtag":
-                    ItemType = FilterItemType.SmallBlindTag;
-                    break;
-                case "bigblindtag":
-                    ItemType = FilterItemType.BigBlindTag;
-                    break;
-                case "voucher":
-                    ItemType = FilterItemType.Voucher;
-                    break;
-                case "playingcard":
-                    ItemType = FilterItemType.PlayingCard;
-                    break;
-                default:
-                    ItemType = FilterItemType.Unknown;
-                    break;
-            }
-            
-            // Parse specific item enum based on type
-            switch (ItemType)
-            {
-                case FilterItemType.Joker:
-                case FilterItemType.SoulJoker:
                     if (!string.IsNullOrEmpty(Value) && 
                         !Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
-                        !Value.Equals("*", StringComparison.OrdinalIgnoreCase) &&
-                        Enum.TryParse<MotelyJoker>(Value, true, out var joker))
+                        !Value.Equals("*", StringComparison.OrdinalIgnoreCase))
                     {
+                        if (!Enum.TryParse<MotelyJoker>(Value, true, out var joker))
+                        {
+                            throw new ArgumentException($"Invalid joker value: '{Value}'. Must be a valid MotelyJoker enum value.");
+                        }
                         JokerEnum = joker;
-                        
                     }
                     break;
                     
-                case FilterItemType.Tarot:
-                case FilterItemType.TarotCard:
-                    if (Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
+                case "tarot":
+                case "tarotcard":
+                    if (!string.IsNullOrEmpty(Value))
+                    {
+                        if (!Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
+                        {
+                            throw new ArgumentException($"Invalid tarot value: '{Value}'. Must be a valid MotelyTarotCard enum value.");
+                        }
                         TarotEnum = tarot;
+                    }
                     break;
                     
-                case FilterItemType.Spectral:
-                case FilterItemType.SpectralCard:
-                    if (Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral))
+                case "spectral":
+                case "spectralcard":
+                    if (!string.IsNullOrEmpty(Value) && 
+                        !Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                        !Value.Equals("*", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral))
+                        {
+                            throw new ArgumentException($"Invalid spectral value: '{Value}'. Must be a valid MotelySpectralCard enum value.");
+                        }
                         SpectralEnum = spectral;
+                    }
                     break;
                     
-                case FilterItemType.Planet:
-                case FilterItemType.PlanetCard:
-                    if (Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
+                case "planet":
+                case "planetcard":
+                    if (!string.IsNullOrEmpty(Value))
+                    {
+                        if (!Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
+                        {
+                            throw new ArgumentException($"Invalid planet value: '{Value}'. Must be a valid MotelyPlanetCard enum value.");
+                        }
                         PlanetEnum = planet;
+                    }
                     break;
                     
-                case FilterItemType.Tag:
-                case FilterItemType.SmallBlindTag:
-                case FilterItemType.BigBlindTag:
-                    if (Enum.TryParse<MotelyTag>(Value, true, out var tag))
+                case "tag":
+                case "smallblindtag":
+                case "bigblindtag":
+                    if (!string.IsNullOrEmpty(Value))
+                    {
+                        if (!Enum.TryParse<MotelyTag>(Value, true, out var tag))
+                        {
+                            throw new ArgumentException($"Invalid tag value: '{Value}'. Must be a valid MotelyTag enum value.");
+                        }
                         TagEnum = tag;
+                    }
                     break;
                     
-                case FilterItemType.Voucher:
-                    if (Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
+                case "voucher":
+                    if (!string.IsNullOrEmpty(Value))
+                    {
+                        if (!Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
+                        {
+                            throw new ArgumentException($"Invalid voucher value: '{Value}'. Must be a valid MotelyVoucher enum value.");
+                        }
                         VoucherEnum = voucher;
+                    }
                     break;
                     
-                case FilterItemType.PlayingCard:
+                case "playingcard":
                     // Parse rank with normalization
                     if (!string.IsNullOrEmpty(Rank))
                     {
                         var normalizedRank = NormalizeRank(Rank);
-                        if (Enum.TryParse<MotelyPlayingCardRank>(normalizedRank, true, out var rank))
-                            RankEnum = rank;
+                        if (!Enum.TryParse<MotelyPlayingCardRank>(normalizedRank, true, out var rank))
+                        {
+                            throw new ArgumentException($"Invalid playing card rank: '{Rank}'.");
+                        }
+                        RankEnum = rank;
                     }
                     
                     // Parse suit
-                    if (!string.IsNullOrEmpty(Suit) && Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit))
+                    if (!string.IsNullOrEmpty(Suit))
+                    {
+                        if (!Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit))
+                        {
+                            throw new ArgumentException($"Invalid playing card suit: '{Suit}'. Must be Hearts, Diamonds, Clubs, or Spades.");
+                        }
                         SuitEnum = suit;
+                    }
                     
                     // Parse enhancement
-                    if (!string.IsNullOrEmpty(Enhancement) && Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enhancement))
+                    if (!string.IsNullOrEmpty(Enhancement))
+                    {
+                        if (!Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enhancement))
+                        {
+                            throw new ArgumentException($"Invalid enhancement: '{Enhancement}'. Must be a valid MotelyItemEnhancement enum value.");
+                        }
                         EnhancementEnum = enhancement;
+                    }
                     
                     // Parse seal
-                    if (!string.IsNullOrEmpty(Seal) && Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal))
+                    if (!string.IsNullOrEmpty(Seal))
+                    {
+                        if (!Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal))
+                        {
+                            throw new ArgumentException($"Invalid seal: '{Seal}'. Must be a valid MotelyItemSeal enum value.");
+                        }
                         SealEnum = seal;
+                    }
                     break;
+                    
+                default:
+                    throw new ArgumentException($"Invalid item type: '{Type}'. Valid types are: joker, souljoker, tarot, tarotcard, spectral, spectralcard, planet, planetcard, tag, voucher, playingcard");
             }
             
             // Parse edition (common to all item types)
-            if (!string.IsNullOrEmpty(Edition) && Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
+            if (!string.IsNullOrEmpty(Edition))
+            {
+                if (!Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
+                {
+                    throw new ArgumentException($"Invalid edition: '{Edition}'. Must be a valid MotelyItemEdition enum value.");
+                }
                 EditionEnum = edition;
+            }
         }
         
         private static string NormalizeRank(string rank)
