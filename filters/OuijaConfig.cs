@@ -326,7 +326,9 @@ public class OuijaConfig
                     }
                     
                     // Parse enhancement
-                    if (!string.IsNullOrEmpty(Enhancement))
+                    if (!string.IsNullOrEmpty(Enhancement) && 
+                        !Enhancement.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                        !Enhancement.Equals("*", StringComparison.OrdinalIgnoreCase))
                     {
                         if (!Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enhancement))
                         {
@@ -336,7 +338,9 @@ public class OuijaConfig
                     }
                     
                     // Parse seal
-                    if (!string.IsNullOrEmpty(Seal))
+                    if (!string.IsNullOrEmpty(Seal) && 
+                        !Seal.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                        !Seal.Equals("*", StringComparison.OrdinalIgnoreCase))
                     {
                         if (!Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal))
                         {
@@ -351,7 +355,9 @@ public class OuijaConfig
             }
             
             // Parse edition (common to all item types)
-            if (!string.IsNullOrEmpty(Edition))
+            if (!string.IsNullOrEmpty(Edition) && 
+                !Edition.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                !Edition.Equals("*", StringComparison.OrdinalIgnoreCase))
             {
                 if (!Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
                 {
