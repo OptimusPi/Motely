@@ -101,10 +101,13 @@ namespace Motely.Filters
                         
                     case "spectral":
                     case "spectralcard":
-                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelySpectralCard>(item.Value, true, out _))
+                        if (!string.IsNullOrEmpty(item.Value) && 
+                            !item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                            !item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                            !Enum.TryParse<MotelySpectralCard>(item.Value, true, out _))
                         {
                             var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
-                            errors.Add($"{prefix}: Invalid spectral '{item.Value}'. Valid spectrals are: {validSpectrals}");
+                            errors.Add($"{prefix}: Invalid spectral '{item.Value}'. Valid spectrals are: {validSpectrals}\nUse 'any', '*', or leave empty to match any spectral.");
                         }
                         break;
                         
