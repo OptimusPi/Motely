@@ -65,9 +65,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static string GetFilterDescription(OuijaConfig.FilterItem item)
         {
             var parts = new List<string>();
-            parts.Add($"{item.ItemType}");
+            parts.Add($"{item.Type}");
             
-            if (item.ItemType == FilterItemType.PlayingCard)
+            if (item.Type.ToLower() == "playingcard")
             {
                 if (item.RankEnum.HasValue)
                     parts.Add($"rank={item.RankEnum.Value}");
@@ -203,15 +203,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 VectorMask anteMask = VectorMask.AllBitsClear;
                 
                 // Handle different types using pre-parsed enums
-                switch (clause.ItemType)
+                var typeLower = clause.Type.ToLower();
+                switch (typeLower)
                 {
-                    case FilterItemType.Tag:
-                    case FilterItemType.SmallBlindTag:
-                    case FilterItemType.BigBlindTag:
+                    case "tag":
+                    case "smallblindtag":
+                    case "bigblindtag":
                         anteMask = CheckTag(ref ctx, clause, ante);
                         break;
                         
-                    case FilterItemType.Voucher:
+                    case "voucher":
                         anteMask = CheckVoucher(ref ctx, clause, ante);
                         break;
                         
@@ -245,13 +246,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             var targetTag = clause.TagEnum.Value;
             
-            switch (clause.ItemType)
+            var typeLower = clause.Type.ToLower();
+            switch (typeLower)
             {
-                case FilterItemType.SmallBlindTag:
+                case "smallblindtag":
                     return VectorEnum256.Equals(smallTag, targetTag);
-                case FilterItemType.BigBlindTag:
+                case "bigblindtag":
                     return VectorEnum256.Equals(bigTag, targetTag);
-                default: // FilterItemType.Tag
+                default: // "tag"
                     return VectorEnum256.Equals(smallTag, targetTag) | VectorEnum256.Equals(bigTag, targetTag);
             }
         }
@@ -282,40 +284,41 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.Log($"[CountOccurrences] Checking ante {ante}...");
                 int anteCount = 0;
                 
-                switch (clause.ItemType)
+                var typeLower = clause.Type.ToLower();
+                switch (typeLower)
                 {
-                    case FilterItemType.Joker:
-                    case FilterItemType.SoulJoker:
+                    case "joker":
+                    case "souljoker":
                         anteCount = CheckJoker(ref ctx, clause, ante);
                         break;
                         
                     // For other types, just return 1 if found (for now)
-                    case FilterItemType.Tarot:
-                    case FilterItemType.TarotCard:
+                    case "tarot":
+                    case "tarotcard":
                         anteCount = CheckTarot(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case FilterItemType.Planet:
-                    case FilterItemType.PlanetCard:
+                    case "planet":
+                    case "planetcard":
                         anteCount = CheckPlanet(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case FilterItemType.Spectral:
-                    case FilterItemType.SpectralCard:
+                    case "spectral":
+                    case "spectralcard":
                         anteCount = CheckSpectral(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case FilterItemType.Tag:
-                    case FilterItemType.SmallBlindTag:
-                    case FilterItemType.BigBlindTag:
+                    case "tag":
+                    case "smallblindtag":
+                    case "bigblindtag":
                         anteCount = CheckTagSingle(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case FilterItemType.Voucher:
+                    case "voucher":
                         anteCount = CheckVoucherSingle(ref ctx, clause, ante) ? 1 : 0;
                         break;
                         
-                    case FilterItemType.PlayingCard:
+                    case "playingcard":
                         anteCount = CheckPlayingCard(ref ctx, clause, ante) ? 1 : 0;
                         break;
                 }
@@ -345,38 +348,39 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.Log($"[CheckSingleClause] Checking ante {ante}...");
                 bool found = false;
                 
-                switch (clause.ItemType)
+                var typeLower = clause.Type.ToLower();
+                switch (typeLower)
                 {
-                    case FilterItemType.Joker:
+                    case "joker":
                         found = CheckJoker(ref ctx, clause, ante) > 0;
                         break;
                         
-                    case FilterItemType.Tarot:
-                    case FilterItemType.TarotCard:
+                    case "tarot":
+                    case "tarotcard":
                         found = CheckTarot(ref ctx, clause, ante);
                         break;
                         
-                    case FilterItemType.Planet:
-                    case FilterItemType.PlanetCard:
+                    case "planet":
+                    case "planetcard":
                         found = CheckPlanet(ref ctx, clause, ante);
                         break;
                         
-                    case FilterItemType.Spectral:
-                    case FilterItemType.SpectralCard:
+                    case "spectral":
+                    case "spectralcard":
                         found = CheckSpectral(ref ctx, clause, ante);
                         break;
                         
-                    case FilterItemType.Tag:
-                    case FilterItemType.SmallBlindTag:
-                    case FilterItemType.BigBlindTag:
+                    case "tag":
+                    case "smallblindtag":
+                    case "bigblindtag":
                         found = CheckTagSingle(ref ctx, clause, ante);
                         break;
                         
-                    case FilterItemType.Voucher:
+                    case "voucher":
                         found = CheckVoucherSingle(ref ctx, clause, ante);
                         break;
                         
-                    case FilterItemType.PlayingCard:
+                    case "playingcard":
                         found = CheckPlayingCard(ref ctx, clause, ante);
                         break;
                 }
@@ -763,38 +767,83 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         private static bool CheckSpectral(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            if (!clause.SpectralEnum.HasValue)
+            DebugLogger.Log($"[CheckSpectral] Looking for spectral card: {clause.Value} in ante {ante}");
+            
+            bool searchAnySpectral = string.IsNullOrEmpty(clause.Value) || 
+                                   clause.Value.Equals("any", StringComparison.OrdinalIgnoreCase) || 
+                                   clause.Value.Equals("*", StringComparison.OrdinalIgnoreCase);
+            
+            if (!searchAnySpectral && !clause.SpectralEnum.HasValue)
             {
                 var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
                 throw new ArgumentException($"INVALID SPECTRAL NAME: '{clause.Value}' is not a valid spectral!\nValid spectrals are: {validSpectrals}");
             }
             
-            var targetSpectral = clause.SpectralEnum.Value;
+            var targetSpectral = searchAnySpectral ? (MotelySpectralCard?)null : clause.SpectralEnum.Value;
+            DebugLogger.Log($"[CheckSpectral] Search any spectral: {searchAnySpectral}, Target: {targetSpectral}");
                 
             // Spectral cards appear only in packs, not in shop
             if (clause.IncludeBoosterPacks)
             {
+                DebugLogger.Log($"[CheckSpectral] Checking booster packs in ante {ante}...");
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 
-                // Check up to 3 packs available in the ante
-                for (int i = 0; i < 3; i++)
+                // Create spectral stream ONCE outside the loop
+                var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
+                bool spectralStreamInit = false;
+                
+                // Check up to 6 packs available in the ante (ante 1 has 4, others have 6)
+                int packCount = ante == 1 ? 4 : 6;
+                DebugLogger.Log($"[CheckSpectral] Checking {packCount} packs...");
+                
+                for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
+                    DebugLogger.Log($"[CheckSpectral] Pack #{i+1}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
                     
                     if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                     {
-                        var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
+                        DebugLogger.Log($"[CheckSpectral] Found Spectral pack! Getting contents...");
+                        
+                        // Only create stream if not already created
+                        if (!spectralStreamInit)
+                        {
+                            spectralStreamInit = true;
+                            spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
+                        }
+                        
                         var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                        
+                        DebugLogger.Log($"[CheckSpectral] Spectral pack contains {contents.Length} cards:");
                         
                         // Check each card in the pack
                         for (int j = 0; j < contents.Length; j++)
                         {
                             var item = contents.GetItem(j);
-                            if (item.Type == (MotelyItemType)targetSpectral)
+                            var spectralType = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+                            DebugLogger.Log($"[CheckSpectral]   Card {j}: {spectralType} (raw: {item.Type})");
+                            
+                            // If searching for any spectral, return true for any spectral card
+                            if (searchAnySpectral)
+                            {
+                                DebugLogger.Log($"[CheckSpectral] FOUND any spectral: {spectralType}!");
                                 return true;
+                            }
+                            
+                            // Otherwise check for specific spectral
+                            if (targetSpectral.HasValue && item.Type == (MotelyItemType)targetSpectral.Value)
+                            {
+                                DebugLogger.Log($"[CheckSpectral] FOUND {targetSpectral}!");
+                                return true;
+                            }
                         }
                     }
                 }
+                // Don't print "no spectral pack found" if we already returned true
+            }
+            else
+            {
+                DebugLogger.Log($"[CheckSpectral] Not checking booster packs (IncludeBoosterPacks = false)");
             }
             
             return false;
@@ -813,13 +862,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var smallTag = ctx.GetNextTag(ref tagStream);
             var bigTag = ctx.GetNextTag(ref tagStream);
             
-            switch (clause.ItemType)
+            var typeLower = clause.Type.ToLower();
+            switch (typeLower)
             {
-                case FilterItemType.SmallBlindTag:
+                case "smallblindtag":
                     return smallTag == targetTag;
-                case FilterItemType.BigBlindTag:
+                case "bigblindtag":
                     return bigTag == targetTag;
-                default: // FilterItemType.Tag
+                default: // "tag"
                     return smallTag == targetTag || bigTag == targetTag;
             }
         }

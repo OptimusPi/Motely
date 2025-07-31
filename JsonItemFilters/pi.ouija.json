@@ -2,20 +2,49 @@
   "must": [
     {
       "item": {
-        "type": "joker",
-        "name": "perkeo"
+        "type": "Spectral",
+        "name": "*"
       },
       "antes": [
         1
+      ],
+      "sources": [
+        "packs"
       ]
     }
   ],
   "should": [
+    {
+      "item": {
+        "type": "Spectral",
+        "name": "any"
+      },
+      "antes": [
+        1
+      ],
+      "sources": [
+        "packs"
+      ],
+      "score": 1
+    },
+    {
+      "item": {
+        "type": "Spectral",
+        "name": "ankh"
+      },
+      "antes": [
+        1
+      ],
+      "sources": [
+        "packs"
+      ],
+      "score": 1
+    }
   ],
   "mustNot": [
   ],
   "filter": {
-    "deck": "Ghost",
+    "deck": "Red",
     "stake": "White",
     "maxAnte": 8
   },
