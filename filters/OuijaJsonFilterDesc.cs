@@ -398,7 +398,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // Check if searching for "any" joker with specific edition
             bool searchAnyJoker = !clause.JokerEnum.HasValue;
             
-            MotelyJoker targetJoker = searchAnyJoker ? MotelyJoker.Joker : clause.JokerEnum.Value;
+            MotelyJoker targetJoker = searchAnyJoker ? MotelyJoker.Joker : clause.JokerEnum!.Value;
             
             int foundCount = 0;
             
@@ -495,6 +495,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 // Check ALL available packs
                 // The user can control which antes to search via the JSON
                 int packCount = ante == 1 ? 4 : 6; // Ante 1 has 4 packs, others have 6
+                int buffoonPackIndex = 0; // Track buffoon pack index separately
                 
                 DebugLogger.Log($"[CheckJoker] === BOOSTER PACK CONTENTS FOR ANTE {ante} ===");
                 
@@ -555,8 +556,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         DebugLogger.Log($"[CheckJoker] Found Buffoon pack #{i+1}, checking for jokers...");
 
                         // Use the proper method to get Buffoon pack contents
-                        // IMPORTANT: Pack number should be i (0-based) not i+1
-                        var contents = ctx.GetNextBuffoonPackContents(ante, i, pack.GetPackSize());
+                        // IMPORTANT: Pack number should be buffoonPackIndex (0-based) not i
+                        var contents = ctx.GetNextBuffoonPackContents(ante, buffoonPackIndex, pack.GetPackSize());
+                        buffoonPackIndex++; // Increment for next buffoon pack
                         
                         DebugLogger.Log($"[CheckJoker] Buffoon pack size: {pack.GetPackSize()}, contains {contents.Length} jokers");
                         
@@ -779,7 +781,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 throw new ArgumentException($"INVALID SPECTRAL NAME: '{clause.Value}' is not a valid spectral!\nValid spectrals are: {validSpectrals}");
             }
             
-            var targetSpectral = searchAnySpectral ? (MotelySpectralCard?)null : clause.SpectralEnum.Value;
+            var targetSpectral = searchAnySpectral ? (MotelySpectralCard?)null : clause.SpectralEnum!.Value;
             DebugLogger.Log($"[CheckSpectral] Search any spectral: {searchAnySpectral}, Target: {targetSpectral}");
                 
             // Spectral cards appear only in packs, not in shop
@@ -831,7 +833,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             }
                             
                             // Otherwise check for specific spectral
-                            if (targetSpectral.HasValue && item.Type == (MotelyItemType)targetSpectral.Value)
+                            if (targetSpectral.HasValue && spectralType == targetSpectral.Value)
                             {
                                 DebugLogger.Log($"[CheckSpectral] FOUND {targetSpectral}!");
                                 return true;
@@ -912,24 +914,39 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                 DebugLogger.Log($"[CheckPlayingCard] Pack card: rank={item.PlayingCardRank}, suit={item.PlayingCardSuit}, seal={item.Seal}, enhancement={item.Enhancement}, edition={item.Edition}");
                                 // For playing cards, we need to check the specific properties
                                 
-                                // Check suit if specified
-                                if (clause.SuitEnum.HasValue && item.PlayingCardSuit != clause.SuitEnum.Value)
+                                // Check suit if specified (not "any" or "*")
+                                if (!string.IsNullOrEmpty(clause.Suit) && 
+                                    !clause.Suit.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                                    !clause.Suit.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                                    clause.SuitEnum.HasValue && item.PlayingCardSuit != clause.SuitEnum.Value)
                                     continue;
                                 
-                                // Check rank if specified
-                                if (clause.RankEnum.HasValue && item.PlayingCardRank != clause.RankEnum.Value)
+                                // Check rank if specified (not "any" or "*")
+                                if (!string.IsNullOrEmpty(clause.Rank) && 
+                                    !clause.Rank.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                                    !clause.Rank.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                                    clause.RankEnum.HasValue && item.PlayingCardRank != clause.RankEnum.Value)
                                     continue;
                                 
-                                // Check enhancement if specified
-                                if (clause.EnhancementEnum.HasValue && item.Enhancement != clause.EnhancementEnum.Value)
+                                // Check enhancement if specified (not "any" or "*")
+                                if (!string.IsNullOrEmpty(clause.Enhancement) && 
+                                    !clause.Enhancement.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                                    !clause.Enhancement.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                                    clause.EnhancementEnum.HasValue && item.Enhancement != clause.EnhancementEnum.Value)
                                     continue;
                                 
-                                // Check seal if specified
-                                if (clause.SealEnum.HasValue && item.Seal != clause.SealEnum.Value)
+                                // Check seal if specified (not "any" or "*")
+                                if (!string.IsNullOrEmpty(clause.Seal) && 
+                                    !clause.Seal.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                                    !clause.Seal.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                                    clause.SealEnum.HasValue && item.Seal != clause.SealEnum.Value)
                                     continue;
                                 
-                                // Check edition if specified
-                                if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+                                // Check edition if specified (not "any" or "*")
+                                if (!string.IsNullOrEmpty(clause.Edition) && 
+                                    !clause.Edition.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                                    !clause.Edition.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                                    clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
                                     continue;
                                 
                                 // If we get here, all specified criteria match
@@ -947,7 +964,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckEditionAndStickers(in ShopState.ShopItem item, OuijaConfig.FilterItem clause)
         {
             // Check edition using pre-parsed enum
-            if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+            // If edition is "any" or "*", we accept any edition (including none)
+            if (!string.IsNullOrEmpty(clause.Edition) && 
+                !clause.Edition.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                !clause.Edition.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
                 return false;
             
             // TODO: Check stickers
@@ -958,7 +979,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckEditionAndStickers(in MotelyItem item, OuijaConfig.FilterItem clause)
         {
             // Check edition using pre-parsed enum
-            if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+            // If edition is "any" or "*", we accept any edition (including none)
+            if (!string.IsNullOrEmpty(clause.Edition) && 
+                !clause.Edition.Equals("any", StringComparison.OrdinalIgnoreCase) && 
+                !clause.Edition.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
                 return false;
             
             // TODO: Check stickers
