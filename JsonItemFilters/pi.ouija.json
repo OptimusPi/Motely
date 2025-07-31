@@ -2,8 +2,9 @@
   "must": [
     {
       "item": {
-        "type": "Spectral",
-        "name": "*"
+        "type": "joker",
+        "name": "Cloud9",
+        "edition": "negative"
       },
       "antes": [
         1
@@ -16,37 +17,48 @@
   "should": [
     {
       "item": {
-        "type": "Spectral",
-        "name": "any"
+        "type": "playingcard",
+        "rank": "nine",
+        "edition": "polychrome",
+        "seal": "red"
       },
       "antes": [
-        1
+        1,2,3,4,5,6,7,8
       ],
       "sources": [
-        "packs"
-      ],
-      "score": 1
+        "shop"
+      ]
     },
     {
       "item": {
-        "type": "Spectral",
-        "name": "ankh"
+        "type": "playingcard",
+        "rank": "nine",
+        "enhancement": "lucky",
+        "seal": "red"
       },
       "antes": [
-        1
+        1,2,3,4,5,6,7,8
       ],
       "sources": [
-        "packs"
+        "shop"
+      ]
+    },
+    {
+      "item": {
+        "type": "joker",
+        "name": "Cloud9"
+      },
+      "antes": [
+        2,3,4,5,6,7,8
       ],
-      "score": 1
+      "sources": [
+        "shop", "packs"
+      ]
     }
   ],
-  "mustNot": [
-  ],
-  "filter": {
-    "deck": "Red",
-    "stake": "White",
-    "maxAnte": 8
-  },
-  "minimumScore": 0
+  "mustNot": [],
+  "deck": "Yellow",
+  "stake": "White",
+  "maxSearchAnte": 8,
+  "minimumScore": 1
 }
