@@ -33,50 +33,34 @@ public static class ValidItemSources
 /// </summary>
 public class OuijaConfig
 {
-    [JsonPropertyName("must")]
+    // Metadata fields
+    public string? Name { get; set; }
+    public string? Author { get; set; }
+    public string? Description { get; set; }
+    
     public List<FilterItem> Must { get; set; } = new();
-    
-    [JsonPropertyName("should")]
     public List<FilterItem> Should { get; set; } = new();
-    
-    [JsonPropertyName("mustNot")]
     public List<FilterItem> MustNot { get; set; } = new();
     
     // Optional deck/stake settings
-    [JsonPropertyName("deck")]
     public string Deck { get; set; } = "Red";
-    
-    [JsonPropertyName("stake")]
     public string Stake { get; set; } = "White";
 
     // Support nested filter format
-    [JsonPropertyName("filter")]
     public FilterSettings? Filter { get; set; }
     
     public class FilterSettings
     {
-        [JsonPropertyName("deck")]
         public string? Deck { get; set; }
-        
-        [JsonPropertyName("stake")]
         public string? Stake { get; set; }
-        
-        [JsonPropertyName("maxAnte")]
         public int? MaxAnte { get; set; }
     }
     
     public class SourcesConfig
     {
-        [JsonPropertyName("shopSlots")]
         public int[]? ShopSlots { get; set; }
-        
-        [JsonPropertyName("packSlots")]
         public int[]? PackSlots { get; set; }
-        
-        [JsonPropertyName("tags")]
         public bool? Tags { get; set; }
-        
-        [JsonPropertyName("requireMega")]
         public bool? RequireMega { get; set; }
         
         // Legacy support - if sources is just an array of strings
@@ -112,46 +96,39 @@ public class OuijaConfig
     public class FilterItem
     {
         // Support both formats
-        [JsonPropertyName("Type")]
         public string Type { get; set; } = "";
-        
-        [JsonPropertyName("Value")]
         public string Value { get; set; } = "";
         
         // Nested item format
-        [JsonPropertyName("item")]
         public ItemInfo? Item { get; set; }
         
-        [JsonPropertyName("SearchAntes")]
-        public int[] SearchAntes { get; set; } = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        // Support both SearchAntes and antes
+        private int[]? _searchAntes;
+        private int[]? _antes;
         
-        [JsonPropertyName("antes")]
-        public int[]? Antes { get; set; }
+        public int[] SearchAntes 
+        { 
+            get => _searchAntes ?? _antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+            set => _searchAntes = value;
+        }
         
-        [JsonPropertyName("Score")]
+        public int[]? Antes 
+        { 
+            get => _antes ?? _searchAntes;
+            set => _antes = value;
+        }
+        
         public int Score { get; set; } = 1;
-        
-        [JsonPropertyName("Edition")]
         public string? Edition { get; set; }
-        
-        [JsonPropertyName("Stickers")]
         public List<string>? Stickers { get; set; }
         
         // PlayingCard specific
-        [JsonPropertyName("Suit")]
         public string? Suit { get; set; }
-        
-        [JsonPropertyName("Rank")]
         public string? Rank { get; set; }
-        
-        [JsonPropertyName("Seal")]
         public string? Seal { get; set; }
-        
-        [JsonPropertyName("Enhancement")]
         public string? Enhancement { get; set; }
         
         // Sources configuration
-        [JsonPropertyName("sources")]
         [JsonConverter(typeof(SourcesConverter))]
         public SourcesConfig? Sources { get; set; }
         
@@ -239,6 +216,22 @@ public class OuijaConfig
                 SearchAntes = Antes;
             }
             
+            // Parse the item type early to determine default sources
+            var typeLower = Type.ToLower();
+            ItemTypeEnum = typeLower switch
+            {
+                "joker" => MotelyFilterItemType.Joker,
+                "souljoker" => MotelyFilterItemType.SoulJoker,
+                "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
+                "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
+                "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
+                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
+                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
+                "voucher" => MotelyFilterItemType.Voucher,
+                "playingcard" => MotelyFilterItemType.PlayingCard,
+                _ => null
+            };
+            
             // Handle sources format
             if (Sources != null)
             {
@@ -263,22 +256,22 @@ public class OuijaConfig
             }
             else
             {
-                // Default sources if not specified
+                // Default sources if not specified - includes all valid sources for the item type
                 Sources = new SourcesConfig
                 {
-                    ShopSlots = new int[] { },
-                    PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                    ShopSlots = new[] { 0, 1, 2, 3, 4, 5 }, // All shop slots (ante 1 has 4, others have 6)
+                    PackSlots = new[] { 0, 1, 2, 3, 4, 5 }, // All pack slots (ante 1 has 2, others have 6)
                     Tags = true
                 };
                 
-                // Legendary jokers can't appear in shops
+                // Legendary jokers (SoulJokers) can't appear in shops
                 if (ItemTypeEnum == MotelyFilterItemType.SoulJoker)
                 {
                     Sources.ShopSlots = new int[] { };
                 }
             }
             
-            // === PARSE STRINGS TO ENUMS FOR PERFORMANCE ===
+            // === PARSE REMAINING ENUMS FOR PERFORMANCE ===
             ParseEnums();
         }
         
@@ -286,20 +279,7 @@ public class OuijaConfig
         {
             var typeLower = Type.ToLower();
             
-            // Parse the item type enum
-            ItemTypeEnum = typeLower switch
-            {
-                "joker" => MotelyFilterItemType.Joker,
-                "souljoker" => MotelyFilterItemType.SoulJoker,
-                "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
-                "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
-                "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
-                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
-                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
-                "voucher" => MotelyFilterItemType.Voucher,
-                "playingcard" => MotelyFilterItemType.PlayingCard,
-                _ => null
-            };
+            // ItemTypeEnum already parsed in Initialize()
             
             // Parse based on type - directly to Motely enums
             switch (typeLower)
@@ -495,32 +475,16 @@ public class OuijaConfig
     
     public class ItemInfo
     {
-        [JsonPropertyName("type")]
         public string? Type { get; set; }
-        
-        [JsonPropertyName("name")]
         public string? Name { get; set; }
-        
-        [JsonPropertyName("edition")]
         public string? Edition { get; set; }
-        
-        [JsonPropertyName("stickers")]
         public List<string>? Stickers { get; set; }
         
         // Playing card specific
-        [JsonPropertyName("rank")]
         public string? Rank { get; set; }
-        
-        [JsonPropertyName("suit")]
         public string? Suit { get; set; }
-        
-        [JsonPropertyName("enhancement")]
         public string? Enhancement { get; set; }
-        
-        [JsonPropertyName("seal")]
         public string? Seal { get; set; }
-        
-        [JsonPropertyName("value")]
         public string? Value { get; set; } // Alternative to name for backward compatibility
     }
     
