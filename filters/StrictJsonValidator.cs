@@ -14,8 +14,7 @@ public static class StrictJsonValidator
         
         var errors = new List<string>();
         
-        // Validate root properties
-        var validRootProps = new HashSet<string> { "deck", "stake", "must", "should", "mustNot", "minimumScore", "maxSearchAnte", "filter" };
+        var validRootProps = new HashSet<string> { "deck", "stake", "must", "should", "mustNot", "filter" };
         foreach (var prop in root.EnumerateObject())
         {
             if (!validRootProps.Contains(prop.Name))
@@ -61,8 +60,7 @@ public static class StrictJsonValidator
             "item", "type", "value", "antes", "sources", "score", 
             "edition", "stickers", "suit", "rank", "seal", "enhancement",
             "Type", "Value", "SearchAntes", "Score", "Edition", "Stickers",
-            "Suit", "Rank", "Seal", "Enhancement", 
-            "IncludeShopStream", "IncludeBoosterPacks", "IncludeSkipTags"
+            "Suit", "Rank", "Seal", "Enhancement"
         };
         
         foreach (var prop in item.EnumerateObject())
@@ -77,14 +75,20 @@ public static class StrictJsonValidator
             {
                 ValidateItemInfo(prop.Value, $"{path}.item", errors);
             }
+            
+            // Validate sources
+            if (prop.Name == "sources" && prop.Value.ValueKind == JsonValueKind.Object)
+            {
+                ValidateSources(prop.Value, $"{path}.sources", errors);
+            }
         }
     }
     
     private static void ValidateItemInfo(JsonElement item, string path, List<string> errors)
     {
-        var validProps = new HashSet<string> 
+        var validProps = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { 
-            "type", "name", "edition", "rank", "suit", "enhancement", "seal", "value"
+            "type", "name", "edition", "rank", "suit", "enhancement", "seal", "value", "stickers"
         };
         
         foreach (var prop in item.EnumerateObject())
@@ -130,6 +134,67 @@ public static class StrictJsonValidator
                 {
                     errors.Add($"{path}: Jokers should use 'name' not 'rank' property");
                 }
+            }
+        }
+    }
+    
+    private static void ValidateSources(JsonElement sources, string path, List<string> errors)
+    {
+        var validProps = new HashSet<string> { "shopSlots", "packSlots", "tags", "requireMega" };
+        
+        foreach (var prop in sources.EnumerateObject())
+        {
+            if (!validProps.Contains(prop.Name))
+            {
+                errors.Add($"Unknown property '{prop.Name}' in {path}. Valid properties are: {string.Join(", ", validProps)}");
+            }
+            
+            // Validate shopSlots array
+            if (prop.Name == "shopSlots" && prop.Value.ValueKind == JsonValueKind.Array)
+            {
+                int index = 0;
+                foreach (var slot in prop.Value.EnumerateArray())
+                {
+                    if (slot.ValueKind != JsonValueKind.Number || !slot.TryGetInt32(out var slotNum))
+                    {
+                        errors.Add($"{path}.shopSlots[{index}]: Must be an integer");
+                    }
+                    else if (slotNum < 0 || slotNum > 999)
+                    {
+                        errors.Add($"{path}.shopSlots[{index}]: Slot {slotNum} out of range. Valid slots are 0-999");
+                    }
+                    index++;
+                }
+            }
+            
+            // Validate packSlots array
+            if (prop.Name == "packSlots" && prop.Value.ValueKind == JsonValueKind.Array)
+            {
+                int index = 0;
+                foreach (var slot in prop.Value.EnumerateArray())
+                {
+                    if (slot.ValueKind != JsonValueKind.Number || !slot.TryGetInt32(out var slotNum))
+                    {
+                        errors.Add($"{path}.packSlots[{index}]: Must be an integer");
+                    }
+                    else if (slotNum < 0 || slotNum > 5)
+                    {
+                        errors.Add($"{path}.packSlots[{index}]: Slot {slotNum} out of range. Valid slots are 0-5");
+                    }
+                    index++;
+                }
+            }
+            
+            // Validate tags
+            if (prop.Name == "tags" && prop.Value.ValueKind != JsonValueKind.True && prop.Value.ValueKind != JsonValueKind.False)
+            {
+                errors.Add($"{path}.tags: Must be a boolean (true/false)");
+            }
+            
+            // Validate requireMega
+            if (prop.Name == "requireMega" && prop.Value.ValueKind != JsonValueKind.True && prop.Value.ValueKind != JsonValueKind.False)
+            {
+                errors.Add($"{path}.requireMega: Must be a boolean (true/false)");
             }
         }
     }

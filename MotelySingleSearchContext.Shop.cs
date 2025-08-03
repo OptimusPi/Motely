@@ -85,7 +85,7 @@ unsafe ref partial struct MotelySingleSearchContext
         MotelyJokerStreamFlags jokerFlags = MotelyJokerStreamFlags.Default,
         bool isCached = false)
     {
-        return CreateShopItemStream(ante, Deck.GetDefaultRunState(), flags, jokerFlags);
+        return CreateShopItemStream(ante, Deck.GetDefaultRunState(), flags, jokerFlags, isCached);
     }
 
 #if !DEBUG
@@ -198,49 +198,5 @@ unsafe ref partial struct MotelySingleSearchContext
 
         return GetNextSpectral(ref stream.SpectralStream);
 
-    }
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    public ShopState GenerateFullShop(int ante)
-    {
-        ShopState shop = new();
-        var stream = CreateShopItemStream(ante);
-        
-        int numSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
-        
-        for (int slot = 0; slot < numSlots; slot++)
-        {
-            ref var item = ref shop.Items[slot];
-            var shopItem = GetNextShopItem(ref stream);
-            
-            // Determine type based on MotelyItem
-            if (shopItem.TypeCategory == MotelyItemTypeCategory.Joker)
-            {
-                item.Type = ShopState.ShopItem.ShopItemType.Joker;
-                // Extract joker type by masking out type category, edition, and other flags
-                item.Joker = (MotelyJoker)(shopItem.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                item.Edition = shopItem.Edition;
-            }
-            else if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
-            {
-                item.Type = ShopState.ShopItem.ShopItemType.Planet;
-                item.Planet = (MotelyPlanetCard)(shopItem.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-            }
-            else if (shopItem.TypeCategory == MotelyItemTypeCategory.TarotCard)
-            {
-                item.Type = ShopState.ShopItem.ShopItemType.Tarot;
-                item.Tarot = (MotelyTarotCard)(shopItem.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-            }
-            else
-            {
-                item.Type = ShopState.ShopItem.ShopItemType.Empty;
-            }
-            
-            item.Item = shopItem;
-        }
-        
-        return shop;
     }
 }

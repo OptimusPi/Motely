@@ -85,8 +85,52 @@ namespace Motely
                 CommandOptionType.SingleValue);
             keywordOption.DefaultValue = string.Empty;
 
+            var analyzeOption = app.Option<string>(
+                "--analyze <SEED>",
+                "Analyze a specific seed and show detailed information",
+                CommandOptionType.SingleValue);
+            analyzeOption.DefaultValue = string.Empty;
+
+            var deckOption = app.Option<string>(
+                "--deck <DECK>",
+                "Deck to use for analysis (default: Red)",
+                CommandOptionType.SingleValue);
+            deckOption.DefaultValue = "Red";
+
+            var stakeOption = app.Option<string>(
+                "--stake <STAKE>",
+                "Stake to use for analysis (default: White)",
+                CommandOptionType.SingleValue);
+            stakeOption.DefaultValue = "White";
+
             app.OnExecute(() =>
             {
+                var analyzeSeed = analyzeOption.Value();
+                var deckName = deckOption.Value();
+                var stakeName = stakeOption.Value();
+                
+                // Check if analyze mode
+                if (!string.IsNullOrEmpty(analyzeSeed))
+                {
+                    Console.WriteLine("🔍 Analyzing seed...");
+                    
+                    // Parse deck and stake
+                    if (!Enum.TryParse<MotelyDeck>(deckName, true, out var deck))
+                    {
+                        Console.WriteLine($"❌ Invalid deck: {deckName}");
+                        return 1;
+                    }
+                    
+                    if (!Enum.TryParse<MotelyStake>(stakeName, true, out var stake))
+                    {
+                        Console.WriteLine($"❌ Invalid stake: {stakeName}");
+                        return 1;
+                    }
+                    
+                    SeedAnalyzer.Analyze(analyzeSeed, deck, stake);
+                    return 0;
+                }
+                
                 Console.WriteLine("🔍 Starting Motely Ouija Search");
                 var configName = configOption.Value()!;
                 var startBatch = startBatchOption.ParsedValue;
@@ -195,8 +239,6 @@ namespace Motely
             {
                 // Load Ouija config
                 var config = LoadConfig(configPath);
-                
-                // Validate config IMMEDIATELY after loading
                 try
                 {
                     OuijaConfigValidator.ValidateConfig(config);
@@ -389,7 +431,6 @@ namespace Motely
         {
             // Print deck/stake info as comments
             Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
-            Console.WriteLine($"# Max Ante: {config.MaxSearchAnte}");
 
             // Print CSV header only once, with + prefix
             var header = "+Seed,TotalScore";
