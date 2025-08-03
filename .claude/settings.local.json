@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(git checkout:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(dotnet build:*)",
+      "Bash(ls:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(dotnet run:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(rm:*)",
+      "Bash(grep:*)",
+      "Bash(mv:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(kill:*)"
     ],
     "deny": []
   }

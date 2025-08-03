@@ -314,14 +314,14 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        FancyConsole.WriteLine($"{seed}");
+        //FancyConsole.WriteLine($"{seed}");
     }
 
     private void PrintReport()
     {
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
-
-        if (elapsedMS - _lastReportMS < 500) return;
+        double printInterval = 1000 * 60 * 15; // 15 minutes
+        if (_lastReportMS > 0 && elapsedMS - _lastReportMS < printInterval) return;
 
         _lastReportMS = elapsedMS;
 
@@ -352,8 +352,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         if (elapsedMS > 1)
             seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
 
-        FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
-
+        //FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+        Console.WriteLine($"Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)"); 
     }
 
     public void Dispose()

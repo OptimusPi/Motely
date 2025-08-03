@@ -35,12 +35,6 @@ namespace Motely.Filters
                 errors.Add($"Invalid stake: '{config.Stake}'. Valid stakes are: {validStakes}");
             }
             
-            // Validate antes
-            if (config.MaxSearchAnte < 1 || config.MaxSearchAnte > 39)
-            {
-                errors.Add($"Invalid maxSearchAnte: {config.MaxSearchAnte}. Must be between 1 and 39.");
-            }
-            
             // If there are errors, throw exception with all of them
             if (errors.Count > 0)
             {

@@ -1,64 +1,44 @@
 {
   "must": [
     {
-      "item": {
-        "type": "joker",
-        "name": "Cloud9",
-        "edition": "negative"
-      },
-      "antes": [
-        1
-      ],
-      "sources": [
-        "packs"
-      ]
+        "Type": "Joker",
+        "Value": "HangingChad",
+        "Edition": "negative",
+        "SearchAntes": [1],
+        "Score": 1,
+        "sources": {
+            "packSlots": [0, 1],
+            "shopSlots": [0, 1, 2, 3],
+            "requireMega": true
+        }
+    },
+    {
+        "Type": "Joker",
+        "Value": "Photograph",
+        "SearchAntes": [1],
+        "Score": 1,
+        "sources": {
+            "packSlots": [0, 1],
+            "shopSlots": [0, 1, 2, 3],
+            "requireMega": true
+        }
     }
   ],
   "should": [
     {
-      "item": {
-        "type": "playingcard",
-        "rank": "nine",
-        "edition": "polychrome",
-        "seal": "red"
-      },
-      "antes": [
-        1,2,3,4,5,6,7,8
-      ],
-      "sources": [
-        "shop"
-      ]
-    },
-    {
-      "item": {
-        "type": "playingcard",
-        "rank": "nine",
-        "enhancement": "lucky",
-        "seal": "red"
-      },
-      "antes": [
-        1,2,3,4,5,6,7,8
-      ],
-      "sources": [
-        "shop"
-      ]
-    },
-    {
-      "item": {
-        "type": "joker",
-        "name": "Cloud9"
-      },
-      "antes": [
-        2,3,4,5,6,7,8
-      ],
-      "sources": [
-        "shop", "packs"
-      ]
+        "Type": "Joker",
+        "Value": "Blueprint",
+        "SearchAntes": [1,2,3,4],
+        "Score": 1,
+        "sources": {
+            "packSlots": [0,1,2,3],
+            "shopSlots": [0, 1, 2, 3, 4, 5],
+            "requireMega": true
+        }
     }
   ],
-  "mustNot": [],
-  "deck": "Yellow",
-  "stake": "White",
-  "maxSearchAnte": 8,
-  "minimumScore": 1
+  "mustNot": [
+  ],
+  "deck": "Red",
+  "stake": "White"
 }
