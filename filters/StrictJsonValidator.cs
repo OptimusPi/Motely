@@ -14,7 +14,7 @@ public static class StrictJsonValidator
         
         var errors = new List<string>();
         
-        var validRootProps = new HashSet<string> { "deck", "stake", "must", "should", "mustNot", "filter" };
+        var validRootProps = new HashSet<string> { "name", "author", "description", "deck", "stake", "must", "should", "mustNot", "filter" };
         foreach (var prop in root.EnumerateObject())
         {
             if (!validRootProps.Contains(prop.Name))
