@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -41,19 +42,13 @@ public class OuijaConfig
     [JsonPropertyName("mustNot")]
     public List<FilterItem> MustNot { get; set; } = new();
     
-    [JsonPropertyName("minimumScore")]
-    public int MinimumScore { get; set; } = 0;
-    
     // Optional deck/stake settings
     [JsonPropertyName("deck")]
     public string Deck { get; set; } = "Red";
     
     [JsonPropertyName("stake")]
     public string Stake { get; set; } = "White";
-    
-    [JsonPropertyName("maxSearchAnte")]
-    public int MaxSearchAnte { get; set; } = 39; // naneInf score to win so this is technically Max Ante in Balatro! Neat! 🃏
-    
+
     // Support nested filter format
     [JsonPropertyName("filter")]
     public FilterSettings? Filter { get; set; }
@@ -68,6 +63,50 @@ public class OuijaConfig
         
         [JsonPropertyName("maxAnte")]
         public int? MaxAnte { get; set; }
+    }
+    
+    public class SourcesConfig
+    {
+        [JsonPropertyName("shopSlots")]
+        public int[]? ShopSlots { get; set; }
+        
+        [JsonPropertyName("packSlots")]
+        public int[]? PackSlots { get; set; }
+        
+        [JsonPropertyName("tags")]
+        public bool? Tags { get; set; }
+        
+        [JsonPropertyName("requireMega")]
+        public bool? RequireMega { get; set; }
+        
+        // Legacy support - if sources is just an array of strings
+        public static implicit operator SourcesConfig?(List<string>? legacy)
+        {
+            if (legacy == null) return null;
+            
+            var config = new SourcesConfig();
+            var lowerSources = legacy.Select(s => s.ToLowerInvariant()).ToList();
+            
+            // Convert legacy format
+            if (lowerSources.Contains("shop"))
+            {
+                // Shop means all shop slots
+                config.ShopSlots = Enumerable.Range(0, 6).ToArray();
+            }
+            
+            if (lowerSources.Contains("packs"))
+            {
+                // Packs means all pack slots
+                config.PackSlots = Enumerable.Range(0, 6).ToArray();
+            }
+            
+            if (lowerSources.Contains("tags"))
+            {
+                config.Tags = true;
+            }
+            
+            return config;
+        }
     }
     
     public class FilterItem
@@ -111,18 +150,10 @@ public class OuijaConfig
         [JsonPropertyName("Enhancement")]
         public string? Enhancement { get; set; }
         
-        // Sources
-        [JsonPropertyName("IncludeShopStream")]
-        public bool IncludeShopStream { get; set; } = true;
-        
-        [JsonPropertyName("IncludeBoosterPacks")]
-        public bool IncludeBoosterPacks { get; set; } = true;
-        
-        [JsonPropertyName("IncludeSkipTags")]
-        public bool IncludeSkipTags { get; set; } = true;
-        
+        // Sources configuration
         [JsonPropertyName("sources")]
-        public List<string>? Sources { get; set; }
+        [JsonConverter(typeof(SourcesConverter))]
+        public SourcesConfig? Sources { get; set; }
         
         // === PARSED ENUM VALUES FOR PERFORMANCE ===
         // These are populated during Initialize() to avoid string comparisons in hot path
@@ -143,6 +174,9 @@ public class OuijaConfig
         public MotelyTag? TagEnum { get; set; }
         
         [JsonIgnore]
+        public MotelyFilterItemType? ItemTypeEnum { get; set; }
+        
+        [JsonIgnore]
         public MotelyVoucher? VoucherEnum { get; set; }
         
         [JsonIgnore]
@@ -159,6 +193,12 @@ public class OuijaConfig
         
         [JsonIgnore]
         public MotelyItemSeal? SealEnum { get; set; }
+        
+        [JsonIgnore]
+        public List<MotelyJokerSticker>? StickerEnums { get; set; }
+        
+        [JsonIgnore]
+        public MotelyTagType? TagTypeEnum { get; set; }
         
         // Initialize from nested format if present
         public void Initialize()
@@ -190,6 +230,8 @@ public class OuijaConfig
                 
                 if (!string.IsNullOrEmpty(Item.Edition))
                     Edition = Item.Edition;
+                if (Item.Stickers != null)
+                    Stickers = Item.Stickers;
             }
             
             if (Antes != null)
@@ -197,23 +239,43 @@ public class OuijaConfig
                 SearchAntes = Antes;
             }
             
+            // Handle sources format
             if (Sources != null)
             {
-                // Validate sources
-                foreach (var source in Sources)
+                // Validate the slot indices
+                if (Sources.ShopSlots != null)
                 {
-                    if (!ValidItemSources.IsValid(source))
+                    foreach (var slot in Sources.ShopSlots)
                     {
-                        var validSources = string.Join(", ", ValidItemSources.AllSources.Select(s => $"'{s}'"));
-                        throw new ArgumentException($"Invalid source '{source}'. Valid sources are: {validSources}");
+                        if (slot < 0 || slot > 999)
+                            throw new ArgumentException($"Invalid shop slot {slot}. Valid slots are 1-999.");
                     }
                 }
                 
-                // Process sources (case-insensitive)
-                var lowerSources = Sources.Select(s => s.ToLowerInvariant()).ToList();
-                IncludeShopStream = lowerSources.Contains(ValidItemSources.Shop);
-                IncludeBoosterPacks = lowerSources.Contains(ValidItemSources.Packs);
-                IncludeSkipTags = lowerSources.Contains(ValidItemSources.Tags);
+                if (Sources.PackSlots != null)
+                {
+                    foreach (var slot in Sources.PackSlots)
+                    {
+                        if (slot < 0 || slot > 5)
+                            throw new ArgumentException($"Invalid pack slot {slot}. Valid slots are 0-5.");
+                    }
+                }
+            }
+            else
+            {
+                // Default sources if not specified
+                Sources = new SourcesConfig
+                {
+                    ShopSlots = new int[] { },
+                    PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                    Tags = true
+                };
+                
+                // Legendary jokers can't appear in shops
+                if (ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+                {
+                    Sources.ShopSlots = new int[] { };
+                }
             }
             
             // === PARSE STRINGS TO ENUMS FOR PERFORMANCE ===
@@ -223,6 +285,21 @@ public class OuijaConfig
         private void ParseEnums()
         {
             var typeLower = Type.ToLower();
+            
+            // Parse the item type enum
+            ItemTypeEnum = typeLower switch
+            {
+                "joker" => MotelyFilterItemType.Joker,
+                "souljoker" => MotelyFilterItemType.SoulJoker,
+                "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
+                "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
+                "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
+                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
+                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
+                "voucher" => MotelyFilterItemType.Voucher,
+                "playingcard" => MotelyFilterItemType.PlayingCard,
+                _ => null
+            };
             
             // Parse based on type - directly to Motely enums
             switch (typeLower)
@@ -279,7 +356,6 @@ public class OuijaConfig
                     }
                     break;
                     
-                case "tag":
                 case "smallblindtag":
                 case "bigblindtag":
                     if (!string.IsNullOrEmpty(Value))
@@ -290,6 +366,14 @@ public class OuijaConfig
                         }
                         TagEnum = tag;
                     }
+                    
+                    // Set the tag type enum based on the type string
+                    TagTypeEnum = typeLower switch
+                    {
+                        "smallblindtag" => MotelyTagType.SmallBlind,
+                        "bigblindtag" => MotelyTagType.BigBlind,
+                        _ => MotelyTagType.Any
+                    };
                     break;
                     
                 case "voucher":
@@ -351,7 +435,7 @@ public class OuijaConfig
                     break;
                     
                 default:
-                    throw new ArgumentException($"Invalid item type: '{Type}'. Valid types are: joker, souljoker, tarot, tarotcard, spectral, spectralcard, planet, planetcard, tag, voucher, playingcard");
+                    throw new ArgumentException($"Invalid item type: '{Type}'. Valid types are: joker, souljoker, tarot, tarotcard, spectral, spectralcard, planet, planetcard, smallblindtag, bigblindtag, voucher, playingcard");
             }
             
             // Parse edition (common to all item types)
@@ -364,6 +448,26 @@ public class OuijaConfig
                     throw new ArgumentException($"Invalid edition: '{Edition}'. Must be a valid MotelyItemEdition enum value.");
                 }
                 EditionEnum = edition;
+            }
+            
+            // Parse stickers (only applies to jokers)
+            if (typeLower == "joker" || typeLower == "souljoker")
+            {
+                if (Stickers != null && Stickers.Count > 0)
+                {
+                    StickerEnums = new List<MotelyJokerSticker>();
+                    foreach (var sticker in Stickers)
+                    {
+                        if (!string.IsNullOrEmpty(sticker))
+                        {
+                            if (!Enum.TryParse<MotelyJokerSticker>(sticker, true, out var stickerEnum))
+                            {
+                                throw new ArgumentException($"Invalid sticker: '{sticker}'. Must be one of: None, Eternal, Perishable, Rental");
+                            }
+                            StickerEnums.Add(stickerEnum);
+                        }
+                    }
+                }
             }
         }
         
@@ -400,6 +504,9 @@ public class OuijaConfig
         [JsonPropertyName("edition")]
         public string? Edition { get; set; }
         
+        [JsonPropertyName("stickers")]
+        public List<string>? Stickers { get; set; }
+        
         // Playing card specific
         [JsonPropertyName("rank")]
         public string? Rank { get; set; }
@@ -434,7 +541,7 @@ public class OuijaConfig
         {
             PropertyNameCaseInsensitive = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
+            AllowTrailingCommas = false
         };
 
         var config = JsonSerializer.Deserialize<OuijaConfig>(json, options) 
@@ -456,24 +563,35 @@ public class OuijaConfig
                 Deck = Filter.Deck;
             if (!string.IsNullOrEmpty(Filter.Stake))
                 Stake = Filter.Stake;
-            if (Filter.MaxAnte.HasValue)
-                MaxSearchAnte = Filter.MaxAnte.Value;
         }
-        
-        // Basic validation
-        if (MaxSearchAnte > 39) MaxSearchAnte = 39;
-        if (MaxSearchAnte < 1) MaxSearchAnte = 1;
-        
+
         // Initialize and validate all filter items
         foreach (var item in Must.Concat(Should).Concat(MustNot))
         {
             // Initialize from nested format
             item.Initialize();
-            
+
             // Ensure all SearchAntes arrays are within bounds
-            item.SearchAntes = item.SearchAntes.Where(a => a >= 1 && a <= MaxSearchAnte).ToArray();
+            item.SearchAntes = item.SearchAntes.ToArray();
             if (item.SearchAntes.Length == 0)
                 item.SearchAntes = new[] { 1 };
+                
+            // Validate game logic constraints
+            if (item.JokerEnum.HasValue && item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+            {
+                var legendaryJokers = new[] { 
+                    MotelyJoker.Perkeo, 
+                    MotelyJoker.Canio, 
+                    MotelyJoker.Triboulet, 
+                    MotelyJoker.Yorick, 
+                    MotelyJoker.Chicot 
+                };
+                
+                if (legendaryJokers.Contains(item.JokerEnum.Value))
+                {
+                    throw new InvalidOperationException($"Invalid config: {item.JokerEnum.Value} is a legendary joker and cannot appear in shops. Remove shop from sources or use a different joker.");
+                }
+            }
         }
     }
     
@@ -488,5 +606,43 @@ public class OuijaConfig
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
         return JsonSerializer.Serialize(this, options);
+    }
+}
+
+// Custom JSON converter to handle both legacy array format and new object format for sources
+public class SourcesConverter : JsonConverter<OuijaConfig.SourcesConfig?>
+{
+    public override OuijaConfig.SourcesConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+            return null;
+            
+        if (reader.TokenType == JsonTokenType.StartArray)
+        {
+            // Legacy format: array of strings
+            var legacyList = JsonSerializer.Deserialize<List<string>>(ref reader, options);
+            return legacyList; // Use implicit conversion
+        }
+        else if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            // New format: object with shopSlots, packSlots, tags
+            return JsonSerializer.Deserialize<OuijaConfig.SourcesConfig>(ref reader, options);
+        }
+        else
+        {
+            throw new JsonException($"Unexpected token type for sources: {reader.TokenType}");
+        }
+    }
+    
+    public override void Write(Utf8JsonWriter writer, OuijaConfig.SourcesConfig? value, JsonSerializerOptions options)
+    {
+        if (value == null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+        
+        // Always write in new format
+        JsonSerializer.Serialize(writer, value, options);
     }
 }
