@@ -15,11 +15,19 @@ namespace Motely.Filters
                 throw new ArgumentNullException(nameof(config));
                 
             var errors = new List<string>();
+            var warnings = new List<string>();
+            
+            // Parse stake for sticker validation
+            MotelyStake stake = MotelyStake.White;
+            if (!string.IsNullOrEmpty(config.Stake))
+            {
+                Enum.TryParse<MotelyStake>(config.Stake, true, out stake);
+            }
             
             // Validate all filter items
-            ValidateFilterItems(config.Must, "must", errors);
-            ValidateFilterItems(config.Should, "should", errors);
-            ValidateFilterItems(config.MustNot, "mustNot", errors);
+            ValidateFilterItems(config.Must, "must", errors, warnings, stake);
+            ValidateFilterItems(config.Should, "should", errors, warnings, stake);
+            ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake);
             
             // Validate deck
             if (!string.IsNullOrEmpty(config.Deck) && !Enum.TryParse<MotelyDeck>(config.Deck, true, out _))
@@ -35,6 +43,18 @@ namespace Motely.Filters
                 errors.Add($"Invalid stake: '{config.Stake}'. Valid stakes are: {validStakes}");
             }
             
+            // If there are warnings, print them
+            if (warnings.Count > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("WARNINGS:");
+                foreach (var warning in warnings)
+                {
+                    Console.WriteLine($"  ⚠️  {warning}");
+                }
+                Console.ResetColor();
+            }
+            
             // If there are errors, throw exception with all of them
             if (errors.Count > 0)
             {
@@ -42,7 +62,7 @@ namespace Motely.Filters
             }
         }
         
-        private static void ValidateFilterItems(List<OuijaConfig.FilterItem> items, string section, List<string> errors)
+        private static void ValidateFilterItems(List<OuijaConfig.FilterItem> items, string section, List<string> errors, List<string> warnings, MotelyStake stake)
         {
             if (items == null) return;
             
@@ -72,6 +92,36 @@ namespace Motely.Filters
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
                             errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nUse 'any', '*', or leave empty to match any joker.");
+                        }
+                        
+                        // Validate stickers
+                        if (item.Stickers != null && item.Stickers.Count > 0)
+                        {
+                            foreach (var sticker in item.Stickers)
+                            {
+                                if (sticker != null)
+                                {
+                                    var stickerLower = sticker.ToLower();
+                                    if (stickerLower == "eternal" || stickerLower == "perishable")
+                                    {
+                                        if (stake < MotelyStake.Black)
+                                        {
+                                            warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Eternal/Perishable stickers only appear on Black Stake or higher.");
+                                        }
+                                    }
+                                    else if (stickerLower == "rental")
+                                    {
+                                        if (stake < MotelyStake.Gold)
+                                        {
+                                            warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Rental stickers only appear on Gold Stake.");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"{prefix}: Invalid sticker '{sticker}'. Valid stickers are: eternal, perishable, rental");
+                                    }
+                                }
+                            }
                         }
                         break;
                         
@@ -136,6 +186,15 @@ namespace Motely.Filters
                         {
                             var validRanks = string.Join(", ", Enum.GetNames(typeof(MotelyPlayingCardRank)));
                             errors.Add($"{prefix}: Invalid rank '{item.Rank}'. Valid ranks are: {validRanks}");
+                        }
+                        break;
+                        
+                    case "boss":
+                    case "bossblind":
+                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyBossBlind>(item.Value, true, out _))
+                        {
+                            var validBosses = string.Join(", ", Enum.GetNames(typeof(MotelyBossBlind)));
+                            errors.Add($"{prefix}: Invalid boss blind '{item.Value}'. Valid boss blinds are: {validBosses}");
                         }
                         break;
                         

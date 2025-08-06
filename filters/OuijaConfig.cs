@@ -177,6 +177,9 @@ public class OuijaConfig
         [JsonIgnore]
         public MotelyTagType? TagTypeEnum { get; set; }
         
+        [JsonIgnore]
+        public MotelyBossBlind? BossEnum { get; set; }
+        
         // Initialize from nested format if present
         public void Initialize()
         {
@@ -229,6 +232,7 @@ public class OuijaConfig
                 "bigblindtag" => MotelyFilterItemType.BigBlindTag,
                 "voucher" => MotelyFilterItemType.Voucher,
                 "playingcard" => MotelyFilterItemType.PlayingCard,
+                "boss" or "bossblind" => MotelyFilterItemType.Boss,
                 _ => null
             };
             
@@ -269,6 +273,17 @@ public class OuijaConfig
                 {
                     Sources.ShopSlots = new int[] { };
                 }
+                
+                // Boss blinds have their own generation, not from shops/packs/tags
+                if (ItemTypeEnum == MotelyFilterItemType.Boss)
+                {
+                    Sources = new SourcesConfig
+                    {
+                        ShopSlots = new int[] { },
+                        PackSlots = new int[] { },
+                        Tags = false
+                    };
+                }
             }
             
             // === PARSE REMAINING ENUMS FOR PERFORMANCE ===
@@ -292,7 +307,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyJoker>(Value, true, out var joker))
                         {
-                            throw new ArgumentException($"Invalid joker value: '{Value}'. Must be a valid MotelyJoker enum value.");
+                            throw new ArgumentException($"Invalid joker value: '{Value}'. Examples of valid values: Baron, Blueprint, Brainstorm, Burglar, Hacker, IceCream, Mime, Perkeo, etc. Use the exact name from the game without spaces.");
                         }
                         JokerEnum = joker;
                     }
@@ -304,7 +319,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
                         {
-                            throw new ArgumentException($"Invalid tarot value: '{Value}'. Must be a valid MotelyTarotCard enum value.");
+                            throw new ArgumentException($"Invalid tarot value: '{Value}'. Valid values: Fool, Magician, HighPriestess, Empress, Emperor, Hierophant, Lovers, Chariot, Justice, Hermit, WheelOfFortune, Strength, HangedMan, Death, Temperance, Devil, Tower, Star, Moon, Sun, Judgement, World.");
                         }
                         TarotEnum = tarot;
                     }
@@ -318,7 +333,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral))
                         {
-                            throw new ArgumentException($"Invalid spectral value: '{Value}'. Must be a valid MotelySpectralCard enum value.");
+                            throw new ArgumentException($"Invalid spectral value: '{Value}'. Valid values: Familiar, Grim, Incantation, Talisman, Aura, Wraith, Sigil, Ouija, Ectoplasm, Immolate, Black, Ankh, Deja, Hex, Trance, Medium, Cryptid, Soul.");
                         }
                         SpectralEnum = spectral;
                     }
@@ -330,7 +345,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
                         {
-                            throw new ArgumentException($"Invalid planet value: '{Value}'. Must be a valid MotelyPlanetCard enum value.");
+                            throw new ArgumentException($"Invalid planet value: '{Value}'. Valid values: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Planet_X, Ceres, Eris.");
                         }
                         PlanetEnum = planet;
                     }
@@ -342,7 +357,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyTag>(Value, true, out var tag))
                         {
-                            throw new ArgumentException($"Invalid tag value: '{Value}'. Must be a valid MotelyTag enum value.");
+                            throw new ArgumentException($"Invalid tag value: '{Value}'. Examples: UncommonTag, RareTag, NegativeTag, FoilTag, HolographicTag, PolychromeTag, InvestmentTag, VoucherTag, BossTag, StandardTag, CharmTag, MeteorTag, BuffoonTag, HangingTag, BullTag, DoubleTag, CouponTag, JugglerTag, TopUpTag, SpeedTag, OrbitalTag, EconomyTag, etc.");
                         }
                         TagEnum = tag;
                     }
@@ -361,7 +376,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
                         {
-                            throw new ArgumentException($"Invalid voucher value: '{Value}'. Must be a valid MotelyVoucher enum value.");
+                            throw new ArgumentException($"Invalid voucher value: '{Value}'. Examples: OverstockPlus, Clearance, Hone, Reroll, CrystalBall, Telescope, Observatory, GrabBag, Wasteful, Recyclomancy, SeedMoney, MoneyTree, Director, HitTheRoad, ToTheMoon, etc.");
                         }
                         VoucherEnum = voucher;
                     }
@@ -396,7 +411,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enhancement))
                         {
-                            throw new ArgumentException($"Invalid enhancement: '{Enhancement}'. Must be a valid MotelyItemEnhancement enum value.");
+                            throw new ArgumentException($"Invalid enhancement: '{Enhancement}'. Valid values: Base (or None), Bonus, Mult, Wild, Glass, Steel, Stone, Gold, Lucky.");
                         }
                         EnhancementEnum = enhancement;
                     }
@@ -408,14 +423,26 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal))
                         {
-                            throw new ArgumentException($"Invalid seal: '{Seal}'. Must be a valid MotelyItemSeal enum value.");
+                            throw new ArgumentException($"Invalid seal: '{Seal}'. Valid values: Base (or None), Gold, Red, Blue, Purple.");
                         }
                         SealEnum = seal;
                     }
                     break;
                     
+                case "boss":
+                case "bossblind":
+                    if (!string.IsNullOrEmpty(Value))
+                    {
+                        if (!Enum.TryParse<MotelyBossBlind>(Value, true, out var boss))
+                        {
+                            throw new ArgumentException($"Invalid boss blind value: '{Value}'. Valid values: TheArm, TheClub, TheEye, AmberAcorn, CeruleanBell, CrimsonHeart, VerdantLeaf, VioletVessel, TheFish, TheFlint, TheGoad, TheHead, TheHook, TheHouse, TheManacle, TheMark, TheMouth, TheNeedle, TheOx, ThePillar, ThePlant, ThePsychic, TheSerpent, TheTooth, TheWall, TheWater, TheWheel, TheWindow.");
+                        }
+                        BossEnum = boss;
+                    }
+                    break;
+                    
                 default:
-                    throw new ArgumentException($"Invalid item type: '{Type}'. Valid types are: joker, souljoker, tarot, tarotcard, spectral, spectralcard, planet, planetcard, smallblindtag, bigblindtag, voucher, playingcard");
+                    throw new ArgumentException($"Invalid item type: '{Type}'. Valid types are: joker, souljoker, tarot, tarotcard, spectral, spectralcard, planet, planetcard, smallblindtag, bigblindtag, voucher, playingcard, boss, bossblind.");
             }
             
             // Parse edition (common to all item types)
@@ -425,7 +452,7 @@ public class OuijaConfig
             {
                 if (!Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
                 {
-                    throw new ArgumentException($"Invalid edition: '{Edition}'. Must be a valid MotelyItemEdition enum value.");
+                    throw new ArgumentException($"Invalid edition: '{Edition}'. Valid values: Base (or None), Foil, Holographic, Polychrome, Negative.");
                 }
                 EditionEnum = edition;
             }

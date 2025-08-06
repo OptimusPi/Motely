@@ -98,6 +98,10 @@ namespace Motely
                 {
                     var anteData = new SeedAnalyzerCapture.AnteData { Ante = ante };
 
+                    // Boss
+                    var boss = ctx.GetBossForAnte(ante);
+                    anteData.Boss = boss.ToString();
+
                     // Voucher
                     anteData.Voucher = ctx.GetAnteFirstVoucher(ante);
 
@@ -110,7 +114,7 @@ namespace Motely
 
                     // Shop Queue
                     var shopStream = ctx.CreateShopItemStream(ante);
-                    int maxSlots = ante == 1 ? 2 : 4;
+                    int maxSlots = ante == 1 ? 15 : 50;
                     for (int i = 0; i < maxSlots; i++)
                     {
                         var item = ctx.GetNextShopItem(ref shopStream);
