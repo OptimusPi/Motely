@@ -62,8 +62,9 @@ public struct AnalyzerFilterDesc : IMotelySeedFilterDesc<AnalyzerFilterDesc.Anal
             {
                 Console.WriteLine($"==ANTE {ante}==");
 
-                // Boss - Note: Boss blind generation not found in current API
-                Console.WriteLine($"Boss: [Boss blind API not available]");
+                // Boss
+                var boss = ctx.GetBossForAnte(ante);
+                Console.WriteLine($"Boss: {boss}");
 
                 // Voucher
                 var voucher = ctx.GetAnteFirstVoucher(ante);
@@ -83,7 +84,7 @@ public struct AnalyzerFilterDesc : IMotelySeedFilterDesc<AnalyzerFilterDesc.Anal
                 var shopStream = ctx.CreateShopItemStream(ante);
                 var shopItems = new List<string>();
                 
-                int maxSlots = ante == 1 ? 2 : 4; // Ante 1 has 2 shop slots, others have 4
+                int maxSlots = ante == 1 ? 15 : 50;
                 for (int i = 0; i < maxSlots; i++)
                 {
                     var item = ctx.GetNextShopItem(ref shopStream);

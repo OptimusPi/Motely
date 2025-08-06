@@ -13,5 +13,6 @@ public enum MotelyFilterItemType
     SmallBlindTag,
     BigBlindTag,
     Voucher,
-    PlayingCard
+    PlayingCard,
+    Boss
 }
