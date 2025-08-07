@@ -320,7 +320,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private void PrintReport()
     {
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
-        double printInterval = 1000 * 60 * 15; // 15 minutes
+        double printInterval = 1000;// * 60 * 15; // 15 minutes
         if (_lastReportMS > 0 && elapsedMS - _lastReportMS < printInterval) return;
 
         _lastReportMS = elapsedMS;
