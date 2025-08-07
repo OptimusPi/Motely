@@ -155,6 +155,7 @@ unsafe ref partial struct MotelySingleSearchContext
     public MotelyItem GetNextShopItem(ref MotelySingleShopItemStream stream)
     {
         double itemTypePoll = GetNextRandom(ref stream.ItemTypeStream) * stream.TotalRate;
+        DebugLogger.Log($"[Shop] Item type poll: {itemTypePoll:F2}, TotalRate: {stream.TotalRate}, SpectralRate: {stream.SpectralRate}");
 
         if (itemTypePoll < ShopJokerRate)
         {
@@ -196,7 +197,9 @@ unsafe ref partial struct MotelySingleSearchContext
         if (!stream.DoesProvideSpectrals)
             return new(MotelyItemType.SpectralExcludedByStream);
 
-        return GetNextSpectral(ref stream.SpectralStream);
+        var spectral = GetNextSpectral(ref stream.SpectralStream);
+        DebugLogger.Log($"[Shop] Generated spectral card: {spectral.Type}");
+        return spectral;
 
     }
 }
