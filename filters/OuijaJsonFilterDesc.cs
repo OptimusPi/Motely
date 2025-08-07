@@ -1017,27 +1017,62 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             var targetSpectral = searchAnySpectral ? (MotelySpectralCard?)null : clause.SpectralEnum!.Value;
             DebugLogger.Log($"[CheckSpectral] Search any spectral: {searchAnySpectral}, Target: {targetSpectral}");
+            
+            // Check shop (only for Ghost Deck)
+            bool shouldCheckShop = clause.Sources?.ShopSlots != null && clause.Sources.ShopSlots.Length > 0;
+            
+            DebugLogger.Log($"[CheckSpectral] Sources: {(clause.Sources != null ? "exists" : "null")}");
+            if (clause.Sources != null)
+            {
+                DebugLogger.Log($"[CheckSpectral] ShopSlots: {(clause.Sources.ShopSlots != null ? string.Join(",", clause.Sources.ShopSlots) : "null")}");
+                DebugLogger.Log($"[CheckSpectral] PackSlots: {(clause.Sources.PackSlots != null ? string.Join(",", clause.Sources.PackSlots) : "null")}");
+            }
+            
+            if (shouldCheckShop)
+            {
+                DebugLogger.Log($"[CheckSpectral] Checking shop slots in ante {ante}...");
+                DebugLogger.Log($"[CheckSpectral] Context deck: {ctx.Deck}");
+                int maxSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
                 
-            // Spectral cards can appear in shop with Ghost Deck, otherwise only in packs
-            // Determine what to check based on sources configuration
-            bool shouldCheckShop = false;
-            bool shouldCheckPacks = false;
-            
-            if (clause.Sources == null)
-            {
-                // No sources specified - check both shop (if Ghost) and packs
-                shouldCheckShop = ctx.Deck == MotelyDeck.Ghost;
-                shouldCheckPacks = true;
+                for (int i = 0; i < maxSlots; i++)
+                {
+                    var item = ctx.GetNextShopItem(ref shopStream);
+                    DebugLogger.Log($"[CheckSpectral] Shop slot {i}: {item.TypeCategory} - {item.Type}");
+                    
+                    // If using granular sources, check if this slot is included
+                    if (clause.Sources != null && clause.Sources.ShopSlots != null)
+                    {
+                        if (!clause.Sources.ShopSlots.Contains(i))
+                        {
+                            DebugLogger.Log($"[CheckSpectral] Skipping slot {i} - not in allowed slots");
+                            continue;
+                        }
+                    }
+                    
+                    if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                    {
+                        var shopSpectral = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+                        DebugLogger.Log($"[CheckSpectral] Shop slot {i}: Found spectral {shopSpectral} (looking for {targetSpectral})");
+                        
+                        // If searching for any spectral, return true for any spectral card
+                        if (searchAnySpectral)
+                        {
+                            DebugLogger.Log($"[CheckSpectral] FOUND any spectral in shop slot {i}: {shopSpectral}!");
+                            return true;
+                        }
+                        
+                        // Otherwise check for specific spectral
+                        if (targetSpectral.HasValue && shopSpectral == targetSpectral.Value)
+                        {
+                            DebugLogger.Log($"[CheckSpectral] FOUND {targetSpectral} in shop slot {i}!");
+                            return true;
+                        }
+                    }
+                }
             }
-            else
-            {
-                // Sources specified - only check what's explicitly requested
-                shouldCheckShop = ctx.Deck == MotelyDeck.Ghost && 
-                    clause.Sources.ShopSlots != null && clause.Sources.ShopSlots.Length > 0;
-                shouldCheckPacks = clause.Sources.PackSlots != null && clause.Sources.PackSlots.Length > 0;
-            }
-            
-            DebugLogger.Log($"[CheckSpectral] Sources config: shouldCheckShop={shouldCheckShop}, shouldCheckPacks={shouldCheckPacks}");
+                
+            // Check packs
+            bool shouldCheckPacks = clause.Sources?.PackSlots != null && clause.Sources.PackSlots.Length > 0;
             
             if (shouldCheckPacks)
             {
