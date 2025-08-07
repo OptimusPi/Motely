@@ -280,10 +280,20 @@ namespace Motely
                 if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
                 {
                     searchSettings = searchSettings.WithDeck(deck);
+                    DebugLogger.Log($"[Program] Using deck from config: {deck}");
+                }
+                else
+                {
+                    DebugLogger.Log($"[Program] Using default deck: {searchSettings.Deck}");
                 }
                 if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse<MotelyStake>(config.Stake, true, out var stake))
                 {
                     searchSettings = searchSettings.WithStake(stake);
+                    DebugLogger.Log($"[Program] Using stake from config: {stake}");
+                }
+                else
+                {
+                    DebugLogger.Log($"[Program] Using default stake: {searchSettings.Stake}");
                 }
                 
                 // Set batch range if specified
