@@ -188,7 +188,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     {
                         int clauseScore = should.Score * occurrences;
                         totalScore += clauseScore;
-                        scoreDetails.Add(clauseScore);
+                        // Add occurrence count to details, not the score
+                        scoreDetails.Add(occurrences);
                         DebugLogger.Log($"[Filter] Found {occurrences} occurrences, score = {should.Score} * {occurrences} = {clauseScore}");
                     }
                     else
@@ -357,8 +358,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 int anteCount = 0;
                 
                 // Create streams for this ante
-                var shopStream = ctx.CreateShopItemStream(ante, isCached: true);
-                var packStream = ctx.CreateBoosterPackStream(ante, isCached: true);
+                // Use isCached: false to ensure each clause gets a fresh stream
+                var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
+                var packStream = ctx.CreateBoosterPackStream(ante, isCached: false);
                 
                 // Debug shop stream for spectral cards
                 if (clause.ItemTypeEnum == MotelyFilterItemType.SpectralCard && ctx.Deck == MotelyDeck.Ghost)
@@ -452,8 +454,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 bool found = false;
                 
                 // PERFORMANCE: Create streams only when needed
-                var shopStream = needsShopStream ? ctx.CreateShopItemStream(ante, isCached: true) : default;
-                var packStream = needsPackStream ? ctx.CreateBoosterPackStream(ante, isCached: true) : default;
+                // Use isCached: false to ensure each clause gets a fresh stream
+                var shopStream = needsShopStream ? ctx.CreateShopItemStream(ante, isCached: false) : default;
+                var packStream = needsPackStream ? ctx.CreateBoosterPackStream(ante, isCached: false) : default;
                 
                 switch (clause.ItemTypeEnum)
                 {
