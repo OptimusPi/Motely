@@ -301,7 +301,7 @@ namespace Motely
                     searchSettings = searchSettings.WithStartBatchIndex(startBatch);
                 if (endBatch > 0)
                 {
-                    // Note: No WithEndBatchIndex method - handle batch limit differently
+                    searchSettings = searchSettings.WithEndBatchIndex(endBatch);
                 }
                     
                 // Apply minimum score cutoff
@@ -397,9 +397,13 @@ namespace Motely
                     }
                     else
                     {
-                        // For sequential search, it's batches - this is misleading
+                        // For sequential search, calculate actual seeds
+                        long seedsPerBatch = (long)Math.Pow(35, batchSize);
+                        long totalSeedsSearched = totalSearched * seedsPerBatch;
+                        
                         Console.WriteLine($"   Total batches processed: {totalSearched:N0}");
-                        Console.WriteLine($"   (Note: Sequential search processes batch patterns, not individual seeds)");
+                        Console.WriteLine($"   Seeds per batch: {seedsPerBatch:N0} (35^{batchSize})");
+                        Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
                     }
                     Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
                 }
