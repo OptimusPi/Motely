@@ -26,7 +26,8 @@ public struct VectorLuaRandom
             ulong m = 1ul << (r & 255);
             r >>= 8;
 
-            d *= 3.14159265358979323846;
+            //d *= 3.14159265358979323846;
+            d *= 3.141592653589793238462643383279502884;
             d += Vector512.Create(2.7182818284590452354);
 
             Vector512<ulong> state = d.AsUInt64();
