@@ -8,7 +8,7 @@
     {
       "type": "joker",
       "value": "Blueprint",
-      "searchAntes": [1, 2, 3],
+      "Antes": [1, 2, 3],
       "score": 2,
       "sources": {
         "shopSlots": [0, 1, 2],
@@ -22,7 +22,7 @@
       "suit": "Spades",
       "enhancement": "Gold",
       "seal": "Red",
-      "searchAntes": [1, 2],
+      "Antes": [1, 2],
       "score": 1
     }
   ],
@@ -31,7 +31,7 @@
       "type": "tarot",
       "value": "Fool",
       "edition": "Foil",
-      "searchAntes": [1, 2, 3, 4],
+      "Antes": [1, 2, 3, 4],
       "score": 1
     }
   ],
@@ -39,7 +39,7 @@
     {
       "type": "joker",
       "value": "IceCream",
-      "searchAntes": [1, 2, 3, 4, 5, 6, 7, 8]
+      "Antes": [1, 2, 3, 4, 5, 6, 7, 8]
     }
   ]
 }

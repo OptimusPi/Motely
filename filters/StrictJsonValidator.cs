@@ -59,7 +59,7 @@ public static class StrictJsonValidator
         { 
             "item", "type", "value", "antes", "sources", "score", 
             "edition", "stickers", "suit", "rank", "seal", "enhancement",
-            "Type", "Value", "SearchAntes", "Score", "Edition", "Stickers",
+            "Type", "Value", "Antes", "Score", "Edition", "Stickers",
             "Suit", "Rank", "Seal", "Enhancement"
         };
         

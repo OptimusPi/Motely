@@ -9,7 +9,7 @@
     {
       "type": "joker",
       "value": "Blueprint",
-      "searchAntes": [1, 2],
+      "Antes": [1, 2],
       "score": 2,
       "edition": "Negative",
       "sources": {
@@ -24,7 +24,7 @@
       "suit": "Spades",
       "enhancement": "Gold",
       "seal": "Red",
-      "searchAntes": [1, 2, 3],
+      "Antes": [1, 2, 3],
       "sources": {
         "shopSlots": [0, 1],
         "packSlots": [],
@@ -38,19 +38,19 @@
       "type": "tarot",
       "value": "Devil",
       "edition": "Polychrome",
-      "searchAntes": [1, 2, 3, 4],
+      "Antes": [1, 2, 3, 4],
       "score": 3
     },
     {
       "type": "spectral",
       "value": "Soul",
-      "searchAntes": [2, 3, 4],
+      "Antes": [2, 3, 4],
       "score": 5
     },
     {
       "type": "tag",
       "value": "NegativeTag",
-      "searchAntes": [1, 2, 3, 4, 5],
+      "Antes": [1, 2, 3, 4, 5],
       "score": 10
     }
   ],
@@ -60,12 +60,12 @@
       "type": "joker",
       "value": "IceCream",
       "stickers": ["Eternal"],
-      "searchAntes": [1, 2, 3, 4, 5, 6, 7, 8]
+      "Antes": [1, 2, 3, 4, 5, 6, 7, 8]
     },
     {
       "type": "boss",
       "value": "TheNeedle",
-      "searchAntes": [3, 4, 5]
+      "Antes": [3, 4, 5]
     }
   ]
 }
