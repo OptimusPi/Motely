@@ -40,10 +40,7 @@ public class OuijaConfig
         public string Type { get; set; } = "";
         public string? Value { get; set; }
         
-        [JsonPropertyName("searchAntes")]
-        public int[]? SearchAntes { get; set; }
-        
-        [JsonPropertyName("antes")]
+        [JsonPropertyName("Antes")]
         public int[]? Antes { get; set; }
         
         public int Score { get; set; } = 1;
@@ -59,9 +56,9 @@ public class OuijaConfig
         // Sources configuration
         public SourcesConfig? Sources { get; set; }
         
-        // Get effective antes (searchAntes takes precedence over antes)
+        // Get effective antes (Antes takes precedence over antes)
         [JsonIgnore]
-        public int[] EffectiveAntes => SearchAntes ?? Antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        public int[] EffectiveAntes => Antes ?? Antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         
         // === COMPUTED ENUM PROPERTIES FOR COMPATIBILITY ===
         // These parse on-demand from the string values
