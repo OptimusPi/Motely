@@ -335,15 +335,27 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
 
         int thisCompletedCount = _completedBatchCount - _startBatchIndex;
-
-        double totalPortionFinished = _completedBatchCount / (double)_threads[0].MaxBatch;
-        double thisPortionFinished = thisCompletedCount / (double)_threads[0].MaxBatch;
-        double totalTimeEstimate = elapsedMS / thisPortionFinished;
-        double timeLeft = totalTimeEstimate - elapsedMS;
+        
+        // For unlimited searches (EndBatchIndex == -1), don't calculate time remaining
+        bool isUnlimitedSearch = _settings.EndBatchIndex < 0;
+        
+        double totalPortionFinished = 0;
+        double thisPortionFinished = 0;
+        double totalTimeEstimate = 0;
+        double timeLeft = 0;
+        
+        if (!isUnlimitedSearch && thisCompletedCount > 0)
+        {
+            int totalBatchCount = _settings.EndBatchIndex - _startBatchIndex;
+            totalPortionFinished = thisCompletedCount / (double)totalBatchCount;
+            thisPortionFinished = thisCompletedCount / (double)totalBatchCount;
+            totalTimeEstimate = elapsedMS / thisPortionFinished;
+            timeLeft = totalTimeEstimate - elapsedMS;
+        }
 
         string timeLeftFormatted;
         bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
-        if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
+        if (isUnlimitedSearch || invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
         {
             timeLeftFormatted = "--:--:--";
         }
@@ -372,12 +384,26 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         if (elapsedMS > 3000)
         {
             seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-            Console.WriteLine($"⏱️${Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            if (isUnlimitedSearch)
+            {
+                Console.WriteLine($"⏱️ Batches: {_completedBatchCount} ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
+            else
+            {
+                Console.WriteLine($"⏱️ {Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
         }
         else if (elapsedMS > 0)
         {
             seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-            Console.WriteLine($"⏱️{Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            if (isUnlimitedSearch)
+            {
+                Console.WriteLine($"⏱️ Batches: {_completedBatchCount} ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
+            else
+            {
+                Console.WriteLine($"⏱️ {Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
         }
     }
 

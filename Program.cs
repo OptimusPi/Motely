@@ -33,7 +33,7 @@ namespace Motely
                 "--endBatch <INDEX>",
                 "Ending batch index (-1 for unlimited)",
                 CommandOptionType.SingleValue);
-            endBatchOption.DefaultValue = 1000;
+            endBatchOption.DefaultValue = -1;
 
             var threadsOption = app.Option<int>(
                 "--threads <COUNT>",
