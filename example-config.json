@@ -1,0 +1,45 @@
+{
+  "name": "Example Ouija Config",
+  "author": "Claude Code",
+  "description": "Modern JSON-based configuration without manual parsing",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "joker",
+      "value": "Blueprint",
+      "searchAntes": [1, 2, 3],
+      "score": 2,
+      "sources": {
+        "shopSlots": [0, 1, 2],
+        "packSlots": [0, 1, 2, 3, 4, 5],
+        "tags": true
+      }
+    },
+    {
+      "type": "playingcard",
+      "rank": "Ace",
+      "suit": "Spades",
+      "enhancement": "Gold",
+      "seal": "Red",
+      "searchAntes": [1, 2],
+      "score": 1
+    }
+  ],
+  "should": [
+    {
+      "type": "tarot",
+      "value": "Fool",
+      "edition": "Foil",
+      "searchAntes": [1, 2, 3, 4],
+      "score": 1
+    }
+  ],
+  "mustNot": [
+    {
+      "type": "joker",
+      "value": "IceCream",
+      "searchAntes": [1, 2, 3, 4, 5, 6, 7, 8]
+    }
+  ]
+}

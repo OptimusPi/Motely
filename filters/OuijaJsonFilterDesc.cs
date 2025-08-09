@@ -33,7 +33,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         Action<List<OuijaConfig.FilterItem>> collectAntes = (items) =>
         {
             foreach (var item in items)
-                foreach (var ante in item.SearchAntes)
+                foreach (var ante in item.EffectiveAntes)
                     if (ante <= (config.Filter?.MaxAnte ?? 8))
                         allAntes.Add(ante);
         };
@@ -270,7 +270,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             VectorMask result = orAcrossAntes ? VectorMask.AllBitsClear : VectorMask.AllBitsSet;
             var maxSearchAnte = _config.Filter?.MaxAnte ?? 8; // Capture for comparison
             
-            foreach (var ante in clause.SearchAntes)
+            foreach (var ante in clause.EffectiveAntes)
             {
                 if (ante > maxSearchAnte) continue;
                 
@@ -348,9 +348,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int maxSearchAnte)
         {
             int totalCount = 0;
-            DebugLogger.Log($"[CountOccurrences] Counting occurrences in antes: {string.Join(",", clause.SearchAntes)} (max: {maxSearchAnte})");
+            DebugLogger.Log($"[CountOccurrences] Counting occurrences in antes: {string.Join(",", clause.EffectiveAntes)} (max: {maxSearchAnte})");
             
-            foreach (var ante in clause.SearchAntes)
+            foreach (var ante in clause.EffectiveAntes)
             {
                 if (ante > maxSearchAnte) continue;
                 
@@ -425,10 +425,10 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static bool CheckSingleClause(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int maxSearchAnte)
         {
             // PERFORMANCE: Early exit if no antes to check
-            if (clause.SearchAntes == null || clause.SearchAntes.Length == 0)
+            if (clause.EffectiveAntes == null || clause.EffectiveAntes.Length == 0)
                 return false;
                 
-            DebugLogger.Log($"[CheckSingleClause] Checking antes: {string.Join(",", clause.SearchAntes)} (max: {maxSearchAnte})");
+            DebugLogger.Log($"[CheckSingleClause] Checking antes: {string.Join(",", clause.EffectiveAntes)} (max: {maxSearchAnte})");
             
             // PERFORMANCE: Only create streams if we actually need them
             bool needsShopStream = clause.ItemTypeEnum == MotelyFilterItemType.Joker ||
@@ -442,7 +442,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                    clause.ItemTypeEnum == MotelyFilterItemType.PlanetCard ||
                                    clause.ItemTypeEnum == MotelyFilterItemType.SpectralCard;
             
-            foreach (var ante in clause.SearchAntes)
+            foreach (var ante in clause.EffectiveAntes)
             {
                 if (ante > maxSearchAnte) 
                 {
@@ -1283,7 +1283,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             VectorMask resultMask = VectorMask.AllBitsClear;
             
             // Check each ante for the joker/edition
-            foreach (var ante in clause.SearchAntes)
+            foreach (var ante in clause.EffectiveAntes)
             {
                 // Create joker stream for this ante
                 var jokerStream = ctx.CreateShopJokerStream(ante, MotelyJokerStreamFlags.Default, isCached: true);

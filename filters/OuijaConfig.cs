@@ -1,35 +1,14 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 
 namespace Motely.Filters;
 
-// REMOVED FilterItemType enum - use Motely enums directly!
-
 /// <summary>
-/// Valid item sources for filtering
-/// </summary>
-public static class ValidItemSources
-{
-    public const string Shop = "shop";   // Items in the shop
-    public const string Packs = "packs"; // Items from booster packs
-    public const string Tags = "tags";   // Items from skip tags
-    
-    public static readonly HashSet<string> AllSources = new()
-    {
-        Shop, Packs, Tags
-    };
-    
-    public static bool IsValid(string source) => 
-        AllSources.Contains(source?.ToLowerInvariant() ?? "");
-}
-
-/// <summary>
-/// MongoDB compound Operator-style Ouija configuration
+/// MongoDB compound Operator-style Ouija configuration - Clean JSON deserialization
 /// </summary>
 public class OuijaConfig
 {
@@ -45,7 +24,7 @@ public class OuijaConfig
     // Optional deck/stake settings
     public string Deck { get; set; } = "Red";
     public string Stake { get; set; } = "White";
-
+    
     // Support nested filter format
     public FilterSettings? Filter { get; set; }
     
@@ -56,67 +35,16 @@ public class OuijaConfig
         public int? MaxAnte { get; set; }
     }
     
-    public class SourcesConfig
-    {
-        public int[]? ShopSlots { get; set; }
-        public int[]? PackSlots { get; set; }
-        public bool? Tags { get; set; }
-        public bool? RequireMega { get; set; }
-        
-        // Legacy support - if sources is just an array of strings
-        public static implicit operator SourcesConfig?(List<string>? legacy)
-        {
-            if (legacy == null) return null;
-            
-            var config = new SourcesConfig();
-            var lowerSources = legacy.Select(s => s.ToLowerInvariant()).ToList();
-            
-            // Convert legacy format
-            if (lowerSources.Contains("shop"))
-            {
-                // Shop means all shop slots
-                config.ShopSlots = Enumerable.Range(0, 6).ToArray();
-            }
-            
-            if (lowerSources.Contains("packs"))
-            {
-                // Packs means all pack slots
-                config.PackSlots = Enumerable.Range(0, 6).ToArray();
-            }
-            
-            if (lowerSources.Contains("tags"))
-            {
-                config.Tags = true;
-            }
-            
-            return config;
-        }
-    }
-    
     public class FilterItem
     {
-        // Support both formats
         public string Type { get; set; } = "";
-        public string Value { get; set; } = "";
+        public string? Value { get; set; }
         
-        // Nested item format
-        public ItemInfo? Item { get; set; }
+        [JsonPropertyName("searchAntes")]
+        public int[]? SearchAntes { get; set; }
         
-        // Support both SearchAntes and antes
-        private int[]? _searchAntes;
-        private int[]? _antes;
-        
-        public int[] SearchAntes 
-        { 
-            get => _searchAntes ?? _antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-            set => _searchAntes = value;
-        }
-        
-        public int[]? Antes 
-        { 
-            get => _antes ?? _searchAntes;
-            set => _antes = value;
-        }
+        [JsonPropertyName("antes")]
+        public int[]? Antes { get; set; }
         
         public int Score { get; set; } = 1;
         public string? Edition { get; set; }
@@ -129,359 +57,106 @@ public class OuijaConfig
         public string? Enhancement { get; set; }
         
         // Sources configuration
-        [JsonConverter(typeof(SourcesConverter))]
         public SourcesConfig? Sources { get; set; }
         
-        // === PARSED ENUM VALUES FOR PERFORMANCE ===
-        // These are populated during Initialize() to avoid string comparisons in hot path
+        // Get effective antes (searchAntes takes precedence over antes)
+        [JsonIgnore]
+        public int[] EffectiveAntes => SearchAntes ?? Antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        
+        // === COMPUTED ENUM PROPERTIES FOR COMPATIBILITY ===
+        // These parse on-demand from the string values
         
         [JsonIgnore]
-        public MotelyJoker? JokerEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyTarotCard? TarotEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelySpectralCard? SpectralEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyPlanetCard? PlanetEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyTag? TagEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyFilterItemType? ItemTypeEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyVoucher? VoucherEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyItemEdition? EditionEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyPlayingCardRank? RankEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyPlayingCardSuit? SuitEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyItemEnhancement? EnhancementEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyItemSeal? SealEnum { get; set; }
-        
-        [JsonIgnore]
-        public List<MotelyJokerSticker>? StickerEnums { get; set; }
-        
-        [JsonIgnore]
-        public MotelyTagType? TagTypeEnum { get; set; }
-        
-        [JsonIgnore]
-        public MotelyBossBlind? BossEnum { get; set; }
-        
-        // Initialize from nested format if present
-        public void Initialize()
+        public MotelyFilterItemType? ItemTypeEnum => Type?.ToLowerInvariant() switch
         {
-            if (Item != null)
+            "joker" => MotelyFilterItemType.Joker,
+            "souljoker" => MotelyFilterItemType.SoulJoker,
+            "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
+            "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
+            "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
+            "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
+            "bigblindtag" => MotelyFilterItemType.BigBlindTag,
+            "voucher" => MotelyFilterItemType.Voucher,
+            "playingcard" => MotelyFilterItemType.PlayingCard,
+            "boss" or "bossblind" => MotelyFilterItemType.Boss,
+            _ => null
+        };
+        
+        [JsonIgnore]
+        public MotelyJoker? JokerEnum => 
+            !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyJoker>(Value, true, out var joker) ? joker : null;
+        
+        [JsonIgnore]
+        public MotelyTarotCard? TarotEnum => 
+            !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot) ? tarot : null;
+        
+        [JsonIgnore]
+        public MotelySpectralCard? SpectralEnum => 
+            !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral) ? spectral : null;
+        
+        [JsonIgnore]
+        public MotelyPlanetCard? PlanetEnum => 
+            !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet) ? planet : null;
+        
+        [JsonIgnore]
+        public MotelyTag? TagEnum => 
+            !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTag>(Value, true, out var tag) ? tag : null;
+        
+        [JsonIgnore]
+        public MotelyVoucher? VoucherEnum => 
+            !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyVoucher>(Value, true, out var voucher) ? voucher : null;
+        
+        [JsonIgnore]
+        public MotelyBossBlind? BossEnum => 
+            !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyBossBlind>(Value, true, out var boss) ? boss : null;
+        
+        [JsonIgnore]
+        public MotelyItemEdition? EditionEnum => 
+            !string.IsNullOrEmpty(Edition) && Enum.TryParse<MotelyItemEdition>(Edition, true, out var ed) ? ed : null;
+        
+        [JsonIgnore]
+        public MotelyPlayingCardRank? RankEnum => 
+            !string.IsNullOrEmpty(Rank) && Enum.TryParse<MotelyPlayingCardRank>(NormalizeRank(Rank), true, out var rank) ? rank : null;
+        
+        [JsonIgnore]
+        public MotelyPlayingCardSuit? SuitEnum => 
+            !string.IsNullOrEmpty(Suit) && Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit) ? suit : null;
+        
+        [JsonIgnore]
+        public MotelyItemEnhancement? EnhancementEnum => 
+            !string.IsNullOrEmpty(Enhancement) && Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enh) ? enh : null;
+        
+        [JsonIgnore]
+        public MotelyItemSeal? SealEnum => 
+            !string.IsNullOrEmpty(Seal) && Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal) ? seal : null;
+        
+        [JsonIgnore]
+        public List<MotelyJokerSticker>? StickerEnums
+        {
+            get
             {
-                Type = Item.Type ?? "";
-                
-                // Handle different item types
-                if (Type.ToLower() == "playingcard")
+                if (Stickers == null || Stickers.Count == 0) return null;
+                var result = new List<MotelyJokerSticker>();
+                foreach (var sticker in Stickers)
                 {
-                    // For playing cards, use rank/suit from nested item
-                    if (!string.IsNullOrEmpty(Item.Rank))
-                        Rank = Item.Rank;
-                    if (!string.IsNullOrEmpty(Item.Value)) // Support "value" as alternative to "rank"
-                        Rank = Item.Value;
-                    if (!string.IsNullOrEmpty(Item.Suit))
-                        Suit = Item.Suit;
-                    if (!string.IsNullOrEmpty(Item.Enhancement))
-                        Enhancement = Item.Enhancement;
-                    if (!string.IsNullOrEmpty(Item.Seal))
-                        Seal = Item.Seal;
+                    if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var s))
+                        result.Add(s);
                 }
-                else
-                {
-                    // For other types (jokers, etc), use name
-                    Value = Item.Name ?? Item.Value ?? "";
-                }
-                
-                if (!string.IsNullOrEmpty(Item.Edition))
-                    Edition = Item.Edition;
-                if (Item.Stickers != null)
-                    Stickers = Item.Stickers;
+                return result.Count > 0 ? result : null;
             }
-            
-            if (Antes != null)
-            {
-                SearchAntes = Antes;
-            }
-            
-            // Parse the item type early to determine default sources
-            var typeLower = Type.ToLower();
-            ItemTypeEnum = typeLower switch
-            {
-                "joker" => MotelyFilterItemType.Joker,
-                "souljoker" => MotelyFilterItemType.SoulJoker,
-                "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
-                "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
-                "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
-                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
-                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
-                "voucher" => MotelyFilterItemType.Voucher,
-                "playingcard" => MotelyFilterItemType.PlayingCard,
-                "boss" or "bossblind" => MotelyFilterItemType.Boss,
-                _ => null
-            };
-            
-            // Handle sources format
-            if (Sources != null)
-            {
-                // Validate the slot indices
-                if (Sources.ShopSlots != null)
-                {
-                    foreach (var slot in Sources.ShopSlots)
-                    {
-                        if (slot < 0 || slot > 999)
-                            throw new ArgumentException($"Invalid shop slot {slot}. Valid slots are 1-999.");
-                    }
-                }
-                
-                if (Sources.PackSlots != null)
-                {
-                    foreach (var slot in Sources.PackSlots)
-                    {
-                        if (slot < 0 || slot > 5)
-                            throw new ArgumentException($"Invalid pack slot {slot}. Valid slots are 0-5.");
-                    }
-                }
-            }
-            else
-            {
-                // Default sources if not specified - includes all valid sources for the item type
-                Sources = new SourcesConfig
-                {
-                    ShopSlots = new[] { 0, 1, 2, 3, 4, 5 }, // All shop slots (ante 1 has 4, others have 6)
-                    PackSlots = new[] { 0, 1, 2, 3, 4, 5 }, // All pack slots (ante 1 has 2, others have 6)
-                    Tags = true
-                };
-                
-                // Legendary jokers (SoulJokers) can't appear in shops
-                if (ItemTypeEnum == MotelyFilterItemType.SoulJoker)
-                {
-                    Sources.ShopSlots = new int[] { };
-                }
-                
-                // Boss blinds have their own generation, not from shops/packs/tags
-                if (ItemTypeEnum == MotelyFilterItemType.Boss)
-                {
-                    Sources = new SourcesConfig
-                    {
-                        ShopSlots = new int[] { },
-                        PackSlots = new int[] { },
-                        Tags = false
-                    };
-                }
-            }
-            
-            // === PARSE REMAINING ENUMS FOR PERFORMANCE ===
-            ParseEnums();
         }
         
-        private void ParseEnums()
+        [JsonIgnore]
+        public MotelyTagType? TagTypeEnum => Type?.ToLowerInvariant() switch
         {
-            var typeLower = Type.ToLower();
-            
-            // ItemTypeEnum already parsed in Initialize()
-            
-            // Parse based on type - directly to Motely enums
-            switch (typeLower)
-            {
-                case "joker":
-                case "souljoker":
-                    if (!string.IsNullOrEmpty(Value) && 
-                        !Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
-                        !Value.Equals("*", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!Enum.TryParse<MotelyJoker>(Value, true, out var joker))
-                        {
-                            throw new ArgumentException($"Invalid joker value: '{Value}'. Examples of valid values: Baron, Blueprint, Brainstorm, Burglar, Hacker, IceCream, Mime, Perkeo, etc. Use the exact name from the game without spaces.");
-                        }
-                        JokerEnum = joker;
-                    }
-                    break;
-                    
-                case "tarot":
-                case "tarotcard":
-                    if (!string.IsNullOrEmpty(Value))
-                    {
-                        if (!Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
-                        {
-                            throw new ArgumentException($"Invalid tarot value: '{Value}'. Valid values: Fool, Magician, HighPriestess, Empress, Emperor, Hierophant, Lovers, Chariot, Justice, Hermit, WheelOfFortune, Strength, HangedMan, Death, Temperance, Devil, Tower, Star, Moon, Sun, Judgement, World.");
-                        }
-                        TarotEnum = tarot;
-                    }
-                    break;
-                    
-                case "spectral":
-                case "spectralcard":
-                    if (!string.IsNullOrEmpty(Value) && 
-                        !Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
-                        !Value.Equals("*", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var spectralValue = Value.Trim();
-                        if (!Enum.TryParse<MotelySpectralCard>(spectralValue, true, out var spectral))
-                        {
-                            throw new ArgumentException($"Invalid spectral value: '{Value}'. Valid values (case-insensitive, no aliases): Familiar, Grim, Incantation, Talisman, Aura, Wraith, Sigil, Ouija, Ectoplasm, Immolate, Ankh, DejaVu, Hex, Trance, Medium, Cryptid, Soul, BlackHole.");
-                        }
-                        SpectralEnum = spectral;
-                    }
-                    break;
-                    
-                case "planet":
-                case "planetcard":
-                    if (!string.IsNullOrEmpty(Value))
-                    {
-                        if (!Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
-                        {
-                            throw new ArgumentException($"Invalid planet value: '{Value}'. Valid values: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, PlanetX, Ceres, Eris.");
-                        }
-                        PlanetEnum = planet;
-                    }
-                    break;
-                    
-                case "smallblindtag":
-                case "bigblindtag":
-                    if (!string.IsNullOrEmpty(Value))
-                    {
-                        if (!Enum.TryParse<MotelyTag>(Value, true, out var tag))
-                        {
-                            throw new ArgumentException($"Invalid tag value: '{Value}'. Examples: UncommonTag, RareTag, NegativeTag, FoilTag, HolographicTag, PolychromeTag, InvestmentTag, VoucherTag, BossTag, StandardTag, CharmTag, MeteorTag, BuffoonTag, HangingTag, BullTag, DoubleTag, CouponTag, JugglerTag, TopUpTag, SpeedTag, OrbitalTag, EconomyTag, etc.");
-                        }
-                        TagEnum = tag;
-                    }
-                    
-                    // Set the tag type enum based on the type string
-                    TagTypeEnum = typeLower switch
-                    {
-                        "smallblindtag" => MotelyTagType.SmallBlind,
-                        "bigblindtag" => MotelyTagType.BigBlind,
-                        _ => MotelyTagType.Any
-                    };
-                    break;
-                    
-                case "voucher":
-                    if (!string.IsNullOrEmpty(Value))
-                    {
-                        if (!Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
-                        {
-                            throw new ArgumentException($"Invalid voucher value: '{Value}'. Examples: OverstockPlus, Clearance, Hone, Reroll, CrystalBall, Telescope, Observatory, GrabBag, Wasteful, Recyclomancy, SeedMoney, MoneyTree, Director, HitTheRoad, ToTheMoon, etc.");
-                        }
-                        VoucherEnum = voucher;
-                    }
-                    break;
-                    
-                case "playingcard":
-                    // Parse rank with normalization
-                    if (!string.IsNullOrEmpty(Rank))
-                    {
-                        var normalizedRank = NormalizeRank(Rank);
-                        if (!Enum.TryParse<MotelyPlayingCardRank>(normalizedRank, true, out var rank))
-                        {
-                            throw new ArgumentException($"Invalid playing card rank: '{Rank}'.");
-                        }
-                        RankEnum = rank;
-                    }
-                    
-                    // Parse suit
-                    if (!string.IsNullOrEmpty(Suit))
-                    {
-                        if (!Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit))
-                        {
-                            throw new ArgumentException($"Invalid playing card suit: '{Suit}'. Must be Hearts, Diamonds, Clubs, or Spades.");
-                        }
-                        SuitEnum = suit;
-                    }
-                    
-                    // Parse enhancement
-                    if (!string.IsNullOrEmpty(Enhancement) && 
-                        !Enhancement.Equals("any", StringComparison.OrdinalIgnoreCase) && 
-                        !Enhancement.Equals("*", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enhancement))
-                        {
-                            throw new ArgumentException($"Invalid enhancement: '{Enhancement}'. Valid values: Base (or None), Bonus, Mult, Wild, Glass, Steel, Stone, Gold, Lucky.");
-                        }
-                        EnhancementEnum = enhancement;
-                    }
-                    
-                    // Parse seal
-                    if (!string.IsNullOrEmpty(Seal) && 
-                        !Seal.Equals("any", StringComparison.OrdinalIgnoreCase) && 
-                        !Seal.Equals("*", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal))
-                        {
-                            throw new ArgumentException($"Invalid seal: '{Seal}'. Valid values: Base (or None), Gold, Red, Blue, Purple.");
-                        }
-                        SealEnum = seal;
-                    }
-                    break;
-                    
-                case "boss":
-                case "bossblind":
-                    if (!string.IsNullOrEmpty(Value))
-                    {
-                        if (!Enum.TryParse<MotelyBossBlind>(Value, true, out var boss))
-                        {
-                            throw new ArgumentException($"Invalid boss blind value: '{Value}'. Valid values: TheArm, TheClub, TheEye, AmberAcorn, CeruleanBell, CrimsonHeart, VerdantLeaf, VioletVessel, TheFish, TheFlint, TheGoad, TheHead, TheHook, TheHouse, TheManacle, TheMark, TheMouth, TheNeedle, TheOx, ThePillar, ThePlant, ThePsychic, TheSerpent, TheTooth, TheWall, TheWater, TheWheel, TheWindow.");
-                        }
-                        BossEnum = boss;
-                    }
-                    break;
-                    
-                default:
-                    throw new ArgumentException($"Invalid item type: '{Type}'. Valid types are: joker, souljoker, tarot, tarotcard, spectral, spectralcard, planet, planetcard, smallblindtag, bigblindtag, voucher, playingcard, boss, bossblind.");
-            }
-            
-            // Parse edition (common to all item types)
-            if (!string.IsNullOrEmpty(Edition) && 
-                !Edition.Equals("any", StringComparison.OrdinalIgnoreCase) && 
-                !Edition.Equals("*", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
-                {
-                    throw new ArgumentException($"Invalid edition: '{Edition}'. Valid values: Base (or None), Foil, Holographic, Polychrome, Negative.");
-                }
-                EditionEnum = edition;
-            }
-            
-            // Parse stickers (only applies to jokers)
-            if (typeLower == "joker" || typeLower == "souljoker")
-            {
-                if (Stickers != null && Stickers.Count > 0)
-                {
-                    StickerEnums = new List<MotelyJokerSticker>();
-                    foreach (var sticker in Stickers)
-                    {
-                        if (!string.IsNullOrEmpty(sticker))
-                        {
-                            if (!Enum.TryParse<MotelyJokerSticker>(sticker, true, out var stickerEnum))
-                            {
-                                throw new ArgumentException($"Invalid sticker: '{sticker}'. Must be one of: None, Eternal, Perishable, Rental");
-                            }
-                            StickerEnums.Add(stickerEnum);
-                        }
-                    }
-                }
-            }
-        }
+            "smallblindtag" => MotelyTagType.SmallBlind,
+            "bigblindtag" => MotelyTagType.BigBlind,
+            _ => MotelyTagType.Any
+        };
         
         private static string NormalizeRank(string rank)
         {
-            return rank?.ToLower() switch
+            return rank?.ToLowerInvariant() switch
             {
                 "2" or "two" => "Two",
                 "3" or "three" => "Three",
@@ -496,28 +171,28 @@ public class OuijaConfig
                 "q" or "queen" => "Queen",
                 "k" or "king" => "King",
                 "a" or "ace" => "Ace",
-                _ => throw new ArgumentException($"Invalid rank: '{rank}'. Valid ranks are: 2-10, J, Q, K, A (or spelled out: Two-Ten, Jack, Queen, King, Ace)")
+                _ => rank ?? ""
             };
         }
     }
     
-    public class ItemInfo
+    public class SourcesConfig
     {
-        public string? Type { get; set; }
-        public string? Name { get; set; }
-        public string? Edition { get; set; }
-        public List<string>? Stickers { get; set; }
+        [JsonPropertyName("shopSlots")]
+        public int[]? ShopSlots { get; set; }
         
-        // Playing card specific
-        public string? Rank { get; set; }
-        public string? Suit { get; set; }
-        public string? Enhancement { get; set; }
-        public string? Seal { get; set; }
-        public string? Value { get; set; } // Alternative to name for backward compatibility
+        [JsonPropertyName("packSlots")]
+        public int[]? PackSlots { get; set; }
+        
+        [JsonPropertyName("tags")]
+        public bool? Tags { get; set; }
+        
+        [JsonPropertyName("requireMega")]
+        public bool? RequireMega { get; set; }
     }
     
     /// <summary>
-    /// Load from JSON - MongoDB-style must/should/mustNot format
+    /// Load from JSON file
     /// </summary>
     public static OuijaConfig LoadFromJson(string jsonPath)
     {
@@ -526,27 +201,25 @@ public class OuijaConfig
 
         var json = File.ReadAllText(jsonPath);
         
-        // Validate JSON structure first
-        StrictJsonValidator.ValidateJson(json, jsonPath);
-        
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = false
+            AllowTrailingCommas = true,
+            Converters = { new SourcesConfigConverter() }
         };
 
         var config = JsonSerializer.Deserialize<OuijaConfig>(json, options) 
             ?? throw new InvalidOperationException("Failed to parse config");
             
-        config.Validate();
+        config.PostProcess();
         return config;
     }
     
     /// <summary>
-    /// Validate the configuration
+    /// Post-process after deserialization
     /// </summary>
-    public void Validate()
+    private void PostProcess()
     {
         // Apply nested filter settings if present
         if (Filter != null)
@@ -557,34 +230,43 @@ public class OuijaConfig
                 Stake = Filter.Stake;
         }
 
-        // Initialize and validate all filter items
+        // Process all filter items
         foreach (var item in Must.Concat(Should).Concat(MustNot))
         {
-            // Initialize from nested format
-            item.Initialize();
-
-            // Ensure all SearchAntes arrays are within bounds
-            item.SearchAntes = item.SearchAntes.ToArray();
-            if (item.SearchAntes.Length == 0)
-                item.SearchAntes = new[] { 1 };
-                
-            // Validate game logic constraints
-            if (item.JokerEnum.HasValue && item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+            // Normalize type
+            item.Type = item.Type.ToLowerInvariant();
+            
+            // Set default sources if not specified
+            if (item.Sources == null)
             {
-                var legendaryJokers = new[] { 
-                    MotelyJoker.Perkeo, 
-                    MotelyJoker.Canio, 
-                    MotelyJoker.Triboulet, 
-                    MotelyJoker.Yorick, 
-                    MotelyJoker.Chicot 
-                };
-                
-                if (legendaryJokers.Contains(item.JokerEnum.Value))
-                {
-                    throw new InvalidOperationException($"Invalid config: {item.JokerEnum.Value} is a legendary joker and cannot appear in shops. Remove shop from sources or use a different joker.");
-                }
+                item.Sources = GetDefaultSources(item.Type);
             }
         }
+    }
+    
+    private static SourcesConfig GetDefaultSources(string itemType)
+    {
+        return itemType switch
+        {
+            "souljoker" => new SourcesConfig
+            {
+                ShopSlots = Array.Empty<int>(), // Legendary jokers can't appear in shops
+                PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                Tags = true
+            },
+            "boss" or "bossblind" => new SourcesConfig
+            {
+                ShopSlots = Array.Empty<int>(),
+                PackSlots = Array.Empty<int>(),
+                Tags = false
+            },
+            _ => new SourcesConfig
+            {
+                ShopSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                Tags = true
+            }
+        };
     }
     
     /// <summary>
@@ -595,14 +277,17 @@ public class OuijaConfig
         var options = new JsonSerializerOptions
         {
             WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
         return JsonSerializer.Serialize(this, options);
     }
 }
 
-// Custom JSON converter to handle both legacy array format and new object format for sources
-public class SourcesConverter : JsonConverter<OuijaConfig.SourcesConfig?>
+/// <summary>
+/// Custom converter to handle both legacy array format and new object format for sources
+/// </summary>
+public class SourcesConfigConverter : JsonConverter<OuijaConfig.SourcesConfig?>
 {
     public override OuijaConfig.SourcesConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
@@ -611,14 +296,38 @@ public class SourcesConverter : JsonConverter<OuijaConfig.SourcesConfig?>
             
         if (reader.TokenType == JsonTokenType.StartArray)
         {
-            // Legacy format: array of strings
+            // Legacy format: array of strings like ["shop", "packs", "tags"]
+            var sources = new OuijaConfig.SourcesConfig();
             var legacyList = JsonSerializer.Deserialize<List<string>>(ref reader, options);
-            return legacyList; // Use implicit conversion
+            
+            if (legacyList != null)
+            {
+                foreach (var source in legacyList.Select(s => s.ToLowerInvariant()))
+                {
+                    switch (source)
+                    {
+                        case "shop":
+                            sources.ShopSlots = new[] { 0, 1, 2, 3, 4, 5 };
+                            break;
+                        case "packs":
+                            sources.PackSlots = new[] { 0, 1, 2, 3, 4, 5 };
+                            break;
+                        case "tags":
+                            sources.Tags = true;
+                            break;
+                    }
+                }
+            }
+            
+            return sources;
         }
         else if (reader.TokenType == JsonTokenType.StartObject)
         {
-            // New format: object with shopSlots, packSlots, tags
-            return JsonSerializer.Deserialize<OuijaConfig.SourcesConfig>(ref reader, options);
+            // New format: object with specific slots
+            // Create new options without this converter to avoid recursion
+            var newOptions = new JsonSerializerOptions(options);
+            newOptions.Converters.Remove(this);
+            return JsonSerializer.Deserialize<OuijaConfig.SourcesConfig>(ref reader, newOptions);
         }
         else
         {
