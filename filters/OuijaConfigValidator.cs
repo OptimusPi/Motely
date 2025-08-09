@@ -211,13 +211,13 @@ namespace Motely.Filters
                 }
                 
                 // Validate antes
-                if (item.SearchAntes == null || item.SearchAntes.Count() == 0)
+                if (item.Antes == null || item.Antes.Count() == 0)
                 {
-                    errors.Add($"{prefix}: Missing or empty 'searchAntes' array");
+                    errors.Add($"{prefix}: Missing or empty 'Antes' array");
                 }
                 else
                 {
-                    foreach (var ante in item.SearchAntes)
+                    foreach (var ante in item.Antes)
                     {
                         if (ante < 0 || ante > 39)
                         {
