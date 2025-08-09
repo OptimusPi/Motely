@@ -19,7 +19,7 @@ namespace Motely
 
             var configOption = app.Option<string>(
                 "-c|--config <CONFIG>",
-                "Config file (looks in JsonItemFilters/ directory, add .ouija.json if not present)",
+                "Config file (looks in JsonItemFilters/ directory, add .json if not present)",
                 CommandOptionType.SingleValue);
             configOption.DefaultValue = "standard";
 
@@ -430,7 +430,7 @@ namespace Motely
             }
 
             // Always look in JsonItemFilters for configs
-            string fileName = configPath.EndsWith(".ouija.json") ? configPath : configPath + ".ouija.json";
+            string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
             string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
             if (File.Exists(jsonItemFiltersPath))
             {
