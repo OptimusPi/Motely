@@ -331,9 +331,10 @@ public class OuijaConfig
                         !Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
                         !Value.Equals("*", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (!Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral))
+                        var spectralValue = Value.Trim();
+                        if (!Enum.TryParse<MotelySpectralCard>(spectralValue, true, out var spectral))
                         {
-                            throw new ArgumentException($"Invalid spectral value: '{Value}'. Valid values: Familiar, Grim, Incantation, Talisman, Aura, Wraith, Sigil, Ouija, Ectoplasm, Immolate, Black, Ankh, Deja, Hex, Trance, Medium, Cryptid, Soul.");
+                            throw new ArgumentException($"Invalid spectral value: '{Value}'. Valid values (case-insensitive, no aliases): Familiar, Grim, Incantation, Talisman, Aura, Wraith, Sigil, Ouija, Ectoplasm, Immolate, Ankh, DejaVu, Hex, Trance, Medium, Cryptid, Soul, BlackHole.");
                         }
                         SpectralEnum = spectral;
                     }
@@ -345,7 +346,7 @@ public class OuijaConfig
                     {
                         if (!Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
                         {
-                            throw new ArgumentException($"Invalid planet value: '{Value}'. Valid values: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, Planet_X, Ceres, Eris.");
+                            throw new ArgumentException($"Invalid planet value: '{Value}'. Valid values: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, PlanetX, Ceres, Eris.");
                         }
                         PlanetEnum = planet;
                     }
