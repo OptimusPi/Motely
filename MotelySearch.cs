@@ -384,14 +384,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         if (elapsedMS > 3000)
         {
             seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-            if (isUnlimitedSearch)
-            {
-                Console.WriteLine($"⏱️ Batches: {_completedBatchCount} ({Math.Round(seedsPerMS)} seeds/ms)");
-            }
-            else
-            {
-                Console.WriteLine($"⏱️ {Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
-            }
+            Console.WriteLine($"⏱️ {Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
         }
         else if (elapsedMS > 0)
         {
