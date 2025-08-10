@@ -12,6 +12,7 @@ public struct VectorMask(uint mask)
 
     public static readonly VectorMask AllBitsSet = new(0xFF);
     public static readonly VectorMask NoBitsSet = new(0);
+    public static readonly VectorMask AllBitsClear = new(0); // Alias for compatibility
 
     public uint Value = mask;
 

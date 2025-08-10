@@ -33,6 +33,45 @@ public enum MotelyShopStreamFlags
     Default = 0
 }
 
+/// <summary>
+/// Complete shop state for an ante
+/// </summary>
+public struct ShopState
+{
+    public const int ShopSlots = 6;
+    public const int ShopSlotsAnteOne = 4; 
+
+    [InlineArray(ShopSlots)]
+    public struct ShopItems
+    {
+        public ShopItem Item;
+    }
+    
+    public ShopItems Items;
+    
+    public struct ShopItem
+    {
+        public ShopItemType Type;
+        public MotelyItem Item;
+        
+        // Type-specific data
+        public MotelyJoker Joker;
+        public MotelyJokerRarity JokerRarity;
+        public MotelyPlanetCard Planet;
+        public MotelyTarotCard Tarot;
+        public MotelyItemEdition Edition;
+        // TODO: Stickers
+        
+        public enum ShopItemType : byte
+        {
+            Empty,
+            Joker,
+            Planet,
+            Tarot
+        }
+    }
+}
+
 unsafe ref partial struct MotelySingleSearchContext
 {
 
@@ -46,7 +85,7 @@ unsafe ref partial struct MotelySingleSearchContext
         MotelyJokerStreamFlags jokerFlags = MotelyJokerStreamFlags.Default,
         bool isCached = false)
     {
-        return CreateShopItemStream(ante, Deck.GetDefaultRunState(), flags, jokerFlags);
+        return CreateShopItemStream(ante, Deck.GetDefaultRunState(), flags, jokerFlags, isCached);
     }
 
 #if !DEBUG
@@ -116,6 +155,7 @@ unsafe ref partial struct MotelySingleSearchContext
     public MotelyItem GetNextShopItem(ref MotelySingleShopItemStream stream)
     {
         double itemTypePoll = GetNextRandom(ref stream.ItemTypeStream) * stream.TotalRate;
+        DebugLogger.Log($"[Shop] Item type poll: {itemTypePoll:F2}, TotalRate: {stream.TotalRate}, SpectralRate: {stream.SpectralRate}");
 
         if (itemTypePoll < ShopJokerRate)
         {
@@ -157,7 +197,9 @@ unsafe ref partial struct MotelySingleSearchContext
         if (!stream.DoesProvideSpectrals)
             return new(MotelyItemType.SpectralExcludedByStream);
 
-        return GetNextSpectral(ref stream.SpectralStream);
+        var spectral = GetNextSpectral(ref stream.SpectralStream);
+        DebugLogger.Log($"[Shop] Generated spectral card: {spectral.Type}");
+        return spectral;
 
     }
 }

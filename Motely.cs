@@ -1,13 +1,11 @@
 namespace Motely;
 
-public class Motely
+public static class Motely
 {
     public const int MaxCachedPseudoHashKeyLength = 32;
 
     public static readonly char[] SeedDigits = [.. "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
     public const int MaxSeedLength = 8;
-
-    public const int MaxVectorWidth = 8; // Equals Vector512<double>.Count (but a const)
 
     public const int ItemTypeMask = 0xFFFF;
 

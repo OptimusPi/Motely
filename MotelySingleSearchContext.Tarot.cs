@@ -27,7 +27,7 @@ ref partial struct MotelySingleSearchContext
                 CreateResampleStream(MotelyPrngKeys.Tarot + source + ante, isCached) :
                 MotelySingleResampleStream.Invalid,
             soulable ?
-                CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
+                CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
                 MotelySinglePrngStream.Invalid
         );
     }
@@ -73,6 +73,19 @@ ref partial struct MotelySingleSearchContext
         for (int i = 0; i < cardCount; i++)
             pack.Append(GetNextTarot(ref tarotStream, pack));
 
+        return pack;
+    }
+    
+    // Alias for compatibility with OuijaJsonFilterDesc
+    public MotelySingleItemSet GetArcanaPackContents(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size)
+        => GetNextArcanaPackContents(ref tarotStream, size);
+    
+    public MotelySingleItemSet GetArcanaPackContents(ref MotelySingleTarotStream tarotStream, int size)
+    {
+        Debug.Assert(size <= MotelySingleItemSet.MaxLength);
+        MotelySingleItemSet pack = new();
+        for (int i = 0; i < size; i++)
+            pack.Append(GetNextTarot(ref tarotStream, pack));
         return pack;
     }
 
