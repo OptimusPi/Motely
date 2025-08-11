@@ -23,13 +23,13 @@ namespace Motely
                 CommandOptionType.SingleValue);
             configOption.DefaultValue = "standard";
 
-            var startBatchOption = app.Option<int>(
+            var startBatchOption = app.Option<ulong>(
                 "--startBatch <INDEX>",
                 "Starting batch index",
                 CommandOptionType.SingleValue);
             startBatchOption.DefaultValue = 0;
 
-            var endBatchOption = app.Option<int>(
+            var endBatchOption = app.Option<long>(
                 "--endBatch <INDEX>",
                 "Ending batch index (-1 for unlimited)",
                 CommandOptionType.SingleValue);
@@ -164,7 +164,7 @@ namespace Motely
             return app.Execute(args);
         }
 
-        public static void RunOuijaSearch(string configPath, int startBatch, int endBatch, int threads,
+        public static void RunOuijaSearch(string configPath, ulong startBatch, long endBatch, int threads,
             int batchSize, int cutoff, bool enableDebug, bool quiet, string? wordlist = null,
             string? keyword = null, bool nofancy = false, string? specificSeed = null)
         {
@@ -223,17 +223,18 @@ namespace Motely
                     Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
             }
 
-            if (!quiet)
-            {
-                Console.WriteLine($"🔍 Motely Ouija Search Starting");
-                Console.WriteLine($"   Config: {configPath}");
-                Console.WriteLine($"   Threads: {threads}");
-                Console.WriteLine($"   Batch Size: {batchSize} chars");
-                Console.WriteLine($"   Range: {startBatch} to {endBatch}");
-                if (enableDebug)
-                    Console.WriteLine($"   Debug: Enabled");
-                Console.WriteLine();
-            }
+                if (!quiet)
+                {
+                    Console.WriteLine($"🔍 Motely Ouija Search Starting");
+                    Console.WriteLine($"   Config: {configPath}");
+                    Console.WriteLine($"   Threads: {threads}");
+                    Console.WriteLine($"   Batch Size: {batchSize} chars");
+                    string endDisplay = endBatch < 0 ? "∞" : endBatch.ToString();
+                    Console.WriteLine($"   Range: {startBatch} to {endDisplay}");
+                    if (enableDebug)
+                        Console.WriteLine($"   Debug: Enabled");
+                    Console.WriteLine();
+                }
 
             try
             {
@@ -301,7 +302,7 @@ namespace Motely
                     searchSettings = searchSettings.WithStartBatchIndex(startBatch);
                 if (endBatch > 0)
                 {
-                    searchSettings = searchSettings.WithEndBatchIndex(endBatch);
+                    searchSettings = searchSettings.WithEndBatchIndex((ulong)endBatch);
                 }
                     
                 // Apply minimum score cutoff
@@ -384,29 +385,27 @@ namespace Motely
                 searchStopwatch.Stop();
                 
                 // Results are printed in real-time by OuijaJsonFilterDesc
-                var totalSearched = search.CompletedBatchCount;
+                ulong totalSearched = search.CompletedBatchCount;
                 var duration = searchStopwatch.Elapsed;
 
-                if (!quiet)
+                Console.WriteLine($"\n✅ Search completed");
+                if (seeds != null && seeds.Count > 0)
                 {
-                    Console.WriteLine($"\n✅ Search completed");
-                    if (seeds != null && seeds.Count > 0)
-                    {
-                        // For list search, it's the actual number of seeds
-                        Console.WriteLine($"   Total seeds searched: {totalSearched:N0}");
-                    }
-                    else
-                    {
-                        // For sequential search, calculate actual seeds
-                        long seedsPerBatch = (long)Math.Pow(35, batchSize);
-                        long totalSeedsSearched = totalSearched * seedsPerBatch;
-                        
-                        Console.WriteLine($"   Total batches processed: {totalSearched:N0}");
-                        Console.WriteLine($"   Seeds per batch: {seedsPerBatch:N0} (35^{batchSize})");
-                        Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
-                    }
-                    Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
+                    // For list search, it's the actual number of seeds
+                    Console.WriteLine($"   Total seeds searched: {totalSearched:N0}");
                 }
+                else
+                {
+                    // For sequential search, calculate actual seeds
+                    ulong seedsPerBatch = (ulong)Math.Pow(35, batchSize);
+                    ulong totalSeedsSearched = totalSearched * seedsPerBatch;
+                    
+                    Console.WriteLine($"   Total batches processed: {totalSearched:N0}");
+                    Console.WriteLine($"   Seeds per batch: {seedsPerBatch:N0} (35^{batchSize})");
+                    Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
+                }
+                Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
+                
             }
             catch (OperationCanceledException)
             {
