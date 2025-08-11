@@ -388,7 +388,7 @@ namespace Motely
                 ulong totalSearched = search.CompletedBatchCount;
                 var duration = searchStopwatch.Elapsed;
 
-                Console.WriteLine($"\n✅ Search completed");
+                Console.WriteLine($"\n✅ Search completed"); 
                 if (seeds != null && seeds.Count > 0)
                 {
                     // For list search, it's the actual number of seeds
