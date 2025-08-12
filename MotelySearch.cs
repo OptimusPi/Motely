@@ -103,6 +103,13 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
 
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
+    
+    /// <summary>
+    /// Controls whether found seeds are written to console output.
+    /// When false, seeds are only reported through the SeedFound event.
+    /// Default is true for CLI compatibility.
+    /// </summary>
+    public bool EnableConsoleOutput { get; set; } = true;
 
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
@@ -169,6 +176,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     public MotelySearchSettings<TBaseFilter> WithProgressCallback(IProgress<MotelyProgress> progressCallback)
     {
         ProgressCallback = progressCallback;
+        return this;
+    }
+    
+    public MotelySearchSettings<TBaseFilter> WithConsoleOutput(bool enableConsoleOutput)
+    {
+        EnableConsoleOutput = enableConsoleOutput;
         return this;
     }
 
@@ -340,8 +353,9 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Fire event if anyone is listening
         SeedFound?.Invoke(this, seedString);
         
-        // Also write to console if no event handlers (backward compatibility)
-        if (SeedFound == null)
+        // Write to console if enabled and no event handlers attached
+        // This maintains backward compatibility for CLI usage
+        if (_settings.EnableConsoleOutput && SeedFound == null)
         {
             Console.WriteLine(seedString);
         }

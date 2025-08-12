@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Diagnostics;
 
 namespace Motely.Filters
 {
@@ -40,8 +41,8 @@ namespace Motely.Filters
             public string Type { get; set; } = "";
             public string? Value { get; set; }
         
-        [JsonPropertyName("Antes")]
-        public int[]? Antes { get; set; }
+            [JsonPropertyName("Antes")]
+            public int[]? Antes { get; set; }
         
             public int Score { get; set; } = 1;
             public string? Edition { get; set; }
@@ -61,102 +62,319 @@ namespace Motely.Filters
         public int[] EffectiveAntes => Antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         
             // === COMPUTED ENUM PROPERTIES FOR COMPATIBILITY ===
-            // These parse on-demand from the string values
-        
+            // Cache parsed enum values to avoid string operations in hot path
+            
+            private MotelyFilterItemType? _cachedItemTypeEnum;
+            
             [JsonIgnore]
-            public MotelyFilterItemType? ItemTypeEnum => Type?.ToLowerInvariant() switch
+            public MotelyFilterItemType ItemTypeEnum
             {
-                // Strict canonical identifiers only; case-insensitive, no aliases
-                "joker" => MotelyFilterItemType.Joker,
-                "souljoker" => MotelyFilterItemType.SoulJoker,
-                "tarotcard" => MotelyFilterItemType.TarotCard,
-                "planetcard" => MotelyFilterItemType.PlanetCard,
-                "spectralcard" => MotelyFilterItemType.SpectralCard,
-                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
-                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
-                "voucher" => MotelyFilterItemType.Voucher,
-                "playingcard" => MotelyFilterItemType.PlayingCard,
-                "boss" => MotelyFilterItemType.Boss,
-                _ => null
-            };
+                get
+                {
+                    // Cache the parsed enum value to avoid string operations in hot path
+                    if (!_cachedItemTypeEnum.HasValue)
+                    {
+                        _cachedItemTypeEnum = Type?.ToLowerInvariant() switch
+                        {
+                            // Strict canonical identifiers only; case-insensitive, no aliases
+                            "joker" => MotelyFilterItemType.Joker,
+                            "souljoker" => MotelyFilterItemType.SoulJoker,
+                            "tarotcard" => MotelyFilterItemType.TarotCard,
+                            "planetcard" => MotelyFilterItemType.PlanetCard,
+                            "spectralcard" => MotelyFilterItemType.SpectralCard,
+                            "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
+                            "bigblindtag" => MotelyFilterItemType.BigBlindTag,
+                            "voucher" => MotelyFilterItemType.Voucher,
+                            "playingcard" => MotelyFilterItemType.PlayingCard,
+                            "boss" => MotelyFilterItemType.Boss,
+                            _ => throw new ArgumentException($"Unknown filter item type: {Type}.")
+                        };
+                    }
+                    return _cachedItemTypeEnum.Value;
+                }
+            }
         
+            // Cache all parsed enum values to avoid string operations in hot path
+            private MotelyJoker? _cachedJokerEnum;
+            private bool _jokerEnumParsed;
+            
             [JsonIgnore]
-            public MotelyJoker? JokerEnum => 
-                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyJoker>(Value, true, out var joker) ? joker : null;
-        
+            public MotelyJoker? JokerEnum
+            {
+                get
+                {
+                    if (!_jokerEnumParsed)
+                    {
+                        _cachedJokerEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyJoker>(Value, true, out var joker) ? joker : null;
+                        _jokerEnumParsed = true;
+                    }
+                    return _cachedJokerEnum;
+                }
+            }
+            
+            private MotelyTarotCard? _cachedTarotEnum;
+            private bool _tarotEnumParsed;
+            
             [JsonIgnore]
-            public MotelyTarotCard? TarotEnum => 
-                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot) ? tarot : null;
-        
+            public MotelyTarotCard? TarotEnum
+            {
+                get
+                {
+                    if (!_tarotEnumParsed)
+                    {
+                        _cachedTarotEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot) ? tarot : null;
+                        _tarotEnumParsed = true;
+                    }
+                    return _cachedTarotEnum;
+                }
+            }
+            
+            private MotelySpectralCard? _cachedSpectralEnum;
+            private bool _spectralEnumParsed;
+            
             [JsonIgnore]
-            public MotelySpectralCard? SpectralEnum => 
-                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral) ? spectral : null;
-        
+            public MotelySpectralCard? SpectralEnum
+            {
+                get
+                {
+                    if (!_spectralEnumParsed)
+                    {
+                        _cachedSpectralEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral) ? spectral : null;
+                        _spectralEnumParsed = true;
+                    }
+                    return _cachedSpectralEnum;
+                }
+            }
+            
+            private MotelyPlanetCard? _cachedPlanetEnum;
+            private bool _planetEnumParsed;
+            
             [JsonIgnore]
-            public MotelyPlanetCard? PlanetEnum => 
-                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet) ? planet : null;
-        
+            public MotelyPlanetCard? PlanetEnum
+            {
+                get
+                {
+                    if (!_planetEnumParsed)
+                    {
+                        _cachedPlanetEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet) ? planet : null;
+                        _planetEnumParsed = true;
+                    }
+                    return _cachedPlanetEnum;
+                }
+            }
+            
+            private MotelyTag? _cachedTagEnum;
+            private bool _tagEnumParsed;
+            
             [JsonIgnore]
-            public MotelyTag? TagEnum => 
-                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTag>(Value, true, out var tag) ? tag : null;
-        
+            public MotelyTag? TagEnum
+            {
+                get
+                {
+                    if (!_tagEnumParsed)
+                    {
+                        _cachedTagEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTag>(Value, true, out var tag) ? tag : null;
+                        _tagEnumParsed = true;
+                    }
+                    return _cachedTagEnum;
+                }
+            }
+            
+            private MotelyVoucher? _cachedVoucherEnum;
+            private bool _voucherEnumParsed;
+            
             [JsonIgnore]
-            public MotelyVoucher? VoucherEnum => 
-                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyVoucher>(Value, true, out var voucher) ? voucher : null;
-        
+            public MotelyVoucher? VoucherEnum
+            {
+                get
+                {
+                    if (!_voucherEnumParsed)
+                    {
+                        _cachedVoucherEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyVoucher>(Value, true, out var voucher) ? voucher : null;
+                        _voucherEnumParsed = true;
+                    }
+                    return _cachedVoucherEnum;
+                }
+            }
+            
+            private MotelyBossBlind? _cachedBossEnum;
+            private bool _bossEnumParsed;
+            
             [JsonIgnore]
-            public MotelyBossBlind? BossEnum => 
-                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyBossBlind>(Value, true, out var boss) ? boss : null;
-        
+            public MotelyBossBlind? BossEnum
+            {
+                get
+                {
+                    if (!_bossEnumParsed)
+                    {
+                        _cachedBossEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyBossBlind>(Value, true, out var boss) ? boss : null;
+                        _bossEnumParsed = true;
+                    }
+                    return _cachedBossEnum;
+                }
+            }
+            
+            private MotelyItemEdition? _cachedEditionEnum;
+            private bool _editionEnumParsed;
+            
             [JsonIgnore]
-            public MotelyItemEdition? EditionEnum => 
-                !string.IsNullOrEmpty(Edition) && Enum.TryParse<MotelyItemEdition>(Edition, true, out var ed) ? ed : null;
-        
+            public MotelyItemEdition? EditionEnum
+            {
+                get
+                {
+                    if (!_editionEnumParsed)
+                    {
+                        _cachedEditionEnum = !string.IsNullOrEmpty(Edition) && Enum.TryParse<MotelyItemEdition>(Edition, true, out var ed) ? ed : null;
+                        _editionEnumParsed = true;
+                    }
+                    return _cachedEditionEnum;
+                }
+            }
+            
+            private MotelyPlayingCardRank? _cachedRankEnum;
+            private bool _rankEnumParsed;
+            
             [JsonIgnore]
-            public MotelyPlayingCardRank? RankEnum => 
-                !string.IsNullOrEmpty(Rank) && Enum.TryParse<MotelyPlayingCardRank>(Rank, true, out var rank) ? rank : null;
-        
+            public MotelyPlayingCardRank? RankEnum
+            {
+                get
+                {
+                    if (!_rankEnumParsed)
+                    {
+                        _cachedRankEnum = !string.IsNullOrEmpty(Rank) && Enum.TryParse<MotelyPlayingCardRank>(Rank, true, out var rank) ? rank : null;
+                        _rankEnumParsed = true;
+                    }
+                    return _cachedRankEnum;
+                }
+            }
+            
+            private MotelyPlayingCardSuit? _cachedSuitEnum;
+            private bool _suitEnumParsed;
+            
             [JsonIgnore]
-            public MotelyPlayingCardSuit? SuitEnum => 
-                !string.IsNullOrEmpty(Suit) && Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit) ? suit : null;
-        
+            public MotelyPlayingCardSuit? SuitEnum
+            {
+                get
+                {
+                    if (!_suitEnumParsed)
+                    {
+                        _cachedSuitEnum = !string.IsNullOrEmpty(Suit) && Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit) ? suit : null;
+                        _suitEnumParsed = true;
+                    }
+                    return _cachedSuitEnum;
+                }
+            }
+            
+            private MotelyItemEnhancement? _cachedEnhancementEnum;
+            private bool _enhancementEnumParsed;
+            
             [JsonIgnore]
-            public MotelyItemEnhancement? EnhancementEnum => 
-                !string.IsNullOrEmpty(Enhancement) && Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enh) ? enh : null;
-        
+            public MotelyItemEnhancement? EnhancementEnum
+            {
+                get
+                {
+                    if (!_enhancementEnumParsed)
+                    {
+                        _cachedEnhancementEnum = !string.IsNullOrEmpty(Enhancement) && Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enh) ? enh : null;
+                        _enhancementEnumParsed = true;
+                    }
+                    return _cachedEnhancementEnum;
+                }
+            }
+            
+            private MotelyItemSeal? _cachedSealEnum;
+            private bool _sealEnumParsed;
+            
             [JsonIgnore]
-            public MotelyItemSeal? SealEnum => 
-                !string.IsNullOrEmpty(Seal) && Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal) ? seal : null;
+            public MotelyItemSeal? SealEnum
+            {
+                get
+                {
+                    if (!_sealEnumParsed)
+                    {
+                        _cachedSealEnum = !string.IsNullOrEmpty(Seal) && Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal) ? seal : null;
+                        _sealEnumParsed = true;
+                    }
+                    return _cachedSealEnum;
+                }
+            }
+            
+            /// <summary>
+            /// Force all enums to be parsed immediately to avoid string operations in hot path
+            /// </summary>
+            internal void CompileEnums()
+            {
+                // Access each enum property to force parsing
+                _ = ItemTypeEnum;
+                _ = JokerEnum;
+                _ = TarotEnum;
+                _ = SpectralEnum;
+                _ = PlanetEnum;
+                _ = TagEnum;
+                _ = VoucherEnum;
+                _ = BossEnum;
+                _ = EditionEnum;
+                _ = RankEnum;
+                _ = SuitEnum;
+                _ = EnhancementEnum;
+                _ = SealEnum;
+                _ = StickerEnums;
+                _ = TagTypeEnum;
+            }
         
+            private List<MotelyJokerSticker>? _cachedStickerEnums;
+            private bool _stickerEnumsParsed;
+            
             [JsonIgnore]
             public List<MotelyJokerSticker>? StickerEnums
             {
                 get
                 {
-                    if (Stickers == null || Stickers.Count == 0)
+                    if (!_stickerEnumsParsed)
                     {
-                        return null;
-                    }
-
-                    var result = new List<MotelyJokerSticker>();
-                    foreach (var sticker in Stickers)
-                    {
-                        if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var s))
+                        if (Stickers == null || Stickers.Count == 0)
                         {
-                            result.Add(s);
+                            _cachedStickerEnums = null;
                         }
+                        else
+                        {
+                            var result = new List<MotelyJokerSticker>();
+                            foreach (var sticker in Stickers)
+                            {
+                                if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var s))
+                                {
+                                    result.Add(s);
+                                }
+                            }
+                            _cachedStickerEnums = result.Count > 0 ? result : null;
+                        }
+                        _stickerEnumsParsed = true;
                     }
-                    return result.Count > 0 ? result : null;
+                    return _cachedStickerEnums;
                 }
             }
+            
+            private MotelyTagType? _cachedTagTypeEnum;
+            private bool _tagTypeEnumParsed;
         
             [JsonIgnore]
-            public MotelyTagType? TagTypeEnum => Type?.ToLowerInvariant() switch
+            public MotelyTagType? TagTypeEnum
             {
-                "smallblindtag" => MotelyTagType.SmallBlind,
-                "bigblindtag" => MotelyTagType.BigBlind,
-                _ => MotelyTagType.Any
-            };
+                get
+                {
+                    if (!_tagTypeEnumParsed)
+                    {
+                        _cachedTagTypeEnum = Type?.ToLowerInvariant() switch
+                        {
+                            "smallblindtag" => MotelyTagType.SmallBlind,
+                            "bigblindtag" => MotelyTagType.BigBlind,
+                            _ => MotelyTagType.Any
+                        };
+                        _tagTypeEnumParsed = true;
+                    }
+                    return _cachedTagTypeEnum;
+                }
+            }
         
         // No rank normalization: require canonical enum names (case-insensitive only)
         }
@@ -226,6 +444,9 @@ namespace Motely.Filters
             {
                 // Normalize type
                 item.Type = item.Type.ToLowerInvariant();
+                
+                // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
+                item.CompileEnums();
             
                 // Set default sources if not specified
                 if (item.Sources == null)

@@ -24,7 +24,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         DebugLogger.Log("[OuijaJsonFilterDesc] CreateFilter called!");
-        DebugLogger.Log($"[OuijaJsonFilterDesc] Config has {Config.Must.Count} MUST clauses");
+        DebugLogger.Log($"[OuijaJsonFilterDesc] Config has {Config.Must?.Count ?? 0} MUST clauses");
         
         // Cache streams for all antes we need
         var allAntes = new HashSet<int>();
@@ -32,15 +32,21 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         var config = Config; // Capture for lambda
         Action<List<OuijaConfig.FilterItem>> collectAntes = (items) =>
         {
-            foreach (var item in items)
-                foreach (var ante in item.EffectiveAntes)
-                    if (ante <= (config.Filter?.MaxAnte ?? 8))
-                        allAntes.Add(ante);
+            if (items != null)
+            {
+                foreach (var item in items)
+                    foreach (var ante in item.EffectiveAntes)
+                        if (ante <= (config.Filter?.MaxAnte ?? 8))
+                            allAntes.Add(ante);
+            }
         };
         
-        collectAntes(Config.Must);
-        collectAntes(Config.Should);
-        collectAntes(Config.MustNot);
+        if (Config.Must != null)
+            collectAntes(Config.Must);
+        if (Config.Should != null)
+            collectAntes(Config.Should);
+        if (Config.MustNot != null)
+            collectAntes(Config.MustNot);
         
         foreach (var ante in allAntes)
         {
