@@ -14,11 +14,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
 {
     public OuijaConfig Config { get; }
     public int Cutoff { get; set; }
+    public bool AutoCutoff { get; set; }
 
     public OuijaJsonFilterDesc(OuijaConfig config)
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
         Cutoff = 0; // Set by command line --cutoff parameter
+        AutoCutoff = false;
     }
 
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
@@ -57,16 +59,24 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             ctx.CacheSoulJokerStream(ante);
         }
         
-        return new OuijaJsonFilter(Config, Cutoff);
+        return new OuijaJsonFilter(Config, Cutoff, AutoCutoff);
     }
 
     public struct OuijaJsonFilter : IMotelySeedFilter
     {
         private readonly OuijaConfig _config;
         private readonly int _cutoff;
+        private readonly bool _autoCutoff;
         
         public static ConcurrentQueue<OuijaResult> ResultsQueue = new();
         public static bool IsCancelled = false;
+        
+        // Auto-cutoff tracking
+        private static int _currentCutoff = 1;
+        private static int _batchSize = 35;
+        private static int _seedsProcessed = 0;
+        private static int _batchHits = 0;
+        private static readonly double MaxHitRate = 0.01; // 1% threshold
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetFilterDescription(OuijaConfig.FilterItem item)
@@ -103,12 +113,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return string.Join(", ", parts);
         }
 
-        public OuijaJsonFilter(OuijaConfig config, int cutoff)
+        public OuijaJsonFilter(OuijaConfig config, int cutoff, bool autoCutoff = false)
         {
             DebugLogger.Log("[OuijaJsonFilter] Constructor called!");
             DebugLogger.Log($"[OuijaJsonFilter] Must clauses: {config.Must.Count}");
             _config = config;
             _cutoff = cutoff;
+            _autoCutoff = autoCutoff;
+            
+            // Reset auto-cutoff state if enabled
+            if (autoCutoff)
+            {
+                _currentCutoff = cutoff > 0 ? cutoff : 1;
+                _seedsProcessed = 0;
+                _batchHits = 0;
+                DebugLogger.Log($"[OuijaJsonFilter] Auto-cutoff enabled, starting at {_currentCutoff}");
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -148,6 +168,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             // Process SHOULD clauses for scoring
             var config = _config; // Capture for lambda
             var cutoff = _cutoff; // Capture for lambda
+            var autoCutoff = _autoCutoff; // Capture for lambda
             
             return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
@@ -204,9 +225,45 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     }
                 }
                 
-                // Check if meets minimum score
-                if (totalScore >= cutoff)
+                // Use auto-cutoff if enabled, otherwise use fixed cutoff
+                int effectiveCutoff = autoCutoff ? _currentCutoff : cutoff;
+                
+                // Track seeds for auto-cutoff
+                if (autoCutoff)
                 {
+                    _seedsProcessed++;
+                    
+                    // Check if we should adjust cutoff after each batch
+                    if (_seedsProcessed % _batchSize == 0)
+                    {
+                        double hitRate = (double)_batchHits / _batchSize;
+                        
+                        if (hitRate > MaxHitRate && _currentCutoff < 10)
+                        {
+                            _currentCutoff++;
+                            Console.WriteLine($"⚡ Auto-cutoff: Increased to {_currentCutoff} (hit rate was {hitRate:P2})");
+                            _batchHits = 0; // Reset for next batch
+                        }
+                        else if (_batchHits == 0 && _currentCutoff > 1)
+                        {
+                            // Optionally decrease if no hits
+                            // _currentCutoff--;
+                        }
+                        else
+                        {
+                            _batchHits = 0; // Reset for next batch
+                        }
+                    }
+                }
+                
+                // Check if meets minimum score
+                if (totalScore >= effectiveCutoff)
+                {
+                    if (autoCutoff)
+                    {
+                        _batchHits++;
+                    }
+                    
                     var result = new OuijaResult
                     {
                         Seed = singleCtx.GetSeed(),

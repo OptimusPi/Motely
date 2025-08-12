@@ -47,11 +47,11 @@ namespace Motely
                 CommandOptionType.SingleValue);
             batchSizeOption.DefaultValue = 4;
 
-            var cutoffOption = app.Option<int>(
-                "--cutoff <SCORE>",
-                "Minimum TotalScore threshold for results (0 for no cutoff)",
+            var cutoffOption = app.Option<string>(
+                "--cutoff <SCORE|auto>",
+                "Minimum TotalScore threshold for results (0 for no cutoff, 'auto' for automatic adjustment)",
                 CommandOptionType.SingleValue);
-            cutoffOption.DefaultValue = 0;
+            cutoffOption.DefaultValue = "0";
 
             var debugOption = app.Option(
                 "--debug",
@@ -137,7 +137,9 @@ namespace Motely
                 var endBatch = endBatchOption.ParsedValue;
                 var threads = threadsOption.ParsedValue;
                 var batchSize = batchSizeOption.ParsedValue;
-                var cutoff = cutoffOption.ParsedValue;
+                var cutoffStr = cutoffOption.ParsedValue;
+                bool autoCutoff = cutoffStr.ToLower() == "auto";
+                int cutoff = autoCutoff ? 1 : int.TryParse(cutoffStr, out var c) ? c : 0;
                 var enableDebug = debugOption.HasValue();
                 var quiet = quietOption.HasValue();
                 var wordlist = wordlistOption.Value();
@@ -155,7 +157,7 @@ namespace Motely
                     return 1;
                 }
 
-                RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff,
+                RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
                     enableDebug, quiet, wordlist, keyword, nofancy, seedInput);
                 Console.WriteLine("🔍 Search completed");
                 return 0;
@@ -165,7 +167,7 @@ namespace Motely
         }
 
         public static void RunOuijaSearch(string configPath, ulong startBatch, long endBatch, int threads,
-            int batchSize, int cutoff, bool enableDebug, bool quiet, string? wordlist = null,
+            int batchSize, int cutoff, bool autoCutoff, bool enableDebug, bool quiet, string? wordlist = null,
             string? keyword = null, bool nofancy = false, string? specificSeed = null)
         {
             // Set debug output flag
@@ -267,9 +269,15 @@ namespace Motely
                 // It will convert new format to legacy format internally
                 var filterDesc = new OuijaJsonFilterDesc(config);
                 filterDesc.Cutoff = cutoff;
+                filterDesc.AutoCutoff = autoCutoff;
                 
                 if (!quiet)
-                    Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
+                {
+                    if (autoCutoff)
+                        Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
+                    else
+                        Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
+                }
                 
                 // Create the search using OuijaJsonFilterDesc
                 var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
