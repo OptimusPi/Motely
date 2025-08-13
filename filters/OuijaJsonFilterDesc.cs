@@ -76,7 +76,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static int _batchSize = 35;
         private static int _seedsProcessed = 0;
         private static int _batchHits = 0;
-        private static readonly double MaxHitRate = 0.01; // 1% threshold
+        private static readonly double MaxHitRate = 0.03; // 3% threshold
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetFilterDescription(OuijaConfig.FilterItem item)
