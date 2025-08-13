@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Linq;
@@ -15,6 +16,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     public OuijaConfig Config { get; }
     public int Cutoff { get; set; }
     public bool AutoCutoff { get; set; }
+    
+    // Static callback for when results are found
+    public static Action<string, int, int[]>? OnResultFound { get; set; }
 
     public OuijaJsonFilterDesc(OuijaConfig config)
     {
@@ -68,15 +72,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private readonly int _cutoff;
         private readonly bool _autoCutoff;
         
-        public static ConcurrentQueue<OuijaResult> ResultsQueue = new();
         public static bool IsCancelled = false;
         
-        // Auto-cutoff tracking
-        private static int _currentCutoff = 1;
-        private static int _batchSize = 35;
-        private static int _seedsProcessed = 0;
-        private static int _batchHits = 0;
-        private static readonly double MaxHitRate = 0.03; // 3% threshold
+        // Auto-cutoff tracking - simple highest score seen
+        private static int _currentCutoff = 0;
+        private static int _highestScoreSeen = 0;
+        private static int _resultsFound = 0;
+        private static long _autoCutoffStartTicks = 0;
+        private static bool _autoCutoffExpired = false;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetFilterDescription(OuijaConfig.FilterItem item)
@@ -117,17 +120,21 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             DebugLogger.Log("[OuijaJsonFilter] Constructor called!");
             DebugLogger.Log($"[OuijaJsonFilter] Must clauses: {config.Must.Count}");
+            DebugLogger.Log($"[OuijaJsonFilter] Cutoff: {cutoff}, AutoCutoff: {autoCutoff}");
+            
             _config = config;
             _cutoff = cutoff;
             _autoCutoff = autoCutoff;
             
-            // Reset auto-cutoff state if enabled
+            // Reset auto-cutoff state for new search
             if (autoCutoff)
             {
-                _currentCutoff = cutoff > 0 ? cutoff : 1;
-                _seedsProcessed = 0;
-                _batchHits = 0;
-                DebugLogger.Log($"[OuijaJsonFilter] Auto-cutoff enabled, starting at {_currentCutoff}");
+                _currentCutoff = 0;
+                _highestScoreSeen = 0;
+                _resultsFound = 0;
+                _autoCutoffStartTicks = System.Diagnostics.Stopwatch.GetTimestamp();
+                _autoCutoffExpired = false;
+                DebugLogger.Log("[OuijaJsonFilter] Auto-cutoff initialized, will expire in 10 seconds");
             }
         }
 
@@ -225,54 +232,54 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     }
                 }
                 
-                // Use auto-cutoff if enabled, otherwise use fixed cutoff
-                int effectiveCutoff = autoCutoff ? _currentCutoff : cutoff;
-                
-                // Track seeds for auto-cutoff
-                if (autoCutoff)
+                // Simple auto-cutoff: if enabled, track highest score and use it as cutoff
+                if (autoCutoff && totalScore > 0 && !_autoCutoffExpired)
                 {
-                    _seedsProcessed++;
-                    
-                    // Check if we should adjust cutoff after each batch
-                    if (_seedsProcessed % _batchSize == 0)
+                    // Check if 10 seconds have passed (10 seconds = 10 * Stopwatch.Frequency ticks)
+                    if (!_autoCutoffExpired && (System.Diagnostics.Stopwatch.GetTimestamp() - _autoCutoffStartTicks) > (10 * System.Diagnostics.Stopwatch.Frequency))
                     {
-                        double hitRate = (double)_batchHits / _batchSize;
+                        _autoCutoffExpired = true;
+                        DebugLogger.Log($"[OuijaJsonFilter] Auto-cutoff expired after 10 seconds. Final cutoff: {_highestScoreSeen}");
+                    }
+                    
+                    if (!_autoCutoffExpired)
+                    {
+                        // First few results, let them through to establish baseline
+                        if (_resultsFound < 10)
+                        {
+                            _resultsFound++;
+                            if (totalScore > _highestScoreSeen)
+                            {
+                                _highestScoreSeen = totalScore;
+                            }
+                            // Let first 10 results through to establish range
+                            var seed = singleCtx.GetSeed();
+                            var scores = scoreDetails.ToArray();
+                            OnResultFound?.Invoke(seed, totalScore, scores);
+                            return true;
+                        }
                         
-                        if (hitRate > MaxHitRate && _currentCutoff < 10)
+                        // After 10 results, only accept if equal to or better than highest
+                        if (totalScore >= _highestScoreSeen)
                         {
-                            _currentCutoff++;
-                            Console.WriteLine($"⚡ Auto-cutoff: Increased to {_currentCutoff} (hit rate was {hitRate:P2})");
-                            _batchHits = 0; // Reset for next batch
-                        }
-                        else if (_batchHits == 0 && _currentCutoff > 1)
-                        {
-                            // Optionally decrease if no hits
-                            // _currentCutoff--;
-                        }
-                        else
-                        {
-                            _batchHits = 0; // Reset for next batch
+                            _highestScoreSeen = totalScore;
+                            _currentCutoff = totalScore;
+                            
+                            var seed = singleCtx.GetSeed();
+                            var scores = scoreDetails.ToArray();
+                            OnResultFound?.Invoke(seed, totalScore, scores);
+                            return true;
                         }
                     }
                 }
-                
-                // Check if meets minimum score
-                if (totalScore >= effectiveCutoff)
+                else if ((!autoCutoff && totalScore >= cutoff) || 
+                         (autoCutoff && _autoCutoffExpired && totalScore >= _highestScoreSeen))
                 {
-                    if (autoCutoff)
-                    {
-                        _batchHits++;
-                    }
+                    // Fixed cutoff mode
+                    var seed = singleCtx.GetSeed();
+                    var scores = scoreDetails.ToArray();
+                    OnResultFound?.Invoke(seed, totalScore, scores);
                     
-                    var result = new OuijaResult
-                    {
-                        Seed = singleCtx.GetSeed(),
-                        TotalScore = totalScore,
-                        ScoreWants = scoreDetails.ToArray(),
-                        Success = true
-                    };
-                    
-                    ResultsQueue.Enqueue(result);
                     return true;
                 }
                 
@@ -572,11 +579,45 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private static int CheckJoker(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelySingleShopItemStream shopStream, ref MotelySingleBoosterPackStream packStream)
         {
             // PERFORMANCE: Cache commonly used values
-            bool searchAnyJoker = !clause.JokerEnum.HasValue;
-            MotelyJoker targetJoker = searchAnyJoker ? MotelyJoker.Joker : clause.JokerEnum!.Value;
+            bool hasWildcard = clause.WildcardEnum.HasValue;
+            bool hasSpecificJoker = clause.JokerEnum.HasValue;
+            
+            // DEBUG: Log what we're searching for
+            Debug.Assert(hasWildcard || hasSpecificJoker, 
+                $"CheckJoker called but no joker specified! Value='{clause.Value}', Type='{clause.Type}', WildcardEnum={clause.WildcardEnum}, JokerEnum={clause.JokerEnum}");
+            
+            if (!hasWildcard && !hasSpecificJoker)
+            {
+                // This should NEVER happen - something is wrong with enum parsing
+                DebugLogger.Log($"[CheckJoker] ERROR: No joker enum parsed! Value='{clause.Value}', Type='{clause.Type}'");
+                return 0; // Can't find what we don't know to look for
+            }
+            
+            // Determine target rarity for wildcard searches
+            MotelyJokerRarity? targetRarity = null;
+            if (hasWildcard)
+            {
+                targetRarity = clause.WildcardEnum switch
+                {
+                    JokerWildcard.AnyCommon => MotelyJokerRarity.Common,
+                    JokerWildcard.AnyUncommon => MotelyJokerRarity.Uncommon,
+                    JokerWildcard.AnyRare => MotelyJokerRarity.Rare,
+                    JokerWildcard.AnyLegendary => MotelyJokerRarity.Legendary,
+                    JokerWildcard.AnyJoker => null, // Any rarity
+                    _ => null
+                };
+            }
+            
+            MotelyJoker? targetJoker = hasSpecificJoker ? clause.JokerEnum : null;
             int foundCount = 0;
             
-            DebugLogger.Log($"[CheckJoker] Looking for {targetJoker} in ante {ante} SearchAnyJoker: {searchAnyJoker}");
+            if (DebugLogger.IsEnabled)
+            {
+                string searchDescription = hasWildcard ? clause.WildcardEnum.ToString()! : 
+                                          hasSpecificJoker ? targetJoker!.Value.ToString() :
+                                          "unknown";
+                DebugLogger.Log($"[CheckJoker] Looking for {searchDescription} in ante {ante} HasWildcard: {hasWildcard} HasSpecificJoker: {hasSpecificJoker}");
+            }
                 
             // Check shop
             bool shouldCheckShop = clause.Sources?.ShopSlots != null && clause.Sources.ShopSlots.Length > 0;
@@ -614,14 +655,36 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             // Extract joker without edition bits for comparison
                             var shopJoker = (MotelyJoker)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
 
-                            // Check if we're looking for any joker or a specific one
-                            bool jokerMatches = searchAnyJoker || shopJoker == targetJoker;
+                            // Check if joker matches our criteria
+                            bool jokerMatches = false;
+                            
+                            if (hasWildcard)
+                            {
+                                if (clause.WildcardEnum == JokerWildcard.AnyJoker)
+                                {
+                                    jokerMatches = true; // Any joker matches
+                                }
+                                else if (targetRarity.HasValue)
+                                {
+                                    // Check if joker matches the wildcard rarity
+                                    var jokerRarity = (MotelyJokerRarity)((int)shopJoker & Motely.JokerRarityMask);
+                                    jokerMatches = jokerRarity == targetRarity.Value;
+                                }
+                            }
+                            else if (hasSpecificJoker)
+                            {
+                                jokerMatches = shopJoker == targetJoker;
+                            }
 
                             if (jokerMatches && CheckEditionAndStickers(item, clause))
                             {
                                 foundCount++;
-                                string jokerName = searchAnyJoker ? $"any joker ({shopJoker})" : targetJoker.ToString();
-                                DebugLogger.Log($"[CheckJoker] Found {jokerName} in shop slot {i}! Total count: {foundCount}");
+                                if (DebugLogger.IsEnabled)
+                                {
+                                    string jokerName = hasWildcard ? $"{clause.WildcardEnum} ({shopJoker})" : 
+                                                      shopJoker.ToString();
+                                    DebugLogger.Log($"[CheckJoker] Found {jokerName} in shop slot {i}! Total count: {foundCount}");
+                                }
                                 
                                 // TODO: Add early exit optimization when Min property is available
                             }
@@ -638,12 +701,32 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         if (item.TypeCategory == MotelyItemTypeCategory.Joker)
                         {
                             var shopJoker = (MotelyJoker)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                            bool jokerMatches = searchAnyJoker || shopJoker == targetJoker;
+                            
+                            bool jokerMatches = false;
+                            if (hasWildcard)
+                            {
+                                if (clause.WildcardEnum == JokerWildcard.AnyJoker)
+                                {
+                                    jokerMatches = true;
+                                }
+                                else if (targetRarity.HasValue)
+                                {
+                                    var jokerRarity = (MotelyJokerRarity)((int)shopJoker & Motely.JokerRarityMask);
+                                    jokerMatches = jokerRarity == targetRarity.Value;
+                                }
+                            }
+                            else if (hasSpecificJoker)
+                            {
+                                jokerMatches = shopJoker == targetJoker;
+                            }
                             
                             if (jokerMatches && CheckEditionAndStickers(item, clause))
                             {
                                 foundCount++;
-                                DebugLogger.Log($"[CheckJoker] Found in shop slot {i}!");
+                                if (DebugLogger.IsEnabled)
+                                {
+                                    DebugLogger.Log($"[CheckJoker] Found in shop slot {i}!");
+                                }
                                 
                                 // TODO: Add early exit optimization when Min property is available
                             }
@@ -715,27 +798,55 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                             DebugLogger.Log($"[CheckJoker]   Buffoon pack slot {j}: ExtractedJoker={extractedJoker}, Edition={joker.Edition}");
                             DebugLogger.Log($"[CheckJoker]     -> Raw: Value={joker.Value:X8}, TypeCategory={joker.TypeCategory}");
                             
-                            // Extract joker type without edition bits (same fix as shop)
-                            var jokerType = (MotelyItemType)(joker.Value & Motely.ItemTypeMask);
-                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)targetJoker);
+                            // Check if joker matches our criteria
+                            bool jokerMatches = false;
                             
-                            // Check if we're looking for any joker or a specific one
-                            bool jokerMatches = searchAnyJoker || jokerType == targetType;
+                            if (hasWildcard)
+                            {
+                                if (clause.WildcardEnum == JokerWildcard.AnyJoker)
+                                {
+                                    jokerMatches = true;
+                                }
+                                else if (targetRarity.HasValue)
+                                {
+                                    // Extract rarity from the joker enum value
+                                    var jokerRarity = (MotelyJokerRarity)((int)extractedJoker & Motely.JokerRarityMask);
+                                    jokerMatches = jokerRarity == targetRarity.Value;
+                                }
+                            }
+                            else if (hasSpecificJoker)
+                            {
+                                jokerMatches = extractedJoker == targetJoker;
+                            }
                             
                             if (jokerMatches)
                             {
-                                string jokerName = searchAnyJoker ? $"any joker (Buffoon)" : targetJoker.ToString();
-                                DebugLogger.Log($"[CheckJoker] Buffoon Match! {jokerName} Edition={joker.Edition}, Required Edition={clause.Edition}");
-                                DebugLogger.Log($"[CheckJoker]   -> Actual Joker: {extractedJoker}, Target: {targetJoker}, Match: {extractedJoker == targetJoker}");
+                                if (DebugLogger.IsEnabled)
+                                {
+                                    string jokerName = hasWildcard ? $"{clause.WildcardEnum} (Buffoon)" : 
+                                                      extractedJoker.ToString();
+                                    DebugLogger.Log($"[CheckJoker] Buffoon Match! {jokerName} Edition={joker.Edition}, Required Edition={clause.Edition}");
+                                    if (hasSpecificJoker)
+                                    {
+                                        DebugLogger.Log($"[CheckJoker]   -> Actual Joker: {extractedJoker}, Target: {targetJoker}, Match: {extractedJoker == targetJoker}");
+                                    }
+                                }
+                                
                                 if (CheckEditionAndStickers(joker, clause))
                                 {
                                     foundCount++;
-                                    string foundJokerName = searchAnyJoker ? $"any joker ({extractedJoker})" : extractedJoker.ToString();
-                                    DebugLogger.Log($"[CheckJoker] Buffoon Edition check PASSED! Found {foundJokerName} with edition {joker.Edition}. Total count: {foundCount}");
-                                    DebugLogger.Log($">>> FOUND IN PACK: Ante={ante}, Pack=#{i+1}, Slot={j}, Joker={extractedJoker}, Edition={joker.Edition}");
+                                    if (DebugLogger.IsEnabled)
+                                    {
+                                        string foundJokerName = hasWildcard ? $"{clause.WildcardEnum} ({extractedJoker})" : 
+                                                               extractedJoker.ToString();
+                                        DebugLogger.Log($"[CheckJoker] Buffoon Edition check PASSED! Found {foundJokerName} with edition {joker.Edition}. Total count: {foundCount}");
+                                        DebugLogger.Log($">>> FOUND IN PACK: Ante={ante}, Pack=#{i+1}, Slot={j}, Joker={extractedJoker}, Edition={joker.Edition}");
+                                    }
                                 }
-                                else
+                                else if (DebugLogger.IsEnabled)
                                 {
+                                    string jokerName = hasWildcard ? $"{clause.WildcardEnum} (Buffoon)" : 
+                                                      extractedJoker.ToString();
                                     DebugLogger.Log($"[CheckJoker] Buffoon Edition check FAILED! Found {jokerName} but edition {joker.Edition} != {clause.Edition}");
                                 }
                             }
@@ -755,9 +866,14 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.Log($"[CheckJoker] === END BOOSTER PACK CONTENTS ===");
             }
             
-            string searchDescription = searchAnyJoker ? "any jokers" : targetJoker.ToString();
-            DebugLogger.Log($"[CheckJoker] === FINAL COUNT for {searchDescription} in ante {ante}: {foundCount} ===");
-            DebugLogger.Log($"[CheckJoker] Sources checked: Shop={(clause.Sources?.ShopSlots?.Length > 0)}, Packs={(clause.Sources?.PackSlots?.Length > 0)}, Tags={(clause.Sources?.Tags ?? false)}");
+            if (DebugLogger.IsEnabled)
+            {
+                string searchDescription = hasWildcard ? clause.WildcardEnum.ToString()! : 
+                                          hasSpecificJoker ? targetJoker!.Value.ToString() :
+                                          "unknown";
+                DebugLogger.Log($"[CheckJoker] === FINAL COUNT for {searchDescription} in ante {ante}: {foundCount} ===");
+                DebugLogger.Log($"[CheckJoker] Sources checked: Shop={(clause.Sources?.ShopSlots?.Length > 0)}, Packs={(clause.Sources?.PackSlots?.Length > 0)}, Tags={(clause.Sources?.Tags ?? false)}");
+            }
             return foundCount;
         }
         

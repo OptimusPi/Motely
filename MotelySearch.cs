@@ -353,12 +353,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Fire event if anyone is listening
         SeedFound?.Invoke(this, seedString);
         
-        // Write to console if enabled and no event handlers attached
-        // This maintains backward compatibility for CLI usage
-        if (_settings.EnableConsoleOutput && SeedFound == null)
-        {
-            Console.WriteLine(seedString);
-        }
+        // Don't print to console - the callback handles output now
     }
 
     private void PrintReport(long elapsedMS)
@@ -376,7 +371,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         double seedsPerMS = 0;
         if (elapsedMS > 0)
         {
-            seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
+            seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / (double)elapsedMS;
         }
         
         // Calculate progress and time remaining

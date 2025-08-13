@@ -9,6 +9,18 @@ using System.Diagnostics;
 namespace Motely.Filters
 {
     /// <summary>
+    /// Wildcard types for joker filtering
+    /// </summary>
+    public enum JokerWildcard
+    {
+        AnyJoker,
+        AnyCommon,
+        AnyUncommon,
+        AnyRare,
+        AnyLegendary
+    }
+
+    /// <summary>
     /// MongoDB compound Operator-style Ouija configuration - Clean JSON deserialization
     /// </summary>
     public class OuijaConfig
@@ -17,6 +29,7 @@ namespace Motely.Filters
         public string? Name { get; set; }
         public string? Author { get; set; }
         public string? Description { get; set; }
+        public DateTime? DateCreated { get; set; }
     
         public List<FilterItem> Must { get; set; } = new();
         public List<FilterItem> Should { get; set; } = new();
@@ -94,125 +107,132 @@ namespace Motely.Filters
                 }
             }
         
-            // Cache all parsed enum values to avoid string operations in hot path
-            private MotelyJoker? _cachedJokerEnum;
-            private bool _jokerEnumParsed;
+            // Pre-parsed enum values - parsed ONCE at initialization, not in hot path!
+            [JsonIgnore]
+            public JokerWildcard? WildcardEnum { get; private set; }
             
             [JsonIgnore]
-            public MotelyJoker? JokerEnum
+            public MotelyJoker? JokerEnum { get; private set; }
+            
+            // Call this after deserialization to parse all enums ONCE
+            public void InitializeParsedEnums()
             {
-                get
+                Debug.WriteLine($"[InitializeParsedEnums] Called for Type='{Type}', Value='{Value}'");
+                
+                // Parse based on item type
+                switch (ItemTypeEnum)
                 {
-                    if (!_jokerEnumParsed)
-                    {
-                        _cachedJokerEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyJoker>(Value, true, out var joker) ? joker : null;
-                        _jokerEnumParsed = true;
-                    }
-                    return _cachedJokerEnum;
+                    case MotelyFilterItemType.Joker:
+                        // Parse wildcard first
+                        WildcardEnum = Value?.ToLowerInvariant() switch
+                        {
+                            "anyjoker" => JokerWildcard.AnyJoker,
+                            "anycommon" => JokerWildcard.AnyCommon,
+                            "anyuncommon" => JokerWildcard.AnyUncommon,
+                            "anyrare" => JokerWildcard.AnyRare,
+                            "anylegendary" => JokerWildcard.AnyLegendary,
+                            _ => null
+                        };
+                        
+                        Debug.WriteLine($"[InitializeParsedEnums] Joker parsing: WildcardEnum={WildcardEnum}");
+                        
+                        // Only parse as joker enum if it's not a wildcard
+                        if (!WildcardEnum.HasValue && !string.IsNullOrEmpty(Value))
+                        {
+                            if (Enum.TryParse<MotelyJoker>(Value, true, out var joker))
+                            {
+                                JokerEnum = joker;
+                                Debug.WriteLine($"[InitializeParsedEnums] Successfully parsed joker: {JokerEnum}");
+                            }
+                            else
+                            {
+                                Debug.WriteLine($"[InitializeParsedEnums] FAILED to parse joker value: '{Value}'");
+                                // In debug mode, crash if we can't parse a joker value
+                                Debug.Assert(false, $"Failed to parse joker value: '{Value}'. This is not a valid MotelyJoker enum value!");
+                            }
+                        }
+                        break;
+                        
+                    case MotelyFilterItemType.TarotCard:
+                        if (!string.IsNullOrEmpty(Value))
+                        {
+                            if (Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
+                            {
+                                TarotEnum = tarot;
+                            }
+                        }
+                        break;
+                        
+                    case MotelyFilterItemType.SpectralCard:
+                        if (!string.IsNullOrEmpty(Value))
+                        {
+                            if (Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral))
+                            {
+                                SpectralEnum = spectral;
+                            }
+                        }
+                        break;
+                        
+                    case MotelyFilterItemType.PlanetCard:
+                        if (!string.IsNullOrEmpty(Value))
+                        {
+                            if (Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
+                            {
+                                PlanetEnum = planet;
+                            }
+                        }
+                        break;
+                        
+                    case MotelyFilterItemType.SmallBlindTag:
+                    case MotelyFilterItemType.BigBlindTag:
+                        if (!string.IsNullOrEmpty(Value))
+                        {
+                            if (Enum.TryParse<MotelyTag>(Value, true, out var tag))
+                            {
+                                TagEnum = tag;
+                            }
+                        }
+                        break;
+                        
+                    case MotelyFilterItemType.Voucher:
+                        if (!string.IsNullOrEmpty(Value))
+                        {
+                            if (Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
+                            {
+                                VoucherEnum = voucher;
+                            }
+                        }
+                        break;
+                        
+                    case MotelyFilterItemType.Boss:
+                        if (!string.IsNullOrEmpty(Value))
+                        {
+                            if (Enum.TryParse<MotelyBossBlind>(Value, true, out var boss))
+                            {
+                                BossEnum = boss;
+                            }
+                        }
+                        break;
                 }
             }
             
-            private MotelyTarotCard? _cachedTarotEnum;
-            private bool _tarotEnumParsed;
+            [JsonIgnore]
+            public MotelyTarotCard? TarotEnum { get; private set; }
             
             [JsonIgnore]
-            public MotelyTarotCard? TarotEnum
-            {
-                get
-                {
-                    if (!_tarotEnumParsed)
-                    {
-                        _cachedTarotEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot) ? tarot : null;
-                        _tarotEnumParsed = true;
-                    }
-                    return _cachedTarotEnum;
-                }
-            }
-            
-            private MotelySpectralCard? _cachedSpectralEnum;
-            private bool _spectralEnumParsed;
+            public MotelySpectralCard? SpectralEnum { get; private set; }
             
             [JsonIgnore]
-            public MotelySpectralCard? SpectralEnum
-            {
-                get
-                {
-                    if (!_spectralEnumParsed)
-                    {
-                        _cachedSpectralEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral) ? spectral : null;
-                        _spectralEnumParsed = true;
-                    }
-                    return _cachedSpectralEnum;
-                }
-            }
-            
-            private MotelyPlanetCard? _cachedPlanetEnum;
-            private bool _planetEnumParsed;
+            public MotelyPlanetCard? PlanetEnum { get; private set; }
             
             [JsonIgnore]
-            public MotelyPlanetCard? PlanetEnum
-            {
-                get
-                {
-                    if (!_planetEnumParsed)
-                    {
-                        _cachedPlanetEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet) ? planet : null;
-                        _planetEnumParsed = true;
-                    }
-                    return _cachedPlanetEnum;
-                }
-            }
-            
-            private MotelyTag? _cachedTagEnum;
-            private bool _tagEnumParsed;
+            public MotelyTag? TagEnum { get; private set; }
             
             [JsonIgnore]
-            public MotelyTag? TagEnum
-            {
-                get
-                {
-                    if (!_tagEnumParsed)
-                    {
-                        _cachedTagEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTag>(Value, true, out var tag) ? tag : null;
-                        _tagEnumParsed = true;
-                    }
-                    return _cachedTagEnum;
-                }
-            }
-            
-            private MotelyVoucher? _cachedVoucherEnum;
-            private bool _voucherEnumParsed;
+            public MotelyVoucher? VoucherEnum { get; private set; }
             
             [JsonIgnore]
-            public MotelyVoucher? VoucherEnum
-            {
-                get
-                {
-                    if (!_voucherEnumParsed)
-                    {
-                        _cachedVoucherEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyVoucher>(Value, true, out var voucher) ? voucher : null;
-                        _voucherEnumParsed = true;
-                    }
-                    return _cachedVoucherEnum;
-                }
-            }
-            
-            private MotelyBossBlind? _cachedBossEnum;
-            private bool _bossEnumParsed;
-            
-            [JsonIgnore]
-            public MotelyBossBlind? BossEnum
-            {
-                get
-                {
-                    if (!_bossEnumParsed)
-                    {
-                        _cachedBossEnum = !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyBossBlind>(Value, true, out var boss) ? boss : null;
-                        _bossEnumParsed = true;
-                    }
-                    return _cachedBossEnum;
-                }
-            }
+            public MotelyBossBlind? BossEnum { get; private set; }
             
             private MotelyItemEdition? _cachedEditionEnum;
             private bool _editionEnumParsed;
@@ -446,13 +466,16 @@ namespace Motely.Filters
                 item.Type = item.Type.ToLowerInvariant();
                 
                 // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
-                item.CompileEnums();
+                item.InitializeParsedEnums();
             
                 // Set default sources if not specified
                 if (item.Sources == null)
                 {
                     item.Sources = GetDefaultSources(item.Type);
                 }
+                
+                // Override sources for special items
+                OverrideSpecialItemSources(item);
             }
         }
     
@@ -479,6 +502,25 @@ namespace Motely.Filters
                     Tags = true
                 }
             };
+        }
+        
+        // Override sources for special items that can't appear in shops
+        private void OverrideSpecialItemSources(FilterItem item)
+        {
+            // Soul and Black Hole spectral cards can ONLY come from spectral packs
+            if (item.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
+            {
+                if (item.SpectralEnum == MotelySpectralCard.Soul || 
+                    item.SpectralEnum == MotelySpectralCard.BlackHole)
+                {
+                    item.Sources = new SourcesConfig
+                    {
+                        ShopSlots = Array.Empty<int>(), // Cannot appear in shops, even on Ghost Deck
+                        PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                        Tags = false
+                    };
+                }
+            }
         }
     
         /// <summary>

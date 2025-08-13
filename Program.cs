@@ -48,8 +48,8 @@ namespace Motely
             batchSizeOption.DefaultValue = 4;
 
             var cutoffOption = app.Option<string>(
-                "--cutoff <SCORE|auto>",
-                "Minimum TotalScore threshold for results (0 for no cutoff, 'auto' for automatic adjustment)",
+                "--cutoff <SCORE>",
+                "Minimum TotalScore threshold (1-10 for fixed, 0 for auto-cutoff)",
                 CommandOptionType.SingleValue);
             cutoffOption.DefaultValue = "0";
 
@@ -137,10 +137,19 @@ namespace Motely
                 var endBatch = endBatchOption.ParsedValue;
                 var threads = threadsOption.ParsedValue;
                 var batchSize = batchSizeOption.ParsedValue;
-                var cutoffStr = cutoffOption.ParsedValue;
-                bool autoCutoff = cutoffStr.ToLower() == "auto";
-                int cutoff = autoCutoff ? 1 : int.TryParse(cutoffStr, out var c) ? c : 0;
                 var enableDebug = debugOption.HasValue();
+                var cutoffStr = cutoffOption.Value() ?? "0";
+                int cutoffValue = int.TryParse(cutoffStr, out var c) ? c : 0;
+                bool autoCutoff = cutoffValue == 0;  // 0 means auto-cutoff
+                int cutoff = autoCutoff ? 1 : cutoffValue;  // Start at 1 for auto-cutoff
+                
+                if (enableDebug)
+                {
+                    Console.WriteLine($"[DEBUG] Cutoff string: '{cutoffStr}'");
+                    Console.WriteLine($"[DEBUG] Cutoff value: {cutoffValue}");
+                    Console.WriteLine($"[DEBUG] Auto-cutoff: {autoCutoff}");
+                    Console.WriteLine($"[DEBUG] Effective starting cutoff: {cutoff}");
+                }
                 var quiet = quietOption.HasValue();
                 var wordlist = wordlistOption.Value();
                 var keyword = keywordOption.Value();
@@ -338,11 +347,19 @@ namespace Motely
                 // Print CSV header for results
                 PrintResultsHeader(config);
                 
-                // Clear results queue before starting (static queue persists between runs)
-                while (OuijaJsonFilterDesc.OuijaJsonFilter.ResultsQueue.TryDequeue(out _)) { }
-                
                 // Reset cancellation flag
                 OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = false;
+                
+                // Register callback to print results with scores
+                OuijaJsonFilterDesc.OnResultFound = (seed, totalScore, scores) =>
+                {
+                    var line = $"{seed},{totalScore}";
+                    foreach (var score in scores)
+                    {
+                        line += $",{score}";
+                    }
+                    Console.WriteLine(line);
+                };
 
                 // Setup cancellation token
                 var cts = new CancellationTokenSource();
@@ -354,40 +371,6 @@ namespace Motely
                     search.Dispose();
                     Console.WriteLine("✅ Search stopped gracefully");
                 };
-
-                // Process results while search is running
-                var resultsTask = System.Threading.Tasks.Task.Run(() =>
-                {
-                    while (search.Status == MotelySearchStatus.Running || !OuijaJsonFilterDesc.OuijaJsonFilter.ResultsQueue.IsEmpty)
-                    {
-                        if (OuijaJsonFilterDesc.OuijaJsonFilter.ResultsQueue.TryDequeue(out var result))
-                        {
-                            // Print result as CSV row
-                            var row = $"{result.Seed},{result.TotalScore}";
-                            if (result.ScoreWants != null)
-                            {
-                                foreach (var score in result.ScoreWants)
-                                {
-                                    row += $",{score}";
-                                }
-                            }
-                            Console.WriteLine(row);
-                        }
-                        else
-                        {
-                            System.Threading.Thread.Sleep(10);
-                        }
-                    }
-                });
-                
-                // Wait for search to complete
-                while (search.Status == MotelySearchStatus.Running)
-                {
-                    System.Threading.Thread.Sleep(100);
-                }
-                
-                // Wait for results processing to complete
-                resultsTask.Wait();
                 
                 // Stop timing
                 searchStopwatch.Stop();

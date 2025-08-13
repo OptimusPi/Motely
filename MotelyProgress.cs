@@ -23,7 +23,7 @@ namespace Motely
         {
             if (!timeRemaining.HasValue)
             {
-                return $"{percent:0.00}% ({seedsPerMillisecond * 1000:F0} seeds/ms)";
+                return $"{percent:0.00}% ({seedsPerMillisecond * 1000:F0} seeds/s)";
             }
             
             string timeLeftFormatted;
