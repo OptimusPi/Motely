@@ -364,7 +364,22 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return; // No batches completed yet
         }
 
-        // Use the actual thread MaxBatch (already capped by EndBatchIndex if set)
+        // Calculate the REAL total batch count based on batch size
+        // We need to derive batch char count from seeds per batch
+        int batchCharCount = 1; // default
+        ulong seedsPerBatch = _threads[0].SeedsPerBatch;
+        if (seedsPerBatch == 35) batchCharCount = 1;
+        else if (seedsPerBatch == 1225) batchCharCount = 2;  // 35^2
+        else if (seedsPerBatch == 42875) batchCharCount = 3; // 35^3
+        else if (seedsPerBatch == 1500625) batchCharCount = 4; // 35^4
+        
+        ulong realTotalBatches = (ulong)Math.Pow(35, 8 - batchCharCount); // 35^(8-batchSize)
+        
+        // Use the FULL batch range for proper percentage calculation
+        ulong absoluteTotalBatches = realTotalBatches; // ACTUAL total search space
+        ulong absoluteCompletedBatches = _startBatchIndex + thisCompletedCount; // Absolute position
+        
+        // Use relative count for speed calculation (this session only)
         ulong totalBatchCount = _threads[0].MaxBatch - _startBatchIndex;
         
         // Calculate seeds per millisecond
@@ -378,10 +393,14 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         double percentComplete = 0;
         TimeSpan? timeRemaining = null;
         string formattedMessage;
-        Debug.Assert(totalBatchCount > 0, "Batch count must be a positive number.");
+        Debug.Assert(absoluteTotalBatches > 0, "Batch count must be a positive number.");
         
-        percentComplete = thisCompletedCount / (double)totalBatchCount * 100.0;
-        double totalTimeEstimate = elapsedMS / (thisCompletedCount / (double)totalBatchCount);
+        // Use ABSOLUTE position for percentage!
+        percentComplete = absoluteCompletedBatches / (double)absoluteTotalBatches * 100.0;
+        
+        // Calculate ETA based on ABSOLUTE progress
+        double progressRatio = absoluteCompletedBatches / (double)absoluteTotalBatches;
+        double totalTimeEstimate = progressRatio > 0 ? elapsedMS / progressRatio : 0;
         double timeLeft = totalTimeEstimate - elapsedMS;
 
         if (!double.IsNaN(timeLeft) && !double.IsInfinity(timeLeft) && timeLeft > 0 && timeLeft < TimeSpan.MaxValue.TotalMilliseconds)

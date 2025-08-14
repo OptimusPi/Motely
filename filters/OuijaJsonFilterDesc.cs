@@ -119,8 +119,20 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         public OuijaJsonFilter(OuijaConfig config, int cutoff, bool autoCutoff = false)
         {
             DebugLogger.Log("[OuijaJsonFilter] Constructor called!");
-            DebugLogger.Log($"[OuijaJsonFilter] Must clauses: {config.Must.Count}");
+            DebugLogger.Log($"[OuijaJsonFilter] Must clauses: {config.Must?.Count ?? 0}");
+            DebugLogger.Log($"[OuijaJsonFilter] Should clauses: {config.Should?.Count ?? 0}");
+            DebugLogger.Log($"[OuijaJsonFilter] MustNot clauses: {config.MustNot?.Count ?? 0}");
             DebugLogger.Log($"[OuijaJsonFilter] Cutoff: {cutoff}, AutoCutoff: {autoCutoff}");
+            
+            // Log the first few clauses for debugging
+            if (config.Must != null && config.Must.Count > 0)
+            {
+                DebugLogger.Log($"[OuijaJsonFilter] First MUST clause: Type={config.Must[0].Type}, Value={config.Must[0].Value}");
+            }
+            if (config.Should != null && config.Should.Count > 0)
+            {
+                DebugLogger.Log($"[OuijaJsonFilter] First SHOULD clause: Type={config.Should[0].Type}, Value={config.Should[0].Value}, Score={config.Should[0].Score}");
+            }
             
             _config = config;
             _cutoff = cutoff;
