@@ -698,7 +698,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                     DebugLogger.Log($"[CheckJoker] Found {jokerName} in shop slot {i}! Total count: {foundCount}");
                                 }
                                 
-                                // TODO: Add early exit optimization when Min property is available
+                                // Early exit optimization when Min is specified
+                                if (clause.Min.HasValue && foundCount >= clause.Min.Value)
+                                {
+                                    if (DebugLogger.IsEnabled)
+                                        DebugLogger.Log($"[CheckJoker] Early exit - found {foundCount} >= Min {clause.Min.Value}");
+                                    return foundCount;
+                                }
                             }
                         }
                     }
@@ -740,7 +746,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                     DebugLogger.Log($"[CheckJoker] Found in shop slot {i}!");
                                 }
                                 
-                                // TODO: Add early exit optimization when Min property is available
+                                // Early exit optimization when Min is specified
+                                if (clause.Min.HasValue && foundCount >= clause.Min.Value)
+                                {
+                                    if (DebugLogger.IsEnabled)
+                                        DebugLogger.Log($"[CheckJoker] Early exit - found {foundCount} >= Min {clause.Min.Value}");
+                                    return foundCount;
+                                }
                             }
                         }
                     }

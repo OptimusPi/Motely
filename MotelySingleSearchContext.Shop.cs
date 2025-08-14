@@ -60,7 +60,7 @@ public struct ShopState
         public MotelyPlanetCard Planet;
         public MotelyTarotCard Tarot;
         public MotelyItemEdition Edition;
-        // TODO: Stickers
+        public MotelyJokerSticker Stickers; // Eternal, Perishable, Rental
         
         public enum ShopItemType : byte
         {

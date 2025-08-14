@@ -281,11 +281,22 @@ namespace Motely
 
                         case MotelyBoosterPack.MegaBuffoon:
                             var megaBuffoonStream = ctx.CreateBuffoonPackJokerStream(ante, 0);
-                            for (int i = 0; i < 2; i++)
+                            // Mega packs show 5 jokers, player can pick 2
+                            for (int i = 0; i < 5; i++)
                             {
                                 var joker = ctx.GetNextJoker(ref megaBuffoonStream);
                                 var jokerName = FormatJokerName(((MotelyJoker)(joker.Value & 0xFF)).ToString());
-                                contents.Add($"Foil {jokerName}"); // TODO: Get actual edition
+                                // Check if this joker has an edition (not guaranteed in Mega packs)
+                                var edition = joker.Edition;
+                                var editionStr = edition switch
+                                {
+                                    MotelyItemEdition.Foil => "Foil",
+                                    MotelyItemEdition.Holographic => "Holographic",
+                                    MotelyItemEdition.Polychrome => "Polychrome",
+                                    MotelyItemEdition.Negative => "Negative",
+                                    _ => ""
+                                };
+                                contents.Add(!string.IsNullOrEmpty(editionStr) ? $"{editionStr} {jokerName}" : jokerName);
                             }
                             break;
 
@@ -327,7 +338,8 @@ namespace Motely
 
                         case MotelyBoosterPack.MegaCelestial:
                             var megaCelestialStream = ctx.CreateCelestialPackPlanetStream(ante);
-                            for (int i = 0; i < 2; i++)
+                            // Mega packs show 5 items, player can pick 2
+                            for (int i = 0; i < 5; i++)
                             {
                                 var card = ctx.GetNextPlanet(ref megaCelestialStream);
                                 contents.Add(((MotelyPlanetCard)(card.Value & 0xFF)).ToString());
@@ -336,7 +348,8 @@ namespace Motely
 
                         case MotelyBoosterPack.MegaSpectral:
                             var megaSpectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-                            for (int i = 0; i < 2; i++)
+                            // Mega packs show 5 items, player can pick 2
+                            for (int i = 0; i < 5; i++)
                             {
                                 var card = ctx.GetNextSpectral(ref megaSpectralStream);
                                 contents.Add(((MotelySpectralCard)(card.Value & 0xFF)).ToString());
@@ -345,7 +358,8 @@ namespace Motely
                             
                         case MotelyBoosterPack.MegaStandard:
                             var megaStandardStream = ctx.CreateStandardPackCardStream(ante);
-                            for (int i = 0; i < 2; i++)
+                            // Mega packs show 5 cards, player can pick 2
+                            for (int i = 0; i < 5; i++)
                             {
                                 var card = ctx.GetNextStandardCard(ref megaStandardStream);
                                 contents.Add(FormatPlayingCard(card));

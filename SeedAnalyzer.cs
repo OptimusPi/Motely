@@ -274,14 +274,24 @@ public struct AnalyzerFilterDesc : IMotelySeedFilterDesc<AnalyzerFilterDesc.Anal
                     case MotelyBoosterPack.MegaBuffoon:
                         var megaBuffoonStream = ctx.CreateBuffoonPackJokerStream(ante, packSlot);
                         var megaBuffoonJokers = new List<string>();
-                        for (int i = 0; i < 2; i++)
+                        // Mega packs show 5 jokers, player can pick 2
+                        for (int i = 0; i < 5; i++)
                         {
                             var joker = ctx.GetNextJoker(ref megaBuffoonStream);
                             var jokerName = FormatJokerName(((MotelyJoker)(joker.Value & 0xFF)).ToString());
-                            // Mega packs have guaranteed editions
-                            megaBuffoonJokers.Add($"Foil {jokerName}"); // TODO: Get actual edition
+                            // Check if this joker has an edition (not guaranteed in Mega packs)
+                            var edition = joker.Edition;
+                            var editionStr = edition switch
+                            {
+                                MotelyItemEdition.Foil => "Foil",
+                                MotelyItemEdition.Holographic => "Holographic",
+                                MotelyItemEdition.Polychrome => "Polychrome",
+                                MotelyItemEdition.Negative => "Negative",
+                                _ => ""
+                            };
+                            megaBuffoonJokers.Add(!string.IsNullOrEmpty(editionStr) ? $"{editionStr} {jokerName}" : jokerName);
                         }
-                        Console.WriteLine($"Mega Buffoon Pack - {string.Join(", ", megaBuffoonJokers)}");
+                        Console.WriteLine($"Mega Buffoon Pack (pick 2) - {string.Join(", ", megaBuffoonJokers)}");
                         break;
 
                     case MotelyBoosterPack.Standard:

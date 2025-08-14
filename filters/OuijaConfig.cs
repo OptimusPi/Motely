@@ -58,6 +58,7 @@ namespace Motely.Filters
             public int[]? Antes { get; set; }
         
             public int Score { get; set; } = 1;
+            public int? Min { get; set; }  // Minimum count required for early exit optimization
             public string? Edition { get; set; }
             public List<string>? Stickers { get; set; }
         
