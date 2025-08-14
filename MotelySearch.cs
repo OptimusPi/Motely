@@ -603,7 +603,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 {
                     long now = Search._elapsedTime.ElapsedMilliseconds;
                     long last = Volatile.Read(ref Search._lastReportMS);
-                    if (now - last >= 1000)
+                    if (now - last >= 420)
                     {
                         // Try to claim the slot; if another thread updated first, we skip
                         if (Interlocked.CompareExchange(ref Search._lastReportMS, now, last) == last)
