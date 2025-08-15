@@ -209,7 +209,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     MotelyFilterItemType.BigBlindTag => true,
                     MotelyFilterItemType.Voucher => true,
                     MotelyFilterItemType.Joker => true,  // VECTORIZED via MotelyVectorJokerStream!
-                    MotelyFilterItemType.SoulJoker => false,  // Too complex - defer to individual for now
+                    MotelyFilterItemType.SoulJoker => false,  // Too complex - needs pack checking
                     MotelyFilterItemType.TarotCard => true,  // Can be vectorized for simple checks
                     MotelyFilterItemType.PlanetCard => true,  // Can be vectorized for simple checks
                     MotelyFilterItemType.SpectralCard => true,  // Can be vectorized for simple checks
@@ -244,7 +244,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     MotelyFilterItemType.BigBlindTag => true,
                     MotelyFilterItemType.Voucher => true,
                     MotelyFilterItemType.Joker => true,  // VECTORIZED!
-                    MotelyFilterItemType.SoulJoker => false,  // Too complex - defer to individual for now
+                    MotelyFilterItemType.SoulJoker => false,  // Too complex - needs pack checking
                     MotelyFilterItemType.TarotCard => true,
                     MotelyFilterItemType.PlanetCard => true,
                     MotelyFilterItemType.SpectralCard => true,
@@ -280,13 +280,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 var currentSeed = singleCtx.GetSeed();
                 DebugLogger.Log($"[SEARCH] ========== CHECKING SEED: {currentSeed} ==========");
                 
+                // Create voucher state for this seed that persists across all checks
+                MotelyRunState voucherState = new();
+                
                 // PERFORMANCE: Check MUST clauses first - exit immediately on failure
                 // This avoids wasting time on expensive operations for seeds that don't match
                 foreach (var must in config.Must)
                 {
                     string searchDesc = GetFilterDescription(must);
                     DebugLogger.Log($"[SEARCH] Looking for: {searchDesc}");
-                    if (!CheckSingleClause(ref singleCtx, must))
+                    if (!CheckSingleClause(ref singleCtx, must, ref voucherState))
                     {
                         DebugLogger.Log($"[SEARCH] NOT FOUND - exiting early!");
                         return false; // EARLY EXIT - no point checking other MUST clauses
@@ -297,7 +300,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 // Check MUST NOT clauses - none can match
                 foreach (var mustNot in config.MustNot)
                 {
-                    if (CheckSingleClause(ref singleCtx, mustNot))
+                    if (CheckSingleClause(ref singleCtx, mustNot, ref voucherState))
                     {
                         DebugLogger.Log($"[SEARCH] Found MUST NOT item - exiting!");
                         return false; // EARLY EXIT
@@ -313,7 +316,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 foreach (var should in config.Should)
                 {
                     DebugLogger.Log($"[Filter] Seed {currentSeed}: Checking SHOULD clause: {should.Type} = {should.Value}");
-                    int occurrences = CountOccurrences(ref singleCtx, should);
+                    int occurrences = CountOccurrences(ref singleCtx, should, ref voucherState);
                     if (occurrences > 0)
                     {
                         int clauseScore = should.Score * occurrences;
@@ -489,65 +492,60 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
             }
             
-            // NOTE: Pack checking is deferred to individual seed processing for performance
-            // The vectorized pass gives us a quick filter, then individual processing does detailed checks
+            // If packs are needed, we can't fully vectorize this
+            // Return all bits set to defer to individual processing
+            if (clause.Sources?.PackSlots == null || clause.Sources.PackSlots.Length > 0)
+            {
+                return VectorMask.AllBitsSet; // Let individual processing handle pack checking
+            }
             
             return result;
         }
         
-        // NEW: SMART Vectorized soul joker checking - pre-filter by joker type!
+        // SMART Vectorized soul joker checking - pre-filters by FIRST soul joker
         private VectorMask CheckSoulJokerVector(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            // SMART APPROACH: We can vectorize the soul joker stream to eliminate seeds that would
-            // generate the wrong legendary joker, even if they don't have Soul cards.
-            // This gives us massive performance gains by eliminating 80% of seeds immediately.
-            // The remaining seeds get checked individually for pack contents.
+            // KEY INSIGHT: Check what the FIRST soul joker would be for each seed
+            // This eliminates seeds that would generate the wrong legendary even if they had Soul
+            // Seeds that pass this check still need individual processing to verify pack contents
             
             // Get the vectorized soul joker stream for this ante
             var soulJokerStream = ctx.CreateSoulJokerStream(ante);
-            var soulJokers = ctx.GetNextJoker(ref soulJokerStream);
-            
-            // DEBUG: Log what the soul joker stream returns for debugging
-            if (DebugLogger.IsEnabled)
-            {
-                // This is a vectorized operation, so we can't easily print individual values,
-                // but we can check if the stream is working correctly
-                DebugLogger.Log($"[CheckSoulJokerVector] DEBUG: Soul joker stream created for ante {ante}");
-            }
+            var firstSoulJoker = ctx.GetNextJoker(ref soulJokerStream);
             
             VectorMask result = VectorMask.AllBitsClear;
             
-            // Check for specific joker match
             if (clause.JokerEnum.HasValue)
             {
-                // Create target joker using the MotelyJoker constructor  
+                // Check for specific joker
                 var targetJoker = new MotelyItem(clause.JokerEnum.Value);
-                result = MotelyItemVector.Equals(soulJokers, targetJoker);
+                result = MotelyItemVector.Equals(firstSoulJoker, targetJoker);
                 
                 // Also check edition if specified
                 if (clause.EditionEnum.HasValue)
                 {
-                    result &= VectorEnum256.Equals(soulJokers.Edition, clause.EditionEnum.Value);
+                    result &= VectorEnum256.Equals(firstSoulJoker.Edition, clause.EditionEnum.Value);
                 }
                 
-                DebugLogger.Log($"[CheckSoulJokerVector] Ante {ante}: Pre-filtered for {clause.Value} {clause.Edition} - seeds passing joker+edition check will be verified for Soul cards individually");
+                DebugLogger.Log($"[CheckSoulJokerVector] Ante {ante}: Pre-filtered for FIRST soul joker = {clause.Value} {clause.Edition}");
             }
             else
             {
-                // If no specific joker specified, accept any legendary joker
-                result = VectorEnum256.Equals(soulJokers.Type, MotelyItemType.Triboulet) |
-                        VectorEnum256.Equals(soulJokers.Type, MotelyItemType.Perkeo) |
-                        VectorEnum256.Equals(soulJokers.Type, MotelyItemType.Yorick) |
-                        VectorEnum256.Equals(soulJokers.Type, MotelyItemType.Chicot) |
-                        VectorEnum256.Equals(soulJokers.Type, MotelyItemType.Canio);
+                // Looking for any legendary joker
+                result = VectorEnum256.Equals(firstSoulJoker.Type, MotelyItemType.Triboulet) |
+                        VectorEnum256.Equals(firstSoulJoker.Type, MotelyItemType.Perkeo) |
+                        VectorEnum256.Equals(firstSoulJoker.Type, MotelyItemType.Yorick) |
+                        VectorEnum256.Equals(firstSoulJoker.Type, MotelyItemType.Chicot) |
+                        VectorEnum256.Equals(firstSoulJoker.Type, MotelyItemType.Canio);
                 
-                DebugLogger.Log($"[CheckSoulJokerVector] Ante {ante}: Pre-filtered for any legendary joker - seeds passing will be verified for Soul cards individually");
+                if (clause.EditionEnum.HasValue)
+                {
+                    result &= VectorEnum256.Equals(firstSoulJoker.Edition, clause.EditionEnum.Value);
+                }
             }
             
-            // CRITICAL: This pre-filtering step eliminates ~80% of seeds immediately!
-            // Only seeds that would generate the correct joker+edition proceed to individual pack checking.
-            // This is the key to massive performance gains while maintaining correctness.
-            
+            // Seeds passing this check MIGHT have the right soul joker
+            // Individual processing will verify if they actually have Soul cards in packs
             return result;
         }
         
@@ -594,7 +592,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return VectorEnum256.Equals(voucher, clause.VoucherEnum.Value);
         }
         
-        private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause)
+        private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyRunState voucherState)
         {
             int totalCount = 0;
             DebugLogger.Log($"[CountOccurrences] Counting occurrences in antes: {string.Join(",", clause.EffectiveAntes)}");
@@ -645,7 +643,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         break;
                         
                     case MotelyFilterItemType.Voucher:
-                        anteCount = CheckVoucherSingle(ref ctx, clause, ante) ? 1 : 0;
+                        anteCount = CheckVoucherSingle(ref ctx, clause, ante, ref voucherState) ? 1 : 0;
                         break;
                         
                     case MotelyFilterItemType.PlayingCard:
@@ -670,7 +668,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool CheckSingleClause(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause)
+        private static bool CheckSingleClause(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyRunState voucherState)
         {
             // PERFORMANCE: Early exit if no antes to check
             if (clause.EffectiveAntes == null || clause.EffectiveAntes.Length == 0)
@@ -729,7 +727,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         break;
                         
                     case MotelyFilterItemType.Voucher:
-                        found = CheckVoucherSingle(ref ctx, clause, ante);
+                        found = CheckVoucherSingle(ref ctx, clause, ante, ref voucherState);
                         break;
                         
                     case MotelyFilterItemType.PlayingCard:
@@ -935,8 +933,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 DebugLogger.Log($"[CheckJoker] Checking booster packs in ante {ante}...");
                 
+                // Use packSlots from config if specified
                 var packSlots = clause.Sources?.PackSlots;
-                int packCount = ante == 1 ? 4 : 6;
+                int packCount = (packSlots != null && packSlots.Length > 0) ? 
+                    packSlots.Max() + 1 : // Need to iterate up to highest slot + 1
+                    (ante == 1 ? 4 : 6); // Default pack count if not specified
                 int buffoonPackIndex = 0;
                 bool requireMega = clause.Sources?.RequireMega ?? false;
                 
@@ -945,7 +946,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    DebugLogger.Log($"[CheckJoker] Pack #{i+1}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
+                    DebugLogger.Log($"[CheckJoker] Pack slot {i}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
                     
                     // PERFORMANCE: Fast slot check
                     if (packSlots != null && packSlots.Length > 0)
@@ -1106,21 +1107,22 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             bool spectralStreamInit = false;
             bool soulStreamInit = false;
             
-            int packCount = ante == 1 ? 4 : 6;
+            // Use packSlots from config if specified
+            var packSlots = clause.Sources?.PackSlots;
+            int packCount = (packSlots != null && packSlots.Length > 0) ? 
+                packSlots.Max() + 1 : // Need to iterate up to highest slot + 1
+                (ante == 1 ? 4 : 6); // Default pack count if not specified
             
             for (int i = 0; i < packCount; i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                DebugLogger.Log($"[CheckSoulJoker] Pack #{i+1}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
+                DebugLogger.Log($"[CheckSoulJoker] Pack slot {i}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
                 
-                // If using granular sources, check if this pack slot is included
-                if (clause.Sources != null && clause.Sources.PackSlots != null)
+                // Skip if this pack slot isn't in our filter
+                if (packSlots != null && packSlots.Length > 0 && !packSlots.Contains(i))
                 {
-                    if (!clause.Sources.PackSlots.Contains(i))
-                    {
-                        DebugLogger.Log($"[CheckSoulJoker] Skipping pack #{i+1} - not in packSlots filter");
-                        continue;
-                    }
+                    DebugLogger.Log($"[CheckSoulJoker] Skipping pack #{i} - not in packSlots filter");
+                    continue;
                 }
                 
                 if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
@@ -1139,7 +1141,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
                     }
                     
-                    var hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+                    // Generate full pack contents to keep RNG in sync
+                    var packContents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                    bool hasSoul = false;
+                    for (int j = 0; j < packContents.Length; j++)
+                    {
+                        if (packContents.GetItem(j) == MotelyItemType.Soul)
+                        {
+                            hasSoul = true;
+                            // DON'T BREAK - need to check all cards to keep RNG in sync!
+                        }
+                    }
                     DebugLogger.Log($"[CheckSoulJoker] Arcana pack has The Soul: {hasSoul}");
                     
                     if (hasSoul)
@@ -1195,7 +1207,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
                     }
                     
-                    var hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+                    // Generate full pack contents to keep RNG in sync
+                    var packContents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                    bool hasSoul = false;
+                    for (int j = 0; j < packContents.Length; j++)
+                    {
+                        if (packContents.GetItem(j) == MotelyItemType.Soul)
+                        {
+                            hasSoul = true;
+                            // DON'T BREAK - need to check all cards to keep RNG in sync!
+                        }
+                    }
                     DebugLogger.Log($"[CheckSoulJoker] Spectral pack has The Soul: {hasSoul}");
                     
                     if (hasSoul)
@@ -1282,7 +1304,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             if (shouldCheckPacks)
             {
-                int packCount = ante == 1 ? 4 : 6;
+                // Use packSlots from config if specified, otherwise use default
+                var packSlots = clause.Sources?.PackSlots;
+                int packCount = (packSlots != null && packSlots.Length > 0) ? 
+                    packSlots.Length : // Only iterate through specified pack slots
+                    (ante == 1 ? 4 : 6); // Default if not specified
                 
                 for (int i = 0; i < packCount; i++)
                 {
@@ -1371,7 +1397,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             if (shouldCheckPacks)
             {
-                int packCount = ante == 1 ? 4 : 6;
+                // Use packSlots from config if specified, otherwise use default
+                var packSlots = clause.Sources?.PackSlots;
+                int packCount = (packSlots != null && packSlots.Length > 0) ? 
+                    packSlots.Length : // Only iterate through specified pack slots
+                    (ante == 1 ? 4 : 6); // Default if not specified
                 
                 for (int i = 0; i < packCount; i++)
                 {
@@ -1453,8 +1483,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     
                     if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
                     {
+                        // NOTE: BlackHole and Soul NEVER appear in shops, only regular spectral cards
                         var shopSpectral = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
                         DebugLogger.Log($"[CheckSpectral] Shop slot {i}: Found spectral {shopSpectral} (looking for {targetSpectral})");
+                        
+                        // BlackHole and Soul cannot appear in shops
+                        if (targetSpectral.HasValue && (targetSpectral.Value == MotelySpectralCard.BlackHole || targetSpectral.Value == MotelySpectralCard.Soul))
+                        {
+                            DebugLogger.Log($"[CheckSpectral] Note: {targetSpectral} NEVER appears in shops, only in packs!");
+                            continue;
+                        }
                         
                         // If searching for any spectral, return true for any spectral card
                         if (searchAnySpectral)
@@ -1484,21 +1522,28 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 MotelySingleSpectralStream spectralStream = default;
                 bool spectralStreamInit = false;
                 
-                // Check up to 6 packs available in the ante (ante 1 has 4, others have 6)
-                int packCount = ante == 1 ? 4 : 6;
-                DebugLogger.Log($"[CheckSpectral] Checking {packCount} packs...");
+                // IMPORTANT: We must iterate through ALL packs to keep stream in sync
+                // but only check the ones specified in PackSlots
+                // Use packSlots from config if specified
+                var packSlots = clause.Sources?.PackSlots;
+                int packCount = (packSlots != null && packSlots.Length > 0) ? 
+                    packSlots.Max() + 1 : // Need to iterate up to highest slot + 1
+                    (ante == 1 ? 4 : 6); // Default pack count if not specified
+                
+                DebugLogger.Log($"[CheckSpectral] Checking pack slots: {string.Join(",", packSlots ?? Array.Empty<int>())}");
                 
                 for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    DebugLogger.Log($"[CheckSpectral] Pack #{i+1}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
                     
-                    // If using granular sources, check if this pack slot is included
-                    if (clause.Sources != null && clause.Sources.PackSlots != null)
+                    // Skip if this pack slot isn't in our filter
+                    if (packSlots != null && packSlots.Length > 0 && !packSlots.Contains(i))
                     {
-                        if (!clause.Sources.PackSlots.Contains(i))
-                            continue;
+                        DebugLogger.Log($"[CheckSpectral] Pack slot {i}: Type={pack.GetPackType()}, Size={pack.GetPackSize()} - SKIPPING (not in filter)");
+                        continue;
                     }
+                    
+                    DebugLogger.Log($"[CheckSpectral] Pack slot {i}: Type={pack.GetPackType()}, Size={pack.GetPackSize()} - CHECKING");
                     
                     if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                     {
@@ -1526,21 +1571,59 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         for (int j = 0; j < contents.Length; j++)
                         {
                             var item = contents.GetItem(j);
-                            var spectralType = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                            DebugLogger.Log($"[CheckSpectral]   Card {j}: {spectralType} (raw: {item.Type}, value: {item.Value:X8}, enum: {(int)spectralType})");
                             
-                            // If searching for any spectral, return true for any spectral card
-                            if (searchAnySpectral)
+                            // Debug what we actually got
+                            DebugLogger.Log($"[CheckSpectral]   Card {j}: Type={item.Type}, Value={item.Value:X8}, TypeCategory={item.TypeCategory}");
+                            
+                            // Check for Soul and BlackHole
+                            if (item.Type == MotelyItemType.Soul)
                             {
-                                DebugLogger.Log($"[CheckSpectral] FOUND any spectral: {spectralType}!");
-                                return true;
+                                DebugLogger.Log($"[CheckSpectral]   Card {j}: Soul (special)");
+                                if (searchAnySpectral || (targetSpectral.HasValue && targetSpectral.Value == MotelySpectralCard.Soul))
+                                {
+                                    DebugLogger.Log($"[CheckSpectral] FOUND Soul!");
+                                    return true;
+                                }
                             }
-                            
-                            // Otherwise check for specific spectral
-                            if (targetSpectral.HasValue && spectralType == targetSpectral.Value)
+                            else if (item.Type == MotelyItemType.BlackHole)
                             {
-                                DebugLogger.Log($"[CheckSpectral] FOUND {targetSpectral}!");
-                                return true;
+                                DebugLogger.Log($"[CheckSpectral]   Card {j}: BlackHole (special)");
+                                if (searchAnySpectral || (targetSpectral.HasValue && targetSpectral.Value == MotelySpectralCard.BlackHole))
+                                {
+                                    DebugLogger.Log($"[CheckSpectral] FOUND BlackHole!");
+                                    return true;
+                                }
+                            }
+                            else if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                            {
+                                // Regular spectral cards
+                                var spectralType = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+                                DebugLogger.Log($"[CheckSpectral]   Card {j}: {spectralType} (regular spectral)");
+                                
+                                // Check if it might be BlackHole with wrong enum value
+                                if (spectralType == MotelySpectralCard.BlackHole)
+                                {
+                                    DebugLogger.Log($"[CheckSpectral] WARNING: Found BlackHole as regular spectral enum!");
+                                    if (searchAnySpectral || (targetSpectral.HasValue && targetSpectral.Value == MotelySpectralCard.BlackHole))
+                                    {
+                                        DebugLogger.Log($"[CheckSpectral] FOUND BlackHole!");
+                                        return true;
+                                    }
+                                }
+                                
+                                // If searching for any spectral, return true for any spectral card
+                                if (searchAnySpectral)
+                                {
+                                    DebugLogger.Log($"[CheckSpectral] FOUND any spectral: {spectralType}!");
+                                    return true;
+                                }
+                                
+                                // Otherwise check for specific spectral
+                                if (targetSpectral.HasValue && spectralType == targetSpectral.Value)
+                                {
+                                    DebugLogger.Log($"[CheckSpectral] FOUND {targetSpectral}!");
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -1602,9 +1685,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         
                         if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
                         {
-                            // Extract spectral card type
+                            // NOTE: BlackHole and Soul NEVER appear in shops, only regular spectral cards
                             var shopSpectral = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
                             DebugLogger.Log($"[CheckSpectral] Found spectral card in shop slot {i}: {shopSpectral}");
+                            
+                            // BlackHole and Soul cannot appear in shops
+                            if (targetSpectral.HasValue && (targetSpectral.Value == MotelySpectralCard.BlackHole || targetSpectral.Value == MotelySpectralCard.Soul))
+                            {
+                                DebugLogger.Log($"[CheckSpectral] Note: {targetSpectral} NEVER appears in shops, only in packs!");
+                                continue;
+                            }
                             
                             // Check if we're looking for any spectral or a specific one
                             if (searchAnySpectral || shopSpectral == targetSpectral)
@@ -1640,8 +1730,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         
                         if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
                         {
+                            // NOTE: BlackHole and Soul NEVER appear in shops, only regular spectral cards
                             var shopSpectral = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
                             DebugLogger.Log($"[CheckSpectral] Found spectral card in shop slot {i}: {shopSpectral}");
+                            
+                            // BlackHole and Soul cannot appear in shops
+                            if (targetSpectral.HasValue && (targetSpectral.Value == MotelySpectralCard.BlackHole || targetSpectral.Value == MotelySpectralCard.Soul))
+                            {
+                                DebugLogger.Log($"[CheckSpectral] Note: {targetSpectral} NEVER appears in shops, only in packs!");
+                                continue;
+                            }
                             
                             if (searchAnySpectral || shopSpectral == targetSpectral)
                             {
@@ -1783,20 +1881,32 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             }
         }
         
-        private static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
+        private static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelyRunState voucherState)
         {
             // Assume validation was done during config parsing
             if (!clause.VoucherEnum.HasValue)
                 return false;
                 
-            var voucher = ctx.GetAnteFirstVoucher(ante);
-            return voucher == clause.VoucherEnum.Value;
+            var voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
+            
+            if (voucher == clause.VoucherEnum.Value)
+            {
+                // KISS: Found the voucher, activate it for upgrade vouchers in later antes!
+                voucherState.ActivateVoucher(voucher);
+                return true;
+            }
+            
+            return false;
         }
         
         private static bool CheckPlayingCard(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             var packStream = ctx.CreateBoosterPackStream(ante, isCached: true);
-            int packCount = ante == 1 ? 4 : 6;
+            // Use packSlots from config if specified, otherwise use default
+            var packSlots = clause.Sources?.PackSlots;
+            int packCount = (packSlots != null && packSlots.Length > 0) ? 
+                packSlots.Length : // Only iterate through specified pack slots
+                (ante == 1 ? 4 : 6); // Default if not specified
             
             for (int i = 0; i < packCount; i++)
             {
