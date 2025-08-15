@@ -173,15 +173,6 @@ public ref struct MotelyFilterCreationContext
             MotelyPrngKeys.ShopJokerRentalSource,
             flags, force
         );
-
-        // Cache the common joker stream for performance
-        // Using the same source as shop items since we don't have a separate JokerSource
-        CacheJokerStream(ante,
-            MotelyPrngKeys.ShopItemSource,
-            MotelyPrngKeys.ShopJokerEternalPerishableSource,
-            MotelyPrngKeys.ShopJokerRentalSource,
-            flags, force
-        );
     }
 
     private readonly void CacheFixedRarityJokerStream(int ante,

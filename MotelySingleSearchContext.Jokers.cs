@@ -276,7 +276,9 @@ unsafe ref partial struct MotelySingleSearchContext
     private MotelyJoker GetNextJoker<T>(ref MotelySinglePrngStream stream, MotelyJokerRarity rarity) where T : unmanaged, Enum
     {
         Debug.Assert(sizeof(T) == 4);
-        int value = (int)rarity | GetNextRandomInt(ref stream, 0, MotelyEnum<T>.ValueCount);
+        int randomIndex = GetNextRandomInt(ref stream, 0, MotelyEnum<T>.ValueCount);
+        
+        int value = (int)rarity | randomIndex;
         return (MotelyJoker)value;
     }
 

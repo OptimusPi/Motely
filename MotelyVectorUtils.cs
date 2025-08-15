@@ -1,78 +1,45 @@
-
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics.Arm;
-using System.Numerics;
+using System.Runtime.Intrinsics.X86;
 
 namespace Motely;
 
 public unsafe static class MotelyVectorUtils
 {
-    public static readonly bool IsAccelerated;
-    public static readonly bool HasAvx512;
-    public static readonly bool HasAvx2;
-    public static readonly bool HasArmNeon;
-
-    static MotelyVectorUtils()
-    {
-        // Check for platform-specific SIMD support
-        HasAvx512 = Avx512F.IsSupported;
-        HasAvx2 = Avx2.IsSupported;
-        HasArmNeon = AdvSimd.IsSupported;
-        
-        // Accelerated if we have ANY SIMD support
-        IsAccelerated = HasAvx512 || HasAvx2 || HasArmNeon || Vector256.IsHardwareAccelerated;
-    }
+    public static bool IsAccelerated => Vector512.IsHardwareAccelerated;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<int> ConvertToVector256Int32(in Vector512<double> vector)
     {
-        if (HasAvx512)
+        if (Avx512F.IsSupported)
         {
-            // x86: Use AVX512 for best performance
             return Avx512F.ConvertToVector256Int32WithTruncation(vector);
         }
         else
         {
-            // Fallback: Use portable SIMD narrow operations
-            var lower = vector.GetLower();
-            var upper = vector.GetUpper();
-            
-            // Convert doubles to floats first (narrows 64-bit to 32-bit)
-            var floatLower = Vector128.Narrow(lower.GetLower(), lower.GetUpper());
-            var floatUpper = Vector128.Narrow(upper.GetLower(), upper.GetUpper());
-            
-            // Then convert floats to ints with truncation
-            var intLower = Vector128.ConvertToInt32(floatLower);
-            var intUpper = Vector128.ConvertToInt32(floatUpper);
-            
-            return Vector256.Create(intLower, intUpper);
+            Vector512<long> integerVector = Vector512.ConvertToInt64(vector);
+            return Vector256.Narrow(integerVector.GetLower(), integerVector.GetUpper());
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<int> ShiftLeft(in Vector256<int> value, in Vector256<int> shiftCount)
     {
-        if (HasAvx2)
+        if (Avx2.IsSupported)
         {
-            // x86: Use AVX2 variable shift
+            return Vector256.Create(
+                AdvSimd.ShiftLogical(value.GetLower(), shiftCount.GetLower()),
+                AdvSimd.ShiftLogical(value.GetUpper(), shiftCount.GetUpper())
+            );
+        }
+
+        if (AdvSimd.IsSupported)
+        {
             return Avx2.ShiftLeftLogicalVariable(value, shiftCount.AsUInt32());
         }
-        else if (HasArmNeon)
-        {
-            // ARM: NEON doesn't have variable shift for int32, use fallback
-            // Fall through to portable implementation
-            var s0 = shiftCount.GetElement(0) & 31;
-            return value << s0; // Uses SIMD shift with broadcast
-        }
-        else
-        {
-            // Fallback: Use portable SIMD with constant shifts
-            // This is still SIMD but less efficient than variable shift
-            var s0 = shiftCount.GetElement(0) & 31;
-            return value << s0; // Uses SIMD shift with broadcast
-        }
+
+        throw new PlatformNotSupportedException();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -101,29 +68,8 @@ public unsafe static class MotelyVectorUtils
         if (sizeof(TFrom) != 4) throw new InvalidOperationException();
         if (sizeof(TTo) != 8) throw new InvalidOperationException();
 
-        if (HasAvx2)
-        {
-            // x86: Use AVX2 sign extension
-            Vector256<long> low = Avx2.ConvertToVector256Int64(smallMask.AsInt32().GetLower());
-            Vector256<long> high = Avx2.ConvertToVector256Int64(smallMask.AsInt32().GetUpper());
-            return Vector512.Create(low, high).As<long, TTo>();
-        }
-        else
-        {
-            // Portable SIMD: Use Vector.Widen for sign extension
-            var input32 = smallMask.AsInt32();
-            var lower128 = input32.GetLower();
-            var upper128 = input32.GetUpper();
-            
-            // Widen operations are SIMD and preserve sign
-            (var low0, var low1) = Vector128.Widen(lower128);
-            (var high0, var high1) = Vector128.Widen(upper128);
-            
-            var low = Vector256.Create(low0, low1);
-            var high = Vector256.Create(high0, high1);
-            
-            return Vector512.Create(low, high).As<long, TTo>();
-        }
+        (Vector256<long> low, Vector256<long> high) = Vector256.Widen(smallMask.AsInt32());
+        return Vector512.Create(low, high).As<long, TTo>();
     }
 
 
@@ -153,24 +99,7 @@ public unsafe static class MotelyVectorUtils
         if (sizeof(TTo) != 4) throw new InvalidOperationException();
         if (sizeof(TFrom) != 8) throw new InvalidOperationException();
 
-        if (HasAvx512)
-        {
-            // x86: Use AVX512 conversion
-            return Avx512F.ConvertToVector256Int32(smallMask.AsUInt64()).As<int, TTo>();
-        }
-        else
-        {
-            // Portable SIMD: Use vector narrow operations
-            var input64 = smallMask.AsInt64();
-            var lower = input64.GetLower();
-            var upper = input64.GetUpper();
-            
-            // Narrow using SIMD operations
-            var narrowLower = Vector128.Narrow(lower.GetLower(), lower.GetUpper());
-            var narrowUpper = Vector128.Narrow(upper.GetLower(), upper.GetUpper());
-            
-            return Vector256.Create(narrowLower, narrowUpper).As<int, TTo>();
-        }
+        return Vector256.Narrow(smallMask.GetLower().AsUInt64(), smallMask.GetUpper().AsUInt64()).As<uint, TTo>();
     }
 
 #if !DEBUG

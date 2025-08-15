@@ -1,4 +1,3 @@
-
 using System.Runtime.Intrinsics;
 
 namespace Motely;
@@ -10,6 +9,18 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
     {
         ctx.CacheAnteFirstVoucher(1);
         ctx.CacheAnteFirstVoucher(2);
+        
+        // Cache booster pack streams that are needed
+        ctx.CacheBoosterPackStream(1);
+        ctx.CacheBoosterPackStream(2);
+        
+        // Cache soul joker streams
+        ctx.CacheSoulJokerStream(1);
+        ctx.CacheSoulJokerStream(2);
+        
+        // Cache tarot and spectral streams for pack checking
+        ctx.CacheArcanaPackTarotStream(1, true);
+        ctx.CacheArcanaPackTarotStream(2, true);
 
         return new PerkeoObservatoryFilter();
     }
@@ -52,7 +63,8 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                     if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
                     {
                         if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(1);
-                        return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+                        var joker = searchContext.GetNextJoker(ref soulStream);
+                        return joker.Type == MotelyItemType.Triboulet && joker.Edition == MotelyItemEdition.Negative;
                     }
                 }
 
@@ -63,7 +75,8 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                     if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                     {
                         if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(1);
-                        return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+                        var joker = searchContext.GetNextJoker(ref soulStream);
+                        return joker.Type == MotelyItemType.Triboulet && joker.Edition == MotelyItemEdition.Negative;
                     }
 
                 }
