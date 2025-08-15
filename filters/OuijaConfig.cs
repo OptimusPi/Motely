@@ -69,6 +69,19 @@ namespace Motely.Filters
         
             // Sources configuration
             public SourcesConfig? Sources { get; set; }
+            
+            // Direct properties for backwards compatibility and simpler JSON
+            [JsonPropertyName("packSlots")]
+            public int[]? PackSlots { get; set; }
+            
+            [JsonPropertyName("shopSlots")]
+            public int[]? ShopSlots { get; set; }
+            
+            [JsonPropertyName("requireMega")]
+            public bool? RequireMega { get; set; }
+            
+            [JsonPropertyName("tags")]
+            public bool? Tags { get; set; }
         
         // Get effective antes
         [JsonIgnore]
@@ -491,6 +504,25 @@ namespace Motely.Filters
                 // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
                 item.InitializeParsedEnums();
             
+                // Merge flat properties into Sources for backwards compatibility
+                if (item.PackSlots != null || item.ShopSlots != null || item.RequireMega != null || item.Tags != null)
+                {
+                    if (item.Sources == null)
+                    {
+                        item.Sources = new SourcesConfig();
+                    }
+                    
+                    // Use flat properties if provided, otherwise keep existing Sources values
+                    if (item.PackSlots != null)
+                        item.Sources.PackSlots = item.PackSlots;
+                    if (item.ShopSlots != null)
+                        item.Sources.ShopSlots = item.ShopSlots;
+                    if (item.RequireMega != null)
+                        item.Sources.RequireMega = item.RequireMega.Value;
+                    if (item.Tags != null)
+                        item.Sources.Tags = item.Tags.Value;
+                }
+            
                 // Set default sources if not specified
                 if (item.Sources == null)
                 {
@@ -530,18 +562,31 @@ namespace Motely.Filters
         // Override sources for special items that can't appear in shops
         private void OverrideSpecialItemSources(FilterItem item)
         {
-            // Soul and Black Hole spectral cards can ONLY come from spectral packs
+            // Soul and BlackHole special cards (0.3% chance in packs):
+            // - Soul: Tarot in Arcana packs (gives legendary joker), Spectral in Spectral packs
+            // - BlackHole: Planet in Celestial packs (upgrades 3 planets), Spectral in Spectral packs
+            // They NEVER appear in shops - only in packs!
             if (item.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
             {
                 if (item.SpectralEnum == MotelySpectralCard.Soul || 
                     item.SpectralEnum == MotelySpectralCard.BlackHole)
                 {
-                    item.Sources = new SourcesConfig
+                    // Only override ShopSlots (they can NEVER appear in shops)
+                    // Keep user's packSlots and requireMega settings!
+                    if (item.Sources != null)
                     {
-                        ShopSlots = Array.Empty<int>(), // Cannot appear in shops, even on Ghost Deck
-                        PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
-                        Tags = false
-                    };
+                        item.Sources.ShopSlots = Array.Empty<int>(); // Cannot appear in shops
+                        item.Sources.Tags = false; // Can't come from tags either
+                    }
+                    else
+                    {
+                        item.Sources = new SourcesConfig
+                        {
+                            ShopSlots = Array.Empty<int>(),
+                            PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                            Tags = false
+                        };
+                    }
                 }
             }
         }
