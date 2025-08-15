@@ -46,7 +46,6 @@ namespace Motely.Filters
         {
             public string? Deck { get; set; }
             public string? Stake { get; set; }
-            public int? MaxAnte { get; set; }
         }
     
         public class FilterItem
@@ -71,9 +70,20 @@ namespace Motely.Filters
             // Sources configuration
             public SourcesConfig? Sources { get; set; }
         
-        // Get effective antes; default to antes 1-8 when unspecified
+        // Get effective antes
         [JsonIgnore]
-        public int[] EffectiveAntes => Antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        public int[] EffectiveAntes 
+        {
+            get
+            {
+                if (Antes == null || Antes.Length == 0)
+                {
+                    // Default to all 8 antes if not specified
+                    return new int[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+                }
+                return Antes;
+            }
+        }
         
             // === COMPUTED ENUM PROPERTIES FOR COMPATIBILITY ===
             // Cache parsed enum values to avoid string operations in hot path
@@ -124,16 +134,21 @@ namespace Motely.Filters
                 switch (ItemTypeEnum)
                 {
                     case MotelyFilterItemType.Joker:
-                        // Parse wildcard first
-                        WildcardEnum = Value?.ToLowerInvariant() switch
+                    case MotelyFilterItemType.SoulJoker:  // ALSO parse joker enum for soul jokers!
+                        // Parse wildcard first (only for regular jokers, not soul jokers)
+                        if (ItemTypeEnum == MotelyFilterItemType.Joker)
                         {
-                            "anyjoker" => JokerWildcard.AnyJoker,
-                            "anycommon" => JokerWildcard.AnyCommon,
-                            "anyuncommon" => JokerWildcard.AnyUncommon,
-                            "anyrare" => JokerWildcard.AnyRare,
-                            "anylegendary" => JokerWildcard.AnyLegendary,
-                            _ => null
-                        };
+                            WildcardEnum = Value?.ToLowerInvariant() switch
+                            {
+                                "any" => JokerWildcard.AnyJoker,  // Support both "any" and "anyjoker"
+                                "anyjoker" => JokerWildcard.AnyJoker,
+                                "anycommon" => JokerWildcard.AnyCommon,
+                                "anyuncommon" => JokerWildcard.AnyUncommon,
+                                "anyrare" => JokerWildcard.AnyRare,
+                                "anylegendary" => JokerWildcard.AnyLegendary,
+                                _ => null
+                            };
+                        }
                         
                         Debug.WriteLine($"[InitializeParsedEnums] Joker parsing: WildcardEnum={WildcardEnum}");
                         
@@ -143,7 +158,14 @@ namespace Motely.Filters
                             if (Enum.TryParse<MotelyJoker>(Value, true, out var joker))
                             {
                                 JokerEnum = joker;
-                                Debug.WriteLine($"[InitializeParsedEnums] Successfully parsed joker: {JokerEnum}");
+                                Debug.WriteLine($"[InitializeParsedEnums] Successfully parsed joker: '{Value}' -> {JokerEnum} (int value: {(int)joker})");
+                                
+                                // IMPORTANT DEBUG: Log if this is a Legendary joker
+                                if (Value.Equals("Perkeo", StringComparison.OrdinalIgnoreCase) || 
+                                    Value.Equals("Triboulet", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    Debug.WriteLine($"[InitializeParsedEnums] LEGENDARY JOKER PARSED: '{Value}' -> Enum={JokerEnum}, IntValue={(int)joker}");
+                                }
                             }
                             else
                             {

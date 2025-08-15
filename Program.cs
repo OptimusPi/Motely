@@ -45,7 +45,7 @@ namespace Motely
                 "--batchSize <CHARS>",
                 "Batch character count (2-4 recommended)",
                 CommandOptionType.SingleValue);
-            batchSizeOption.DefaultValue = 4;
+            batchSizeOption.DefaultValue = 1;
 
             var cutoffOption = app.Option<string>(
                 "--cutoff <SCORE>",
@@ -287,12 +287,10 @@ namespace Motely
                     else
                         Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
                 }
-                
+
                 // Create the search using OuijaJsonFilterDesc
                 var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
-                    .WithThreadCount(threads)
-                    .WithSequentialSearch()
-                    .WithBatchCharacterCount(batchSize);
+                    .WithThreadCount(threads);
                     
                 // Apply deck and stake from config
                 if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
@@ -333,15 +331,22 @@ namespace Motely
                 {
                     // Search specific seeds from list
                     if (!quiet && enableDebug)
+                    {
                         Console.WriteLine($"[DEBUG] Starting list search with {seeds.Count} seeds");
+                        Console.WriteLine($"[DEBUG] Seeds to search: {string.Join(", ", seeds.Take(5))}...");
+                    }
                     search = searchSettings.WithListSearch(seeds).Start();
+                    DebugLogger.Log($"[Program] List search created. Status immediately after Start(): {search.Status}");
                 }
                 else
                 {
                     // Sequential batch search
                     if (!quiet && enableDebug)
                         Console.WriteLine($"[DEBUG] Starting sequential batch search");
-                    search = searchSettings.Start();
+                    search = searchSettings
+                    .WithSequentialSearch()
+                    .WithBatchCharacterCount(batchSize)
+                    .Start();
                 }
 
                 // Print CSV header for results
@@ -372,6 +377,20 @@ namespace Motely
                     Console.WriteLine("✅ Search stopped gracefully");
                 };
                 
+                // WAIT FOR SEARCH TO COMPLETE!
+                DebugLogger.Log($"[Program] Search started. Initial status: {search.Status}");
+                int loopCount = 0;
+                while (search.Status != MotelySearchStatus.Completed && !OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled)
+                {
+                    System.Threading.Thread.Sleep(100);
+                    loopCount++;
+                    if (loopCount % 10 == 0) // Log every second
+                    {
+                        DebugLogger.Log($"[Program] Waiting for search... Status: {search.Status}, CompletedBatchCount: {search.CompletedBatchCount}");
+                    }
+                }
+                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled}");
+                
                 // Stop timing
                 searchStopwatch.Stop();
                 
@@ -382,8 +401,8 @@ namespace Motely
                 Console.WriteLine($"\n✅ Search completed"); 
                 if (seeds != null && seeds.Count > 0)
                 {
-                    // For list search, it's the actual number of seeds
-                    Console.WriteLine($"   Total seeds searched: {totalSearched:N0}");
+                    // For list search, show the actual number of seeds we tried to search
+                    Console.WriteLine($"   Total seeds searched: {seeds.Count:N0}");
                 }
                 else
                 {

@@ -568,14 +568,24 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         return;
                 }
 
-                ulong batchIdx = Interlocked.Increment(ref Search._batchIndex);
+                // Get the next batch index atomically
+                ulong batchIdx = (ulong)Interlocked.Increment(ref Search._batchIndex) - 1;
+                
+                // DEBUG: Log batch processing
+                if (DebugLogger.IsEnabled)
+                    DebugLogger.Log($"[MotelySearch] Thread attempting batch {batchIdx}, MaxBatch={MaxBatch}");
+                
                 if (batchIdx >= MaxBatch)
                 {
+                    if (DebugLogger.IsEnabled)
+                        DebugLogger.Log($"[MotelySearch] Batch {batchIdx} >= MaxBatch {MaxBatch}, marking completed");
                     Search._batchIndex = MaxBatch;
                     Search._status = MotelySearchStatus.Completed;
                     continue;
                 }
 
+                if (DebugLogger.IsEnabled)
+                    DebugLogger.Log($"[MotelySearch] Processing batch {batchIdx}");
                 SearchBatch(batchIdx);
                 Interlocked.Increment(ref Search._completedBatchCount);
 
@@ -830,8 +840,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         protected override void SearchBatch(ulong batchIdx)
         {
+            DebugLogger.Log($"[ProviderSearchThread] SearchBatch called with batchIdx={batchIdx}, MaxBatch={MaxBatch}, SeedCount={SeedProvider.SeedCount}");
+            
             // If this is the last batch, check if we have enough seeds to fill a vector.
-            if (batchIdx == MaxBatch && (ulong)SeedProvider.SeedCount != MaxBatch * (ulong)Vector512<double>.Count)
+            if (batchIdx == MaxBatch - 1 && (ulong)SeedProvider.SeedCount != MaxBatch * (ulong)Vector512<double>.Count)
             {
                 // If we don't, search the last seeds individually
                 for (int i = 0; i < SeedProvider.SeedCount - (int)((MaxBatch - 1) * (ulong)Vector512<double>.Count); i++)
@@ -921,6 +933,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         private void SearchSingleSeed(ReadOnlySpan<char> seed)
         {
+            DebugLogger.Log($"[ProviderSearchThread] SearchSingleSeed called for seed: {seed.ToString()}");
             char* seedLastCharacters = stackalloc char[Motely.MaxSeedLength - 1];
 
             // Calculate the partial psuedohash cache
