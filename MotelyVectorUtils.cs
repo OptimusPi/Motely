@@ -26,7 +26,7 @@ public unsafe static class MotelyVectorUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<int> ShiftLeft(in Vector256<int> value, in Vector256<int> shiftCount)
     {
-        if (Avx2.IsSupported)
+        if (AdvSimd.IsSupported)
         {
             return Vector256.Create(
                 AdvSimd.ShiftLogical(value.GetLower(), shiftCount.GetLower()),
@@ -34,7 +34,7 @@ public unsafe static class MotelyVectorUtils
             );
         }
 
-        if (AdvSimd.IsSupported)
+        if (Avx2.IsSupported)
         {
             return Avx2.ShiftLeftLogicalVariable(value, shiftCount.AsUInt32());
         }
