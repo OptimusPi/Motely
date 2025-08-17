@@ -54,19 +54,6 @@ ref partial struct MotelySingleSearchContext
 
         return pack;
     }
-    
-    // Alias for compatibility with OuijaJsonFilterDesc
-    public MotelySingleItemSet GetCelestialPackContents(ref MotelySinglePlanetStream planetStream, MotelyBoosterPackSize size)
-        => GetNextCelestialPackContents(ref planetStream, size);
-    
-    public MotelySingleItemSet GetCelestialPackContents(ref MotelySinglePlanetStream planetStream, int size)
-    {
-        Debug.Assert(size <= MotelySingleItemSet.MaxLength);
-        MotelySingleItemSet pack = new();
-        for (int i = 0; i < size; i++)
-            pack.Append(GetNextPlanet(ref planetStream, pack));
-        return pack;
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem GetNextPlanet(ref MotelySinglePlanetStream planetStream)
@@ -107,19 +94,10 @@ ref partial struct MotelySingleSearchContext
 
             planet = (MotelyItemType)MotelyItemTypeCategory.PlanetCard | (MotelyItemType)GetNextRandomInt(
                 ref GetResamplePrngStream(ref planetStream.ResampleStream, planetStream.ResampleKey, resampleCount),
-                0, MotelyEnum<MotelyPlanetCard>.ValueCount
+                0, MotelyEnum<MotelyVoucher>.ValueCount
             );
 
             ++resampleCount;
         }
-    }
-    
-    public MotelyItem GetNextShopPlanet(ref MotelySinglePlanetStream planetStream)
-    {
-        // Shop planets are simpler - no duplicate checking needed
-        MotelyItemType planet = (MotelyItemType)MotelyItemTypeCategory.PlanetCard | 
-            (MotelyItemType)GetNextRandomInt(ref planetStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyPlanetCard>.ValueCount);
-        
-        return planet;
     }
 }

@@ -37,9 +37,9 @@ ref partial struct MotelySingleSearchContext
                 MotelySinglePrngStream.Invalid :
                 CreatePrngStream(MotelyPrngKeys.StandardCardEnhancement + MotelyPrngKeys.StandardPackItemSource + ante),
 
-            EditionPrngStream = !flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEdition) ?
-                CreatePrngStream(MotelyPrngKeys.StandardCardEdition + ante) :
-                MotelySinglePrngStream.Invalid,
+            EditionPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEdition) ?
+                MotelySinglePrngStream.Invalid :
+                CreatePrngStream(MotelyPrngKeys.StandardCardEdition + ante),
 
             HasSealPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeSeal) ?
                 MotelySinglePrngStream.Invalid :

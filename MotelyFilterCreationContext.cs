@@ -70,7 +70,7 @@ public ref struct MotelyFilterCreationContext
 
         if (cacheSoul)
         {
-            CachePseudoHash(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, force);
+            CachePseudoHash(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante, force);
         }
     }
 
@@ -173,6 +173,8 @@ public ref struct MotelyFilterCreationContext
             MotelyPrngKeys.ShopJokerRentalSource,
             flags, force
         );
+
+        // TODO Cache the common joker stream?
     }
 
     private readonly void CacheFixedRarityJokerStream(int ante,
