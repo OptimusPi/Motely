@@ -1,431 +1,409 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
-namespace Motely;
-
-public static class SeedAnalyzer
+namespace Motely
 {
-    public static void Analyze(string seed, MotelyDeck deck, MotelyStake stake)
+    /// <summary>
+    /// Consolidated seed analyzer that captures seed data and provides various output formats
+    /// </summary>
+    public static class SeedAnalyzer
     {
-        try
+        /// <summary>
+        /// Analyzes a seed and returns structured data
+        /// </summary>
+        public static SeedAnalysisData Analyze(string seed, MotelyDeck deck, MotelyStake stake)
         {
-            // Create analyzer filter
-            var filterDesc = new AnalyzerFilterDesc();
-            var searchSettings = new MotelySearchSettings<AnalyzerFilterDesc.AnalyzerFilter>(filterDesc)
-                .WithDeck(deck)
-                .WithStake(stake)
-                .WithListSearch(new[] { seed })
-                .WithThreadCount(1);
+            var data = new SeedAnalysisData 
+            { 
+                Seed = seed, 
+                Deck = deck, 
+                Stake = stake 
+            };
+
+            try
+            {
+                var filterDesc = new AnalyzerFilterDesc(data);
+                var searchSettings = new MotelySearchSettings<AnalyzerFilterDesc.AnalyzerFilter>(filterDesc)
+                    .WithDeck(deck)
+                    .WithStake(stake)
+                    .WithListSearch(new[] { seed })
+                    .WithThreadCount(1);
+                    
+                var search = searchSettings.Start();
                 
-            var search = searchSettings.Start();
-            
-            // Wait for completion
-            while (search.Status == MotelySearchStatus.Running)
-            {
-                System.Threading.Thread.Sleep(10);
+                // Wait for completion
+                while (search.Status == MotelySearchStatus.Running)
+                {
+                    System.Threading.Thread.Sleep(10);
+                }
+                
+                search.Dispose();
             }
-            
-            search.Dispose();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Error analyzing seed: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
-        }
-    }
-}
-
-public struct AnalyzerFilterDesc : IMotelySeedFilterDesc<AnalyzerFilterDesc.AnalyzerFilter>
-{
-    public AnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
-    {
-        return new AnalyzerFilter();
-    }
-
-    public struct AnalyzerFilter : IMotelySeedFilter
-    {
-        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
-        {
-            // For analyzer, we just want to check individual seeds
-            return ctx.SearchIndividualSeeds(CheckSeed);
-        }
-
-        public bool CheckSeed(ref MotelySingleSearchContext ctx)
-        {
-            var seed = ctx.GetSeed();
-            Console.WriteLine($"Seed: {seed}");
-            Console.WriteLine($"Deck: {ctx.Deck}, Stake: {ctx.Stake}");
-            Console.WriteLine();
-
-            // Analyze each ante
-            for (int ante = 1; ante <= 8; ante++)
+            catch (Exception ex)
             {
-                Console.WriteLine($"==ANTE {ante}==");
+                data.Error = ex.Message;
+            }
 
-                // Boss
-                var boss = ctx.GetBossForAnte(ante);
-                Console.WriteLine($"Boss: {boss}");
+            return data;
+        }
 
-                // Voucher
-                var voucher = ctx.GetAnteFirstVoucher(ante);
-                Console.WriteLine($"Voucher: {voucher}");
+        /// <summary>
+        /// Analyzes a seed and prints to console
+        /// </summary>
+        public static void AnalyzeToConsole(string seed, MotelyDeck deck, MotelyStake stake)
+        {
+            var data = Analyze(seed, deck, stake);
+            ConsoleFormatter.Print(data);
+        }
+
+        /// <summary>
+        /// Alias for UI compatibility - captures analysis data for a seed
+        /// </summary>
+        public static List<SeedAnalysisData.AnteData> CaptureAnalysis(string seed, MotelyDeck deck, MotelyStake stake)
+        {
+            var data = Analyze(seed, deck, stake);
+            return data.Antes;
+        }
+    }
+
+    /// <summary>
+    /// Alias for UI compatibility
+    /// </summary>
+    public static class SeedAnalyzerCapture
+    {
+        /// <summary>
+        /// Captures analysis data for a seed
+        /// </summary>
+        public static List<AnteData> CaptureAnalysis(string seed, MotelyDeck deck, MotelyStake stake)
+        {
+            var data = SeedAnalyzer.Analyze(seed, deck, stake);
+            return data.Antes.Select(a => new AnteData(a)).ToList();
+        }
+
+        // Wrapper classes for UI compatibility that delegate to the actual data classes
+        public class AnteData(SeedAnalysisData.AnteData data)
+        {
+            private readonly SeedAnalysisData.AnteData _data = data;
+            
+            public int Ante => _data.Ante;
+            public MotelyBossBlind Boss => _data.Boss;
+            public MotelyVoucher Voucher => _data.Voucher;
+            public List<MotelyTag> Tags => _data.Tags;
+            public List<ShopItem> ShopQueue => _data.ShopQueue.Select(s => new ShopItem(s)).ToList();
+            public List<PackContent> Packs => _data.Packs.Select(p => new PackContent(p)).ToList();
+        }
+        
+        public class ShopItem(SeedAnalysisData.ShopItem data)
+        {
+            private readonly SeedAnalysisData.ShopItem _data = data;
+            
+            public int Slot => _data.Slot;
+            public MotelyItem Item => _data.Item;
+            public string FormattedName => _data.FormattedName;
+        }
+        
+        public class PackContent(SeedAnalysisData.PackContent data)
+        {
+            private readonly SeedAnalysisData.PackContent _data = data;
+            
+            public MotelyBoosterPack PackType => _data.PackType;
+            public MotelyBoosterPackSize PackSize => _data.PackSize;
+            public List<MotelyItem> Cards => _data.Cards;
+            public string FormattedName => _data.FormattedName;
+            public List<string> FormattedContents => _data.FormattedContents;
+            
+            // Add the missing "Contents" property that the UI expects
+            public List<MotelyItem> Contents => _data.Cards;
+        }
+    }
+
+    /// <summary>
+    /// Contains all analysis data for a seed
+    /// </summary>
+    public class SeedAnalysisData
+    {
+        public string Seed { get; set; } = "";
+        public MotelyDeck Deck { get; set; }
+        public MotelyStake Stake { get; set; }
+        public string? Error { get; set; }
+        public List<AnteData> Antes { get; set; } = new();
+
+        public class AnteData
+        {
+            public int Ante { get; set; }
+            public MotelyBossBlind Boss { get; set; }
+            public MotelyVoucher Voucher { get; set; }
+            public List<MotelyTag> Tags { get; set; } = new();
+            public List<ShopItem> ShopQueue { get; set; } = new();
+            public List<PackContent> Packs { get; set; } = new();
+        }
+
+        public class ShopItem
+        {
+            public int Slot { get; set; }
+            public MotelyItem Item { get; set; }
+            public string FormattedName => FormatUtils.FormatItem(Item);
+        }
+
+        public class PackContent
+        {
+            public MotelyBoosterPack PackType { get; set; }
+            public MotelyBoosterPackSize PackSize { get; set; }
+            public List<MotelyItem> Cards { get; set; } = new();
+            
+            public string FormattedName => FormatUtils.FormatPackName(PackType);
+            public List<string> FormattedContents => Cards.ConvertAll(c => FormatUtils.FormatItem(c));
+        }
+    }
+
+    /// <summary>
+    /// Console output formatter for seed analysis
+    /// </summary>
+    public static class ConsoleFormatter
+    {
+        public static void Print(SeedAnalysisData data)
+        {
+            if (!string.IsNullOrEmpty(data.Error))
+            {
+                Console.WriteLine($"❌ Error analyzing seed: {data.Error}");
+                return;
+            }
+
+            // Match TheSoul's format exactly
+            foreach (var ante in data.Antes)
+            {
+                Console.WriteLine($"==ANTE {ante.Ante}==");
+                Console.WriteLine($"Boss: {FormatUtils.FormatBoss(ante.Boss)}");
+                Console.WriteLine($"Voucher: {FormatUtils.FormatVoucher(ante.Voucher)}");
 
                 // Tags
-                var tagStream = ctx.CreateTagStream(ante);
-                var smallTag = ctx.GetNextTag(ref tagStream);
-                var bigTag = ctx.GetNextTag(ref tagStream);
-                var tags = new List<string>();
-                if (smallTag != 0) tags.Add(FormatTag(smallTag));
-                if (bigTag != 0) tags.Add(FormatTag(bigTag));
-                Console.WriteLine($"Tags: {string.Join(", ", tags)}");
-
-                // Shop Queue
-                Console.WriteLine("Shop Queue:");
-                var shopStream = ctx.CreateShopItemStream(ante);
-                var shopItems = new List<string>();
+                var tagNames = ante.Tags.ConvertAll(t => FormatUtils.FormatTag(t));
+                Console.WriteLine($"Tags: {string.Join(", ", tagNames)}");
                 
-                int maxSlots = ante == 1 ? 15 : 50;
-                for (int i = 0; i < maxSlots; i++)
+                // Shop Queue - match TheSoul format exactly: "Shop Queue: " on its own line, then numbered items
+                Console.WriteLine("Shop Queue: ");
+                foreach (var item in ante.ShopQueue)
                 {
-                    var item = ctx.GetNextShopItem(ref shopStream);
-                    shopItems.Add($"{i + 1}) {FormatShopItem(item)}");
+                    Console.WriteLine($"{item.Slot}) {item.FormattedName}");
                 }
+                Console.WriteLine();
                 
-                foreach (var item in shopItems)
+                // Packs - match Immolate format exactly: "Pack Name - Card1, Card2, Card3"
+                Console.WriteLine("Packs: ");
+                foreach (var pack in ante.Packs)
                 {
-                    Console.WriteLine(item);
+                    // Format: "Pack Name - Card1, Card2, Card3"
+                    var contents = pack.FormattedContents.Count > 0 
+                        ? " - " + string.Join(", ", pack.FormattedContents)
+                        : "";
+                    Console.WriteLine($"{pack.FormattedName}{contents}");
                 }
-
-
-                // Packs
-                Console.WriteLine("Packs:");
-                var packStream = ctx.CreateBoosterPackStream(ante);
-                int packCount = ante == 1 ? 4 : 6; // Ante 1 has 4 packs, others have 6
-                
-                for (int i = 0; i < packCount; i++)
-                {
-                    var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (pack != 0)
-                    {
-                        ShowPackContentsInline(ref ctx, ante, pack, i);
-                    }
-                }
-
                 Console.WriteLine();
             }
+        }
+    }
 
-            return false;
+    /// <summary>
+    /// Shared formatting utilities
+    /// </summary>
+    public static class FormatUtils
+    {
+        public static string FormatItem(MotelyItem item)
+        {
+            var result = new StringBuilder();
+            
+            // Add seal for playing cards (BEFORE edition)
+            if (item.Seal != MotelyItemSeal.None)
+            {
+                result.Append(item.Seal.ToString().Replace("Seal", "")).Append(" Seal ");
+            }
+
+            // Add edition if present (AFTER seal)
+            if (item.Edition != MotelyItemEdition.None)
+            {
+                result.Append(item.Edition).Append(" ");
+            }
+            
+            // Add enhancement for playing cards
+            if (item.Enhancement != MotelyItemEnhancement.None)
+            {
+                result.Append(item.Enhancement).Append(" ");
+            }
+            
+            // Format based on type
+            switch (item.TypeCategory)
+            {
+                case MotelyItemTypeCategory.PlayingCard:
+                    var playingCard = (MotelyPlayingCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+                    result.Append(FormatPlayingCard(playingCard));
+                    break;
+                    
+                default:
+                    // For all other types, just use the Type enum value and format it
+                    result.Append(FormatDisplayName(item.Type.ToString()));
+                    break;
+            }
+            
+            return result.ToString().Trim();
         }
 
-        private static string FormatTag(MotelyTag tag)
+        public static string FormatBoss(MotelyBossBlind boss)
         {
-            // Format tag name to be more readable
+            return FormatDisplayName(boss.ToString());
+        }
+
+        public static string FormatVoucher(MotelyVoucher voucher)
+        {
+            return FormatDisplayName(voucher.ToString());
+        }
+
+        public static string FormatTag(MotelyTag tag)
+        {
             var name = tag.ToString();
+            // Special case for TopupTag
+            if (name == "TopupTag")
+                return "Top-up Tag";
             if (name.EndsWith("Tag"))
                 name = name.Substring(0, name.Length - 3) + " Tag";
             return name;
         }
 
-        private static string FormatShopItem(MotelyItem item)
+        // Copy of FormatDisplayName from BalatroData.cs
+        public static string FormatDisplayName(string enumName)
         {
-            var result = "";
-            
-            // Add edition if present
-            if (item.Edition != MotelyItemEdition.None)
+            // Special cases that need custom formatting - copied from BalatroData.cs
+            var specialCases = new Dictionary<string, string>
             {
-                result += item.Edition + " ";
-            }
-            
-            switch (item.TypeCategory)
-            {
-                case MotelyItemTypeCategory.Joker:
-                    var joker = (MotelyJoker)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                    result += FormatJokerName(joker.ToString());
-                    break;
-                    
-                case MotelyItemTypeCategory.TarotCard:
-                    var tarot = (MotelyTarotCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                    result += FormatTarotName(tarot.ToString());
-                    break;
-                    
-                case MotelyItemTypeCategory.PlanetCard:
-                    var planet = (MotelyPlanetCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                    result += planet.ToString();
-                    break;
-                    
-                case MotelyItemTypeCategory.SpectralCard:
-                    var spectral = (MotelySpectralCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                    result += spectral.ToString();
-                    break;
-                    
-                    
-                default:
-                    result += item.Type.ToString();
-                    break;
-            }
-            
-            return result.Trim();
-        }
+                // Numbers
+                { "EightBall", "8 Ball" },
+                { "Cloud9", "Cloud 9" },
+                { "OopsAll6s", "Oops! All 6s" },
+                // Multi-word special formatting
+                { "ToTheMoon", "To the Moon" },
+                { "ToDoList", "To Do List" },
+                { "RiffRaff", "Riff-raff" },
+                { "MailInRebate", "Mail In Rebate" },
+                { "TheWheel", "The Wheel" },
+                { "TheWheelOfFortune", "The Wheel of Fortune" },
+                { "SockandBuskin", "Sock and Buskin" },
+                { "SockAndBuskin", "Sock and Buskin" },
+                { "DriversLicense", "Driver's License" },
+                { "DirectorsCut", "Director's Cut" },
+                { "PlanetX", "Planet X" },
+                // Spectral cards
+                { "Soul", "The Soul" },
+                // Other special formatting
+                { "MrBones", "Mr. Bones" },
+                { "ChaostheClown", "Chaos the Clown" },
+                // But Immolate test data has these variations we need to match:
+                { "ChaosTheClown", "Chaosthe Clown" }, // Weird but matches verified output
+                { "ShootTheMoon", "Shoot the Moon" },
+                { "RideTheBus", "Ride the Bus" },
+                { "HitTheRoad", "Hit the Road" },
+                { "TheVerdant", "Verdant Leaf" },
+                { "VerdantLeaf", "Verdant Leaf" },
+                { "VioletVessel", "Violet Vessel" },
+                { "CrimsonHeart", "Crimson Heart" },
+                { "AmberAcorn", "Amber Acorn" },
+                { "CeruleanBell", "Cerulean Bell" },
+                {"TheFool", "The Fool" },
+                {"TheMagician", "The Magician" },
+                {"TheHighPriestess", "The High Priestess" },
+                {"TheEmpress", "The Empress" },
+                {"TheEmperor", "The Emperor" },
+                {"TheHierophant", "The Hierophant" },
+                {"TheLovers", "The Lovers" },
+                {"TheChariot", "The Chariot" },
+                {"TheHermit", "The Hermit" },
+                {"Justice", "Justice" },
+                {"TheJustice", "Justice" },
+                {"TheHangedMan", "The Hanged Man" },
+                {"Death", "Death" },
+                {"TheDeath", "Death" },
+                {"Temperance", "Temperance" },
+                {"TheTemperance", "Temperance" },
+                {"TheDevil", "The Devil" },
+                {"TheTower", "The Tower" },
+                {"TheStar", "The Star" },
+                {"TheMoon", "The Moon" },
+                {"TheSun", "The Sun" },
+                {"Judgement", "Judgement" },
+                {"TheJudgement", "Judgement" },
+                {"TheWorld", "The World" },
+                {"Strength", "Strength" }
+            };
 
-        private static string FormatJokerName(string name)
-        {
-            // Convert CamelCase to spaced words
-            var result = System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
+            if (specialCases.TryGetValue(enumName, out var special))
+            {
+                return special;
+            }
+
+            // Add spaces before capital letters (except the first one) - from BalatroData.cs
+            var result = string.Empty;
+            for (int i = 0; i < enumName.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(enumName[i]) && !char.IsUpper(enumName[i - 1]))
+                {
+                    result += " ";
+                }
+                result += enumName[i];
+            }
+
             return result;
         }
 
-        private static string FormatTarotName(string name)
+        public static string FormatJokerName(MotelyJoker joker)
         {
-            // Handle "The" prefix tarots
-            if (name.StartsWith("The"))
-                return "The " + System.Text.RegularExpressions.Regex.Replace(name.Substring(3), "([A-Z])", " $1").Trim();
-            return name;
+            var name = joker.ToString();
+            return FormatDisplayName(name);
         }
 
-        private static void ShowPackContentsInline(ref MotelySingleSearchContext ctx, int ante, MotelyBoosterPack pack, int packSlot)
+        public static string FormatTarotName(string name)
         {
-            try
-            {
-                var packType = pack.GetPackType();
-                var packSize = pack.GetPackSize();
-                var cardCount = packType.GetCardCount(packSize);
-                
-                switch (pack)
-                {
-                    case MotelyBoosterPack.Arcana:
-                        var arcanaStream = ctx.CreateArcanaPackTarotStream(ante);
-                        var arcanaCards = new List<string>();
-                        var arcanaContents = ctx.GetNextArcanaPackContents(ref arcanaStream, packSize);
-                        for (int i = 0; i < arcanaContents.Length; i++)
-                        {
-                            var card = arcanaContents.GetItem(i);
-                            var tarot = (MotelyTarotCard)(card.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-                            arcanaCards.Add(FormatTarotName(tarot.ToString()));
-                        }
-                        Console.WriteLine($"Arcana Pack - {string.Join(", ", arcanaCards)}");
-                        break;
-
-                    case MotelyBoosterPack.Celestial:
-                        var celestialStream = ctx.CreateCelestialPackPlanetStream(ante);
-                        var celestialCards = new List<string>();
-                        for (int i = 0; i < 3; i++)
-                        {
-                            var card = ctx.GetNextPlanet(ref celestialStream);
-                            celestialCards.Add(((MotelyPlanetCard)(card.Value & 0xFF)).ToString());
-                        }
-                        Console.WriteLine($"Celestial Pack - {string.Join(", ", celestialCards)}");
-                        break;
-
-                    case MotelyBoosterPack.JumboCelestial:
-                        var jumboCelestialStream = ctx.CreateCelestialPackPlanetStream(ante);
-                        var jumboCelestialCards = new List<string>();
-                        for (int i = 0; i < 5; i++)
-                        {
-                            var card = ctx.GetNextPlanet(ref jumboCelestialStream);
-                            jumboCelestialCards.Add(((MotelyPlanetCard)(card.Value & 0xFF)).ToString());
-                        }
-                        Console.WriteLine($"Jumbo Celestial Pack - {string.Join(", ", jumboCelestialCards)}");
-                        break;
-
-                    case MotelyBoosterPack.Spectral:
-                        var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-                        var spectralCards = new List<string>();
-                        for (int i = 0; i < 2; i++)
-                        {
-                            var card = ctx.GetNextSpectral(ref spectralStream);
-                            spectralCards.Add(((MotelySpectralCard)(card.Value & 0xFF)).ToString());
-                        }
-                        Console.WriteLine($"Spectral Pack - {string.Join(", ", spectralCards)}");
-                        break;
-
-                    case MotelyBoosterPack.JumboSpectral:
-                        var jumboSpectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-                        var jumboSpectralCards = new List<string>();
-                        for (int i = 0; i < 4; i++)
-                        {
-                            var card = ctx.GetNextSpectral(ref jumboSpectralStream);
-                            jumboSpectralCards.Add(((MotelySpectralCard)(card.Value & 0xFF)).ToString());
-                        }
-                        Console.WriteLine($"Jumbo Spectral Pack - {string.Join(", ", jumboSpectralCards)}");
-                        break;
-
-                    case MotelyBoosterPack.Buffoon:
-                        var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante, packSlot);
-                        var buffoonJokers = new List<string>();
-                        for (int i = 0; i < 2; i++)
-                        {
-                            var joker = ctx.GetNextJoker(ref buffoonStream);
-                            buffoonJokers.Add(FormatJokerName(((MotelyJoker)(joker.Value & 0xFF)).ToString()));
-                        }
-                        Console.WriteLine($"Buffoon Pack - {string.Join(", ", buffoonJokers)}");
-                        break;
-
-                    case MotelyBoosterPack.JumboBuffoon:
-                        var jumboBuffoonStream = ctx.CreateBuffoonPackJokerStream(ante, packSlot);
-                        var jumboBuffoonJokers = new List<string>();
-                        for (int i = 0; i < 4; i++)
-                        {
-                            var joker = ctx.GetNextJoker(ref jumboBuffoonStream);
-                            jumboBuffoonJokers.Add(FormatJokerName(((MotelyJoker)(joker.Value & 0xFF)).ToString()));
-                        }
-                        Console.WriteLine($"Jumbo Buffoon Pack - {string.Join(", ", jumboBuffoonJokers)}");
-                        break;
-
-                    case MotelyBoosterPack.MegaBuffoon:
-                        var megaBuffoonStream = ctx.CreateBuffoonPackJokerStream(ante, packSlot);
-                        var megaBuffoonJokers = new List<string>();
-                        // Mega packs show 5 jokers, player can pick 2
-                        for (int i = 0; i < 5; i++)
-                        {
-                            var joker = ctx.GetNextJoker(ref megaBuffoonStream);
-                            var jokerName = FormatJokerName(((MotelyJoker)(joker.Value & 0xFF)).ToString());
-                            // Check if this joker has an edition (not guaranteed in Mega packs)
-                            var edition = joker.Edition;
-                            var editionStr = edition switch
-                            {
-                                MotelyItemEdition.Foil => "Foil",
-                                MotelyItemEdition.Holographic => "Holographic",
-                                MotelyItemEdition.Polychrome => "Polychrome",
-                                MotelyItemEdition.Negative => "Negative",
-                                _ => ""
-                            };
-                            megaBuffoonJokers.Add(!string.IsNullOrEmpty(editionStr) ? $"{editionStr} {jokerName}" : jokerName);
-                        }
-                        Console.WriteLine($"Mega Buffoon Pack (pick 2) - {string.Join(", ", megaBuffoonJokers)}");
-                        break;
-
-                    case MotelyBoosterPack.Standard:
-                        var standardStream = ctx.CreateStandardPackCardStream(ante);
-                        var standardCards = new List<string>();
-                        for (int i = 0; i < 3; i++)
-                        {
-                            var card = ctx.GetNextStandardCard(ref standardStream);
-                            standardCards.Add(FormatPlayingCard(card));
-                        }
-                        Console.WriteLine($"Standard Pack - {string.Join(", ", standardCards)}");
-                        break;
-
-                    case MotelyBoosterPack.JumboStandard:
-                        var jumboStandardStream = ctx.CreateStandardPackCardStream(ante);
-                        var jumboStandardCards = new List<string>();
-                        for (int i = 0; i < 5; i++)
-                        {
-                            var card = ctx.GetNextStandardCard(ref jumboStandardStream);
-                            jumboStandardCards.Add(FormatPlayingCard(card));
-                        }
-                        Console.WriteLine($"Standard Pack - {string.Join(", ", jumboStandardCards)}");
-                        break;
-
-                    case MotelyBoosterPack.JumboArcana:
-                        var jumboArcanaStream = ctx.CreateArcanaPackTarotStream(ante);
-                        var jumboArcanaCards = new List<string>();
-                        for (int i = 0; i < 5; i++)
-                        {
-                            var card = ctx.GetNextTarot(ref jumboArcanaStream);
-                            jumboArcanaCards.Add(FormatTarotName(((MotelyTarotCard)(card.Value & 0xFF)).ToString()));
-                        }
-                        Console.WriteLine($"Jumbo Arcana Pack - {string.Join(", ", jumboArcanaCards)}");
-                        break;
-
-                    case MotelyBoosterPack.MegaArcana:
-                        var megaArcanaStream = ctx.CreateArcanaPackTarotStream(ante);
-                        var megaArcanaCards = new List<string>();
-                        for (int i = 0; i < 2; i++)
-                        {
-                            var card = ctx.GetNextTarot(ref megaArcanaStream);
-                            megaArcanaCards.Add(FormatTarotName(((MotelyTarotCard)(card.Value & 0xFF)).ToString()));
-                        }
-                        Console.WriteLine($"Mega Arcana Pack - {string.Join(", ", megaArcanaCards)}");
-                        break;
-
-                    case MotelyBoosterPack.MegaCelestial:
-                        var megaCelestialStream = ctx.CreateCelestialPackPlanetStream(ante);
-                        var megaCelestialCards = new List<string>();
-                        for (int i = 0; i < 2; i++)
-                        {
-                            var card = ctx.GetNextPlanet(ref megaCelestialStream);
-                            megaCelestialCards.Add(((MotelyPlanetCard)(card.Value & 0xFF)).ToString());
-                        }
-                        Console.WriteLine($"Mega Celestial Pack - {string.Join(", ", megaCelestialCards)}");
-                        break;
-
-                    case MotelyBoosterPack.MegaSpectral:
-                        var megaSpectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-                        var megaSpectralCards = new List<string>();
-                        for (int i = 0; i < 2; i++)
-                        {
-                            var card = ctx.GetNextSpectral(ref megaSpectralStream);
-                            megaSpectralCards.Add(((MotelySpectralCard)(card.Value & 0xFF)).ToString());
-                        }
-                        Console.WriteLine($"Mega Spectral Pack - {string.Join(", ", megaSpectralCards)}");
-                        break;
-                        
-                    case MotelyBoosterPack.MegaStandard:
-                        var megaStandardStream = ctx.CreateStandardPackCardStream(ante);
-                        var megaStandardCards = new List<string>();
-                        for (int i = 0; i < 2; i++)
-                        {
-                            var card = ctx.GetNextStandardCard(ref megaStandardStream);
-                            megaStandardCards.Add(FormatPlayingCard(card));
-                        }
-                        Console.WriteLine($"Mega Standard Pack - {string.Join(", ", megaStandardCards)}");
-                        break;
-                        
-                    default:
-                        Console.WriteLine($"{pack} - [Contents not implemented]");
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"    Error reading pack contents: {ex.Message}");
-            }
+            // This method is now obsolete - just use FormatDisplayName
+            return FormatDisplayName(name);
         }
 
-        private static string FormatPlayingCard(MotelyItem card)
+        public static string FormatPlayingCardSuit(string suitAbbreviation)
         {
-            var result = "";
-
-            // Add seal if present
-            if (card.Seal != MotelyItemSeal.None)
+            return suitAbbreviation switch
             {
-                result += card.Seal.ToString().Replace("Seal", "") + " Seal ";
-            }
-
-            // Add edition if present  
-            if (card.Edition != MotelyItemEdition.None)
-            {
-                result += card.Edition + " ";
-            }
-
-            // Add enhancement if present
-            if (card.Enhancement != MotelyItemEnhancement.None)
-            {
-                result += card.Enhancement + " ";
-            }
-
-            // Add the card itself (e.g., "Ace of Spades")
-            var playingCard = (MotelyPlayingCard)(card.Value & 0xFF);
-            result += FormatCardName(playingCard);
-
-            return result.Trim();
+                "C" => "Clubs",
+                "D" => "Diamonds",
+                "H" => "Hearts",
+                "S" => "Spades",
+                _ => "Unknown"
+            };
         }
 
-        private static string FormatCardName(MotelyPlayingCard card)
+        public static string FormatPlayingCardRank(string rankAbbreviation)
+        {
+            return rankAbbreviation switch
+            {
+                "2" => "2",
+                "3" => "3",
+                "4" => "4",
+                "5" => "5",
+                "6" => "6",
+                "7" => "7",
+                "8" => "8",
+                "9" => "9",
+                "10" => "10",
+                "J" => "Jack",
+                "Q" => "Queen",
+                "K" => "King",
+                "A" => "Ace",
+                _ => throw new ArgumentOutOfRangeException(nameof(rankAbbreviation), $"Invalid rank abbreviation: {rankAbbreviation}")
+            };
+        }
+
+        public static string FormatPlayingCard(MotelyPlayingCard card)
         {
             var cardStr = card.ToString();
-            // Convert C2 -> 2 of Clubs, HA -> Ace of Hearts, etc.
             if (cardStr.Length >= 2)
             {
-                var suit = cardStr[0] switch
-                {
-                    'C' => "Clubs",
-                    'D' => "Diamonds",
-                    'H' => "Hearts",
-                    'S' => "Spades",
-                    _ => "Unknown"
-                };
-
+                var suit = FormatPlayingCardSuit(cardStr[0].ToString());
                 var rank = cardStr.Substring(1) switch
                 {
                     "2" => "2",
@@ -448,6 +426,237 @@ public struct AnalyzerFilterDesc : IMotelySeedFilterDesc<AnalyzerFilterDesc.Anal
             }
             return cardStr;
         }
+
+        public static string FormatPackName(MotelyBoosterPack pack)
+        {
+            return pack switch
+            {
+                MotelyBoosterPack.Arcana => "Arcana Pack",
+                MotelyBoosterPack.JumboArcana => "Jumbo Arcana Pack",
+                MotelyBoosterPack.MegaArcana => "Mega Arcana Pack",
+                MotelyBoosterPack.Celestial => "Celestial Pack",
+                MotelyBoosterPack.JumboCelestial => "Jumbo Celestial Pack",
+                MotelyBoosterPack.MegaCelestial => "Mega Celestial Pack",
+                MotelyBoosterPack.Spectral => "Spectral Pack",
+                MotelyBoosterPack.JumboSpectral => "Jumbo Spectral Pack",
+                MotelyBoosterPack.MegaSpectral => "Mega Spectral Pack",
+                MotelyBoosterPack.Buffoon => "Buffoon Pack",
+                MotelyBoosterPack.JumboBuffoon => "Jumbo Buffoon Pack",
+                MotelyBoosterPack.MegaBuffoon => "Mega Buffoon Pack",
+                MotelyBoosterPack.Standard => "Standard Pack",
+                MotelyBoosterPack.JumboStandard => "Jumbo Standard Pack",
+                MotelyBoosterPack.MegaStandard => "Mega Standard Pack",
+                _ => pack.ToString()
+            };
+        }
     }
-    
+
+    /// <summary>
+    /// Filter descriptor for seed analysis
+    /// </summary>
+    public readonly struct AnalyzerFilterDesc(SeedAnalysisData data) : IMotelySeedFilterDesc<AnalyzerFilterDesc.AnalyzerFilter>
+    {
+        private readonly SeedAnalysisData _data = data;
+
+        public readonly AnalyzerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+        {
+            _ = ctx; // Required by interface
+            return new AnalyzerFilter(_data);
+        }
+
+        public readonly struct AnalyzerFilter(SeedAnalysisData data) : IMotelySeedFilter
+        {
+            private readonly SeedAnalysisData _data = data;
+
+            public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
+            {
+                return ctx.SearchIndividualSeeds(CheckSeed);
+            }
+
+            public readonly bool CheckSeed(ref MotelySingleSearchContext ctx)
+            {
+                // Create voucher state to track activated vouchers across antes
+                MotelyRunState voucherState = new();
+                
+                // Analyze each ante
+                for (int ante = 1; ante <= 8; ante++)
+                {
+                    var anteData = new SeedAnalysisData.AnteData { Ante = ante };
+
+                    // Track streams for pack contents to maintain state between packs of same type
+                    var arcanaStream = default(MotelySingleTarotStream);
+                    var celestialStream = default(MotelySinglePlanetStream);
+                    var spectralStream = default(MotelySingleSpectralStream);
+                    var standardStream = default(MotelySingleStandardCardStream);
+                    var buffoonStream = default(MotelySingleJokerStream);
+                    bool arcanaStreamInit = false;
+                    bool celestialStreamInit = false;
+                    bool spectralStreamInit = false;
+                    bool standardStreamInit = false;
+                    bool buffoonStreamInit = false;
+
+                    // Boss
+                    anteData.Boss = ctx.GetBossForAnte(ante);
+
+                    // Voucher - get with state for proper progression
+                    anteData.Voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
+                    
+                    // TEST: Activate ALL vouchers from ante 1 onwards
+                    voucherState.ActivateVoucher(anteData.Voucher);
+
+                    // Tags
+                    var tagStream = ctx.CreateTagStream(ante);
+                    var smallTag = ctx.GetNextTag(ref tagStream);
+                    var bigTag = ctx.GetNextTag(ref tagStream);
+                    if (smallTag != 0) anteData.Tags.Add(smallTag);
+                    if (bigTag != 0) anteData.Tags.Add(bigTag);
+
+                    // Shop Queue
+                    var shopStream = ctx.CreateShopItemStream(ante);
+                    int maxSlots = ante == 1 ? 15 : 50;
+                    for (int i = 0; i < maxSlots; i++)
+                    {
+                        var item = ctx.GetNextShopItem(ref shopStream);
+                        anteData.ShopQueue.Add(new SeedAnalysisData.ShopItem
+                        {
+                            Slot = i + 1,
+                            Item = item
+                        });
+                    }
+
+                    // Packs - Get the actual shop packs (not tag-generated ones)
+                    // Balatro generates 2 base shop packs, then tags can add more up to 4 in ante 1 or 6 in other antes
+                    var packStream = ctx.CreateBoosterPackStream(ante, isCached: false);
+                    int maxPacks = ante == 1 ? 4 : 6;
+                    
+                    // Get all packs up to the maximum
+                    for (int i = 0; i < maxPacks; i++)
+                    {
+                        var pack = ctx.GetNextBoosterPack(ref packStream);
+                        var packContent = ExtractPackContents(ref ctx, ante, pack, i,
+                            ref arcanaStream, ref arcanaStreamInit,
+                            ref celestialStream, ref celestialStreamInit,
+                            ref spectralStream, ref spectralStreamInit,
+                            ref standardStream, ref standardStreamInit,
+                            ref buffoonStream, ref buffoonStreamInit);
+                        if (packContent != null)
+                        {
+                            anteData.Packs.Add(packContent);
+                        }
+                    }
+
+                    _data.Antes.Add(anteData);
+                }
+
+                return false; // Always return false since we're just analyzing
+            }
+
+            private static bool ShouldActivateVoucher(MotelyVoucher voucher)
+            {
+                // Match Immolate's banned vouchers list
+                // Magic Trick should be activated (it upgrades to Illusion)
+                return voucher != MotelyVoucher.Illusion &&
+                       voucher != MotelyVoucher.TarotTycoon &&
+                       voucher != MotelyVoucher.TarotMerchant &&
+                       voucher != MotelyVoucher.PlanetTycoon &&
+                       voucher != MotelyVoucher.PlanetMerchant;
+            }
+            
+            private static SeedAnalysisData.PackContent ExtractPackContents(
+                ref MotelySingleSearchContext ctx, int ante, MotelyBoosterPack pack, int packSlot,
+                ref MotelySingleTarotStream arcanaStream, ref bool arcanaStreamInit,
+                ref MotelySinglePlanetStream celestialStream, ref bool celestialStreamInit,
+                ref MotelySingleSpectralStream spectralStream, ref bool spectralStreamInit,
+                ref MotelySingleStandardCardStream standardStream, ref bool standardStreamInit,
+                ref MotelySingleJokerStream buffoonStream, ref bool buffoonStreamInit)
+            {
+                var packType = pack.GetPackType();
+                var packSize = pack.GetPackSize();
+                var packContent = new SeedAnalysisData.PackContent
+                {
+                    PackType = pack,
+                    PackSize = packSize
+                };
+                
+                switch (packType)
+                {
+                    case MotelyBoosterPackType.Arcana:
+                        if (!arcanaStreamInit)
+                        {
+                            arcanaStream = ctx.CreateArcanaPackTarotStream(ante, isCached: false);
+                            arcanaStreamInit = true;
+                        }
+                        int arcanaCount = packType.GetCardCount(packSize);
+                        var arcanaItemSet = new MotelySingleItemSet();
+                        for (int i = 0; i < arcanaCount; i++)
+                        {
+                            var tarot = ctx.GetNextTarot(ref arcanaStream, arcanaItemSet);
+                            packContent.Cards.Add(tarot);
+                            arcanaItemSet.Append(tarot);
+                        }
+                        break;
+
+                    case MotelyBoosterPackType.Celestial:
+                        if (!celestialStreamInit)
+                        {
+                            celestialStream = ctx.CreateCelestialPackPlanetStream(ante);
+                            celestialStreamInit = true;
+                        }
+                        int celestialCount = packType.GetCardCount(packSize);
+                        var celestialItemSet = new MotelySingleItemSet();
+                        for (int i = 0; i < celestialCount; i++)
+                        {
+                            var planet = ctx.GetNextPlanet(ref celestialStream, celestialItemSet);
+                            packContent.Cards.Add(planet);
+                            celestialItemSet.Append(planet);
+                        }
+                        break;
+
+                    case MotelyBoosterPackType.Spectral:
+                        if (!spectralStreamInit)
+                        {
+                            spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
+                            spectralStreamInit = true;
+                        }
+                        int spectralCount = packType.GetCardCount(packSize);
+                        var spectralItemSet = new MotelySingleItemSet();
+                        for (int i = 0; i < spectralCount; i++)
+                        {
+                            var spectral = ctx.GetNextSpectral(ref spectralStream, spectralItemSet);
+                            packContent.Cards.Add(spectral);
+                            spectralItemSet.Append(spectral);
+                        }
+                        break;
+
+                    case MotelyBoosterPackType.Buffoon:
+                        if (!buffoonStreamInit)
+                        {
+                            buffoonStream = ctx.CreateBuffoonPackJokerStream(ante, 0);
+                            buffoonStreamInit = true;
+                        }
+                        int buffoonCount = packType.GetCardCount(packSize);
+                        for (int i = 0; i < buffoonCount; i++)
+                        {
+                            packContent.Cards.Add(ctx.GetNextJoker(ref buffoonStream));
+                        }
+                        break;
+
+                    case MotelyBoosterPackType.Standard:
+                        if (!standardStreamInit)
+                        {
+                            standardStream = ctx.CreateStandardPackCardStream(ante);
+                            standardStreamInit = true;
+                        }
+                        int standardCount = packType.GetCardCount(packSize);
+                        for (int i = 0; i < standardCount; i++)
+                        {
+                            packContent.Cards.Add(ctx.GetNextStandardCard(ref standardStream));
+                        }
+                        break;
+                }
+
+                return packContent;
+            }
+        }
+    }
 }

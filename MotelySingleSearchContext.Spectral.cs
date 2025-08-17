@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -40,9 +39,9 @@ ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-
     public MotelySingleSpectralStream CreateShopSpectralStream(int ante, bool isCached = false) =>
         CreateSpectralStream(MotelyPrngKeys.ShopItemSource, ante, true, false, isCached);
+
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,17 +52,27 @@ ref partial struct MotelySingleSearchContext
 
         int cardCount = MotelyBoosterPackType.Spectral.GetCardCount(size);
 
-        // Check each card position following Balatro logic:
+        // We need to track this so we can keep the prng stream in the right state
+        bool hasBlackHole = false;
+
         for (int i = 0; i < cardCount; i++)
         {
-            // Soul check (0.3% chance)
             if (GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997)
             {
-                return true; // Found Soul!
+                // We found the soul!
+
+                // Progress the stream to get ready for the next pack
+                for (; i < cardCount && !hasBlackHole; i++)
+                {
+                    hasBlackHole = GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997;
+                }
+                return true;
             }
 
-            // BlackHole check (0.3% chance) - must still consume RNG even though we don't care about BlackHole
-            GetNextRandom(ref spectralStream.SoulBlackHolePrngStream);
+            if (!hasBlackHole && GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997)
+            {
+                hasBlackHole = true;
+            }
         }
 
         return false;
@@ -75,47 +84,31 @@ ref partial struct MotelySingleSearchContext
     public MotelySingleItemSet GetNextSpectralPackContents(ref MotelySingleSpectralStream spectralStream, int size)
     {
         Debug.Assert(size <= MotelySingleItemSet.MaxLength);
-        DebugLogger.Log($"[GetNextSpectralPackContents] Generating {size} cards");
 
         MotelySingleItemSet pack = new();
 
         for (int i = 0; i < size; i++)
-        {
-            var card = GetNextSpectral(ref spectralStream, pack);
-            pack.Append(card);
-            DebugLogger.Log($"[GetNextSpectralPackContents] Card {i}: {card.Type}");
-        }
+            pack.Append(GetNextSpectral(ref spectralStream, pack));
 
         return pack;
     }
-    
-    // Alias for compatibility with OuijaJsonFilterDesc
-    public MotelySingleItemSet GetSpectralPackContents(ref MotelySingleSpectralStream spectralStream, MotelyBoosterPackSize size)
-        => GetNextSpectralPackContents(ref spectralStream, size);
-        
-    public MotelySingleItemSet GetSpectralPackContents(ref MotelySingleSpectralStream spectralStream, int size)
-        => GetNextSpectralPackContents(ref spectralStream, size);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem GetNextSpectral(ref MotelySingleSpectralStream spectralStream)
     {
         if (spectralStream.IsSoulBlackHoleable)
         {
-            // Check for Soul (0.3% chance)
             if (GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997)
             {
                 return MotelyItemType.Soul;
             }
 
-            // Check for BlackHole (0.3% chance) - cannot override Soul
             if (GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997)
             {
                 return MotelyItemType.BlackHole;
             }
         }
 
-        // Soul and BlackHole should ONLY come from special generation, not regular
-        // So we limit to 0-15 (Familiar through Cryptid), excluding Soul (16) and BlackHole (17)
         return (MotelyItemType)MotelyItemTypeCategory.SpectralCard |
             (MotelyItemType)GetNextRandomInt(ref spectralStream.ResampleStream.InitialPrngStream, 0, 16);
     }
@@ -124,28 +117,20 @@ ref partial struct MotelySingleSearchContext
     {
         if (SpectralStream.IsSoulBlackHoleable)
         {
-            // CRITICAL: Only consume RNG if we're actually checking for the item!
-            // Check Soul first (0.3% chance)
             if (!itemSet.Contains(MotelyItemType.Soul) && GetNextRandom(ref SpectralStream.SoulBlackHolePrngStream) > 0.997)
             {
-                DebugLogger.Log($"[GetNextSpectral] FORCED SOUL!");
                 return MotelyItemType.Soul;
             }
 
-            // Check BlackHole (0.3% chance)
             if (!itemSet.Contains(MotelyItemType.BlackHole) && GetNextRandom(ref SpectralStream.SoulBlackHolePrngStream) > 0.997)
             {
-                DebugLogger.Log($"[GetNextSpectral] FORCED BLACKHOLE!");
                 return MotelyItemType.BlackHole;
             }
         }
 
-        // Soul and BlackHole should ONLY come from special generation, not regular
-        // So we limit to 0-15 (Familiar through Cryptid), excluding Soul (16) and BlackHole (17)
         MotelyItemType Spectral = (MotelyItemType)MotelyItemTypeCategory.SpectralCard |
             (MotelyItemType)GetNextRandomInt(ref SpectralStream.ResampleStream.InitialPrngStream, 0, 16);
 
-        DebugLogger.Log($"[GetNextSpectral] Generated regular spectral: {Spectral}");
         int resampleCount = 0;
 
         while (true)
@@ -155,7 +140,6 @@ ref partial struct MotelySingleSearchContext
                 return Spectral;
             }
 
-            // Resample also needs to exclude Soul/BlackHole
             Spectral = (MotelyItemType)MotelyItemTypeCategory.SpectralCard | (MotelyItemType)GetNextRandomInt(
                 ref GetResamplePrngStream(ref SpectralStream.ResampleStream, SpectralStream.ResampleKey, resampleCount),
                 0, 16

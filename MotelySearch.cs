@@ -82,6 +82,9 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     
     // Progress callback support
     public IProgress<MotelyProgress>? ProgressCallback { get; set; }
+    
+    // Quiet mode - only report progress every 60 minutes
+    public bool QuietMode { get; set; } = false;
 
     public IList<IMotelySeedFilterDesc>? AdditionalFilters { get; set; } = null;
 
@@ -179,6 +182,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
         return this;
     }
     
+    public MotelySearchSettings<TBaseFilter> WithQuietMode(bool quiet = true)
+    {
+        QuietMode = quiet;
+        return this;
+    }
+    
     public MotelySearchSettings<TBaseFilter> WithConsoleOutput(bool enableConsoleOutput)
     {
         EnableConsoleOutput = enableConsoleOutput;
@@ -258,6 +267,26 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public ulong CompletedBatchCount => _completedBatchCount;
 
     private long _lastReportMS; // last report time in ms (atomic access)
+    
+    // For quiet mode - track when we last printed to console
+    private DateTime _lastConsolePrintTime = DateTime.MinValue;
+    private int _progressUpdateCount = 0;  // Track how many times we've reported progress
+    private bool _warmupComplete = false;  // Track if we've finished the 5-second warmup
+    
+    // Progressive reporting intervals - starts fast, gets slower
+    private static readonly int[] ProgressiveIntervals = new[]
+    {
+        0,      // Skip first update (warmup)
+        5,      // Wait 5 seconds for first real ETA
+        10,     // 10 seconds
+        30,     // 30 seconds  
+        60,     // 1 minute
+        120,    // 2 minutes
+        300,    // 5 minutes
+        600,    // 10 minutes
+        1800,   // 30 minutes
+        3600    // 60 minutes (max)
+    };
 
     private readonly Stopwatch _elapsedTime = new();
 
@@ -430,8 +459,63 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
         else
         {
-            // Fallback to console output if no callback
-            Console.WriteLine($"⏱️ {formattedMessage}");
+            // Smart progressive reporting with --quiet mode
+            bool shouldPrint = false;
+            
+            if (_settings.QuietMode)
+            {
+                var elapsed = _elapsedTime.Elapsed.TotalSeconds;
+                var now = DateTime.UtcNow;
+                var timeSinceLastPrint = now - _lastConsolePrintTime;
+                
+                // Handle warmup phase (first 5 seconds)
+                if (elapsed < 5.0)
+                {
+                    // During warmup - print speed every 1 second
+                    if (_progressUpdateCount == 0 || timeSinceLastPrint.TotalSeconds >= 1.0)
+                    {
+                        Console.WriteLine($"🚀 Warming up... ({seedsPerMS * 1000:F0} seeds/s)");
+                        _lastConsolePrintTime = now;
+                        _progressUpdateCount++;
+                    }
+                    shouldPrint = false;
+                }
+                else if (!_warmupComplete)
+                {
+                    // First real update after warmup (at ~5 seconds) - show first ETA
+                    shouldPrint = true;
+                    _warmupComplete = true;
+                    _lastConsolePrintTime = now;
+                    _progressUpdateCount = 0; // Reset counter for progressive intervals
+                }
+                else
+                {
+                    // Post-warmup progressive intervals
+                    // Use simplified intervals: 10s, 30s, 60s, 2m, 5m, 10m, 30m, 60m
+                    int[] postWarmupIntervals = { 10, 30, 60, 120, 300, 600, 1800, 3600 };
+                    int intervalIndex = Math.Min(_progressUpdateCount, postWarmupIntervals.Length - 1);
+                    int requiredSeconds = postWarmupIntervals[intervalIndex];
+                    
+                    shouldPrint = timeSinceLastPrint.TotalSeconds >= requiredSeconds;
+                    
+                    if (shouldPrint)
+                    {
+                        _lastConsolePrintTime = now;
+                        _progressUpdateCount++;
+                    }
+                }
+            }
+            else
+            {
+                // Normal mode - always print
+                shouldPrint = true;
+            }
+            
+            if (shouldPrint)
+            {
+                // Fallback to console output if no callback
+                Console.WriteLine($"⏱️ {formattedMessage}");
+            }
         }
     }
 

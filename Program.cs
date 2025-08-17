@@ -112,7 +112,7 @@ namespace Motely
                 // Check if analyze mode
                 if (!string.IsNullOrEmpty(analyzeSeed))
                 {
-                    Console.WriteLine("🔍 Analyzing seed...");
+                    // Don't print anything - match Immolate's output exactly
                     
                     // Parse deck and stake
                     if (!Enum.TryParse<MotelyDeck>(deckName, true, out var deck))
@@ -127,7 +127,7 @@ namespace Motely
                         return 1;
                     }
                     
-                    SeedAnalyzer.Analyze(analyzeSeed, deck, stake);
+                    SeedAnalyzer.AnalyzeToConsole(analyzeSeed, deck, stake);
                     return 0;
                 }
                 
@@ -290,7 +290,8 @@ namespace Motely
 
                 // Create the search using OuijaJsonFilterDesc
                 var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
-                    .WithThreadCount(threads);
+                    .WithThreadCount(threads)
+                    .WithQuietMode(quiet);
                     
                 // Apply deck and stake from config
                 if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
