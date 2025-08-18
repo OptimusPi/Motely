@@ -42,15 +42,13 @@ public struct SoulTestFilterDesc() : IMotelySeedFilterDesc<SoulTestFilterDesc.So
                 
                 if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
-                    // Get buffoon pack contents
-                    var packContents = ctx.GetNextBuffoonPackContents(1, pack.GetPackCardCount());
+                    var buffoonStream = ctx.CreateBuffoonPackJokerStream(1); // single stream per ante
+                    var packContents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackCardCount());
                     Console.WriteLine($"  Buffoon pack contains {packContents.Length} jokers:");
-                    
                     for (int i = 0; i < packContents.Length; i++)
                     {
                         var item = packContents.GetItem(i);
                         Console.WriteLine($"    Slot {i + 1}: {item.Type}, Edition: {item.Edition}");
-                        
                         if (item.Type == MotelyItemType.Triboulet && item.Edition == MotelyItemEdition.Negative)
                         {
                             Console.WriteLine($"    [FOUND] Negative Triboulet in pack slot {i + 1}!");
