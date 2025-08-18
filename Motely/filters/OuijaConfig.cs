@@ -4,11 +4,15 @@ using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+<<<<<<< HEAD
 using System.Diagnostics;
+=======
+>>>>>>> master
 
 namespace Motely.Filters
 {
     /// <summary>
+<<<<<<< HEAD
     /// Wildcard types for joker filtering
     /// </summary>
     public enum JokerWildcard
@@ -21,6 +25,8 @@ namespace Motely.Filters
     }
 
     /// <summary>
+=======
+>>>>>>> master
     /// MongoDB compound Operator-style Ouija configuration - Clean JSON deserialization
     /// </summary>
     public class OuijaConfig
@@ -29,7 +35,10 @@ namespace Motely.Filters
         public string? Name { get; set; }
         public string? Author { get; set; }
         public string? Description { get; set; }
+<<<<<<< HEAD
         public DateTime? DateCreated { get; set; }
+=======
+>>>>>>> master
     
         public List<FilterItem> Must { get; set; } = new();
         public List<FilterItem> Should { get; set; } = new();
@@ -46,6 +55,10 @@ namespace Motely.Filters
         {
             public string? Deck { get; set; }
             public string? Stake { get; set; }
+<<<<<<< HEAD
+=======
+            public int? MaxAnte { get; set; }
+>>>>>>> master
         }
     
         public class FilterItem
@@ -53,11 +66,18 @@ namespace Motely.Filters
             public string Type { get; set; } = "";
             public string? Value { get; set; }
         
+<<<<<<< HEAD
             [JsonPropertyName("Antes")]
             public int[]? Antes { get; set; }
         
             public int Score { get; set; } = 1;
             public int? Min { get; set; }  // Minimum count required for early exit optimization
+=======
+        [JsonPropertyName("Antes")]
+        public int[]? Antes { get; set; }
+        
+            public int Score { get; set; } = 1;
+>>>>>>> master
             public string? Edition { get; set; }
             public List<string>? Stickers { get; set; }
         
@@ -69,6 +89,7 @@ namespace Motely.Filters
         
             // Sources configuration
             public SourcesConfig? Sources { get; set; }
+<<<<<<< HEAD
             
             // Direct properties for backwards compatibility and simpler JSON
             [JsonPropertyName("packSlots")]
@@ -381,11 +402,87 @@ namespace Motely.Filters
             private List<MotelyJokerSticker>? _cachedStickerEnums;
             private bool _stickerEnumsParsed;
             
+=======
+        
+        // Get effective antes; default to antes 1-8 when unspecified
+        [JsonIgnore]
+        public int[] EffectiveAntes => Antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        
+            // === COMPUTED ENUM PROPERTIES FOR COMPATIBILITY ===
+            // These parse on-demand from the string values
+        
+            [JsonIgnore]
+            public MotelyFilterItemType? ItemTypeEnum => Type?.ToLowerInvariant() switch
+            {
+                // Strict canonical identifiers only; case-insensitive, no aliases
+                "joker" => MotelyFilterItemType.Joker,
+                "souljoker" => MotelyFilterItemType.SoulJoker,
+                "tarotcard" => MotelyFilterItemType.TarotCard,
+                "planetcard" => MotelyFilterItemType.PlanetCard,
+                "spectralcard" => MotelyFilterItemType.SpectralCard,
+                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
+                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
+                "voucher" => MotelyFilterItemType.Voucher,
+                "playingcard" => MotelyFilterItemType.PlayingCard,
+                "boss" => MotelyFilterItemType.Boss,
+                _ => null
+            };
+        
+            [JsonIgnore]
+            public MotelyJoker? JokerEnum => 
+                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyJoker>(Value, true, out var joker) ? joker : null;
+        
+            [JsonIgnore]
+            public MotelyTarotCard? TarotEnum => 
+                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot) ? tarot : null;
+        
+            [JsonIgnore]
+            public MotelySpectralCard? SpectralEnum => 
+                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral) ? spectral : null;
+        
+            [JsonIgnore]
+            public MotelyPlanetCard? PlanetEnum => 
+                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet) ? planet : null;
+        
+            [JsonIgnore]
+            public MotelyTag? TagEnum => 
+                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyTag>(Value, true, out var tag) ? tag : null;
+        
+            [JsonIgnore]
+            public MotelyVoucher? VoucherEnum => 
+                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyVoucher>(Value, true, out var voucher) ? voucher : null;
+        
+            [JsonIgnore]
+            public MotelyBossBlind? BossEnum => 
+                !string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyBossBlind>(Value, true, out var boss) ? boss : null;
+        
+            [JsonIgnore]
+            public MotelyItemEdition? EditionEnum => 
+                !string.IsNullOrEmpty(Edition) && Enum.TryParse<MotelyItemEdition>(Edition, true, out var ed) ? ed : null;
+        
+            [JsonIgnore]
+            public MotelyPlayingCardRank? RankEnum => 
+                !string.IsNullOrEmpty(Rank) && Enum.TryParse<MotelyPlayingCardRank>(Rank, true, out var rank) ? rank : null;
+        
+            [JsonIgnore]
+            public MotelyPlayingCardSuit? SuitEnum => 
+                !string.IsNullOrEmpty(Suit) && Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit) ? suit : null;
+        
+            [JsonIgnore]
+            public MotelyItemEnhancement? EnhancementEnum => 
+                !string.IsNullOrEmpty(Enhancement) && Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enh) ? enh : null;
+        
+            [JsonIgnore]
+            public MotelyItemSeal? SealEnum => 
+                !string.IsNullOrEmpty(Seal) && Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal) ? seal : null;
+        
+>>>>>>> master
             [JsonIgnore]
             public List<MotelyJokerSticker>? StickerEnums
             {
                 get
                 {
+<<<<<<< HEAD
                     if (!_stickerEnumsParsed)
                     {
                         if (Stickers == null || Stickers.Count == 0)
@@ -431,6 +528,32 @@ namespace Motely.Filters
                     return _cachedTagTypeEnum;
                 }
             }
+=======
+                    if (Stickers == null || Stickers.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    var result = new List<MotelyJokerSticker>();
+                    foreach (var sticker in Stickers)
+                    {
+                        if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var s))
+                        {
+                            result.Add(s);
+                        }
+                    }
+                    return result.Count > 0 ? result : null;
+                }
+            }
+        
+            [JsonIgnore]
+            public MotelyTagType? TagTypeEnum => Type?.ToLowerInvariant() switch
+            {
+                "smallblindtag" => MotelyTagType.SmallBlind,
+                "bigblindtag" => MotelyTagType.BigBlind,
+                _ => MotelyTagType.Any
+            };
+>>>>>>> master
         
         // No rank normalization: require canonical enum names (case-insensitive only)
         }
@@ -500,6 +623,7 @@ namespace Motely.Filters
             {
                 // Normalize type
                 item.Type = item.Type.ToLowerInvariant();
+<<<<<<< HEAD
                 
                 // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
                 item.InitializeParsedEnums();
@@ -522,15 +646,20 @@ namespace Motely.Filters
                     if (item.Tags != null)
                         item.Sources.Tags = item.Tags.Value;
                 }
+=======
+>>>>>>> master
             
                 // Set default sources if not specified
                 if (item.Sources == null)
                 {
                     item.Sources = GetDefaultSources(item.Type);
                 }
+<<<<<<< HEAD
                 
                 // Override sources for special items
                 OverrideSpecialItemSources(item);
+=======
+>>>>>>> master
             }
         }
     
@@ -558,6 +687,7 @@ namespace Motely.Filters
                 }
             };
         }
+<<<<<<< HEAD
         
         // Override sources for special items that can't appear in shops
         private void OverrideSpecialItemSources(FilterItem item)
@@ -590,6 +720,8 @@ namespace Motely.Filters
                 }
             }
         }
+=======
+>>>>>>> master
     
         /// <summary>
         /// Convert to JSON string

@@ -6,11 +6,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+<<<<<<< HEAD
     <GenerateProgramFile>false</GenerateProgramFile>
+=======
+>>>>>>> master
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
+<<<<<<< HEAD
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
@@ -28,6 +32,8 @@
     <None Update="tests\*.verified.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+=======
+>>>>>>> master
   </ItemGroup>
 
 </Project>

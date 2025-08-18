@@ -83,6 +83,7 @@ namespace Motely.Filters
                 {
                     case "joker":
                     case "souljoker":
+<<<<<<< HEAD
                         // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare", "AnyLegendary"
                         bool isWildcard = string.IsNullOrEmpty(item.Value) || 
                                           item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
@@ -97,6 +98,17 @@ namespace Motely.Filters
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
                             errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary");
+=======
+                        // Allow "any", "*", or empty for searching any joker with specific edition
+                        bool isAnyJoker = string.IsNullOrEmpty(item.Value) || 
+                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase);
+                        
+                        if (!isAnyJoker && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
+                        {
+                            var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
+                            errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nUse 'any', '*', or leave empty to match any joker.");
+>>>>>>> master
                         }
                         
                         // Validate stickers

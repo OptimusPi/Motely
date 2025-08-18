@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -8,31 +7,30 @@ namespace Motely;
 public ref struct MotelySingleBossStream
 {
     public MotelySinglePrngStream BossPrngStream;
-    public Dictionary<MotelyBossBlind, int> BossesUsed;
+    public bool[] LockedBosses;
     public int CurrentAnte;
     
     public MotelySingleBossStream(MotelySinglePrngStream bossPrngStream, int ante)
     {
         BossPrngStream = bossPrngStream;
         CurrentAnte = ante;
-        // Initialize bosses_used tracking like Balatro does
-        BossesUsed = new Dictionary<MotelyBossBlind, int>();
-        
-        // Initialize all bosses with 0 uses
-        foreach (var boss in BossOrder)
-        {
-            BossesUsed[boss] = 0;
-        }
+        // Initialize locked bosses array - 28 bosses total
+        LockedBosses = new bool[28];
     }
-    
-    // Boss order from Balatro P_BLINDS - sorted by key names for consistency
+}
+
+ref partial struct MotelySingleSearchContext
+{
+    // Boss order from Immolate BOSSES array
     private static readonly MotelyBossBlind[] BossOrder = [
-        MotelyBossBlind.AmberAcorn,
-        MotelyBossBlind.CeruleanBell,
-        MotelyBossBlind.CrimsonHeart,
         MotelyBossBlind.TheArm,
         MotelyBossBlind.TheClub,
         MotelyBossBlind.TheEye,
+        MotelyBossBlind.AmberAcorn,
+        MotelyBossBlind.CeruleanBell,
+        MotelyBossBlind.CrimsonHeart,
+        MotelyBossBlind.VerdantLeaf,
+        MotelyBossBlind.VioletVessel,
         MotelyBossBlind.TheFish,
         MotelyBossBlind.TheFlint,
         MotelyBossBlind.TheGoad,
@@ -52,30 +50,19 @@ public ref struct MotelySingleBossStream
         MotelyBossBlind.TheWall,
         MotelyBossBlind.TheWater,
         MotelyBossBlind.TheWheel,
-        MotelyBossBlind.TheWindow,
-        MotelyBossBlind.VerdantLeaf,
-        MotelyBossBlind.VioletVessel
+        MotelyBossBlind.TheWindow
     ];
-}
-
-ref partial struct MotelySingleSearchContext
-{
-    // Showdown bosses (finishers) that appear only at ante % 8 == 0
-    private static readonly HashSet<MotelyBossBlind> ShowdownBosses = new HashSet<MotelyBossBlind>
-    {
-        MotelyBossBlind.AmberAcorn,
-        MotelyBossBlind.CeruleanBell,
-        MotelyBossBlind.CrimsonHeart,
-        MotelyBossBlind.VerdantLeaf,
-        MotelyBossBlind.VioletVessel
-    };
+    
+    // Finisher bosses start at index 3 (AmberAcorn) in the BossOrder array
+    private const int FinisherBossStartIndex = 3;
+    private const int FinisherBossEndIndex = 8; // Exclusive (5 finisher bosses total)
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public MotelySingleBossStream CreateBossStream(int ante = 1)
     {
-        // Boss RNG uses "boss" as the key in Balatro
+        // Boss RNG uses "boss" as the key in Immolate
         var bossPrng = CreatePrngStream("boss");
         return new MotelySingleBossStream(bossPrng, ante);
     }
@@ -86,39 +73,84 @@ ref partial struct MotelySingleSearchContext
     public MotelyBossBlind GetNextBoss(ref MotelySingleBossStream bossStream)
     {
         var ante = bossStream.CurrentAnte;
-        var isShowdownAnte = (ante % 8 == 0);
+        var isFinisherAnte = (ante % 8 == 0);
         
-        // Build list of eligible bosses based on ante type
-        var eligibleBosses = new List<MotelyBossBlind>();
+        // Build pool of available bosses
+        var availableBosses = new System.Collections.Generic.List<int>();
         
-        if (isShowdownAnte)
+        for (int i = 0; i < BossOrder.Length; i++)
         {
-            // Showdown bosses for ante 8, 16, etc.
-            eligibleBosses.AddRange(ShowdownBosses);
-        }
-        else
-        {
-            // Regular bosses for non-showdown antes
-            foreach (var boss in bossStream.BossesUsed.Keys)
+            // Skip locked bosses
+            if (bossStream.LockedBosses[i])
+                continue;
+                
+            // Check if boss is appropriate for this ante type
+            bool isFinisherBoss = (i >= FinisherBossStartIndex && i < FinisherBossEndIndex);
+            
+            if (isFinisherAnte && isFinisherBoss)
             {
-                if (!ShowdownBosses.Contains(boss))
+                availableBosses.Add(i);
+            }
+            else if (!isFinisherAnte && !isFinisherBoss)
+            {
+                availableBosses.Add(i);
+            }
+        }
+        
+        // If no bosses available, reset the appropriate pool
+        if (availableBosses.Count == 0)
+        {
+            if (isFinisherAnte)
+            {
+                // Reset finisher boss pool
+                for (int i = FinisherBossStartIndex; i < FinisherBossEndIndex; i++)
                 {
-                    eligibleBosses.Add(boss);
+                    bossStream.LockedBosses[i] = false;
+                }
+            }
+            else
+            {
+                // Reset regular boss pool
+                for (int i = 0; i < BossOrder.Length; i++)
+                {
+                    if (i < FinisherBossStartIndex || i >= FinisherBossEndIndex)
+                    {
+                        bossStream.LockedBosses[i] = false;
+                    }
+                }
+            }
+            
+            // Rebuild available bosses after reset
+            availableBosses.Clear();
+            for (int i = 0; i < BossOrder.Length; i++)
+            {
+                if (bossStream.LockedBosses[i])
+                    continue;
+                    
+                bool isFinisherBoss = (i >= FinisherBossStartIndex && i < FinisherBossEndIndex);
+                
+                if (isFinisherAnte && isFinisherBoss)
+                {
+                    availableBosses.Add(i);
+                }
+                else if (!isFinisherAnte && !isFinisherBoss)
+                {
+                    availableBosses.Add(i);
                 }
             }
         }
         
-        // Sort bosses alphabetically for consistent ordering
-        eligibleBosses.Sort((a, b) => string.Compare(a.ToString(), b.ToString(), StringComparison.Ordinal));
+        // Select a random boss from available pool
+        int selectedIndex = GetNextRandomInt(ref bossStream.BossPrngStream, 0, availableBosses.Count - 1);
+        int bossIndex = availableBosses[selectedIndex];
         
-        // Simple random selection without usage tracking (like Immolate might do)
-        int selectedIndex = GetNextRandomInt(ref bossStream.BossPrngStream, 0, eligibleBosses.Count - 1);
-        var selectedBoss = eligibleBosses[selectedIndex];
+        // Lock the selected boss
+        bossStream.LockedBosses[bossIndex] = true;
         
         // Increment ante for next call
         bossStream.CurrentAnte++;
         
-        return selectedBoss;
+        return BossOrder[bossIndex];
     }
     
     // Simple method for getting boss for a specific ante without tracking state
@@ -128,45 +160,8 @@ ref partial struct MotelySingleSearchContext
 #endif
     public MotelyBossBlind GetBossForAnte(int ante)
     {
-        // TEMPORARY: Hardcode boss sequences for test seeds to match Immolate
-        // TODO: Fix the actual PRNG algorithm to match Immolate's implementation
-        string seed = GetSeed();
-        
-        if (seed == "UNITTEST")
-        {
-            // Expected bosses from Immolate for UNITTEST seed
-            return ante switch
-            {
-                1 => MotelyBossBlind.TheWindow,
-                2 => MotelyBossBlind.TheMouth,
-                3 => MotelyBossBlind.TheHouse,
-                4 => MotelyBossBlind.TheTooth,
-                5 => MotelyBossBlind.TheFish,
-                6 => MotelyBossBlind.ThePillar,
-                7 => MotelyBossBlind.TheWater,
-                8 => MotelyBossBlind.VioletVessel,
-                _ => MotelyBossBlind.TheWindow
-            };
-        }
-        else if (seed == "ALEEB")
-        {
-            // Expected bosses from Immolate for ALEEB seed
-            return ante switch
-            {
-                1 => MotelyBossBlind.TheWindow,
-                2 => MotelyBossBlind.TheArm,
-                3 => MotelyBossBlind.TheMouth,
-                4 => MotelyBossBlind.TheWheel,
-                5 => MotelyBossBlind.TheHook,
-                6 => MotelyBossBlind.TheFish,
-                7 => MotelyBossBlind.TheGoad,
-                8 => MotelyBossBlind.VioletVessel,
-                _ => MotelyBossBlind.TheWindow
-            };
-        }
-        
-        // For other seeds, use the normal algorithm
-        var bossStream = CreateBossStream(1);
+        // Create a temporary boss stream
+        var bossStream = CreateBossStream(ante);
         
         // Get bosses for each ante up to the requested one
         // This simulates the game progression
