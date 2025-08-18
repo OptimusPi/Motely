@@ -4,8 +4,7 @@ namespace Motely;
 
 ref partial struct MotelySingleSearchContext
 {
-    // Build a buffoon pack's joker contents (single stream per ante). packIndex ignored (legacy).
-    public MotelySingleItemSet GetNextBuffoonPackContents(int ante, int /*ignored*/ packIndex, int packCardCount)
+    public MotelySingleItemSet GetNextBuffoonPackContents(int ante, int packCardCount)
     {
         var jokerStream = CreateBuffoonPackJokerStream(ante);
         MotelySingleItemSet set = MotelySingleItemSet.Empty;

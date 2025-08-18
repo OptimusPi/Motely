@@ -43,7 +43,7 @@ public struct SoulTestFilterDesc() : IMotelySeedFilterDesc<SoulTestFilterDesc.So
                 if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
                     // Get buffoon pack contents
-                    var packContents = ctx.GetNextBuffoonPackContents(1, 0, pack.GetPackCardCount());
+                    var packContents = ctx.GetNextBuffoonPackContents(1, pack.GetPackCardCount());
                     Console.WriteLine($"  Buffoon pack contains {packContents.Length} jokers:");
                     
                     for (int i = 0; i < packContents.Length; i++)
