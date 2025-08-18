@@ -795,8 +795,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             
             if (shouldCheckShop)
             {
-                var shopSlots = clause.Sources?.ShopSlots;
-                int maxSlots = shopSlots?.Max() + 1 ?? 0;
+                var shopSlots = clause.Sources!.ShopSlots!; // guarded by shouldCheckShop
+                int maxSlots = shopSlots.Max() + 1;
                 var slotSet = new HashSet<int>(shopSlots);
                 for (int i = 0; i < maxSlots; i++)
                 {
@@ -870,9 +870,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.Log($"[CheckJoker] Checking booster packs in ante {ante}...");
                 
                 // Use packSlots from config if specified
-                var packSlots = clause.Sources?.PackSlots;
+                var packSlots = clause.Sources?.PackSlots ?? Array.Empty<int>();
+                if (packSlots.Length == 0)
+                {
+                    DebugLogger.Log("[CheckJoker] No pack slots specified; skipping packs section");
+                    return foundCount;
+                }
                 int packCount = packSlots.Max()+1;
-                int buffoonPackIndex = 0;
+                // Persistent Buffoon joker stream for this ante (single stream per ante requirement)
+                MotelySingleJokerStream buffoonStream = default;
+                bool buffoonStreamInit = false;
                 bool requireMega = clause.Sources?.RequireMega ?? false;
                 
                 DebugLogger.Log($"[CheckJoker] === BOOSTER PACK CONTENTS FOR ANTE {ante} ===");
@@ -904,8 +911,13 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         }
                         
                         DebugLogger.Log($"[CheckJoker] Found Buffoon pack #{i+1}, checking for jokers...");
-                        var contents = ctx.GetNextBuffoonPackContents(ante, pack.GetPackSize());
-                        var contents = ctx.GetNextBuffoonPackContents(ante, pack.GetPackCardCount());
+                        if (!buffoonStreamInit)
+                        {
+                            buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
+                            buffoonStreamInit = true;
+                            DebugLogger.Log($"[CheckJoker] Initialized Buffoon joker stream for ante {ante}");
+                        }
+                        var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackCardCount());
                         
                         DebugLogger.Log($"[CheckJoker] Buffoon pack size: {pack.GetPackSize()}, contains {contents.Length} jokers");
                         
@@ -913,7 +925,6 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         for (int j = 0; j < contents.Length; j++)
                         {
                             var joker = contents.GetItem(j);
-                            // Extract the actual joker enum value
                             var extractedJoker = new MotelyItem(joker.Value).GetJoker();
                             DebugLogger.Log($"[CheckJoker]   Buffoon pack slot {j}: ExtractedJoker={extractedJoker}, Edition={joker.Edition}");
                             DebugLogger.Log($"[CheckJoker]     -> Raw: Value={joker.Value:X8}, TypeCategory={joker.TypeCategory}");
