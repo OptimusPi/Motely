@@ -350,6 +350,12 @@ namespace Motely
                     .Start();
                 }
 
+                // Apply quiet mode throttling to search progress output
+                if (quiet && search is MotelySearch<OuijaJsonFilterDesc.OuijaJsonFilter> concreteSearch)
+                {
+                    concreteSearch.SetQuietMode(true);
+                }
+
                 // Print CSV header for results
                 PrintResultsHeader(config);
                 

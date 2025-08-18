@@ -337,13 +337,53 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         FancyConsole.WriteLine($"{seed}");
     }
 
+    // Quiet mode reporting control
+    private static readonly double[] _quietReportScheduleMS = new double[] { 0, 5000, 10000, 60000 }; // then every 15m
+    private int _quietReportIndex = 0;
+    private double _nextQuietReportMS = 0;
+    private bool _quietMode = false;
+
+    public void SetQuietMode(bool quiet)
+    {
+        _quietMode = quiet;
+        if (quiet)
+        {
+            _quietReportIndex = 0;
+            _nextQuietReportMS = 0; // force immediate
+        }
+    }
+
     private void PrintReport()
     {
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
-
-        if (elapsedMS - _lastReportMS < 500) return;
-
-        _lastReportMS = elapsedMS;
+        if (_quietMode)
+        {
+            bool shouldReport = false;
+            if (_quietReportIndex < _quietReportScheduleMS.Length)
+            {
+                double target = _quietReportScheduleMS[_quietReportIndex];
+                if (elapsedMS >= target)
+                {
+                    shouldReport = true;
+                    _quietReportIndex++;
+                    if (_quietReportIndex < _quietReportScheduleMS.Length)
+                        _nextQuietReportMS = _quietReportScheduleMS[_quietReportIndex];
+                    else
+                        _nextQuietReportMS = elapsedMS + 15 * 60 * 1000; // every 15 minutes thereafter
+                }
+            }
+            else if (elapsedMS >= _nextQuietReportMS)
+            {
+                shouldReport = true;
+                _nextQuietReportMS = elapsedMS + 15 * 60 * 1000;
+            }
+            if (!shouldReport) return;
+        }
+        else
+        {
+            if (elapsedMS - _lastReportMS < 500) return;
+            _lastReportMS = elapsedMS;
+        }
 
     ulong thisCompletedCount = (ulong)_completedBatchCount - _startBatchIndex;
 
@@ -385,7 +425,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             seedsPerMS = clampedCompleted * (double)_threads[0].SeedsPerBatch / elapsedMS;
 
         double pct = Math.Clamp(totalPortionFinished * 100, 0, 100);
-        FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+    FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
 
     }
 
