@@ -167,10 +167,10 @@ namespace Motely
                     return 1;
                 }
 
-                // RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
-                //     enableDebug, quiet, wordlist, keyword, nofancy, seedInput);
-                Console.WriteLine("🔍 Search completed");
-                return 0;
+                // Execute the search (this was previously commented out which made the app a no-op)
+                RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
+                    enableDebug, quiet, wordlist, keyword, nofancy, seedInput);
+                return 0; // RunOuijaSearch handles its own console output & completion text
             });
 
             return app.Execute(args);
