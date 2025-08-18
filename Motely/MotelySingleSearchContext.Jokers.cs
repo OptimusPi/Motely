@@ -100,12 +100,14 @@ unsafe ref partial struct MotelySingleSearchContext
 
     public MotelySingleJokerFixedRarityStream CreateSoulJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
     {
-        return CreateJokerFixedRarityStream(
+    var stream = CreateJokerFixedRarityStream(
             MotelyPrngKeys.JokerSoulSource,
             MotelyPrngKeys.ShopJokerEternalPerishableSource,
             MotelyPrngKeys.ShopJokerRentalSource,
             ante, flags, MotelyJokerRarity.Legendary, isCached
         );
+    Debug.Assert(stream.DoesProvideEdition, "Soul joker stream should provide editions unless explicitly excluded");
+    return stream;
     }
 
 #if !DEBUG
@@ -117,7 +119,7 @@ unsafe ref partial struct MotelySingleSearchContext
         {
             Rarity = rarity,
             JokerPrngStream = CreatePrngStream(MotelyPrngKeys.FixedRarityJoker(rarity, source, ante), isCached),
-            EditionPrngStream = flags.HasFlag(MotelyJokerStreamFlags.ExcludeEdition) ?
+            EditionPrngStream = !flags.HasFlag(MotelyJokerStreamFlags.ExcludeEdition) ?
                 CreatePrngStream(MotelyPrngKeys.JokerEdition + source + ante, isCached) : MotelySinglePrngStream.Invalid,
             EternalPerishablePrngStream = (!flags.HasFlag(MotelyJokerStreamFlags.ExcludeStickers) && Stake >= MotelyStake.Black) ?
                 CreatePrngStream(eternalPerishableSource + ante, isCached) : MotelySinglePrngStream.Invalid,
