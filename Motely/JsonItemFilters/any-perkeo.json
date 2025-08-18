@@ -1,0 +1,16 @@
+{
+  "name": "any-perkeo",
+  "description": "Just find ANY Perkeo",
+  "author": "test",
+  "must": [
+    {
+      "type": "souljoker",
+      "value": "Perkeo",
+      "antes": [1,2,3,4,5,6,7,8]
+    }
+  ],
+  "should": [],
+  "mustNot": [],
+  "deck": "Red",
+  "stake": "White"
+}

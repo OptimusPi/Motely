@@ -1,0 +1,15 @@
+{
+  "name": "test-spectral",
+  "description": "Test spectral detection",
+  "author": "test",
+  "dateCreated": "2025-08-17T00:00:00Z",
+  "must": [
+    {
+      "type": "spectralcard",
+      "value": "any",
+      "antes": [1, 2, 3]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}
