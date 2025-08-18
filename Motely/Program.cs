@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
+using Motely.Analysis;
 // using Motely.Filters; // OuijaJsonFilterDesc not available
 
 namespace Motely
@@ -127,7 +128,7 @@ namespace Motely
                         return 1;
                     }
                     
-                    SeedAnalyzer.AnalyzeToConsole(analyzeSeed, deck, stake);
+                    MotelySeedAnalyzer.AnalyzeToConsole(analyzeSeed, deck, stake);
                     return 0;
                 }
                 
