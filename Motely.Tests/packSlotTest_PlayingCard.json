@@ -1,0 +1,22 @@
+{
+    "Must": [],
+    "Should": [
+        {
+            "type": "PlayingCard",
+            "value": "C7",
+            "antes": [1],
+            "sources": {
+                "packSlots": [2]
+            }
+        },
+        {
+            "type": "PlayingCard",
+            "value": "H3",
+            "antes": [1],
+            "sources": {
+                "packSlots": [2]
+            }
+        }
+    ],
+    "MustNot": []
+}

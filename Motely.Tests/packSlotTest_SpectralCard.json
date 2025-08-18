@@ -1,0 +1,14 @@
+{
+    "Must": [],
+    "Should": [
+        {
+            "type": "SpectralCard",
+            "value": "Soul",
+            "antes": [1],
+            "sources": {
+                "packSlots": [1,3]
+            }
+        }
+    ],
+    "MustNot": []
+}

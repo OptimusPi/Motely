@@ -66,9 +66,9 @@ unsafe ref partial struct MotelySingleSearchContext
         );
     }
 
-    public MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, int packIndex, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
+    public MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
     {
-        // Each pack gets its own stream based on pack index
+        // Single stream per ante (not per pack index)
         return CreateJokerStream(
             MotelyPrngKeys.BuffoonPackItemSource,
             MotelyPrngKeys.BuffoonJokerEternalPerishableSource,
@@ -117,7 +117,7 @@ unsafe ref partial struct MotelySingleSearchContext
         {
             Rarity = rarity,
             JokerPrngStream = CreatePrngStream(MotelyPrngKeys.FixedRarityJoker(rarity, source, ante), isCached),
-            EditionPrngStream = !flags.HasFlag(MotelyJokerStreamFlags.ExcludeEdition) ?
+            EditionPrngStream = flags.HasFlag(MotelyJokerStreamFlags.ExcludeEdition) ?
                 CreatePrngStream(MotelyPrngKeys.JokerEdition + source + ante, isCached) : MotelySinglePrngStream.Invalid,
             EternalPerishablePrngStream = (!flags.HasFlag(MotelyJokerStreamFlags.ExcludeStickers) && Stake >= MotelyStake.Black) ?
                 CreatePrngStream(eternalPerishableSource + ante, isCached) : MotelySinglePrngStream.Invalid,
@@ -125,6 +125,22 @@ unsafe ref partial struct MotelySingleSearchContext
                 CreatePrngStream(rentalSource + ante, isCached) : MotelySinglePrngStream.Invalid,
         };
     }
+
+    public MotelySingleItemSet GetNextBuffoonPackContents(ref MotelySingleJokerStream jokerStream, MotelyBoosterPackSize size)
+    => GetNextBuffoonPackContents(ref jokerStream, MotelyBoosterPackType.Buffoon.GetCardCount(size));
+
+    public MotelySingleItemSet GetNextBuffoonPackContents(ref MotelySingleJokerStream jokerStream, int size)
+    {
+        Debug.Assert(size <= MotelySingleItemSet.MaxLength);
+
+        MotelySingleItemSet pack = new();
+
+        for (int i = 0; i < size; i++)
+            pack.Append(GetNextJoker(ref jokerStream)); // TODO Duplicates?
+
+        return pack;
+    }
+
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,10 +226,6 @@ unsafe ref partial struct MotelySingleSearchContext
 
         return item;
     }
-    
-    // Alias for compatibility with OuijaJsonFilterDesc
-    public MotelyItem NextJoker(ref MotelySingleJokerFixedRarityStream stream)
-        => GetNextJoker(ref stream);
 
 #if !DEBUG
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,32 +290,5 @@ unsafe ref partial struct MotelySingleSearchContext
         Debug.Assert(sizeof(T) == 4);
         int value = (int)rarity | GetNextRandomInt(ref stream, 0, MotelyEnum<T>.ValueCount);
         return (MotelyJoker)value;
-    }
-
-    public MotelySingleItemSet GetNextBuffoonPackContents(int ante, int packIndex, MotelyBoosterPackSize size)
-    {
-        var jokerStream = CreateBuffoonPackJokerStream(ante, packIndex);
-        
-        // Skip to the correct pack index by consuming the right number of jokers
-        // Each pack before this one consumed jokers from the stream
-        for (int i = 0; i < packIndex; i++)
-        {
-            int skipCount = MotelyBoosterPackType.Buffoon.GetCardCount(size);
-            for (int j = 0; j < skipCount; j++)
-            {
-                GetNextJoker(ref jokerStream);
-            }
-        }
-        
-        // Now get the actual pack contents
-        MotelySingleItemSet pack = new();
-        int cardCount = MotelyBoosterPackType.Buffoon.GetCardCount(size);
-        
-        for (int i = 0; i < cardCount; i++)
-        {
-            pack.Append(GetNextJoker(ref jokerStream));
-        }
-        
-        return pack;
     }
 }
