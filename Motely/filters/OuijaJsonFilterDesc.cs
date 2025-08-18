@@ -904,7 +904,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         }
                         
                         DebugLogger.Log($"[CheckJoker] Found Buffoon pack #{i+1}, checking for jokers...");
-                        var contents = ctx.GetNextBuffoonPackContents(ante, pack.GetPackSize());
+                        var contents = ctx.GetNextBuffoonPackContents(ante, pack.GetPackCardCount());
+                        buffoonPackIndex++; // still advance index for any future per-pack logic
                         
                         DebugLogger.Log($"[CheckJoker] Buffoon pack size: {pack.GetPackSize()}, contains {contents.Length} jokers");
                         
@@ -1195,7 +1196,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 var shopSlots = clause.Sources?.ShopSlots;
                 int maxSlots = shopSlots != null && shopSlots.Length > 0 ? 
                     shopSlots.Max() + 1 : 
-                    (ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots);
+                    (ante == 1 ? 5 : 6);
                 
                 // PERFORMANCE: Use HashSet for O(1) slot lookups
                 var slotSet = shopSlots != null ? new HashSet<int>(shopSlots) : null;
@@ -1288,7 +1289,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 var shopSlots = clause.Sources?.ShopSlots;
                 int maxSlots = shopSlots != null && shopSlots.Length > 0 ? 
                     shopSlots.Max() + 1 : 
-                    (ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots);
+                    (ante == 1 ? 5 : 6);
                 
                 // PERFORMANCE: Use HashSet for O(1) slot lookups
                 var slotSet = shopSlots != null ? new HashSet<int>(shopSlots) : null;
@@ -1388,7 +1389,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 DebugLogger.Log($"[CheckSpectral] Checking shop slots in ante {ante}...");
                 DebugLogger.Log($"[CheckSpectral] Context deck: {ctx.Deck}");
-                int maxSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
+                int maxSlots = ante == 1 ? 5 : 6;
                 
                 for (int i = 0; i < maxSlots; i++)
                 {
@@ -1568,7 +1569,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 
                 var shopSlots = clause.Sources?.ShopSlots;
                 // ALWAYS iterate through all shop slots to keep stream in sync
-                int maxSlots = ante == 1 ? ShopState.ShopSlotsAnteOne : ShopState.ShopSlots;
+                int maxSlots = ante == 1 ? 5 : 6;
                 
                 DebugLogger.Log($"[CheckSpectral] Shop slots requested: {(shopSlots != null ? string.Join(",", shopSlots) : "all")}, iterating through {maxSlots} slots");
                 DebugLogger.Log($"[CheckSpectral] Shop stream info: DoesProvideSpectrals={shopStream.DoesProvideSpectrals}, SpectralRate={shopStream.SpectralRate}, TotalRate={shopStream.TotalRate}");
