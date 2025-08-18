@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-// using Motely.Filters; // OuijaJsonFilterDesc not available
+using Motely.Filters; // For OuijaConfig, OuijaJsonFilterDesc, OuijaConfigValidator
 
 namespace Motely
 {
@@ -176,310 +176,310 @@ namespace Motely
             return app.Execute(args);
         }
 
-        // public static void RunOuijaSearch(string configPath, ulong startBatch, long endBatch, int threads,
-        //     int batchSize, int cutoff, bool autoCutoff, bool enableDebug, bool quiet, string? wordlist = null,
-        //     string? keyword = null, bool nofancy = false, string? specificSeed = null)
-        // {
-        //     // Set debug output flag
-        //     DebugLogger.IsEnabled = enableDebug;
-        //     FancyConsole.IsEnabled = !nofancy;
+        public static void RunOuijaSearch(string configPath, ulong startBatch, long endBatch, int threads,
+            int batchSize, int cutoff, bool autoCutoff, bool enableDebug, bool quiet, string? wordlist = null,
+            string? keyword = null, bool nofancy = false, string? specificSeed = null)
+        {
+            // Set debug output flag
+            DebugLogger.IsEnabled = enableDebug;
+            FancyConsole.IsEnabled = !nofancy;
 
-        //     List<string>? seeds = null;
+            List<string>? seeds = null;
 
-        //     // Handle specific seed
-        //     if (!string.IsNullOrEmpty(specificSeed))
-        //     {
-        //         seeds = new List<string> { specificSeed };
-        //         if (!quiet)
-        //             Console.WriteLine($"🔍 Searching for specific seed: {specificSeed}");
-        //     }
-        //     // Handle keyword generation
-        //     else if (!string.IsNullOrEmpty(keyword))
-        //     {
-        //         // Generate seeds from keyword pattern
-        //         seeds = new List<string>();
-        //         for (int i = 0; i <= 99; i++)
-        //         {
-        //             string padded = keyword + i.ToString("00");
-        //             if (padded.Length == 8)
-        //                 seeds.Add(padded);
-        //             else if (padded.Length < 8)
-        //                 seeds.Add(padded.PadRight(8, '0'));
-        //             else
-        //                 seeds.Add(padded.Substring(0, 8));
-        //         }
-        //         if (!quiet)
-        //         {
-        //             Console.WriteLine($"🎯 Generated {seeds.Count} seeds from keyword: {keyword}");
-        //             if (seeds.Count <= 10)
-        //             {
-        //                 Console.WriteLine($"   Seeds: {string.Join(", ", seeds)}");
-        //             }
-        //             else
-        //             {
-        //                 Console.WriteLine($"   First 10: {string.Join(", ", seeds.Take(10))}...");
-        //             }
-        //         }
-        //     }
-        //     // Handle wordlist loading
-        //     else if (!string.IsNullOrEmpty(wordlist))
-        //     {
-        //         var wordlistPath = Path.Combine("WordLists", wordlist + ".txt");
-        //         if (!File.Exists(wordlistPath))
-        //             throw new FileNotFoundException($"Wordlist file not found: {wordlistPath}");
-        //         seeds = File.ReadAllLines(wordlistPath)
-        //             .Select(line => line.Trim())
-        //             .Where(line => line.Length == 8)
-        //             .ToList();
-        //         if (!quiet)
-        //             Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
-        //     }
+            // Handle specific seed
+            if (!string.IsNullOrEmpty(specificSeed))
+            {
+                seeds = new List<string> { specificSeed };
+                if (!quiet)
+                    Console.WriteLine($"🔍 Searching for specific seed: {specificSeed}");
+            }
+            // Handle keyword generation
+            else if (!string.IsNullOrEmpty(keyword))
+            {
+                // Generate seeds from keyword pattern
+                seeds = new List<string>();
+                for (int i = 0; i <= 99; i++)
+                {
+                    string padded = keyword + i.ToString("00");
+                    if (padded.Length == 8)
+                        seeds.Add(padded);
+                    else if (padded.Length < 8)
+                        seeds.Add(padded.PadRight(8, '0'));
+                    else
+                        seeds.Add(padded.Substring(0, 8));
+                }
+                if (!quiet)
+                {
+                    Console.WriteLine($"🎯 Generated {seeds.Count} seeds from keyword: {keyword}");
+                    if (seeds.Count <= 10)
+                    {
+                        Console.WriteLine($"   Seeds: {string.Join(", ", seeds)}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"   First 10: {string.Join(", ", seeds.Take(10))}...");
+                    }
+                }
+            }
+            // Handle wordlist loading
+            else if (!string.IsNullOrEmpty(wordlist))
+            {
+                var wordlistPath = Path.Combine("WordLists", wordlist + ".txt");
+                if (!File.Exists(wordlistPath))
+                    throw new FileNotFoundException($"Wordlist file not found: {wordlistPath}");
+                seeds = File.ReadAllLines(wordlistPath)
+                    .Select(line => line.Trim())
+                    .Where(line => line.Length == 8)
+                    .ToList();
+                if (!quiet)
+                    Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
+            }
 
-        //         if (!quiet)
-        //         {
-        //             Console.WriteLine($"🔍 Motely Ouija Search Starting");
-        //             Console.WriteLine($"   Config: {configPath}");
-        //             Console.WriteLine($"   Threads: {threads}");
-        //             Console.WriteLine($"   Batch Size: {batchSize} chars");
-        //             string endDisplay = endBatch < 0 ? "∞" : endBatch.ToString();
-        //             Console.WriteLine($"   Range: {startBatch} to {endDisplay}");
-        //             if (enableDebug)
-        //                 Console.WriteLine($"   Debug: Enabled");
-        //             Console.WriteLine();
-        //         }
+                if (!quiet)
+                {
+                    Console.WriteLine($"🔍 Motely Ouija Search Starting");
+                    Console.WriteLine($"   Config: {configPath}");
+                    Console.WriteLine($"   Threads: {threads}");
+                    Console.WriteLine($"   Batch Size: {batchSize} chars");
+                    string endDisplay = endBatch < 0 ? "∞" : endBatch.ToString();
+                    Console.WriteLine($"   Range: {startBatch} to {endDisplay}");
+                    if (enableDebug)
+                        Console.WriteLine($"   Debug: Enabled");
+                    Console.WriteLine();
+                }
 
-        //     try
-        //     {
-        //         // Load Ouija config
-        //         var config = LoadConfig(configPath);
-        //         try
-        //         {
-        //             OuijaConfigValidator.ValidateConfig(config);
-        //         }
-        //         catch (ArgumentException ex)
-        //         {
-        //             Console.WriteLine($"❌ CONFIG VALIDATION FAILED:\n{ex.Message}");
-        //             return;
-        //         }
+            try
+            {
+                // Load Ouija config
+                var config = LoadConfig(configPath);
+                try
+                {
+                    OuijaConfigValidator.ValidateConfig(config);
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.WriteLine($"❌ CONFIG VALIDATION FAILED:\n{ex.Message}");
+                    return;
+                }
                 
-        //         if (!quiet)
-        //             Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
+                if (!quiet)
+                    Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
 
-        //         // Print the parsed config for debugging
-        //         if (!quiet && enableDebug)
-        //         {
-        //             DebugLogger.Log("\n--- Parsed Ouija Config ---");
-        //             DebugLogger.Log(config.ToJson());
-        //             DebugLogger.Log("--- End Config ---\n");
-        //         }
+                // Print the parsed config for debugging
+                if (!quiet && enableDebug)
+                {
+                    DebugLogger.Log("\n--- Parsed Ouija Config ---");
+                    DebugLogger.Log(config.ToJson());
+                    DebugLogger.Log("--- End Config ---\n");
+                }
 
-        //         // Search configuration is now part of MotelySearchSettings
+                // Search configuration is now part of MotelySearchSettings
 
-        //         // The config loader now handles both formats automatically
-        //         // It will convert new format to legacy format internally
-        //         var filterDesc = new OuijaJsonFilterDesc(config);
-        //         filterDesc.Cutoff = cutoff;
-        //         filterDesc.AutoCutoff = autoCutoff;
+                // The config loader now handles both formats automatically
+                // It will convert new format to legacy format internally
+                var filterDesc = new OuijaJsonFilterDesc(config);
+                filterDesc.Cutoff = cutoff;
+                filterDesc.AutoCutoff = autoCutoff;
                 
-        //         if (!quiet)
-        //         {
-        //             if (autoCutoff)
-        //                 Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
-        //             else
-        //                 Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
-        //         }
+                if (!quiet)
+                {
+                    if (autoCutoff)
+                        Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
+                    else
+                        Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
+                }
 
-        //         // Create the search using OuijaJsonFilterDesc
-        //         var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
-        //             .WithThreadCount(threads);
+                // Create the search using OuijaJsonFilterDesc
+                var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
+                    .WithThreadCount(threads);
                     
-        //         // Apply deck and stake from config
-        //         if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
-        //         {
-        //             searchSettings = searchSettings.WithDeck(deck);
-        //             DebugLogger.Log($"[Program] Using deck from config: {deck}");
-        //         }
-        //         else
-        //         {
-        //             DebugLogger.Log($"[Program] Using default deck: {searchSettings.Deck}");
-        //         }
-        //         if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse<MotelyStake>(config.Stake, true, out var stake))
-        //         {
-        //             searchSettings = searchSettings.WithStake(stake);
-        //             DebugLogger.Log($"[Program] Using stake from config: {stake}");
-        //         }
-        //         else
-        //         {
-        //             DebugLogger.Log($"[Program] Using default stake: {searchSettings.Stake}");
-        //         }
+                // Apply deck and stake from config
+                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
+                {
+                    searchSettings = searchSettings.WithDeck(deck);
+                    DebugLogger.Log($"[Program] Using deck from config: {deck}");
+                }
+                else
+                {
+                    DebugLogger.Log($"[Program] Using default deck: {searchSettings.Deck}");
+                }
+                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse<MotelyStake>(config.Stake, true, out var stake))
+                {
+                    searchSettings = searchSettings.WithStake(stake);
+                    DebugLogger.Log($"[Program] Using stake from config: {stake}");
+                }
+                else
+                {
+                    DebugLogger.Log($"[Program] Using default stake: {searchSettings.Stake}");
+                }
                 
-        //         // Set batch range if specified
-        //         if (startBatch > 0)
-        //             searchSettings = searchSettings.WithStartBatchIndex((ulong)startBatch);
-        //         if (endBatch > 0)
-        //         {
-        //             searchSettings = searchSettings.WithEndBatchIndex((ulong)endBatch);
-        //         }
+                // Set batch range if specified
+                if (startBatch > 0)
+                    searchSettings = searchSettings.WithStartBatchIndex((ulong)startBatch);
+                if (endBatch > 0)
+                {
+                    searchSettings = searchSettings.WithEndBatchIndex((ulong)endBatch);
+                }
                     
-        //         // Apply minimum score cutoff
-        //         // Minimum score cutoff is handled by the filter itself
+                // Apply minimum score cutoff
+                // Minimum score cutoff is handled by the filter itself
                 
-        //         // Start timing before search begins
-        //         var searchStopwatch = Stopwatch.StartNew();
+                // Start timing before search begins
+                var searchStopwatch = Stopwatch.StartNew();
                 
-        //         IMotelySearch search;
-        //         if (seeds != null && seeds.Count > 0)
-        //         {
-        //             // Search specific seeds from list
-        //             if (!quiet && enableDebug)
-        //             {
-        //                 Console.WriteLine($"[DEBUG] Starting list search with {seeds.Count} seeds");
-        //                 Console.WriteLine($"[DEBUG] Seeds to search: {string.Join(", ", seeds.Take(5))}...");
-        //             }
-        //             search = searchSettings.WithListSearch(seeds).Start();
-        //             DebugLogger.Log($"[Program] List search created. Status immediately after Start(): {search.Status}");
-        //         }
-        //         else
-        //         {
-        //             // Sequential batch search
-        //             if (!quiet && enableDebug)
-        //                 Console.WriteLine($"[DEBUG] Starting sequential batch search");
-        //             search = searchSettings
-        //             .WithSequentialSearch()
-        //             .WithBatchCharacterCount(batchSize)
-        //             .Start();
-        //         }
+                IMotelySearch search;
+                if (seeds != null && seeds.Count > 0)
+                {
+                    // Search specific seeds from list
+                    if (!quiet && enableDebug)
+                    {
+                        Console.WriteLine($"[DEBUG] Starting list search with {seeds.Count} seeds");
+                        Console.WriteLine($"[DEBUG] Seeds to search: {string.Join(", ", seeds.Take(5))}...");
+                    }
+                    search = searchSettings.WithListSearch(seeds).Start();
+                    DebugLogger.Log($"[Program] List search created. Status immediately after Start(): {search.Status}");
+                }
+                else
+                {
+                    // Sequential batch search
+                    if (!quiet && enableDebug)
+                        Console.WriteLine($"[DEBUG] Starting sequential batch search");
+                    search = searchSettings
+                    .WithSequentialSearch()
+                    .WithBatchCharacterCount(batchSize)
+                    .Start();
+                }
 
-        //         // Print CSV header for results
-        //         PrintResultsHeader(config);
+                // Print CSV header for results
+                PrintResultsHeader(config);
                 
-        //         // Reset cancellation flag
-        //         OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = false;
+                // Reset cancellation flag
+                OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = false;
                 
-        //         // Register callback to print results with scores
-        //         OuijaJsonFilterDesc.OnResultFound = (seed, totalScore, scores) =>
-        //         {
-        //             var line = $"{seed},{totalScore}";
-        //             foreach (var score in scores)
-        //             {
-        //                 line += $",{score}";
-        //             }
-        //             Console.WriteLine(line);
-        //         };
+                // Register callback to print results with scores
+                OuijaJsonFilterDesc.OnResultFound = (seed, totalScore, scores) =>
+                {
+                    var line = $"{seed},{totalScore}";
+                    foreach (var score in scores)
+                    {
+                        line += $",{score}";
+                    }
+                    Console.WriteLine(line);
+                };
 
-        //         // Setup cancellation token
-        //         var cts = new CancellationTokenSource();
-        //         Console.CancelKeyPress += (sender, e) =>
-        //         {
-        //             e.Cancel = true;
-        //             Console.WriteLine("\n🛑 Stopping search...");
-        //             OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = true;
-        //             search.Dispose();
-        //             Console.WriteLine("✅ Search stopped gracefully");
-        //         };
+                // Setup cancellation token
+                var cts = new CancellationTokenSource();
+                Console.CancelKeyPress += (sender, e) =>
+                {
+                    e.Cancel = true;
+                    Console.WriteLine("\n🛑 Stopping search...");
+                    OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = true;
+                    search.Dispose();
+                    Console.WriteLine("✅ Search stopped gracefully");
+                };
                 
-        //         // WAIT FOR SEARCH TO COMPLETE!
-        //         DebugLogger.Log($"[Program] Search started. Initial status: {search.Status}");
-        //         int loopCount = 0;
-        //         while (search.Status != MotelySearchStatus.Completed && !OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled)
-        //         {
-        //             System.Threading.Thread.Sleep(100);
-        //             loopCount++;
-        //             if (loopCount % 10 == 0) // Log every second
-        //             {
-        //                 DebugLogger.Log($"[Program] Waiting for search... Status: {search.Status}, CompletedBatchCount: {search.CompletedBatchCount}");
-        //             }
-        //         }
-        //         DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled}");
+                // WAIT FOR SEARCH TO COMPLETE!
+                DebugLogger.Log($"[Program] Search started. Initial status: {search.Status}");
+                int loopCount = 0;
+                while (search.Status != MotelySearchStatus.Completed && !OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled)
+                {
+                    System.Threading.Thread.Sleep(100);
+                    loopCount++;
+                    if (loopCount % 10 == 0) // Log every second
+                    {
+                        DebugLogger.Log($"[Program] Waiting for search... Status: {search.Status}, CompletedBatchCount: {search.CompletedBatchCount}");
+                    }
+                }
+                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled}");
                 
-        //         // Stop timing
-        //         searchStopwatch.Stop();
+                // Stop timing
+                searchStopwatch.Stop();
                 
-        //         // Results are printed in real-time by OuijaJsonFilterDesc
-        //         ulong totalSearched = (ulong)search.CompletedBatchCount;
-        //         var duration = searchStopwatch.Elapsed;
+                // Results are printed in real-time by OuijaJsonFilterDesc
+                ulong totalSearched = (ulong)search.CompletedBatchCount;
+                var duration = searchStopwatch.Elapsed;
 
-        //         Console.WriteLine($"\n✅ Search completed"); 
-        //         if (seeds != null && seeds.Count > 0)
-        //         {
-        //             // For list search, show the actual number of seeds we tried to search
-        //             Console.WriteLine($"   Total seeds searched: {seeds.Count:N0}");
-        //         }
-        //         else
-        //         {
-        //             // For sequential search, calculate actual seeds
-        //             ulong seedsPerBatch = (ulong)Math.Pow(35, batchSize);
-        //             ulong totalSeedsSearched = totalSearched * seedsPerBatch;
+                Console.WriteLine($"\n✅ Search completed"); 
+                if (seeds != null && seeds.Count > 0)
+                {
+                    // For list search, show the actual number of seeds we tried to search
+                    Console.WriteLine($"   Total seeds searched: {seeds.Count:N0}");
+                }
+                else
+                {
+                    // For sequential search, calculate actual seeds
+                    ulong seedsPerBatch = (ulong)Math.Pow(35, batchSize);
+                    ulong totalSeedsSearched = totalSearched * seedsPerBatch;
                     
-        //             Console.WriteLine($"   Total batches processed: {totalSearched:N0}");
-        //             Console.WriteLine($"   Seeds per batch: {seedsPerBatch:N0} (35^{batchSize})");
-        //             Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
-        //         }
-        //         Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
+                    Console.WriteLine($"   Total batches processed: {totalSearched:N0}");
+                    Console.WriteLine($"   Seeds per batch: {seedsPerBatch:N0} (35^{batchSize})");
+                    Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
+                }
+                Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
                 
-        //     }
-        //     catch (OperationCanceledException)
-        //     {
-        //         Console.WriteLine("\n🛑 Search cancelled by user");
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         Console.WriteLine($"❌ Error: {ex.Message}");
-        //         if (enableDebug)
-        //             DebugLogger.Log(ex.StackTrace ?? "No stack trace available");
-        //     }
-        // }
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("\n🛑 Search cancelled by user");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error: {ex.Message}");
+                if (enableDebug)
+                    DebugLogger.Log(ex.StackTrace ?? "No stack trace available");
+            }
+        }
 
-        // static OuijaConfig LoadConfig(string configPath)
-        // {
-        //     // If configPath is a rooted (absolute) path, use it directly
-        //     if (Path.IsPathRooted(configPath) && File.Exists(configPath))
-        //     {
-        //         DebugLogger.Log($"📁 Loading config from: {configPath}");
-        //         return OuijaConfig.LoadFromJson(configPath);
-        //     }
+        static OuijaConfig LoadConfig(string configPath)
+        {
+            // If configPath is a rooted (absolute) path, use it directly
+            if (Path.IsPathRooted(configPath) && File.Exists(configPath))
+            {
+                DebugLogger.Log($"📁 Loading config from: {configPath}");
+                return OuijaConfig.LoadFromJson(configPath);
+            }
 
-        //     // Always look in JsonItemFilters for configs
-        //     string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
-        //     string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
-        //     if (File.Exists(jsonItemFiltersPath))
-        //     {
-        //         DebugLogger.Log($"📁 Loading config from: {jsonItemFiltersPath}");
-        //         return OuijaConfig.LoadFromJson(jsonItemFiltersPath);
-        //     }
+            // Always look in JsonItemFilters for configs
+            string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
+            string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
+            if (File.Exists(jsonItemFiltersPath))
+            {
+                DebugLogger.Log($"📁 Loading config from: {jsonItemFiltersPath}");
+                return OuijaConfig.LoadFromJson(jsonItemFiltersPath);
+            }
 
-        //     throw new FileNotFoundException($"Could not find config file: {configPath}");
-        // }
+            throw new FileNotFoundException($"Could not find config file: {configPath}");
+        }
 
-        // static void PrintResultsHeader(OuijaConfig config)
-        // {
-        //     // Print deck/stake info as comments
-        //     Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
+        static void PrintResultsHeader(OuijaConfig config)
+        {
+            // Print deck/stake info as comments
+            Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
 
-        //     // Print CSV header only once, with + prefix
-        //     var header = "+Seed,TotalScore";
+            // Print CSV header only once, with + prefix
+            var header = "+Seed,TotalScore";
 
-        //     // Add column for each should clause
-        //     if (config.Should != null)
-        //     {
-        //         foreach (var should in config.Should)
-        //         {
-        //             var col = FormatShouldColumn(should);
-        //             header += $",{col}";
-        //         }
-        //     }
-        //     Console.WriteLine(header);
-        // }
+            // Add column for each should clause
+            if (config.Should != null)
+            {
+                foreach (var should in config.Should)
+                {
+                    var col = FormatShouldColumn(should);
+                    header += $",{col}";
+                }
+            }
+            Console.WriteLine(header);
+        }
 
-        // static string FormatShouldColumn(OuijaConfig.FilterItem should)
-        // {
-        //     if (should == null) return "Should";
-        //     // Format as Type:Value or just Value if type is obvious
-        //     var name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
-        //     if (!string.IsNullOrEmpty(should.Edition))
-        //         name = should.Edition + name;
-        //     return name;
-        // }
+        static string FormatShouldColumn(OuijaConfig.FilterItem should)
+        {
+            if (should == null) return "Should";
+            // Format as Type:Value or just Value if type is obvious
+            var name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
+            if (!string.IsNullOrEmpty(should.Edition))
+                name = should.Edition + name;
+            return name;
+        }
     }
 }
     
