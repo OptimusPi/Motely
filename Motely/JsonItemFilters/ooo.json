@@ -1,0 +1,22 @@
+{
+  "name": "test",
+  "description": "test is fucking ankh works bro",
+  "author": "pifreak",
+  "dateCreated": "2025-08-16T05:46:12.6691000Z",
+  "must": [
+    {
+      "type": "spectralcard",
+      "value": "ankh",
+      "sources": {
+        "packSlots": [1]
+      },
+      "antes": [1]
+    }
+  ],
+  "should": [
+  ],
+  "mustNot": [],
+  "scoring": {
+    "type": "sum"
+  }
+}

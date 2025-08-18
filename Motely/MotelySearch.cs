@@ -76,7 +76,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
 {
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
     public int StartBatchIndex { get; set; } = 0;
-    public int EndBatchIndex { get; set; } = -1; // -1 means no limit
 
     public IMotelySeedFilterDesc<TBaseFilter> BaseFilterDesc { get; set; } = baseFilterDesc;
 
@@ -110,12 +109,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     public MotelySearchSettings<TBaseFilter> WithStartBatchIndex(int startBatchIndex)
     {
         StartBatchIndex = startBatchIndex;
-        return this;
-    }
-
-    public MotelySearchSettings<TBaseFilter> WithEndBatchIndex(int endBatchIndex)
-    {
-        EndBatchIndex = endBatchIndex;
         return this;
     }
 
@@ -181,6 +174,7 @@ public interface IMotelySearch : IDisposable
     public int CompletedBatchCount { get; }
 
     public void Start();
+    public void AwaitCompletion();
     public void Pause();
 }
 
@@ -209,7 +203,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 {
 
     private readonly MotelySearchParameters _searchParameters;
-    private readonly MotelySearchSettings<TBaseFilter> _settings;
 
     private readonly MotelySearchThread[] _threads;
     private readonly Barrier _pauseBarrier;
@@ -232,13 +225,12 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private int _completedBatchCount;
     public int CompletedBatchCount => _completedBatchCount;
 
-    private long _lastReportMS; // last report time in ms (atomic access)
+    private double _lastReportMS;
 
     private readonly Stopwatch _elapsedTime = new();
 
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
-        _settings = settings;
         _searchParameters = new()
         {
             Deck = settings.Deck,
@@ -310,6 +302,12 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _unpauseBarrier.SignalAndWait();
     }
 
+    public void AwaitCompletion()
+    {
+        foreach (MotelySearchThread searchThread in _threads)
+            searchThread.Thread.Join();
+    }
+
     public void Pause()
     {
         ObjectDisposedException.ThrowIf(_status == MotelySearchStatus.Disposed, this);
@@ -323,38 +321,27 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        //FancyConsole.WriteLine($"{seed}");
+        FancyConsole.WriteLine($"{seed}");
     }
 
-    private void PrintReport(long elapsedMS)
+    private void PrintReport()
     {
-        // Always use Lucky Numbers for magic numbers
-        if (elapsedMS < 13)
-        {
-            return;
-        }
+        double elapsedMS = _elapsedTime.ElapsedMilliseconds;
+
+        if (elapsedMS - _lastReportMS < 500) return;
+
+        _lastReportMS = elapsedMS;
 
         int thisCompletedCount = _completedBatchCount - _startBatchIndex;
-        
-        // For unlimited searches (EndBatchIndex == -1), don't calculate time remaining
-        bool isUnlimitedSearch = _settings.EndBatchIndex < 0;
-        
-        double totalPortionFinished = 0;
-        double thisPortionFinished = 0;
-        double totalTimeEstimate = 0;
-        double timeLeft = 0;
-        
-        if (!isUnlimitedSearch && thisCompletedCount > 0)
-        {
-            int totalBatchCount = _settings.EndBatchIndex - _startBatchIndex;
-            totalPortionFinished = thisCompletedCount / (double)totalBatchCount;
-            thisPortionFinished = thisCompletedCount / (double)totalBatchCount;
-            totalTimeEstimate = elapsedMS / thisPortionFinished;
-            timeLeft = totalTimeEstimate - elapsedMS;
-        }
+
+        double totalPortionFinished = _completedBatchCount / (double)_threads[0].MaxBatch;
+        double thisPortionFinished = thisCompletedCount / (double)_threads[0].MaxBatch;
+        double totalTimeEstimate = elapsedMS / thisPortionFinished;
+        double timeLeft = totalTimeEstimate - elapsedMS;
 
         string timeLeftFormatted;
         bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
+        // Clamp to max TimeSpan if too large - for very slow searches
         if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
         {
             timeLeftFormatted = "--:--:--";
@@ -362,42 +349,18 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         else
         {
             TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
-            if (timeLeftSpan.TotalDays >= 1)
-            {
-                timeLeftFormatted = $"{timeLeftSpan.Days} days, {timeLeftSpan.Hours} hours";
-            }
-            else if (timeLeftSpan.TotalHours >= 1)
-            {
-                timeLeftFormatted = $"{timeLeftSpan.Hours} hours, {timeLeftSpan.Minutes} minutes";
-            }
-            else if (timeLeftSpan.TotalMinutes >= 1)
-            {
-                timeLeftFormatted = $"{timeLeftSpan.Minutes} minutes, {timeLeftSpan.Seconds} seconds";
-            }
-            else
-            {
-                timeLeftFormatted = $"{timeLeftSpan.Seconds} seconds";
-            }
+            if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+            else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
         }
 
+        // Calculate seeds per millisecond
+        // Avoid divide by zero for a very fast find
         double seedsPerMS = 0;
-        if (elapsedMS > 3000)
-        {
+        if (elapsedMS > 1)
             seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-            Console.WriteLine($"⏱️ {Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
-        }
-        else if (elapsedMS > 0)
-        {
-            seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-            if (isUnlimitedSearch)
-            {
-                Console.WriteLine($"⏱️ Batches: {_completedBatchCount} ({Math.Round(seedsPerMS)} seeds/ms)");
-            }
-            else
-            {
-                Console.WriteLine($"⏱️ {Math.Round(totalPortionFinished * 100, 2):0.00}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
-            }
-        }
+
+        FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+
     }
 
     public void Dispose()
@@ -562,19 +525,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
 
-                // Atomic throttled report (once per ~1000ms across all threads)
-                {
-                    long now = Search._elapsedTime.ElapsedMilliseconds;
-                    long last = Volatile.Read(ref Search._lastReportMS);
-                    if (now - last >= 60000)
-                    {
-                        // Try to claim the slot; if another thread updated first, we skip
-                        if (Interlocked.CompareExchange(ref Search._lastReportMS, now, last) == last)
-                        {
-                            Search.PrintReport(now);
-                        }
-                    }
-                }
+                Search.PrintReport();
             }
 
         }
@@ -775,12 +726,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             MaxBatch = (SeedProvider.SeedCount + Vector512<double>.Count - 1) / Vector512<double>.Count;
             SeedsPerBatch = Vector512<double>.Count;
-            
-            // Apply EndBatchIndex limit if specified
-            if (search._settings.EndBatchIndex >= 0)
-            {
-                MaxBatch = Math.Min(MaxBatch, search._settings.EndBatchIndex);
-            }
 
             _hashes = (Vector512<double>*)Marshal.AllocHGlobal(sizeof(Vector512<double>) * search._pseudoHashKeyLengthCount);
 
@@ -973,12 +918,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             _nonBatchCharCount = Motely.MaxSeedLength - _batchCharCount;
             MaxBatch = (int)Math.Pow(Motely.SeedDigits.Length, _nonBatchCharCount);
-            
-            // Apply EndBatchIndex limit if specified
-            if (search._settings.EndBatchIndex >= 0)
-            {
-                MaxBatch = Math.Min(MaxBatch, search._settings.EndBatchIndex);
-            }
 
             _hashes = (Vector512<double>*)Marshal.AllocHGlobal(sizeof(Vector512<double>) * Search._pseudoHashKeyLengthCount * (_batchCharCount + 1));
 

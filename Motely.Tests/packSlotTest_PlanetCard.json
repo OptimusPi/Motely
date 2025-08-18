@@ -1,0 +1,14 @@
+{
+    "Must": [],
+    "Should": [],
+    "MustNot": [
+        {
+            "type": "PlanetCard",
+            "value": "PlanetX",
+            "antes": [1],
+            "sources": {
+                "packSlots": [0,1,2,3]
+            }
+        }
+    ]
+}

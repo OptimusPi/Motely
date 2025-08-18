@@ -1,0 +1,37 @@
+{
+  "name": "naninf",
+  "description": "Created with visual filter builder",
+  "dateCreated": "2025-08-15T00:37:30.630Z",
+  "author": "pifreak",
+  "must": [
+   {
+    "type": "souljoker",
+    "value": "Perkeo",
+    "antes": [
+        1
+      ],
+      "sources": {
+        "packSlots": [
+          1
+        ]
+      }
+   },
+    {
+      "type": "SpectralCard",
+      "value": "BlackHole",
+      "antes": [
+        1
+      ],
+      "sources": {
+        "packSlots": [
+          1
+        ]
+      }
+    }
+  ],
+  "should": [
+  ],
+  "mustNot": [],
+  "deck": "Ghost",
+  "stake": "White"
+}

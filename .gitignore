@@ -1,5 +1,7 @@
 bin
 obj
+/JsonItemFilters
 /WordLists
 *.csv
+/WordLists
 /JsonItemFilters

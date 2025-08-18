@@ -83,15 +83,20 @@ namespace Motely.Filters
                 {
                     case "joker":
                     case "souljoker":
-                        // Allow "any", "*", or empty for searching any joker with specific edition
-                        bool isAnyJoker = string.IsNullOrEmpty(item.Value) || 
+                        // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare", "AnyLegendary"
+                        bool isWildcard = string.IsNullOrEmpty(item.Value) || 
                                           item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase);
+                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyCommon", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase);
                         
-                        if (!isAnyJoker && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
+                        if (!isWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
-                            errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nUse 'any', '*', or leave empty to match any joker.");
+                            errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary");
                         }
                         
                         // Validate stickers
