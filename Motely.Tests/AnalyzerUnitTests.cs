@@ -1,9 +1,6 @@
-using System;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
-using VerifyXunit;
+
+using Motely.Analysis;
+using static VerifyXunit.Verifier;
 
 namespace Motely.Tests
 {
@@ -78,7 +75,7 @@ namespace Motely.Tests
 
     private string GetAnalyzerOutput(string seed)
     {
-        return SeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White)).ToString();
+        return MotelySeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White)).ToString();
     }
 
     // This method is now only used by other tests that don't use Verify yet
