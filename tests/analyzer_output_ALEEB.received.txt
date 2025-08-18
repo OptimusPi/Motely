@@ -341,9 +341,9 @@ Packs:
 Celestial Pack - Ceres, Planet X, Jupiter
 Jumbo Arcana Pack - The Emperor, The Fool, The Magician, The Hierophant, The Devil
 Standard Pack - Gold 7 of Clubs, Blue Seal Bonus 4 of Spades, Jack of Clubs
-Spectral Pack - Cryptid, Grim
+Spectral Pack - Black Hole, Grim
 Celestial Pack - Pluto, Mars, Saturn
-Spectral Pack - Ectoplasm, Ouija
+Spectral Pack - Immolate, Ectoplasm
 
 ==ANTE 7==
 Boss: The Goad
@@ -467,7 +467,7 @@ Shop Queue:
 
 Packs: 
 Arcana Pack - Strength, Death, The World
-Spectral Pack - Ankh, Medium
+Spectral Pack - Deja Vu, Cryptid
 Buffoon Pack - Popcorn, Ride the Bus
 Buffoon Pack - Walkie Talkie, Odd Todd
 Jumbo Celestial Pack - Earth, Neptune, Mars, Venus, Jupiter

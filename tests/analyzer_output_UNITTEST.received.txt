@@ -23,7 +23,7 @@ Packs:
 Buffoon Pack - Constellation, Cloud 9
 Mega Standard Pack - Glass 7 of Clubs, Gold Seal 6 of Clubs, 7 of Diamonds, Jack of Spades, Jack of Spades
 Jumbo Celestial Pack - Jupiter, Planet X, Saturn, Mars, Pluto
-Spectral Pack - Wraith, Incantation
+Spectral Pack - Wraith, Talisman
 
 ==ANTE 2==
 Boss: The Mouth
@@ -274,7 +274,7 @@ Shop Queue:
 50) Mercury
 
 Packs: 
-Spectral Pack - Hex, Trance
+Spectral Pack - Medium, Cryptid
 Standard Pack - Bonus King of Hearts, 6 of Clubs, Wild 5 of Spades
 Jumbo Celestial Pack - Planet X, Neptune, Mars, Earth, Ceres
 Standard Pack - 7 of Hearts, 6 of Diamonds, Purple Seal Bonus 4 of Diamonds
@@ -338,7 +338,7 @@ Shop Queue:
 50) Uranus
 
 Packs: 
-Spectral Pack - Aura, Ouija
+Spectral Pack - Wraith, Ectoplasm
 Standard Pack - Red Seal Foil 5 of Hearts, 9 of Hearts, Glass 8 of Hearts
 Jumbo Standard Pack - 3 of Spades, Bonus 6 of Spades, Gold Queen of Clubs, Stone 7 of Clubs, 10 of Hearts
 Standard Pack - Ace of Diamonds, Blue Seal Wild 9 of Spades, Purple Seal 10 of Diamonds

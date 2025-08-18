@@ -562,6 +562,7 @@ namespace Motely
                        voucher != MotelyVoucher.PlanetMerchant;
             }
             
+    
             private static SeedAnalysisData.PackContent ExtractPackContents(
                 ref MotelySingleSearchContext ctx, int ante, MotelyBoosterPack pack, int packSlot,
                 ref MotelySingleTarotStream arcanaStream, ref bool arcanaStreamInit,
@@ -577,7 +578,7 @@ namespace Motely
                     PackType = pack,
                     PackSize = packSize
                 };
-                
+
                 switch (packType)
                 {
                     case MotelyBoosterPackType.Arcana:
