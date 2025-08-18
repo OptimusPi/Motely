@@ -76,6 +76,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
 {
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
     public int StartBatchIndex { get; set; } = 0;
+    // Added: optional end batch index (exclusive) for sequential searches
+    public ulong? EndBatchIndex { get; set; } = null;
 
     public IMotelySeedFilterDesc<TBaseFilter> BaseFilterDesc { get; set; } = baseFilterDesc;
 
@@ -106,9 +108,14 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
         return this;
     }
 
-    public MotelySearchSettings<TBaseFilter> WithStartBatchIndex(int startBatchIndex)
+    public MotelySearchSettings<TBaseFilter> WithStartBatchIndex(ulong startBatchIndex)
     {
         StartBatchIndex = startBatchIndex;
+        return this;
+    }
+    public MotelySearchSettings<TBaseFilter> WithEndBatchIndex(ulong endBatchIndex)
+    {
+        EndBatchIndex = endBatchIndex;
         return this;
     }
 
