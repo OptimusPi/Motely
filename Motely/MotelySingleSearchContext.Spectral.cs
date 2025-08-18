@@ -40,9 +40,9 @@ ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-
     public MotelySingleSpectralStream CreateShopSpectralStream(int ante, bool isCached = false) =>
         CreateSpectralStream(MotelyPrngKeys.ShopItemSource, ante, true, false, isCached);
+
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -93,13 +93,6 @@ ref partial struct MotelySingleSearchContext
 
         return pack;
     }
-    
-    // Alias for compatibility with OuijaJsonFilterDesc
-    public MotelySingleItemSet GetSpectralPackContents(ref MotelySingleSpectralStream spectralStream, MotelyBoosterPackSize size)
-        => GetNextSpectralPackContents(ref spectralStream, size);
-        
-    public MotelySingleItemSet GetSpectralPackContents(ref MotelySingleSpectralStream spectralStream, int size)
-        => GetNextSpectralPackContents(ref spectralStream, size);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItem GetNextSpectral(ref MotelySingleSpectralStream spectralStream)
