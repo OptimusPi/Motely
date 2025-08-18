@@ -1,0 +1,19 @@
+{
+  "name": "perkeo-test",
+  "description": "Test for any Perkeo",
+  "author": "test",
+  "must": [
+    {
+      "type": "SoulJoker",
+      "value": "Perkeo",
+      "antes": [1,2,3,4,5],
+      "sources": {
+        "packSlots": [0,1,2,3]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": [],
+  "deck": "Red",
+  "stake": "White"
+}

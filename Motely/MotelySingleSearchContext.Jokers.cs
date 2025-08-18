@@ -66,21 +66,9 @@ unsafe ref partial struct MotelySingleSearchContext
         );
     }
 
-<<<<<<< HEAD
-public MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
-{
-    // Each pack gets its own stream based on pack index
-    return CreateJokerStream(
-        MotelyPrngKeys.BuffoonPackItemSource,
-        MotelyPrngKeys.BuffoonJokerEternalPerishableSource,
-        MotelyPrngKeys.BuffoonJokerRentalSource,
-        ante, flags, isCached
-    );
-}
-=======
-    public MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, int packIndex, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
+    public MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
     {
-        // Each pack gets its own stream based on pack index
+        // Single stream per ante (not per pack index)
         return CreateJokerStream(
             MotelyPrngKeys.BuffoonPackItemSource,
             MotelyPrngKeys.BuffoonJokerEternalPerishableSource,
@@ -88,7 +76,6 @@ public MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, MotelyJoke
             ante, flags, isCached
         );
     }
->>>>>>> master
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

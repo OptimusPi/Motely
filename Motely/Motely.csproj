@@ -8,34 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
-<<<<<<< HEAD
-<<<<<<< HEAD:Motely.csproj
-
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Verify.Xunit" />
-    <PackageReference Include="Verify.DiffPlex" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Update="tests\*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tests\*.verified.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-=======
-  
->>>>>>> upstream/master:Motely/Motely.csproj
-=======
-  
->>>>>>> master
 </Project>
