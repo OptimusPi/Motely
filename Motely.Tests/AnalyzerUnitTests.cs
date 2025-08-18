@@ -47,6 +47,61 @@ namespace Motely.Tests
             Console.SetOut(stringWriter);
             
             try
+        // Arrange
+        string seed = "UNITTEST";
+
+
+
+        // Act
+        var actualOutput = GetAnalyzerOutput(seed);
+
+        // Assert using Verify - this will create a nice diff view
+        await Verify(actualOutput)
+            .UseFileName($"analyzer_output_{seed}")
+            .DisableRequireUniquePrefix();
+    }
+
+    [Fact]
+    public async Task TestAnalyzer_ALEEB_Seed()
+    {
+        // Arrange
+        string seed = "ALEEB";
+
+        // Act
+        var actualOutput = GetAnalyzerOutput(seed);
+
+        // Assert using Verify - this will create a nice diff view
+        await Verify(actualOutput)
+            .UseFileName($"analyzer_output_{seed}")
+            .DisableRequireUniquePrefix();
+    }
+
+    private string GetAnalyzerOutput(string seed)
+    {
+        return SeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White)).ToString();
+    }
+
+    // This method is now only used by other tests that don't use Verify yet
+    private void AssertOutputsMatch(string expected, string actual, string seed)
+    {
+        // Normalize line endings
+        expected = expected.Replace("\r\n", "\n").Trim();
+        actual = actual.Replace("\r\n", "\n").Trim();
+
+        // Split into lines for detailed comparison
+        var expectedLines = expected.Split('\n');
+        var actualLines = actual.Split('\n');
+
+        // First check line count
+        Assert.Equal(expectedLines.Length, actualLines.Length);
+
+        // Compare line by line for better error messages
+        for (int i = 0; i < expectedLines.Length; i++)
+        {
+            var expectedLine = expectedLines[i].TrimEnd();
+            var actualLine = actualLines[i].TrimEnd();
+
+            if (expectedLine != actualLine)
             {
                 // Run the analyzer
                 SeedAnalyzer.AnalyzeToConsole(seed, MotelyDeck.Red, MotelyStake.White);
