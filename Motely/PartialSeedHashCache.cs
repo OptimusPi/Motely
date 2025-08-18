@@ -7,9 +7,6 @@ using System.Runtime.Intrinsics;
 namespace Motely;
 
 
-#if !DEBUG
-[method:MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
 internal unsafe struct PartialSeedHashCache : IDisposable
 {
     // A map of pseudohash key length => pointer to cached partial hash
@@ -23,6 +20,9 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     public readonly Vector512<double>* DynamicCacheMemory;
     public int DynamicCacheEntryCount;
 
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     public PartialSeedHashCache(IInternalMotelySearch search, Vector512<double>* partialSeedHashes)
     {
         Cache = (Vector512<double>**)Marshal.AllocHGlobal(sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
