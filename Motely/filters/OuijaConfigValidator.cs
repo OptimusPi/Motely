@@ -216,17 +216,21 @@ namespace Motely.Filters
                 }
                 
                 // Validate antes
-                if (item.Antes == null || item.Antes.Count() == 0)
+                // Semantics: null/missing = all antes (handled by EffectiveAntes); explicit empty array is invalid.
+                if (item.Antes != null)
                 {
-                    errors.Add($"{prefix}: Missing or empty 'Antes' array");
-                }
-                else
-                {
-                    foreach (var ante in item.Antes)
+                    if (item.Antes.Length == 0)
                     {
-                        if (ante < 0 || ante > 39)
+                        errors.Add($"{prefix}: Empty 'Antes' array (remove it to mean all antes, or specify values)");
+                    }
+                    else
+                    {
+                        foreach (var ante in item.Antes)
                         {
-                            errors.Add($"{prefix}: Invalid ante {ante}. Must be between 0 and 39.");
+                            if (ante < 0 || ante > 39)
+                            {
+                                errors.Add($"{prefix}: Invalid ante {ante}. Must be between 0 and 39.");
+                            }
                         }
                     }
                 }
