@@ -362,15 +362,19 @@ namespace Motely
                 // Reset cancellation flag
                 OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = false;
                 
-                // Register callback to print results with scores
+                // Register callback to print results with scores (CSV only – suppress standalone/plain seed lines)
                 OuijaJsonFilterDesc.OnResultFound = (seed, totalScore, scores) =>
                 {
-                    var line = $"{seed},{totalScore}";
-                    foreach (var score in scores)
+                    // Only emit a single CSV line per result. This avoids duplicate plain-seed output
+                    // specifically for OuijaJsonFilterDesc.
+                    // Format: Seed,TotalScore,<per-should scores>
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder(seed.Length + 16 + scores.Length * 4);
+                    sb.Append(seed).Append(',').Append(totalScore);
+                    for (int i = 0; i < scores.Length; i++)
                     {
-                        line += $",{score}";
+                        sb.Append(',').Append(scores[i]);
                     }
-                    Console.WriteLine(line);
+                    Console.WriteLine(sb.ToString());
                 };
 
                 // Setup cancellation token

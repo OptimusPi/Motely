@@ -179,6 +179,16 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         {
             DebugLogger.Log("[OuijaJsonFilter] Filter method called!");
             VectorMask mask = VectorMask.AllBitsSet;
+
+            // Ultra-early pre-filters (safe, no false negatives) for extremely restrictive MUST clauses.
+            // Currently only targets SoulJoker clauses specifying a concrete Joker and/or Edition.
+            // We OR over antes within a clause (seed may satisfy via any ante), then AND across clauses.
+            mask &= HandlePreFilters(ref searchContext);
+            if (mask.IsAllFalse())
+            {
+                DebugLogger.Log("[PreFilters] All seeds eliminated by pre-filters – aborting early.");
+                return mask;
+            }
             
             // CRITICAL PERFORMANCE: Process vectorizable MUST clauses FIRST to eliminate most seeds!
             // Sort MUST clauses: vectorizable ones first, non-vectorizable ones last
@@ -385,6 +395,54 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 
                 return false;
             });
+        }
+
+        // PRE-FILTER: fast superset elimination for rare soul joker requirements.
+        // Does NOT enforce packSlots / requireMega / stickers; only first soul joker identity + edition.
+        // Guarantees no false negatives (only discards seeds that cannot possibly satisfy the clause).
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VectorMask HandlePreFilters(ref MotelyVectorSearchContext ctx)
+        {
+            VectorMask mask = VectorMask.AllBitsSet;
+            bool applied = false;
+            if (_config.Must == null || _config.Must.Count == 0) return mask; // nothing to do
+
+            foreach (var clause in _config.Must)
+            {
+                if (clause.ItemTypeEnum != MotelyFilterItemType.SoulJoker)
+                    continue;
+
+                // Only helpful if targeting a specific legendary or specific edition.
+                // SAFETY: Only prefilter when BOTH a specific legendary AND a specific edition are required.
+                // If only the joker is specified (no edition) we might incorrectly eliminate seeds where
+                // the joker appears as a later Soul result (first legendary differs). That caused missed matches.
+                if (!(clause.JokerEnum.HasValue && clause.EditionEnum.HasValue))
+                    continue; // not selective enough for guaranteed safe prefilter
+
+                VectorMask clauseMask = VectorMask.NoBitsSet;
+                try
+                {
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        // Combine (OR) across antes: seed can satisfy via any ante's first Soul result.
+                        var anteMask = CheckSoulJokerVector(ref ctx, clause, ante);
+                        clauseMask |= anteMask;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DebugLogger.Log($"[PreFilters] Exception computing soul joker prefilter: {ex.Message}");
+                    continue; // fail open (no elimination)
+                }
+
+                // AND across distinct soul joker clauses.
+                mask &= clauseMask;
+                applied = true;
+                DebugLogger.Log($"[PreFilters] Applied soul joker prefilter: remaining bits set? {!mask.IsAllFalse()}");
+                if (mask.IsAllFalse()) break;
+            }
+
+            return applied ? mask : VectorMask.AllBitsSet;
         }
         
         private VectorMask ProcessClause(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, bool orAcrossAntes)
