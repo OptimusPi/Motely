@@ -7,6 +7,12 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
+  <!-- Minimal performance knobs -->
+  <Optimize>true</Optimize>
+  <TieredCompilation>true</TieredCompilation>
+  <TieredPGO>true</TieredPGO>
+  <ServerGarbageCollection>true</ServerGarbageCollection>
+  <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
