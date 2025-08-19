@@ -70,6 +70,19 @@ namespace Motely.Filters
             // Sources configuration
             public SourcesConfig? Sources { get; set; }
             
+            // Cached slot membership bitmasks (built in PostProcess). Up to 32 slots supported.
+            // Bit i set => slot i included.
+            internal uint PackSlotMask; // bitmask for requested pack slots
+            internal uint ShopSlotMask; // bitmask for requested shop slots
+            public bool HasPackSlot(int slot) => slot >= 0 && slot < 32 && ((PackSlotMask >> slot) & 1u) != 0u;
+            public bool HasShopSlot(int slot) => slot >= 0 && slot < 32 && ((ShopSlotMask >> slot) & 1u) != 0u;
+
+            // Precomputed metadata flags (populated in PostProcess after sources merged)
+            internal int MaxPackSlot = -1; // highest referenced pack slot (or -1 if none)
+            internal int MaxShopSlot = -1; // highest referenced shop slot (or -1 if none)
+            internal bool IsWildcardAnyJoker; // true if wildcard and AnyJoker
+            internal bool IsSimpleNegativeAnyPackOnly; // pattern: joker, AnyJoker, Edition specified, only packSlots, no shopSlots, Min null/<=1
+            
             // Direct properties for backwards compatibility and simpler JSON
             [JsonPropertyName("packSlots")]
             public int[]? PackSlots { get; set; }
@@ -137,6 +150,8 @@ namespace Motely.Filters
             
             [JsonIgnore]
             public MotelyJoker? JokerEnum { get; private set; }
+            [JsonIgnore]
+            public MotelyVoucher? VoucherEnum { get; private set; }
             
             // Call this after deserialization to parse all enums ONCE
             public void InitializeParsedEnums()
@@ -147,13 +162,12 @@ namespace Motely.Filters
                 switch (ItemTypeEnum)
                 {
                     case MotelyFilterItemType.Joker:
-                    case MotelyFilterItemType.SoulJoker:  // ALSO parse joker enum for soul jokers!
-                        // Parse wildcard first (only for regular jokers, not soul jokers)
+                    case MotelyFilterItemType.SoulJoker:
                         if (ItemTypeEnum == MotelyFilterItemType.Joker)
                         {
                             WildcardEnum = Value?.ToLowerInvariant() switch
                             {
-                                "any" => JokerWildcard.AnyJoker,  // Support both "any" and "anyjoker"
+                                "any" => JokerWildcard.AnyJoker,
                                 "anyjoker" => JokerWildcard.AnyJoker,
                                 "anycommon" => JokerWildcard.AnyCommon,
                                 "anyuncommon" => JokerWildcard.AnyUncommon,
@@ -162,20 +176,13 @@ namespace Motely.Filters
                                 _ => null
                             };
                         }
-                        
                         Debug.WriteLine($"[InitializeParsedEnums] Joker parsing: WildcardEnum={WildcardEnum}");
-                        
-                        // Only parse as joker enum if it's not a wildcard
                         if (!WildcardEnum.HasValue && !string.IsNullOrEmpty(Value))
                         {
                             if (Enum.TryParse<MotelyJoker>(Value, true, out var joker))
                             {
                                 JokerEnum = joker;
-                                Debug.WriteLine($"[InitializeParsedEnums] Successfully parsed joker: '{Value}' -> {JokerEnum} (int value: {(int)joker})");
-                                
-                                // IMPORTANT DEBUG: Log if this is a Legendary joker
-                                if (Value.Equals("Perkeo", StringComparison.OrdinalIgnoreCase) || 
-                                    Value.Equals("Triboulet", StringComparison.OrdinalIgnoreCase))
+                                if (Value.Equals("Perkeo", StringComparison.OrdinalIgnoreCase) || Value.Equals("Triboulet", StringComparison.OrdinalIgnoreCase))
                                 {
                                     Debug.WriteLine($"[InitializeParsedEnums] LEGENDARY JOKER PARSED: '{Value}' -> Enum={JokerEnum}, IntValue={(int)joker}");
                                 }
@@ -183,12 +190,21 @@ namespace Motely.Filters
                             else
                             {
                                 Debug.WriteLine($"[InitializeParsedEnums] FAILED to parse joker value: '{Value}'");
-                                // In debug mode, crash if we can't parse a joker value
                                 Debug.Assert(false, $"Failed to parse joker value: '{Value}'. This is not a valid MotelyJoker enum value!");
                             }
                         }
                         break;
-                        
+                    case MotelyFilterItemType.Voucher:
+                        if (!string.IsNullOrEmpty(Value) && Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
+                        {
+                            VoucherEnum = voucher;
+                            Debug.WriteLine($"[InitializeParsedEnums] Parsed voucher value '{Value}' -> {voucher}");
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[InitializeParsedEnums] FAILED to parse voucher value: '{Value}' (IsNullOrEmpty={string.IsNullOrEmpty(Value)})");
+                        }
+                        break;
                     case MotelyFilterItemType.TarotCard:
                         if (!string.IsNullOrEmpty(Value))
                         {
@@ -230,16 +246,6 @@ namespace Motely.Filters
                         }
                         break;
                         
-                    case MotelyFilterItemType.Voucher:
-                        if (!string.IsNullOrEmpty(Value))
-                        {
-                            if (Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
-                            {
-                                VoucherEnum = voucher;
-                            }
-                        }
-                        break;
-                        
                     case MotelyFilterItemType.Boss:
                         if (!string.IsNullOrEmpty(Value))
                         {
@@ -264,8 +270,7 @@ namespace Motely.Filters
             [JsonIgnore]
             public MotelyTag? TagEnum { get; private set; }
             
-            [JsonIgnore]
-            public MotelyVoucher? VoucherEnum { get; private set; }
+            // VoucherEnum already declared above
             
             [JsonIgnore]
             public MotelyBossBlind? BossEnum { get; private set; }
@@ -532,6 +537,20 @@ namespace Motely.Filters
                 // Override sources for special items
                 OverrideSpecialItemSources(item);
             }
+
+            // Second pass: compute per-item metadata (after overrides & masks) 
+            foreach (var item in Must.Concat(Should).Concat(MustNot))
+            {
+                if (item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0)
+                    item.MaxPackSlot = item.Sources.PackSlots.Max();
+                if (item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+                    item.MaxShopSlot = item.Sources.ShopSlots.Max();
+
+                item.IsWildcardAnyJoker = item.ItemTypeEnum == MotelyFilterItemType.Joker && item.WildcardEnum == JokerWildcard.AnyJoker;
+                bool onlyPacks = (item.Sources?.PackSlots?.Length ?? 0) > 0 && (item.Sources?.ShopSlots?.Length ?? 0) == 0;
+                bool simpleMin = !item.Min.HasValue || item.Min.Value <= 1;
+                item.IsSimpleNegativeAnyPackOnly = item.IsWildcardAnyJoker && onlyPacks && simpleMin && item.EditionEnum.HasValue;
+            }
         }
     
         private static SourcesConfig GetDefaultSources(string itemType)
@@ -588,6 +607,23 @@ namespace Motely.Filters
                         };
                     }
                 }
+            }
+
+            // Build cached bitmasks for fast slot membership tests (tolerate duplicates)
+            // NOTE: Previously this executed ONLY for SpectralCard due to scoping bug; now applies to ALL item types.
+            if (item.Sources?.PackSlots != null)
+            {
+                uint packMask = 0;
+                foreach (var s in item.Sources.PackSlots)
+                    if (s >= 0 && s < 32) packMask |= (1u << s);
+                item.PackSlotMask = packMask;
+            }
+            if (item.Sources?.ShopSlots != null)
+            {
+                uint shopMask = 0;
+                foreach (var s in item.Sources.ShopSlots)
+                    if (s >= 0 && s < 32) shopMask |= (1u << s);
+                item.ShopSlotMask = shopMask;
             }
         }
     
