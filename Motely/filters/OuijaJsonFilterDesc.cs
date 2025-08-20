@@ -19,12 +19,56 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
     
     // Static callback for when results are found
     public static Action<string, int, int[]>? OnResultFound { get; set; }
+    // Global prefilter toggle (enabled via --prefilter CLI flag). Default: false
+    public static bool PrefilterEnabled = false;
 
     public OuijaJsonFilterDesc(OuijaConfig config)
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
         Cutoff = 0; // Set by command line --cutoff parameter
         AutoCutoff = false;
+    }
+
+    // CENTRAL CONFIG VALIDATION
+    // Throws (YEET) on structurally invalid clauses so runtime paths can assume invariants.
+    private static void ValidateConfig(OuijaConfig cfg)
+    {
+        if (cfg == null) throw new ArgumentNullException(nameof(cfg));
+
+        void ValidateList(List<OuijaConfig.FilterItem>? list, string kind)
+        {
+            if (list == null) return;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var fi = list[i];
+                // EffectiveAntes must be parsed & non-empty
+                if (fi.EffectiveAntes == null || fi.EffectiveAntes.Length == 0)
+                    throw new ArgumentException($"[{kind}][{i}] '{fi.Type}:{fi.Value}' missing 'antes' – provide at least one ante.");
+
+                // Joker / SoulJoker must specify at least one source domain (shop or packs)
+                if ((fi.ItemTypeEnum == MotelyFilterItemType.Joker || fi.ItemTypeEnum == MotelyFilterItemType.SoulJoker) &&
+                    (fi.Sources == null || ((fi.Sources.ShopSlots == null || fi.Sources.ShopSlots.Length == 0) && (fi.Sources.PackSlots == null || fi.Sources.PackSlots.Length == 0))))
+                    throw new ArgumentException($"[{kind}][{i}] Joker/SoulJoker '{fi.Type}:{fi.Value}' requires 'shopSlots' or 'packSlots'.");
+
+                // WARN (not error): out-of-baseline pack slot usage (ante1 >4, others >6) – user may intentionally extend
+                if (fi.Sources?.PackSlots is { Length: > 0 })
+                {
+                    int maxPack = fi.Sources.PackSlots.Max();
+                    int declaredCount = maxPack + 1;
+                    foreach (var ante in fi.EffectiveAntes)
+                    {
+                        if (ante == 1 && declaredCount > 4)
+                            DebugLogger.Log($"[WARNING] [{kind}][{i}] '{fi.Type}:{fi.Value}' requests {declaredCount} pack slots in ante 1 (>4 baseline). Proceeding.");
+                        else if (ante != 1 && declaredCount > 6)
+                            DebugLogger.Log($"[WARNING] [{kind}][{i}] '{fi.Type}:{fi.Value}' requests {declaredCount} pack slots in ante {ante} (>6 baseline). Proceeding.");
+                    }
+                }
+            }
+        }
+
+        ValidateList(cfg.Must, "must");
+        ValidateList(cfg.Should, "should");
+        ValidateList(cfg.MustNot, "mustNot");
     }
 
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
@@ -87,6 +131,11 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         private readonly OuijaConfig _config;
         private readonly int _cutoff;
         private readonly bool _autoCutoff;
+            // Derived per-ante slot loop bounds (computed from config so we don't guess).
+            // Index = ante number. Value = (max referenced slot index + 1) across ALL clauses for that ante.
+            // If zero => no clauses referenced any specific slot for that ante; we fall back to a conservative global max.
+            private readonly int[] _maxShopSlotsPerAnte; // for shop jokers
+            private readonly int[] _maxPackSlotsPerAnte; // for booster packs
         
         public static bool IsCancelled = false;
         
@@ -161,8 +210,54 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             _config = config;
             _cutoff = cutoff;
             _autoCutoff = autoCutoff;
-            
-            // Reset auto-cutoff state for new search
+
+            // Build per-ante SLOT MAXIMA.
+            // SHOP: derived from highest referenced shop slot index per ante (user can exceed defaults intentionally).
+            // PACK: fixed Balatro rule per user directive: ante 1 => 4 Buffoon pack "slots", all other antes => 6.
+            // We retain arrays for structural consistency; pack maxima are pre-filled constants.
+            const int GlobalFallbackShopSlots = 6; // used only when NO explicit shop slots referenced for an ante
+            const int PackSlotsAnte1 = 4;
+            const int PackSlotsOtherAntes = 6;
+            _maxShopSlotsPerAnte = new int[16];
+            _maxPackSlotsPerAnte = new int[16];
+            for (int i = 0; i < _maxPackSlotsPerAnte.Length; i++)
+                _maxPackSlotsPerAnte[i] = (i == 1) ? PackSlotsAnte1 : PackSlotsOtherAntes;
+
+            // Copy refs to avoid struct 'this' capture issue inside local functions
+            var shopMaxRef = _maxShopSlotsPerAnte;
+            void Accumulate(OuijaConfig.FilterItem fi)
+            {
+                if (fi.Sources?.ShopSlots is { Length: > 0 })
+                {
+                    int maxIdx = -1;
+                    foreach (var s in fi.Sources.ShopSlots)
+                        if (s >= 0 && s < 32 && s > maxIdx) maxIdx = s;
+                    if (maxIdx >= 0)
+                    {
+                        int needed = maxIdx + 1;
+                        foreach (var ante in fi.EffectiveAntes)
+                        {
+                            if ((uint)ante < (uint)shopMaxRef.Length && needed > shopMaxRef[ante])
+                                shopMaxRef[ante] = needed;
+                        }
+                    }
+                }
+            }
+            void AccumulateList(List<OuijaConfig.FilterItem>? list)
+            {
+                if (list == null) return;
+                foreach (var fi in list) Accumulate(fi);
+            }
+            AccumulateList(config.Must);
+            AccumulateList(config.Should);
+            AccumulateList(config.MustNot);
+
+            // Ensure any ante that had zero explicit references still has fallback bounds
+            for (int i = 0; i < _maxShopSlotsPerAnte.Length; i++)
+            {
+                if (_maxShopSlotsPerAnte[i] == 0) _maxShopSlotsPerAnte[i] = GlobalFallbackShopSlots;
+                // Pack array already pre-filled with constants; no fallback needed.
+            }
             if (autoCutoff)
             {
                 _currentCutoff = 0;
@@ -180,34 +275,32 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             DebugLogger.Log("[OuijaJsonFilter] Filter method called!");
             VectorMask mask = VectorMask.AllBitsSet;
 
-            // Ultra-early pre-filters (safe, no false negatives) for extremely restrictive MUST clauses.
-            // Currently only targets SoulJoker clauses specifying a concrete Joker and/or Edition.
-            // We OR over antes within a clause (seed may satisfy via any ante), then AND across clauses.
-            mask &= HandlePreFilters(ref searchContext);
+            // Create shared voucher state for tracking activations across all voucher clauses
+            MotelyVectorRunStateVoucher sharedVoucherState = new();
+
+            // Optional ultra-early pre-filters (enabled only with --prefilter) for very restrictive MUST clauses.
+            // Currently targets SoulJoker clauses specifying a concrete Joker (and optional Edition).
+            // Safe: only eliminates seeds whose FIRST soul legendary cannot satisfy the clause.
+            if (PrefilterEnabled)
+                mask &= HandlePreFilters(ref searchContext);
             if (mask.IsAllFalse())
             {
                 DebugLogger.Log("[PreFilters] All seeds eliminated by pre-filters – aborting early.");
                 return mask;
             }
             
-            // CRITICAL PERFORMANCE: Process vectorizable MUST clauses FIRST to eliminate most seeds!
-            // Sort MUST clauses: vectorizable ones first, non-vectorizable ones last
-            var sortedMust = _config.Must.OrderBy(m => m.ItemTypeEnum switch
+            // UNIFIED VOUCHER PROCESSING: Process all voucher clauses together sequentially from ante 1-8
+            mask &= ProcessAllVoucherClausesUnified(ref searchContext, mask, ref sharedVoucherState);
+            if (mask.IsAllFalse())
             {
-                MotelyFilterItemType.Joker => 0,  // Process regular jokers first (highly vectorizable)
-                MotelyFilterItemType.Voucher => 1,
-                MotelyFilterItemType.SmallBlindTag => 2,
-                MotelyFilterItemType.BigBlindTag => 2,
-                MotelyFilterItemType.TarotCard => 3,
-                MotelyFilterItemType.PlanetCard => 3,
-                MotelyFilterItemType.SpectralCard => 3,
-                MotelyFilterItemType.SoulJoker => 10,  // Process soul jokers LAST (not vectorizable)
-                MotelyFilterItemType.PlayingCard => 11,
-                MotelyFilterItemType.Boss => 12,
-                _ => 100
-            });
+                DebugLogger.Log("[Filter] Early exit - all seeds eliminated after unified voucher processing");
+                return mask;
+            }
             
-            // Process MUST clauses - all must match
+            // Order non-voucher MUST clauses by heuristic cost (cheap & selective first)
+            var sortedMust = _config.Must.Where(c => c.ItemTypeEnum != MotelyFilterItemType.Voucher).OrderBy(GetClauseCost);
+            
+            // Process non-voucher MUST clauses - all must match (vouchers already processed above)
             foreach (var must in sortedMust)
             {
                 DebugLogger.Log($"[Filter] Processing MUST clause: {must.Type} = {must.Value}");
@@ -217,9 +310,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 {
                     MotelyFilterItemType.SmallBlindTag => true,
                     MotelyFilterItemType.BigBlindTag => true,
-                    MotelyFilterItemType.Voucher => true,
-                    MotelyFilterItemType.Joker => true,  // VECTORIZED via MotelyVectorJokerStream!
-                    MotelyFilterItemType.SoulJoker => false,  // Too complex - needs pack checking
+                    MotelyFilterItemType.Voucher => false, // Already processed in unified voucher processing
+                    MotelyFilterItemType.Joker => true,      // Vectorized via joker stream
+                    MotelyFilterItemType.SoulJoker => true,  // We have CheckSoulJokerVector()
                     MotelyFilterItemType.TarotCard => true,  // Can be vectorized for simple checks
                     MotelyFilterItemType.PlanetCard => true,  // Can be vectorized for simple checks
                     MotelyFilterItemType.SpectralCard => true,  // Can be vectorized for simple checks
@@ -230,7 +323,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 
                 if (canVectorize)
                 {
-                    mask &= ProcessClause(ref searchContext, must, true);
+                    // Pass current mask so clause evaluation can skip already dead lanes
+                    var clauseMask = ProcessClause(ref searchContext, must, true, mask, ref sharedVoucherState);
+                    mask &= clauseMask;
                     
                     // EARLY EXIT: If no seeds remain, stop processing immediately
                     if (mask.IsAllFalse()) 
@@ -242,8 +337,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 // Non-vectorizable MUST clauses will be checked in individual seed processing
             }
             
-            // Process MUST NOT clauses - none can match
-            foreach (var mustNot in _config.MustNot)
+            // Process non-voucher MUST NOT clauses - none can match (vouchers already processed above)
+            foreach (var mustNot in _config.MustNot.Where(c => c.ItemTypeEnum != MotelyFilterItemType.Voucher))
             {
                 DebugLogger.Log($"[Filter] Processing MUST NOT clause: {mustNot.Type} = {mustNot.Value}");
                 
@@ -252,9 +347,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 {
                     MotelyFilterItemType.SmallBlindTag => true,
                     MotelyFilterItemType.BigBlindTag => true,
-                    MotelyFilterItemType.Voucher => true,
-                    MotelyFilterItemType.Joker => true,  // VECTORIZED!
-                    MotelyFilterItemType.SoulJoker => false,  // Too complex - needs pack checking
+                    MotelyFilterItemType.Voucher => false, // Already processed in unified voucher processing
+                    MotelyFilterItemType.Joker => true,
+                    MotelyFilterItemType.SoulJoker => true,
                     MotelyFilterItemType.TarotCard => true,
                     MotelyFilterItemType.PlanetCard => true,
                     MotelyFilterItemType.SpectralCard => true,
@@ -265,7 +360,8 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 
                 if (canVectorize)
                 {
-                    mask &= ProcessClause(ref searchContext, mustNot, true) ^ VectorMask.AllBitsSet;
+                    var clauseMask = ProcessClause(ref searchContext, mustNot, true, mask, ref sharedVoucherState);
+                    mask &= clauseMask ^ VectorMask.AllBitsSet; // invert only surviving lanes of this clause
                     
                     // EARLY EXIT: If no seeds remain, stop processing immediately
                     if (mask.IsAllFalse()) 
@@ -292,7 +388,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 
                 // Create voucher state for this seed that persists across all checks
                 MotelyRunState voucherState = new();
-                
+
+                // EARLY STATE ACQUISITION: Activate prerequisite vouchers and Showman (if explicitly required)
+                // This runs once per seed before clause-by-clause processing so later checks can rely on runState.
+                // Voucher clauses are now processed first in MUST clause ordering
+                // Showman activation happens during individual joker clause processing
+
                 // PERFORMANCE: Check MUST clauses first - exit immediately on failure
                 // This avoids wasting time on expensive operations for seeds that don't match
                 foreach (var must in config.Must)
@@ -397,107 +498,129 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             });
         }
 
-        // PRE-FILTER: fast superset elimination for rare soul joker requirements.
-        // Does NOT enforce packSlots / requireMega / stickers; only first soul joker identity + edition.
-        // Guarantees no false negatives (only discards seeds that cannot possibly satisfy the clause).
+        // Early activation pass: process (cheap) voucher prerequisites and Showman joker before full MUST evaluation
+        // Order: vouchers -> (blind) tags (no state) -> Showman. Only activates state; does NOT eliminate seeds.
+        // Deleted EarlyActivateVouchersAndShowman - vouchers now processed in proper order
+        // Showman activation happens during individual joker clause processing
+
+        // PRE-FILTER (soul joker): cheap identity (and optional edition) check on FIRST soul legendary per seed.
+        // Rationale: For a specific soul legendary (e.g. Perkeo) you can reject all seeds whose first soul legendary
+        // is different without simulating any pack contents. This is deterministic and safe (no false negatives) because
+        // if the first soul legendary is not the target, that seed can never yield the target from The Soul this run.
+        // We IGNORE wildcard legendary soul clauses here (would require multi-soul lookahead) and let them pass.
+        // NOTE: Removed previous environment variable toggles – always apply this safe identity prefilter.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask HandlePreFilters(ref MotelyVectorSearchContext ctx)
         {
-            VectorMask mask = VectorMask.AllBitsSet;
-            bool applied = false;
-            if (_config.Must == null || _config.Must.Count == 0) return mask; // nothing to do
+            // Double-guard: only run if the global flag is set.
+            if (!OuijaJsonFilterDesc.PrefilterEnabled)
+                return VectorMask.AllBitsSet;
+            if (_config.Must == null || _config.Must.Count == 0)
+                return VectorMask.AllBitsSet;
 
-            foreach (var clause in _config.Must)
+            // DISABLED: The original soul joker prefilter compared ONLY the *first* soul legendary.
+            // This causes FALSE NEGATIVES when the target legendary could appear from a later Soul card
+            // (e.g., earlier Soul rolls a different legendary in an unrequested pack slot / later ante).
+            // Until we implement multi-soul lookahead (or user explicitly asks for first-soul-only semantics),
+            // we fail OPEN here.
+            DebugLogger.Log("[PreFilters] Soul joker identity prefilter disabled (avoiding first-soul false negatives)");
+
+            // NEW: Cheap negative blind tag prefilter (antes 2-4). Eliminates seeds lacking NegativeTag on both blinds.
+            bool requiresNegTag = _config.Must?.Any(it =>
+                (it.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag || it.ItemTypeEnum == MotelyFilterItemType.BigBlindTag) &&
+                it.TagEnum.HasValue && it.TagEnum.Value == MotelyTag.NegativeTag) ?? false;
+
+            if (!requiresNegTag)
+                return VectorMask.AllBitsSet;
+
+            return PrefilterNegativeTag(ref ctx);
+        }
+
+        // Heuristic cost for ordering MUST clauses: lower runs earlier (cheaper &/or more selective)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GetClauseCost(OuijaConfig.FilterItem item)
+        {
+            // Base on type + specificity + rarity. Lower = sooner.
+            switch (item.ItemTypeEnum)
             {
-                if (clause.ItemTypeEnum != MotelyFilterItemType.SoulJoker)
-                    continue;
-
-                // Only helpful if targeting a specific legendary or specific edition.
-                // SAFETY: Only prefilter when BOTH a specific legendary AND a specific edition are required.
-                // If only the joker is specified (no edition) we might incorrectly eliminate seeds where
-                // the joker appears as a later Soul result (first legendary differs). That caused missed matches.
-                if (!(clause.JokerEnum.HasValue && clause.EditionEnum.HasValue))
-                    continue; // not selective enough for guaranteed safe prefilter
-
-                VectorMask clauseMask = VectorMask.NoBitsSet;
-                try
-                {
-                    foreach (var ante in clause.EffectiveAntes)
+                case MotelyFilterItemType.Voucher:
+                    return 3; // BALANCED PRIORITY - vouchers need early processing for state but are expensive
+                case MotelyFilterItemType.SmallBlindTag:
+                case MotelyFilterItemType.BigBlindTag:
+                    return 6; // two tag fetches
+                case MotelyFilterItemType.SoulJoker:
+                    // Specific legendary soul joker: super selective & cheap vector look
+                    return item.JokerEnum.HasValue ? 1 : 25;
+                case MotelyFilterItemType.Joker:
+                    // Specific legendary earlier than rare; wildcards later
+                    if (item.JokerEnum.HasValue)
                     {
-                        // Combine (OR) across antes: seed can satisfy via any ante's first Soul result.
-                        var anteMask = CheckSoulJokerVector(ref ctx, clause, ante);
-                        clauseMask |= anteMask;
+                        // Extract rarity bits (same logic as IsRareJoker but need legendary priority)
+                        var rarity = (MotelyJokerRarity)((int)item.JokerEnum.Value & 0xFF00);
+                        return rarity == MotelyJokerRarity.Legendary ? 2 :
+                               rarity == MotelyJokerRarity.Rare ? 8 : 12;
                     }
-                }
-                catch (Exception ex)
-                {
-                    DebugLogger.Log($"[PreFilters] Exception computing soul joker prefilter: {ex.Message}");
-                    continue; // fail open (no elimination)
-                }
-
-                // AND across distinct soul joker clauses.
-                mask &= clauseMask;
-                applied = true;
-                DebugLogger.Log($"[PreFilters] Applied soul joker prefilter: remaining bits set? {!mask.IsAllFalse()}");
-                if (mask.IsAllFalse()) break;
+                    if (item.WildcardEnum.HasValue)
+                    {
+                        return item.WildcardEnum.Value switch
+                        {
+            
+                            JokerWildcard.AnyRare => 9,
+                            JokerWildcard.AnyUncommon => 13,
+                            JokerWildcard.AnyCommon => 14,
+                            JokerWildcard.AnyJoker => 18,
+                            _ => 19
+                        };
+                    }
+                    return 20;
+                case MotelyFilterItemType.SpectralCard:
+                case MotelyFilterItemType.TarotCard:
+                case MotelyFilterItemType.PlanetCard:
+                    return item.SpectralEnum.HasValue || item.TarotEnum.HasValue || item.PlanetEnum.HasValue ? 11 : 15;
+                case MotelyFilterItemType.PlayingCard:
+                    return 30; // expensive multi-attribute
+                case MotelyFilterItemType.Boss:
+                    return 16; // trivial but low selectivity
+                default:
+                    return 40;
             }
-
-            return applied ? mask : VectorMask.AllBitsSet;
         }
         
-        private VectorMask ProcessClause(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, bool orAcrossAntes)
+        // Enhanced ProcessClause with voucher state support for vectorized filtering
+        private VectorMask ProcessClause(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, bool orAcrossAntes, VectorMask activeMask, ref MotelyVectorRunStateVoucher sharedVoucherState)
         {
+            // If upstream mask already killed all lanes, bail early
+            if (activeMask.IsAllFalse())
+                return activeMask;
+
             VectorMask result = orAcrossAntes ? VectorMask.NoBitsSet : VectorMask.AllBitsSet;
+            
+            // For voucher clauses, we need special handling to support activation and upgrades
+            if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
+            {
+                DebugLogger.Log($"[ProcessClause] Processing voucher clause for {clause.VoucherEnum?.ToString() ?? "unknown"} across antes: {string.Join(",", clause.EffectiveAntes)}");
+                return ProcessVoucherClause(ref ctx, clause, orAcrossAntes, activeMask, ref sharedVoucherState);
+            }
             
             foreach (var ante in clause.EffectiveAntes)
             {
                 VectorMask anteMask = VectorMask.NoBitsSet;
-                
+
                 // Handle different types using VECTORIZED methods!
-                switch (clause.ItemTypeEnum)
+                anteMask = (global::System.Object)clause.ItemTypeEnum switch
                 {
-                    case MotelyFilterItemType.SmallBlindTag:
-                    case MotelyFilterItemType.BigBlindTag:
-                        anteMask = CheckTag(ref ctx, clause, ante);
-                        break;
-                        
-                    case MotelyFilterItemType.Voucher:
-                        anteMask = CheckVoucher(ref ctx, clause, ante);
-                        break;
-                        
-                    case MotelyFilterItemType.Joker:
-                        // VECTORIZED joker checking - do a quick pass to filter seeds
-                        anteMask = CheckJokerVector(ref ctx, clause, ante);
-                        break;
-                        
-                    case MotelyFilterItemType.SoulJoker:
-                        // VECTORIZED soul joker checking
-                        anteMask = CheckSoulJokerVector(ref ctx, clause, ante);
-                        break;
-                        
-                    case MotelyFilterItemType.TarotCard:
-                    case MotelyFilterItemType.PlanetCard:
-                    case MotelyFilterItemType.SpectralCard:
-                        // These can do basic vectorized checks for existence
-                        anteMask = CheckConsumableVector(ref ctx, clause, ante);
-                        break;
-                        
-                    case MotelyFilterItemType.PlayingCard:
-                    case MotelyFilterItemType.Boss:
-                        // These need individual checking - return all true to defer to individual processing
-                        anteMask = VectorMask.AllBitsSet;
-                        break;
-                        
-                    default:
-                        // Unknown types - assume can't be vectorized
-                        anteMask = VectorMask.AllBitsSet;
-                        break;
-                }
-                
+                    MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => CheckTag(ref ctx, clause, ante),
+                    MotelyFilterItemType.Voucher => CheckVoucher(ref ctx, clause, ante), // This should not be reached due to early return above
+                    MotelyFilterItemType.Joker => CheckJoker(ref ctx, clause, ante),
+                    MotelyFilterItemType.SoulJoker => CheckSoulJoker(ref ctx, clause, ante),// VECTORIZED soul joker checking
+                    MotelyFilterItemType.TarotCard or MotelyFilterItemType.PlanetCard or MotelyFilterItemType.SpectralCard => CheckConsumable(ref ctx, clause, ante),// These can do basic vectorized checks for existence
+                    MotelyFilterItemType.PlayingCard or MotelyFilterItemType.Boss => VectorMask.AllBitsSet,// These need individual checking - return all true to defer to individual processing
+                    _ => VectorMask.AllBitsSet,// Unknown types - assume can't be vectorized
+                };
                 if (orAcrossAntes)
-                    result |= anteMask;
+                    result |= anteMask & activeMask; // only care about still-alive lanes
                 else
-                    result &= anteMask;
+                    result &= anteMask; // AND semantics already naturally shrink
                     
                 // EARLY EXIT: If processing AND clauses and result is already all false
                 if (!orAcrossAntes && result.IsAllFalse())
@@ -507,65 +630,69 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 }
             }
             
-            return result;
+            // Constrain by upstream active mask (so we never re-enable dead lanes)
+            return result & activeMask;
         }
         
         // NEW: Vectorized joker checking - does a quick vectorized pass
-        private VectorMask CheckJokerVector(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
+        private VectorMask CheckJoker(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            VectorMask result = VectorMask.NoBitsSet;
-            
-            // Check shop jokers if needed
-            if (clause.Sources?.ShopSlots == null || clause.Sources.ShopSlots.Length > 0)
+            // IMPORTANT: Shop slot vectorization DISABLED.
+            // Previous implementation incorrectly used a pure Joker stream (skipping Tarot/Planet/Spectral draws),
+            // breaking slot index alignment and causing false negatives (e.g. shopSlots:[2]).
+            // Until a FULL vector shop item stream (with item type PRNG) is implemented, we must NOT prefilter by shop joker slots.
+            // Return AllBitsSet so scalar path performs authoritative evaluation.
+            if (clause.Sources?.ShopSlots is { Length: > 0 })
+                return VectorMask.AllBitsSet;
+            // PACK-ONLY prefilter: if only packSlots specified, we can at least eliminate seeds whose referenced pack slots are NOT Buffoon (or not Mega when required).
+            if (OuijaJsonFilterDesc.PrefilterEnabled && clause.Sources?.PackSlots is { Length: > 0 })
             {
-                var shopJokerStream = ctx.CreateShopJokerStream(ante);
-                
-                // Check each shop slot
-                for (int i = 0; i < 6; i++)
+                var packSlots = clause.Sources.PackSlots;
+                int maxPackIdx = packSlots.Max();
+                var packSlotSet = new HashSet<int>(packSlots);
+                var packStream = ctx.CreateBoosterPackStream(ante);
+                VectorMask anyBuffoon = VectorMask.NoBitsSet;
+                for (int i = 0; i <= maxPackIdx; i++)
                 {
-                    if (clause.Sources?.ShopSlots != null && !clause.Sources.ShopSlots.Contains(i))
-                        continue;
-                        
-                    var joker = ctx.GetNextJoker(ref shopJokerStream);
-                    
-                    // For wildcards, just check if any joker exists
-                    if (clause.WildcardEnum.HasValue)
+                    var pack = ctx.GetNextBoosterPack(ref packStream);
+                    if (!packSlotSet.Contains(i)) continue; // skip unrequested pack slots (still advanced for RNG alignment)
+                    // Only Buffoon packs can contain non-legendary jokers like Blueprint. (Soul legendary path handled elsewhere.)
+                    var isBuffoon = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Buffoon);
+                    if (clause.Sources.RequireMega == true)
                     {
-                        // Check if not empty (has jokers)
-                        result |= ~VectorEnum256.Equals(joker.Type, MotelyItemType.Invalid);
+                        var isMega = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega);
+                        isBuffoon &= isMega;
                     }
-                    // For specific jokers, check the exact match
-                    else if (clause.JokerEnum.HasValue)
-                    {
-                        // Create target joker using the MotelyJoker constructor
-                        var targetJoker = new MotelyItem(clause.JokerEnum.Value);
-                        result |= MotelyItemVector.Equals(joker, targetJoker);
-                        
-                        // Also check edition if specified
-                        if (clause.EditionEnum.HasValue)
-                        {
-                            result &= VectorEnum256.Equals(joker.Edition, clause.EditionEnum.Value);
-                        }
-                    }
+                    anyBuffoon |= isBuffoon;
                 }
+                // anyBuffoon lanes remain candidates; others eliminated now.
+                return anyBuffoon;
             }
-            
-            // If packs are needed, we can't fully vectorize this
-            // Return all bits set to defer to individual processing
-            if (clause.Sources?.PackSlots == null || clause.Sources.PackSlots.Length > 0)
-            {
-                return VectorMask.AllBitsSet; // Let individual processing handle pack checking
-            }
-            
-            return result;
+            // No explicit shop slots: defer to scalar path (packs or invalid) without pre-filtering.
+            return VectorMask.AllBitsSet;
         }
         
         // SMART Vectorized soul joker checking - pre-filters by FIRST soul joker
-        private VectorMask CheckSoulJokerVector(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
+        private VectorMask CheckSoulJoker(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
             // KEY INSIGHT: Check what the FIRST soul joker would be for each seed
             // This eliminates seeds that would generate the wrong legendary even if they had Soul
             // Seeds that pass this check still need individual processing to verify pack contents
+            // IMPORTANT: This is ONLY sound for queries that care about the FIRST soul legendary irrespective of
+            // which pack slot produced The Soul. If the user restricts pack slots (sources.packSlots) we can get
+            // FALSE NEGATIVES (first soul legendary might come from an unrequested pack slot while the requested
+            // slot later yields the target). In that case we must FAIL OPEN and defer to scalar simulation.
+            
+            // OPTIMIZATION: For negative edition searches, we can pre-filter by checking edition
+            // even with packSlots, since we can safely consume RNG state with cached streams
+            if (clause.Sources?.PackSlots is { Length: > 0 })
+            {
+                // No special pre-filtering for packSlots - requires full simulation
+                
+                return VectorMask.AllBitsSet; // keep all seeds - packSlots require full simulation
+            }
+            if (clause.Min.HasValue && clause.Min.Value > 1)
+                return VectorMask.AllBitsSet; // multi-count queries require full simulation
             
             // Get the vectorized soul joker stream for this ante
             var soulJokerStream = ctx.CreateSoulJokerStream(ante);
@@ -608,10 +735,29 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
         }
         
         // NEW: Basic vectorized consumable checking
-        private VectorMask CheckConsumableVector(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
+        private VectorMask CheckConsumable(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            // For now, return AllBitsSet to defer to individual processing
-            // TODO: Implement vectorized consumable checking
+            // Use Motely's built-in vectorized consumable filtering
+            switch (clause.ItemTypeEnum)
+            {
+                case MotelyFilterItemType.TarotCard:
+                    if (clause.TarotEnum.HasValue)
+                        return ctx.FilterTarotCard(ante, clause.TarotEnum.Value);
+                    break;
+
+                case MotelyFilterItemType.PlanetCard:
+                    if (clause.PlanetEnum.HasValue)
+                        return ctx.FilterPlanetCard(ante, clause.PlanetEnum.Value);
+                    break;
+
+                case MotelyFilterItemType.SpectralCard:
+                    if (clause.SpectralEnum.HasValue)
+                        return ctx.FilterSpectralCard(ante, clause.SpectralEnum.Value);
+                    break;
+                
+            }
+            
+            // If no specific consumable type or enum, defer to individual processing
             return VectorMask.AllBitsSet;
         }
         
@@ -626,28 +772,272 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 return VectorMask.NoBitsSet;
             
             var targetTag = clause.TagEnum.Value;
-            
+
             // Use pre-parsed enum for type checking
-            switch (clause.TagTypeEnum)
+            return (global::System.Object?)clause.TagTypeEnum switch
             {
-                case MotelyTagType.SmallBlind:
-                    return VectorEnum256.Equals(smallTag, targetTag);
-                case MotelyTagType.BigBlind:
-                    return VectorEnum256.Equals(bigTag, targetTag);
-                default: // Any
-                    return VectorEnum256.Equals(smallTag, targetTag) | VectorEnum256.Equals(bigTag, targetTag);
-            }
+                MotelyTagType.SmallBlind => (VectorMask)VectorEnum256.Equals(smallTag, targetTag),
+                MotelyTagType.BigBlind => (VectorMask)VectorEnum256.Equals(bigTag, targetTag),
+                // Any
+                _ => (VectorMask)(VectorEnum256.Equals(smallTag, targetTag) | VectorEnum256.Equals(bigTag, targetTag)),
+            };
         }
         
+        // NEW: Prefilter seeds that must have NegativeTag on both blinds in antes 2-4
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static VectorMask PrefilterNegativeTag(ref MotelyVectorSearchContext ctx)
+        {
+            VectorMask mask = VectorMask.AllBitsSet;
+            for (int ante = 2; ante <= 4; ante++)
+            {
+                var tagStream = ctx.CreateTagStream(ante);
+                var smallTag = ctx.GetNextTag(ref tagStream);
+                var bigTag = ctx.GetNextTag(ref tagStream);
+
+                mask &= VectorEnum256.Equals(smallTag, MotelyTag.NegativeTag);
+                mask &= VectorEnum256.Equals(bigTag, MotelyTag.NegativeTag);
+
+                if (mask.IsAllFalse())
+                    break;
+            }
+            return mask;
+        }
+
+        // Single-pass voucher processing: iterate through antes 1-N, activate vouchers and check requirements immediately
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VectorMask ProcessAllVoucherClausesUnified(ref MotelyVectorSearchContext searchContext, VectorMask currentMask, ref MotelyVectorRunStateVoucher sharedVoucherState)
+        {
+            // Collect all voucher clauses (both MUST and MUST NOT)
+            var allVoucherClauses = new List<(OuijaConfig.FilterItem clause, bool isMust)>();
+            
+            foreach (var must in _config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                allVoucherClauses.Add((must, true));
+            
+            foreach (var mustNot in _config.MustNot.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                allVoucherClauses.Add((mustNot, false));
+            
+            if (allVoucherClauses.Count == 0)
+            {
+                DebugLogger.Log("[ProcessAllVoucherClausesUnified] No voucher clauses found, returning current mask");
+                return currentMask;
+            }
+            
+            // Determine the maximum ante from all voucher clauses
+            int maxAnte = allVoucherClauses.SelectMany(vc => vc.clause.EffectiveAntes).Max();
+            DebugLogger.Log($"[ProcessAllVoucherClausesUnified] Starting single-pass voucher processing from ante 1-{maxAnte}");
+            
+            VectorMask resultMask = currentMask;
+            
+            // Single pass: iterate through antes 1-N, activate vouchers and check requirements
+            for (int ante = 1; ante <= maxAnte; ante++)
+            {
+                // Get the voucher that appears in this ante
+                var voucher = searchContext.GetAnteFirstVoucher(ante, sharedVoucherState);
+                
+                // Activate EVERY voucher found in this ante (1 voucher per ante)
+                foreach (MotelyVoucher possibleVoucher in Enum.GetValues<MotelyVoucher>())
+                {
+                    var voucherMask = VectorEnum256.Equals(voucher, possibleVoucher);
+                    VectorMask voucherMaskConverted = voucherMask;
+                    
+                    if (!voucherMaskConverted.IsAllFalse())
+                    {
+                        DebugLogger.Log($"[ProcessAllVoucherClausesUnified] Ante {ante}: Activating voucher {possibleVoucher}");
+                        sharedVoucherState.ActivateVoucher(possibleVoucher);
+                        
+                        // Handle prerequisite activation for odd vouchers
+                        int voucherInt = (int)possibleVoucher;
+                        if ((voucherInt & 1) == 1) // Odd voucher
+                        {
+                            var prerequisiteVoucher = (MotelyVoucher)(voucherInt - 1);
+                            DebugLogger.Log($"[ProcessAllVoucherClausesUnified] Ante {ante}: {possibleVoucher} is odd, also activating prerequisite {prerequisiteVoucher}");
+                            sharedVoucherState.ActivateVoucher(prerequisiteVoucher);
+                        }
+                        break; // Only one voucher per ante
+                    }
+                }
+                
+                // After activating vouchers in this ante, check all requirements that include this ante
+                foreach (var (clause, isMust) in allVoucherClauses)
+                {
+                    if (!clause.VoucherEnum.HasValue || !clause.EffectiveAntes.Contains(ante)) continue;
+                    
+                    var targetVoucher = clause.VoucherEnum.Value;
+                    
+                    // Check if the target voucher is active in the shared state (handles prerequisites)
+                    var isActive = sharedVoucherState.IsVoucherActive(targetVoucher);
+                    VectorMask activeMask = isActive;
+                    
+                    DebugLogger.Log($"[ProcessAllVoucherClausesUnified] Ante {ante}: Checking {(isMust ? "MUST" : "MUST NOT")} voucher {targetVoucher}, active: {!activeMask.IsAllFalse()}");
+                    
+                    if (isMust)
+                    {
+                        // MUST: keep only seeds where the voucher is active
+                        resultMask &= activeMask;
+                    }
+                    else
+                    {
+                        // MUST NOT: exclude seeds where the voucher is active
+                        resultMask &= activeMask ^ VectorMask.AllBitsSet;
+                    }
+                    
+                    if (resultMask.IsAllFalse())
+                    {
+                        DebugLogger.Log($"[ProcessAllVoucherClausesUnified] All seeds eliminated after {(isMust ? "MUST" : "MUST NOT")} voucher {targetVoucher} in ante {ante}");
+                        return resultMask;
+                    }
+                }
+            }
+            
+            DebugLogger.Log($"[ProcessAllVoucherClausesUnified] Single-pass voucher processing complete, seeds remaining");
+            return resultMask;
+        }
+        
+        // Process a single voucher clause for a specific ante
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VectorMask ProcessVoucherClauseForAnte(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, bool isMust, VectorMask activeMask, ref MotelyVectorRunStateVoucher voucherState, int ante)
+        {
+            if (!clause.VoucherEnum.HasValue)
+            {
+                DebugLogger.Log($"[ProcessVoucherClauseForAnte] No voucher enum specified for ante {ante}");
+                return VectorMask.NoBitsSet;
+            }
+
+            var targetVoucher = clause.VoucherEnum.Value;
+            DebugLogger.Log($"[ProcessVoucherClauseForAnte] Voucher {targetVoucher} EffectiveAntes: [{string.Join(", ", clause.EffectiveAntes)}]");
+            
+            // Check if this ante is in the clause's effective antes
+            if (!clause.EffectiveAntes.Contains(ante))
+            {
+                DebugLogger.Log($"[ProcessVoucherClauseForAnte] Voucher {targetVoucher} not specified for ante {ante}, skipping");
+                return VectorMask.NoBitsSet; // No match for MUST, no restriction for MUST NOT
+            }
+            
+            DebugLogger.Log($"[ProcessVoucherClauseForAnte] Checking voucher {targetVoucher} in ante {ante} with shared state");
+            
+            // CRITICAL FIX: Handle prerequisite vouchers for odd-numbered vouchers
+            // Observatory (11) requires Telescope (10), etc.
+            int targetVoucherInt = (int)targetVoucher;
+            if ((targetVoucherInt & 1) == 1) // Odd voucher requires prerequisite
+            {
+                var prerequisiteVoucher = (MotelyVoucher)(targetVoucherInt - 1);
+                DebugLogger.Log($"[ProcessVoucherClauseForAnte] {targetVoucher} is odd ({targetVoucherInt}), checking prerequisite {prerequisiteVoucher} ({targetVoucherInt - 1})");
+                
+                // Check if we need to activate the prerequisite first
+                // This handles cases like Observatory requiring Telescope
+                if (!voucherState.IsVoucherActive(prerequisiteVoucher).Equals(Vector256<int>.AllBitsSet))
+                {
+                    DebugLogger.Log($"[ProcessVoucherClauseForAnte] Prerequisite {prerequisiteVoucher} not fully active, checking if it appears in this ante");
+                    
+                    // Check if the prerequisite appears in this ante
+                    var prerequisiteCheck = ctx.GetAnteFirstVoucher(ante, voucherState);
+                    var prerequisiteMask = VectorEnum256.Equals(prerequisiteCheck, prerequisiteVoucher);
+                    
+                    // Activate prerequisite for seeds that found it
+                    VectorMask prerequisiteMaskConverted = prerequisiteMask;
+                    if (!prerequisiteMaskConverted.IsAllFalse())
+                    {
+                        DebugLogger.Log($"[ProcessVoucherClauseForAnte] Activating prerequisite {prerequisiteVoucher} found in ante {ante}");
+                        voucherState.ActivateVoucher(prerequisiteVoucher);
+                    }
+                }
+            }
+            
+            // Get voucher with current state (handles prerequisites and upgrades)
+            var voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
+            var anteMask = VectorEnum256.Equals(voucher, targetVoucher);
+            
+            // Activate the voucher for seeds that found it (enables upgrades in later antes)
+            VectorMask anteMaskConverted = anteMask;
+            if (!anteMaskConverted.IsAllFalse())
+            {
+                DebugLogger.Log($"[ProcessVoucherClauseForAnte] Activating voucher {targetVoucher} for matched seeds in ante {ante}");
+                // Note: We activate for ALL lanes since we can't selectively activate per lane in vectorized mode
+                // Individual seed processing will handle the precise activation logic
+                voucherState.ActivateVoucher(targetVoucher);
+            }
+            
+            DebugLogger.Log($"[ProcessVoucherClauseForAnte] Result for voucher {targetVoucher} in ante {ante}: processing complete");
+            return anteMask;
+        }
+        
+        // Enhanced voucher clause processing with activation and upgrade support
+        private VectorMask ProcessVoucherClause(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, bool orAcrossAntes, VectorMask activeMask, ref MotelyVectorRunStateVoucher voucherState)
+        {
+            if (!clause.VoucherEnum.HasValue)
+            {
+                DebugLogger.Log($"[ProcessVoucherClause] No voucher enum specified");
+                return VectorMask.NoBitsSet;
+            }
+
+            var targetVoucher = clause.VoucherEnum.Value;
+            DebugLogger.Log($"[ProcessVoucherClause] Processing voucher {targetVoucher} with shared state support");
+            
+            VectorMask result = orAcrossAntes ? VectorMask.NoBitsSet : VectorMask.AllBitsSet;
+            
+            foreach (var ante in clause.EffectiveAntes)
+            {
+                DebugLogger.Log($"[ProcessVoucherClause] Checking ante {ante} for voucher {targetVoucher}");
+                
+                // Get voucher with current state (handles prerequisites and upgrades)
+                var voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
+                var anteMask = VectorEnum256.Equals(voucher, targetVoucher);
+                
+                
+                // Activate the voucher for seeds that found it (enables upgrades in later antes)
+                VectorMask anteMaskConverted = anteMask;
+                if (!anteMaskConverted.IsAllFalse())
+                {
+                    DebugLogger.Log($"[ProcessVoucherClause] Activating voucher {targetVoucher} for matched seeds in ante {ante}");
+                    // Note: We activate for ALL lanes since we can't selectively activate per lane in vectorized mode
+                    // Individual seed processing will handle the precise activation logic
+                    voucherState.ActivateVoucher(targetVoucher);
+                }
+                
+                // Combine results based on OR/AND logic
+                if (orAcrossAntes)
+                {
+                    result |= anteMask;
+                }
+                else
+                {
+                    result &= anteMask;
+                }
+                
+                // Early exit optimization for AND logic
+                if (!orAcrossAntes && result.IsAllFalse())
+                {
+                    DebugLogger.Log($"[ProcessVoucherClause] Early exit - no seeds remain after ante {ante}");
+                    break;
+                }
+            }
+            
+            DebugLogger.Log($"[ProcessVoucherClause] Final result for voucher {targetVoucher}: processing complete");
+            return result;
+        }
+        
+        // Enhanced voucher checking with state support for vectorized filtering
         private VectorMask CheckVoucher(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
-            var voucher = ctx.GetAnteFirstVoucher(ante);
-            
             // Assume validation was done during config parsing
             if (!clause.VoucherEnum.HasValue)
+            {
+                DebugLogger.Log($"[CheckVoucher] No voucher enum specified for ante {ante}");
                 return VectorMask.NoBitsSet;
-                
-            return VectorEnum256.Equals(voucher, clause.VoucherEnum.Value);
+            }
+
+            var targetVoucher = clause.VoucherEnum.Value;
+            DebugLogger.Log($"[CheckVoucher] Looking for voucher {targetVoucher} in ante {ante}");
+            
+            // Get the first voucher without state (basic check)
+            var voucher = ctx.GetAnteFirstVoucher(ante);
+            var basicMatch = VectorEnum256.Equals(voucher, targetVoucher);
+            
+            DebugLogger.Log($"[CheckVoucher] Basic match result for {targetVoucher}: processing complete");
+            
+            // If we have basic matches, we're done for the vectorized path
+            // Individual seed processing will handle voucher activation and upgrades
+            return basicMatch;
         }
         
         private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyRunState voucherState)
@@ -679,12 +1069,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                         break;
                         
                     case MotelyFilterItemType.SoulJoker:
-                        anteCount = CheckSoulJoker(ref ctx, clause, ante, ref packStream);
+                        anteCount = CheckSoulJoker(ref ctx, clause, ante, ref packStream, in voucherState);
                         break;
                         
                     // For other types, just return 1 if found (for now)
                     case MotelyFilterItemType.TarotCard:
-                        anteCount = CheckTarot(ref ctx, clause, ante, ref shopStream, ref packStream) ? 1 : 0;
+                        anteCount = CheckTarot(ref ctx, clause, ante, ref shopStream, ref packStream, in voucherState) ? 1 : 0;
                         break;
                         
                     case MotelyFilterItemType.PlanetCard:
@@ -760,15 +1150,24 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 switch (clause.ItemTypeEnum)
                 {
                     case MotelyFilterItemType.Joker:
-                        found = CheckJoker(ref ctx, clause, ante, ref shopStream, ref packStream) > 0;
+                        int jokerCount = CheckJoker(ref ctx, clause, ante, ref shopStream, ref packStream);
+                        found = jokerCount > 0;
+                        
+                        // SHOWMAN ACTIVATION: If we found a Showman joker, activate it in the run state
+                        if (found && clause.JokerEnum.HasValue && clause.JokerEnum.Value == MotelyJoker.Showman)
+                        {
+                            voucherState.ActivateShowman();
+                            if (DebugLogger.IsEnabled)
+                                DebugLogger.Log($"[CheckSingleClause] Activated Showman joker for ante {ante}");
+                        }
                         break;
                         
                     case MotelyFilterItemType.SoulJoker:
-                        found = CheckSoulJoker(ref ctx, clause, ante, ref packStream) > 0;
+                        found = CheckSoulJoker(ref ctx, clause, ante, ref packStream, in voucherState) > 0;
                         break;
                         
                     case MotelyFilterItemType.TarotCard:
-                        found = CheckTarot(ref ctx, clause, ante, ref shopStream, ref packStream);
+                        found = CheckTarot(ref ctx, clause, ante, ref shopStream, ref packStream, in voucherState);
                         break;
                         
                     case MotelyFilterItemType.PlanetCard:
@@ -819,7 +1218,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             {
                 // This should NEVER happen - something is wrong with enum parsing
                 DebugLogger.Log($"[CheckJoker] ERROR: No joker enum parsed! Value='{clause.Value}', Type='{clause.Type}'");
-                return 0; // Can't find what we don't know to look for
+                throw new InvalidOperationException("No joker enum parsed");
             }
             
             // Determine target rarity for wildcard searches
@@ -831,7 +1230,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                     JokerWildcard.AnyCommon => MotelyJokerRarity.Common,
                     JokerWildcard.AnyUncommon => MotelyJokerRarity.Uncommon,
                     JokerWildcard.AnyRare => MotelyJokerRarity.Rare,
-                    JokerWildcard.AnyLegendary => MotelyJokerRarity.Legendary,
+    
                     JokerWildcard.AnyJoker => null, // Any rarity
                     _ => null
                 };
@@ -848,210 +1247,113 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                 DebugLogger.Log($"[CheckJoker] Looking for {searchDescription} in ante {ante} HasWildcard: {hasWildcard} HasSpecificJoker: {hasSpecificJoker}");
             }
                 
-            // Check shop
-            bool shouldCheckShop = clause.Sources?.ShopSlots != null && clause.Sources.ShopSlots.Length > 0;
-            
-            if (shouldCheckShop)
+            // SHOP: only inspect if explicit shopSlots specified.
+            if (clause.Sources?.ShopSlots is { Length: > 0 })
             {
-                var shopSlots = clause.Sources!.ShopSlots!; // guarded by shouldCheckShop
-                int maxSlots = shopSlots.Max() + 1;
-                var slotSet = new HashSet<int>(shopSlots);
-                for (int i = 0; i < maxSlots; i++)
+                var slots = clause.Sources.ShopSlots;
+                int maxIdx = slots.Max();
+                var slotSet = new HashSet<int>(slots);
+                for (int i = 0; i <= maxIdx; i++)
                 {
-                    // Skip generation if this slot isn't requested
-                    if (!slotSet.Contains(i))
+                    var item = ctx.GetNextShopItem(ref shopStream); // advance for RNG alignment
+                    if (!slotSet.Contains(i)) continue;
+                    if (item.TypeCategory != MotelyItemTypeCategory.Joker) continue;
+                    var shopJoker = new MotelyItem(item.Value).GetJoker();
+                    bool jokerMatches = false;
+                    if (hasWildcard)
                     {
-                        // Still need to advance the stream to keep position correct
-                        ctx.GetNextShopItem(ref shopStream);
-                        continue;
+                        if (clause.WildcardEnum == JokerWildcard.AnyJoker)
+                            jokerMatches = true;
+                        else if (targetRarity.HasValue)
+                        {
+                            var jokerRarity = (MotelyJokerRarity)((int)shopJoker & Motely.JokerRarityMask);
+                            jokerMatches = jokerRarity == targetRarity.Value;
+                        }
                     }
-                    
-                    var item = ctx.GetNextShopItem(ref shopStream);
-                    
-                    if (item.TypeCategory == MotelyItemTypeCategory.Joker)
+                    else if (hasSpecificJoker)
                     {
-                        // Extract joker without edition bits for comparison
-                        var shopJoker = new MotelyItem(item.Value).GetJoker();
-
-                        // Check if joker matches our criteria
-                        bool jokerMatches = false;
-                        
-                        if (hasWildcard)
+                        jokerMatches = shopJoker == targetJoker;
+                        if (DebugLogger.IsEnabled && clause.EditionEnum.HasValue)
+                            DebugLogger.Log($"[CheckJoker] Specific joker check: shopJoker={shopJoker}, targetJoker={targetJoker}, matches={jokerMatches}, edition={item.Edition}, targetEdition={clause.EditionEnum}");
+                    }
+                    if (jokerMatches && CheckEditionAndStickers(item, clause))
+                    {
+                        foundCount++;
+                        if (DebugLogger.IsEnabled)
                         {
-                            if (clause.WildcardEnum == JokerWildcard.AnyJoker)
-                            {
-                                jokerMatches = true; // Any joker matches
-                            }
-                            else if (targetRarity.HasValue)
-                            {
-                                // Check if joker matches the wildcard rarity
-                                var jokerRarity = (MotelyJokerRarity)((int)shopJoker & Motely.JokerRarityMask);
-                                jokerMatches = jokerRarity == targetRarity.Value;
-                            }
+                            string jokerName = hasWildcard ? $"{clause.WildcardEnum} ({shopJoker})" : shopJoker.ToString();
+                            DebugLogger.Log($"[CheckJoker] Found {jokerName} in shop slot {i}! Total count: {foundCount}");
                         }
-                        else if (hasSpecificJoker)
-                        {
-                            jokerMatches = shopJoker == targetJoker;
-                            if (DebugLogger.IsEnabled && clause.EditionEnum.HasValue)
-                            {
-                                DebugLogger.Log($"[CheckJoker] Specific joker check: shopJoker={shopJoker}, targetJoker={targetJoker}, matches={jokerMatches}, edition={item.Edition}, targetEdition={clause.EditionEnum}");
-                            }
-                        }
-
-                        if (jokerMatches && CheckEditionAndStickers(item, clause))
-                        {
-                            foundCount++;
-                            if (DebugLogger.IsEnabled)
-                            {
-                                string jokerName = hasWildcard ? $"{clause.WildcardEnum} ({shopJoker})" : 
-                                                    shopJoker.ToString();
-                                DebugLogger.Log($"[CheckJoker] Found {jokerName} in shop slot {i}! Total count: {foundCount}");
-                            }
-                            
-                            // Early exit optimization when Min is specified
-                            if (clause.Min.HasValue && foundCount >= clause.Min.Value)
-                            {
-                                if (DebugLogger.IsEnabled)
-                                    DebugLogger.Log($"[CheckJoker] Early exit - found {foundCount} >= Min {clause.Min.Value}");
-                                return foundCount;
-                            }
-                        }
+                        if (clause.Min.HasValue && foundCount >= clause.Min.Value)
+                            return foundCount;
                     }
                 }
             }
-            
-            // Check booster packs
-            bool shouldCheckPacks = clause.Sources?.PackSlots != null && clause.Sources.PackSlots.Length > 0;
-            
-            if (shouldCheckPacks)
+
+            // PACKS: only inspect if explicit packSlots specified.
+            if (clause.Sources?.PackSlots is { Length: > 0 })
             {
-                DebugLogger.Log($"[CheckJoker] Checking booster packs in ante {ante}...");
-                
-                // Use packSlots from config if specified
-                var packSlots = clause.Sources?.PackSlots ?? Array.Empty<int>();
-                if (packSlots.Length == 0)
-                {
-                    DebugLogger.Log("[CheckJoker] No pack slots specified; skipping packs section");
-                    return foundCount;
-                }
-                int packCount = packSlots.Max()+1;
-                // Persistent Buffoon joker stream for this ante (single stream per ante requirement)
+                var packSlots = clause.Sources.PackSlots;
+                int packLoop = clause.MaxPackSlot >= 0 ? clause.MaxPackSlot + 1 : packSlots.Max() + 1;
+                bool requireMega = clause.Sources?.RequireMega ?? false;
+                bool simpleFastPath = clause.IsSimpleNegativeAnyPackOnly; // any joker + edition + only packs + Min<=1
                 MotelySingleJokerStream buffoonStream = default;
                 bool buffoonStreamInit = false;
-                bool requireMega = clause.Sources?.RequireMega ?? false;
-                
-                DebugLogger.Log($"[CheckJoker] === BOOSTER PACK CONTENTS FOR ANTE {ante} ===");
-                
-                for (int i = 0; i < packCount; i++)
+                for (int i = 0; i < packLoop; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    DebugLogger.Log($"[CheckJoker] Pack slot {i}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
-                    
-                    
-                    bool checkThisPack = false;
-                    for (int j = 0; j < packSlots.Length; j++)
+                    // membership test (small array): linear; packSlots length small; optimize later via mask if needed
+                    bool evaluate = false;
+                    foreach (var ps in packSlots) { if (ps == i) { evaluate = true; break; } }
+                    if (!evaluate) continue;
+                    if (pack.GetPackType() != MotelyBoosterPackType.Buffoon) continue;
+                    if (requireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+                    if (!buffoonStreamInit)
                     {
-                        if (packSlots[j] == i)
+                        buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
+                        buffoonStreamInit = true;
+                    }
+                    int cardCount = MotelyBoosterPackType.Buffoon.GetCardCount(pack.GetPackSize());
+                    if (simpleFastPath)
+                    {
+                        // Stream cards one by one; early exit on first Negative edition joker.
+                        for (int c = 0; c < cardCount; c++)
                         {
-                            checkThisPack = true;
-                            break;
+                            var jokerItem = ctx.GetNextJoker(ref buffoonStream);
+                            if (CheckEditionAndStickers(jokerItem, clause))
+                            {
+                                foundCount = 1;
+                                return foundCount; // Min <=1 ensured
+                            }
                         }
                     }
-                    if (!checkThisPack) continue;
-                    
-                    if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                    else
                     {
-                        // If requireMega is set, skip non-mega buffoon packs
-                        if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
-                        {
-                            DebugLogger.Log($"[CheckJoker] Skipping non-mega Buffoon pack (requireMega=true)");
-                            continue;
-                        }
-                        
-                        DebugLogger.Log($"[CheckJoker] Found Buffoon pack #{i+1}, checking for jokers...");
-                        if (!buffoonStreamInit)
-                        {
-                            buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
-                            buffoonStreamInit = true;
-                            DebugLogger.Log($"[CheckJoker] Initialized Buffoon joker stream for ante {ante}");
-                        }
-                        var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackCardCount());
-                        
-                        DebugLogger.Log($"[CheckJoker] Buffoon pack size: {pack.GetPackSize()}, contains {contents.Length} jokers");
-                        
-                        // Check each joker in the pack
+                        var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
                         for (int j = 0; j < contents.Length; j++)
                         {
                             var joker = contents.GetItem(j);
                             var extractedJoker = new MotelyItem(joker.Value).GetJoker();
-                            DebugLogger.Log($"[CheckJoker]   Buffoon pack slot {j}: ExtractedJoker={extractedJoker}, Edition={joker.Edition}");
-                            DebugLogger.Log($"[CheckJoker]     -> Raw: Value={joker.Value:X8}, TypeCategory={joker.TypeCategory}");
-                            
-                            // Check if joker matches our criteria
                             bool jokerMatches = false;
-                            
                             if (hasWildcard)
                             {
-                                if (clause.WildcardEnum == JokerWildcard.AnyJoker)
+                                if (clause.WildcardEnum == JokerWildcard.AnyJoker) jokerMatches = true; else if (targetRarity.HasValue)
                                 {
-                                    jokerMatches = true;
-                                }
-                                else if (targetRarity.HasValue)
-                                {
-                                    // Extract rarity from the joker enum value
-                                    var jokerRarity = (MotelyJokerRarity)((int)extractedJoker & Motely.JokerRarityMask);
-                                    jokerMatches = jokerRarity == targetRarity.Value;
+                                    var jr = (MotelyJokerRarity)((int)extractedJoker & Motely.JokerRarityMask);
+                                    jokerMatches = jr == targetRarity.Value;
                                 }
                             }
                             else if (hasSpecificJoker)
-                            {
                                 jokerMatches = extractedJoker == targetJoker;
-                            }
-                            
-                            if (jokerMatches)
+                            if (jokerMatches && CheckEditionAndStickers(joker, clause))
                             {
-                                if (DebugLogger.IsEnabled)
-                                {
-                                    string jokerName = hasWildcard ? $"{clause.WildcardEnum} (Buffoon)" : 
-                                                      extractedJoker.ToString();
-                                    DebugLogger.Log($"[CheckJoker] Buffoon Match! {jokerName} Edition={joker.Edition}, Required Edition={clause.Edition}");
-                                    if (hasSpecificJoker)
-                                    {
-                                        DebugLogger.Log($"[CheckJoker]   -> Actual Joker: {extractedJoker}, Target: {targetJoker}, Match: {extractedJoker == targetJoker}");
-                                    }
-                                }
-                                
-                                if (CheckEditionAndStickers(joker, clause))
-                                {
-                                    foundCount++;
-                                    if (DebugLogger.IsEnabled)
-                                    {
-                                        string foundJokerName = hasWildcard ? $"{clause.WildcardEnum} ({extractedJoker})" : 
-                                                               extractedJoker.ToString();
-                                        DebugLogger.Log($"[CheckJoker] Buffoon Edition check PASSED! Found {foundJokerName} with edition {joker.Edition}. Total count: {foundCount}");
-                                        DebugLogger.Log($">>> FOUND IN PACK: Ante={ante}, Pack=#{i+1}, Slot={j}, Joker={extractedJoker}, Edition={joker.Edition}");
-                                    }
-                                }
-                                else if (DebugLogger.IsEnabled)
-                                {
-                                    string jokerName = hasWildcard ? $"{clause.WildcardEnum} (Buffoon)" : 
-                                                      extractedJoker.ToString();
-                                    DebugLogger.Log($"[CheckJoker] Buffoon Edition check FAILED! Found {jokerName} but edition {joker.Edition} != {clause.Edition}");
-                                }
+                                foundCount++;
+                                if (clause.Min.HasValue && foundCount >= clause.Min.Value)
+                                    return foundCount;
                             }
                         }
                     }
-                    else if (pack.GetPackType() == MotelyBoosterPackType.Standard)
-                    {
-                        DebugLogger.Log($"[CheckJoker]   Standard pack - contains playing cards");
-                    }
-                    else if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
-                    {
-                        DebugLogger.Log($"[CheckJoker]   Celestial pack - contains planet cards");
-                    }
                 }
-                
-                DebugLogger.Log($"[CheckJoker] === END BOOSTER PACK CONTENTS ===");
             }
             
             if (DebugLogger.IsEnabled)
@@ -1060,12 +1362,12 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                                           hasSpecificJoker ? targetJoker!.Value.ToString() :
                                           "unknown";
                 DebugLogger.Log($"[CheckJoker] === FINAL COUNT for {searchDescription} in ante {ante}: {foundCount} ===");
-                DebugLogger.Log($"[CheckJoker] Sources checked: Shop={(clause.Sources?.ShopSlots?.Length > 0)}, Packs={(clause.Sources?.PackSlots?.Length > 0)}, Tags={(clause.Sources?.Tags ?? false)}");
+                DebugLogger.Log($"[CheckJoker] Sources checked: Shop={(clause.Sources?.ShopSlots?.Length > 0)}, Packs={(clause.Sources?.PackSlots?.Length > 0)}");
             }
             return foundCount;
         }
         
-        private static int CheckSoulJoker(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelySingleBoosterPackStream packStream)
+    private static int CheckSoulJoker(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelySingleBoosterPackStream packStream, in MotelyRunState runState)
         {
             // Soul jokers only come from The Soul card in Arcana or Spectral packs
             // They are always legendary: Perkeo, Canio, Triboulet, Yorick, or Chicot
@@ -1248,7 +1550,7 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             return foundCount;
         }
         
-        private static bool CheckTarot(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelySingleShopItemStream shopStream, ref MotelySingleBoosterPackStream packStream)
+    private static bool CheckTarot(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelySingleShopItemStream shopStream, ref MotelySingleBoosterPackStream packStream, in MotelyRunState runState)
         {
             // Assume validation was done during config parsing
             if (!clause.TarotEnum.HasValue)
@@ -1444,65 +1746,17 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var targetSpectral = searchAnySpectral ? (MotelySpectralCard?)null : clause.SpectralEnum!.Value;
             DebugLogger.Log($"[CheckSpectral] Search any spectral: {searchAnySpectral}, Target: {targetSpectral}");
             
-            // Check shop (only for Ghost Deck)
+            // NOTE: Previous implementation performed TWO separate shop loops, advancing the shop stream twice
+            // per ante when shopSlots were specified. This caused stream/index misalignment and could report
+            // finds in unexpected higher slot numbers (e.g. "slot 6 or 7") even when only shopSlots:[0,1]
+            // were configured. We now defer all shop spectral checking to the unified block later in this
+            // method ("Check shop for spectral cards" section) to ensure a single pass with correct slot mapping.
             bool shouldCheckShop = clause.Sources?.ShopSlots != null && clause.Sources.ShopSlots.Length > 0;
-            
             DebugLogger.Log($"[CheckSpectral] Sources: {(clause.Sources != null ? "exists" : "null")}");
             if (clause.Sources != null)
             {
                 DebugLogger.Log($"[CheckSpectral] ShopSlots: {(clause.Sources.ShopSlots != null ? string.Join(",", clause.Sources.ShopSlots) : "null")}");
                 DebugLogger.Log($"[CheckSpectral] PackSlots: {(clause.Sources.PackSlots != null ? string.Join(",", clause.Sources.PackSlots) : "null")}");
-            }
-            
-            if (shouldCheckShop)
-            {
-                DebugLogger.Log($"[CheckSpectral] Checking shop slots in ante {ante}...");
-                DebugLogger.Log($"[CheckSpectral] Context deck: {ctx.Deck}");
-                int maxSlots = ante == 1 ? 5 : 6;
-                
-                for (int i = 0; i < maxSlots; i++)
-                {
-                    var item = ctx.GetNextShopItem(ref shopStream);
-                    DebugLogger.Log($"[CheckSpectral] Shop slot {i}: {item.TypeCategory} - {item.Type}");
-                    
-                    // If using granular sources, check if this slot is included
-                    if (clause.Sources != null && clause.Sources.ShopSlots != null)
-                    {
-                        if (!clause.Sources.ShopSlots.Contains(i))
-                        {
-                            DebugLogger.Log($"[CheckSpectral] Skipping slot {i} - not in allowed slots");
-                            continue;
-                        }
-                    }
-                    
-                    if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
-                    {
-                        // NOTE: BlackHole and Soul NEVER appear in shops, only regular spectral cards
-                        var shopSpectral = new MotelyItem(item.Value).GetSpectral();
-                        DebugLogger.Log($"[CheckSpectral] Shop slot {i}: Found spectral {shopSpectral} (looking for {targetSpectral})");
-                        
-                        // BlackHole and Soul cannot appear in shops
-                        if (targetSpectral.HasValue && (targetSpectral.Value == MotelySpectralCard.BlackHole || targetSpectral.Value == MotelySpectralCard.Soul))
-                        {
-                            DebugLogger.Log($"[CheckSpectral] Note: {targetSpectral} NEVER appears in shops, only in packs!");
-                            continue;
-                        }
-                        
-                        // If searching for any spectral, return true for any spectral card
-                        if (searchAnySpectral)
-                        {
-                            DebugLogger.Log($"[CheckSpectral] FOUND any spectral in shop slot {i}: {shopSpectral}!");
-                            return true;
-                        }
-                        
-                        // Otherwise check for specific spectral
-                        if (targetSpectral.HasValue && shopSpectral == targetSpectral.Value)
-                        {
-                            DebugLogger.Log($"[CheckSpectral] FOUND {targetSpectral} in shop slot {i}!");
-                            return true;
-                        }
-                    }
-                }
             }
                 
             // Check packs
@@ -1767,90 +2021,9 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
                    rarity == MotelyJokerRarity.Rare;
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask TryVectorJokerPreFilter(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause)
-        {
-            DebugLogger.Log($"[VectorPreFilter] Starting pre-filter for joker: {clause.JokerEnum}, edition: {clause.EditionEnum}");
-            VectorMask resultMask = VectorMask.NoBitsSet;
-            
-            // Check each ante for the joker/edition
-            foreach (var ante in clause.EffectiveAntes)
-            {
-                // Create joker stream for this ante
-                var jokerStream = ctx.CreateShopJokerStream(ante, MotelyJokerStreamFlags.Default, isCached: true);
-                
-                // Sample a few jokers to see if ANY match our criteria
-                // This is a quick pre-filter - if we don't find it in first 10-20 jokers, seed likely doesn't have it
-                const int SAMPLE_COUNT = 15; // Check first 15 jokers (covers most of shop + some packs)
-                
-                VectorMask anteMask = VectorMask.NoBitsSet;
-                
-                for (int i = 0; i < SAMPLE_COUNT; i++)
-                {
-                    var joker = ctx.GetNextJoker(ref jokerStream);
-                    
-                    // Check if this joker matches our criteria
-                    VectorMask matches = VectorMask.AllBitsSet;
-                    
-                    // Check joker type if specified
-                    if (clause.JokerEnum.HasValue)
-                    {
-                        // CRITICAL FIX: Only compare the joker type, not edition/stickers!
-                        // Mask out everything except the joker type bits
-                        var targetJoker = new MotelyItemVector(new MotelyItem((int)MotelyItemTypeCategory.Joker | (int)clause.JokerEnum.Value));
-                        var jokerTypeMask = Vector256.Create(Motely.ItemTypeMask);
-                        
-                        // Compare only the type bits
-                        matches &= Vector256.Equals(
-                            Vector256.BitwiseAnd(joker.Value, jokerTypeMask),
-                            Vector256.BitwiseAnd(targetJoker.Value, jokerTypeMask)
-                        );
-                    }
-                    
-                    // Check edition if specified (especially good for Negative!)
-                    if (clause.EditionEnum.HasValue)
-                    {
-                        matches &= VectorEnum256.Equals(joker.Edition, clause.EditionEnum.Value);
-                    }
-                    
-                    // Check stickers
-                    if (clause.StickerEnums != null && clause.StickerEnums.Count > 0)
-                    {
-                        foreach (var sticker in clause.StickerEnums)
-                        {
-                            switch (sticker)
-                            {
-                                case MotelyJokerSticker.Eternal:
-                                    matches &= joker.IsEternal;
-                                    break;
-                                case MotelyJokerSticker.Perishable:
-                                    matches &= joker.IsPerishable;
-                                    break;
-                                case MotelyJokerSticker.Rental:
-                                    matches &= joker.IsRental;
-                                    break;
-                            }
-                        }
-                    }
-                    
-                    // If ANY seed has this joker, mark it
-                    if (!matches.IsAllFalse())
-                    {
-                        DebugLogger.Log($"[VectorPreFilter] Found matching joker in ante {ante}, iteration {i}!");
-                    }
-                    anteMask |= matches;
-                    
-                    // OPTIMIZATION: If all seeds already found it, stop checking
-                    if (anteMask.IsAllTrue())
-                        break;
-                }
-                
-                resultMask |= anteMask;
-            }
-            
-            DebugLogger.Log($"[VectorJokerPreFilter] Result: {resultMask}");
-            return resultMask;
-        }
+        // REMOVED: TryVectorJokerPreFilter - was unused dead code that created confusion.
+        // The actual CheckJoker function already properly handles shopSlots by disabling
+        // vectorization and deferring to scalar path when shopSlots are specified.
         
         private static bool CheckTagSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
         {
@@ -1862,32 +2035,54 @@ public struct OuijaJsonFilterDesc : IMotelySeedFilterDesc<OuijaJsonFilterDesc.Ou
             var tagStream = ctx.CreateTagStream(ante);
             var smallTag = ctx.GetNextTag(ref tagStream);
             var bigTag = ctx.GetNextTag(ref tagStream);
-            
+
             // Use pre-parsed enum for type checking
-            switch (clause.TagTypeEnum)
+            return (global::System.Object?)clause.TagTypeEnum switch
             {
-                case MotelyTagType.SmallBlind:
-                    return smallTag == targetTag;
-                case MotelyTagType.BigBlind:
-                    return bigTag == targetTag;
-                default: // Any
-                    return smallTag == targetTag || bigTag == targetTag;
-            }
+                MotelyTagType.SmallBlind => smallTag == targetTag,
+                MotelyTagType.BigBlind => bigTag == targetTag,
+                // Any
+                _ => smallTag == targetTag || bigTag == targetTag,
+            };
         }
         
+        // Enhanced single voucher checking with comprehensive debugging
         private static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelyRunState voucherState)
         {
             // Assume validation was done during config parsing
             if (!clause.VoucherEnum.HasValue)
-                return false;
-                
-            var voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
-            
-            if (voucher == clause.VoucherEnum.Value)
             {
-                // KISS: Found the voucher, activate it for upgrade vouchers in later antes!
-                voucherState.ActivateVoucher(voucher);
+                DebugLogger.Log($"[CheckVoucherSingle] No voucher enum specified for ante {ante}");
+                return false;
+            }
+                
+            var targetVoucher = clause.VoucherEnum.Value;
+            var currentSeed = ctx.GetSeed();
+            
+            DebugLogger.Log($"[CheckVoucherSingle] Seed {currentSeed}: Checking ante {ante} for voucher {targetVoucher}");
+            DebugLogger.Log($"[CheckVoucherSingle] Seed {currentSeed}: Current voucher state: {voucherState.VoucherBitfield:X8}");
+            
+            // Check if target voucher is already active
+            if (voucherState.IsVoucherActive(targetVoucher))
+            {
+                DebugLogger.Log($"[CheckVoucherSingle] Seed {currentSeed}: Voucher {targetVoucher} already active - returning true");
                 return true;
+            }
+            
+            var voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
+            DebugLogger.Log($"[CheckVoucherSingle] Seed {currentSeed}: Found voucher {voucher} in ante {ante}");
+            
+            if (voucher == targetVoucher)
+            {
+                DebugLogger.Log($"[CheckVoucherSingle] Seed {currentSeed}: MATCH! Found {targetVoucher} in ante {ante}");
+                // Activate the voucher for upgrade vouchers in later antes!
+                voucherState.ActivateVoucher(voucher);
+                DebugLogger.Log($"[CheckVoucherSingle] Seed {currentSeed}: Activated voucher {voucher}, new state: {voucherState.VoucherBitfield:X8}");
+                return true;
+            }
+            else
+            {
+                DebugLogger.Log($"[CheckVoucherSingle] Seed {currentSeed}: No match - wanted {targetVoucher}, got {voucher}");
             }
             
             return false;

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.Filters; // For OuijaConfig, OuijaJsonFilterDesc, OuijaConfigValidator
@@ -30,11 +30,11 @@ namespace Motely
                 CommandOptionType.SingleValue);
             startBatchOption.DefaultValue = 0;
 
-            var endBatchOption = app.Option<long>(
+            var endBatchOption = app.Option<ulong>(
                 "--endBatch <INDEX>",
-                "Ending batch index (-1 for unlimited)",
+                "Ending batch index (0 for unlimited)",
                 CommandOptionType.SingleValue);
-            endBatchOption.DefaultValue = -1;
+            endBatchOption.DefaultValue = 0;
 
             var threadsOption = app.Option<int>(
                 "--threads <COUNT>",
@@ -104,6 +104,11 @@ namespace Motely
                 CommandOptionType.SingleValue);
             stakeOption.DefaultValue = "White";
 
+            var prefilterOption = app.Option(
+                "--prefilter",
+                "Enable cheap lookahead prefilter (soul legendary / joker identity first-pass)",
+                CommandOptionType.NoValue);
+
             app.OnExecute(() =>
             {
                 var analyzeSeed = analyzeOption.Value();
@@ -156,6 +161,10 @@ namespace Motely
                 var keyword = keywordOption.Value();
                 var nofancy = noFancyOption.HasValue();
                 var seedInput = seedOption.Value()!;
+                var enablePrefilter = prefilterOption.HasValue();
+
+                // Apply global prefilter flag before search starts
+                OuijaJsonFilterDesc.PrefilterEnabled = enablePrefilter;
 
                 // Validate batchSize
                 if (batchSize < 1 || batchSize > 8)
@@ -176,7 +185,7 @@ namespace Motely
             return app.Execute(args);
         }
 
-        public static void RunOuijaSearch(string configPath, ulong startBatch, long endBatch, int threads,
+        public static void RunOuijaSearch(string configPath, ulong startBatch, ulong endBatch, int threads,
             int batchSize, int cutoff, bool autoCutoff, bool enableDebug, bool quiet, string? wordlist = null,
             string? keyword = null, bool nofancy = false, string? specificSeed = null)
         {
@@ -241,7 +250,7 @@ namespace Motely
                     Console.WriteLine($"   Config: {configPath}");
                     Console.WriteLine($"   Threads: {threads}");
                     Console.WriteLine($"   Batch Size: {batchSize} chars");
-                    string endDisplay = endBatch < 0 ? "∞" : endBatch.ToString();
+                    string endDisplay = endBatch <= 0 ? "∞" : endBatch.ToString();
                     Console.WriteLine($"   Range: {startBatch} to {endDisplay}");
                     if (enableDebug)
                         Console.WriteLine($"   Debug: Enabled");
@@ -287,6 +296,8 @@ namespace Motely
                         Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
                     else
                         Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
+                    if (OuijaJsonFilterDesc.PrefilterEnabled)
+                        Console.WriteLine("⚡ Prefilter enabled");
                 }
 
                 // Create the search using OuijaJsonFilterDesc
@@ -406,27 +417,32 @@ namespace Motely
                 searchStopwatch.Stop();
                 
                 // Results are printed in real-time by OuijaJsonFilterDesc
-                ulong totalSearched = (ulong)search.CompletedBatchCount;
-                var duration = searchStopwatch.Elapsed;
+                Console.WriteLine("\n✅ Search completed");
 
-                Console.WriteLine($"\n✅ Search completed"); 
+                // Summary metrics
+                ulong totalBatchesCompleted = (ulong)search.CompletedBatchCount;
+                var duration = searchStopwatch.Elapsed;
+                ulong totalSeedsSearched;
+
                 if (seeds != null && seeds.Count > 0)
                 {
-                    // For list search, show the actual number of seeds we tried to search
-                    Console.WriteLine($"   Total seeds searched: {seeds.Count:N0}");
+                    totalSeedsSearched = (ulong)seeds.Count;
                 }
                 else
                 {
-                    // For sequential search, calculate actual seeds
                     ulong seedsPerBatch = (ulong)Math.Pow(35, batchSize);
-                    ulong totalSeedsSearched = totalSearched * seedsPerBatch;
-                    
-                    Console.WriteLine($"   Total batches processed: {totalSearched:N0}");
+                    ulong batchesProcessed = startBatch > 0 ? (totalBatchesCompleted - (ulong)startBatch + 1UL) : totalBatchesCompleted;
+                    totalSeedsSearched = batchesProcessed * seedsPerBatch;
+
+                    Console.WriteLine($"   Total batches processed: {batchesProcessed:N0}");
                     Console.WriteLine($"   Seeds per batch: {seedsPerBatch:N0} (35^{batchSize})");
-                    Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
                 }
+
+                Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
+                double seedsPerMs = duration.TotalMilliseconds > 0 ? totalSeedsSearched / duration.TotalMilliseconds : 0;
                 Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
-                
+                Console.WriteLine($"   TOTAL AVG SPEED PER MS OF SEEDS: {seedsPerMs:N0}");
+
             }
             catch (OperationCanceledException)
             {
@@ -446,7 +462,9 @@ namespace Motely
             if (Path.IsPathRooted(configPath) && File.Exists(configPath))
             {
                 DebugLogger.Log($"📁 Loading config from: {configPath}");
-                return OuijaConfig.LoadFromJson(configPath);
+                if (!OuijaConfig.TryLoadFromJsonFile(configPath, out var config))
+                    throw new InvalidOperationException($"Config loading failed for: {configPath}");
+                return config;
             }
 
             // Always look in JsonItemFilters for configs
@@ -455,7 +473,9 @@ namespace Motely
             if (File.Exists(jsonItemFiltersPath))
             {
                 DebugLogger.Log($"📁 Loading config from: {jsonItemFiltersPath}");
-                return OuijaConfig.LoadFromJson(jsonItemFiltersPath);
+                if (!OuijaConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
+                    throw new InvalidOperationException($"Config loading failed for: {jsonItemFiltersPath}");
+                return config;
             }
 
             throw new FileNotFoundException($"Could not find config file: {configPath}");

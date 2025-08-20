@@ -13,7 +13,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
     {
         for (int ante = MinAnte; ante <= MaxAnte; ante++)
         {
-            ctx.CachePseudoHash(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante);
+            ctx.CachePseudoHash(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante);
         }
 
         return new SoulFilter();
@@ -28,7 +28,7 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
 
             for (int ante = MinAnte; ante <= MaxAnte; ante++)
             {
-                MotelyVectorPrngStream vectorSoulStream = searchContext.CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante);
+                MotelyVectorPrngStream vectorSoulStream = searchContext.CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante);
 
                 Vector512<double> soulPoll = searchContext.GetNextRandom(ref vectorSoulStream);
 

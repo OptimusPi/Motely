@@ -14,6 +14,7 @@ public ref struct MotelyRunState
     }
 
     public int VoucherBitfield;
+    public bool ShowmanActive;
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {
@@ -23,5 +24,10 @@ public ref struct MotelyRunState
     public bool IsVoucherActive(MotelyVoucher voucher)
     {
         return (VoucherBitfield & (1 << (int) voucher)) != 0;
+    }
+
+    public void ActivateShowman()
+    {
+        ShowmanActive = true;
     }
 }
