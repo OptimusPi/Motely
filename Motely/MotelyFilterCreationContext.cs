@@ -70,7 +70,7 @@ public ref struct MotelyFilterCreationContext
 
         if (cacheSoul)
         {
-            CachePseudoHash(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante, force);
+            CachePseudoHash(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, force);
         }
     }
 

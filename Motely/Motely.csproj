@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,12 +7,35 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
-  <!-- Minimal performance knobs -->
-  <Optimize>true</Optimize>
-  <TieredCompilation>true</TieredCompilation>
-  <TieredPGO>true</TieredPGO>
-  <ServerGarbageCollection>true</ServerGarbageCollection>
-  <InvariantGlobalization>true</InvariantGlobalization>
+    
+    <!-- Performance optimizations -->
+    <Optimize>true</Optimize>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    
+    <!-- SIMD and CPU optimizations -->
+    <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
+    <EnableAVX2>true</EnableAVX2>
+    <EnableAVX512F>true</EnableAVX512F>
+    <EnableAVX512BW>true</EnableAVX512BW>
+    <EnableAVX512DQ>true</EnableAVX512DQ>
+    <EnableAVX512VL>true</EnableAVX512VL>
+    <EnableBMI1>true</EnableBMI1>
+    <EnableBMI2>true</EnableBMI2>
+    <EnableLZCNT>true</EnableLZCNT>
+    <EnablePOPCNT>true</EnablePOPCNT>
+    <EnableFMA>true</EnableFMA>
+    
+    <!-- Additional performance settings -->
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
