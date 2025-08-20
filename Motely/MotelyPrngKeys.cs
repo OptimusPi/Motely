@@ -11,7 +11,7 @@ public static class MotelyPrngKeys
     public const string ShopPack = "shop_pack";
 
     public const string Tarot = "Tarot";
-    public const string TerrotSoul = "soul_";
+    public const string TarotSoul = "soul_";
     public const string ArcanaPackItemSource = "ar1";
 
     public const string Planet = "Planet";

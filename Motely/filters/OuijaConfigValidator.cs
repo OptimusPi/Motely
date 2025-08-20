@@ -82,9 +82,8 @@ namespace Motely.Filters
                 switch (item.Type.ToLower())
                 {
                     case "joker":
-                    case "souljoker":
                         // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare", "AnyLegendary"
-                        bool isWildcard = string.IsNullOrEmpty(item.Value) || 
+                        bool isJokerWildcard = string.IsNullOrEmpty(item.Value) || 
                                           item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
                                           item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
                                           item.Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
@@ -93,39 +92,94 @@ namespace Motely.Filters
                                           item.Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase) ||
                                           item.Value.Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase);
                         
-                        if (!isWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
+                        if (!isJokerWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
                             errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary");
                         }
+                        break;
                         
-                        // Validate stickers
+                    case "souljoker":
+                        // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare"
+                        // Note: "AnyLegendary" is not allowed for soul jokers since all soul jokers are legendary by definition
+                        bool isSoulJokerWildcard = string.IsNullOrEmpty(item.Value) || 
+                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyCommon", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase);
+                        
+                        // Special case: provide helpful error for "AnyLegendary" on soul jokers
+                        if (item.Value != null && item.Value.Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase))
+                        {
+                            errors.Add($"{prefix}: 'AnyLegendary' is not valid for soul jokers because all soul jokers are legendary by definition. Use 'any' instead.");
+                        }
+                        else if (!isSoulJokerWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
+                        {
+                            var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
+                            errors.Add($"{prefix}: Invalid soul joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare");
+                        }
+                        
+                        // Validate stickers using enum-based logic for performance
                         if (item.Stickers != null && item.Stickers.Count > 0)
                         {
                             foreach (var sticker in item.Stickers)
                             {
                                 if (sticker != null)
                                 {
-                                    var stickerLower = sticker.ToLower();
-                                    if (stickerLower == "eternal" || stickerLower == "perishable")
+                                    // Parse sticker to enum for efficient validation
+                                    if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var stickerEnum))
                                     {
-                                        if (stake < MotelyStake.Black)
+                                        switch (stickerEnum)
                                         {
-                                            warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Eternal/Perishable stickers only appear on Black Stake or higher.");
-                                        }
-                                    }
-                                    else if (stickerLower == "rental")
-                                    {
-                                        if (stake < MotelyStake.Gold)
-                                        {
-                                            warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Rental stickers only appear on Gold Stake.");
+                                            case MotelyJokerSticker.Eternal:
+                                            case MotelyJokerSticker.Perishable:
+                                                if (stake < MotelyStake.Black)
+                                                {
+                                                    warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Eternal/Perishable stickers only appear on Black Stake or higher.");
+                                                }
+                                                break;
+                                            case MotelyJokerSticker.Rental:
+                                                if (stake < MotelyStake.Gold)
+                                                {
+                                                    warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Rental stickers only appear on Gold Stake.");
+                                                }
+                                                break;
+                                            case MotelyJokerSticker.None:
+                                                // None is valid but doesn't require stake validation
+                                                break;
                                         }
                                     }
                                     else
                                     {
-                                        errors.Add($"{prefix}: Invalid sticker '{sticker}'. Valid stickers are: eternal, perishable, rental");
+                                        var validStickers = string.Join(", ", Enum.GetNames(typeof(MotelyJokerSticker)).Where(s => s != "None").Select(s => s.ToLower()));
+                                        errors.Add($"{prefix}: Invalid sticker '{sticker}'. Valid stickers are: {validStickers}");
                                     }
                                 }
+                            }
+                        }
+                        // Note: Legendary joker validation is no longer needed here as the auto-conversion
+                        // in OuijaConfig.cs automatically converts legendary jokers to souljoker type
+                        
+                        // Soul (legendary) jokers only produced via The Soul card in Arcana/Spectral packs – never shops.
+                        if (item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (item.Sources != null && item.Sources.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+                            {
+                                errors.Add($"{prefix}: souljoker '{item.Value ?? "(any)"}' cannot specify shopSlots; legendary jokers never appear in shops. Remove 'shopSlots'.");
+                            }
+                        }
+
+                        // Enforce explicit source specification ONLY for non-soul jokers (user demanded explicit slots for shop/pack joker searches).
+                        // Soul jokers may safely omit sources to mean: "any pack slot capable of producing The Soul" (original semantics).
+                        if (section == "must" && !item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase))
+                        {
+                            bool hasShop = item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0;
+                            bool hasPack = item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0;
+                            if (!hasShop && !hasPack)
+                            {
+                                errors.Add($"{prefix}: joker '{item.Value ?? "(any)"}' MUST clause missing explicit sources. Add 'sources.shopSlots' and/or 'sources.packSlots'.");
                             }
                         }
                         break;
@@ -209,10 +263,19 @@ namespace Motely.Filters
                 }
                 
                 // Validate edition if specified
-                if (!string.IsNullOrEmpty(item.Edition) && !Enum.TryParse<MotelyItemEdition>(item.Edition, true, out _))
+                if (!string.IsNullOrEmpty(item.Edition))
                 {
-                    var validEditions = string.Join(", ", Enum.GetNames(typeof(MotelyItemEdition)));
-                    errors.Add($"{prefix}: Invalid edition '{item.Edition}'. Valid editions are: {validEditions}");
+                    bool typeSupportsEdition = item.Type.Equals("joker", StringComparison.OrdinalIgnoreCase) ||
+                                               item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase);
+                    if (!typeSupportsEdition)
+                    {
+                        errors.Add($"{prefix}: Edition specified ('{item.Edition}') but type '{item.Type}' does not support editions (remove 'edition').");
+                    }
+                    else if (!Enum.TryParse<MotelyItemEdition>(item.Edition, true, out _))
+                    {
+                        var validEditions = string.Join(", ", Enum.GetNames(typeof(MotelyItemEdition)));
+                        errors.Add($"{prefix}: Invalid edition '{item.Edition}'. Valid editions are: {validEditions}");
+                    }
                 }
                 
                 // Validate antes

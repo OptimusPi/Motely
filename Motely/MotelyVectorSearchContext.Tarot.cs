@@ -34,7 +34,7 @@ ref partial struct MotelyVectorSearchContext
                 CreateResampleStream(MotelyPrngKeys.Tarot + source + ante, isCached) :
                 MotelyVectorResampleStream.Invalid,
             soulable ?
-                CreatePrngStream(MotelyPrngKeys.TerrotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
+                CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
                 MotelyVectorPrngStream.Invalid
         );
     }
@@ -122,6 +122,14 @@ ref partial struct MotelyVectorSearchContext
             Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
             tarots
         ));
+    }
+
+    public VectorMask FilterTarotCard(int ante, MotelyTarotCard tarot)
+    {
+        var tarotStream = CreatePrngStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ShopItemSource + ante, true);
+        var tarotChoices = MotelyEnum<MotelyTarotCard>.Values;
+        var tarots = GetNextRandomElement(ref tarotStream, tarotChoices);
+        return VectorEnum256.Equals(tarots, tarot);
     }
 
     public MotelyItemVector GetNextTarot(ref MotelyVectorTarotStream tarotStream, in MotelyVectorItemSet itemSet)

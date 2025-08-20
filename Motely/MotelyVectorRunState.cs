@@ -13,6 +13,7 @@ public ref struct MotelyVectorRunStateVoucher
     }
 
     public Vector256<int> StateBitfield;
+    public Vector256<bool> ShowmanActive;
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {
@@ -38,4 +39,11 @@ public ref struct MotelyVectorRunStateVoucher
             StateBitfield & MotelyVectorUtils.ShiftLeft(Vector256<int>.One, voucherVector.HardwareVector)
         ));
     }
+
+    public void ActivateShowman()
+    {
+        ShowmanActive = Vector256<bool>.AllBitsSet;
+    }
+
+
 }

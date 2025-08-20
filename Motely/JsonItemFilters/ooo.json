@@ -1,19 +1,92 @@
 {
-  "name": "test",
-  "description": "test is fucking ankh works bro",
+  "name": "Nat Negative Finder",
+  "description": "finds natural negative jokers. simple.",
   "author": "pifreak",
-  "dateCreated": "2025-08-16T05:46:12.6691000Z",
+  "dateCreated": "2025-08-19T05:46:12.6691000Z",
   "must": [
     {
-      "type": "spectralcard",
-      "value": "ankh",
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
       "sources": {
-        "packSlots": [1]
+        "shopSlots": [0,1,2,3]
       },
-      "antes": [1]
+      "antes": [1,2,3]
     }
   ],
   "should": [
+    {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1]
+      },
+      "antes": [1]
+    },
+        {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1,2,3]
+      },
+      "antes": [2]
+    },
+    {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1,2,3,4,5]
+      },
+      "antes": [3]
+    },
+    {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1,2,3,4,5,6,7,8,9]
+      },
+      "antes": [4]
+    },
+    {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+      },
+      "antes": [5]
+    },
+    {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27]
+      },
+      "antes": [6]
+    },
+    {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
+      },
+      "antes": [7]
+    },
+    {
+      "type": "joker",
+      "value": "any",
+      "edition": "Negative",
+      "sources": {
+        "shopSlots": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]
+      },
+      "antes": [8]
+    }
   ],
   "mustNot": [],
   "scoring": {
