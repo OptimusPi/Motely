@@ -551,7 +551,12 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             }
                         }
 
-                        Debug.Assert(Search._batchIndex >= MaxBatch);
+                        // Assert we've reached either MaxBatch or the configured end batch
+                        // Note: In Provider mode (list search), early completion due to filter elimination
+                        // is valid and doesn't require reaching the full batch count
+                        ulong effectiveEnd = Search._endBatchIndex != 0 ? Search._endBatchIndex : MaxBatch;
+                        bool isProviderMode = this is MotelyProviderSearchThread;
+                        Debug.Assert(Search._batchIndex >= effectiveEnd || isProviderMode);
                         return;
 
                     case MotelySearchStatus.Disposed:
@@ -1045,6 +1050,12 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 #endif
         private void SearchVector(int i, Vector512<double> seedDigitVector, Vector512<double>* nums, int numsLaneIndex)
         {
+            // Check for cancellation/disposal periodically to make large batches responsive
+            if (Search._status == MotelySearchStatus.Disposed || Search._status == MotelySearchStatus.Paused)
+            {
+                return;
+            }
+
             Vector512<double>* hashes = &_hashes[i * Search._pseudoHashKeyLengthCount];
 
             for (int pseudohashKeyIdx = 0; pseudohashKeyIdx < Search._pseudoHashKeyLengthCount; pseudohashKeyIdx++)
@@ -1079,6 +1090,11 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                     for (int vectorIndex = 0; vectorIndex < SeedDigitVectors.Length; vectorIndex++)
                     {
+                        // Check for cancellation before each recursive call to improve responsiveness
+                        if (Search._status == MotelySearchStatus.Disposed || Search._status == MotelySearchStatus.Paused)
+                        {
+                            return;
+                        }
                         SearchVector(i - 1, SeedDigitVectors[vectorIndex], hashes, lane);
                     }
                 }
