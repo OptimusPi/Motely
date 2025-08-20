@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Motely.Filters
 {
@@ -124,7 +125,7 @@ namespace Motely.Filters
                     // Cache the parsed enum value to avoid string operations in hot path
                     if (!_cachedItemTypeEnum.HasValue)
                     {
-                        _cachedItemTypeEnum = Type?.ToLowerInvariant() switch
+                        var typeEnum = Type?.ToLowerInvariant() switch
                         {
                             // Strict canonical identifiers only; case-insensitive, no aliases
                             "joker" => MotelyFilterItemType.Joker,
@@ -139,6 +140,19 @@ namespace Motely.Filters
                             "boss" => MotelyFilterItemType.Boss,
                             _ => throw new ArgumentException($"Unknown filter item type: {Type}.")
                         };
+                        
+                        // Auto-convert legendary joker names and wildcards from "joker" to "souljoker" type
+                        if (typeEnum == MotelyFilterItemType.Joker && !string.IsNullOrEmpty(Value))
+                        {
+                            var valueLower = Value.ToLowerInvariant();
+                            if (valueLower == "perkeo" || valueLower == "canio" || valueLower == "triboulet" || 
+                                valueLower == "chicot" || valueLower == "yorick")
+                            {
+                                typeEnum = MotelyFilterItemType.SoulJoker;
+                            }
+                        }
+                        
+                        _cachedItemTypeEnum = typeEnum;
                     }
                     return _cachedItemTypeEnum.Value;
                 }
@@ -153,6 +167,10 @@ namespace Motely.Filters
             [JsonIgnore]
             public MotelyVoucher? VoucherEnum { get; private set; }
             
+            // Cached target rarity for wildcard searches - computed once at config load time
+            [JsonIgnore]
+            public MotelyJokerRarity? CachedTargetRarity { get; private set; }
+            
             // Call this after deserialization to parse all enums ONCE
             public void InitializeParsedEnums()
             {
@@ -163,6 +181,7 @@ namespace Motely.Filters
                 {
                     case MotelyFilterItemType.Joker:
                     case MotelyFilterItemType.SoulJoker:
+                        // Set WildcardEnum for Joker types
                         if (ItemTypeEnum == MotelyFilterItemType.Joker)
                         {
                             WildcardEnum = Value?.ToLowerInvariant() switch
@@ -176,7 +195,37 @@ namespace Motely.Filters
                                 _ => null
                             };
                         }
+                        // Set WildcardEnum for SoulJoker types (no "anylegendary" since all soul jokers are legendary)
+                        else if (ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+                        {
+                            WildcardEnum = Value?.ToLowerInvariant() switch
+                            {
+                                "any" => JokerWildcard.AnyJoker,
+                                "anyjoker" => JokerWildcard.AnyJoker,
+                                "anycommon" => JokerWildcard.AnyCommon,
+                                "anyuncommon" => JokerWildcard.AnyUncommon,
+                                "anyrare" => JokerWildcard.AnyRare,
+                                // Note: "anylegendary" is not supported for soul jokers because all soul jokers are legendary
+                                _ => null
+                            };
+                        }
                         Debug.WriteLine($"[InitializeParsedEnums] Joker parsing: WildcardEnum={WildcardEnum}");
+                        
+                        // Pre-compute target rarity for wildcard searches to avoid switch in hot path
+                        if (WildcardEnum.HasValue)
+                        {
+                            CachedTargetRarity = WildcardEnum switch
+                            {
+                                JokerWildcard.AnyCommon => MotelyJokerRarity.Common,
+                                JokerWildcard.AnyUncommon => MotelyJokerRarity.Uncommon,
+                                JokerWildcard.AnyRare => MotelyJokerRarity.Rare,
+                                JokerWildcard.AnyLegendary => MotelyJokerRarity.Legendary,
+                    
+                                JokerWildcard.AnyJoker => null, // Any rarity
+                                _ => null
+                            };
+                        }
+                        
                         if (!WildcardEnum.HasValue && !string.IsNullOrEmpty(Value))
                         {
                             if (Enum.TryParse<MotelyJoker>(Value, true, out var joker))
@@ -456,29 +505,58 @@ namespace Motely.Filters
         }
     
         /// <summary>
-        /// Load from JSON file
+        /// Try to load configuration from JSON file
         /// </summary>
-        public static OuijaConfig LoadFromJson(string jsonPath)
+        /// <param name="jsonPath">Path to the JSON configuration file</param>
+        /// <param name="config">The loaded configuration if successful</param>
+        /// <returns>True if loading and validation succeeded, false otherwise</returns>
+        public static bool TryLoadFromJsonFile(string jsonPath, [NotNullWhen(true)] out OuijaConfig? config)
         {
+            config = null;
+            
             if (!File.Exists(jsonPath))
             {
-                throw new FileNotFoundException($"Config file not found: {jsonPath}");
+                return false;
             }
 
-            var json = File.ReadAllText(jsonPath);
-        
-            var options = new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true
-            };
-
-            var config = JsonSerializer.Deserialize<OuijaConfig>(json, options) 
-                ?? throw new InvalidOperationException("Failed to parse config");
+                var json = File.ReadAllText(jsonPath);
             
-            config.PostProcess();
-            return config;
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true
+                };
+
+                var deserializedConfig = JsonSerializer.Deserialize<OuijaConfig>(json, options);
+                if (deserializedConfig == null)
+                {
+                    return false;
+                }
+                
+                deserializedConfig.PostProcess();
+                
+                // Validate config
+                OuijaConfigValidator.ValidateConfig(deserializedConfig);
+                
+                config = deserializedConfig;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.Log($"Config loading failed for {jsonPath}: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Load from JSON file - returns null if validation fails
+        /// </summary>
+        public static OuijaConfig? LoadFromJson(string jsonPath)
+        {
+            return TryLoadFromJsonFile(jsonPath, out var config) ? config : null;
         }
     
         /// <summary>
