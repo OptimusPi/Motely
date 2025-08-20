@@ -11,7 +11,7 @@ namespace Motely
         {
             var app = new CommandLineApplication
             {
-                Name = "MotelySearch",
+                Name = "Motely",
                 Description = "Motely Ouija Search - Dynamic Balatro Seed Searcher",
                 OptionsComparison = StringComparison.OrdinalIgnoreCase
             };
