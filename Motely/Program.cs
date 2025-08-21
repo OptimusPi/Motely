@@ -164,7 +164,7 @@ namespace Motely
                 var enablePrefilter = prefilterOption.HasValue();
 
                 // Apply global prefilter flag before search starts
-                OuijaJsonFilterDesc.PrefilterEnabled = enablePrefilter;
+                // PrefilterEnabled is now passed via constructor
 
                 // Validate batchSize
                 if (batchSize < 1 || batchSize > 8)
@@ -277,7 +277,9 @@ namespace Motely
 
                 // The config loader now handles both formats automatically
                 // It will convert new format to legacy format internally
-                var filterDesc = new OuijaJsonFilterDesc(config);
+                Action<string, int, int[]> onResultFound = null;
+                
+                var filterDesc = new OuijaJsonFilterDesc(false, config, onResultFound);
                 filterDesc.Cutoff = cutoff;
                 filterDesc.AutoCutoff = autoCutoff;
                 
@@ -287,8 +289,7 @@ namespace Motely
                         Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
                     else
                         Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
-                    if (OuijaJsonFilterDesc.PrefilterEnabled)
-                        Console.WriteLine("⚡ Prefilter enabled");
+                    // Prefilter status is set in constructor now
                 }
 
                 // Create the search using OuijaJsonFilterDesc
@@ -365,7 +366,7 @@ namespace Motely
                 OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = false;
                 
                 // Register callback to print results with scores (CSV only – suppress standalone/plain seed lines)
-                OuijaJsonFilterDesc.OnResultFound = (seed, totalScore, scores) =>
+                onResultFound = (seed, totalScore, scores) =>
                 {
                     // Only emit a single CSV line per result. This avoids duplicate plain-seed output
                     // specifically for OuijaJsonFilterDesc.
