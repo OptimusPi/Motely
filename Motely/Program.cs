@@ -261,15 +261,6 @@ namespace Motely
             {
                 // Load Ouija config
                 var config = LoadConfig(configPath);
-                try
-                {
-                    OuijaConfigValidator.ValidateConfig(config);
-                }
-                catch (ArgumentException ex)
-                {
-                    Console.WriteLine($"❌ CONFIG VALIDATION FAILED:\n{ex.Message}");
-                    return;
-                }
                 
                 if (!quiet)
                     Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
@@ -503,7 +494,7 @@ namespace Motely
 
         static string FormatShouldColumn(OuijaConfig.FilterItem should)
         {
-            if (should == null) return "Should";
+            
             // Format as Type:Value or just Value if type is obvious
             var name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
             if (!string.IsNullOrEmpty(should.Edition))
