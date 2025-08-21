@@ -311,6 +311,16 @@ namespace Motely.Filters;
             [JsonIgnore]
             public MotelyBossBlind? BossEnum { get; private set; }
             
+            // Computed properties for optimization
+            [JsonIgnore]
+            public int? MaxPackSlot { get; set; }
+            
+            [JsonIgnore]
+            public int? MaxShopSlot { get; set; }
+            
+            [JsonIgnore]
+            public bool IsWildcardAnyJoker { get; set; }
+            
             private MotelyItemEdition? _cachedEditionEnum;
             private bool _editionEnumParsed;
             

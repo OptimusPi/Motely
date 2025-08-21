@@ -5,96 +5,364 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Linq;
+using Motely.Filters.Ouija;
 namespace Motely.Filters;
 
 /// <summary>
 /// Clean filter descriptor for MongoDB-style queries
 /// </summary>
-public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<OuijaJsonFilterDesc.OuijaJsonFilter>
+public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Action<string, int, int[]> OnResultFound) : IMotelySeedFilterDesc<OuijaJsonFilterDesc.OuijaJsonFilter>
 {
-    public static bool PrefilterEnabled;
-    public static Action<string, int, int[]> OnResultFound;
     private readonly OuijaConfig _config = config;
     public int Cutoff { get; set; } = 1;
     public bool AutoCutoff { get; set; } = false;
+    
+    // Auto cutoff state
+    private static int _learnedCutoff = 1;
 
-
-
-    public string Name => _config.Name ?? "OuijaJsonFilter";
-    public string Description => _config.Description ?? "JSON-configured filter";
+    public readonly string Name => _config.Name ?? "OuijaJsonFilter";
+    public readonly string Description => _config.Description ?? "JSON-configured filter";
 
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        return new OuijaJsonFilter(_config);
+        // Reset cutoff for new search
+        _learnedCutoff = Cutoff;
+        
+        return new OuijaJsonFilter(_config, Cutoff, AutoCutoff);
     }
 
     public struct OuijaJsonFilter : IMotelySeedFilter
         {
             public static bool IsCancelled;
             private readonly OuijaConfig _config;
+            private readonly int _cutoff;
+            private readonly bool _autoCutoff;
 
-        public OuijaJsonFilter(OuijaConfig config)
+        public OuijaJsonFilter(OuijaConfig config, int cutoff, bool autoCutoff)
         {
             _config = config;
+            _cutoff = cutoff;
+            _autoCutoff = autoCutoff;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            VectorMask mask = VectorMask.AllBitsSet;
-            if (_config.Must?.Count > 0)
+            // Copy fields to local variables to avoid struct closure issues
+            var config = _config;
+            var cutoff = _cutoff;
+            var autoCutoff = _autoCutoff;
+            
+            // PreFilter: Aggressively filter out seeds using vectorized operations
+            var voucherState = new MotelyVectorRunStateVoucher();
+            var mask = PreFilter(config, ref searchContext, ref voucherState);
+            if (mask.IsAllFalse()) return mask;
+            
+            // SearchIndividualSeeds: Handle complex state and scoring for remaining seeds
+            return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                foreach (var clause in _config.Must)
+                var runState = new MotelyRunState();
+                
+                // Activate all vouchers for scoring
+                var maxVoucherAnte = GetMaxVoucherAnte(config);
+                if (maxVoucherAnte > 0)
                 {
-                    mask = ProcessClause(ref searchContext, clause, mask, true);
-                    if (mask.IsAllFalse()) return mask;
+                    ActivateAllVouchers(ref singleCtx, ref runState, maxVoucherAnte);
                 }
-            }
-
-            if (_config.MustNot?.Count > 0)
-            {
-                foreach (var clause in _config.MustNot)
+                
+                // Check remaining MUST clauses (not handled by PreFilter)
+                var remainingMustClauses = config.Must?.Where(c => 
+                    c.ItemTypeEnum == MotelyFilterItemType.SoulJoker ||
+                    c.ItemTypeEnum == MotelyFilterItemType.Joker ||
+                    c.ItemTypeEnum == MotelyFilterItemType.PlayingCard) ?? Enumerable.Empty<OuijaConfig.FilterItem>();
+                
+                foreach (var clause in remainingMustClauses.OrderBy(c => c.EffectiveAntes?.FirstOrDefault() ?? 0))
                 {
-                    mask = ProcessClause(ref searchContext, clause, mask, false);
-                    if (mask.IsAllFalse()) return mask;
+                    if (!CheckSingleClause(ref singleCtx, clause, ref runState))
+                        return false; // Seed doesn't meet requirements
                 }
-            }
-
-            return mask;
-        }
-
-        public bool FilterSingle(ref MotelySingleSearchContext ctx, ulong seed)
-        {
-            var voucherState = new MotelyRunState();
-
-            if (_config.Must?.Count > 0)
-            {
-                foreach (var clause in _config.Must)
+                
+                // Check all MUST NOT clauses
+                if (config.MustNot?.Count > 0)
                 {
-                    if (clause.Min.HasValue && clause.Min.Value > 1)
+                    foreach (var clause in config.MustNot)
                     {
-                        if (CountOccurrences(ref ctx, clause, ref voucherState) < clause.Min.Value)
+                        if (CheckSingleClause(ref singleCtx, clause, ref runState))
                             return false;
                     }
-                    else if (!CheckSingleClause(ref ctx, clause, ref voucherState))
+                }
+                
+                // Calculate scores for SHOULD clauses
+                int totalScore = 1; // Base score for passing MUST
+                var scores = new List<int>();
+                
+                if (config.Should?.Count > 0)
+                {
+                    foreach (var should in config.Should)
+                    {
+                        int count = CountOccurrences(ref singleCtx, should, ref runState);
+                        int score = count * should.Score;
+                        scores.Add(count);
+                        totalScore += score;
+                    }
+                }
+                
+                // Auto cutoff logic
+                var currentCutoff = autoCutoff ? GetCurrentCutoff(totalScore) : cutoff;
+                
+                // Only output if score meets threshold
+                if (totalScore >= currentCutoff)
+                {
+                    // Get the seed string for output  
+                    unsafe
+                    {
+                        char* seedPtr = stackalloc char[9];
+                        int len = singleCtx.GetSeed(seedPtr);
+                        string seedStr = new string(seedPtr, 0, len);
+                        
+                        // Output CSV row with scores
+                        var row = $"{seedStr},{totalScore}";
+                        foreach (var score in scores)
+                        {
+                            row += $",{score}";
+                        }
+                        Console.WriteLine(row);
+                    }
+                }
+                
+                // Return true to indicate seed matches (needed for proper termination)
+                return true;
+            });
+        }
+        
+        private static int GetCurrentCutoff(int currentScore)
+        {
+            // Auto cutoff: Start at 1, raise to highest score found
+            if (currentScore > _learnedCutoff)
+            {
+                var oldCutoff = _learnedCutoff;
+                _learnedCutoff = currentScore;
+                DebugLogger.Log($"[AutoCutoff] Raised cutoff from {oldCutoff} to {_learnedCutoff}");
+            }
+            
+            return _learnedCutoff;
+        }
+        
+        /// <summary>
+        /// Find the maximum ante needed for voucher checking.
+        /// </summary>
+        private static int GetMaxVoucherAnte(OuijaConfig config)
+        {
+            int maxAnte = 0;
+            
+            // Check Must clauses
+            if (config.Must != null)
+            {
+                foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                {
+                    if (clause.EffectiveAntes != null)
+                        maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+                }
+            }
+            
+            // Check Should clauses  
+            if (config.Should != null)
+            {
+                foreach (var clause in config.Should.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                {
+                    if (clause.EffectiveAntes != null)
+                        maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+                }
+            }
+            
+            return maxAnte;
+        }
+        
+        /// <summary>
+        /// Activate all vouchers from antes 1 through maxAnte to simulate actual game progression.
+        /// This is much faster than checking vouchers individually per clause.
+        /// </summary>
+        private static void ActivateAllVouchers(ref MotelySingleSearchContext ctx, ref MotelyRunState runState, int maxAnte)
+        {
+            for (int ante = 1; ante <= maxAnte; ante++)
+            {
+                var voucher = ctx.GetAnteFirstVoucher(ante, runState);
+                runState.ActivateVoucher(voucher);
+                DebugLogger.Log($"[VoucherActivation] Ante {ante}: Activated {voucher}");
+                
+                // Special case: Hieroglyph gives a bonus voucher in the SAME ante
+                if (voucher == MotelyVoucher.Hieroglyph)
+                {
+                    // Use a voucher stream to get the NEXT voucher (not the first one again)
+                    var voucherStream = ctx.CreateVoucherStream(ante);
+                    var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, runState);
+                    runState.ActivateVoucher(bonusVoucher);
+                    DebugLogger.Log($"[VoucherActivation] Ante {ante}: Hieroglyph bonus activated {bonusVoucher}");
+                }
+                
+            }
+        }
+        
+        /// <summary>
+        /// PreFilter: Aggressively filter out seeds using vectorized operations.
+        /// Handles ALL Must[] clauses to eliminate 99.9999% of seeds before expensive individual processing.
+        /// </summary>
+        private static VectorMask PreFilter(OuijaConfig config, ref MotelyVectorSearchContext searchContext, ref MotelyVectorRunStateVoucher voucherState)
+        {
+            var mask = VectorMask.AllBitsSet;
+            
+            if (config.Must?.Count == 0) return mask;
+            
+            // Step 1: Tags (fastest - no state)
+            foreach (var clause in config.Must!.Where(c => 
+                c.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag ||
+                c.ItemTypeEnum == MotelyFilterItemType.BigBlindTag))
+            {
+                mask &= CheckTag(ref searchContext, clause);
+                if (mask.IsAllFalse()) return mask; // Early exit!
+            }
+            
+            // Step 2: Vouchers (build state for later scoring)
+            mask = FilterVouchers(config, ref searchContext, mask, ref voucherState);
+            if (mask.IsAllFalse()) return mask;
+            
+            // Step 3: Tarots (vectorized)
+            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard))
+            {
+                mask &= CheckTarot(ref searchContext, clause);
+                if (mask.IsAllFalse()) return mask;
+            }
+            
+            // Step 4: Planets (vectorized)
+            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard))
+            {
+                mask &= CheckPlanet(ref searchContext, clause);
+                if (mask.IsAllFalse()) return mask;
+            }
+            
+            // Step 5: Spectrals (vectorized)
+            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard))
+            {
+                mask &= CheckSpectral(ref searchContext, clause);
+                if (mask.IsAllFalse()) return mask;
+            }
+            
+            // Step 6: Bosses (vectorized)
+            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Boss))
+            {
+                mask &= CheckBoss(ref searchContext, clause);
+                if (mask.IsAllFalse()) return mask;
+            }
+            
+            // Note: Jokers, SoulJokers, PlayingCards need individual processing for state management
+            // They will be handled in SearchIndividualSeeds
+            
+            return mask;
+        }
+        
+        private static VectorMask FilterVouchers(OuijaConfig config, ref MotelyVectorSearchContext searchContext, VectorMask inputMask, ref MotelyVectorRunStateVoucher voucherState)
+        {
+            var mask = inputMask;
+            
+            // Find max ante needed
+            int maxAnte = 0;
+            var voucherClauses = config.Must!.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher);
+            foreach (var clause in voucherClauses)
+            {
+                if (clause.EffectiveAntes != null)
+                    maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+            }
+            
+            // Loop ante 1 to N: Activate EVERY voucher found
+            for (int ante = 1; ante <= maxAnte; ante++)
+            {
+                var vouchers = searchContext.GetAnteFirstVoucher(ante, voucherState);
+                
+                // Activate this voucher for ALL seeds (doesn't matter which have 0 bits)
+                voucherState.ActivateVoucher(vouchers);
+                
+                // Check each voucher clause to see if this ante satisfies it
+                foreach (var clause in voucherClauses)
+                {
+                    if (clause.EffectiveAntes?.Contains(ante) == true)
+                    {
+                        var voucherMatches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
+                        mask &= voucherMatches;
+                    }
+                }
+                
+                if (mask.IsAllFalse()) return mask;
+            }
+            
+            return mask;
+        }
+        
+        private static int GetMaxVoucherAnteFromConfig(OuijaConfig config)
+        {
+            int maxAnte = 0;
+            if (config.Must != null)
+            {
+                foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                {
+                    if (clause.EffectiveAntes != null)
+                        maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+                }
+            }
+            return maxAnte;
+        }
+
+        public bool FilterSingle(ref MotelySingleSearchContext searchContext, ReadOnlySpan<char> seed)
+        {
+            var runState = new MotelyRunState();
+            
+            // Check all MUST clauses
+            if (_config.Must?.Count > 0)
+            {
+                foreach (var clause in _config.Must)
+                {
+                    if (!CheckSingleClause(ref searchContext, clause, ref runState))
                         return false;
                 }
             }
-
+            
+            // Check all MUST NOT clauses
             if (_config.MustNot?.Count > 0)
             {
                 foreach (var clause in _config.MustNot)
                 {
-                    if (CheckSingleClause(ref ctx, clause, ref voucherState))
+                    if (CheckSingleClause(ref searchContext, clause, ref runState))
                         return false;
                 }
             }
-
+            
+            // Calculate scores for SHOULD clauses
+            int totalScore = 1; // Base score for passing MUST
+            var scores = new List<int>();
+            
+            if (_config.Should?.Count > 0)
+            {
+                foreach (var should in _config.Should)
+                {
+                    int count = CountOccurrences(ref searchContext, should, ref runState);
+                    int score = count * should.Score;
+                    scores.Add(count);
+                    totalScore += score;
+                }
+            }
+            
+            // Output CSV row with scores
+            var row = $"{seed},{totalScore}";
+            foreach (var score in scores)
+            {
+                row += $",{score}";
+            }
+            Console.WriteLine(row);
+            
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask ProcessClause(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, VectorMask mask, bool isMust)
+        private VectorMask ProcessClause(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, VectorMask mask, bool isMust, ref MotelyVectorRunStateVoucher voucherState)
         {
             var result = clause.ItemTypeEnum switch
             {
@@ -106,6 +374,7 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                 MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => CheckTag(ref ctx, clause),
                 MotelyFilterItemType.PlayingCard => CheckPlayingCard(ref ctx, clause),
                 MotelyFilterItemType.Boss => CheckBoss(ref ctx, clause),
+                MotelyFilterItemType.Voucher => CheckVoucherVector(ref ctx, clause, ref voucherState),
                 _ => throw new ArgumentOutOfRangeException(nameof(clause.ItemTypeEnum), clause.ItemTypeEnum, null)
 
             };
@@ -116,11 +385,9 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static VectorMask CheckJoker(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause)
         {
-            if (clause.Sources?.ShopSlots?.Length > 0)
-                return VectorMask.AllBitsSet;
 
             var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
                 var packStream = ctx.CreateBoosterPackStream(ante);
@@ -132,14 +399,14 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                     for (int slot = 0; slot <= maxSlot; slot++)
                     {
                         var item = ctx.GetNextShopItem(ref shopStream);
-                        if (!slotSet.Contains(slot) || item.TypeCategory != MotelyItemTypeCategory.Joker) continue;
+                        if (!slotSet.Contains(slot) || VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker) == Vector256<int>.Zero) continue;
 
-                        var joker = new MotelyItem(item.Value).GetJoker();
+                        var joker = new MotelyItem(item.Value[0]).GetJoker();
                         var matches = clause.JokerEnum.HasValue ?
                             joker == clause.JokerEnum.Value :
                             CheckWildcardMatch(joker, clause.WildcardEnum);
 
-                        if (matches && CheckEditionAndStickers(item, clause))
+                        if (matches && CheckEditionAndStickers(new MotelyItem(item.Value[0]), clause))
                         {
                             mask &= VectorMask.AllBitsSet;
                             break;
@@ -154,19 +421,19 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                     for (int i = 0; i < maxPacks; i++)
                     {
                         var pack = ctx.GetNextBoosterPack(ref packStream);
-                        if (pack.GetPackType() != MotelyBoosterPackType.Buffoon) continue;
-                        if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+                        if (VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Buffoon) == Vector256<int>.Zero) continue;
+                        if (clause.Sources.RequireMega == true && VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega) == Vector256<int>.Zero) continue;
 
-                        var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
-                        for (int j = 0; j < contents.Count; j++)
+                        var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize()[0]);
+                        for (int j = 0; j < contents.Length; j++)
                         {
                             var item = contents[j];
-                            var joker = new MotelyItem(item.Value).GetJoker();
+                            var joker = new MotelyItem(item.Value[0]).GetJoker();
                             var matches = clause.JokerEnum.HasValue ?
                                 joker == clause.JokerEnum.Value :
                                 CheckWildcardMatch(joker, clause.WildcardEnum);
 
-                            if (matches && CheckEditionAndStickers(item, clause))
+                            if (matches && CheckEditionAndStickers(new MotelyItem(item.Value[0]), clause))
                             {
                                 mask &= VectorMask.AllBitsSet;
                                 goto NextAnte;
@@ -185,45 +452,19 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static VectorMask CheckSoulJoker(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause)
         {
-            var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            // For soul jokers, use SearchIndividualSeeds to properly handle pack slots
+            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                var packStream = ctx.CreateBoosterPackStream(ante);
-                var soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
-                bool foundSoul = false;
-
-                for (int i = 0; i < (ante == 1 ? 4 : 6); i++)
+                var runState = new MotelyRunState();
+                
+                // Check all antes specified in the filter
+                foreach (var ante in clause.EffectiveAntes)
                 {
-                    var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                    {
-                        if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
-
-                        var hasSoul = pack.GetPackType() == MotelyBoosterPackType.Arcana ?
-                            CheckArcanaForSoul(ref ctx, ante, pack.GetPackSize()) :
-                            CheckSpectralForSoul(ref ctx, ante, pack.GetPackSize());
-
-                        if (hasSoul)
-                        {
-                            var soulJoker = ctx.GetNextJoker(ref soulStream);
-                            var matches = !clause.JokerEnum.HasValue || soulJoker.Type == new MotelyItem(clause.JokerEnum.Value).Type;
-                            if (matches && CheckEditionAndStickers(soulJoker, clause))
-                            {
-                                foundSoul = true;
-                                break;
-                            }
-                        }
-                    }
+                    if (CheckSoulJokerSingle(ref singleCtx, clause, ante, ref runState) > 0)
+                        return true;
                 }
-
-                if (!foundSoul)
-                {
-                    mask = VectorMask.AllBitsClear;
-                    break;
-                }
-            }
-
-            return mask;
+                return false;
+            });
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -232,12 +473,12 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             if (!clause.TarotEnum.HasValue) return VectorMask.AllBitsSet;
 
             var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 bool found = CheckShopForTarot(ref ctx, clause, ante) || CheckPacksForTarot(ref ctx, clause, ante);
                 if (!found)
                 {
-                    mask = VectorMask.AllBitsClear;
+                    mask = VectorMask.NoBitsSet;
                     break;
                 }
             }
@@ -251,12 +492,12 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             if (!clause.PlanetEnum.HasValue) return VectorMask.AllBitsSet;
 
             var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 bool found = CheckShopForPlanet(ref ctx, clause, ante) || CheckPacksForPlanet(ref ctx, clause, ante);
                 if (!found)
                 {
-                    mask = VectorMask.AllBitsClear;
+                    mask = VectorMask.NoBitsSet;
                     break;
                 }
             }
@@ -268,12 +509,12 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         private static VectorMask CheckSpectral(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause)
         {
             var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 bool found = CheckShopForSpectral(ref ctx, clause, ante) || CheckPacksForSpectral(ref ctx, clause, ante);
                 if (!found)
                 {
-                    mask = VectorMask.AllBitsClear;
+                    mask = VectorMask.NoBitsSet;
                     break;
                 }
             }
@@ -287,7 +528,7 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             if (!clause.TagEnum.HasValue) return VectorMask.AllBitsSet;
 
             var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 var tagStream = ctx.CreateTagStream(ante);
                 var smallTag = ctx.GetNextTag(ref tagStream);
@@ -311,12 +552,12 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         private static VectorMask CheckPlayingCard(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause)
         {
             var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 bool found = CheckPacksForPlayingCard(ref ctx, clause, ante);
                 if (!found)
                 {
-                    mask = VectorMask.AllBitsClear;
+                    mask = VectorMask.NoBitsSet;
                     break;
                 }
             }
@@ -330,7 +571,7 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             if (!clause.BossEnum.HasValue) return VectorMask.AllBitsSet;
 
             var mask = VectorMask.AllBitsSet;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 var bossStream = ctx.CreateBossStream(ante);
                 var boss = ctx.GetNextBoss(ref bossStream);
@@ -343,29 +584,47 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static VectorMask CheckVoucher(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
+        private static VectorMask CheckVoucher(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelyVectorRunStateVoucher voucherState)
         {
             if (!clause.VoucherEnum.HasValue) return VectorMask.AllBitsSet;
 
             var voucherStream = ctx.CreateVoucherStream(ante);
-            var voucher = ctx.GetNextVoucher(ref voucherStream);
+            var voucher = ctx.GetNextVoucher(ref voucherStream, voucherState);
             return VectorEnum256.Equals(voucher, clause.VoucherEnum.Value);
+        }
+
+        private static VectorMask CheckVoucherVector(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyVectorRunStateVoucher voucherState)
+        {
+            if (!clause.VoucherEnum.HasValue) return VectorMask.AllBitsSet;
+
+            var mask = VectorMask.AllBitsSet;
+            foreach (var ante in clause.EffectiveAntes)
+            {
+                mask &= CheckVoucher(ref ctx, clause, ante, ref voucherState);
+                if (mask.IsAllFalse()) break;
+            }
+            return mask;
         }
 
         private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyRunState voucherState)
         {
+            // Special case for vouchers: count differently since they should only be counted once
+            if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
+            {
+                return CountVoucherOccurrences(ref ctx, clause, ref voucherState);
+            }
+            
             int totalCount = 0;
-            foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+            foreach (var ante in clause.EffectiveAntes)
             {
                 var anteCount = clause.ItemTypeEnum switch
                 {
-                    MotelyFilterItemType.Joker => CheckJokerSingle(ref ctx, clause, ante),
+                    MotelyFilterItemType.Joker => CheckJokerSingle(ref ctx, clause, ante, ref voucherState),
                     MotelyFilterItemType.SoulJoker => CheckSoulJokerSingle(ref ctx, clause, ante, ref voucherState),
                     MotelyFilterItemType.TarotCard => CheckTarotSingle(ref ctx, clause, ante, ref voucherState) ? 1 : 0,
                     MotelyFilterItemType.PlanetCard => CheckPlanetSingle(ref ctx, clause, ante) ? 1 : 0,
                     MotelyFilterItemType.SpectralCard => CheckSpectralSingle(ref ctx, clause, ante) ? 1 : 0,
                     MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
-                    MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, clause, ante, ref voucherState) ? 1 : 0,
                     MotelyFilterItemType.PlayingCard => CheckPlayingCardSingle(ref ctx, clause, ante) ? 1 : 0,
                     MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante) ? 1 : 0,
                     _ => 0
@@ -373,6 +632,20 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                 totalCount += anteCount;
             }
             return totalCount;
+        }
+        
+        private static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyRunState voucherState)
+        {
+            if (!clause.VoucherEnum.HasValue) return 0;
+            
+            // Simple: just check if the voucher is active (it was activated during ActivateAllVouchers)
+            if (voucherState.IsVoucherActive(clause.VoucherEnum.Value))
+            {
+                DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} is active, giving 1 point");
+                return 1;
+            }
+            
+            return 0;
         }
 
         private static bool CheckSingleClause(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyRunState voucherState)
@@ -383,7 +656,7 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             {
                 var found = clause.ItemTypeEnum switch
                 {
-                    MotelyFilterItemType.Joker => CheckJokerSingle(ref ctx, clause, ante) > 0,
+                    MotelyFilterItemType.Joker => CheckJokerSingle(ref ctx, clause, ante, ref voucherState) > 0,
                     MotelyFilterItemType.SoulJoker => CheckSoulJokerSingle(ref ctx, clause, ante, ref voucherState) > 0,
                     MotelyFilterItemType.TarotCard => CheckTarotSingle(ref ctx, clause, ante, ref voucherState),
                     MotelyFilterItemType.PlanetCard => CheckPlanetSingle(ref ctx, clause, ante),
@@ -448,9 +721,9 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         {
             var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
             var contents = ctx.GetNextArcanaPackContents(ref tarotStream, size);
-            for (int i = 0; i < contents.Count; i++)
+            for (int i = 0; i < contents.Length; i++)
                     {
-                        if (contents[i].Type == MotelyItemType.Soul)
+                        if (VectorEnum256.Equals(contents[i].Type, MotelyItemType.Soul) != Vector256<int>.Zero)
                     return true;
             }
             return false;
@@ -460,9 +733,9 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         {
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
             var contents = ctx.GetNextSpectralPackContents(ref spectralStream, size);
-            for (int i = 0; i < contents.Count; i++)
+            for (int i = 0; i < contents.Length; i++)
                     {
-                        if (contents[i].Type == MotelyItemType.Soul)
+                        if (VectorEnum256.Equals(contents[i].Type, MotelyItemType.Soul) != Vector256<int>.Zero)
                     return true;
             }
             return false;
@@ -479,9 +752,10 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             for (int i = 0; i < slots.Max(); i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (slotSet.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.TarotCard)
+                if (slotSet.Contains(i) && VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard) != Vector256<int>.Zero)
                 {
-                    var tarot = new MotelyItem(item.Value).GetTarot();
+                    var tarot = new MotelyItem(item.Value[0]).GetTarot();
+                    Debug.Assert(clause.TarotEnum.HasValue, "TarotEnum should be set for tarot card checks");
                     if (tarot == clause.TarotEnum.Value)
                         return true;
                 }
@@ -494,20 +768,22 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             if (clause.Sources?.PackSlots?.Length == 0) return false;
 
             var packStream = ctx.CreateBoosterPackStream(ante);
-            var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 };
+            Debug.Assert(clause.TarotEnum.HasValue, "TarotEnum should be set for tarot card checks");
+            Debug.Assert(clause.Sources != null, "Sources should be set for tarot card checks");
+            var packSlots = clause.Sources.PackSlots;
 
             for (int i = 0; i < (ante == 1 ? 4 : 6); i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                if (packSlots != null && packSlots.Contains(i) && VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Arcana) != Vector256<int>.Zero)
                 {
-                    if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+                    if (clause.Sources?.RequireMega == true && VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega) == Vector256<int>.Zero) continue;
 
                     var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
-                    var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
-                    for (int j = 0; j < contents.Count; j++)
+                    var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize()[0]);
+                    for (int j = 0; j < contents.Length; j++)
                     {
-                        if (contents[j].Type == (MotelyItemType)clause.TarotEnum.Value)
+                        if (VectorEnum256.Equals(contents[j].Type, (MotelyItemType)clause.TarotEnum.Value) != Vector256<int>.Zero)
                             return true;
                     }
                 }
@@ -526,9 +802,9 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             for (int i = 0; i < slots.Max(); i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (slotSet.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.PlanetCard)
+                if (slotSet.Contains(i) && VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.PlanetCard) != Vector256<int>.Zero)
                 {
-                    var planet = new MotelyItem(item.Value).GetPlanet();
+                    var planet = new MotelyItem(item.Value[0]).GetPlanet();
                     if (planet == clause.PlanetEnum.Value)
                         return true;
                 }
@@ -546,15 +822,15 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             for (int i = 0; i < (ante == 1 ? 4 : 6); i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                if (packSlots != null && packSlots.Contains(i) && VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Celestial) != Vector256<int>.Zero)
                 {
-                    if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+                    if (clause.Sources?.RequireMega == true && VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega) == Vector256<int>.Zero) continue;
 
                     var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
-                    var contents = ctx.GetNextCelestialPackContents(ref planetStream, pack.GetPackSize());
-                    for (int j = 0; j < contents.Count; j++)
+                    var contents = ctx.GetNextCelestialPackContents(ref planetStream, pack.GetPackSize()[0]);
+                    for (int j = 0; j < contents.Length; j++)
                     {
-                        if (contents[j].Type == (MotelyItemType)clause.PlanetEnum.Value)
+                        if (VectorEnum256.Equals(contents[j].Type, (MotelyItemType)clause.PlanetEnum.Value) != Vector256<int>.Zero)
                             return true;
                     }
                 }
@@ -573,11 +849,11 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             for (int i = 0; i < slots.Max(); i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (slotSet.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                if (slotSet.Contains(i) && VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.SpectralCard) != Vector256<int>.Zero)
                 {
                     if (clause.SpectralEnum.HasValue)
                     {
-                        var spectral = new MotelyItem(item.Value).GetSpectral();
+                        var spectral = new MotelyItem(item.Value[0]).GetSpectral();
                         if (spectral == clause.SpectralEnum.Value)
                             return true;
                     }
@@ -598,27 +874,27 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             for (int i = 0; i < (ante == 1 ? 4 : 6); i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                if (packSlots != null && packSlots.Contains(i) && VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Spectral) != Vector256<int>.Zero)
                 {
-                    if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+                    if (clause.Sources?.RequireMega == true && VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega) == Vector256<int>.Zero) continue;
 
                     var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
-                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
-                    for (int j = 0; j < contents.Count; j++)
+                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize()[0]);
+                    for (int j = 0; j < contents.Length; j++)
                     {
                         var item = contents[j];
-                        if (item.Type == MotelyItemType.Soul || item.Type == MotelyItemType.BlackHole)
+                        if (VectorEnum256.Equals(item.Type, MotelyItemType.Soul) != Vector256<int>.Zero || VectorEnum256.Equals(item.Type, MotelyItemType.BlackHole) != Vector256<int>.Zero)
                         {
                             if (!clause.SpectralEnum.HasValue ||
-                                (item.Type == MotelyItemType.Soul && clause.SpectralEnum == MotelySpectralCard.Soul) ||
-                                (item.Type == MotelyItemType.BlackHole && clause.SpectralEnum == MotelySpectralCard.BlackHole))
+                                (VectorEnum256.Equals(item.Type, MotelyItemType.Soul) != Vector256<int>.Zero && clause.SpectralEnum == MotelySpectralCard.Soul) ||
+                                (VectorEnum256.Equals(item.Type, MotelyItemType.BlackHole) != Vector256<int>.Zero && clause.SpectralEnum == MotelySpectralCard.BlackHole))
                                 return true;
                         }
-                        else if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                        else if (VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.SpectralCard) != Vector256<int>.Zero)
                         {
                             if (!clause.SpectralEnum.HasValue)
                                 return true;
-                            var spectral = new MotelyItem(item.Value).GetSpectral();
+                            var spectral = new MotelyItem(item.Value[0]).GetSpectral();
                             if (spectral == clause.SpectralEnum.Value)
                                 return true;
                         }
@@ -636,21 +912,23 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             for (int i = 0; i < (ante == 1 ? 4 : 6); i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Standard)
+                if (packSlots != null && packSlots.Contains(i) && VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Standard) != Vector256<int>.Zero)
                 {
-                    if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+                    if (clause.Sources?.RequireMega == true && VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega) == Vector256<int>.Zero) continue;
 
                     var cardStream = ctx.CreateStandardPackCardStream(ante);
-                    var contents = ctx.GetNextStandardPackContents(ref cardStream, pack.GetPackSize());
+                    var contents = ctx.GetNextStandardPackContents(ref cardStream, pack.GetPackSize()[0]);
                     for (int j = 0; j < contents.Length; j++)
                     {
-                        var item = contents[j];
-                        if (item.TypeCategory == MotelyItemTypeCategory.PlayingCard &&
-                            (!clause.SuitEnum.HasValue || item.PlayingCardSuit == clause.SuitEnum.Value) &&
-                            (!clause.RankEnum.HasValue || item.PlayingCardRank == clause.RankEnum.Value) &&
-                            (!clause.EnhancementEnum.HasValue || item.Enhancement == clause.EnhancementEnum.Value) &&
-                            (!clause.SealEnum.HasValue || item.Seal == clause.SealEnum.Value) &&
-                            (!clause.EditionEnum.HasValue || item.Edition == clause.EditionEnum.Value))
+                        var item = contents.GetItem(j);
+                        var isPlayingCard = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.PlayingCard) != Vector256<int>.Zero;
+                        var suitMatches = !clause.SuitEnum.HasValue || VectorEnum256.Equals(item.PlayingCardSuit, clause.SuitEnum.Value) != Vector256<int>.Zero;
+                        var rankMatches = !clause.RankEnum.HasValue || VectorEnum256.Equals(item.PlayingCardRank, clause.RankEnum.Value) != Vector256<int>.Zero;
+                        var enhancementMatches = !clause.EnhancementEnum.HasValue || VectorEnum256.Equals(item.Enhancement, clause.EnhancementEnum.Value) != Vector256<int>.Zero;
+                        var sealMatches = !clause.SealEnum.HasValue || VectorEnum256.Equals(item.Seal, clause.SealEnum.Value) != Vector256<int>.Zero;
+                        var editionMatches = !clause.EditionEnum.HasValue || VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value) != Vector256<int>.Zero;
+                        
+                        if (isPlayingCard && suitMatches && rankMatches && enhancementMatches && sealMatches && editionMatches)
                             return true;
                     }
                 }
@@ -658,7 +936,7 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             return false;
         }
 
-        private static int CheckJokerSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante)
+        private static int CheckJokerSingle(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, int ante, ref MotelyRunState runState)
         {
             int foundCount = 0;
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
@@ -679,6 +957,16 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                             CheckWildcardMatch(joker, clause.WildcardEnum);
                         if (matches && CheckEditionAndStickers(item, clause))
                         {
+                            // Track this joker as owned
+                            runState.AddOwnedJoker(item);
+                            
+                            // Track Showman ONLY if we're searching for Showman
+                            if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                            {
+                                runState.ActivateShowman();
+                                DebugLogger.Log($"[Joker] Activated Showman - duplicates now allowed!");
+                            }
+                            
                             foundCount++;
                             if (clause.Min.HasValue && foundCount >= clause.Min.Value)
                                 return foundCount;
@@ -695,20 +983,30 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                 for (int i = 0; i <= maxPackSlot; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                    if (packSlots != null && packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                     {
                         if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
                         var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
-                        for (int j = 0; j < contents.Count; j++)
+                        for (int j = 0; j < contents.Length; j++)
                         {
                             var item = contents[j];
-                            var joker = new MotelyItem(item.Value).GetJoker();
+                            var joker = item.GetJoker();
                             var matches = clause.JokerEnum.HasValue ?
                                 joker == clause.JokerEnum.Value :
                                 CheckWildcardMatch(joker, clause.WildcardEnum);
                             if (matches && CheckEditionAndStickers(item, clause))
                             {
+                                // Track this joker as owned
+                                runState.AddOwnedJoker(item);
+                                
+                                // Track Showman ONLY if we're searching for Showman
+                                if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                                {
+                                    runState.ActivateShowman();
+                                    DebugLogger.Log($"[Joker] Activated Showman from pack - duplicates now allowed!");
+                                }
+                                
                                 foundCount++;
                                 if (clause.Min.HasValue && foundCount >= clause.Min.Value)
                                     return foundCount;
@@ -731,10 +1029,21 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 };
             int packCount = packSlots.Length > 0 ? packSlots.Max() + 1 : (ante == 1 ? 4 : 6);
 
+            if (DebugLogger.IsEnabled)
+            {
+                DebugLogger.Log($"[SoulJoker] Checking ante {ante}, slots [{string.Join(",", packSlots)}], packCount: {packCount}, target: {clause.Value ?? "any"}");
+            }
+
             for (int i = 0; i < packCount; i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (packSlots.Contains(i) && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
+                
+                if (DebugLogger.IsEnabled)
+                {
+                    DebugLogger.Log($"[SoulJoker] Ante {ante} Pack {i}: Type={pack.GetPackType()}, Size={pack.GetPackSize()}");
+                }
+                
+                if (packSlots != null && packSlots.Contains(i) && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
                 {
                     if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
@@ -743,7 +1052,16 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                     {
                         var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
                         var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
-                        for (int j = 0; j < contents.Count; j++)
+                        
+                        if (DebugLogger.IsEnabled)
+                        {
+                            var itemList = new List<string>();
+                            for (int k = 0; k < contents.Length; k++)
+                                itemList.Add(contents[k].ToString());
+                            DebugLogger.Log($"[SoulJoker] Arcana pack contents: [{string.Join(",", itemList)}]");
+                        }
+                        
+                        for (int j = 0; j < contents.Length; j++)
                         {
                             if (contents[j] == MotelyItemType.Soul)
                             {
@@ -756,7 +1074,16 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                     {
                         var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
                         var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
-                        for (int j = 0; j < contents.Count; j++)
+                        
+                        if (DebugLogger.IsEnabled)
+                        {
+                            var itemList = new List<string>();
+                            for (int k = 0; k < contents.Length; k++)
+                                itemList.Add(contents[k].ToString());
+                            DebugLogger.Log($"[SoulJoker] Spectral pack contents: [{string.Join(",", itemList)}]");
+                        }
+                        
+                        for (int j = 0; j < contents.Length; j++)
                         {
                             if (contents[j] == MotelyItemType.Soul)
                             {
@@ -768,15 +1095,89 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
 
                     if (hasSoul)
                     {
+                        // Check if this soul pack has already been consumed by another clause
+                        if (runState.IsSoulPackConsumed(ante, i))
+                        {
+                            if (DebugLogger.IsEnabled)
+                            {
+                                DebugLogger.Log($"[SoulJoker] Pack {i} soul already consumed by another clause, skipping");
+                            }
+                            continue;
+                        }
+                        
                         if (!soulStreamInit)
                         {
                             soulStreamInit = true;
                         }
-                        var soulJoker = ctx.GetNextJoker(ref soulStream);
+                        
+                        // Get the soul joker, re-rolling if duplicate (unless Showman is active)
+                        MotelyItem soulJoker;
+                        int rerollCount = 0;
+                        const int maxRerolls = 100; // Prevent infinite loop
+                        
+                        do
+                        {
+                            soulJoker = ctx.GetNextJoker(ref soulStream);
+                            
+                            // Check if we can obtain this joker (not duplicate or Showman active)
+                            if (runState.CanObtainJoker(soulJoker))
+                            {
+                                break;
+                            }
+                            
+                            if (DebugLogger.IsEnabled)
+                            {
+                                DebugLogger.Log($"[SoulJoker] Re-roll #{rerollCount + 1}: {soulJoker.Type} is already owned, re-rolling...");
+                            }
+                            
+                            rerollCount++;
+                        } while (rerollCount < maxRerolls);
+                        
+                        if (DebugLogger.IsEnabled)
+                        {
+                            if (rerollCount > 0)
+                            {
+                                DebugLogger.Log($"[SoulJoker] After {rerollCount} re-rolls, final joker = {soulJoker.Type}, Edition = {soulJoker.Edition}");
+                            }
+                            else
+                            {
+                                DebugLogger.Log($"[SoulJoker] Found Soul! Joker = {soulJoker.Type}, Edition = {soulJoker.Edition}");
+                            }
+                        }
+                        
                         var matches = !clause.JokerEnum.HasValue || soulJoker.Type == new MotelyItem(clause.JokerEnum.Value).Type;
+
+                        if (DebugLogger.IsEnabled)
+                        {
+                            if (matches)
+                            {
+                                DebugLogger.Log($"[SoulJoker] Type matches! Checking edition/stickers...");
+                            }
+                            else
+                            {
+                                DebugLogger.Log($"[SoulJoker] Type does not match! Looking for {new MotelyItem(clause.JokerEnum.Value).Type}... but found {soulJoker.Type}");
+                            }
+                        }
+                        
                         if (matches && CheckEditionAndStickers(soulJoker, clause))
                         {
+                            // ONLY mark pack as consumed when we actually match what we're looking for
+                            runState.MarkSoulPackConsumed(ante, i);
+                            
+                            // Track this matching joker as owned
+                            runState.AddOwnedJoker(soulJoker);
+
                             foundCount++;
+                            DebugLogger.Log($"[SoulJoker] *** MATCH FOUND *** Type: {soulJoker.Type}, Edition: {soulJoker.Edition}, Count: {foundCount}");
+                            DebugLogger.Log($"[SoulJoker] Marked pack {i} as consumed");
+
+                            // Track Showman ONLY if we're searching for Showman
+                            if (soulJoker.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                            {
+                                runState.ActivateShowman();
+                                DebugLogger.Log($"[SoulJoker] Activated Showman - duplicates now allowed!");
+                            }
+
                             if (clause.Min.HasValue && foundCount >= clause.Min.Value)
                                 return foundCount;
                         }
@@ -816,13 +1217,13 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                 for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                    if (packSlots != null && packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Arcana)
                     {
                         if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
                         var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
                         var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
-                        for (int j = 0; j < contents.Count; j++)
+                        for (int j = 0; j < contents.Length; j++)
                         {
                             if (contents[j].Type == (MotelyItemType)clause.TarotEnum.Value)
                                 return true;
@@ -863,13 +1264,13 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                 for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                    if (packSlots != null && packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Celestial)
                     {
                         if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
                         var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
                         var contents = ctx.GetNextCelestialPackContents(ref planetStream, pack.GetPackSize());
-                        for (int j = 0; j < contents.Count; j++)
+                        for (int j = 0; j < contents.Length; j++)
                         {
                             if (contents[j].Type == (MotelyItemType)clause.PlanetEnum.Value)
                                 return true;
@@ -898,6 +1299,7 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                         if (searchAnySpectral)
                             return true;
                         var spectral = new MotelyItem(item.Value).GetSpectral();
+                        Debug.Assert(clause.SpectralEnum != null, "Spectral card must provide a 'value' field, or use the Wildcard keyword: 'Any'");
                         if (spectral == clause.SpectralEnum.Value)
                             return true;
                     }
@@ -912,29 +1314,49 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
                 for (int i = 0; i < packCount; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
-                    if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                    // Soul can appear in both Arcana and Spectral packs!
+                    if (packSlots != null && packSlots.Contains(i) && 
+                        (pack.GetPackType() == MotelyBoosterPackType.Spectral || pack.GetPackType() == MotelyBoosterPackType.Arcana))
                     {
                         if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
-                        var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
-                        var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
-                        for (int j = 0; j < contents.Count; j++)
+                        if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                         {
-                            var item = contents[j];
-                            if (item.Type == MotelyItemType.Soul || item.Type == MotelyItemType.BlackHole)
+                            var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
+                            var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                            for (int j = 0; j < contents.Length; j++)
                             {
-                                if (searchAnySpectral ||
-                                    (item.Type == MotelyItemType.Soul && clause.SpectralEnum == MotelySpectralCard.Soul) ||
-                                    (item.Type == MotelyItemType.BlackHole && clause.SpectralEnum == MotelySpectralCard.BlackHole))
-                                    return true;
+                                var item = contents[j];
+                                if (item.Type == MotelyItemType.Soul || item.Type == MotelyItemType.BlackHole)
+                                {
+                                    if (searchAnySpectral ||
+                                        (item.Type == MotelyItemType.Soul && clause.SpectralEnum == MotelySpectralCard.Soul) ||
+                                        (item.Type == MotelyItemType.BlackHole && clause.SpectralEnum == MotelySpectralCard.BlackHole))
+                                        return true;
+                                }
+                                else if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                                {
+                                    if (searchAnySpectral)
+                                        return true;
+                                    var spectral = new MotelyItem(item.Value).GetSpectral();
+                                    Debug.Assert(clause.SpectralEnum != null, "Spectral card must provide a 'value' field, or use the Wildcard keyword: 'Any'");
+                                    if (spectral == clause.SpectralEnum.Value)
+                                        return true;
+                                }
                             }
-                            else if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                        }
+                        else if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                        {
+                            var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: false);
+                            var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
+                            for (int j = 0; j < contents.Length; j++)
                             {
-                                if (searchAnySpectral)
-                                    return true;
-                                var spectral = new MotelyItem(item.Value).GetSpectral();
-                                if (spectral == clause.SpectralEnum.Value)
-                                    return true;
+                                var item = contents[j];
+                                if (item.Type == MotelyItemType.Soul)
+                                {
+                                    if (searchAnySpectral || clause.SpectralEnum == MotelySpectralCard.Soul)
+                                        return true;
+                                }
                             }
                         }
                     }
@@ -964,16 +1386,15 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
         {
             if (!clause.VoucherEnum.HasValue) return false;
 
-            if (voucherState.IsVoucherActive(clause.VoucherEnum.Value))
-                return true;
-
+            // Simple: get voucher for this ante and check if it matches
             var voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
             if (voucher == clause.VoucherEnum.Value)
             {
                 voucherState.ActivateVoucher(voucher);
+                DebugLogger.Log($"[CheckVoucherSingle] Found {voucher} in ante {ante}");
                 return true;
             }
-
+            
             return false;
         }
 
@@ -986,13 +1407,14 @@ public struct OuijaJsonFilterDesc(OuijaConfig config) : IMotelySeedFilterDesc<Ou
             for (int i = 0; i < packCount; i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Standard)
+                if (packSlots != null && packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Standard)
                 {
                     if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
+                    // TODO not advancing stream correctly
                     var cardStream = ctx.CreateStandardPackCardStream(ante);
                     var contents = ctx.GetNextStandardPackContents(ref cardStream, pack.GetPackSize());
-                    for (int j = 0; j < contents.Count; j++)
+                    for (int j = 0; j < contents.Length; j++)
                         {
                             var item = contents[j];
                         if (item.TypeCategory == MotelyItemTypeCategory.PlayingCard &&

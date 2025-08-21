@@ -47,11 +47,23 @@ unsafe partial struct MotelyVectorSearchContext
     }
 
     // Note: For vectorized, this might need to return an array or vector of sets, but to match single, perhaps adapt accordingly
-    // Assuming MotelyVectorItemSet exists or adjust
-    // For now, placeholder to fix build
-    public MotelyItemVector GetNextStandardPackContents(ref MotelyVectorStandardCardStream stream, MotelyBoosterPackSize size)
+    public MotelyItemVector GetNextStandardCard(ref MotelyVectorStandardCardStream stream)
     {
-        // Implementation needed
-        return default;
+        // For now, return a basic playing card
+        // This needs proper implementation based on the PRNG stream
+        return new MotelyItemVector(Vector256.Create((int)MotelyItemType.C2));
+    }
+    
+    public MotelyVectorItemSet GetNextStandardPackContents(ref MotelyVectorStandardCardStream stream, MotelyBoosterPackSize size)
+    {
+        MotelyVectorItemSet pack = new();
+        int cardCount = MotelyBoosterPackType.Standard.GetCardCount(size);
+        
+        for (int i = 0; i < cardCount; i++)
+        {
+            pack.Append(GetNextStandardCard(ref stream));
+        }
+        
+        return pack;
     }
 }

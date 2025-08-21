@@ -12,8 +12,12 @@
       "Bash(grep:*)",
       "Bash(mv:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(find:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/mnt/x/BalatroSeedOracle"
+    ]
   }
 }

@@ -80,6 +80,17 @@ unsafe partial struct MotelyVectorSearchContext
         };
     }
 
+    public MotelyVectorJokerStream CreateBuffoonPackJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
+    {
+        // Single stream per ante (not per pack index)
+        return CreateJokerStream(
+            MotelyPrngKeys.BuffoonPackItemSource,
+            MotelyPrngKeys.BuffoonJokerEternalPerishableSource,
+            MotelyPrngKeys.BuffoonJokerRentalSource,
+            ante, flags, isCached
+        );
+    }
+
     public MotelyVectorJokerFixedRarityStream CreateSoulJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
     {
         return CreateJokerFixedRarityStream(
@@ -269,5 +280,20 @@ unsafe partial struct MotelyVectorSearchContext
     {
         Debug.Assert(sizeof(T) == 4);
         return Vector256.BitwiseOr(Vector256.Create((int)rarity), GetNextRandomInt(ref stream, 0, MotelyEnum<T>.ValueCount));
+    }
+
+    public MotelyVectorItemSet GetNextBuffoonPackContents(ref MotelyVectorJokerStream jokerStream, MotelyBoosterPackSize size)
+        => GetNextBuffoonPackContents(ref jokerStream, MotelyBoosterPackType.Buffoon.GetCardCount(size));
+
+    public MotelyVectorItemSet GetNextBuffoonPackContents(ref MotelyVectorJokerStream jokerStream, int size)
+    {
+        Debug.Assert(size <= MotelyVectorItemSet.MaxLength);
+
+        MotelyVectorItemSet pack = new();
+
+        for (int i = 0; i < size; i++)
+            pack.Append(GetNextJoker(ref jokerStream)); // TODO Duplicates?
+
+        return pack;
     }
 }

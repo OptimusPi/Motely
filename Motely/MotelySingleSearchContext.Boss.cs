@@ -128,44 +128,7 @@ ref partial struct MotelySingleSearchContext
 #endif
     public MotelyBossBlind GetBossForAnte(int ante)
     {
-        // TEMPORARY: Hardcode boss sequences for test seeds to match Immolate
-        // TODO: Fix the actual PRNG algorithm to match Immolate's implementation
-        string seed = GetSeed();
-
-        if (seed == "UNITTEST")
-        {
-            // Expected bosses from Immolate for UNITTEST seed
-            return ante switch
-            {
-                1 => MotelyBossBlind.TheWindow,
-                2 => MotelyBossBlind.TheMouth,
-                3 => MotelyBossBlind.TheHouse,
-                4 => MotelyBossBlind.TheTooth,
-                5 => MotelyBossBlind.TheFish,
-                6 => MotelyBossBlind.ThePillar,
-                7 => MotelyBossBlind.TheWater,
-                8 => MotelyBossBlind.VioletVessel,
-                _ => MotelyBossBlind.TheWindow
-            };
-        }
-        else if (seed == "ALEEB")
-        {
-            // Expected bosses from Immolate for ALEEB seed
-            return ante switch
-            {
-                1 => MotelyBossBlind.TheWindow,
-                2 => MotelyBossBlind.TheArm,
-                3 => MotelyBossBlind.TheMouth,
-                4 => MotelyBossBlind.TheWheel,
-                5 => MotelyBossBlind.TheHook,
-                6 => MotelyBossBlind.TheFish,
-                7 => MotelyBossBlind.TheGoad,
-                8 => MotelyBossBlind.VioletVessel,
-                _ => MotelyBossBlind.TheWindow
-            };
-        }
-
-        // For other seeds, use the normal algorithm
+        // Create a fresh boss stream for each call to ensure consistency
         var bossStream = CreateBossStream(1);
 
         // Get bosses for each ante up to the requested one

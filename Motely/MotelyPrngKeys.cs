@@ -43,6 +43,7 @@ public static class MotelyPrngKeys
     public const string JokerLegendary = "Joker4";
 
     public const string Tags = "Tag";
+    public const string Boss = "boss";  // Must be lowercase to match Balatro's PRNG
 
     public const string ShopItemType = "cdt";
     public const string ShopItemSource = "sho";
