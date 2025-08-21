@@ -7,19 +7,25 @@ using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public ref struct MotelyVectorSpectralStream(MotelyVectorResampleStream resampleStream, MotelyVectorPrngStream soulBlackHolePrngStream)
+public ref struct MotelyVectorSpectralStream(string resampleKey, MotelyVectorResampleStream resampleStream, MotelyVectorPrngStream soulBlackHolePrngStream)
 {
     public readonly bool IsNull => ResampleStream.IsInvalid;
+    public readonly string ResampleKey = resampleKey;
     public MotelyVectorResampleStream ResampleStream = resampleStream;
     public MotelyVectorPrngStream SoulBlackHolePrngStream = soulBlackHolePrngStream;
     public readonly bool IsSoulBlackHoleable => !SoulBlackHolePrngStream.IsInvalid;
+}
+
+ref partial struct MotelyVectorSearchContext
+{
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private static MotelyVectorSpectralStream CreateSpectralStream(string source, int ante, bool searchSpectral, bool soulBlackHoleable, bool isCached)
+    private MotelyVectorSpectralStream CreateSpectralStream(string source, int ante, bool searchSpectral, bool soulBlackHoleable, bool isCached)
     {
         return new(
+            MotelyPrngKeys.Spectral + source + ante,
             searchSpectral ? CreateResampleStream(MotelyPrngKeys.Spectral + source + ante, isCached) : MotelyVectorResampleStream.Invalid,
             soulBlackHoleable ? CreatePrngStream(MotelyPrngKeys.SpectralSoulBlackHole + MotelyPrngKeys.Spectral + ante, isCached) : MotelyVectorPrngStream.Invalid
         );
@@ -28,8 +34,11 @@ public ref struct MotelyVectorSpectralStream(MotelyVectorResampleStream resample
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public static MotelyVectorSpectralStream CreateShopSpectralStream(int ante, bool isCached = false) =>
+    public MotelyVectorSpectralStream CreateShopSpectralStream(int ante, bool isCached = false) =>
         CreateSpectralStream(MotelyPrngKeys.ShopItemSource, ante, true, false, isCached);
+    
+    public MotelyVectorSpectralStream CreateSpectralPackSpectralStream(int ante, bool soulOnly = false, bool isCached = false) =>
+        CreateSpectralStream(MotelyPrngKeys.SpectralPackItemSource, ante, !soulOnly, true, isCached);
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -45,7 +54,7 @@ public ref struct MotelyVectorSpectralStream(MotelyVectorResampleStream resample
         {
             Vector512<double> randomSoul = GetNextRandom(ref stream.SoulBlackHolePrngStream, activeMask);
             Vector512<double> maskSoul = Vector512.GreaterThan(randomSoul, Vector512.Create(0.997));
-            Vector256<int> maskSoulInt = MotelyVectorUtils.ExtendDoubleMaskToInt(maskSoul);
+            Vector256<int> maskSoulInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(maskSoul);
             items = Vector256.ConditionalSelect(maskSoulInt, Vector256.Create((int)MotelyItemType.Soul), items);
             activeMask = Vector512.AndNot(activeMask, maskSoul);
 
@@ -53,7 +62,7 @@ public ref struct MotelyVectorSpectralStream(MotelyVectorResampleStream resample
             {
                 Vector512<double> randomBH = GetNextRandom(ref stream.SoulBlackHolePrngStream, activeMask);
                 Vector512<double> maskBH = Vector512.GreaterThan(randomBH, Vector512.Create(0.997));
-                Vector256<int> maskBHInt = MotelyVectorUtils.ExtendDoubleMaskToInt(maskBH);
+                Vector256<int> maskBHInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(maskBH);
                 items = Vector256.ConditionalSelect(maskBHInt, Vector256.Create((int)MotelyItemType.BlackHole), items);
                 activeMask = Vector512.AndNot(activeMask, maskBH);
             }
@@ -64,7 +73,7 @@ public ref struct MotelyVectorSpectralStream(MotelyVectorResampleStream resample
 
         Vector256<int> spectralEnums = GetNextRandomInt(ref stream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelySpectralCard>.ValueCount, activeMask);
         Vector256<int> spectralItems = Vector256.BitwiseOr(spectralEnums, Vector256.Create((int)MotelyItemTypeCategory.SpectralCard));
-        items = Vector256.ConditionalSelect(MotelyVectorUtils.ExtendDoubleMaskToInt(activeMask), spectralItems, items);
+        items = Vector256.ConditionalSelect(MotelyVectorUtils.ShrinkDoubleMaskToInt(activeMask), spectralItems, items);
 
         int resampleCount = 0;
         while (true)
@@ -90,9 +99,24 @@ public ref struct MotelyVectorSpectralStream(MotelyVectorResampleStream resample
     // Helper method for filtering spectral cards in vector context
     public VectorMask FilterSpectralCard(int ante, MotelySpectralCard targetSpectral, string source = MotelyPrngKeys.ShopItemSource)
     {
-        var spectralStream = CreateSpectralStreamCached(ante, source);
+        var spectralStream = CreateSpectralStream(source, ante, true, false, true);
         var spectralChoices = MotelyEnum<MotelySpectralCard>.Values;
-        var spectrals = GetNextRandomElement(ref spectralStream, spectralChoices);
+        var spectrals = GetNextRandomElement(ref spectralStream.ResampleStream.InitialPrngStream, spectralChoices);
         return VectorEnum256.Equals(spectrals, targetSpectral);
+    }
+    
+    public MotelyVectorItemSet GetNextSpectralPackContents(ref MotelyVectorSpectralStream spectralStream, MotelyBoosterPackSize size)
+        => GetNextSpectralPackContents(ref spectralStream, MotelyBoosterPackType.Spectral.GetCardCount(size));
+
+    public MotelyVectorItemSet GetNextSpectralPackContents(ref MotelyVectorSpectralStream spectralStream, int size)
+    {
+        Debug.Assert(size <= MotelyVectorItemSet.MaxLength);
+
+        MotelyVectorItemSet pack = new();
+
+        for (int i = 0; i < size; i++)
+            pack.Append(GetNextSpectral(ref spectralStream));
+
+        return pack;
     }
 }

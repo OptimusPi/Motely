@@ -17,10 +17,10 @@ public ref struct MotelyVectorShopItemStream
     public Vector512<double> SpectralRate;
     public Vector512<double> TotalRate;
     
-    public readonly bool DoesProvideJokers => !JokerStream.IsInvalid;
-    public readonly bool DoesProvideTarots => !TarotStream.IsInvalid;
-    public readonly bool DoesProvidePlanets => !PlanetStream.IsInvalid;
-    public readonly bool DoesProvideSpectrals => !SpectralStream.IsInvalid;
+    public readonly bool DoesProvideJokers => !JokerStream.IsNull;
+    public readonly bool DoesProvideTarots => !TarotStream.IsNull;
+    public readonly bool DoesProvidePlanets => !PlanetStream.IsNull;
+    public readonly bool DoesProvideSpectrals => !SpectralStream.IsNull;
 }
 
 ref partial struct MotelyVectorSearchContext
@@ -51,7 +51,7 @@ ref partial struct MotelyVectorSearchContext
             PlanetStream = flags.HasFlag(MotelyShopStreamFlags.ExcludePlanets) ?
                 default : CreateShopPlanetStream(ante, isCached),
             SpectralStream = flags.HasFlag(MotelyShopStreamFlags.ExcludeSpectrals) || Deck != MotelyDeck.Ghost ?
-                default : MotelyVectorSearchContext.CreateShopSpectralStream(ante, isCached),
+                default : CreateShopSpectralStream(ante, isCached),
                 
             TarotRate = Vector512.Create(4.0),
             PlanetRate = Vector512.Create(4.0),
@@ -130,7 +130,7 @@ ref partial struct MotelyVectorSearchContext
         
         // Otherwise it's a spectral
         MotelyItemVector spectralResult = stream.DoesProvideSpectrals ?
-            MotelyVectorSearchContext.GetNextSpectral(ref stream.SpectralStream) :
+            GetNextSpectral(ref stream.SpectralStream) :
             new MotelyItemVector(new MotelyItem(MotelyItemType.SpectralExcludedByStream));
             
         // Select the appropriate result based on item type
