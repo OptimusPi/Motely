@@ -7,8 +7,8 @@ using System.IO;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Motely.Filters
-{
+namespace Motely.Filters;
+
     /// <summary>
     /// Wildcard types for joker filtering
     /// </summary>
@@ -70,19 +70,6 @@ namespace Motely.Filters
         
             // Sources configuration
             public SourcesConfig? Sources { get; set; }
-            
-            // Cached slot membership bitmasks (built in PostProcess). Up to 32 slots supported.
-            // Bit i set => slot i included.
-            internal uint PackSlotMask; // bitmask for requested pack slots
-            internal uint ShopSlotMask; // bitmask for requested shop slots
-            public bool HasPackSlot(int slot) => slot >= 0 && slot < 32 && ((PackSlotMask >> slot) & 1u) != 0u;
-            public bool HasShopSlot(int slot) => slot >= 0 && slot < 32 && ((ShopSlotMask >> slot) & 1u) != 0u;
-
-            // Precomputed metadata flags (populated in PostProcess after sources merged)
-            internal int MaxPackSlot = -1; // highest referenced pack slot (or -1 if none)
-            internal int MaxShopSlot = -1; // highest referenced shop slot (or -1 if none)
-            internal bool IsWildcardAnyJoker; // true if wildcard and AnyJoker
-            internal bool IsSimpleNegativeAnyPackOnly; // pattern: joker, AnyJoker, Edition specified, only packSlots, no shopSlots, Min null/<=1
             
             // Direct properties for backwards compatibility and simpler JSON
             [JsonPropertyName("packSlots")]
@@ -611,9 +598,6 @@ namespace Motely.Filters
                 {
                     item.Sources = GetDefaultSources(item.Type);
                 }
-                
-                // Override sources for special items
-                OverrideSpecialItemSources(item);
             }
 
             // Second pass: compute per-item metadata (after overrides & masks) 
@@ -625,9 +609,6 @@ namespace Motely.Filters
                     item.MaxShopSlot = item.Sources.ShopSlots.Max();
 
                 item.IsWildcardAnyJoker = item.ItemTypeEnum == MotelyFilterItemType.Joker && item.WildcardEnum == JokerWildcard.AnyJoker;
-                bool onlyPacks = (item.Sources?.PackSlots?.Length ?? 0) > 0 && (item.Sources?.ShopSlots?.Length ?? 0) == 0;
-                bool simpleMin = !item.Min.HasValue || item.Min.Value <= 1;
-                item.IsSimpleNegativeAnyPackOnly = item.IsWildcardAnyJoker && onlyPacks && simpleMin && item.EditionEnum.HasValue;
             }
         }
     
@@ -656,55 +637,6 @@ namespace Motely.Filters
             };
         }
         
-        // Override sources for special items that can't appear in shops
-        private void OverrideSpecialItemSources(FilterItem item)
-        {
-            // Soul and BlackHole special cards (0.3% chance in packs):
-            // - Soul: Tarot in Arcana packs (gives legendary joker), Spectral in Spectral packs
-            // - BlackHole: Planet in Celestial packs (upgrades 3 planets), Spectral in Spectral packs
-            // They NEVER appear in shops - only in packs!
-            if (item.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
-            {
-                if (item.SpectralEnum == MotelySpectralCard.Soul || 
-                    item.SpectralEnum == MotelySpectralCard.BlackHole)
-                {
-                    // Only override ShopSlots (they can NEVER appear in shops)
-                    // Keep user's packSlots and requireMega settings!
-                    if (item.Sources != null)
-                    {
-                        item.Sources.ShopSlots = Array.Empty<int>(); // Cannot appear in shops
-                        item.Sources.Tags = false; // Can't come from tags either
-                    }
-                    else
-                    {
-                        item.Sources = new SourcesConfig
-                        {
-                            ShopSlots = Array.Empty<int>(),
-                            PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
-                            Tags = false
-                        };
-                    }
-                }
-            }
-
-            // Build cached bitmasks for fast slot membership tests (tolerate duplicates)
-            // NOTE: Previously this executed ONLY for SpectralCard due to scoping bug; now applies to ALL item types.
-            if (item.Sources?.PackSlots != null)
-            {
-                uint packMask = 0;
-                foreach (var s in item.Sources.PackSlots)
-                    if (s >= 0 && s < 32) packMask |= (1u << s);
-                item.PackSlotMask = packMask;
-            }
-            if (item.Sources?.ShopSlots != null)
-            {
-                uint shopMask = 0;
-                foreach (var s in item.Sources.ShopSlots)
-                    if (s >= 0 && s < 32) shopMask |= (1u << s);
-                item.ShopSlotMask = shopMask;
-            }
-        }
-    
         /// <summary>
         /// Convert to JSON string
         /// </summary>
@@ -719,7 +651,3 @@ namespace Motely.Filters
             return JsonSerializer.Serialize(this, options);
         }
     }
-
-
-    // Strict mode: legacy sources formats (like string arrays) are not supported.
-}
