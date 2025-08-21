@@ -255,7 +255,7 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
             }
             
             // Note: Jokers, SoulJokers, PlayingCards need individual processing for state management
-            // They will be handled in SearchIndividualSeeds
+            // They will be handled in SearchIndividualSeeds (NOT in PreFilter)
             
             return mask;
         }
