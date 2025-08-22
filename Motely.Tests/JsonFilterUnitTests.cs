@@ -32,12 +32,12 @@
             
 //             // Should not throw
 //             Assert.True(File.Exists(filterPath), $"Test filter file not found: {filterPath}");
-//             var config = OuijaConfig.LoadFromJson(filterPath);
+//             var config = MotelyJsonConfig.LoadFromJson(filterPath);
 //             Assert.NotNull(config);
             
 //             // Create and run the filter - should not throw
-//             var filterDesc = new OuijaJsonFilterDesc(config);
-//             var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
+//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
+//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB", "UNITTEST" })
@@ -54,8 +54,8 @@
 //         public void TestJsonFilter_JokerShopSlot_RunsWithoutError()
 //         {
 //             // Test that we can create and run a filter looking for Rocket
-//             var config = new OuijaConfig();
-//             var rocketItem = new OuijaConfig.FilterItem {
+//             var config = new MotelyJsonConfig();
+//             var rocketItem = new MotelyJsonConfig.FilterItem {
 //                 Type = "Joker",
 //                 Value = "Rocket",
 //                 Antes = new[] { 1 },
@@ -64,10 +64,10 @@
 //             rocketItem.InitializeParsedEnums();
 //             config.Must.Add(rocketItem);
             
-//             var filterDesc = new OuijaJsonFilterDesc(config);
+//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
             
 //             // Run the filter against ALEEB seed
-//             var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
+//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB" })
@@ -86,8 +86,8 @@
 //         public void TestJsonFilter_TarotCardShop_RunsWithoutError()
 //         {
 //             // Test that we can create and run a filter looking for The Empress
-//             var config = new OuijaConfig();
-//             var empressItem = new OuijaConfig.FilterItem {
+//             var config = new MotelyJsonConfig();
+//             var empressItem = new MotelyJsonConfig.FilterItem {
 //                 Type = "TarotCard",
 //                 Value = "TheEmpress",
 //                 Antes = new[] { 1 },
@@ -96,10 +96,10 @@
 //             empressItem.InitializeParsedEnums();
 //             config.Must.Add(empressItem);
             
-//             var filterDesc = new OuijaJsonFilterDesc(config);
+//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
             
 //             // Run the filter against ALEEB seed
-//             var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
+//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB" })
@@ -118,8 +118,8 @@
 //         public void TestJsonFilter_VerifyListSearchRunsWithoutError()
 //         {
 //             // Simple test to verify we can run a basic filter against known seeds
-//             var config = new OuijaConfig();
-//             var tradingCardItem = new OuijaConfig.FilterItem {
+//             var config = new MotelyJsonConfig();
+//             var tradingCardItem = new MotelyJsonConfig.FilterItem {
 //                 Type = "Joker",
 //                 Value = "TradingCard",
 //                 Antes = new[] { 1 },
@@ -128,10 +128,10 @@
 //             tradingCardItem.InitializeParsedEnums();
 //             config.Must.Add(tradingCardItem);
             
-//             var filterDesc = new OuijaJsonFilterDesc(config);
+//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
             
 //             // Run against both test seeds
-//             var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
+//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB", "UNITTEST" })

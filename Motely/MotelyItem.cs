@@ -115,6 +115,7 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
         return Value == other.Value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool Equals(object? obj)
     {
         return obj is MotelyItem item && Equals(item);
