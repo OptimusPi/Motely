@@ -29,13 +29,14 @@
     <EnableFMA>true</EnableFMA>
     
     <!-- Additional performance settings -->
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <PublishTrimmed>false</PublishTrimmed>
+    <DebugSymbols>false</DebugSymbols>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishReadyToRun>true</PublishReadyToRun>
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
     <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+    <EnableDynamicPGO>true</EnableDynamicPGO>
+
+
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />

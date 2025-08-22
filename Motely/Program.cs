@@ -109,9 +109,16 @@ namespace Motely
                 "Enable cheap lookahead prefilter (soul legendary / joker identity first-pass)",
                 CommandOptionType.NoValue);
 
+            var motelyOption = app.Option<string>(
+                "--motely <FILTER>",
+                "Run built-in Motely filter (PerkeoObservatory, SoulTest, etc.)",
+                CommandOptionType.SingleValue);
+            motelyOption.DefaultValue = string.Empty;
+
             app.OnExecute(() =>
             {
                 var analyzeSeed = analyzeOption.Value();
+                var motelyFilter = motelyOption.Value();
                 var deckName = deckOption.Value();
                 var stakeName = stakeOption.Value();
                 
@@ -137,10 +144,12 @@ namespace Motely
                     return 0;
                 }
                 
+                
                 Console.WriteLine("🔍 Starting Motely Ouija Search");
                 var configName = configOption.Value()!;
                 var startBatch = startBatchOption.ParsedValue;
                 var endBatch = endBatchOption.ParsedValue;
+                
                 var threads = threadsOption.ParsedValue;
                 var batchSize = batchSizeOption.ParsedValue;
                 var enableDebug = debugOption.HasValue();
@@ -149,6 +158,18 @@ namespace Motely
                 bool autoCutoff = cutoffValue == 0;  // 0 means auto-cutoff
                 int cutoff = autoCutoff ? 1 : cutoffValue;  // Start at 1 for auto-cutoff
                 
+                // Validate batch ranges based on search space
+                ulong maxBatches = (ulong)Math.Pow(35, 8 - batchSize); // 35^(8-batchSize)
+                if (endBatch > maxBatches)
+                {
+                    Console.WriteLine($"❌ endBatch too large: {endBatch} (max for batchSize {batchSize}: {maxBatches:N0})");
+                    return 1;
+                }
+                if (startBatch >= endBatch && endBatch != 0)
+                {
+                    Console.WriteLine($"❌ startBatch ({startBatch}) must be less than endBatch ({endBatch})");
+                    return 1;
+                }
                 if (enableDebug)
                 {
                     Console.WriteLine($"[DEBUG] Cutoff string: '{cutoffStr}'");
@@ -176,6 +197,12 @@ namespace Motely
                     return 1;
                 }
 
+                // Check if built-in Motely filter mode
+                if (!string.IsNullOrEmpty(motelyFilter))
+                {
+                    return RunMotelyFilter(motelyFilter, threads, batchSize, enableDebug, quiet, nofancy, seedInput, startBatch, endBatch);
+                }
+
                 // Execute the search (this was previously commented out which made the app a no-op)
                 RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
                     enableDebug, quiet, wordlist, keyword, nofancy, seedInput);
@@ -183,6 +210,53 @@ namespace Motely
             });
 
             return app.Execute(args);
+        }
+        
+        private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool quiet, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch)
+        {
+            DebugLogger.IsEnabled = enableDebug;
+            FancyConsole.IsEnabled = !nofancy;
+            
+            string normalizedFilterName = filterName.ToLower().Trim();
+            
+            IMotelySearch search;
+            if (normalizedFilterName == "perkeoobservatory")
+            {
+                var settings = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchSize);
+                    
+                if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
+                if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
+                    
+                search = !string.IsNullOrEmpty(specificSeed) 
+                    ? settings.WithListSearch([specificSeed]).Start()
+                    : settings.WithSequentialSearch().Start();
+            }
+            else if (normalizedFilterName == "soultest")
+            {
+                var settings = new MotelySearchSettings<SoulTestFilterDesc.SoulTestFilter>(new SoulTestFilterDesc())
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchSize);
+                    
+                if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
+                if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
+                    
+                search = !string.IsNullOrEmpty(specificSeed)
+                    ? settings.WithListSearch([specificSeed]).Start()
+                    : settings.WithSequentialSearch().Start();
+            }
+            else
+            {
+                throw new ArgumentException($"Unknown Motely filter: {filterName}");
+            }
+            
+            Console.WriteLine($"🔍 Running Motely filter: {filterName}" + 
+                (!string.IsNullOrEmpty(specificSeed) ? $" on seed: {specificSeed}" : ""));
+
+            search.Start();
+            search.AwaitCompletion();
+            return 0;
         }
 
         public static void RunOuijaSearch(string configPath, ulong startBatch, ulong endBatch, int threads,

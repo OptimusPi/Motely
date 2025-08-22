@@ -87,9 +87,7 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
                 }
 
                 // Packs - Get the actual shop packs (not tag-generated ones)
-                // Balatro generates 2 base shop packs, then tags can add more up to 4 in ante 1 or 6 in other antes
                 var packStream = ctx.CreateBoosterPackStream(ante);
-
                 int maxPacks = ante == 1 ? 4 : 6;
                 MotelyBoosterPackAnalysis[] packs = new MotelyBoosterPackAnalysis[maxPacks];
 
@@ -117,18 +115,6 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
 
             return false; // Always return false since we're just analyzing
         }
-
-        private static bool ShouldActivateVoucher(MotelyVoucher voucher)
-        {
-            // Match Immolate's banned vouchers list
-            // Magic Trick should be activated (it upgrades to Illusion)
-            return voucher != MotelyVoucher.Illusion &&
-                   voucher != MotelyVoucher.TarotTycoon &&
-                   voucher != MotelyVoucher.TarotMerchant &&
-                   voucher != MotelyVoucher.PlanetTycoon &&
-                   voucher != MotelyVoucher.PlanetMerchant;
-        }
-
 
         private static MotelySingleItemSet GetPackContents(
             ref MotelySingleSearchContext ctx, int ante, MotelyBoosterPack pack, ref AnteAnalysisState state

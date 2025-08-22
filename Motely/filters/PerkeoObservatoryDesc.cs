@@ -58,7 +58,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
                 if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                 {
-                    spectralStream = searchContext.CreateSpectralPackSpectralStream(1, false);
+                    spectralStream = searchContext.CreateSpectralPackSpectralStream(1, true);
 
                     if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                     {
@@ -72,8 +72,8 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                 bool tarotStreamInit = false, spectralStreamInit = false;
                 soulStreamInit = false;
 
-                for (int i = 0; i < 3; i++)
-                {
+                // for (int i = 0; i < 3; i++)
+                // {
                     pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
 
                     if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
@@ -105,7 +105,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                             return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
                         }
                     }
-                }
+                //}
 
                 return false;
 

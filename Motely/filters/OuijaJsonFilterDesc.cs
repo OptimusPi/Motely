@@ -19,14 +19,19 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
     
     // Auto cutoff state
     private static int _learnedCutoff = 1;
+    
+    // Results tracking for rarity calculation
+    private static long _resultsFound = 0;
+    public static long ResultsFound => _resultsFound;
 
     public readonly string Name => _config.Name ?? "OuijaJsonFilter";
     public readonly string Description => _config.Description ?? "JSON-configured filter";
 
     public OuijaJsonFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Reset cutoff for new search
+        // Reset for new search
         _learnedCutoff = Cutoff;
+        _resultsFound = 0;
         
         return new OuijaJsonFilter(_config, Cutoff, AutoCutoff);
     }
@@ -56,7 +61,13 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
             // PreFilter: Aggressively filter out seeds using vectorized operations
             var voucherState = new MotelyVectorRunStateVoucher();
             var mask = PreFilter(config, ref searchContext, ref voucherState);
-            if (mask.IsAllFalse()) return mask;
+            if (mask.IsAllFalse()) 
+            {
+                DebugLogger.Log("[PreFilter] All seeds filtered out by PreFilter");
+                return mask;
+            }
+            
+            DebugLogger.Log("[PreFilter] Seeds passed PreFilter, proceeding to individual processing");
             
             // SearchIndividualSeeds: Handle complex state and scoring for remaining seeds
             return searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
@@ -78,8 +89,18 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
                 
                 foreach (var clause in remainingMustClauses.OrderBy(c => c.EffectiveAntes?.FirstOrDefault() ?? 0))
                 {
-                    if (!CheckSingleClause(ref singleCtx, clause, ref runState))
+                    DebugLogger.Log($"[Must] Checking {clause.ItemTypeEnum} {clause.Value} in antes [{string.Join(",", clause.EffectiveAntes ?? new int[0])}]");
+                    DebugLogger.Log($"[Must] Showman active: {runState.ShowmanActive}, Owned jokers: {runState.OwnedJokers.Length}");
+                    
+                    bool clauseResult = CheckSingleClause(ref singleCtx, clause, ref runState);
+                    
+                    DebugLogger.Log($"[Must] Result: {clauseResult} for {clause.ItemTypeEnum} {clause.Value}");
+                    
+                    if (!clauseResult)
+                    {
+                        DebugLogger.Log($"[Must] FAILED! Seed filtered out because {clause.ItemTypeEnum} {clause.Value} not found");
                         return false; // Seed doesn't meet requirements
+                    }
                 }
                 
                 // Check all MUST NOT clauses
@@ -127,22 +148,24 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
                             row += $",{score}";
                         }
                         Console.WriteLine(row);
+                        
+                        // Track results for rarity calculation
+                        Interlocked.Increment(ref _resultsFound);
                     }
                 }
                 
-                // Return true to indicate seed matches (needed for proper termination)
-                return true;
+                // Return false to suppress plain seed spam (we handle our own CSV output)
+                return false;
             });
         }
         
         private static int GetCurrentCutoff(int currentScore)
         {
-            // Auto cutoff: Start at 1, raise to highest score found
+            // Thread-safe auto cutoff: Start at 1, raise to highest score found
             if (currentScore > _learnedCutoff)
             {
-                var oldCutoff = _learnedCutoff;
-                _learnedCutoff = currentScore;
-                DebugLogger.Log($"[AutoCutoff] Raised cutoff from {oldCutoff} to {_learnedCutoff}");
+                var oldCutoff = Interlocked.Exchange(ref _learnedCutoff, currentScore);
+                DebugLogger.Log($"[AutoCutoff] Raised cutoff from {oldCutoff} to {currentScore}");
             }
             
             return _learnedCutoff;
@@ -223,75 +246,111 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
             }
             
             // Step 2: Vouchers (build state for later scoring)
-            mask = FilterVouchers(config, ref searchContext, mask, ref voucherState);
-            if (mask.IsAllFalse()) return mask;
+            var voucherClauses = config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher) ?? Enumerable.Empty<OuijaConfig.FilterItem>();
+            mask = FilterVouchers(voucherClauses, ref searchContext, mask, ref voucherState);
+            if (mask.IsAllFalse()) 
+            {
+                DebugLogger.Log("[PreFilter] Filtered out by voucher requirements");
+                return mask;
+            }
             
             // Step 3: Tarots (vectorized)
-            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard))
+            foreach (var clause in config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard) ?? [])
             {
                 mask &= CheckTarot(ref searchContext, clause);
                 if (mask.IsAllFalse()) return mask;
             }
             
             // Step 4: Planets (vectorized)
-            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard))
+            foreach (var clause in config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard) ?? [])
             {
                 mask &= CheckPlanet(ref searchContext, clause);
                 if (mask.IsAllFalse()) return mask;
             }
             
             // Step 5: Spectrals (vectorized)
-            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard))
+            foreach (var clause in config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard) ?? [])
             {
                 mask &= CheckSpectral(ref searchContext, clause);
                 if (mask.IsAllFalse()) return mask;
             }
             
             // Step 6: Bosses (vectorized)
-            foreach (var clause in config.Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Boss))
+            foreach (var clause in config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Boss) ?? [])
             {
                 mask &= CheckBoss(ref searchContext, clause);
                 if (mask.IsAllFalse()) return mask;
             }
+
+            // TODO: Jokers ARE vectorized...
             
-            // Note: Jokers, SoulJokers, PlayingCards need individual processing for state management
-            // They will be handled in SearchIndividualSeeds (NOT in PreFilter)
             
             return mask;
         }
         
-        private static VectorMask FilterVouchers(OuijaConfig config, ref MotelyVectorSearchContext searchContext, VectorMask inputMask, ref MotelyVectorRunStateVoucher voucherState)
+        private static VectorMask FilterVouchers(IEnumerable<OuijaConfig.FilterItem> clausesList, ref MotelyVectorSearchContext searchContext, VectorMask inputMask, ref MotelyVectorRunStateVoucher voucherState)
         {
             var mask = inputMask;
             
             // Find max ante needed
             int maxAnte = 0;
-            var voucherClauses = config.Must!.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher);
-            foreach (var clause in voucherClauses)
+            foreach (var clause in clausesList)
             {
                 if (clause.EffectiveAntes != null)
                     maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
             }
             
-            // Loop ante 1 to N: Activate EVERY voucher found
+            // Create clause result tracking
+            var clauseResults = new Dictionary<OuijaConfig.FilterItem, VectorMask>();
+            foreach (var clause in clausesList)
+            {
+                clauseResults[clause] = VectorMask.NoBitsSet; // Start with no matches
+            }
+            
+            // Loop ante 1-N: Build state and score simultaneously
             for (int ante = 1; ante <= maxAnte; ante++)
             {
                 var vouchers = searchContext.GetAnteFirstVoucher(ante, voucherState);
                 
-                // Activate this voucher for ALL seeds (doesn't matter which have 0 bits)
-                voucherState.ActivateVoucher(vouchers);
+                DebugLogger.Log($"[FilterVouchers] Ante {ante}: Found vouchers {vouchers}");
                 
-                // Check each voucher clause to see if this ante satisfies it
-                foreach (var clause in voucherClauses)
+                // Score: Check each clause to see if this ante satisfies it
+                foreach (var clause in clausesList)
                 {
                     if (clause.EffectiveAntes?.Contains(ante) == true)
                     {
-                        var voucherMatches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
-                        mask &= voucherMatches;
+                        VectorMask matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
+                        clauseResults[clause] |= matches; // Accumulate OR result
+                        
+                        DebugLogger.Log($"[FilterVouchers] Ante {ante}: Checking {clause.VoucherEnum.Value}, match: {(matches.IsPartiallyTrue() ? "YES" : "NO")}");
+                        
+                        // Only activate vouchers that we found and are looking for
+                        if (matches.IsPartiallyTrue())
+                        {
+                            voucherState.ActivateVoucher(clause.VoucherEnum.Value);
+                            DebugLogger.Log($"[FilterVouchers] Activated {clause.VoucherEnum.Value} in state");
+                            
+                            // Special case: Hieroglyph changes the NEXT ante's voucher
+                            if (clause.VoucherEnum.Value == MotelyVoucher.Hieroglyph)
+                            {
+                                DebugLogger.Log($"[FilterVouchers] Hieroglyph activated in ante {ante}, next ante will have upgraded voucher");
+                            }
+                        }
                     }
                 }
+            }
+            
+            // Final check: All clauses must have at least one match
+            foreach (var clause in clausesList)
+            {
+                mask &= clauseResults[clause];
+                if (mask.IsAllFalse())
+                {
+                    DebugLogger.Log($"[FilterVouchers] FAILED: {clause.VoucherEnum.Value} not found in any specified antes");
+                    return mask;
+                }
                 
-                if (mask.IsAllFalse()) return mask;
+                DebugLogger.Log($"[FilterVouchers] PASSED: {clause.VoucherEnum.Value} found");
             }
             
             return mask;
@@ -472,18 +531,20 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
         {
             if (!clause.TarotEnum.HasValue) return VectorMask.AllBitsSet;
 
-            var mask = VectorMask.AllBitsSet;
+            // OR logic across antes - tarot can be found in ANY of the specified antes
+            var clauseMask = VectorMask.NoBitsSet;
+            
             foreach (var ante in clause.EffectiveAntes)
             {
                 bool found = CheckShopForTarot(ref ctx, clause, ante) || CheckPacksForTarot(ref ctx, clause, ante);
-                if (!found)
+                if (found)
                 {
-                    mask = VectorMask.NoBitsSet;
-                    break;
+                    clauseMask = VectorMask.AllBitsSet; // Found in this ante
+                    break; // OR logic - found in any ante is enough
                 }
             }
 
-            return mask;
+            return clauseMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -491,35 +552,39 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
         {
             if (!clause.PlanetEnum.HasValue) return VectorMask.AllBitsSet;
 
-            var mask = VectorMask.AllBitsSet;
+            // OR logic across antes - planet can be found in ANY of the specified antes
+            var clauseMask = VectorMask.NoBitsSet;
+            
             foreach (var ante in clause.EffectiveAntes)
             {
                 bool found = CheckShopForPlanet(ref ctx, clause, ante) || CheckPacksForPlanet(ref ctx, clause, ante);
-                if (!found)
+                if (found)
                 {
-                    mask = VectorMask.NoBitsSet;
-                    break;
+                    clauseMask = VectorMask.AllBitsSet; // Found in this ante
+                    break; // OR logic - found in any ante is enough
                 }
             }
 
-            return mask;
+            return clauseMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static VectorMask CheckSpectral(ref MotelyVectorSearchContext ctx, OuijaConfig.FilterItem clause)
         {
-            var mask = VectorMask.AllBitsSet;
+            // OR logic across antes - spectral can be found in ANY of the specified antes
+            var clauseMask = VectorMask.NoBitsSet;
+            
             foreach (var ante in clause.EffectiveAntes)
             {
                 bool found = CheckShopForSpectral(ref ctx, clause, ante) || CheckPacksForSpectral(ref ctx, clause, ante);
-                if (!found)
+                if (found)
                 {
-                    mask = VectorMask.NoBitsSet;
-                    break;
+                    clauseMask = VectorMask.AllBitsSet; // Found in this ante
+                    break; // OR logic - found in any ante is enough
                 }
             }
 
-            return mask;
+            return clauseMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -527,7 +592,9 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
         {
             if (!clause.TagEnum.HasValue) return VectorMask.AllBitsSet;
 
-            var mask = VectorMask.AllBitsSet;
+            // OR logic across antes - tag can be found in ANY of the specified antes
+            var clauseMask = VectorMask.NoBitsSet;
+            
             foreach (var ante in clause.EffectiveAntes)
             {
                 var tagStream = ctx.CreateTagStream(ante);
@@ -541,11 +608,10 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
                     _ => VectorEnum256.Equals(smallTag, clause.TagEnum.Value) | VectorEnum256.Equals(bigTag, clause.TagEnum.Value)
                 };
 
-                mask &= tagMatches;
-                if (mask.IsAllFalse()) break;
+                clauseMask |= tagMatches; // OR logic
             }
 
-            return mask;
+            return clauseMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -597,13 +663,24 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
         {
             if (!clause.VoucherEnum.HasValue) return VectorMask.AllBitsSet;
 
-            var mask = VectorMask.AllBitsSet;
+            // OR logic across antes like PerkeoObservatoryDesc pattern
+            var clauseMask = VectorMask.NoBitsSet;
+            
             foreach (var ante in clause.EffectiveAntes)
             {
-                mask &= CheckVoucher(ref ctx, clause, ante, ref voucherState);
-                if (mask.IsAllFalse()) break;
+                VectorEnum256<MotelyVoucher> vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
+                DebugLogger.Log($"[CheckVoucherVector] Ante {ante}: Found vouchers {vouchers}, looking for {clause.VoucherEnum.Value}");
+                
+                VectorMask voucherMatches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
+                clauseMask |= voucherMatches; // OR logic like CheckTag
+                
+                voucherState.ActivateVoucher(clause.VoucherEnum.Value);
+                DebugLogger.Log($"[CheckVoucherVector] Activated {clause.VoucherEnum.Value} in state for upgrades");
+                
             }
-            return mask;
+            
+            DebugLogger.Log($"[CheckVoucherVector] Final result for {clause.VoucherEnum.Value}: {(clauseMask.IsAllFalse() ? "NO MATCH" : "MATCH")}");
+            return clauseMask;
         }
 
         private static int CountOccurrences(ref MotelySingleSearchContext ctx, OuijaConfig.FilterItem clause, ref MotelyRunState voucherState)
@@ -1110,39 +1187,12 @@ public struct OuijaJsonFilterDesc(bool PrefilterEnabled, OuijaConfig config, Act
                             soulStreamInit = true;
                         }
                         
-                        // Get the soul joker, re-rolling if duplicate (unless Showman is active)
-                        MotelyItem soulJoker;
-                        int rerollCount = 0;
-                        const int maxRerolls = 100; // Prevent infinite loop
-                        
-                        do
-                        {
-                            soulJoker = ctx.GetNextJoker(ref soulStream);
-                            
-                            // Check if we can obtain this joker (not duplicate or Showman active)
-                            if (runState.CanObtainJoker(soulJoker))
-                            {
-                                break;
-                            }
-                            
-                            if (DebugLogger.IsEnabled)
-                            {
-                                DebugLogger.Log($"[SoulJoker] Re-roll #{rerollCount + 1}: {soulJoker.Type} is already owned, re-rolling...");
-                            }
-                            
-                            rerollCount++;
-                        } while (rerollCount < maxRerolls);
+                        // Trust Motely to handle duplicate prevention automatically
+                        var soulJoker = ctx.GetNextJoker(ref soulStream);
                         
                         if (DebugLogger.IsEnabled)
                         {
-                            if (rerollCount > 0)
-                            {
-                                DebugLogger.Log($"[SoulJoker] After {rerollCount} re-rolls, final joker = {soulJoker.Type}, Edition = {soulJoker.Edition}");
-                            }
-                            else
-                            {
-                                DebugLogger.Log($"[SoulJoker] Found Soul! Joker = {soulJoker.Type}, Edition = {soulJoker.Edition}");
-                            }
+                            DebugLogger.Log($"[SoulJoker] Found Soul! Joker = {soulJoker.Type}, Edition = {soulJoker.Edition}");
                         }
                         
                         var matches = !clause.JokerEnum.HasValue || soulJoker.Type == new MotelyItem(clause.JokerEnum.Value).Type;
