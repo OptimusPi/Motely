@@ -4,6 +4,7 @@ using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using Motely.Filters;
 
 namespace Motely;
 
@@ -234,8 +235,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     // Internal counters stored as long for Interlocked; exposed as ulong.
     private ulong _batchIndex;
     public ulong BatchIndex => _batchIndex;
-    private ulong _completedBatchCount;
-    public ulong CompletedBatchCount => _completedBatchCount;
+    private ulong _completedBatchIndex;
+    public ulong CompletedBatchCount => _completedBatchIndex;
 
     private double _lastReportMS;
 
@@ -274,7 +275,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     _startBatchIndex = settings.StartBatchIndex;
     _endBatchIndex = settings.EndBatchIndex;
     _batchIndex = _startBatchIndex; // first Interlocked.Increment claims start+1
-    _completedBatchCount = (ulong)_startBatchIndex;
+    _completedBatchIndex = (ulong)_startBatchIndex;
 
         int[] pseudohashKeyLengths = [.. filterCreationContext.CachedPseudohashKeyLengths];
         _pseudoHashKeyLengthCount = pseudohashKeyLengths.Length;
@@ -353,6 +354,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     private void PrintReport()
     {
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
@@ -385,12 +387,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             _lastReportMS = elapsedMS;
         }
 
-    ulong thisCompletedCount = (ulong)_completedBatchCount - _startBatchIndex;
+        ulong thisCompletedCount = _completedBatchIndex - _startBatchIndex;
 
         // Determine effective exclusive end of range (handles configured end batch and thread max)
-        ulong threadMax = _threads[0].MaxBatch;
-        ulong configuredEnd = _endBatchIndex != 0 ? _endBatchIndex : threadMax; // 0 means 'no explicit end'
-        ulong effectiveMaxExclusive = Math.Min(configuredEnd, threadMax);
+        ulong effectiveMaxExclusive = _threads[0].MaxBatch;
         if (effectiveMaxExclusive <= _startBatchIndex) // fallback guard
             effectiveMaxExclusive = _startBatchIndex + 1;
 
@@ -405,9 +405,9 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         double timeLeft = totalTimeEstimate - elapsedMS;
 
         string timeLeftFormatted;
-        bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
+        bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 1;
         // Clamp to max TimeSpan if too large - for very slow searches
-        if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
+        if (invalid)
         {
             timeLeftFormatted = "--:--:--";
         }
@@ -425,7 +425,40 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             seedsPerMS = clampedCompleted * (double)_threads[0].SeedsPerBatch / elapsedMS;
 
         double pct = Math.Clamp(totalPortionFinished * 100, 0, 100);
-    FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+
+        // Calculate rarity with appropriate units if we have results
+        string rarityStr = "";
+        var resultsFound = OuijaJsonFilterDesc.ResultsFound;
+        if (resultsFound > 0)
+        {
+            ulong totalSeedsSearched = clampedCompleted * (ulong)_threads[0].SeedsPerBatch;
+            double rarityPercent = ((double)resultsFound / totalSeedsSearched) * 100.0;
+
+            if (rarityPercent >= 1.0)
+            {
+                rarityStr = $" | {rarityPercent:F8}%    (⚠️  SPAM)";
+            }
+            else if (rarityPercent >= 0.1)
+            {
+                double perMille = rarityPercent * 10.0;
+                rarityStr = $" | {perMille:F8}‰    (⚠️  JUNK)";
+            }
+            else
+            {
+                double perTenThousand = rarityPercent * 100.0;
+                var rarityMoniker = perTenThousand switch
+                {
+                    < 0.00001 => "🏆  God Tier",
+                    < 0.0001 => "💎  Mythic",
+                    < 0.001 => "🦄  Legendary",
+                    < 0.01 => "🌱  Rare",
+                    _ => "Uncommon"
+                };
+                rarityStr = $" | {perTenThousand:F8}‱    ({rarityMoniker})";
+            }
+        }
+
+        FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms){rarityStr}");
 
     }
 
@@ -474,8 +507,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         public readonly int ThreadIndex;
         public readonly Thread Thread;
 
-    public ulong MaxBatch { get; internal set; }
-    public ulong SeedsPerBatch { get; internal set; }
+        public ulong MaxBatch { get; internal set; }
+        public ulong SeedsPerBatch { get; internal set; }
 
         [InlineArray(Motely.MaxSeedLength)]
         private struct FilterSeedBatchCharacters
@@ -584,7 +617,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                 SearchBatch(batchIdx);
 
-                ulong completed = Interlocked.Increment(ref Search._completedBatchCount);
+                ulong completed = Interlocked.Increment(ref Search._completedBatchIndex);
                 if ((ulong)completed >= Search._endBatchIndex)
                 {
                     Search._status = MotelySearchStatus.Completed;
