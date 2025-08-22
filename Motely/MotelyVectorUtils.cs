@@ -39,7 +39,22 @@ public unsafe static class MotelyVectorUtils
             return Avx2.ShiftLeftLogicalVariable(value, shiftCount.AsUInt32());
         }
 
-        throw new PlatformNotSupportedException();
+        // Portable fallback for 32-bit elements
+        Span<int> vals = stackalloc int[Vector256<int>.Count];
+        Span<int> shifts = stackalloc int[Vector256<int>.Count];
+        value.CopyTo(vals);
+        shiftCount.CopyTo(shifts);
+
+        for (int i = 0; i < vals.Length; i++)
+        {
+            int sc = shifts[i] & 0x1F; // per 32-bit lane shift
+            vals[i] = vals[i] << sc;
+        }
+
+        return Vector256.Create(
+            vals[0], vals[1], vals[2], vals[3],
+            vals[4], vals[5], vals[6], vals[7]
+        );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
