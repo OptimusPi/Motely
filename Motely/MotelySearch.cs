@@ -102,6 +102,17 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
 
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
+    
+    /// <summary>
+    /// Callback for handling search results with custom formatting
+    /// </summary>
+    public Action<string, int, int[]>? ResultCallback { get; set; }
+    
+    /// <summary>
+    /// Callback for progress updates - useful for UI progress bars
+    /// Parameters: (batchesProcessed, totalBatches, seedsFound, elapsedMs)
+    /// </summary>
+    public Action<ulong, ulong, long, double>? ProgressCallback { get; set; }
 
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
@@ -164,6 +175,18 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     public MotelySearchSettings<TBaseFilter> WithStake(MotelyStake stake)
     {
         Stake = stake;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithResultCallback(Action<string, int, int[]> callback)
+    {
+        ResultCallback = callback;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithProgressCallback(Action<ulong, ulong, long, double> callback)
+    {
+        ProgressCallback = callback;
         return this;
     }
 
@@ -335,11 +358,28 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
-        FancyConsole.WriteLine($"{seed}");
+        // Simple seed output for normal Motely filters
+        Console.WriteLine($"{seed}");
+    }
+    
+    // Helper function to make filter result callback that outputs CSV with scores
+    public static Action<string, int, int[]> MakeCsvResultCallback()
+    {
+        return (seed, totalScore, tallies) =>
+        {
+            // Fast CSV formatting: Seed,TotalScore,Tally1,Tally2,...
+            var sb = new System.Text.StringBuilder(seed.Length + 16 + tallies.Length * 4);
+            sb.Append(seed).Append(',').Append(totalScore);
+            foreach (var tally in tallies)
+            {
+                sb.Append(',').Append(tally);
+            }
+            Console.WriteLine(sb.ToString());
+        };
     }
 
     // Quiet mode reporting control
-    private static readonly double[] _quietReportScheduleMS = new double[] { 0, 5000, 10000, 60000 }; // then every 15m
+    private static readonly double[] _quietReportScheduleMS = new double[] { 5000, 15000, 30000, 60000 }; // then every 15m
     private int _quietReportIndex = 0;
     private double _nextQuietReportMS = 0;
     private bool _quietMode = false;
@@ -428,7 +468,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         // Calculate rarity with appropriate units if we have results
         string rarityStr = "";
-        var resultsFound = OuijaJsonFilterDesc.ResultsFound;
+        var resultsFound = MotelyJsonFinalTallyScoresDescDesc.ResultsFound;
         if (resultsFound > 0)
         {
             ulong totalSeedsSearched = clampedCompleted * (ulong)_threads[0].SeedsPerBatch;
@@ -562,7 +602,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             while (true)
             {
-
                 switch (Search._status)
                 {
                     case MotelySearchStatus.Paused:

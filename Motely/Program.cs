@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-using Motely.Filters; // For OuijaConfig, OuijaJsonFilterDesc, OuijaConfigValidator
+using Motely.Filters; // For MotelyJsonConfig, MotelyJsonFinalTallyScoresDescDesc, MotelyJsonConfigValidator
 
 namespace Motely
 {
@@ -104,14 +104,9 @@ namespace Motely
                 CommandOptionType.SingleValue);
             stakeOption.DefaultValue = "White";
 
-            var prefilterOption = app.Option(
-                "--prefilter",
-                "Enable cheap lookahead prefilter (soul legendary / joker identity first-pass)",
-                CommandOptionType.NoValue);
-
             var motelyOption = app.Option<string>(
                 "--motely <FILTER>",
-                "Run built-in Motely filter (PerkeoObservatory, SoulTest, etc.)",
+                "Run built-in Motely filter (PerkeoObservatory, Trickeoglyph, SoulTest, etc.)",
                 CommandOptionType.SingleValue);
             motelyOption.DefaultValue = string.Empty;
 
@@ -181,11 +176,7 @@ namespace Motely
                 var wordlist = wordlistOption.Value();
                 var keyword = keywordOption.Value();
                 var nofancy = noFancyOption.HasValue();
-                var seedInput = seedOption.Value()!;
-                var enablePrefilter = prefilterOption.HasValue();
-
-                // Apply global prefilter flag before search starts
-                // PrefilterEnabled is now passed via constructor
+                var seedInput = seedOption.Value();
 
                 // Validate batchSize
                 if (batchSize < 1 || batchSize > 8)
@@ -200,7 +191,7 @@ namespace Motely
                 // Check if built-in Motely filter mode
                 if (!string.IsNullOrEmpty(motelyFilter))
                 {
-                    return RunMotelyFilter(motelyFilter, threads, batchSize, enableDebug, quiet, nofancy, seedInput, startBatch, endBatch);
+                    return RunMotelyFilter(motelyFilter, threads, batchSize, enableDebug, quiet, nofancy, seedInput, startBatch, endBatch, wordlist);
                 }
 
                 // Execute the search (this was previously commented out which made the app a no-op)
@@ -212,7 +203,40 @@ namespace Motely
             return app.Execute(args);
         }
         
-        private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool quiet, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch)
+        // KISS helper for creating filter searches
+        private static IMotelySearch CreateFilterSearch<TFilter>(IMotelySeedFilterDesc<TFilter> filterDesc, int threads, int batchSize, ulong startBatch, ulong endBatch, string? specificSeed, string? wordlist) 
+            where TFilter : struct, IMotelySeedFilter
+        {
+            var settings = new MotelySearchSettings<TFilter>(filterDesc)
+                .WithThreadCount(threads)
+                .WithBatchCharacterCount(batchSize)
+                .WithResultCallback((seed, score, details) => Console.WriteLine($"{seed}"));
+                
+            if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
+            if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
+                
+            if (!string.IsNullOrEmpty(specificSeed))
+            {
+                return settings.WithListSearch([specificSeed]).Start();
+            }
+            else if (!string.IsNullOrEmpty(wordlist))
+            {
+                var wordlistPath = $"WordLists/{wordlist}.txt";
+                if (!File.Exists(wordlistPath))
+                {
+                    Console.WriteLine($"❌ Wordlist file not found: {wordlistPath}");
+                    return null;
+                }
+                var seeds = File.ReadAllLines(wordlistPath).Where(line => !string.IsNullOrWhiteSpace(line));
+                return settings.WithListSearch(seeds).Start();
+            }
+            else
+            {
+                return settings.WithSequentialSearch().Start();
+            }
+        }
+
+        private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool quiet, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch, string? wordlist)
         {
             DebugLogger.IsEnabled = enableDebug;
             FancyConsole.IsEnabled = !nofancy;
@@ -224,27 +248,97 @@ namespace Motely
             {
                 var settings = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
                     .WithThreadCount(threads)
-                    .WithBatchCharacterCount(batchSize);
+                    .WithBatchCharacterCount(batchSize)
+                    .WithResultCallback((seed, score, details) => {
+                        Console.WriteLine($"{seed}");
+                    });
                     
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
                 if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
                     
-                search = !string.IsNullOrEmpty(specificSeed) 
-                    ? settings.WithListSearch([specificSeed]).Start()
-                    : settings.WithSequentialSearch().Start();
+                if (!string.IsNullOrEmpty(specificSeed))
+                {
+                    search = settings.WithListSearch([specificSeed]).Start();
+                }
+                else if (!string.IsNullOrEmpty(wordlist))
+                {
+                    var wordlistPath = $"WordLists/{wordlist}.txt";
+                    if (!File.Exists(wordlistPath))
+                    {
+                        Console.WriteLine($"❌ Wordlist file not found: {wordlistPath}");
+                        return 1;
+                    }
+                    var seeds = File.ReadAllLines(wordlistPath).Where(line => !string.IsNullOrWhiteSpace(line));
+                    search = settings.WithListSearch(seeds).Start();
+                }
+                else
+                {
+                    search = settings.WithSequentialSearch().Start();
+                }
+            }
+            else if (normalizedFilterName == "trickeoglyph")
+            {
+                var settings = new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(new TrickeoglyphFilterDesc())
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchSize)
+                    .WithResultCallback((seed, score, details) => {
+                        Console.WriteLine($"{seed}");
+                    });
+                    
+                if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
+                if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
+                    
+                if (!string.IsNullOrEmpty(specificSeed))
+                {
+                    search = settings.WithListSearch([specificSeed]).Start();
+                }
+                else if (!string.IsNullOrEmpty(wordlist))
+                {
+                    var wordlistPath = $"WordLists/{wordlist}.txt";
+                    if (!File.Exists(wordlistPath))
+                    {
+                        Console.WriteLine($"❌ Wordlist file not found: {wordlistPath}");
+                        return 1;
+                    }
+                    var seeds = File.ReadAllLines(wordlistPath).Where(line => !string.IsNullOrWhiteSpace(line));
+                    search = settings.WithListSearch(seeds).Start();
+                }
+                else
+                {
+                    search = settings.WithSequentialSearch().Start();
+                }
             }
             else if (normalizedFilterName == "soultest")
             {
                 var settings = new MotelySearchSettings<SoulTestFilterDesc.SoulTestFilter>(new SoulTestFilterDesc())
                     .WithThreadCount(threads)
-                    .WithBatchCharacterCount(batchSize);
+                    .WithBatchCharacterCount(batchSize)
+                    .WithResultCallback((seed, score, details) => {
+                        Console.WriteLine($"{seed}");
+                    });
                     
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
                 if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
                     
-                search = !string.IsNullOrEmpty(specificSeed)
-                    ? settings.WithListSearch([specificSeed]).Start()
-                    : settings.WithSequentialSearch().Start();
+                if (!string.IsNullOrEmpty(specificSeed))
+                {
+                    search = settings.WithListSearch([specificSeed]).Start();
+                }
+                else if (!string.IsNullOrEmpty(wordlist))
+                {
+                    var wordlistPath = $"WordLists/{wordlist}.txt";
+                    if (!File.Exists(wordlistPath))
+                    {
+                        Console.WriteLine($"❌ Wordlist file not found: {wordlistPath}");
+                        return 1;
+                    }
+                    var seeds = File.ReadAllLines(wordlistPath).Where(line => !string.IsNullOrWhiteSpace(line));
+                    search = settings.WithListSearch(seeds).Start();
+                }
+                else
+                {
+                    search = settings.WithSequentialSearch().Start();
+                }
             }
             else
             {
@@ -351,9 +445,21 @@ namespace Motely
 
                 // The config loader now handles both formats automatically
                 // It will convert new format to legacy format internally
-                Action<string, int, int[]> onResultFound = null;
+                Action<string, int, int[]> onResultFound = (seed, totalScore, scores) =>
+                {
+                    // Only emit a single CSV line per result. This avoids duplicate plain-seed output
+                    // specifically for MotelyJsonFinalTallyScoresDescDesc.
+                    // Format: Seed,TotalScore,<per-should scores>
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder(seed.Length + 16 + scores.Length * 4);
+                    sb.Append(seed).Append(',').Append(totalScore);
+                    for (int i = 0; i < scores.Length; i++)
+                    {
+                        sb.Append(',').Append(scores[i]);
+                    }
+                    Console.WriteLine(sb.ToString());
+                };
                 
-                var filterDesc = new OuijaJsonFilterDesc(false, config, onResultFound);
+                var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config, onResultFound);
                 filterDesc.Cutoff = cutoff;
                 filterDesc.AutoCutoff = autoCutoff;
                 
@@ -366,8 +472,8 @@ namespace Motely
                     // Prefilter status is set in constructor now
                 }
 
-                // Create the search using OuijaJsonFilterDesc
-                var searchSettings = new MotelySearchSettings<OuijaJsonFilterDesc.OuijaJsonFilter>(filterDesc)
+                // Create the search using MotelyJsonFinalTallyScoresDescDesc
+                var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
                     .WithThreadCount(threads);
                     
                 // Apply deck and stake from config
@@ -428,7 +534,7 @@ namespace Motely
                 }
 
                 // Apply quiet mode throttling to search progress output
-                if (quiet && search is MotelySearch<OuijaJsonFilterDesc.OuijaJsonFilter> concreteSearch)
+                if (quiet && search is MotelySearch<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc> concreteSearch)
                 {
                     concreteSearch.SetQuietMode(true);
                 }
@@ -437,22 +543,9 @@ namespace Motely
                 PrintResultsHeader(config);
                 
                 // Reset cancellation flag
-                OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = false;
+                MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled = false;
                 
-                // Register callback to print results with scores (CSV only – suppress standalone/plain seed lines)
-                onResultFound = (seed, totalScore, scores) =>
-                {
-                    // Only emit a single CSV line per result. This avoids duplicate plain-seed output
-                    // specifically for OuijaJsonFilterDesc.
-                    // Format: Seed,TotalScore,<per-should scores>
-                    System.Text.StringBuilder sb = new System.Text.StringBuilder(seed.Length + 16 + scores.Length * 4);
-                    sb.Append(seed).Append(',').Append(totalScore);
-                    for (int i = 0; i < scores.Length; i++)
-                    {
-                        sb.Append(',').Append(scores[i]);
-                    }
-                    Console.WriteLine(sb.ToString());
-                };
+                // Callback already set above when creating filterDesc
 
                 // Setup cancellation token
                 var cts = new CancellationTokenSource();
@@ -460,7 +553,7 @@ namespace Motely
                 {
                     e.Cancel = true;
                     Console.WriteLine("\n🛑 Stopping search...");
-                    OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled = true;
+                    MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled = true;
                     search.Dispose();
                     Console.WriteLine("✅ Search stopped gracefully");
                 };
@@ -468,7 +561,7 @@ namespace Motely
                 // WAIT FOR SEARCH TO COMPLETE!
                 DebugLogger.Log($"[Program] Search started. Initial status: {search.Status}");
                 int loopCount = 0;
-                while (search.Status != MotelySearchStatus.Completed && !OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled)
+                while (search.Status != MotelySearchStatus.Completed && !MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled)
                 {
                     System.Threading.Thread.Sleep(100);
                     loopCount++;
@@ -477,12 +570,12 @@ namespace Motely
                         DebugLogger.Log($"[Program] Waiting for search... Status: {search.Status}, CompletedBatchCount: {search.CompletedBatchCount}");
                     }
                 }
-                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {OuijaJsonFilterDesc.OuijaJsonFilter.IsCancelled}");
+                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled}");
                 
                 // Stop timing
                 searchStopwatch.Stop();
                 
-                // Results are printed in real-time by OuijaJsonFilterDesc
+                // Results are printed in real-time by MotelyJsonFinalTallyScoresDescDesc
                 Console.WriteLine("\n✅ Search completed");
 
                 // Summary metrics
@@ -522,13 +615,13 @@ namespace Motely
             }
         }
 
-        static OuijaConfig LoadConfig(string configPath)
+        static MotelyJsonConfig LoadConfig(string configPath)
         {
             // If configPath is a rooted (absolute) path, use it directly
             if (Path.IsPathRooted(configPath) && File.Exists(configPath))
             {
                 DebugLogger.Log($"📁 Loading config from: {configPath}");
-                if (!OuijaConfig.TryLoadFromJsonFile(configPath, out var config))
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
                     throw new InvalidOperationException($"Config loading failed for: {configPath}");
                 return config;
             }
@@ -539,7 +632,7 @@ namespace Motely
             if (File.Exists(jsonItemFiltersPath))
             {
                 DebugLogger.Log($"📁 Loading config from: {jsonItemFiltersPath}");
-                if (!OuijaConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
                     throw new InvalidOperationException($"Config loading failed for: {jsonItemFiltersPath}");
                 return config;
             }
@@ -547,7 +640,7 @@ namespace Motely
             throw new FileNotFoundException($"Could not find config file: {configPath}");
         }
 
-        static void PrintResultsHeader(OuijaConfig config)
+        static void PrintResultsHeader(MotelyJsonConfig config)
         {
             // Print deck/stake info as comments
             Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
@@ -567,7 +660,7 @@ namespace Motely
             Console.WriteLine(header);
         }
 
-        static string FormatShouldColumn(OuijaConfig.FilterItem should)
+        static string FormatShouldColumn(MotelyJsonConfig.FilterItem should)
         {
             
             // Format as Type:Value or just Value if type is obvious

@@ -193,7 +193,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public VectorMask SearchIndividualSeeds(VectorMask mask, MotelyIndividualSeedSearcher searcher)
     {
-        if (mask.IsAllFalse()) return default;
+        if (mask.IsAllFalse()) return mask;
 
         uint results = 0;
 

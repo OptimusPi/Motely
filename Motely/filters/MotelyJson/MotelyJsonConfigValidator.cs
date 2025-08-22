@@ -5,11 +5,11 @@ using System.Linq;
 namespace Motely.Filters
 {
     /// <summary>
-    /// Validates OuijaConfig to catch errors early before searching
+    /// Validates MotelyJsonConfig to catch errors early before searching
     /// </summary>
-    public static class OuijaConfigValidator
+    public static class MotelyJsonConfigValidator
     {
-        public static void ValidateConfig(OuijaConfig config)
+        public static void ValidateConfig(MotelyJsonConfig config)
         {
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
@@ -62,7 +62,7 @@ namespace Motely.Filters
             }
         }
         
-        private static void ValidateFilterItems(List<OuijaConfig.FilterItem> items, string section, List<string> errors, List<string> warnings, MotelyStake stake)
+        private static void ValidateFilterItems(List<MotelyJsonConfig.FilterItem> items, string section, List<string> errors, List<string> warnings, MotelyStake stake)
         {
             if (items == null) return;
             
@@ -160,7 +160,7 @@ namespace Motely.Filters
                             }
                         }
                         // Note: Legendary joker validation is no longer needed here as the auto-conversion
-                        // in OuijaConfig.cs automatically converts legendary jokers to souljoker type
+                        // in MotelyJsonConfig.cs automatically converts legendary jokers to souljoker type
                         
                         // Soul (legendary) jokers only produced via The Soul card in Arcana/Spectral packs – never shops.
                         if (item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase))

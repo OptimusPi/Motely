@@ -122,7 +122,7 @@ ref partial struct MotelySingleSearchContext
     }
 
     // Simple method for getting boss for a specific ante without tracking state
-    // This is what's currently used in OuijaJsonFilterDesc.cs
+    // This is what's currently used in MotelyJsonFinalTallyScoresDescDesc.cs
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif

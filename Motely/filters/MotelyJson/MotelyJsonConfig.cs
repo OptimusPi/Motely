@@ -24,7 +24,7 @@ namespace Motely.Filters;
     /// <summary>
     /// MongoDB compound Operator-style Ouija configuration - Clean JSON deserialization
     /// </summary>
-    public class OuijaConfig
+    public class MotelyJsonConfig
     {
         // Metadata fields
         public string? Name { get; set; }
@@ -39,6 +39,37 @@ namespace Motely.Filters;
         // Optional deck/stake settings
         public string Deck { get; set; } = "Red";
         public string Stake { get; set; } = "White";
+        
+        // Cached expensive calculations
+        private int? _maxVoucherAnte;
+        public int MaxVoucherAnte
+        {
+            get
+            {
+                if (_maxVoucherAnte.HasValue) return _maxVoucherAnte.Value;
+                
+                int maxAnte = 0;
+                if (Must != null)
+                {
+                    foreach (var clause in Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                    {
+                        if (clause.EffectiveAntes != null)
+                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+                    }
+                }
+                if (Should != null)
+                {
+                    foreach (var clause in Should.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                    {
+                        if (clause.EffectiveAntes != null)
+                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+                    }
+                }
+                
+                _maxVoucherAnte = maxAnte;
+                return maxAnte;
+            }
+        }
     
         // Support nested filter format
         public FilterSettings? Filter { get; set; }
@@ -507,7 +538,7 @@ namespace Motely.Filters;
         /// <param name="jsonPath">Path to the JSON configuration file</param>
         /// <param name="config">The loaded configuration if successful</param>
         /// <returns>True if loading and validation succeeded, false otherwise</returns>
-        public static bool TryLoadFromJsonFile(string jsonPath, [NotNullWhen(true)] out OuijaConfig? config)
+        public static bool TryLoadFromJsonFile(string jsonPath, [NotNullWhen(true)] out MotelyJsonConfig? config)
         {
             config = null;
             
@@ -527,7 +558,7 @@ namespace Motely.Filters;
                     AllowTrailingCommas = true
                 };
 
-                var deserializedConfig = JsonSerializer.Deserialize<OuijaConfig>(json, options);
+                var deserializedConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(json, options);
                 if (deserializedConfig == null)
                 {
                     return false;
@@ -536,7 +567,7 @@ namespace Motely.Filters;
                 deserializedConfig.PostProcess();
                 
                 // Validate config
-                OuijaConfigValidator.ValidateConfig(deserializedConfig);
+                MotelyJsonConfigValidator.ValidateConfig(deserializedConfig);
                 
                 config = deserializedConfig;
                 return true;
@@ -551,7 +582,7 @@ namespace Motely.Filters;
         /// <summary>
         /// Load from JSON file - returns null if validation fails
         /// </summary>
-        public static OuijaConfig? LoadFromJson(string jsonPath)
+        public static MotelyJsonConfig? LoadFromJson(string jsonPath)
         {
             return TryLoadFromJsonFile(jsonPath, out var config) ? config : null;
         }
