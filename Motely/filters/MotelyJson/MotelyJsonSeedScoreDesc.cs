@@ -110,7 +110,7 @@ public struct MotelyJsonSeedScoreDesc(
                 }
 
                 // Calculate scores for SHOULD clauses
-                int totalScore = 0;
+                int totalScore = 1;
                 var scores = new List<int>();
 
                 if (config.Should?.Count > 0)

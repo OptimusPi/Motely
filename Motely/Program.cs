@@ -196,40 +196,6 @@ namespace Motely
 
             return app.Execute(args);
         }
-
-        // KISS helper for creating filter searches
-        private static IMotelySearch CreateFilterSearch<TFilter>(IMotelySeedFilterDesc<TFilter> filterDesc, int threads, int batchSize, ulong startBatch, ulong endBatch, string? specificSeed, string? wordlist)
-            where TFilter : struct, IMotelySeedFilter
-        {
-            var settings = new MotelySearchSettings<TFilter>(filterDesc)
-                .WithThreadCount(threads)
-                .WithBatchCharacterCount(batchSize)
-                .WithResultCallback((seed, score, details) => Console.WriteLine($"{seed}"));
-
-            if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
-            if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
-
-            if (!string.IsNullOrEmpty(specificSeed))
-            {
-                return settings.WithListSearch([specificSeed]).Start();
-            }
-            else if (!string.IsNullOrEmpty(wordlist))
-            {
-                var wordlistPath = $"WordLists/{wordlist}.txt";
-                if (!File.Exists(wordlistPath))
-                {
-                    Console.WriteLine($"❌ Wordlist file not found: {wordlistPath}");
-                    return null;
-                }
-                var seeds = File.ReadAllLines(wordlistPath).Where(line => !string.IsNullOrWhiteSpace(line));
-                return settings.WithListSearch(seeds).Start();
-            }
-            else
-            {
-                return settings.WithSequentialSearch().Start();
-            }
-        }
-
         private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch, string? wordlist)
         {
             DebugLogger.IsEnabled = enableDebug;

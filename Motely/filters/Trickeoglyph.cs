@@ -24,7 +24,7 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
 
     public struct TrickeoglyphFilter() : IMotelySeedFilter
     {
-        public static bool CheckSoulJokerInAnte(int ante, MotelyItemType targetJoker, ref MotelySingleSearchContext searchContext)
+        public static bool CheckSoulJokerInAnte(int ante, MotelyItemType targetJoker, ref MotelySingleSearchContext searchContext, MotelyItemEdition? requiredEdition = null)
         {
             var boosterPackStream = searchContext.CreateBoosterPackStream(ante, false, false);
             var soulStream = searchContext.CreateSoulJokerStream(ante);
@@ -71,10 +71,10 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
                         var soulJoker = searchContext.GetNextJoker(ref soulStream);
                         if (soulJoker.Type == targetJoker)
                         {
-                            // For Perkeo, also check for Negative edition
-                            if (targetJoker == MotelyItemType.Perkeo)
+                            // Check edition if specified
+                            if (requiredEdition.HasValue)
                             {
-                                return soulJoker.Edition == MotelyItemEdition.Negative;
+                                return soulJoker.Edition == requiredEdition.Value;
                             }
                             return true;
                         }
@@ -95,19 +95,14 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
 
             for (int ante = 1; ante <= 8; ante++)
             {
-                // Get vector of all the seeds' couchers for the given ante
+                // Get vector of all the seeds' voucher for the given ante
                 VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(ante, state);
                 // Activate vouchers found in this ante
                 VectorMask magicMask = VectorEnum256.Equals(vouchers, MotelyVoucher.MagicTrick);
                 VectorMask hieroglyphMask = VectorEnum256.Equals(vouchers, MotelyVoucher.Hieroglyph);
                 VectorMask petroglyphMask = VectorEnum256.Equals(vouchers, MotelyVoucher.Petroglyph);
                 
-                if (magicMask.IsPartiallyTrue())
-                    state.ActivateVoucher(MotelyVoucher.MagicTrick);
-                if (hieroglyphMask.IsPartiallyTrue())
-                    state.ActivateVoucher(MotelyVoucher.Hieroglyph);
-                if (petroglyphMask.IsPartiallyTrue())
-                    state.ActivateVoucher(MotelyVoucher.Petroglyph);
+                state.ActivateVoucher(vouchers);
 
                 // Check for matches against the target vouchers
                 matchingHiero |= hieroglyphMask;
@@ -115,9 +110,11 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
                 matchingMagic |= magicMask;
             }
 
-            // All three vouchers must be found (AND logic)
-            var finalMask = matchingHiero & matchingPetro & matchingMagic;
-
+            // All three vouchers must be found by the SAME seed (AND logic)
+            var finalMask = VectorMask.AllBitsSet;
+            finalMask &= matchingHiero;
+            finalMask &= matchingPetro;
+            finalMask &= matchingMagic;
             if (finalMask.IsAllFalse())
                 return VectorMask.NoBitsSet; // Missing required vouchers
 
@@ -125,15 +122,15 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
             return searchContext.SearchIndividualSeeds(finalMask, (ref MotelySingleSearchContext searchContext) =>
             {
                 // Passed MUST requirements, now check SHOULD for bonus scoring
-                
-                // SHOULD: Soul Perkeo Negative in ante 1
-                bool hasPerkeoNegative = CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext);
 
-                // SHOULD: Soul Canio in ante 8  
+                // SHOULD: Soul Perkeo Negative in ante 1
+                bool hasPerkeoNegative = CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext, MotelyItemEdition.Negative);
+
+                // SHOULD: Soul Canio in ante 8
                 bool hasCanio = CheckSoulJokerInAnte(8, MotelyItemType.Canio, ref searchContext);
 
-                // Return true for any seed that passes MUST (regardless of SHOULD results)
-                return true;
+
+                return hasCanio && hasPerkeoNegative;
             });
         }
     }

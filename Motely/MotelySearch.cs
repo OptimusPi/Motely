@@ -416,7 +416,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private void PrintReport()
     {
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
-        if (elapsedMS - _lastReportMS < 1000) return;
+        if (elapsedMS - _lastReportMS < 60000) return;
          _lastReportMS = elapsedMS;
         
 
@@ -464,6 +464,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         string rarityEmoji = "🌱";
         string rarityMoniker = "Filtering...";
         var resultsFound = MotelyJsonSeedScoreDesc.ResultsFound;
+        //Console.WriteLine($"[DEBUG RARITY] Results found: {resultsFound}");
         if (resultsFound > 0)
         {
             ulong totalSeedsSearched = clampedCompleted * (ulong)_threads[0].SeedsPerBatch;
@@ -523,8 +524,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         string variant = rarityEmoji;
         filteringEmojis = filteringEmojis.Replace("🌱", variant);
 
-        FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)  {rarityStr}  {filteringEmojis}  {rarityMoniker}");
-
+        //FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)  {rarityStr}  {filteringEmojis}  {rarityMoniker}");
+        Console.WriteLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)  {rarityStr}  {filteringEmojis}  {rarityMoniker}");
     }
 
     public void Dispose()
