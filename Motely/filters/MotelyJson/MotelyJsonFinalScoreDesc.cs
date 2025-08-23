@@ -11,45 +11,51 @@ namespace Motely.Filters;
 /// <summary>
 /// Clean filter descriptor for MongoDB-style queries
 /// </summary>
-public struct MotelyJsonFinalTallyScoresDescDesc(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<string, int, int[]> OnResultFound) : IMotelySeedFilterDesc<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>
+public struct MotelyJsonSeedScoreDesc(
+    MotelyJsonConfig Config,
+    int Cutoff,
+    bool AutoCutoff,
+    Action<IMotelySeedScore> OnResultFound
+)
+    : IMotelySeedScoreDesc<MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider>
 {
-    public int Cutoff { get => cutoff; set => cutoff = value; }
-    public bool AutoCutoff { get; set; } = false;
 
     // Auto cutoff state
     private static int _learnedCutoff = 1;
+    private global::System.Int32 cutoff = 1;
 
     // Results tracking for rarity calculation
     private static long _resultsFound = 0;
-    private global::System.Int32 cutoff = 1;
+
 
     public static long ResultsFound => _resultsFound;
 
-    public MotelyJsonFinalTallyScoresDesc CreateFilter(ref MotelyFilterCreationContext ctx)
+    public MotelyJsonSeedScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
     {
         // Reset for new search
         _learnedCutoff = Cutoff;
         _resultsFound = 0;
 
-        return new MotelyJsonFinalTallyScoresDesc(_config, Cutoff, AutoCutoff, _onResultFound);
+        return new MotelyJsonSeedScoreTally(Config, Cutoff, AutoCutoff, OnResultFound);
     }
 
-    public struct MotelyJsonFinalTallyScoresDesc(MotelyJsonConfig config, int cutoff, bool autoCutoff, Action<string, int, int[]> OnResultFound)
-        : IMotelySeedFilter
+    public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<IMotelySeedScore> OnResultFound)
+        : IMotelySeedScoreProvider
     {
         public static bool IsCancelled;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
+        public IMotelySeedScore Score(ref MotelyVectorSearchContext searchContext)
         {
             if (IsCancelled)
                 return VectorMask.NoBitsSet;
 
             // Copy fields to local variables to avoid struct closure issues
-            var config = _config;
-            var cutoff = _cutoff;
-            var autoCutoff = _autoCutoff;
-            
+            var config = Config;
+            var cutoff = Cutoff;
+            var autoCutoff = AutoCutoff;
+            var onResultFound = OnResultFound;
+
             return searchContext.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
@@ -60,13 +66,12 @@ public struct MotelyJsonFinalTallyScoresDescDesc(MotelyJsonConfig Config, int Cu
                     MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
                 }
 
-
                 foreach (var clause in config.Must)
                 {
                     DebugLogger.Log($"[Must] Checking {clause.ItemTypeEnum} {clause.Value} in antes [{string.Join(",", clause.EffectiveAntes ?? new int[0])}]");
                     DebugLogger.Log($"[Must] Showman active: {runState.ShowmanActive}, Owned jokers: {runState.OwnedJokers.Length}");
 
-                    bool clauseResult = CheckSingleClause(ref singleCtx, clause, ref runState);
+                    bool clauseResult = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
 
                     DebugLogger.Log($"[Must] Result: {clauseResult} for {clause.ItemTypeEnum} {clause.Value}");
 
@@ -82,7 +87,7 @@ public struct MotelyJsonFinalTallyScoresDescDesc(MotelyJsonConfig Config, int Cu
                 {
                     foreach (var clause in config.MustNot)
                     {
-                        if (CheckSingleClause(ref singleCtx, clause, ref runState))
+                        if (MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState))
                             return false;
                     }
                 }
@@ -95,7 +100,7 @@ public struct MotelyJsonFinalTallyScoresDescDesc(MotelyJsonConfig Config, int Cu
                 {
                     foreach (var should in config.Should)
                     {
-                        int count = CountOccurrences(ref singleCtx, should, ref runState);
+                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
                         int score = count * should.Score;
                         scores.Add(count);
                         totalScore += score;
@@ -112,14 +117,13 @@ public struct MotelyJsonFinalTallyScoresDescDesc(MotelyJsonConfig Config, int Cu
                     Interlocked.Increment(ref _resultsFound);
 
                     // Use callback for CSV formatting (moved out of hot path)
-                    if (onResultFound != null)
+                    if (OnResultFound != null)
                     {
                         unsafe
                         {
                             char* seedPtr = stackalloc char[9];
                             int len = singleCtx.GetSeed(seedPtr);
                             string seedStr = new string(seedPtr, 0, len);
-                            onResultFound(seedStr, totalScore, scores.ToArray());
                         }
                         return false; // Callback handled output, don't print seed again
                     }
