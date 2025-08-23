@@ -114,7 +114,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
 
     public IList<IMotelySeedFilterDesc>? AdditionalFilters { get; set; } = null;
 
-    public IMotelySeedScoreProvider? SeedScoreDesc { get; set; } = null;
+    public IMotelySeedScoreDesc? SeedScoreDesc { get; set; } = null;
 
     public MotelySearchMode Mode { get; set; }
 
@@ -416,54 +416,13 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         };
     }
 
-    // Quiet mode reporting control
-    private static readonly double[] _quietReportScheduleMS = new double[] { 5000, 15000, 30000, 60000 }; // then every 15m
-    private int _quietReportIndex = 0;
-    private double _nextQuietReportMS = 0;
-    private bool _quietMode = false;
-
-    public void SetQuietMode(bool quiet)
-    {
-        _quietMode = quiet;
-        if (quiet)
-        {
-            _quietReportIndex = 0;
-            _nextQuietReportMS = 0; // force immediate
-        }
-    }
-
     [MethodImpl(MethodImplOptions.Synchronized)]
     private void PrintReport()
     {
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
-        if (_quietMode)
-        {
-            bool shouldReport = false;
-            if (_quietReportIndex < _quietReportScheduleMS.Length)
-            {
-                double target = _quietReportScheduleMS[_quietReportIndex];
-                if (elapsedMS >= target)
-                {
-                    shouldReport = true;
-                    _quietReportIndex++;
-                    if (_quietReportIndex < _quietReportScheduleMS.Length)
-                        _nextQuietReportMS = _quietReportScheduleMS[_quietReportIndex];
-                    else
-                        _nextQuietReportMS = elapsedMS + 15 * 60 * 1000; // every 15 minutes thereafter
-                }
-            }
-            else if (elapsedMS >= _nextQuietReportMS)
-            {
-                shouldReport = true;
-                _nextQuietReportMS = elapsedMS + 15 * 60 * 1000;
-            }
-            if (!shouldReport) return;
-        }
-        else
-        {
-            if (elapsedMS - _lastReportMS < 500) return;
-            _lastReportMS = elapsedMS;
-        }
+        if (elapsedMS - _lastReportMS < 1000) return;
+         _lastReportMS = elapsedMS;
+        
 
         ulong thisCompletedCount = _completedBatchIndex - _startBatchIndex;
 
@@ -473,7 +432,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             effectiveMaxExclusive = _startBatchIndex + 1;
 
         ulong totalSpan = effectiveMaxExclusive - _startBatchIndex; // number of batches in range
-        if (totalSpan == 0) totalSpan = 1; // safety
+        if (totalSpan == 0) totalSpan = 1; // prevent divide by 0
 
         ulong clampedCompleted = Math.Min(thisCompletedCount, totalSpan);
 
@@ -511,32 +470,63 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             ulong totalSeedsSearched = clampedCompleted * (ulong)_threads[0].SeedsPerBatch;
             double rarityPercent = ((double)resultsFound / totalSeedsSearched) * 100.0;
+            var rarityEmoji = "🌱";
+            var rarityMoniker = "Filtering...";
 
             if (rarityPercent >= 1.0)
             {
-                rarityStr = $" | {rarityPercent:F8}%    (⚠️  SPAM)";
+                rarityStr = $" | {rarityPercent:F8}%";
+                rarityMoniker = "Warming Up...";
+                rarityEmoji = "♻️";
             }
             else if (rarityPercent >= 0.1)
             {
                 double perMille = rarityPercent * 10.0;
-                rarityStr = $" | {perMille:F8}‰    (⚠️  JUNK)";
+                rarityStr = $" | {perMille:F8}‰";
+                rarityMoniker = "Filtering...";
+                rarityEmoji = "🌱";
             }
             else
             {
                 double perTenThousand = rarityPercent * 100.0;
-                var rarityMoniker = perTenThousand switch
+                rarityMoniker = perTenThousand switch
                 {
-                    < 0.00001 => "🏆  God Tier",
-                    < 0.0001 => "💎  Mythic",
-                    < 0.001 => "🦄  Legendary",
-                    < 0.01 => "🌱  Rare",
-                    _ => "Uncommon"
+                    < 0.000169 => "God Tier",
+                    < 0.000269 => "Mythical",
+                    < 0.000314 => "Legendary",
+                    < 0.00314 => "Rare",
+                    < 0.0314 => "Uncommon",
+                    _ => "Common"
                 };
-                rarityStr = $" | {perTenThousand:F8}‱    ({rarityMoniker})";
+                rarityEmoji = perTenThousand switch
+                {
+                    < 0.000169 => "😇",
+                    < 0.000269 => "🦄",
+                    < 0.000314 => "🏆",
+                    < 0.00314 => "🥇",
+                    < 0.0314 => "🥈",
+                    _ => "🥉"
+                };
+                rarityStr = $" | {perTenThousand:F8}‱";
             }
         }
 
-        FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms){rarityStr}");
+        var frame = elapsedMS % 3141;
+        var filteringEmojis = frame switch
+        {
+            > 1999 => "⬛⬛🔄⬛🌱",
+            > 1777 => "⬛⬛🔄⬛🌱",
+            > 1666 => "⬛⬛🔄🌱⬛",
+            > 1415 => "⬛🌱➡️🌱⬛",
+            > 1314 => "⬛🌱🔄⬛⬛",
+            > 1200 => "🌱⬛🔄⬛⬛",
+            > 1100 => "🌱⬛🔄⬛⬛",
+            > 1100 => "➡️➡️➡️➡️➡️",
+            _      => "⬛⬛🔄⬛⬛",
+        };
+        filteringEmojis = filteringEmojis.Replace("🌱", variant);
+
+        FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)  {rarityStr}  {filteringEmojis}  {rarityMoniker}");
 
     }
 
