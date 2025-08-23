@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-using Motely.Filters; // For MotelyJsonConfig, MotelyJsonFinalTallyScoresDescDesc, MotelyJsonConfigValidator
+using Motely.Filters; // For MotelyJsonConfig, MotelyJsonSeedScoreDesc, MotelyJsonConfigValidator
 
 namespace Motely
 {
@@ -57,11 +57,6 @@ namespace Motely
             var debugOption = app.Option(
                 "--debug",
                 "Enable debug output messages",
-                CommandOptionType.NoValue);
-
-            var quietOption = app.Option(
-                "--quiet",
-                "Suppress progress and status output",
                 CommandOptionType.NoValue);
 
             var noFancyOption = app.Option(
@@ -445,6 +440,7 @@ namespace Motely
                 {
                     Console.WriteLine(score.ToCsvRow());
                 };
+
                 var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound)
                 {
                     Cutoff = cutoff,
@@ -462,14 +458,14 @@ namespace Motely
 
                 // Create the search using MotelyJsonFilterSlice pattern
                 // Start with main filter slice, then chain additional slices based on config
-                var mainFilterSlice = new MotelyFilterDesc(FilterCategory.Voucher, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList());
-                
-                var searchSettings = new MotelySearchSettings<MotelyFilterDesc.MotelyFilter>(mainFilterSlice)
+                var mainFilterSlice = new MotelyJsonFilterDesc(FilterCategory.Voucher, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList());
+
+                var searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(mainFilterSlice)
                     .WithThreadCount(threads);
                     
                 // Chain additional filter slices
-                if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.Tarot))
-                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyFilterDesc(FilterCategory.Tarot, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.Tarot).ToList()));
+                if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.TarotCard))
+                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyFilterDesc(FilterCategory.Tarot, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList()));
                     
                 if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker))
                     searchSettings = searchSettings.WithAdditionalFilter(new MotelyFilterDesc(FilterCategory.SoulJoker, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList()));
@@ -534,17 +530,11 @@ namespace Motely
                     .Start();
                 }
 
-                // Apply quiet mode throttling to search progress output
-                if (quiet && search is MotelySearch<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc> concreteSearch)
-                {
-                    concreteSearch.SetQuietMode(true);
-                }
-
                 // Print CSV header for results
                 PrintResultsHeader(config);
                 
                 // Reset cancellation flag
-                MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled = false;
+                MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled = false;
                 
                 // Callback already set above when creating filterDesc
 
@@ -554,7 +544,7 @@ namespace Motely
                 {
                     e.Cancel = true;
                     Console.WriteLine("\n🛑 Stopping search...");
-                    MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled = true;
+                    MotelyJsonSeedScoreDesc.MotelyJsonFilterDesc.IsCancelled = true;
                     search.Dispose();
                     Console.WriteLine("✅ Search stopped gracefully");
                 };
@@ -562,7 +552,7 @@ namespace Motely
                 // WAIT FOR SEARCH TO COMPLETE!
                 DebugLogger.Log($"[Program] Search started. Initial status: {search.Status}");
                 int loopCount = 0;
-                while (search.Status != MotelySearchStatus.Completed && !MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled)
+                while (search.Status != MotelySearchStatus.Completed && !MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled)
                 {
                     System.Threading.Thread.Sleep(100);
                     loopCount++;
@@ -571,12 +561,12 @@ namespace Motely
                         DebugLogger.Log($"[Program] Waiting for search... Status: {search.Status}, CompletedBatchCount: {search.CompletedBatchCount}");
                     }
                 }
-                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled}");
+                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled}");
                 
                 // Stop timing
                 searchStopwatch.Stop();
                 
-                // Results are printed in real-time by MotelyJsonFinalTallyScoresDescDesc
+                // Results are printed in real-time by MotelyJsonSeedScoreDesc
                 Console.WriteLine("\n✅ Search completed");
 
                 // Summary metrics
