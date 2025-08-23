@@ -1,6 +1,6 @@
 namespace Motely.Filters;
 
-public class OuijaResult
+public class MotelyJsonResult
 {
     // Seed string (8 chars + null terminator in C, just use string in C#)
     public string Seed { get; set; } = string.Empty;
@@ -19,7 +19,7 @@ public class OuijaResult
     {
         // Start with pipe marker, then seed and total score
         var row = $"|{Seed},{TotalScore}";
-        
+
         // Add scores for each should clause, limited by numWants parameter
         if (ScoreWants != null && config?.Should != null)
         {
