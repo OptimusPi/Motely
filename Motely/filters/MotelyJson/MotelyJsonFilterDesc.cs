@@ -12,21 +12,22 @@ namespace Motely.Filters;
 /// Universal filter descriptor that can filter any category and chain to itself
 /// Single class handles all filter types with category-specific optimization
 /// </summary>
-public struct MotelyJsonFilterDesc(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilterDesc<MotelyJsonFilterDesc.MotelyFilter>
+public struct MotelyJsonFilterDesc(
+    FilterCategory category,
+    List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+)
+    : IMotelySeedFilterDesc<MotelyJsonFilterDesc.MotelyFilter>
 {
     private readonly FilterCategory _category = category;
     private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses = clauses;
 
-    public readonly string Name => $"MotelyFilter_{_category}";
-    public readonly string Description => $"Filters {_category} items with vectorized optimization";
+    public readonly string Name => $"Everybody loves Wee Joker";
+    public readonly string Description => $"pifreak loves you!";
 
     public MotelyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        foreach (var clause in Clauses)
-        {
-            if (clause.Type != _category)
-                Debug.Assert(false, $"MotelyJsonFilterDesc({_category}) contains clause of different type: {clause.Type}");
-        }
+        // TODO: Add validation that clauses match the category
+        // For now, trust the caller to pass correct clauses
 
         // Cache relevant streams based on category
         switch (_category)
@@ -35,7 +36,7 @@ public struct MotelyJsonFilterDesc(FilterCategory category, List<MotelyJsonConfi
                 for (int ante = 1; ante <= 8; ante++)
                     ctx.CacheAnteFirstVoucher(ante);
                 break;
-            case FilterCategory.SoulJoker:
+            case FilterCategory.Joker:
                 ctx.CacheBoosterPackStream(1);
                 ctx.CacheBoosterPackStream(2);
                 ctx.CacheBoosterPackStream(8);
@@ -60,11 +61,10 @@ public struct MotelyJsonFilterDesc(FilterCategory category, List<MotelyJsonConfi
             {
                 FilterCategory.Voucher => FilterVouchers(ref searchContext),
                 FilterCategory.Tag => FilterTags(ref searchContext),
-                FilterCategory.Tarot => FilterTarots(ref searchContext),
-                FilterCategory.Planet => FilterPlanets(ref searchContext),
-                FilterCategory.Spectral => FilterSpectrals(ref searchContext),
+                FilterCategory.TarotCard => FilterTarots(ref searchContext),
+                FilterCategory.PlanetCard => FilterPlanets(ref searchContext),
+                FilterCategory.SpectralCard => FilterSpectrals(ref searchContext),
                 FilterCategory.Joker => FilterJokers(ref searchContext),
-                FilterCategory.SoulJoker => FilterSoulJokers(ref searchContext),
                 FilterCategory.PlayingCard => FilterPlayingCards(ref searchContext),
                 FilterCategory.Boss => FilterBosses(ref searchContext),
                 _ => throw new ArgumentException($"Unknown filter category: {_category}")

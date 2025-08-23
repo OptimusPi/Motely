@@ -111,35 +111,35 @@ namespace Motely
                 var motelyFilter = motelyOption.Value();
                 var deckName = deckOption.Value();
                 var stakeName = stakeOption.Value();
-                
+
                 // Check if analyze mode
                 if (!string.IsNullOrEmpty(analyzeSeed))
                 {
                     // Don't print anything - match Immolate's output exactly
-                    
+
                     // Parse deck and stake
                     if (!Enum.TryParse<MotelyDeck>(deckName, true, out var deck))
                     {
                         Console.WriteLine($"❌ Invalid deck: {deckName}");
                         return 1;
                     }
-                    
+
                     if (!Enum.TryParse<MotelyStake>(stakeName, true, out var stake))
                     {
                         Console.WriteLine($"❌ Invalid stake: {stakeName}");
                         return 1;
                     }
-                    
+
                     MotelySeedAnalyzer.AnalyzeToConsole(analyzeSeed, deck, stake);
                     return 0;
                 }
-                
-                
+
+
                 Console.WriteLine("🔍 Starting Motely Ouija Search");
                 var configName = configOption.Value()!;
                 var startBatch = startBatchOption.ParsedValue;
                 var endBatch = endBatchOption.ParsedValue;
-                
+
                 var threads = threadsOption.ParsedValue;
                 var batchSize = batchSizeOption.ParsedValue;
                 var enableDebug = debugOption.HasValue();
@@ -147,7 +147,7 @@ namespace Motely
                 int cutoffValue = int.TryParse(cutoffStr, out var c) ? c : 0;
                 bool autoCutoff = cutoffValue == 0;  // 0 means auto-cutoff
                 int cutoff = autoCutoff ? 1 : cutoffValue;  // Start at 1 for auto-cutoff
-                
+
                 // Validate batch ranges based on search space
                 ulong maxBatches = (ulong)Math.Pow(35, 8 - batchSize); // 35^(8-batchSize)
                 if (endBatch > maxBatches)
@@ -167,7 +167,6 @@ namespace Motely
                     Console.WriteLine($"[DEBUG] Auto-cutoff: {autoCutoff}");
                     Console.WriteLine($"[DEBUG] Effective starting cutoff: {cutoff}");
                 }
-                var quiet = quietOption.HasValue();
                 var wordlist = wordlistOption.Value();
                 var keyword = keywordOption.Value();
                 var nofancy = noFancyOption.HasValue();
@@ -186,30 +185,30 @@ namespace Motely
                 // Check if built-in Motely filter mode
                 if (!string.IsNullOrEmpty(motelyFilter))
                 {
-                    return RunMotelyFilter(motelyFilter, threads, batchSize, enableDebug, quiet, nofancy, seedInput, startBatch, endBatch, wordlist);
+                    return RunMotelyFilter(motelyFilter, threads, batchSize, enableDebug, nofancy, seedInput, startBatch, endBatch, wordlist);
                 }
 
                 // Execute the search (this was previously commented out which made the app a no-op)
-                RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
-                    enableDebug, quiet, wordlist, keyword, nofancy, seedInput);
+                PiFreakLovesYou(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
+                    enableDebug, wordlist, keyword, nofancy, seedInput);
                 return 0;
             });
 
             return app.Execute(args);
         }
-        
+
         // KISS helper for creating filter searches
-        private static IMotelySearch CreateFilterSearch<TFilter>(IMotelySeedFilterDesc<TFilter> filterDesc, int threads, int batchSize, ulong startBatch, ulong endBatch, string? specificSeed, string? wordlist) 
+        private static IMotelySearch CreateFilterSearch<TFilter>(IMotelySeedFilterDesc<TFilter> filterDesc, int threads, int batchSize, ulong startBatch, ulong endBatch, string? specificSeed, string? wordlist)
             where TFilter : struct, IMotelySeedFilter
         {
             var settings = new MotelySearchSettings<TFilter>(filterDesc)
                 .WithThreadCount(threads)
                 .WithBatchCharacterCount(batchSize)
                 .WithResultCallback((seed, score, details) => Console.WriteLine($"{seed}"));
-                
+
             if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
             if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
-                
+
             if (!string.IsNullOrEmpty(specificSeed))
             {
                 return settings.WithListSearch([specificSeed]).Start();
@@ -231,26 +230,27 @@ namespace Motely
             }
         }
 
-        private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool quiet, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch, string? wordlist)
+        private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch, string? wordlist)
         {
             DebugLogger.IsEnabled = enableDebug;
             FancyConsole.IsEnabled = !nofancy;
-            
+
             string normalizedFilterName = filterName.ToLower().Trim();
-            
+
             IMotelySearch search;
             if (normalizedFilterName == "perkeoobservatory")
             {
                 var settings = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize)
-                    .WithResultCallback((seed, score, details) => {
+                    .WithResultCallback((seed, score, details) =>
+                    {
                         Console.WriteLine($"{seed}");
                     });
-                    
+
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
                 if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
-                    
+
                 if (!string.IsNullOrEmpty(specificSeed))
                 {
                     search = settings.WithListSearch([specificSeed]).Start();
@@ -276,13 +276,14 @@ namespace Motely
                 var settings = new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(new TrickeoglyphFilterDesc())
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize)
-                    .WithResultCallback((seed, score, details) => {
+                    .WithResultCallback((seed, score, details) =>
+                    {
                         Console.WriteLine($"{seed}");
                     });
-                    
+
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
                 if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
-                    
+
                 if (!string.IsNullOrEmpty(specificSeed))
                 {
                     search = settings.WithListSearch([specificSeed]).Start();
@@ -308,13 +309,14 @@ namespace Motely
                 var settings = new MotelySearchSettings<SoulTestFilterDesc.SoulTestFilter>(new SoulTestFilterDesc())
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize)
-                    .WithResultCallback((seed, score, details) => {
+                    .WithResultCallback((seed, score, details) =>
+                    {
                         Console.WriteLine($"{seed}");
                     });
-                    
+
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
                 if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
-                    
+
                 if (!string.IsNullOrEmpty(specificSeed))
                 {
                     search = settings.WithListSearch([specificSeed]).Start();
@@ -339,8 +341,8 @@ namespace Motely
             {
                 throw new ArgumentException($"Unknown Motely filter: {filterName}");
             }
-            
-            Console.WriteLine($"🔍 Running Motely filter: {filterName}" + 
+
+            Console.WriteLine($"🔍 Running Motely filter: {filterName}" +
                 (!string.IsNullOrEmpty(specificSeed) ? $" on seed: {specificSeed}" : ""));
 
             search.Start();
@@ -348,8 +350,8 @@ namespace Motely
             return 0;
         }
 
-        public static void RunOuijaSearch(string configPath, ulong startBatch, ulong endBatch, int threads,
-            int batchSize, int cutoff, bool autoCutoff, bool enableDebug, bool quiet, string? wordlist = null,
+        public static void PiFreakLovesYou(string configPath, ulong startBatch, ulong endBatch, int threads,
+            int batchSize, int cutoff, bool autoCutoff, bool enableDebug, string? wordlist = null,
             string? keyword = null, bool nofancy = false, string? specificSeed = null)
         {
             // Set debug output flag
@@ -362,36 +364,7 @@ namespace Motely
             if (!string.IsNullOrEmpty(specificSeed))
             {
                 seeds = new List<string> { specificSeed };
-                if (!quiet)
-                    Console.WriteLine($"🔍 Searching for specific seed: {specificSeed}");
-            }
-            // Handle keyword generation
-            else if (!string.IsNullOrEmpty(keyword))
-            {
-                // Generate seeds from keyword pattern
-                seeds = new List<string>();
-                for (int i = 0; i <= 99; i++)
-                {
-                    string padded = keyword + i.ToString("00");
-                    if (padded.Length == 8)
-                        seeds.Add(padded);
-                    else if (padded.Length < 8)
-                        seeds.Add(padded.PadRight(8, '0'));
-                    else
-                        seeds.Add(padded.Substring(0, 8));
-                }
-                if (!quiet)
-                {
-                    Console.WriteLine($"🎯 Generated {seeds.Count} seeds from keyword: {keyword}");
-                    if (seeds.Count <= 10)
-                    {
-                        Console.WriteLine($"   Seeds: {string.Join(", ", seeds)}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"   First 10: {string.Join(", ", seeds.Take(10))}...");
-                    }
-                }
+                Console.WriteLine($"🔍 Searching for specific seed: {specificSeed}");
             }
             // Handle wordlist loading
             else if (!string.IsNullOrEmpty(wordlist))
@@ -403,58 +376,48 @@ namespace Motely
                     .Select(line => line.Trim())
                     .Where(line => line.Length == 8)
                     .ToList();
-                if (!quiet)
-                    Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
+
+                Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
             }
 
-                if (!quiet)
-                {
-                    Console.WriteLine($"🔍 Motely Ouija Search Starting");
-                    Console.WriteLine($"   Config: {configPath}");
-                    Console.WriteLine($"   Threads: {threads}");
-                    Console.WriteLine($"   Batch Size: {batchSize} chars");
-                    string endDisplay = endBatch <= 0 ? "∞" : endBatch.ToString();
-                    Console.WriteLine($"   Range: {startBatch} to {endDisplay}");
-                    if (enableDebug)
-                        Console.WriteLine($"   Debug: Enabled");
-                    Console.WriteLine();
-                }
+
+            Console.WriteLine($"🔍 Motely Ouija Search Starting");
+            Console.WriteLine($"   Config: {configPath}");
+            Console.WriteLine($"   Threads: {threads}");
+            Console.WriteLine($"   Batch Size: {batchSize} chars");
+            string endDisplay = endBatch <= 0 ? "∞" : endBatch.ToString();
+            Console.WriteLine($"   Range: {startBatch} to {endDisplay}");
+            if (enableDebug)
+                Console.WriteLine($"   Debug: Enabled");
+            Console.WriteLine();
 
             try
             {
                 // Load config
                 var config = LoadConfig(configPath);
-                
-                if (!quiet)
-                    Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
+
+                Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
 
                 // Print the parsed config for debugging
-                if (!quiet && enableDebug)
+                if (enableDebug)
                 {
                     DebugLogger.Log("\n--- Parsed Motely JSON Config ---");
                     DebugLogger.Log(config.ToJson());
                     DebugLogger.Log("--- End Config ---\n");
                 }
 
-                Action<IMotelySeedScore> onResultFound = (score) =>
+                Action<MotelySeedScoreTally> onResultFound = (score) =>
                 {
-                    Console.WriteLine(score.ToCsvRow());
+                    Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
                 };
 
-                var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound)
-                {
-                    Cutoff = cutoff,
-                    AutoCutoff = autoCutoff
-                };
+                var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound);
 
-                if (!quiet)
-                {
-                    if (autoCutoff)
-                        Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
-                    else
-                        Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
-                    // Prefilter status is set in constructor now
-                }
+                if (autoCutoff)
+                    Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
+                else
+                    Console.WriteLine($"✅ Loaded config with cutoff: {cutoff}");
+
 
                 // Create the search using MotelyJsonFilterSlice pattern
                 // Start with main filter slice, then chain additional slices based on config
@@ -462,14 +425,14 @@ namespace Motely
 
                 var searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(mainFilterSlice)
                     .WithThreadCount(threads);
-                    
+
                 // Chain additional filter slices
                 if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.TarotCard))
-                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyFilterDesc(FilterCategory.Tarot, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList()));
-                    
+                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.TarotCard, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList()));
+
                 if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker))
-                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyFilterDesc(FilterCategory.SoulJoker, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList()));
-                
+                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Joker, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList()));
+
                 // Add final scoring
                 searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
 
@@ -492,7 +455,7 @@ namespace Motely
                 {
                     DebugLogger.Log($"[Program] Using default stake: {searchSettings.Stake}");
                 }
-                
+
                 // Set batch range if specified
                 if (startBatch > 0)
                     searchSettings = searchSettings.WithStartBatchIndex((ulong)startBatch);
@@ -500,18 +463,18 @@ namespace Motely
                 {
                     searchSettings = searchSettings.WithEndBatchIndex((ulong)endBatch);
                 }
-                    
+
                 // Apply minimum score cutoff
                 // Minimum score cutoff is handled by the filter itself
-                
+
                 // Start timing before search begins
                 var searchStopwatch = Stopwatch.StartNew();
-                
+
                 IMotelySearch search;
                 if (seeds != null && seeds.Count > 0)
                 {
                     // Search specific seeds from list
-                    if (!quiet && enableDebug)
+                    if (enableDebug)
                     {
                         Console.WriteLine($"[DEBUG] Starting list search with {seeds.Count} seeds");
                         Console.WriteLine($"[DEBUG] Seeds to search: {string.Join(", ", seeds.Take(5))}...");
@@ -522,7 +485,7 @@ namespace Motely
                 else
                 {
                     // Sequential batch search
-                    if (!quiet && enableDebug)
+                    if (enableDebug)
                         Console.WriteLine($"[DEBUG] Starting sequential batch search");
                     search = searchSettings
                     .WithSequentialSearch()
@@ -532,10 +495,10 @@ namespace Motely
 
                 // Print CSV header for results
                 PrintResultsHeader(config);
-                
+
                 // Reset cancellation flag
-                MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled = false;
-                
+                MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider.IsCancelled = false;
+
                 // Callback already set above when creating filterDesc
 
                 // Setup cancellation token
@@ -544,15 +507,15 @@ namespace Motely
                 {
                     e.Cancel = true;
                     Console.WriteLine("\n🛑 Stopping search...");
-                    MotelyJsonSeedScoreDesc.MotelyJsonFilterDesc.IsCancelled = true;
+                    MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider.IsCancelled = true;
                     search.Dispose();
                     Console.WriteLine("✅ Search stopped gracefully");
                 };
-                
+
                 // WAIT FOR SEARCH TO COMPLETE!
                 DebugLogger.Log($"[Program] Search started. Initial status: {search.Status}");
                 int loopCount = 0;
-                while (search.Status != MotelySearchStatus.Completed && !MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled)
+                while (search.Status != MotelySearchStatus.Completed && !MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider.IsCancelled)
                 {
                     System.Threading.Thread.Sleep(100);
                     loopCount++;
@@ -561,11 +524,11 @@ namespace Motely
                         DebugLogger.Log($"[Program] Waiting for search... Status: {search.Status}, CompletedBatchCount: {search.CompletedBatchCount}");
                     }
                 }
-                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc.IsCancelled}");
-                
+                DebugLogger.Log($"[Program] Search loop exited. Final status: {search.Status}, Cancelled: {MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider.IsCancelled}");
+
                 // Stop timing
                 searchStopwatch.Stop();
-                
+
                 // Results are printed in real-time by MotelyJsonSeedScoreDesc
                 Console.WriteLine("\n✅ Search completed");
 
@@ -659,7 +622,7 @@ namespace Motely
         }
     }
 }
-    
+
 
 //     IMotelySearch search = new MotelySearchSettings<FilledSoulFilterDesc.SoulFilter>(new FilledSoulFilterDesc())
 // // IMotelySearch search = new MotelySearchSettings<TestFilterDesc.TestFilter>(new TestFilterDesc())

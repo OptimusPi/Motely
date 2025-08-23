@@ -39,18 +39,14 @@ public interface IMotelySeedScoreDesc<TScoreProvider> : IMotelySeedScoreDesc whe
     }
 }
 
-public record IMotelySeedScore(string Seed, int Score, int[] Scores)
+public interface IMotelySeedScore
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override string ToString() => $"Seed: {Seed.ToString()}, Score: {Score}, Score Columns: {string.Join(", ", Scores.ToArray())}";
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public string ToCsvRow() => $"{Seed.ToString()},{Score}{(Scores.Length > 0 ? "," : "")}{string.Join(",", Scores.ToArray())}";
+    public string Seed { get; }
 }
 
 public interface IMotelySeedScoreProvider
 {
-    public IMotelySeedScore Score(ref MotelyVectorSearchContext searchContext);
+    public void Score(ref MotelyVectorSearchContext searchContext);
 }
 
 public interface IMotelySeedFilter
@@ -465,13 +461,13 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         // Calculate rarity with appropriate units if we have results
         string rarityStr = "";
-        var resultsFound = MotelyJsonFinalTallyScoresDescDesc.ResultsFound;
+        string rarityEmoji = "🌱";
+        string rarityMoniker = "Filtering...";
+        var resultsFound = MotelyJsonSeedScoreDesc.ResultsFound;
         if (resultsFound > 0)
         {
             ulong totalSeedsSearched = clampedCompleted * (ulong)_threads[0].SeedsPerBatch;
             double rarityPercent = ((double)resultsFound / totalSeedsSearched) * 100.0;
-            var rarityEmoji = "🌱";
-            var rarityMoniker = "Filtering...";
 
             if (rarityPercent >= 1.0)
             {
@@ -521,9 +517,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             > 1314 => "⬛🌱🔄⬛⬛",
             > 1200 => "🌱⬛🔄⬛⬛",
             > 1100 => "🌱⬛🔄⬛⬛",
-            > 1100 => "➡️➡️➡️➡️➡️",
+            > 900 => "➡️➡️➡️➡️➡️",
             _      => "⬛⬛🔄⬛⬛",
         };
+        string variant = rarityEmoji;
         filteringEmojis = filteringEmojis.Replace("🌱", variant);
 
         FancyConsole.SetBottomLine($"{pct:F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)  {rarityStr}  {filteringEmojis}  {rarityMoniker}");
