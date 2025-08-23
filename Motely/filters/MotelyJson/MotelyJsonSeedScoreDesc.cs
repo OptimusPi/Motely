@@ -6,7 +6,23 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Linq;
 using System.Numerics;
+
 namespace Motely.Filters;
+
+
+public struct MotelySeedScoreTally : IMotelySeedScore
+{
+    public int Score { get; }
+    public List<int> TallyColumns { get; }
+    public string Seed { get; }
+
+    public MotelySeedScoreTally(string seed, int score, List<int> tallyColumns)
+    {
+        Seed = seed;
+        Score = score;
+        TallyColumns = tallyColumns;
+    }
+}   
 
 /// <summary>
 /// Clean filter descriptor for MongoDB-style queries
@@ -15,7 +31,7 @@ public struct MotelyJsonSeedScoreDesc(
     MotelyJsonConfig Config,
     int Cutoff,
     bool AutoCutoff,
-    Action<IMotelySeedScore> OnResultFound
+    Action<MotelySeedScoreTally> OnResultFound
 )
     : IMotelySeedScoreDesc<MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider>
 {
@@ -26,9 +42,10 @@ public struct MotelyJsonSeedScoreDesc(
 
     // Results tracking for rarity calculation
     private static long _resultsFound = 0;
-
-
     public static long ResultsFound => _resultsFound;
+
+    // Callback to return the score object to (the caller can print, send to a db, I don't care)
+    private readonly Action<MotelySeedScoreTally> _onResultFound = OnResultFound;
 
     public MotelyJsonSeedScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
     {
@@ -36,19 +53,19 @@ public struct MotelyJsonSeedScoreDesc(
         _learnedCutoff = Cutoff;
         _resultsFound = 0;
 
-        return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, OnResultFound);
+        return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound);
     }
 
-    public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<IMotelySeedScore> OnResultFound)
+    public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<MotelySeedScoreTally> OnResultFound)
         : IMotelySeedScoreProvider
     {
         public static bool IsCancelled;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IMotelySeedScore Score(ref MotelyVectorSearchContext searchContext)
+        public void Score(ref MotelyVectorSearchContext searchContext)
         {
             if (IsCancelled)
-                return new IMotelySeedScore("", 0, []);
+                return;
 
             // Copy fields to local variables to avoid struct closure issues
             var config = Config;
@@ -56,7 +73,7 @@ public struct MotelyJsonSeedScoreDesc(
             var autoCutoff = AutoCutoff;
             var onResultFound = OnResultFound;
 
-            return searchContext.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
+            searchContext.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
 
@@ -93,7 +110,7 @@ public struct MotelyJsonSeedScoreDesc(
                 }
 
                 // Calculate scores for SHOULD clauses
-                int totalScore = 1; // Base score for passing MUST
+                int totalScore = 0;
                 var scores = new List<int>();
 
                 if (config.Should?.Count > 0)
@@ -107,36 +124,35 @@ public struct MotelyJsonSeedScoreDesc(
                     }
                 }
 
-                // Auto cutoff logic
-                var currentCutoff = autoCutoff ? GetCurrentCutoff(totalScore) : cutoff;
-
                 // Only return true if score meets threshold
-                if (totalScore >= currentCutoff)
+                if (totalScore >= GetCurrentCutoff(totalScore, autoCutoff, cutoff))
                 {
                     // Track results for rarity calculation
                     Interlocked.Increment(ref _resultsFound);
 
-                    // Use callback for CSV formatting (moved out of hot path)
-                    if (OnResultFound != null)
+                    string seedStr;
+                    unsafe
                     {
-                        unsafe
-                        {
-                            char* seedPtr = stackalloc char[9];
-                            int len = singleCtx.GetSeed(seedPtr);
-                            string seedStr = new string(seedPtr, 0, len);
-                        }
-                        return false; // Callback handled output, don't print seed again
+                        char* seedPtr = stackalloc char[9];
+                        int length = singleCtx.GetSeed(seedPtr);
+                        seedStr = new string(seedPtr, 0, length);
                     }
-
-                    return true; // Let framework handle seed output if no callback
+                    var seedScore = new MotelySeedScoreTally(seedStr, totalScore, scores);
+                    onResultFound(seedScore); // RICH CALLBACK!
+                    
+                    return true; // Tell framework this seed passed
                 }
 
                 return false;
             });
         }
 
-        private static int GetCurrentCutoff(int currentScore)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GetCurrentCutoff(int currentScore, bool autoCutoff, int cutoff)
         {
+            if (!autoCutoff)
+                return cutoff;
+
             // Thread-safe auto cutoff: Start at 1, raise to highest score found
             if (currentScore > _learnedCutoff)
             {
