@@ -57,6 +57,19 @@ namespace Motely.Filters;
         // Sources configuration
         public SourcesConfig? Sources { get; set; }
         
+        // Direct properties for backwards compatibility  
+        [JsonPropertyName("packSlots")]
+        public int[]? PackSlots { get; set; }
+        
+        [JsonPropertyName("shopSlots")]
+        public int[]? ShopSlots { get; set; }
+        
+        [JsonPropertyName("requireMega")]
+        public bool? RequireMega { get; set; }
+        
+        [JsonPropertyName("tags")]
+        public bool? Tags { get; set; }
+        
         // Get effective antes
         [JsonIgnore]
         public int[] EffectiveAntes
@@ -120,6 +133,8 @@ namespace Motely.Filters;
         [JsonIgnore] public MotelyPlayingCardRank? RankEnum { get; set; }
         [JsonIgnore] public MotelyItemSeal? SealEnum { get; set; }
         [JsonIgnore] public MotelyItemEnhancement? EnhancementEnum { get; set; }
+        [JsonIgnore] public JokerWildcard? WildcardEnum { get; set; }
+        [JsonIgnore] public bool IsWildcardAnyJoker { get; set; }
         
         public void InitializeParsedEnums()
         {

@@ -12,7 +12,7 @@ namespace Motely.Filters;
 /// Universal filter descriptor that can filter any category and chain to itself
 /// Single class handles all filter types with category-specific optimization
 /// </summary>
-public struct MotelyFilterDesc(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilterDesc<MotelyFilterDesc.MotelyFilter>
+public struct MotelyJsonFilterDesc(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilterDesc<MotelyJsonFilterDesc.MotelyFilter>
 {
     private readonly FilterCategory _category = category;
     private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses = clauses;
@@ -22,6 +22,12 @@ public struct MotelyFilterDesc(FilterCategory category, List<MotelyJsonConfig.Mo
 
     public MotelyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        foreach (var clause in Clauses)
+        {
+            if (clause.Type != _category)
+                Debug.Assert(false, $"MotelyJsonFilterDesc({_category}) contains clause of different type: {clause.Type}");
+        }
+
         // Cache relevant streams based on category
         switch (_category)
         {
@@ -34,7 +40,7 @@ public struct MotelyFilterDesc(FilterCategory category, List<MotelyJsonConfig.Mo
                 ctx.CacheBoosterPackStream(2);
                 ctx.CacheBoosterPackStream(8);
                 break;
-            // Add other categories as needed
+                // Add other categories as needed
         }
         
         return new MotelyFilter(_category, Clauses);
@@ -265,13 +271,19 @@ public struct MotelyFilterDesc(FilterCategory category, List<MotelyJsonConfig.Mo
 /// </summary>
 public enum FilterCategory
 {
+    // Meta
     Voucher,
+    Boss,
     Tag,
-    Tarot,
-    Planet,
-    Spectral,
-    Joker,
-    SoulJoker,
+
+    // Consumables
+    TarotCard,
+    PlanetCard,
+    SpectralCard,
+
+    // Standard
     PlayingCard,
-    Boss
+
+    // Jokers and "SoulJoker" in same category
+    Joker,
 }
