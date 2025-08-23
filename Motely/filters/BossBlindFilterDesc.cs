@@ -46,7 +46,6 @@ public struct BossBlindFilterDesc : IMotelySeedFilterDesc<BossBlindFilterDesc.Bo
         {
             VectorMask mask = VectorMask.AllBitsSet;
             
-            // Boss generation algorithm from Ouija:
             // 1. Bosses appear in EVERY ante (after small and big blinds)
             // 2. There are regular bosses and finisher bosses (ante % 8 == 0)
             // 3. Once a boss is used, it's locked until the pool is exhausted

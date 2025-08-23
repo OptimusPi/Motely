@@ -24,7 +24,7 @@ public struct MotelyJsonFinalTallyScoresDescDesc(
     public MotelyJsonFinalTallyScoresDesc CreateFilter(ref MotelyFilterCreationContext ctx)
     {
 
-        return new MotelyJsonFinalTallyScoresDesc(_config, Cutoff, AutoCutoff, _onResultFound);
+        return new MotelyJsonFinalTallyScoresDesc(_config, Cutoff, AutoCutoff, OnResultFound);
     }
 
     public struct MotelyJsonFinalTallyScoresDesc(MotelyJsonConfig config, int cutoff, bool autoCutoff, Action<string, int, int[]> OnResultFound)
