@@ -17,7 +17,7 @@ public static class MotelyJsonFiltering
     // These handle vectorized filtering for PreFilter phase
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static VectorMask VectorFilter_Tags(ref MotelyVectorSearchContext ctx, MotelyJsonConfig.FilterItem clause)
+    public static VectorMask VectorFilter_Tags(ref MotelyVectorSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause)
     {
         Debug.Assert(clause.TagEnum.HasValue, "VectorFilter_Tags requires TagEnum");
         
@@ -44,7 +44,7 @@ public static class MotelyJsonFiltering
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static VectorMask VectorFilter_Vouchers(List<MotelyJsonConfig.FilterItem> clausesList, ref MotelyVectorSearchContext searchContext, ref MotelyVectorRunStateVoucher voucherState)
+    public static VectorMask VectorFilter_Vouchers(List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList, ref MotelyVectorSearchContext searchContext, ref MotelyVectorRunStateVoucher voucherState)
     {
         Debug.Assert(clausesList.Count > 0, "VectorFilter_Vouchers requires non-empty clause list");
         
@@ -119,7 +119,7 @@ public static class MotelyJsonFiltering
     // These handle individual seed filtering for complex logic
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool ExistsSoulJoker(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante, ref MotelyRunState runState)
+    public static bool ExistsSoulJoker(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
     {
         // Fast existence check for soul jokers - early exit on first match
         // TODO: Move soul joker filtering logic here
@@ -127,7 +127,7 @@ public static class MotelyJsonFiltering
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool ExistsPlayingCard(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante)
+    public static bool ExistsPlayingCard(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante)
     {
         // Fast existence check for playing cards - early exit on first match
         // TODO: Move playing card filtering logic here

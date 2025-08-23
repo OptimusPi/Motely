@@ -34,39 +34,4 @@ public ref struct MotelyRunState
     {
         ShowmanActive = true;
     }
-    
-    public void AddOwnedJoker(MotelyItem joker)
-    {
-        if (!OwnedJokers.Contains(joker))
-        {
-            OwnedJokers.Append(joker);
-        }
-    }
-    
-    public bool CanObtainJoker(MotelyItem joker)
-    {
-        // Can always obtain if Showman is active
-        if (ShowmanActive) return true;
-        
-        // Otherwise, can't obtain duplicates
-        return !OwnedJokers.Contains(joker.Type);
-    }
-    
-    public bool IsSoulPackConsumed(int ante, int packSlot)
-    {
-        // Each ante gets 8 bits (supports up to 8 pack slots per ante)
-        int bitIndex = (ante - 1) * 8 + packSlot;
-        if (bitIndex >= 64) return false; // Safety check
-        return (ConsumedSoulPackSlots & (1UL << bitIndex)) != 0;
-    }
-    
-    public void MarkSoulPackConsumed(int ante, int packSlot)
-    {
-        // Each ante gets 8 bits (supports up to 8 pack slots per ante)
-        int bitIndex = (ante - 1) * 8 + packSlot;
-        if (bitIndex < 64) // Safety check
-        {
-            ConsumedSoulPackSlots |= (1UL << bitIndex);
-        }
-    }
 }

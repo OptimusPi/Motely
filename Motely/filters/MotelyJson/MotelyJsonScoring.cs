@@ -14,7 +14,7 @@ public static class MotelyJsonScoring
     #region Count Functions for Should Clauses
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int TarotCardsTally(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
+    public static int TarotCardsTally(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
         Debug.Assert(clause.TarotEnum.HasValue, "TarotCardsTally requires TarotEnum");
         Debug.Assert(clause.Sources != null, "TarotCardsTally requires Sources");
@@ -27,7 +27,7 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot;
+            int maxSlot = clause.MaxShopSlot ?? shopSlots.Max();
             
             for (int i = 0; i <= maxSlot; i++)
             {
@@ -82,7 +82,7 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountPlanetOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante, bool earlyExit = false)
+    public static int CountPlanetOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, bool earlyExit = false)
     {
         Debug.Assert(clause.PlanetEnum.HasValue, "CountPlanetOccurrences requires PlanetEnum");
         
@@ -94,7 +94,7 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountSpectralOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante, bool earlyExit = false)
+    public static int CountSpectralOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, bool earlyExit = false)
     {
         bool searchAnySpectral = !clause.SpectralEnum.HasValue;
         int tally = 0;
@@ -105,7 +105,7 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountPlayingCardOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante, bool earlyExit = false)
+    public static int CountPlayingCardOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, bool earlyExit = false)
     {
         Debug.Assert(clause.SuitEnum.HasValue || clause.RankEnum.HasValue || clause.EnhancementEnum.HasValue || clause.SealEnum.HasValue || clause.EditionEnum.HasValue, 
             "CountPlayingCardOccurrences requires at least one filter criteria");
@@ -140,8 +140,8 @@ public static class MotelyJsonScoring
                             (!clause.SealEnum.HasValue || item.Seal == clause.SealEnum.Value) &&
                             (!clause.EditionEnum.HasValue || item.Edition == clause.EditionEnum.Value))
                         {
-                            foundCount++;
-                            if (earlyExit) return foundCount; // Early exit for filtering
+                            tally++;
+                            if (earlyExit) return tally; // Early exit for filtering
                         }
                     }
                 }
@@ -152,7 +152,7 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
+    public static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
         int tally = 0;
         
@@ -162,7 +162,7 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
+    public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
         int tally = 0;
         
@@ -172,7 +172,7 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.FilterItem clause, ref MotelyRunState voucherState)
+    public static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState voucherState)
     {
         if (!clause.VoucherEnum.HasValue) return 0;
 
@@ -207,7 +207,7 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool CheckEditionAndStickers(in MotelyItem item, MotelyJsonConfig.FilterItem clause)
+    public static bool CheckEditionAndStickers(in MotelyItem item, MotelyJsonConfig.MotleyJsonFilterClause clause)
     {
         if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
             return false;
@@ -228,6 +228,25 @@ public static class MotelyJsonScoring
         }
 
         return true;
+    }
+
+    #endregion
+
+    #region Missing Methods - TODO: Implement
+
+    public static void ActivateAllVouchers(ref MotelySingleSearchContext ctx, ref MotelyRunState runState, int maxAnte)
+    {
+        throw new NotImplementedException("TODO: Move ActivateAllVouchers logic from old OuijaJsonFilterDesc");
+    }
+
+    public static bool CheckSingleClause(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
+    {
+        throw new NotImplementedException("TODO: Move CheckSingleClause logic from old OuijaJsonFilterDesc");
+    }
+
+    public static int CountOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
+    {
+        throw new NotImplementedException("TODO: Move CountOccurrences logic from old OuijaJsonFilterDesc");
     }
 
     #endregion

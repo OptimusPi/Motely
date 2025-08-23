@@ -62,7 +62,7 @@ namespace Motely.Filters
             }
         }
         
-        private static void ValidateFilterItems(List<MotelyJsonConfig.FilterItem> items, string section, List<string> errors, List<string> warnings, MotelyStake stake)
+        private static void ValidateFilterItems(List<MotelyJsonConfig.MotleyJsonFilterClause> items, string section, List<string> errors, List<string> warnings, MotelyStake stake)
         {
             if (items == null) return;
             

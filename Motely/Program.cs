@@ -12,7 +12,7 @@ namespace Motely
             var app = new CommandLineApplication
             {
                 Name = "Motely",
-                Description = "Motely Ouija Search - Dynamic Balatro Seed Searcher",
+                Description = "Motely JSON Search Filter - Dynamic Balatro Seed Searcher",
                 OptionsComparison = StringComparison.OrdinalIgnoreCase
             };
 
@@ -197,7 +197,7 @@ namespace Motely
                 // Execute the search (this was previously commented out which made the app a no-op)
                 RunOuijaSearch(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
                     enableDebug, quiet, wordlist, keyword, nofancy, seedInput);
-                return 0; // RunOuijaSearch handles its own console output & completion text
+                return 0;
             });
 
             return app.Execute(args);
@@ -427,7 +427,7 @@ namespace Motely
 
             try
             {
-                // Load Ouija config
+                // Load config
                 var config = LoadConfig(configPath);
                 
                 if (!quiet)
@@ -436,33 +436,21 @@ namespace Motely
                 // Print the parsed config for debugging
                 if (!quiet && enableDebug)
                 {
-                    DebugLogger.Log("\n--- Parsed Ouija Config ---");
+                    DebugLogger.Log("\n--- Parsed Motely JSON Config ---");
                     DebugLogger.Log(config.ToJson());
                     DebugLogger.Log("--- End Config ---\n");
                 }
 
-                // Search configuration is now part of MotelySearchSettings
-
-                // The config loader now handles both formats automatically
-                // It will convert new format to legacy format internally
-                Action<string, int, int[]> onResultFound = (seed, totalScore, scores) =>
+                Action<IMotelySeedScore> onResultFound = (score) =>
                 {
-                    // Only emit a single CSV line per result. This avoids duplicate plain-seed output
-                    // specifically for MotelyJsonFinalTallyScoresDescDesc.
-                    // Format: Seed,TotalScore,<per-should scores>
-                    System.Text.StringBuilder sb = new System.Text.StringBuilder(seed.Length + 16 + scores.Length * 4);
-                    sb.Append(seed).Append(',').Append(totalScore);
-                    for (int i = 0; i < scores.Length; i++)
-                    {
-                        sb.Append(',').Append(scores[i]);
-                    }
-                    Console.WriteLine(sb.ToString());
+                    Console.WriteLine(score.ToCsvRow());
                 };
-                
-                var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config, onResultFound);
-                filterDesc.Cutoff = cutoff;
-                filterDesc.AutoCutoff = autoCutoff;
-                
+                var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound)
+                {
+                    Cutoff = cutoff,
+                    AutoCutoff = autoCutoff
+                };
+
                 if (!quiet)
                 {
                     if (autoCutoff)
@@ -472,10 +460,23 @@ namespace Motely
                     // Prefilter status is set in constructor now
                 }
 
-                // Create the search using MotelyJsonFinalTallyScoresDescDesc
-                var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
+                // Create the search using MotelyJsonFilterSlice pattern
+                // Start with main filter slice, then chain additional slices based on config
+                var mainFilterSlice = new MotelyFilterDesc(FilterCategory.Voucher, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList());
+                
+                var searchSettings = new MotelySearchSettings<MotelyFilterDesc.MotelyFilter>(mainFilterSlice)
                     .WithThreadCount(threads);
                     
+                // Chain additional filter slices
+                if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.Tarot))
+                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyFilterDesc(FilterCategory.Tarot, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.Tarot).ToList()));
+                    
+                if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker))
+                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyFilterDesc(FilterCategory.SoulJoker, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList()));
+                
+                // Add final scoring
+                searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
+
                 // Apply deck and stake from config
                 if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
                 {
@@ -626,7 +627,7 @@ namespace Motely
                 return config;
             }
 
-            // Always look in JsonItemFilters for configs
+            // Always look in ./JsonItemFilters for configs
             string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
             string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
             if (File.Exists(jsonItemFiltersPath))
@@ -645,28 +646,25 @@ namespace Motely
             // Print deck/stake info as comments
             Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
 
-            // Print CSV header only once, with + prefix
-            var header = "+Seed,TotalScore";
+            // Print CSV header only once
+            var header = "Seed,TotalScore";
 
             // Add column for each should clause
             if (config.Should != null)
             {
                 foreach (var should in config.Should)
                 {
-                    var col = FormatShouldColumn(should);
+                    var col = GetColumnLabel(should);
                     header += $",{col}";
                 }
             }
             Console.WriteLine(header);
         }
 
-        static string FormatShouldColumn(MotelyJsonConfig.FilterItem should)
+        static string GetColumnLabel(MotelyJsonConfig.MotleyJsonFilterClause should)
         {
-            
             // Format as Type:Value or just Value if type is obvious
-            var name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
-            if (!string.IsNullOrEmpty(should.Edition))
-                name = should.Edition + name;
+            var name = should.Label ?? should.Value ?? should.Type;
             return name;
         }
     }

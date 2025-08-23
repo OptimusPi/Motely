@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Linq;
+using Motely.Filters;
 
 namespace Motely.Filters;
 
@@ -11,10 +12,10 @@ namespace Motely.Filters;
 /// Universal filter descriptor that can filter any category and chain to itself
 /// Single class handles all filter types with category-specific optimization
 /// </summary>
-public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterItem> clauses) : IMotelySeedFilterDesc<MotelyFilterDesc.MotelyFilter>
+public struct MotelyFilterDesc(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilterDesc<MotelyFilterDesc.MotelyFilter>
 {
     private readonly FilterCategory _category = category;
-    private readonly List<OuijaConfig.FilterItem> _clauses = clauses;
+    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses = clauses;
 
     public readonly string Name => $"MotelyFilter_{_category}";
     public readonly string Description => $"Filters {_category} items with vectorized optimization";
@@ -36,18 +37,18 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
             // Add other categories as needed
         }
         
-        return new MotelyFilter(_category, _clauses);
+        return new MotelyFilter(_category, Clauses);
     }
 
-    public struct MotelyFilter(FilterCategory category, List<OuijaConfig.FilterItem> clauses) : IMotelySeedFilter
+    public struct MotelyFilter(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilter
     {
         private readonly FilterCategory _category = category;
-        private readonly List<OuijaConfig.FilterItem> _clauses = clauses;
+        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses = clauses;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            Debug.Assert(_clauses.Count > 0, $"MotelyFilter({_category}) called with empty clauses");
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter({_category}) called with empty clauses");
 
             return _category switch
             {
@@ -73,9 +74,9 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
             var state = new MotelyVectorRunStateVoucher();
 
             // Find max ante needed
-            int maxAnte = _clauses.Max(c => c.EffectiveAntes?.Max() ?? 1);
+            int maxAnte = Clauses.Max(c => c.EffectiveAntes?.Max() ?? 1);
 
-            foreach (var clause in _clauses)
+            foreach (var clause in Clauses)
             {
                 var clauseMask = VectorMask.NoBitsSet;
 
@@ -87,7 +88,7 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
                         var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
                         clauseMask |= matches;
 
-                        if (matches.IsPartiallyTrue())
+                        if (((VectorMask)matches).IsPartiallyTrue())
                         {
                             state.ActivateVoucher(clause.VoucherEnum.Value);
                         }
@@ -106,11 +107,11 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
         {
             var mask = VectorMask.AllBitsSet;
 
-            foreach (var clause in _clauses)
+            foreach (var clause in Clauses)
             {
                 var clauseMask = VectorMask.NoBitsSet;
 
-                foreach (var ante in clause.EffectiveAntes ?? [])
+                foreach (var ante in clause.EffectiveAntes)
                 {
                     var tagStream = ctx.CreateTagStream(ante);
                     var smallTag = ctx.GetNextTag(ref tagStream);
@@ -137,13 +138,15 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
         private VectorMask FilterTarots(ref MotelyVectorSearchContext ctx)
         {
             // For now, fall back to individual processing until true vectorization
+            var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                foreach (var clause in _clauses)
+                foreach (var clause in clauses)
                 {
                     foreach (var ante in clause.EffectiveAntes ?? [])
                     {
-                        if (MotelyJsonScoring.TarotCardsTally(ref singleCtx, clause, ante, ref new MotelyRunState(), earlyExit: true) > 0)
+                        var tempState = new MotelyRunState();
+                        if (MotelyJsonScoring.TarotCardsTally(ref singleCtx, clause, ante, ref tempState, earlyExit: true) > 0)
                             return true;
                     }
                 }
@@ -155,9 +158,10 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
         private VectorMask FilterPlanets(ref MotelyVectorSearchContext ctx)
         {
             // TODO: Implement vectorized planet filtering
+            var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                foreach (var clause in _clauses)
+                foreach (var clause in clauses)
                 {
                     foreach (var ante in clause.EffectiveAntes ?? [])
                     {
@@ -173,9 +177,10 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
         private VectorMask FilterSpectrals(ref MotelyVectorSearchContext ctx)
         {
             // TODO: Implement vectorized spectral filtering
+            var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                foreach (var clause in _clauses)
+                foreach (var clause in clauses)
                 {
                     foreach (var ante in clause.EffectiveAntes ?? [])
                     {
@@ -191,10 +196,11 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
         private VectorMask FilterJokers(ref MotelyVectorSearchContext ctx)
         {
             // TODO: Implement vectorized joker filtering for shop/pack slots
+            var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
-                foreach (var clause in _clauses)
+                foreach (var clause in clauses)
                 {
                     foreach (var ante in clause.EffectiveAntes ?? [])
                     {
@@ -209,10 +215,11 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterSoulJokers(ref MotelyVectorSearchContext ctx)
         {
+            var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
-                foreach (var clause in _clauses)
+                foreach (var clause in clauses)
                 {
                     foreach (var ante in clause.EffectiveAntes ?? [])
                     {
@@ -227,9 +234,10 @@ public struct MotelyFilterDesc(FilterCategory category, List<OuijaConfig.FilterI
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterPlayingCards(ref MotelyVectorSearchContext ctx)
         {
+            var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                foreach (var clause in _clauses)
+                foreach (var clause in clauses)
                 {
                     foreach (var ante in clause.EffectiveAntes ?? [])
                     {

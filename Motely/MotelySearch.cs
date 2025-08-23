@@ -13,6 +13,7 @@ public interface IMotelySeedFilterDesc
     public IMotelySeedFilter CreateFilter(ref MotelyFilterCreationContext ctx);
 }
 
+
 public interface IMotelySeedFilterDesc<TFilter> : IMotelySeedFilterDesc where TFilter : struct, IMotelySeedFilter
 {
     public new TFilter CreateFilter(ref MotelyFilterCreationContext ctx);
@@ -21,6 +22,35 @@ public interface IMotelySeedFilterDesc<TFilter> : IMotelySeedFilterDesc where TF
     {
         return CreateFilter(ref ctx);
     }
+}
+
+public interface IMotelySeedScoreDesc
+{
+    public IMotelySeedScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx);
+}
+
+public interface IMotelySeedScoreDesc<TScoreProvider> : IMotelySeedScoreDesc where TScoreProvider : struct, IMotelySeedScoreProvider
+{
+    public new TScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx);
+
+    IMotelySeedScoreProvider IMotelySeedScoreDesc.CreateScoreProvider(ref MotelyFilterCreationContext ctx)
+    {
+        return CreateScoreProvider(ref ctx);
+    }
+}
+
+public record IMotelySeedScore(string Seed, int Score, int[] Scores)
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override string ToString() => $"Seed: {Seed.ToString()}, Score: {Score}, Score Columns: {string.Join(", ", Scores.ToArray())}";
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public string ToCsvRow() => $"{Seed.ToString()},{Score}{(Scores.Length > 0 ? "," : "")}{string.Join(",", Scores.ToArray())}";
+}
+
+public interface IMotelySeedScoreProvider
+{
+    public IMotelySeedScore Score(ref MotelyVectorSearchContext searchContext);
 }
 
 public interface IMotelySeedFilter
@@ -83,6 +113,8 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     public IMotelySeedFilterDesc<TBaseFilter> BaseFilterDesc { get; set; } = baseFilterDesc;
 
     public IList<IMotelySeedFilterDesc>? AdditionalFilters { get; set; } = null;
+
+    public IMotelySeedScoreProvider? SeedScoreDesc { get; set; } = null;
 
     public MotelySearchMode Mode { get; set; }
 
@@ -163,6 +195,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     {
         AdditionalFilters ??= [];
         AdditionalFilters.Add(filterDesc);
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithSeedScoreProvider(IMotelySeedScoreDesc seedScoreDesc)
+    {
+        SeedScoreDesc = seedScoreDesc;
         return this;
     }
 

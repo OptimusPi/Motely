@@ -55,7 +55,7 @@
 //         {
 //             // Test that we can create and run a filter looking for Rocket
 //             var config = new MotelyJsonConfig();
-//             var rocketItem = new MotelyJsonConfig.FilterItem {
+//             var rocketItem = new MotelyJsonConfig.MotleyJsonFilterClause {
 //                 Type = "Joker",
 //                 Value = "Rocket",
 //                 Antes = new[] { 1 },
@@ -87,7 +87,7 @@
 //         {
 //             // Test that we can create and run a filter looking for The Empress
 //             var config = new MotelyJsonConfig();
-//             var empressItem = new MotelyJsonConfig.FilterItem {
+//             var empressItem = new MotelyJsonConfig.MotleyJsonFilterClause {
 //                 Type = "TarotCard",
 //                 Value = "TheEmpress",
 //                 Antes = new[] { 1 },
@@ -119,7 +119,7 @@
 //         {
 //             // Simple test to verify we can run a basic filter against known seeds
 //             var config = new MotelyJsonConfig();
-//             var tradingCardItem = new MotelyJsonConfig.FilterItem {
+//             var tradingCardItem = new MotelyJsonConfig.MotleyJsonFilterClause {
 //                 Type = "Joker",
 //                 Value = "TradingCard",
 //                 Antes = new[] { 1 },
