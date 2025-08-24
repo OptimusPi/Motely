@@ -27,7 +27,7 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot ?? shopSlots.Max();
+            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
             
             for (int i = 0; i <= maxSlot; i++)
             {
@@ -50,7 +50,7 @@ public static class MotelyJsonScoring
             var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
             var tarotStream = ctx.CreateArcanaPackTarotStream(ante); // Create ONCE before loop
             var packSlots = clause.Sources.PackSlots;
-            int packCount = (clause.MaxPackSlot ?? packSlots.Max()) + 1;
+            int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
             
             for (int i = 0; i < packCount; i++)
             {
@@ -87,8 +87,60 @@ public static class MotelyJsonScoring
         Debug.Assert(clause.PlanetEnum.HasValue, "CountPlanetOccurrences requires PlanetEnum");
         
         int tally = 0;
-        
-        // TODO: Implement planet counting logic with proper stream advancement
+
+        // Check shop slots
+        if (clause.Sources?.ShopSlots?.Length > 0)
+        {
+            var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
+            var shopSlots = clause.Sources.ShopSlots;
+            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
+            
+            for (int i = 0; i <= maxSlot; i++)
+            {
+                var item = ctx.GetNextShopItem(ref shopStream);
+                if (shopSlots.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.PlanetCard)
+                {
+                    var planet = new MotelyItem(item.Value).GetPlanet();
+                    if (planet == clause.PlanetEnum.Value)
+                    {
+                        tally++;
+                        if (earlyExit) return tally;
+                    }
+                }
+            }
+        }
+
+        // Check pack slots
+        if (clause.Sources?.PackSlots?.Length > 0)
+        {
+            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+            var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
+            var packSlots = clause.Sources.PackSlots;
+            int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
+            
+            for (int i = 0; i < packCount; i++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                
+                if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                {
+                    var contents = ctx.GetNextCelestialPackContents(ref planetStream, pack.GetPackSize());
+                    
+                    if (packSlots.Contains(i) && 
+                        !(clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega))
+                    {
+                        for (int j = 0; j < contents.Length; j++)
+                        {
+                            if (contents[j].Type == (MotelyItemType)clause.PlanetEnum.Value)
+                            {
+                                tally++;
+                                if (earlyExit) return tally;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         return tally;
     }
@@ -98,8 +150,91 @@ public static class MotelyJsonScoring
     {
         bool searchAnySpectral = !clause.SpectralEnum.HasValue;
         int tally = 0;
-        
-        // TODO: Implement spectral counting logic with proper stream advancement
+
+        // Check shop slots
+        if (clause.Sources?.ShopSlots?.Length > 0)
+        {
+            var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
+            var shopSlots = clause.Sources.ShopSlots;
+            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
+            
+            for (int i = 0; i <= maxSlot; i++)
+            {
+                var item = ctx.GetNextShopItem(ref shopStream);
+                if (shopSlots.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                {
+                    if (searchAnySpectral)
+                    {
+                        tally++;
+                        if (earlyExit) return tally;
+                    }
+                    else
+                    {
+                        var spectral = new MotelyItem(item.Value).GetSpectral();
+                        if (spectral == clause.SpectralEnum.Value)
+                        {
+                            tally++;
+                            if (earlyExit) return tally;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check pack slots
+        if (clause.Sources?.PackSlots?.Length > 0)
+        {
+            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+            var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
+            var packSlots = clause.Sources.PackSlots;
+            int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
+            
+            for (int i = 0; i < packCount; i++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                
+                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                {
+                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
+                    
+                    if (packSlots.Contains(i) && 
+                        !(clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega))
+                    {
+                        for (int j = 0; j < contents.Length; j++)
+                        {
+                            var item = contents[j];
+                            if (item.Type == MotelyItemType.Soul || item.Type == MotelyItemType.BlackHole)
+                            {
+                                if (searchAnySpectral ||
+                                    (item.Type == MotelyItemType.Soul && clause.SpectralEnum == MotelySpectralCard.Soul) ||
+                                    (item.Type == MotelyItemType.BlackHole && clause.SpectralEnum == MotelySpectralCard.BlackHole))
+                                {
+                                    tally++;
+                                    if (earlyExit) return tally;
+                                }
+                            }
+                            else if (item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                            {
+                                if (searchAnySpectral)
+                                {
+                                    tally++;
+                                    if (earlyExit) return tally;
+                                }
+                                else
+                                {
+                                    var spectral = new MotelyItem(item.Value).GetSpectral();
+                                    if (spectral == clause.SpectralEnum.Value)
+                                    {
+                                        tally++;
+                                        if (earlyExit) return tally;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         return tally;
     }
@@ -155,9 +290,71 @@ public static class MotelyJsonScoring
     public static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
         int tally = 0;
-        
-        // TODO: Move joker counting logic here
-        
+        var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
+        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+
+        if (clause.Sources?.ShopSlots?.Length > 0)
+        {
+            var shopSlots = clause.Sources.ShopSlots;
+            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
+            for (int i = 0; i <= maxSlot; i++)
+            {
+                var item = ctx.GetNextShopItem(ref shopStream);
+                if (shopSlots.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.Joker)
+                {
+                    var joker = new MotelyItem(item.Value).GetJoker();
+                    var matches = clause.JokerEnum.HasValue ?
+                        joker == clause.JokerEnum.Value :
+                        CheckWildcardMatch(joker, clause.WildcardEnum);
+                    if (matches && CheckEditionAndStickers(item, clause))
+                    {
+                        // TODO: runState.AddOwnedJoker(item);
+                        if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                        {
+                            runState.ActivateShowman();
+                        }
+                        tally++;
+                        if (earlyExit) return tally;
+                    }
+                }
+            }
+        }
+
+        if (clause.Sources?.PackSlots?.Length > 0)
+        {
+            var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
+            var packSlots = clause.Sources.PackSlots;
+            int maxPackSlot = clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0);
+            for (int i = 0; i <= maxPackSlot; i++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                {
+                    if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+
+                    var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
+                    for (int j = 0; j < contents.Length; j++)
+                    {
+                        var item = contents[j];
+                        var joker = item.GetJoker();
+                        var matches = clause.JokerEnum.HasValue ?
+                            joker == clause.JokerEnum.Value :
+                            CheckWildcardMatch(joker, clause.WildcardEnum);
+                        if (matches && CheckEditionAndStickers(item, clause))
+                        {
+                            // TODO: runState.AddOwnedJoker(item);
+                            if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                            {
+                                runState.ActivateShowman();
+                            }
+                            tally++;
+                            if (earlyExit) return tally;
+                        }
+                    }
+                }
+            }
+        }
+
         return tally;
     }
 
@@ -165,9 +362,67 @@ public static class MotelyJsonScoring
     public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
         int tally = 0;
-        
-        // TODO: Move soul joker counting logic here with proper stream advancement
-        
+        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+        var soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
+        bool soulStreamInit = false;
+
+        var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 };
+        int packCount = packSlots.Length > 0 ? (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1 : (ante == 1 ? 4 : 6);
+
+        for (int i = 0; i < packCount; i++)
+        {
+            var pack = ctx.GetNextBoosterPack(ref packStream);
+
+            if (packSlots.Contains(i) && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
+            {
+                if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+
+                bool hasSoul = false;
+                if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                {
+                    var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
+                    hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+                }
+                else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                {
+                    var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true);
+                    hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+                }
+
+                if (hasSoul)
+                {
+                    // Check if this soul pack has already been consumed by another clause
+                    // TODO: if (runState.IsSoulPackConsumed(ante, i)) continue;
+
+                    if (!soulStreamInit)
+                    {
+                        soulStreamInit = true;
+                    }
+
+                    // Get the soul joker and check if it matches
+                    var soulJoker = ctx.GetNextJoker(ref soulStream);
+
+                    if (!clause.JokerEnum.HasValue || soulJoker.Type == new MotelyItem(clause.JokerEnum.Value).Type)
+                    {
+                        // Check edition and stickers if specified
+                        if (CheckEditionAndStickers(soulJoker, clause))
+                        {
+                            // TODO: runState.MarkSoulPackConsumed(ante, i);
+                            // TODO: runState.AddOwnedJoker(soulJoker);
+
+                            if (soulJoker.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                            {
+                                runState.ActivateShowman();
+                            }
+
+                            tally++;
+                            if (earlyExit) return tally; // Early exit for Must clauses
+                        }
+                    }
+                }
+            }
+        }
+
         return tally;
     }
 
@@ -236,17 +491,91 @@ public static class MotelyJsonScoring
 
     public static void ActivateAllVouchers(ref MotelySingleSearchContext ctx, ref MotelyRunState runState, int maxAnte)
     {
-        throw new NotImplementedException("TODO: Move ActivateAllVouchers logic from old OuijaJsonFilterDesc");
+        for (int ante = 1; ante <= maxAnte; ante++)
+        {
+            var voucher = ctx.GetAnteFirstVoucher(ante, runState);
+            runState.ActivateVoucher(voucher);
+            DebugLogger.Log($"[VoucherActivation] Ante {ante}: Activated {voucher}");
+
+            // Special case: Hieroglyph gives a bonus voucher in the SAME ante
+            if (voucher == MotelyVoucher.Hieroglyph)
+            {
+                // Use a voucher stream to get the NEXT voucher (not the first one again)
+                var voucherStream = ctx.CreateVoucherStream(ante);
+                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, runState);
+                runState.ActivateVoucher(bonusVoucher);
+                DebugLogger.Log($"[VoucherActivation] Ante {ante}: Hieroglyph bonus activated {bonusVoucher}");
+            }
+        }
     }
 
     public static bool CheckSingleClause(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
-        throw new NotImplementedException("TODO: Move CheckSingleClause logic from old OuijaJsonFilterDesc");
+        if (clause.EffectiveAntes?.Length == 0) return false;
+
+        foreach (var ante in clause.EffectiveAntes)
+        {
+            var found = clause.ItemTypeEnum switch
+            {
+                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: true) > 0,
+                MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: true) > 0,
+                MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: true) > 0,
+                MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
+                MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
+                MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante),
+                MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante),
+                MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
+                MotelyFilterItemType.Boss => false, // TODO: Implement after boss PRNG fix
+                MotelyFilterItemType.Voucher => true, // Vouchers already validated in PreFilter
+                _ => false
+            };
+
+            if (found)
+            {
+                if (clause.ItemTypeEnum == MotelyFilterItemType.Joker && clause.JokerEnum == MotelyJoker.Showman)
+                    runState.ActivateShowman();
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private static bool CheckTagSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante)
+    {
+        var tagStream = ctx.CreateTagStream(ante);
+        var smallTag = ctx.GetNextTag(ref tagStream);
+        var bigTag = ctx.GetNextTag(ref tagStream);
+
+        return clause.TagTypeEnum switch
+        {
+            MotelyTagType.SmallBlind => smallTag == clause.TagEnum.Value,
+            MotelyTagType.BigBlind => bigTag == clause.TagEnum.Value,
+            _ => smallTag == clause.TagEnum.Value || bigTag == clause.TagEnum.Value
+        };
     }
 
     public static int CountOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
-        throw new NotImplementedException("TODO: Move CountOccurrences logic from old OuijaJsonFilterDesc");
+        int totalCount = 0;
+        foreach (var ante in clause.EffectiveAntes)
+        {
+            var anteCount = clause.ItemTypeEnum switch
+            {
+                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
+                MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
+                MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
+                MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
+                MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
+                MotelyFilterItemType.Boss => 0, // TODO: Implement after boss PRNG fix
+                MotelyFilterItemType.Voucher => CountVoucherOccurrences(ref ctx, clause, ref runState),
+                _ => 0
+            };
+            totalCount += anteCount;
+        }
+        return totalCount;
     }
 
     #endregion

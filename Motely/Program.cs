@@ -270,6 +270,39 @@ namespace Motely
                     search = settings.WithSequentialSearch().Start();
                 }
             }
+            else if (normalizedFilterName == "negativecopy")
+            {
+                var settings = new MotelySearchSettings<NegativeCopyFilterDesc.NegativeCopyFilter>(new NegativeCopyFilterDesc())
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchSize)
+                    .WithResultCallback((seed, score, details) =>
+                    {
+                        Console.WriteLine($"{seed}");
+                    });
+
+                if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
+                if (endBatch > 0) settings = settings.WithEndBatchIndex(endBatch);
+
+                if (!string.IsNullOrEmpty(specificSeed))
+                {
+                    search = settings.WithListSearch([specificSeed]).Start();
+                }
+                else if (!string.IsNullOrEmpty(wordlist))
+                {
+                    var wordlistPath = $"WordLists/{wordlist}.txt";
+                    if (!File.Exists(wordlistPath))
+                    {
+                        Console.WriteLine($"❌ Wordlist file not found: {wordlistPath}");
+                        return 1;
+                    }
+                    var seeds = File.ReadAllLines(wordlistPath).Where(line => !string.IsNullOrWhiteSpace(line));
+                    search = settings.WithListSearch(seeds).Start();
+                }
+                else
+                {
+                    search = settings.WithSequentialSearch().Start();
+                }
+            }
             else if (normalizedFilterName == "soultest")
             {
                 var settings = new MotelySearchSettings<SoulTestFilterDesc.SoulTestFilter>(new SoulTestFilterDesc())
@@ -387,17 +420,24 @@ namespace Motely
 
                 // Create the search using MotelyJsonFilterSlice pattern
                 // Start with main filter slice, then chain additional slices based on config
-                var mainFilterSlice = new MotelyJsonFilterDesc(FilterCategory.Voucher, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList());
+                
+                // Get ALL clauses (Must + Should + MustNot) for each category
+                var allClauses = config.Must.Concat(config.Should ?? []).Concat(config.MustNot ?? []).ToList();
+                var voucherClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList();
+                
+                var mainFilterSlice = new MotelyJsonFilterDesc(FilterCategory.Voucher, voucherClauses);
 
                 var searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(mainFilterSlice)
                     .WithThreadCount(threads);
 
-                // Chain additional filter slices
-                if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.TarotCard))
-                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.TarotCard, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList()));
-
-                if (config.Must.Any(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker))
-                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Joker, config.Must.Where(m => m.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList()));
+                // Chain additional filter slices using ALL clauses
+                var tarotClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList();
+                if (tarotClauses.Count > 0)
+                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.TarotCard, tarotClauses));
+                    
+                var jokerClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker || c.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList();
+                if (jokerClauses.Count > 0)
+                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Joker, jokerClauses));
 
                 // Add final scoring
                 searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);

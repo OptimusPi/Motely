@@ -36,8 +36,8 @@
 //             Assert.NotNull(config);
             
 //             // Create and run the filter - should not throw
-//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
-//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
+//             var filterDesc = new MotelyJsonSeedScoreDesc(config);
+//             var searchSettings = new MotelySearchSettings<MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB", "UNITTEST" })
@@ -64,10 +64,10 @@
 //             rocketItem.InitializeParsedEnums();
 //             config.Must.Add(rocketItem);
             
-//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
+//             var filterDesc = new MotelyJsonSeedScoreDesc(config);
             
 //             // Run the filter against ALEEB seed
-//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
+//             var searchSettings = new MotelySearchSettings<MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB" })
@@ -96,10 +96,10 @@
 //             empressItem.InitializeParsedEnums();
 //             config.Must.Add(empressItem);
             
-//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
+//             var filterDesc = new MotelyJsonSeedScoreDesc(config);
             
 //             // Run the filter against ALEEB seed
-//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
+//             var searchSettings = new MotelySearchSettings<MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB" })
@@ -128,10 +128,10 @@
 //             tradingCardItem.InitializeParsedEnums();
 //             config.Must.Add(tradingCardItem);
             
-//             var filterDesc = new MotelyJsonFinalTallyScoresDescDesc(config);
+//             var filterDesc = new MotelyJsonSeedScoreDesc(config);
             
 //             // Run against both test seeds
-//             var searchSettings = new MotelySearchSettings<MotelyJsonFinalTallyScoresDescDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
+//             var searchSettings = new MotelySearchSettings<MotelyJsonSeedScoreDesc.MotelyJsonFinalTallyScoresDesc>(filterDesc)
 //                 .WithDeck(MotelyDeck.Red)
 //                 .WithStake(MotelyStake.White)
 //                 .WithListSearch(new[] { "ALEEB", "UNITTEST" })
