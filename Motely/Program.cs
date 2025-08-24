@@ -422,7 +422,7 @@ namespace Motely
                 // Start with main filter slice, then chain additional slices based on config
                 
                 // Get ALL clauses (Must + Should + MustNot) for each category
-                var allClauses = config.Must.Concat(config.Should ?? []).Concat(config.MustNot ?? []).ToList();
+                var allClauses = config?.Must.Concat(config?.Should ?? []).Concat(config?.MustNot ?? []).ToList();
                 var voucherClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList();
                 
                 var mainFilterSlice = new MotelyJsonFilterDesc(FilterCategory.Voucher, voucherClauses);

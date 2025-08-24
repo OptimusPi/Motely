@@ -7,3 +7,4 @@ obj
 /JsonItemFilters
 /Motely/JsonItemFilters
 /Motely/WordLists
+Motely/filters/NegativeScore=2.ini
