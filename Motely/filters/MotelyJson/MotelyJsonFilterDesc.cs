@@ -26,22 +26,30 @@ public struct MotelyJsonFilterDesc(
 
     public MotelyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // TODO: Add validation that clauses match the category
-        // For now, trust the caller to pass correct clauses
+        //Debug.Assert(Clauses.Count > 0, $"MotelyJsonFilterDesc({_category}) called with empty clauses");
+        //Debug.Assert(Clauses.All(c => c.Category == _category), $"MotelyJsonFilterDesc({_category}) called with mixed-category clauses");
 
-        // Cache relevant streams based on category
+        // Cache ALL relevant streams based on category (following NegativeCopyJokers pattern)
         switch (_category)
         {
             case FilterCategory.Voucher:
+                // Cache all voucher antes like NegativeCopyJokers
                 for (int ante = 1; ante <= 8; ante++)
                     ctx.CacheAnteFirstVoucher(ante);
                 break;
             case FilterCategory.Joker:
-                ctx.CacheBoosterPackStream(1);
-                ctx.CacheBoosterPackStream(2);
-                ctx.CacheBoosterPackStream(8);
+                // Cache all pack streams like NegativeCopyJokers
+                for (int ante = 1; ante <= 8; ante++)
+                    ctx.CacheBoosterPackStream(ante);
                 break;
-                // Add other categories as needed
+            case FilterCategory.TarotCard:
+            case FilterCategory.PlanetCard:
+            case FilterCategory.SpectralCard:
+            case FilterCategory.PlayingCard:
+                // Cache all pack streams for comprehensive searching
+                for (int ante = 1; ante <= 8; ante++)
+                    ctx.CacheBoosterPackStream(ante);
+                break;
         }
         
         return new MotelyFilter(_category, Clauses);
