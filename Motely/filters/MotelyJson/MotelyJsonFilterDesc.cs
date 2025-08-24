@@ -80,7 +80,7 @@ public struct MotelyJsonFilterDesc(
             var state = new MotelyVectorRunStateVoucher();
 
             // Find max ante needed
-            int maxAnte = Clauses.Max(c => c.EffectiveAntes?.Max() ?? 1);
+            int maxAnte = Clauses.Count > 0 ? Clauses.Max(c => c.EffectiveAntes?.Length > 0 ? c.EffectiveAntes.Max() : 1) : 1;
 
             foreach (var clause in Clauses)
             {
@@ -163,13 +163,12 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterPlanets(ref MotelyVectorSearchContext ctx)
         {
-            // TODO: Implement vectorized planet filtering
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 foreach (var clause in clauses)
                 {
-                    foreach (var ante in clause.EffectiveAntes ?? [])
+                    foreach (var ante in clause.EffectiveAntes)
                     {
                         if (MotelyJsonScoring.CountPlanetOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
                             return true;
@@ -182,13 +181,12 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterSpectrals(ref MotelyVectorSearchContext ctx)
         {
-            // TODO: Implement vectorized spectral filtering
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 foreach (var clause in clauses)
                 {
-                    foreach (var ante in clause.EffectiveAntes ?? [])
+                    foreach (var ante in clause.EffectiveAntes)
                     {
                         if (MotelyJsonScoring.CountSpectralOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
                             return true;
@@ -201,36 +199,25 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterJokers(ref MotelyVectorSearchContext ctx)
         {
-            // TODO: Implement vectorized joker filtering for shop/pack slots
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
                 foreach (var clause in clauses)
                 {
-                    foreach (var ante in clause.EffectiveAntes ?? [])
+                    foreach (var ante in clause.EffectiveAntes)
                     {
-                        if (MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
-                            return true;
-                    }
-                }
-                return false;
-            });
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask FilterSoulJokers(ref MotelyVectorSearchContext ctx)
-        {
-            var clauses = Clauses; // Copy to local variable for lambda access
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-            {
-                var runState = new MotelyRunState();
-                foreach (var clause in clauses)
-                {
-                    foreach (var ante in clause.EffectiveAntes ?? [])
-                    {
-                        if (MotelyJsonScoring.CountSoulJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
-                            return true;
+                        // Handle both regular Jokers and SoulJokers
+                        if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+                        {
+                            if (MotelyJsonScoring.CountSoulJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
+                                return true;
+                        }
+                        else
+                        {
+                            if (MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
+                                return true;
+                        }
                     }
                 }
                 return false;
@@ -245,7 +232,7 @@ public struct MotelyJsonFilterDesc(
             {
                 foreach (var clause in clauses)
                 {
-                    foreach (var ante in clause.EffectiveAntes ?? [])
+                    foreach (var ante in clause.EffectiveAntes)
                     {
                         if (MotelyJsonScoring.CountPlayingCardOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
                             return true;
@@ -254,6 +241,7 @@ public struct MotelyJsonFilterDesc(
                 return false;
             });
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterBosses(ref MotelyVectorSearchContext ctx)

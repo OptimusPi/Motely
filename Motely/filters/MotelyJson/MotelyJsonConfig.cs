@@ -161,7 +161,7 @@ namespace Motely.Filters;
                     foreach (var clause in Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
                     {
                         if (clause.EffectiveAntes != null)
-                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
                     }
                 }
                 if (Should != null)
@@ -169,7 +169,7 @@ namespace Motely.Filters;
                     foreach (var clause in Should.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
                     {
                         if (clause.EffectiveAntes != null)
-                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Max());
+                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
                     }
                 }
                 
@@ -250,6 +250,16 @@ namespace Motely.Filters;
             {
                 // Normalize type
                 item.Type = item.Type.ToLowerInvariant();
+                
+                // Normalize arrays - force empty arrays instead of null
+                item.PackSlots ??= [];
+                item.ShopSlots ??= [];
+                item.Stickers ??= [];
+                item.Antes ??= [1, 2, 3, 4, 5, 6, 7, 8]; // Default to all antes
+                if (item.Sources?.PackSlots == null && item.Sources != null) 
+                    item.Sources.PackSlots = [];
+                if (item.Sources?.ShopSlots == null && item.Sources != null) 
+                    item.Sources.ShopSlots = [];
                 
                 // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
                 item.InitializeParsedEnums();
