@@ -109,7 +109,7 @@ public struct MotelyJsonSeedScoreDesc(
                     }
                 }
 
-                // Calculate scores for SHOULD clauses
+                // Calculate scores for SHOULD clauses using comprehensive scanning like NegativeCopyJokers
                 int totalScore = 1;
                 var scores = new List<int>();
 
@@ -117,10 +117,13 @@ public struct MotelyJsonSeedScoreDesc(
                 {
                     foreach (var should in config.Should)
                     {
+                        // Use comprehensive counting across all relevant antes
                         int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
                         int score = count * should.Score;
                         scores.Add(count);
                         totalScore += score;
+                        
+                        DebugLogger.Log($"[Should] {should.ItemTypeEnum} {should.Value}: found {count}, score {score}");
                     }
                 }
 
