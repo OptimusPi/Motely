@@ -196,6 +196,47 @@ namespace Motely
 
             return app.Execute(args);
         }
+        // Reusable function to create slice-chained search from JSON config
+        public static MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter> CreateSliceChainedSearch(MotelyJsonConfig config, int threads)
+        {
+            // Get ALL clauses (Must + Should + MustNot) for each category
+            var allClauses = config.Must.Concat(config.Should ?? []).Concat(config.MustNot ?? []).ToList();
+            
+            // Create main filter slice (start with most selective category)
+            var voucherClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList();
+            var mainFilterSlice = new MotelyJsonFilterDesc(FilterCategory.Voucher, voucherClauses);
+
+            var searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(mainFilterSlice)
+                .WithThreadCount(threads);
+
+            // Chain additional filter slices using ALL clauses
+            var tarotClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList();
+            if (tarotClauses.Count > 0)
+                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.TarotCard, tarotClauses));
+                
+            var jokerClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker || c.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList();
+            if (jokerClauses.Count > 0)
+                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Joker, jokerClauses));
+                
+            var tagClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag || c.ItemTypeEnum == MotelyFilterItemType.BigBlindTag).ToList();
+            if (tagClauses.Count > 0)
+                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Tag, tagClauses));
+                
+            var planetClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard).ToList();
+            if (planetClauses.Count > 0)
+                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.PlanetCard, planetClauses));
+                
+            var spectralClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard).ToList();
+            if (spectralClauses.Count > 0)
+                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.SpectralCard, spectralClauses));
+                
+            var playingCardClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlayingCard).ToList();
+            if (playingCardClauses.Count > 0)
+                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.PlayingCard, playingCardClauses));
+
+            return searchSettings;
+        }
+
         private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch, string? wordlist)
         {
             DebugLogger.IsEnabled = enableDebug;
@@ -421,24 +462,9 @@ namespace Motely
                 // Create the search using MotelyJsonFilterSlice pattern
                 // Start with main filter slice, then chain additional slices based on config
                 
-                // Get ALL clauses (Must + Should + MustNot) for each category
-                var allClauses = config?.Must.Concat(config?.Should ?? []).Concat(config?.MustNot ?? []).ToList();
-                var voucherClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList();
+                // Create slice-chained search using reusable function
+                var searchSettings = CreateSliceChainedSearch(config, threads);
                 
-                var mainFilterSlice = new MotelyJsonFilterDesc(FilterCategory.Voucher, voucherClauses);
-
-                var searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(mainFilterSlice)
-                    .WithThreadCount(threads);
-
-                // Chain additional filter slices using ALL clauses
-                var tarotClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList();
-                if (tarotClauses.Count > 0)
-                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.TarotCard, tarotClauses));
-                    
-                var jokerClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker || c.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList();
-                if (jokerClauses.Count > 0)
-                    searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Joker, jokerClauses));
-
                 // Add final scoring
                 searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
 
