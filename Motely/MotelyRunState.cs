@@ -15,10 +15,14 @@ public ref struct MotelyRunState
 
     public int VoucherBitfield;
     public bool ShowmanActive;
-    public MotelySingleItemSet OwnedJokers;
     
     // Track which pack slots have had their souls consumed (bit per pack slot, 8 bytes for 8 antes)
     public ulong ConsumedSoulPackSlots;
+    
+    // Boss state tracking (moved from static fields in MotelySingleSearchContext.Boss.cs)
+    public int[]? BossLocked;
+    public MotelySinglePrngStream? BossPrngStream;
+    public int LastProcessedBossAnte;
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {

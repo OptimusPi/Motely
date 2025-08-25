@@ -86,7 +86,7 @@ public struct MotelyJsonSeedScoreDesc(
                 foreach (var clause in config.Must)
                 {
                     DebugLogger.Log($"[Must] Checking {clause.ItemTypeEnum} {clause.Value} in antes [{string.Join(",", clause.EffectiveAntes ?? new int[0])}]");
-                    DebugLogger.Log($"[Must] Showman active: {runState.ShowmanActive}, Owned jokers: {runState.OwnedJokers.Length}");
+                    DebugLogger.Log($"[Must] Showman active: {runState.ShowmanActive}");
 
                     bool clauseResult = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
 
