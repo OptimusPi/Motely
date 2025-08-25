@@ -130,7 +130,7 @@ namespace Motely
                         return 1;
                     }
 
-                    MotelySeedAnalyzer.AnalyzeToConsole(analyzeSeed, deck, stake);
+                    MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(analyzeSeed, deck, stake));
                     return 0;
                 }
 
