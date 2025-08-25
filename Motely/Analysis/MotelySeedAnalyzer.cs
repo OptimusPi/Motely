@@ -105,6 +105,8 @@ public static partial class MotelySeedAnalyzer
             search.AwaitCompletion();
 
             Debug.Assert(filterDesc.LastAnalysis != null);
+        
+            Console.Write(filterDesc.LastAnalysis);
 
             return filterDesc.LastAnalysis;
         }
@@ -112,14 +114,6 @@ public static partial class MotelySeedAnalyzer
         {
             return new MotelySeedAnalysis(ex.ToString(), []);
         }
-    }
-
-    /// <summary>
-    /// Convenience method to analyze and immediately write formatted output to console.
-    /// </summary>
-    public static void AnalyzeToConsole(string seed, MotelyDeck deck, MotelyStake stake)
-    {
-        var analysis = Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
-        Console.Write(analysis.ToString());
+        
     }
 }

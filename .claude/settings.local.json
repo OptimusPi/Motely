@@ -13,7 +13,8 @@
       "Bash(mv:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(kill:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(dotnet test:*)"
     ],
     "deny": [],
     "additionalDirectories": [

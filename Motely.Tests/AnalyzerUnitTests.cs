@@ -19,8 +19,7 @@ public sealed class AnalyzerUnitTests
 
         // Assert using Verify - this will create a nice diff view
         await Verify(actualOutput)
-            .UseFileName($"analyzer_output_{seed}")
-            .DisableRequireUniquePrefix();
+            .UseFileName($"analyzer_output_{seed}");
     }
 
     [Fact]
@@ -34,44 +33,12 @@ public sealed class AnalyzerUnitTests
 
         // Assert using Verify - this will create a nice diff view
         await Verify(actualOutput)
-            .UseFileName($"analyzer_output_{seed}")
-            .DisableRequireUniquePrefix();
+            .UseFileName($"analyzer_output_{seed}");
     }
 
     private string GetAnalyzerOutput(string seed)
     {
         return MotelySeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White)).ToString();
-    }
-
-    // This method is now only used by other tests that don't use Verify yet
-    private void AssertOutputsMatch(string expected, string actual, string seed)
-    {
-        // Normalize line endings
-        expected = expected.Replace("\r\n", "\n").Trim();
-        actual = actual.Replace("\r\n", "\n").Trim();
-
-        // Split into lines for detailed comparison
-        var expectedLines = expected.Split('\n');
-        var actualLines = actual.Split('\n');
-
-        // First check line count
-        Assert.Equal(expectedLines.Length, actualLines.Length);
-
-        // Compare line by line for better error messages
-        for (int i = 0; i < expectedLines.Length; i++)
-        {
-            var expectedLine = expectedLines[i].TrimEnd();
-            var actualLine = actualLines[i].TrimEnd();
-
-            if (expectedLine != actualLine)
-            {
-                // Provide detailed error message showing the difference
-                var message = $"Seed {seed} - Line {i + 1} mismatch:\n" +
-                              $"Expected: {expectedLine}\n" +
-                              $"Actual:   {actualLine}";
-                Assert.Fail(message);
-            }
-        }
     }
 
     [Fact]
