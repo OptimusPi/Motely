@@ -60,7 +60,7 @@ ref partial struct MotelySingleSearchContext
         MotelyBossBlind.TheWheel,
         MotelyBossBlind.TheWindow
     };
-    
+
     // Index where finisher bosses begin in BOSSES array
     // In our new enum order: AmberAcorn=5, but in BOSSES array it's at index 3
     private const int FINISHER_START_INDEX = 3; // AmberAcorn is at index 3 in BOSSES array (also enum value 3)
@@ -71,22 +71,22 @@ ref partial struct MotelySingleSearchContext
     public MotelySingleBossStream CreateBossStream(ref MotelyRunState runState, int ante)
     {
         // Initialize boss state if needed
-    if (runState.BossLocked == null)
+        if (runState.BossLocked == null)
         {
             // Need array large enough for all boss indices including SmallBlind/BigBlind at 100/101
             runState.BossLocked = new int[102]; // Up to BigBlind = 101
             runState.LastProcessedBossAnte = 0;
-            
+
             // Initialize all boss slots to unlocked (0)
             for (int i = 0; i < BOSSES.Length; i++)
             {
                 runState.BossLocked[(int)BOSSES[i]] = 0;
             }
-            
+
             // Mark SmallBlind and BigBlind as non-boss (-1)
             runState.BossLocked[(int)MotelyBossBlind.SmallBlind] = -1;
             runState.BossLocked[(int)MotelyBossBlind.BigBlind] = -1;
-            
+
             // Lock bosses based on ante requirements (from OpenCL init_locks)
             // These are locked until ante 2
             runState.BossLocked[(int)MotelyBossBlind.TheMouth] = 1;
@@ -99,26 +99,26 @@ ref partial struct MotelySingleSearchContext
             runState.BossLocked[(int)MotelyBossBlind.TheWater] = 1;
             runState.BossLocked[(int)MotelyBossBlind.TheNeedle] = 1;
             runState.BossLocked[(int)MotelyBossBlind.TheFlint] = 1;
-            
+
             // These are locked until ante 3
             runState.BossLocked[(int)MotelyBossBlind.TheTooth] = 1;
             runState.BossLocked[(int)MotelyBossBlind.TheEye] = 1;
-            
+
             // Locked until ante 4
             runState.BossLocked[(int)MotelyBossBlind.ThePlant] = 1;
-            
+
             // Locked until ante 5
             runState.BossLocked[(int)MotelyBossBlind.TheSerpent] = 1;
-            
+
             // Locked until ante 6
             runState.BossLocked[(int)MotelyBossBlind.TheOx] = 1;
-            
+
             // Initialize the persistent PRNG stream for boss generation
             // This stream must persist across all antes, matching Balatro's behavior
             runState.BossPrngStream = CreatePrngStream(MotelyPrngKeys.Boss);
         }
-        
-    // Return a boss stream using the persistent PRNG stream
+
+        // Return a boss stream using the persistent PRNG stream
         // Note: The caller must update both runState.BossPrngStream AND runState.BossLocked after use to maintain state
         return new MotelySingleBossStream(runState.BossPrngStream, runState.BossLocked);
     }
@@ -135,7 +135,7 @@ ref partial struct MotelySingleSearchContext
 #endif
     public MotelyBossBlind GetNextBoss(ref MotelySingleBossStream bossStream, int ante)
     {
-        
+
         // Unlock bosses based on ante (from OpenCL init_unlocks)
         if (ante >= 2)
         {
@@ -167,9 +167,9 @@ ref partial struct MotelySingleSearchContext
         {
             bossStream.Unlock(MotelyBossBlind.TheOx);
         }
-        
+
         var bossPool = new List<MotelyBossBlind>();
-        
+
         // Build pool following OpenCL logic exactly
         for (int i = 0; i < BOSSES.Length; i++)
         {
@@ -179,7 +179,7 @@ ref partial struct MotelySingleSearchContext
                 // Finisher bosses are enum values 3-7 (AmberAcorn through VioletVessel)
                 bool isFinisher = (int)boss >= 3 && (int)boss <= 7;
                 bool isFinisherAnte = (ante % 8 == 0);
-                
+
                 // Match OpenCL condition: (ante % 8 == 0 && boss is finisher) || (ante % 8 != 0 && boss is not finisher)
                 if ((isFinisherAnte && isFinisher) || (!isFinisherAnte && !isFinisher))
                 {
@@ -188,7 +188,7 @@ ref partial struct MotelySingleSearchContext
                 }
             }
         }
-        
+
         // If pool is empty, unlock appropriate bosses
         if (bossPool.Count == 0)
         {
@@ -214,7 +214,7 @@ ref partial struct MotelySingleSearchContext
                     }
                 }
             }
-            
+
             // Rebuild pool after unlocking
             for (int i = 0; i < BOSSES.Length; i++)
             {
@@ -224,7 +224,7 @@ ref partial struct MotelySingleSearchContext
                     // Finisher bosses are enum values 3-7 (AmberAcorn through VioletVessel)
                     bool isFinisher = (int)boss >= 3 && (int)boss <= 7;
                     bool isFinisherAnte = (ante % 8 == 0);
-                    
+
                     if ((isFinisherAnte && isFinisher) || (!isFinisherAnte && !isFinisher))
                     {
                         bossPool.Add(boss);
@@ -232,9 +232,9 @@ ref partial struct MotelySingleSearchContext
                 }
             }
         }
-        
+
         if (bossPool.Count == 0) throw new InvalidOperationException("Boss pool empty after unlock");
-        
+
         // Sort the pool alphabetically by Lua key name (bl_club, bl_head, etc.)
         // Map our enum to Lua keys for proper sorting
         var luaKeyMap = new Dictionary<MotelyBossBlind, string>
@@ -268,18 +268,18 @@ ref partial struct MotelySingleSearchContext
             { MotelyBossBlind.VerdantLeaf, "bl_final_leaf" },
             { MotelyBossBlind.VioletVessel, "bl_final_vessel" }
         };
-        
+
         bossPool.Sort((a, b) => luaKeyMap[a].CompareTo(luaKeyMap[b]));
-        
+
         // Use the continuous PRNG stream passed in, which maintains state across antes
         // This matches the OpenCL cache behavior where each call advances the state
         // In OpenCL: chosen_boss = boss_pool[l_randint(&(inst->rng), 0, num_available_bosses-1)];
         // l_randint generates an integer between min and max inclusive
-    int idx = GetNextRandomInt(ref bossStream.PrngStream, 0, bossPool.Count);
-        
+        int idx = GetNextRandomInt(ref bossStream.PrngStream, 0, bossPool.Count);
+
         var selected = bossPool[idx];
         bossStream.Lock(selected);
-        
+
         return selected;
     }
 
@@ -293,17 +293,17 @@ ref partial struct MotelySingleSearchContext
             // Need array large enough for all boss indices including SmallBlind/BigBlind at 100/101
             runState.BossLocked = new int[102]; // Up to BigBlind = 101
             runState.LastProcessedBossAnte = 0;
-            
+
             // Initialize all boss slots to unlocked (0)
             for (int i = 0; i < BOSSES.Length; i++)
             {
                 runState.BossLocked[(int)BOSSES[i]] = 0;
             }
-            
+
             // Mark SmallBlind and BigBlind as non-boss (-1)
             runState.BossLocked[(int)MotelyBossBlind.SmallBlind] = -1;
             runState.BossLocked[(int)MotelyBossBlind.BigBlind] = -1;
-            
+
             // Lock bosses based on ante requirements (from OpenCL init_locks)
             // These are locked until ante 2
             runState.BossLocked[(int)MotelyBossBlind.TheMouth] = 1;
@@ -316,20 +316,20 @@ ref partial struct MotelySingleSearchContext
             runState.BossLocked[(int)MotelyBossBlind.TheWater] = 1;
             runState.BossLocked[(int)MotelyBossBlind.TheNeedle] = 1;
             runState.BossLocked[(int)MotelyBossBlind.TheFlint] = 1;
-            
+
             // These are locked until ante 3
             runState.BossLocked[(int)MotelyBossBlind.TheTooth] = 1;
             runState.BossLocked[(int)MotelyBossBlind.TheEye] = 1;
-            
+
             // Locked until ante 4
             runState.BossLocked[(int)MotelyBossBlind.ThePlant] = 1;
-            
+
             // Locked until ante 5
             runState.BossLocked[(int)MotelyBossBlind.TheSerpent] = 1;
-            
+
             // Locked until ante 6
             runState.BossLocked[(int)MotelyBossBlind.TheOx] = 1;
-            
+
             // Initialize the persistent PRNG stream for boss generation
             // This stream must persist across all antes, matching Balatro's behavior
             runState.BossPrngStream = CreatePrngStream(MotelyPrngKeys.Boss);
@@ -342,7 +342,7 @@ ref partial struct MotelySingleSearchContext
             // But for now we'll just throw since we don't cache individual results
             throw new InvalidOperationException($"Cannot get boss for ante {ante} - already processed up to ante {runState.LastProcessedBossAnte}. Bosses must be generated sequentially.");
         }
-        
+
         // Process antes sequentially to maintain state - bosses unlock at different antes and get locked after selection
         MotelyBossBlind selectedBoss = MotelyBossBlind.TheHook;
         while (runState.LastProcessedBossAnte < ante)
