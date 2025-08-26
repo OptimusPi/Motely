@@ -324,6 +324,7 @@ public static class MotelyJsonScoring
         if (clause.Sources?.PackSlots?.Length > 0)
         {
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
+            Debug.Assert(!buffoonStream.RarityPrngStream.IsInvalid, $"BuffoonStream RarityPrng should be valid for ante {ante}");
             var packSlots = clause.Sources.PackSlots;
             int maxPackSlot = clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0);
             for (int i = 0; i <= maxPackSlot; i++)

@@ -50,7 +50,7 @@ namespace Motely
 
             var cutoffOption = app.Option<string>(
                 "--cutoff <SCORE>",
-                "Minimum TotalScore threshold (1-10 for fixed, 0 for auto-cutoff)",
+                "Minimum TotalScore threshold (0+ for fixed, 'auto' for auto-cutoff)",
                 CommandOptionType.SingleValue);
             cutoffOption.DefaultValue = "0";
 
@@ -149,9 +149,9 @@ namespace Motely
                 var batchSize = batchSizeOption.ParsedValue;
                 var enableDebug = debugOption.HasValue();
                 var cutoffStr = cutoffOption.Value() ?? "0";
-                int cutoffValue = int.TryParse(cutoffStr, out var c) ? c : 0;
-                bool autoCutoff = cutoffValue == 0;  // 0 means auto-cutoff
-                int cutoff = autoCutoff ? 1 : cutoffValue;  // Start at 1 for auto-cutoff
+                bool autoCutoff = cutoffStr.ToLowerInvariant() == "auto";
+                int cutoffValue = autoCutoff ? 1 : (int.TryParse(cutoffStr, out var c) ? c : 0);
+                int cutoff = cutoffValue;  // Use the parsed value or 1 for auto
 
                 // Validate batch ranges based on search space
                 ulong maxBatches = (ulong)Math.Pow(35, 8 - batchSize); // 35^(8-batchSize)
