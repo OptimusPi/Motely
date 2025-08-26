@@ -229,6 +229,48 @@ public struct MotelyJsonFilterDesc(
         {
             Debug.Assert(Clauses.Count > 0, $"MotelyFilter(Joker) called with empty clauses");
             var clauses = Clauses; // Copy to local variable for lambda access
+            
+            // Special optimization for PerkeoObservatory pattern
+            if (clauses.Count == 1 && clauses[0].ItemTypeEnum == MotelyFilterItemType.SoulJoker && 
+                clauses[0].JokerEnum == MotelyJoker.Perkeo)
+            {
+                return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
+                {
+                    // Fast path for Perkeo check
+                    foreach (var ante in clauses[0].EffectiveAntes)
+                    {
+                        var packStream = singleCtx.CreateBoosterPackStream(ante, ante != 1, false);
+                        for (int i = 0; i < 4; i++) // Check first 4 packs
+                        {
+                            var pack = singleCtx.GetNextBoosterPack(ref packStream);
+                            
+                            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                            {
+                                var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
+                                if (singleCtx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                                {
+                                    var soulStream = singleCtx.CreateSoulJokerStream(ante);
+                                    if (singleCtx.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo)
+                                        return true;
+                                }
+                            }
+                            else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                            {
+                                var spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
+                                if (singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                                {
+                                    var soulStream = singleCtx.CreateSoulJokerStream(ante);
+                                    if (singleCtx.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo)
+                                        return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                });
+            }
+            
+            // Regular path for other joker checks
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();

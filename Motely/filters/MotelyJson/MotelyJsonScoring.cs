@@ -362,15 +362,17 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
+        // Simple approach for scoring: just iterate and count matches
+        // No fancy stream management - we know very few seeds get here
         int tally = 0;
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
         var soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
-        bool soulStreamInit = false;
-
+        
+        // Just check the packs we care about
         var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 };
-        int packCount = packSlots.Length > 0 ? (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1 : (ante == 1 ? 4 : 6);
+        int maxPacks = ante == 1 ? 4 : 6;
 
-        for (int i = 0; i < packCount; i++)
+        for (int i = 0; i < maxPacks; i++)
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
 
@@ -394,11 +396,6 @@ public static class MotelyJsonScoring
                 {
                     // Check if this soul pack has already been consumed by another clause
                     // TODO: if (runState.IsSoulPackConsumed(ante, i)) continue;
-
-                    if (!soulStreamInit)
-                    {
-                        soulStreamInit = true;
-                    }
 
                     // Get the soul joker and check if it matches
                     var soulJoker = ctx.GetNextJoker(ref soulStream);
