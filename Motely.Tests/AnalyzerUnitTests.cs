@@ -6,27 +6,16 @@ namespace Motely.Tests;
 public sealed class AnalyzerUnitTests
 {
 
-    [Fact]
-    public async Task TestAnalyzer_UNITTEST_Seed()
+    [Theory]
+    [InlineData("UNITTEST")]
+    [InlineData("ALEEB")]
+    [InlineData("ALEEBOOO")]
+    [InlineData("12345678")]
+    [InlineData("1234567")]
+    public async Task TestAnalyzer_Seeds(string seed)
     {
         // Arrange
-        string seed = "UNITTEST";
-
-
-
-        // Act
-        var actualOutput = GetAnalyzerOutput(seed);
-
-        // Assert using Verify - this will create a nice diff view
-        await Verify(actualOutput)
-            .UseFileName($"analyzer_output_{seed}");
-    }
-
-    [Fact]
-    public async Task TestAnalyzer_ALEEB_Seed()
-    {
-        // Arrange
-        string seed = "ALEEB";
+        // seed param passed in via InlineData from Theory attribute
 
         // Act
         var actualOutput = GetAnalyzerOutput(seed);

@@ -12,11 +12,6 @@
             "type": "Voucher",
             "value": "Observatory",
             "Antes": [2]
-        },
-        {
-            "type": "boss",
-            "value": "CrimsonHeart",
-            "Antes": [8]
         }
     ],
     "should": [

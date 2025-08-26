@@ -1,0 +1,10 @@
+﻿Boss generation for seed: UNITTEST
+========================
+Ante 1: TheWindow
+Ante 2: TheMouth
+Ante 3: TheHouse
+Ante 4: TheTooth
+Ante 5: TheFish
+Ante 6: ThePillar
+Ante 7: TheWater
+Ante 8: VioletVessel

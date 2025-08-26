@@ -22,7 +22,7 @@ public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterD
             MotelyVectorTagStream tagStream;
             VectorMask mask = VectorMask.AllBitsSet;
 
-            for (int ante = 2; ante <= 4; ante++)
+            for (int ante = 2; ante <= 8; ante++)
             {
                 tagStream = searchContext.CreateTagStream(ante, true);
 
