@@ -9,18 +9,25 @@ public static class FancyConsole
 
     private static string? _bottomLine;
 
-    [MethodImpl(MethodImplOptions.Synchronized)]
     private static void WriteBottomLine(string bottomLine)
     {
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
-        Console.SetCursorPosition(0, Console.BufferHeight - 1);
-        Console.Write(new string(' ', Console.BufferWidth));
-        Console.SetCursorPosition(0, Console.BufferHeight - 1);
+        
+        // Don't try to write to bottom if window is too small
+        if (Console.WindowHeight < 1) return;
+        
+        int bottomRow = Console.CursorTop >= Console.WindowHeight - 1 
+            ? Console.WindowHeight - 1 
+            : Console.WindowHeight - 1;
+            
+        Console.SetCursorPosition(0, bottomRow);
+        // Clear the line first
+        Console.Write(new string(' ', Math.Min(bottomLine.Length + 20, Console.WindowWidth - 1)));
+        Console.SetCursorPosition(0, bottomRow);
         Console.Write(bottomLine);
         Console.SetCursorPosition(oldLeft, oldTop);
     }
 
-    [MethodImpl(MethodImplOptions.Synchronized)]
     private static void ClearBottomLine()
     {
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
@@ -29,7 +36,7 @@ public static class FancyConsole
         Console.SetCursorPosition(oldLeft, oldTop);
     }
 
-    [MethodImpl(MethodImplOptions.Synchronized)]
+
     public static void SetBottomLine(string? bottomLine)
     {
         _bottomLine = bottomLine;
@@ -44,7 +51,6 @@ public static class FancyConsole
         }
     }
 
-    [MethodImpl(MethodImplOptions.Synchronized)]
     public static void WriteLine<T>(T message)
     {
         WriteLine(message?.ToString() ?? null);
@@ -54,18 +60,33 @@ public static class FancyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void WriteLine(string? message)
     {
+        if (!IsEnabled)
+        {
+            Console.WriteLine(message ?? "null");
+            return;
+        }
+
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
 
-        if (oldTop == Console.BufferHeight - 1)
+        // If we're about to write to the bottom line, we need to scroll first
+        if (oldTop >= Console.BufferHeight - 2)
         {
+            // Clear the bottom line
             ClearBottomLine();
+            
+            // Move cursor up one line if we're on the bottom line
+            if (oldTop == Console.BufferHeight - 1)
+            {
+                Console.SetCursorPosition(0, Console.BufferHeight - 2);
+            }
         }
 
         Console.WriteLine(message ?? "null");
 
-        if (oldTop == Console.BufferHeight - 1)
+        // Always restore the bottom line if we have one
+        if (_bottomLine != null)
         {
-            SetBottomLine(_bottomLine);
+            WriteBottomLine(_bottomLine);
         }
     }
 }

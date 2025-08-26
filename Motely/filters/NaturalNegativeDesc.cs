@@ -3,19 +3,19 @@ using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>
+public struct NaturalNegativesFilterDesc() : IMotelySeedFilterDesc<NaturalNegativesFilterDesc.NaturalNegativesFilter>
 {
 
-    public PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public NaturalNegativesFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheAnteFirstVoucher(1);
         ctx.CacheAnteFirstVoucher(2);
         ctx.CacheBoosterPackStream(1);
         ctx.CacheBoosterPackStream(2);
-        return new PerkeoObservatoryFilter();
+        return new NaturalNegativesFilter();
     }
 
-    public struct PerkeoObservatoryFilter() : IMotelySeedFilter
+    public struct NaturalNegativesFilter() : IMotelySeedFilter
     {
         public static bool CheckAnteForPerkeo(int ante, ref MotelySingleSearchContext searchContext)
         {
@@ -42,7 +42,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
                 if (!boosterPackStreamInit)
                 {
-                    boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante!=1, false);
+                    boosterPackStream = searchContext.CreateBoosterPackStream(ante, false, false);
                     boosterPackStreamInit = true;
                 }
 
