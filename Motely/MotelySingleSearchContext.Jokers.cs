@@ -14,7 +14,7 @@ public struct MotelySingleJokerStream
     public MotelySinglePrngStream RarityPrngStream;
     public MotelySinglePrngStream EternalPerishablePrngStream;
     public MotelySinglePrngStream RentalPrngStream;
-    public string ResampleKey; // Key to create resample stream for handling duplicates when needed
+    public string? ResampleKey; // Key to create resample stream for handling duplicates when needed
 
     // For these, a state set to -1 means they are not yet initialized.
     //  A state of -2 means the stream does not provide that joker
@@ -251,17 +251,40 @@ unsafe ref partial struct MotelySingleSearchContext
         if (!itemSet.Contains(joker))
             return joker;
         
-        // We have a duplicate - need to use resample streams
-        // Create the resample stream only when we actually need it
-        var resampleStream = CreateResampleStream(stream.ResampleKey, false);
-        int resampleCount = 0;  // Motely uses +2 offset, so 0 becomes _resample2
+        // Determine the rarity-specific resample key based on the original joker's rarity
+        MotelyJokerRarity originalRarity = (MotelyJokerRarity)((int)joker.Type & 0xF00);
+        string rarityPrefix = originalRarity switch
+        {
+            MotelyJokerRarity.Rare => MotelyPrngKeys.JokerRare,
+            MotelyJokerRarity.Uncommon => MotelyPrngKeys.JokerUncommon,
+            _ => MotelyPrngKeys.JokerCommon
+        };
+        string resampleKey = rarityPrefix + stream.ResampleKey;
         
-        // Keep rerolling while we have duplicates, using resample streams
-        // This matches the Balatro behavior where duplicate jokers in packs are rerolled
+        // Create the resample stream with the correct key
+        var resampleStream = CreateResampleStream(resampleKey, false);
+        int resampleCount = 0;
+        
+        // Keep rerolling while we have duplicates
         while (itemSet.Contains(joker))
         {
-            // Use resample stream for rerolls to avoid affecting main PRNG state
-            joker = GetNextJokerFromResampleStream(ref stream, ref resampleStream, resampleCount, joker);
+            ref var resamplePrngStream = ref GetResamplePrngStream(ref resampleStream, resampleKey, resampleCount);
+            
+            // Get new joker of same rarity
+            MotelyJoker newJoker = originalRarity switch
+            {
+                MotelyJokerRarity.Rare => GetNextJoker<MotelyJokerRare>(ref resamplePrngStream, MotelyJokerRarity.Rare),
+                MotelyJokerRarity.Uncommon => GetNextJoker<MotelyJokerUncommon>(ref resamplePrngStream, MotelyJokerRarity.Uncommon),
+                _ => GetNextJoker<MotelyJokerCommon>(ref resamplePrngStream, MotelyJokerRarity.Common)
+            };
+            
+            // Preserve edition and stickers from original (Balatro doesn't re-roll these)
+            joker = new MotelyItem(newJoker)
+                .WithEdition(joker.Edition);
+            if (joker.IsEternal) joker = joker.WithEternal(true);
+            if (joker.IsPerishable) joker = joker.WithPerishable(true);
+            if (joker.IsRental) joker = joker.WithRental(true);
+            
             resampleCount++;
             
             if (joker.Type == MotelyItemType.JokerExcludedByStream)
@@ -269,53 +292,6 @@ unsafe ref partial struct MotelySingleSearchContext
         }
         
         return joker;
-    }
-    
-    // Helper method to get joker from resample stream
-    // We need to pass in the original joker to know which rarity to resample
-    private MotelyItem GetNextJokerFromResampleStream(ref MotelySingleJokerStream stream, ref MotelySingleResampleStream resampleStream, int resampleIndex, MotelyItem originalJoker)
-    {
-        MotelyJoker joker;
-        
-        // Determine the rarity of the original joker to resample within the same rarity tier
-        MotelyJokerRarity originalRarity = (MotelyJokerRarity)((int)originalJoker.Type & 0xF00);
-        
-        if (originalRarity == MotelyJokerRarity.Rare)
-        {
-            // Build the resample key for rare jokers: "Joker3" + stream suffix (e.g., "buf1")
-            // This matches Balatro's pool key format
-            string rarityResampleKey = MotelyPrngKeys.JokerRare + stream.StreamSuffix;
-            ref var resamplePrngStream = ref GetResamplePrngStream(ref resampleStream, rarityResampleKey, resampleIndex);
-            
-            joker = GetNextJoker<MotelyJokerRare>(ref resamplePrngStream, MotelyJokerRarity.Rare);
-        }
-        else if (originalRarity == MotelyJokerRarity.Uncommon)
-        {
-            // Build the resample key for uncommon jokers: "Joker2" + stream suffix
-            string rarityResampleKey = MotelyPrngKeys.JokerUncommon + stream.StreamSuffix;
-            ref var resamplePrngStream = ref GetResamplePrngStream(ref resampleStream, rarityResampleKey, resampleIndex);
-            
-            joker = GetNextJoker<MotelyJokerUncommon>(ref resamplePrngStream, MotelyJokerRarity.Uncommon);
-        }
-        else
-        {
-            // Build the resample key for common jokers: "Joker1" + stream suffix
-            string rarityResampleKey = MotelyPrngKeys.JokerCommon + stream.StreamSuffix;
-            ref var resamplePrngStream = ref GetResamplePrngStream(ref resampleStream, rarityResampleKey, resampleIndex);
-            
-            joker = GetNextJoker<MotelyJokerCommon>(ref resamplePrngStream, MotelyJokerRarity.Common);
-        }
-        
-        MotelyItem jokerItem = new(joker);
-        
-        // Copy the edition and stickers from the original joker
-        // (Balatro doesn't re-roll these properties, just the joker itself)
-        jokerItem = jokerItem.WithEdition(originalJoker.Edition);
-        if (originalJoker.IsEternal) jokerItem = jokerItem.WithEternal(true);
-        if (originalJoker.IsPerishable) jokerItem = jokerItem.WithPerishable(true);
-        if (originalJoker.IsRental) jokerItem = jokerItem.WithRental(true);
-        
-        return jokerItem;
     }
     
     // Helper for applying stickers from resample stream
