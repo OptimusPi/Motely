@@ -87,35 +87,9 @@ namespace Motely.Filters;
         public int? MaxShopSlot { get; set; }
         public int? MaxPackSlot { get; set; }
         
-        // Parsed enums (cached for performance)
-        private MotelyFilterItemType? _cachedItemTypeEnum;
-        
-        [JsonIgnore]
-        public MotelyFilterItemType ItemTypeEnum
-        {
-            get
-            {
-                if (!_cachedItemTypeEnum.HasValue)
-                {
-                    var typeEnum = Type?.ToLowerInvariant() switch
-                    {
-                        "joker" => MotelyFilterItemType.Joker,
-                        "souljoker" => MotelyFilterItemType.SoulJoker,
-                        "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
-                        "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
-                        "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
-                        "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
-                        "bigblindtag" => MotelyFilterItemType.BigBlindTag,
-                        "voucher" => MotelyFilterItemType.Voucher,
-                        "playingcard" => MotelyFilterItemType.PlayingCard,
-                        "boss" => MotelyFilterItemType.Boss,
-                        _ => throw new ArgumentException($"Unknown filter item type: {Type}")
-                    };
-                    _cachedItemTypeEnum = typeEnum;
-                }
-                return _cachedItemTypeEnum.Value;
-            }
-        }
+        // Pre-parsed enum (set during initialization, immutable after)
+        [JsonIgnore] 
+        public MotelyFilterItemType ItemTypeEnum { get; private set; }
         
         [JsonIgnore] public MotelyVoucher? VoucherEnum { get; set; }
         [JsonIgnore] public MotelyTarotCard? TarotEnum { get; set; }
@@ -136,9 +110,21 @@ namespace Motely.Filters;
         
         public void InitializeParsedEnums()
         {
-            // ItemTypeEnum is already computed from Type property getter
-            // Force it to be cached by accessing it
-            var itemType = ItemTypeEnum;
+            // Parse ItemTypeEnum from Type string
+            ItemTypeEnum = Type?.ToLowerInvariant() switch
+            {
+                "joker" => MotelyFilterItemType.Joker,
+                "souljoker" => MotelyFilterItemType.SoulJoker,
+                "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
+                "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
+                "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
+                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
+                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
+                "voucher" => MotelyFilterItemType.Voucher,
+                "playingcard" => MotelyFilterItemType.PlayingCard,
+                "boss" => MotelyFilterItemType.Boss,
+                _ => throw new ArgumentException($"Unknown filter item type: {Type}")
+            };
             
             // Parse Value based on ItemType
             if (!string.IsNullOrEmpty(Value))
@@ -251,36 +237,9 @@ namespace Motely.Filters;
         public string Deck { get; set; } = "Red";
         public string Stake { get; set; } = "White";
         
-        // Cached expensive calculations
-        private int? _maxVoucherAnte;
-        public int MaxVoucherAnte
-        {
-            get
-            {
-                if (_maxVoucherAnte.HasValue) return _maxVoucherAnte.Value;
-                
-                int maxAnte = 0;
-                if (Must != null)
-                {
-                    foreach (var clause in Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
-                    {
-                        if (clause.EffectiveAntes != null)
-                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
-                    }
-                }
-                if (Should != null)
-                {
-                    foreach (var clause in Should.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
-                    {
-                        if (clause.EffectiveAntes != null)
-                            maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
-                    }
-                }
-                
-                _maxVoucherAnte = maxAnte;
-                return maxAnte;
-            }
-        }
+        // Pre-computed expensive calculations (set during PostProcess, immutable after)
+        [JsonIgnore]
+        public int MaxVoucherAnte { get; private set; }
 
         public class SourcesConfig
         {
@@ -415,6 +374,26 @@ namespace Motely.Filters;
 
                 item.IsWildcard = item.ItemTypeEnum == MotelyFilterItemType.Joker && item.WildcardEnum == MotelyJsonConfigWildcards.AnyJoker;
             }
+            
+            // Compute MaxVoucherAnte once during PostProcess
+            int maxAnte = 0;
+            if (Must != null)
+            {
+                foreach (var clause in Must.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                {
+                    if (clause.EffectiveAntes != null)
+                        maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
+                }
+            }
+            if (Should != null)
+            {
+                foreach (var clause in Should.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher))
+                {
+                    if (clause.EffectiveAntes != null)
+                        maxAnte = Math.Max(maxAnte, clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
+                }
+            }
+            MaxVoucherAnte = maxAnte;
         }
     
         private static SourcesConfig GetDefaultSources(string itemType)

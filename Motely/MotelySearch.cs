@@ -95,7 +95,7 @@ public sealed class MotelySeedListProvider(IEnumerable<string> seeds) : IMotelyS
 
     public ulong SeedCount => (ulong)Seeds.Length;
 
-    private ulong _currentSeed = ulong.MaxValue;
+    private long _currentSeed = -1;
     public ReadOnlySpan<char> NextSeed() => Seeds[Interlocked.Increment(ref _currentSeed)];
 }
 
