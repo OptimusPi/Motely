@@ -14,6 +14,7 @@ public struct MotelySingleJokerStream
     public MotelySinglePrngStream RarityPrngStream;
     public MotelySinglePrngStream EternalPerishablePrngStream;
     public MotelySinglePrngStream RentalPrngStream;
+    public string ResampleKey; // Key to create resample stream for handling duplicates when needed
 
     // For these, a state set to -1 means they are not yet initialized.
     //  A state of -2 means the stream does not provide that joker
@@ -69,18 +70,19 @@ unsafe ref partial struct MotelySingleSearchContext
     public MotelySingleJokerStream CreateBuffoonPackJokerStream(int ante, MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default, bool isCached = false)
     {
         // Single stream per ante (not per pack index)
+        // Include resample stream for handling duplicates in buffoon packs
         return CreateJokerStream(
             MotelyPrngKeys.BuffoonPackItemSource,
             MotelyPrngKeys.BuffoonJokerEternalPerishableSource,
             MotelyPrngKeys.BuffoonJokerRentalSource,
-            ante, flags, isCached
+            ante, flags, isCached, includeResampleStream: true
         );
     }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private MotelySingleJokerStream CreateJokerStream(string source, string eternalPerishableSource, string rentalSource, int ante, MotelyJokerStreamFlags flags, bool isCached)
+    private MotelySingleJokerStream CreateJokerStream(string source, string eternalPerishableSource, string rentalSource, int ante, MotelyJokerStreamFlags flags, bool isCached, bool includeResampleStream = false)
     {
         return new()
         {
@@ -92,6 +94,8 @@ unsafe ref partial struct MotelySingleSearchContext
                 CreatePrngStream(eternalPerishableSource + ante, isCached) : MotelySinglePrngStream.Invalid,
             RentalPrngStream = (!flags.HasFlag(MotelyJokerStreamFlags.ExcludeStickers) && Stake >= MotelyStake.Gold) ?
                 CreatePrngStream(rentalSource + ante, isCached) : MotelySinglePrngStream.Invalid,
+            ResampleKey = includeResampleStream ?
+                source + ante : null,
             CommonJokerPrngStream = new(flags.HasFlag(MotelyJokerStreamFlags.ExcludeCommonJokers) ? -2 : -1),
             UncommonJokerPrngStream = new(flags.HasFlag(MotelyJokerStreamFlags.ExcludeUncommonJokers) ? -2 : -1),
             RareJokerPrngStream = new(flags.HasFlag(MotelyJokerStreamFlags.ExcludeRareJokers) ? -2 : -1),
@@ -138,7 +142,7 @@ unsafe ref partial struct MotelySingleSearchContext
         MotelySingleItemSet pack = new();
 
         for (int i = 0; i < size; i++)
-            pack.Append(GetNextJoker(ref jokerStream)); // TODO Duplicates?
+            pack.Append(GetNextJoker(ref jokerStream, pack)); // Handle duplicates
 
         return pack;
     }
@@ -232,6 +236,111 @@ unsafe ref partial struct MotelySingleSearchContext
 #if !DEBUG
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
+    // Overload that handles duplicate checking for packs using resample stream
+    public MotelyItem GetNextJoker(ref MotelySingleJokerStream stream, in MotelySingleItemSet itemSet)
+    {
+        Debug.Assert(stream.ResampleKey != null, "Joker stream should have resample key for duplicate handling in packs");
+        
+        MotelyItem joker = GetNextJoker(ref stream);
+        
+        // If we got an excluded joker, don't check for duplicates
+        if (joker.Type == MotelyItemType.JokerExcludedByStream)
+            return joker;
+        
+        // If no duplicate, return immediately
+        if (!itemSet.Contains(joker))
+            return joker;
+        
+        // We have a duplicate - need to use resample streams
+        // Create the resample stream only when we actually need it
+        var resampleStream = CreateResampleStream(stream.ResampleKey, false);
+        int resampleCount = 0;  // Motely uses +2 offset, so 0 becomes _resample2
+        
+        // Keep rerolling while we have duplicates, using resample streams
+        // This matches the Balatro behavior where duplicate jokers in packs are rerolled
+        while (itemSet.Contains(joker))
+        {
+            // Use resample stream for rerolls to avoid affecting main PRNG state
+            joker = GetNextJokerFromResampleStream(ref stream, ref resampleStream, resampleCount, joker);
+            resampleCount++;
+            
+            if (joker.Type == MotelyItemType.JokerExcludedByStream)
+                return joker;
+        }
+        
+        return joker;
+    }
+    
+    // Helper method to get joker from resample stream
+    // We need to pass in the original joker to know which rarity to resample
+    private MotelyItem GetNextJokerFromResampleStream(ref MotelySingleJokerStream stream, ref MotelySingleResampleStream resampleStream, int resampleIndex, MotelyItem originalJoker)
+    {
+        MotelyJoker joker;
+        
+        // Determine the rarity of the original joker to resample within the same rarity tier
+        MotelyJokerRarity originalRarity = (MotelyJokerRarity)((int)originalJoker.Type & 0xF00);
+        
+        if (originalRarity == MotelyJokerRarity.Rare)
+        {
+            // Build the resample key for rare jokers: "Joker3" + stream suffix (e.g., "buf1")
+            // This matches Balatro's pool key format
+            string rarityResampleKey = MotelyPrngKeys.JokerRare + stream.StreamSuffix;
+            ref var resamplePrngStream = ref GetResamplePrngStream(ref resampleStream, rarityResampleKey, resampleIndex);
+            
+            joker = GetNextJoker<MotelyJokerRare>(ref resamplePrngStream, MotelyJokerRarity.Rare);
+        }
+        else if (originalRarity == MotelyJokerRarity.Uncommon)
+        {
+            // Build the resample key for uncommon jokers: "Joker2" + stream suffix
+            string rarityResampleKey = MotelyPrngKeys.JokerUncommon + stream.StreamSuffix;
+            ref var resamplePrngStream = ref GetResamplePrngStream(ref resampleStream, rarityResampleKey, resampleIndex);
+            
+            joker = GetNextJoker<MotelyJokerUncommon>(ref resamplePrngStream, MotelyJokerRarity.Uncommon);
+        }
+        else
+        {
+            // Build the resample key for common jokers: "Joker1" + stream suffix
+            string rarityResampleKey = MotelyPrngKeys.JokerCommon + stream.StreamSuffix;
+            ref var resamplePrngStream = ref GetResamplePrngStream(ref resampleStream, rarityResampleKey, resampleIndex);
+            
+            joker = GetNextJoker<MotelyJokerCommon>(ref resamplePrngStream, MotelyJokerRarity.Common);
+        }
+        
+        MotelyItem jokerItem = new(joker);
+        
+        // Copy the edition and stickers from the original joker
+        // (Balatro doesn't re-roll these properties, just the joker itself)
+        jokerItem = jokerItem.WithEdition(originalJoker.Edition);
+        if (originalJoker.IsEternal) jokerItem = jokerItem.WithEternal(true);
+        if (originalJoker.IsPerishable) jokerItem = jokerItem.WithPerishable(true);
+        if (originalJoker.IsRental) jokerItem = jokerItem.WithRental(true);
+        
+        return jokerItem;
+    }
+    
+    // Helper for applying stickers from resample stream
+    private MotelyItem ApplyNextStickersFromResample(MotelyItem item, ref MotelySinglePrngStream resampleStream)
+    {
+        if (Stake < MotelyStake.Black) return item;
+        
+        double stickerPoll = GetNextRandom(ref resampleStream);
+        
+        item = item.WithEternal(stickerPoll > 0.7);
+        
+        if (Stake < MotelyStake.Orange) return item;
+        
+        item = item.WithPerishable(stickerPoll > 0.4 && stickerPoll <= 0.7);
+        
+        if (Stake < MotelyStake.Gold) return item;
+        
+        // Use another roll for rental
+        stickerPoll = GetNextRandom(ref resampleStream);
+        
+        item = item.WithRental(stickerPoll > 0.7);
+        
+        return item;
+    }
+    
     public MotelyItem GetNextJoker(ref MotelySingleJokerStream stream)
     {
         MotelyJoker joker;

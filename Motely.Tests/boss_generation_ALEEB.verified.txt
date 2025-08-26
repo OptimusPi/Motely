@@ -1,0 +1,10 @@
+﻿Boss generation for seed: ALEEB
+========================
+Ante 1: TheWindow
+Ante 2: TheArm
+Ante 3: TheMouth
+Ante 4: TheWheel
+Ante 5: TheHook
+Ante 6: TheFish
+Ante 7: TheGoad
+Ante 8: VioletVessel
