@@ -31,18 +31,22 @@ public struct MotelyJsonSeedScoreDesc(
     MotelyJsonConfig Config,
     int Cutoff,
     bool AutoCutoff,
-    Action<MotelySeedScoreTally> OnResultFound
+    Action<MotelySeedScoreTally> OnResultFound,
+    bool ScoreOnlyMode = false
 )
     : IMotelySeedScoreDesc<MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider>
 {
 
     // Auto cutoff state
     private static int _learnedCutoff = 1;
-    private global::System.Int32 cutoff = 1;
 
     // Results tracking for rarity calculation
     private static long _resultsFound = 0;
     public static long ResultsFound => _resultsFound;
+    
+    // Debug: Track how many seeds reach scoring
+    private static long _seedsScored = 0;
+    public static long SeedsScored => _seedsScored;
 
     // Callback to return the score object to (the caller can print, send to a db, I don't care)
     private readonly Action<MotelySeedScoreTally> _onResultFound = OnResultFound;
@@ -53,10 +57,10 @@ public struct MotelyJsonSeedScoreDesc(
         _learnedCutoff = Cutoff;
         _resultsFound = 0;
 
-        return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound);
+        return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound, ScoreOnlyMode);
     }
 
-    public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<MotelySeedScoreTally> OnResultFound)
+    public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<MotelySeedScoreTally> OnResultFound, bool ScoreOnlyMode = false)
         : IMotelySeedScoreProvider
     {
         public static bool IsCancelled;
@@ -72,9 +76,13 @@ public struct MotelyJsonSeedScoreDesc(
             var cutoff = Cutoff;
             var autoCutoff = AutoCutoff;
             var onResultFound = OnResultFound;
+            var scoreOnlyMode = ScoreOnlyMode;
+            var mask = VectorMask.AllBitsSet;
+            
 
-            searchContext.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
+            searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
             {
+                // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
                 var runState = new MotelyRunState();
 
                 // Activate all vouchers for scoring (using cached property)
@@ -83,19 +91,82 @@ public struct MotelyJsonSeedScoreDesc(
                     MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
                 }
 
-                foreach (var clause in config.Must)
+                // In scoreOnly mode, we need to validate Must clauses since there's no base filter
+                if (scoreOnlyMode && config.Must?.Count > 0)
                 {
-                    DebugLogger.Log($"[Must] Checking {clause.ItemTypeEnum} {clause.Value} in antes [{string.Join(",", clause.EffectiveAntes ?? new int[0])}]");
-                    DebugLogger.Log($"[Must] Showman active: {runState.ShowmanActive}");
-
-                    bool clauseResult = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
-
-                    DebugLogger.Log($"[Must] Result: {clauseResult} for {clause.ItemTypeEnum} {clause.Value}");
-
-                    if (!clauseResult)
+                    // Validate Must clauses - ALL must be satisfied
+                    foreach (var clause in config.Must)
                     {
-                        DebugLogger.Log($"[Must] FAILED! Seed filtered out because {clause.ItemTypeEnum} {clause.Value} not found");
-                        return false; // Seed doesn't meet requirements
+                        bool clauseSatisfied = false;
+                        
+                        // Check if this requirement appears in ANY of its required antes
+                        foreach (var ante in clause.EffectiveAntes ?? [])
+                        {
+                            switch (clause.ItemTypeEnum)
+                            {
+                                case MotelyFilterItemType.Voucher:
+                                    if (MotelyJsonScoring.CheckVoucherSingle(ref singleCtx, clause, ante, ref runState))
+                                    {
+                                        clauseSatisfied = true;
+                                        break;
+                                    }
+                                    break;
+                                    
+                                case MotelyFilterItemType.SoulJoker:
+                                    if (MotelyJsonScoring.CountSoulJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
+                                    {
+                                        clauseSatisfied = true;
+                                        break;
+                                    }
+                                    break;
+                                    
+                                case MotelyFilterItemType.Joker:
+                                    if (MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
+                                    {
+                                        clauseSatisfied = true;
+                                        break;
+                                    }
+                                    break;
+                                    
+                                case MotelyFilterItemType.TarotCard:
+                                    if (MotelyJsonScoring.TarotCardsTally(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
+                                    {
+                                        clauseSatisfied = true;
+                                        break;
+                                    }
+                                    break;
+                                    
+                                case MotelyFilterItemType.PlanetCard:
+                                    if (MotelyJsonScoring.CountPlanetOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
+                                    {
+                                        clauseSatisfied = true;
+                                        break;
+                                    }
+                                    break;
+                                    
+                                case MotelyFilterItemType.SpectralCard:
+                                    if (MotelyJsonScoring.CountSpectralOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
+                                    {
+                                        clauseSatisfied = true;
+                                        break;
+                                    }
+                                    break;
+                                    
+                                case MotelyFilterItemType.PlayingCard:
+                                    if (MotelyJsonScoring.CountPlayingCardOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
+                                    {
+                                        clauseSatisfied = true;
+                                        break;
+                                    }
+                                    break;
+                            }
+                            
+                            if (clauseSatisfied) break; // Found in one ante, move to next clause
+                        }
+                        
+                        // If this Must clause wasn't satisfied, seed fails
+                        if (!clauseSatisfied)
+                            return false;
                     }
                 }
 
@@ -110,7 +181,7 @@ public struct MotelyJsonSeedScoreDesc(
                 }
 
                 // Calculate scores for SHOULD clauses using comprehensive scanning like NegativeCopyJokers
-                int totalScore = 1;
+                int totalScore = 0;  // Start at 0, not 1!
                 var scores = new List<int>();
 
                 if (config.Should?.Count > 0)
@@ -123,7 +194,7 @@ public struct MotelyJsonSeedScoreDesc(
                         scores.Add(count);
                         totalScore += score;
                         
-                        DebugLogger.Log($"[Should] {should.ItemTypeEnum} {should.Value}: found {count}, score {score}");
+                        // DebugLogger.Log($"[Should] {should.ItemTypeEnum} {should.Value}: found {count}, score {score}"); // DISABLED FOR PERFORMANCE
                     }
                 }
 

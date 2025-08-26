@@ -4,24 +4,22 @@
     "author": "pifreak",
     "must": [
         {
-            "type": "souljoker",
-            "value": "perkeo",
-            "Antes": [1],
-            "sources": {
-                "packSlots": [0,1,2,3]
-            }
-        },
-        {
             "type": "smallblindtag",
             "value": "negativetag",
             "Antes": [2]
         },
         {
+            "type": "souljoker",
+            "value": "perkeo",
+            "Antes": [3,4,5]
+        },
+        {
             "type": "joker",
-            "value": "blueprint",
+            "value": "showman",
             "Antes": [2],
             "sources": {
-                "packSlots": [2,3]
+                "shopSlots": [0,1],
+                "packSlots": [0,1]
             }
         }
     ],
@@ -51,7 +49,16 @@
             "sources": {
                 "shopSlots": [2,3]
             },
-            "score": 10
+            "score": 2
+        },
+                {
+            "type": "joker",
+            "value": "Brainstorm",
+            "Antes": [2],
+            "sources": {
+                "shopSlots": [2,3]
+            },
+            "score": 2
         }
     ],
     "mustNot": [],

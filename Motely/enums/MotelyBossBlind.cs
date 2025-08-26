@@ -1,37 +1,38 @@
-
 namespace Motely;
 
 public enum MotelyBossBlind
 {
-    // Keep Small/Big first (non-boss) then alphabetical by internal key (bl_*) to align with pseudorandom_element sorting
-    SmallBlind, // bl_small
-    BigBlind,   // bl_big
-    AmberAcorn, // bl_final_acorn
-    CeruleanBell, // bl_final_bell
-    CrimsonHeart, // bl_final_heart
-    TheArm, // bl_arm
-    TheClub, // bl_club
-    TheEye, // bl_eye
-    TheFish, // bl_fish
-    TheFlint, // bl_flint
-    TheGoad, // bl_goad
-    TheHead, // bl_head
-    TheHook, // bl_hook
-    TheHouse, // bl_house
-    TheManacle, // bl_manacle
-    TheMark, // bl_mark
-    TheMouth, // bl_mouth
-    TheNeedle, // bl_needle
-    TheOx, // bl_ox
-    ThePillar, // bl_pillar
-    ThePlant, // bl_plant
-    ThePsychic, // bl_psychic
-    TheSerpent, // bl_serpent
-    TheTooth, // bl_tooth
-    TheWall, // bl_wall
-    TheWater, // bl_water
-    TheWheel, // bl_wheel
-    TheWindow, // bl_window
-    VerdantLeaf, // bl_final_leaf
-    VioletVessel // bl_final_vessel
+    // Order matches OpenCL BOSSES array for correct indexing
+    TheArm,          // 0
+    TheClub,         // 1
+    TheEye,          // 2
+    AmberAcorn,      // 3  - finisher boss
+    CeruleanBell,    // 4  - finisher boss
+    CrimsonHeart,    // 5  - finisher boss
+    VerdantLeaf,     // 6  - finisher boss
+    VioletVessel,    // 7  - finisher boss
+    TheFish,         // 8
+    TheFlint,        // 9
+    TheGoad,         // 10
+    TheHead,         // 11
+    TheHook,         // 12
+    TheHouse,        // 13
+    TheManacle,      // 14
+    TheMark,         // 15
+    TheMouth,        // 16
+    TheNeedle,       // 17
+    TheOx,           // 18
+    ThePillar,       // 19
+    ThePlant,        // 20
+    ThePsychic,      // 21
+    TheSerpent,      // 22
+    TheTooth,        // 23
+    TheWall,         // 24
+    TheWater,        // 25
+    TheWheel,        // 26
+    TheWindow,       // 27
+    
+    // Non-boss blinds (not in BOSSES array)
+    SmallBlind = 100,  // Special value to avoid collision
+    BigBlind = 101     // Special value to avoid collision
 }

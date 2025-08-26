@@ -44,7 +44,7 @@ public static class MotelyJsonFiltering
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static VectorMask VectorFilter_Vouchers(List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList, ref MotelyVectorSearchContext searchContext, ref MotelyVectorRunStateVoucher voucherState)
+    public static VectorMask VectorFilter_Vouchers(List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList, ref MotelyVectorSearchContext searchContext, ref MotelyVectorRunState voucherState)
     {
         Debug.Assert(clausesList.Count > 0, "VectorFilter_Vouchers requires non-empty clause list");
         
@@ -69,6 +69,7 @@ public static class MotelyJsonFiltering
         // Loop through each voucher clause and AND them together
         foreach (var clause in clausesList)
         {
+            Debug.Assert(clause.VoucherEnum.HasValue, "VectorFilter_Vouchers requires VoucherEnum in each clause");
             var clauseMask = VectorMask.NoBitsSet; // OR across antes for this clause
 
             // Check each ante for this voucher

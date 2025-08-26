@@ -149,6 +149,7 @@ public static class MotelyJsonScoring
     public static int CountSpectralOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, bool earlyExit = false)
     {
         bool searchAnySpectral = !clause.SpectralEnum.HasValue;
+        Debug.Assert(clause.SpectralEnum.HasValue, "CountSpectralOccurrences requires SpectralEnum");
         int tally = 0;
 
         // Check shop slots
@@ -434,7 +435,7 @@ public static class MotelyJsonScoring
         // Simple: just check if the voucher is active (it was activated during ActivateAllVouchers)
         if (voucherState.IsVoucherActive(clause.VoucherEnum.Value))
         {
-            DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} is active, giving 1 point");
+            // DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} is active, giving 1 point"); // DISABLED FOR PERFORMANCE
             return 1;
         }
 
@@ -446,17 +447,17 @@ public static class MotelyJsonScoring
     #region Helper Functions
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool CheckWildcardMatch(MotelyJoker joker, JokerWildcard? wildcard)
+    public static bool CheckWildcardMatch(MotelyJoker joker, MotelyJsonConfigWildcards? wildcard)
     {
         if (!wildcard.HasValue) return false;
-        if (wildcard == JokerWildcard.AnyJoker) return true;
+        if (wildcard == MotelyJsonConfigWildcards.AnyJoker) return true;
 
         var rarity = (MotelyJokerRarity)((int)joker & Motely.JokerRarityMask);
         return wildcard switch
         {
-            JokerWildcard.AnyCommon => rarity == MotelyJokerRarity.Common,
-            JokerWildcard.AnyUncommon => rarity == MotelyJokerRarity.Uncommon,
-            JokerWildcard.AnyRare => rarity == MotelyJokerRarity.Rare,
+            MotelyJsonConfigWildcards.AnyCommon => rarity == MotelyJokerRarity.Common,
+            MotelyJsonConfigWildcards.AnyUncommon => rarity == MotelyJokerRarity.Uncommon,
+            MotelyJsonConfigWildcards.AnyRare => rarity == MotelyJokerRarity.Rare,
             _ => false
         };
     }
@@ -495,7 +496,7 @@ public static class MotelyJsonScoring
         {
             var voucher = ctx.GetAnteFirstVoucher(ante, runState);
             runState.ActivateVoucher(voucher);
-            DebugLogger.Log($"[VoucherActivation] Ante {ante}: Activated {voucher}");
+            // DebugLogger.Log($"[VoucherActivation] Ante {ante}: Activated {voucher}"); // DISABLED FOR PERFORMANCE
 
             // Special case: Hieroglyph gives a bonus voucher in the SAME ante
             if (voucher == MotelyVoucher.Hieroglyph)
@@ -504,14 +505,16 @@ public static class MotelyJsonScoring
                 var voucherStream = ctx.CreateVoucherStream(ante);
                 var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, runState);
                 runState.ActivateVoucher(bonusVoucher);
-                DebugLogger.Log($"[VoucherActivation] Ante {ante}: Hieroglyph bonus activated {bonusVoucher}");
+                // DebugLogger.Log($"[VoucherActivation] Ante {ante}: Hieroglyph bonus activated {bonusVoucher}"); // DISABLED FOR PERFORMANCE
             }
         }
     }
 
     public static bool CheckSingleClause(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
-        if (clause.EffectiveAntes?.Length == 0) return false;
+        Debug.Assert(clause.ItemTypeEnum != MotelyFilterItemType.Voucher, "CheckSingleClause should not be used for Voucher clauses");
+        Debug.Assert(clause.EffectiveAntes != null, "CheckSingleClause requires EffectiveAntes");
+        Debug.Assert(clause.EffectiveAntes.Length > 0, "CheckSingleClause requires non-empty EffectiveAntes");
 
         foreach (var ante in clause.EffectiveAntes)
         {
@@ -525,8 +528,8 @@ public static class MotelyJsonScoring
                 MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante),
                 MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante),
                 MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
-                MotelyFilterItemType.Boss => false, // TODO: Implement after boss PRNG fix
-                MotelyFilterItemType.Voucher => true, // Vouchers already validated in PreFilter
+                MotelyFilterItemType.Boss => throw new NotImplementedException("Boss filtering is not yet implemented. The boss PRNG does not match the actual game behavior."),
+                MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, clause, ante, ref runState),
                 _ => false
             };
 
@@ -542,6 +545,7 @@ public static class MotelyJsonScoring
     
     private static bool CheckTagSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante)
     {
+        Debug.Assert(clause.TagEnum.HasValue, "CheckTagSingle requires TagEnum");
         var tagStream = ctx.CreateTagStream(ante);
         var smallTag = ctx.GetNextTag(ref tagStream);
         var bigTag = ctx.GetNextTag(ref tagStream);
@@ -552,6 +556,22 @@ public static class MotelyJsonScoring
             MotelyTagType.BigBlind => bigTag == clause.TagEnum.Value,
             _ => smallTag == clause.TagEnum.Value || bigTag == clause.TagEnum.Value
         };
+    }
+
+    public static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    {
+        if (!clause.VoucherEnum.HasValue) return false;
+        
+        // Check if this voucher appears at the specified ante
+        var voucher = ctx.GetAnteFirstVoucher(ante, runState);
+        if (voucher == clause.VoucherEnum.Value)
+        {
+            runState.ActivateVoucher(voucher);
+            return true;
+        }
+        
+        // Also check if it's already active from a previous ante
+        return runState.IsVoucherActive(clause.VoucherEnum.Value);
     }
 
     public static int CountOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
@@ -569,7 +589,7 @@ public static class MotelyJsonScoring
                 MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
                 MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
                 MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.Boss => 0, // TODO: Implement after boss PRNG fix
+                MotelyFilterItemType.Boss => throw new NotImplementedException("Boss filtering is not yet implemented. The boss PRNG does not match the actual game behavior."),
                 MotelyFilterItemType.Voucher => CountVoucherOccurrences(ref ctx, clause, ref runState),
                 _ => 0
             };

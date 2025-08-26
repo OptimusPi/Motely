@@ -4,6 +4,7 @@
   "author": "test",
   "dateCreated": "2025-08-17T00:00:00Z",
   "must": [
+    
     {
       "type": "spectralcard",
       "value": "ankh",
@@ -13,6 +14,8 @@
       "antes": [1]
     }
   ],
-  "should": [],
+  "should": [
+
+  ],
   "mustNot": []
 }

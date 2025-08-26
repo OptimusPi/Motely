@@ -105,6 +105,11 @@ namespace Motely
                 CommandOptionType.SingleValue);
             motelyOption.DefaultValue = string.Empty;
 
+            var scoreOnlyOption = app.Option(
+                "--scoreOnly",
+                "Run only the scoring filter without the base filter",
+                CommandOptionType.NoValue);
+
             app.OnExecute(() =>
             {
                 var analyzeSeed = analyzeOption.Value();
@@ -188,54 +193,103 @@ namespace Motely
                     return RunMotelyFilter(motelyFilter, threads, batchSize, enableDebug, nofancy, seedInput, startBatch, endBatch, wordlist);
                 }
 
-                // Execute the search (this was previously commented out which made the app a no-op)
-                PiFreakLovesYou(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
-                    enableDebug, wordlist, keyword, nofancy, seedInput);
-                return 0;
+                var scoreOnly = scoreOnlyOption.HasValue();
+                return PiFreakLovesYou(configName, startBatch, endBatch, threads, batchSize, cutoff, autoCutoff,
+                    enableDebug, wordlist, keyword, nofancy, seedInput, scoreOnly);
             });
 
             return app.Execute(args);
         }
         // Reusable function to create slice-chained search from JSON config
-        public static MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter> CreateSliceChainedSearch(MotelyJsonConfig config, int threads)
+        public static MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter> CreateSliceChainedSearch(MotelyJsonConfig config, int threads, bool scoreOnly = false)
         {
-            // Get ALL clauses (Must + Should + MustNot) for each category
-            var allClauses = config.Must.Concat(config.Should ?? []).Concat(config.MustNot ?? []).ToList();
+            MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>? searchSettings = null;
             
-            // Create main filter slice (start with most selective category)
-            var voucherClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList();
-            var mainFilterSlice = new MotelyJsonFilterDesc(FilterCategory.Voucher, voucherClauses);
+            if (!scoreOnly)
+            {
+                // Get only Must clauses for base filtering
+                var mustClauses = config.Must.ToList();
+                
+                // Sort by FilterOrder (if specified), with default of 999 for unspecified
+                // Then group by category to create filter slices
+                var sortedClauses = mustClauses
+                    .OrderBy(c => c.FilterOrder ?? 999)
+                    .ThenBy(c => c.ItemTypeEnum)  // Secondary sort for stability
+                    .ToList();
+                
+                // Group clauses by category while preserving order
+                var categoryGroups = new List<(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)>();
+                var processedCategories = new HashSet<FilterCategory>();
+                
+                foreach (var clause in sortedClauses)
+                {
+                    var category = GetFilterCategory(clause.ItemTypeEnum);
+                    if (!processedCategories.Contains(category))
+                    {
+                        var categoryClauses = mustClauses.Where(c => GetFilterCategory(c.ItemTypeEnum) == category).ToList();
+                        if (categoryClauses.Count > 0)
+                        {
+                            // DebugLogger.Log($"[CreateSliceChainedSearch] Adding filter group: {category} with {categoryClauses.Count} clauses"); // DISABLED FOR PERFORMANCE
+                            categoryGroups.Add((category, categoryClauses));
+                            processedCategories.Add(category);
+                        }
+                    }
+                }
 
-            var searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(mainFilterSlice)
-                .WithThreadCount(threads);
-
-            // Chain additional filter slices using ALL clauses
-            var tarotClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard).ToList();
-            if (tarotClauses.Count > 0)
-                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.TarotCard, tarotClauses));
-                
-            var jokerClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker || c.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList();
-            if (jokerClauses.Count > 0)
-                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Joker, jokerClauses));
-                
-            var tagClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag || c.ItemTypeEnum == MotelyFilterItemType.BigBlindTag).ToList();
-            if (tagClauses.Count > 0)
-                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.Tag, tagClauses));
-                
-            var planetClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard).ToList();
-            if (planetClauses.Count > 0)
-                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.PlanetCard, planetClauses));
-                
-            var spectralClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard).ToList();
-            if (spectralClauses.Count > 0)
-                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.SpectralCard, spectralClauses));
-                
-            var playingCardClauses = allClauses.Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlayingCard).ToList();
-            if (playingCardClauses.Count > 0)
-                searchSettings = searchSettings.WithAdditionalFilter(new MotelyJsonFilterDesc(FilterCategory.PlayingCard, playingCardClauses));
-
+                // If we have base filter groups, create the chain
+                if (categoryGroups.Count > 0)
+                {
+                    // Create the search settings starting with the first group
+                    var firstGroup = categoryGroups[0];
+                    searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                        new MotelyJsonFilterDesc(firstGroup.category, firstGroup.clauses))
+                        .WithThreadCount(threads);
+                    
+                    // Add remaining groups as additional filters
+                    for (int i = 1; i < categoryGroups.Count; i++)
+                    {
+                        var group = categoryGroups[i];
+                        searchSettings = searchSettings.WithAdditionalFilter(
+                            new MotelyJsonFilterDesc(group.category, group.clauses));
+                    }
+                }
+            }
+            else
+            {
+                // ScoreOnly mode - create a dummy base filter that passes everything
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                    new MotelyJsonFilterDesc(FilterCategory.Voucher, new List<MotelyJsonConfig.MotleyJsonFilterClause>()))
+                    .WithThreadCount(threads);
+            }
+            
+            // If still no search settings (shouldn't happen), create empty voucher filter
+            if (searchSettings == null)
+            {
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                    new MotelyJsonFilterDesc(FilterCategory.Voucher, new List<MotelyJsonConfig.MotleyJsonFilterClause>()))
+                    .WithThreadCount(threads);
+            }
+            
+            // Return settings - scoring will be added separately via WithSeedScoreProvider
             return searchSettings;
         }
+        
+        private static FilterCategory GetFilterCategory(MotelyFilterItemType itemType)
+        {
+            return itemType switch
+            {
+                MotelyFilterItemType.Voucher => FilterCategory.Voucher,
+                MotelyFilterItemType.Joker or MotelyFilterItemType.SoulJoker => FilterCategory.Joker,
+                MotelyFilterItemType.TarotCard => FilterCategory.TarotCard,
+                MotelyFilterItemType.PlanetCard => FilterCategory.PlanetCard,
+                MotelyFilterItemType.SpectralCard => FilterCategory.SpectralCard,
+                MotelyFilterItemType.PlayingCard => FilterCategory.PlayingCard,
+                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => FilterCategory.Tag,
+                MotelyFilterItemType.Boss => FilterCategory.Boss,
+                _ => FilterCategory.Joker
+            };
+        }
+
 
         private static int RunMotelyFilter(string filterName, int threads, int batchSize, bool enableDebug, bool nofancy, string? specificSeed, ulong startBatch, ulong endBatch, string? wordlist)
         {
@@ -243,6 +297,13 @@ namespace Motely
             FancyConsole.IsEnabled = !nofancy;
 
             string normalizedFilterName = filterName.ToLower().Trim();
+            
+            // Setup progress callback for all filters
+            DateTime lastProgressUpdate = DateTime.UtcNow;
+            Action<ulong, ulong, ulong, double> progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
+            {
+                
+            };
 
             IMotelySearch search;
             if (normalizedFilterName == "perkeoobservatory")
@@ -250,9 +311,10 @@ namespace Motely
                 var settings = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize)
+                    //.WithProgressCallback(progressCallback)
                     .WithResultCallback((seed, score, details) =>
                     {
-                        Console.WriteLine($"{seed}");
+                        Console.WriteLine($"\r{seed}                                                  ");
                     });
 
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
@@ -283,9 +345,10 @@ namespace Motely
                 var settings = new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(new TrickeoglyphFilterDesc())
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize)
+                    //.WithProgressCallback(progressCallback)
                     .WithResultCallback((seed, score, details) =>
                     {
-                        Console.WriteLine($"{seed}");
+                        Console.WriteLine($"\r{seed}                                                  ");
                     });
 
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
@@ -390,9 +453,9 @@ namespace Motely
             return 0;
         }
 
-        public static void PiFreakLovesYou(string configPath, ulong startBatch, ulong endBatch, int threads,
+        public static int PiFreakLovesYou(string configPath, ulong startBatch, ulong endBatch, int threads,
             int batchSize, int cutoff, bool autoCutoff, bool enableDebug, string? wordlist = null,
-            string? keyword = null, bool nofancy = false, string? specificSeed = null)
+            string? keyword = null, bool nofancy = false, string? specificSeed = null, bool scoreOnly = false)
         {
             // Set debug output flag
             DebugLogger.IsEnabled = enableDebug;
@@ -448,10 +511,12 @@ namespace Motely
 
                 Action<MotelySeedScoreTally> onResultFound = (score) =>
                 {
+                    // Clear the progress line before printing CSV
+                    Console.Write("\r                                                                                \r");
                     Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
                 };
 
-                var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound);
+                var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound, scoreOnly);
 
                 if (autoCutoff)
                     Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {cutoff})");
@@ -461,12 +526,24 @@ namespace Motely
 
                 // Create the search using MotelyJsonFilterSlice pattern
                 // Start with main filter slice, then chain additional slices based on config
-                
-                // Create slice-chained search using reusable function
-                var searchSettings = CreateSliceChainedSearch(config, threads);
-                
-                // Add final scoring
-                searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
+
+                // Create slice-chained search using reusable function (includes scoring if should clauses exist)
+                var searchSettings = CreateSliceChainedSearch(config, threads, scoreOnly);
+
+                // Add the score provider ONLY if we have valid should clauses or scoreOnly mode
+                bool hasValidShouldClauses = config.Should != null && 
+                    config.Should.Count > 0 && 
+                    config.Should.Any(c => !string.IsNullOrEmpty(c.Type) || !string.IsNullOrEmpty(c.Value));
+                    
+                if (hasValidShouldClauses || scoreOnly)
+                {
+                    // DebugLogger.Log($"[Program] Adding score provider (hasValidShouldClauses={hasValidShouldClauses}, scoreOnly={scoreOnly}"); // DISABLED FOR PERFORMANCE
+                    searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
+                }
+                else
+                {
+                    // DebugLogger.Log("[Program] Skipping score provider - no valid should clauses"); // DISABLED FOR PERFORMANCE
+                }
 
                 // Apply deck and stake from config
                 if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
@@ -498,6 +575,10 @@ namespace Motely
 
                 // Apply minimum score cutoff
                 // Minimum score cutoff is handled by the filter itself
+
+                // Progress callback - currently disabled for CLI (MotelySearch.cs has emoji progress)
+                // But this callback is available for UI integration
+                // Note: seedsSearched is already calculated correctly in the callback
 
                 // Start timing before search begins
                 var searchStopwatch = Stopwatch.StartNew();
@@ -541,7 +622,7 @@ namespace Motely
                     Console.WriteLine("\n🛑 Stopping search...");
                     MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider.IsCancelled = true;
                     search.Dispose();
-                    Console.WriteLine("✅ Search stopped gracefully");
+                    // Don't print completion here - let the main code handle it
                 };
 
                 // WAIT FOR SEARCH TO COMPLETE!
@@ -562,7 +643,10 @@ namespace Motely
                 searchStopwatch.Stop();
 
                 // Results are printed in real-time by MotelyJsonSeedScoreDesc
-                Console.WriteLine("\n✅ Search completed");
+                if (MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider.IsCancelled)
+                    Console.WriteLine("\n✅ Search stopped gracefully");
+                else
+                    Console.WriteLine("\n✅ Search completed");
 
                 // Summary metrics
                 ulong totalBatchesCompleted = (ulong)search.CompletedBatchCount;
@@ -584,9 +668,33 @@ namespace Motely
                 }
 
                 Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
-                double seedsPerMs = duration.TotalMilliseconds > 0 ? totalSeedsSearched / duration.TotalMilliseconds : 0;
-                Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss}");
-                Console.WriteLine($"   TOTAL AVG SPEED PER MS OF SEEDS: {seedsPerMs:N0}");
+                
+                // For very fast searches, show microseconds or just say "instant"
+                double durationMs = duration.TotalMilliseconds;
+                double seedsPerMs = 0;
+                
+                if (durationMs >= 1)
+                {
+                    seedsPerMs = totalSeedsSearched / durationMs;
+                    Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff} ({durationMs:N0}ms)");
+                    
+                    // For slow speeds, show more precision
+                    if (seedsPerMs < 1)
+                        Console.WriteLine($"   Speed: {seedsPerMs:F3} seeds/ms ({totalSeedsSearched / duration.TotalSeconds:N0} seeds/sec)");
+                    else
+                        Console.WriteLine($"   Speed: {seedsPerMs:N0} seeds/ms");
+                }
+                else if (duration.TotalMicroseconds >= 1)
+                {
+                    double seedsPerUs = totalSeedsSearched / duration.TotalMicroseconds;
+                    Console.WriteLine($"   Duration: {duration.TotalMicroseconds:N0} microseconds");
+                    Console.WriteLine($"   Speed: {seedsPerUs:N2} seeds/μs");
+                }
+                else
+                {
+                    Console.WriteLine($"   Duration: <1 microsecond");
+                    Console.WriteLine($"   Speed: Instant");
+                }
 
             }
             catch (OperationCanceledException)
@@ -599,6 +707,7 @@ namespace Motely
                 if (enableDebug)
                     DebugLogger.Log(ex.StackTrace ?? "No stack trace available");
             }
+            return 0;
         }
 
         static MotelyJsonConfig LoadConfig(string configPath)

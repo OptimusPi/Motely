@@ -8,3 +8,5 @@ obj
 /Motely/JsonItemFilters
 /Motely/WordLists
 Motely/filters/NegativeScore=2.ini
+.claude/settings.local.json
+*.swp

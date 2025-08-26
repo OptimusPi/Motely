@@ -1,0 +1,10 @@
+﻿Boss generation for seed: 12345678
+========================
+Ante 1: ThePillar
+Ante 2: TheClub
+Ante 3: TheHook
+Ante 4: TheNeedle
+Ante 5: TheWall
+Ante 6: TheMouth
+Ante 7: ThePlant
+Ante 8: CeruleanBell

@@ -67,7 +67,7 @@ ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public VectorEnum256<MotelyVoucher> GetAnteFirstVoucher(int ante, in MotelyVectorRunStateVoucher voucherState, bool isCached = false)
+    public VectorEnum256<MotelyVoucher> GetAnteFirstVoucher(int ante, in MotelyVectorRunState voucherState, bool isCached = false)
     {
         MotelyVectorPrngStream prngStream = CreatePrngStream(MotelyPrngKeys.Voucher + ante, isCached);
 
@@ -108,7 +108,7 @@ ref partial struct MotelyVectorSearchContext
         return vouchers;
     }
 
-    public VectorEnum256<MotelyVoucher> GetNextVoucher(ref MotelyVectorVoucherStream voucherStream, in MotelyVectorRunStateVoucher voucherState)
+    public VectorEnum256<MotelyVoucher> GetNextVoucher(ref MotelyVectorVoucherStream voucherStream, in MotelyVectorRunState voucherState)
     {
         VectorEnum256<MotelyVoucher> vouchers = new(GetNextRandomInt(ref voucherStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyVoucher>.ValueCount));
         int resampleCount = 0;

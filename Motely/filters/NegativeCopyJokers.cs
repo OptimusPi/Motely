@@ -32,18 +32,39 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
             MotelySingleSpectralStream spectralStream = default;
             MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateSoulJokerStream(ante);
 
+            var soulJoker = searchContext.GetNextJoker(ref soulStream);
+            if (soulJoker.Type == targetJoker)
+            {
+                if (requiredEdition.HasValue)
+                {
+                    if (soulJoker.Edition != requiredEdition.Value) return 0;
+                }
+            }
+            else return 0;
+
             var boosterPackStream = searchContext.CreateBoosterPackStream(ante, false, ante != 1);
-            bool soulStreamInit = false;
             bool spectralStreamInit = false;
             bool tarotStreamInit = false;
-            int score = 0;
 
             // Check pack slots 0-5 for ante 8 (Canio), 0-3 for ante 1 (Perkeo)
             int maxPackSlots = ante == 1 ? 4 : 6;
-
             for (int i = 0; i < maxPackSlots; i++)
             {
                 var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+
+
+                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                {
+                    if (!spectralStreamInit)
+                    {
+                        spectralStreamInit = true;
+                        spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
+                    }
+                    if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    {
+                        return 1;
+                    }
+                }
 
                 if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                 {
@@ -55,44 +76,19 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
                     }
                     if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
                     {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(ante);
-                        var soulJoker = searchContext.GetNextJoker(ref soulStream);
-                        if (soulJoker.Type == targetJoker)
-                        {
-                            if (requiredEdition.HasValue)
-                            {
-                                score += soulJoker.Edition == requiredEdition.Value ? 1 : 0;
-                            }
-                            else score++;
-                        }
-                    }
-                }
-
-                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                {
-                    if (!spectralStreamInit)
-                    {
-                        spectralStreamInit = true;
-                        spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
-                    }
-                    if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
-                    {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(ante);
-                        var soulJoker = searchContext.GetNextJoker(ref soulStream);
-                        if (soulJoker.Type == targetJoker)
-                        {
-                            if (requiredEdition.HasValue)
-                            {
-                                score += soulJoker.Edition == requiredEdition.Value ? 1 : 0;
-                            }
-                            else score++;
-                        }
+                        return 1;
                     }
                 }
 
             }
+            // if there is no packs then I guess u can check for tags at this point lol
+            var tagStream = searchContext.CreateTagStream(ante);
+            var smallBlindTag = searchContext.GetNextTag(ref tagStream);
+            if (smallBlindTag == MotelyTag.CharmTag) return 1;
+            var bigBlindTag = searchContext.GetNextTag(ref tagStream);
+            if (bigBlindTag == MotelyTag.CharmTag) return 1;
 
-            return score;
+            return 0;
         }
 
         public static int CheckJokerInAnte(int ante, MotelyItemType targetJoker, ref MotelySingleSearchContext ctx, MotelyItemEdition? requiredEdition = null)
@@ -163,23 +159,33 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
 
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            MotelyVectorRunStateVoucher voucherState = new();
+            MotelyVectorRunState voucherState = new();
             VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(1);
             VectorMask matchingTele = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
             VectorMask matchingObservatory = VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
             voucherState.ActivateVoucher(vouchers);
 
-
             vouchers = searchContext.GetAnteFirstVoucher(2, voucherState);
             matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
             matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
             voucherState.ActivateVoucher(vouchers);
+
             vouchers = searchContext.GetAnteFirstVoucher(3, voucherState);
             matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
             matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
             voucherState.ActivateVoucher(vouchers);
 
             vouchers = searchContext.GetAnteFirstVoucher(4, voucherState);
+            matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
+            matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
+            voucherState.ActivateVoucher(vouchers);
+
+            vouchers = searchContext.GetAnteFirstVoucher(5, voucherState);
+            matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
+            matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
+            voucherState.ActivateVoucher(vouchers);
+
+            vouchers = searchContext.GetAnteFirstVoucher(6, voucherState);
             matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
             matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
             voucherState.ActivateVoucher(vouchers);
@@ -203,7 +209,7 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
                 int invis = 0;
                 int showman = 0;
 
-                hasPerkeoNegative += CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext, MotelyItemEdition.Negative);
+                hasPerkeoNegative += CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext);
                 hasPerkeo += CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext);
                 Nbps += CheckJokerInAnte(1, MotelyItemType.Blueprint, ref searchContext, MotelyItemEdition.Negative);
                 Nbss += CheckJokerInAnte(1, MotelyItemType.Brainstorm, ref searchContext, MotelyItemEdition.Negative);
@@ -213,12 +219,11 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
                 invis += CheckJokerInAnte(1, MotelyItemType.InvisibleJoker, ref searchContext);
                 showman += CheckJokerInAnte(1, MotelyItemType.Showman, ref searchContext);
 
-                if (hasPerkeo == 0)
-                    return false;
+
 
                 for (int ante = 2; ante < 4; ante++)
                 {
-                    hasPerkeoNegative += CheckSoulJokerInAnte(ante, MotelyItemType.Perkeo, ref searchContext, MotelyItemEdition.Negative);
+                    hasPerkeoNegative += CheckSoulJokerInAnte(ante, MotelyItemType.Perkeo, ref searchContext);
                     hasPerkeo += CheckSoulJokerInAnte(ante, MotelyItemType.Perkeo, ref searchContext);
                     Nbps += CheckJokerInAnte(ante, MotelyItemType.Blueprint, ref searchContext, MotelyItemEdition.Negative);
                     Nbss += CheckJokerInAnte(ante, MotelyItemType.Brainstorm, ref searchContext, MotelyItemEdition.Negative);
@@ -228,8 +233,10 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
                     invis += CheckJokerInAnte(ante, MotelyItemType.InvisibleJoker, ref searchContext);
                     showman += CheckJokerInAnte(ante, MotelyItemType.Showman, ref searchContext);
                 }
+
                 if (showman == 0 || (invis + Bps + Bss < 1))
                     return false;
+
 
                 for (int ante = 4; ante < 10; ante++)
                 {
@@ -243,23 +250,9 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
 
                 var score = hasPerkeo + hasPerkeoNegative + Nbps + Nbss + Ninvis + invis + Bss + Bps;
                 var negScore = hasPerkeoNegative + Nbps + Nbss + Ninvis;
-                if (negScore > 1)
+                if (negScore > 2)
                 {
-                    Console.WriteLine(" ");
-                    Console.Write($"""
-                    NegativeScore={negScore}
-                    Score={score}
-                    Perkeo={hasPerkeo},
-                    NegativePerkeo={hasPerkeoNegative},
-                    NegativeBlueprint={Nbps},
-                    NegativeBrainstorm={Nbss},
-                    NegativeInvisibleJoker={Ninvis},
-                    InvisibleJoker={invis},
-                    Brainstorm={Bss},
-                    Blueprint={Bps},
-                    Seed=
-                    """
-                    );
+                    Console.WriteLine($"pifreaklovesyou,{score},{hasPerkeo},{hasPerkeoNegative},{Nbps},{Nbss},{Ninvis},{invis},{Bss},{Bps},Seed=");
                     return true;
                 }
                 return false;

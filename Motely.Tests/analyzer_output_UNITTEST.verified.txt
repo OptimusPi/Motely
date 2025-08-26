@@ -1,5 +1,5 @@
 ﻿==ANTE 1==
-Boss: The Club
+Boss: The Window
 Voucher: Tarot Merchant
 Tags: Speed Tag, Speed Tag
 Shop Queue: 
@@ -26,7 +26,7 @@ Jumbo Celestial Pack - Jupiter, Planet X, Saturn, Mars, Pluto
 Spectral Pack - Wraith, Talisman
 
 ==ANTE 2==
-Boss: The Arm
+Boss: The Mouth
 Voucher: Planet Merchant
 Tags: D6 Tag, Economy Tag
 Shop Queue: 
@@ -90,7 +90,7 @@ Celestial Pack - Jupiter, Neptune, Eris
 Mega Arcana Pack - Strength, The Fool, The Sun, The High Priestess, Justice
 
 ==ANTE 3==
-Boss: The Eye
+Boss: The House
 Voucher: Telescope
 Tags: Coupon Tag, Speed Tag
 Shop Queue: 
@@ -154,7 +154,7 @@ Jumbo Celestial Pack - Ceres, Eris, Planet X, Jupiter, Venus
 Jumbo Celestial Pack - Pluto, Saturn, Neptune, Earth, Uranus
 
 ==ANTE 4==
-Boss: The Club
+Boss: The Tooth
 Voucher: Crystal Ball
 Tags: Negative Tag, Handy Tag
 Shop Queue: 
@@ -218,7 +218,7 @@ Jumbo Celestial Pack - Venus, Pluto, Jupiter, Mars, Neptune
 Buffoon Pack - Runner, Seeing Double
 
 ==ANTE 5==
-Boss: The Eye
+Boss: The Fish
 Voucher: Paint Brush
 Tags: Garbage Tag, Garbage Tag
 Shop Queue: 
@@ -282,7 +282,7 @@ Celestial Pack - Venus, Planet X, Saturn
 Jumbo Standard Pack - 7 of Hearts, Holographic 10 of Spades, 6 of Spades, Gold 4 of Spades, Red Seal Jack of Spades
 
 ==ANTE 6==
-Boss: The Arm
+Boss: The Pillar
 Voucher: Seed Money
 Tags: Rare Tag, Coupon Tag
 Shop Queue: 
@@ -346,7 +346,7 @@ Arcana Pack - The World, The Hermit, The Hanged Man
 Jumbo Standard Pack - Mult 2 of Hearts, Stone Ace of Spades, Red Seal Stone Jack of Diamonds, 10 of Spades, 3 of Clubs
 
 ==ANTE 7==
-Boss: The Club
+Boss: The Water
 Voucher: Omen Globe
 Tags: Buffoon Tag, Meteor Tag
 Shop Queue: 

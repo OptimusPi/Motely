@@ -63,7 +63,9 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter({_category}) called with empty clauses");
+            // If no clauses, pass everything through (for scoreOnly mode)
+            if (Clauses.Count == 0)
+                return VectorMask.AllBitsSet;
 
             return _category switch
             {
@@ -84,33 +86,46 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterVouchers(ref MotelyVectorSearchContext ctx)
         {
+            // If no clauses, pass everything through (for scoreOnly mode)
+            if (Clauses.Count == 0)
+                return VectorMask.AllBitsSet;
+                
             var mask = VectorMask.AllBitsSet;
-            var state = new MotelyVectorRunStateVoucher();
+            var state = new MotelyVectorRunState();
 
             // Find max ante needed
             int maxAnte = Clauses.Count > 0 ? Clauses.Max(c => c.EffectiveAntes?.Length > 0 ? c.EffectiveAntes.Max() : 1) : 1;
 
+            // Check each voucher clause independently
+            // Each clause needs to match at least one of its specified antes
             foreach (var clause in Clauses)
             {
+                Debug.Assert(clause.VoucherEnum.HasValue, "FilterVouchers requires VoucherEnum");
                 var clauseMask = VectorMask.NoBitsSet;
 
+                // Check if this voucher appears at ANY of its required antes
                 foreach (var ante in clause.EffectiveAntes ?? [])
                 {
                     if (ante <= maxAnte)
                     {
                         var vouchers = ctx.GetAnteFirstVoucher(ante, state);
                         var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
-                        clauseMask |= matches;
-
+                        
                         if (((VectorMask)matches).IsPartiallyTrue())
                         {
                             state.ActivateVoucher(clause.VoucherEnum.Value);
+                            clauseMask |= matches;  // OR - voucher can appear at any of its antes
                         }
                     }
                 }
 
-                mask &= clauseMask;
-                if (mask.IsAllFalse()) break;
+                // This voucher must appear at at least one of its antes
+                if (clauseMask.IsAllFalse())
+                {
+                    return VectorMask.NoBitsSet;  // Required voucher not found
+                }
+                
+                mask &= clauseMask;  // AND - all required vouchers must be present
             }
 
             return mask;
@@ -119,10 +134,12 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterTags(ref MotelyVectorSearchContext ctx)
         {
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(Tag) called with empty clauses");
             var mask = VectorMask.AllBitsSet;
 
             foreach (var clause in Clauses)
             {
+                Debug.Assert(clause.TagEnum.HasValue, "FilterTags requires TagEnum");
                 var clauseMask = VectorMask.NoBitsSet;
 
                 foreach (var ante in clause.EffectiveAntes)
@@ -151,6 +168,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterTarots(ref MotelyVectorSearchContext ctx)
         {
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(TarotCard) called with empty clauses");
             // For now, fall back to individual processing until true vectorization
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
@@ -171,6 +189,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterPlanets(ref MotelyVectorSearchContext ctx)
         {
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(PlanetCard) called with empty clauses");
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
@@ -189,6 +208,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterSpectrals(ref MotelyVectorSearchContext ctx)
         {
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(SpectralCard) called with empty clauses");
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
@@ -207,34 +227,53 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterJokers(ref MotelyVectorSearchContext ctx)
         {
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(Joker) called with empty clauses");
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
+                
+                // Each clause must be satisfied (AND between different jokers)
                 foreach (var clause in clauses)
                 {
+                    bool clauseSatisfied = false;
+                    
+                    // Check if this joker appears in ANY of its required antes (OR across antes)
                     foreach (var ante in clause.EffectiveAntes)
                     {
                         // Handle both regular Jokers and SoulJokers
                         if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
                         {
                             if (MotelyJsonScoring.CountSoulJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
-                                return true;
+                            {
+                                clauseSatisfied = true;
+                                break; // Found in this ante, clause is satisfied
+                            }
                         }
                         else
                         {
                             if (MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
-                                return true;
+                            {
+                                clauseSatisfied = true;
+                                break; // Found in this ante, clause is satisfied
+                            }
                         }
                     }
+                    
+                    // If this joker wasn't found in any of its antes, fail
+                    if (!clauseSatisfied)
+                        return false;
                 }
-                return false;
+                
+                // All joker clauses were satisfied
+                return true;
             });
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterPlayingCards(ref MotelyVectorSearchContext ctx)
         {
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(PlayingCard) called with empty clauses");
             var clauses = Clauses; // Copy to local variable for lambda access
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
@@ -254,8 +293,8 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterBosses(ref MotelyVectorSearchContext ctx)
         {
-            // TODO: Implement after boss PRNG is fixed
-            return VectorMask.AllBitsSet; // Pass-through for now
+            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(Boss) called with empty clauses");
+            throw new NotImplementedException("Boss filtering is not yet implemented. The boss PRNG does not match the actual game behavior.");
         }
 
         #endregion

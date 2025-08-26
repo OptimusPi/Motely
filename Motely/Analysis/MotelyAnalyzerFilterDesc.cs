@@ -64,9 +64,6 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
 
                 // Voucher - get with state for proper progression
                 MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, runState);
-
-                // TEST: Activate ALL vouchers from ante 1 onwards
-                // if (ShouldActivateVoucher(voucher))
                 runState.ActivateVoucher(voucher);
 
                 // Tags
