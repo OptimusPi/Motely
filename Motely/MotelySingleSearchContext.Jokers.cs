@@ -137,6 +137,7 @@ unsafe ref partial struct MotelySingleSearchContext
 
     public MotelySingleItemSet GetNextBuffoonPackContents(ref MotelySingleJokerStream jokerStream, int size)
     {
+        Debug.Assert(!jokerStream.RarityPrngStream.IsInvalid, "Joker stream must have valid rarity PRNG");
         Debug.Assert(size <= MotelySingleItemSet.MaxLength);
 
         MotelySingleItemSet pack = new();

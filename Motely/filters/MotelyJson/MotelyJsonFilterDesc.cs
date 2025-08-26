@@ -234,32 +234,35 @@ public struct MotelyJsonFilterDesc(
             if (clauses.Count == 1 && clauses[0].ItemTypeEnum == MotelyFilterItemType.SoulJoker && 
                 clauses[0].JokerEnum == MotelyJoker.Perkeo)
             {
+                // Capture clause to avoid closure issues
+                var perkeoClause = clauses[0];
+                var effectiveAntes = perkeoClause.EffectiveAntes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
                 return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
                 {
                     // Fast path for Perkeo check
-                    foreach (var ante in clauses[0].EffectiveAntes)
+                    foreach (var ante in effectiveAntes)
                     {
-                        var packStream = singleCtx.CreateBoosterPackStream(ante, ante != 1, false);
+                        var packStream = singleCtx.CreateBoosterPackStream(ante, ante != 1, isCached: true);
                         for (int i = 0; i < 4; i++) // Check first 4 packs
                         {
                             var pack = singleCtx.GetNextBoosterPack(ref packStream);
                             
                             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                             {
-                                var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
+                                var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, soulOnly: true, isCached: true);
                                 if (singleCtx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
                                 {
-                                    var soulStream = singleCtx.CreateSoulJokerStream(ante);
+                                    var soulStream = singleCtx.CreateSoulJokerStream(ante, isCached: true);
                                     if (singleCtx.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo)
                                         return true;
                                 }
                             }
                             else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                             {
-                                var spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
+                                var spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, soulOnly: true, isCached: true);
                                 if (singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                                 {
-                                    var soulStream = singleCtx.CreateSoulJokerStream(ante);
+                                    var soulStream = singleCtx.CreateSoulJokerStream(ante, isCached: true);
                                     if (singleCtx.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo)
                                         return true;
                                 }
