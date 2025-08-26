@@ -15,7 +15,7 @@ public ref struct MotelyRunState
     public int VoucherBitfield;
     public bool ShowmanActive;
     
-    public int[]? BossLocked;
+    public HashSet<MotelyBossBlind>? UsedBosses;
     public int LastProcessedBossAnte;
     public MotelySinglePrngStream BossPrngStream; // Persistent PRNG stream for boss generation
 
