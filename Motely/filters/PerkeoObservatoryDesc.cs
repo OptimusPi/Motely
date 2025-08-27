@@ -30,16 +30,14 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             
             bool tarotStreamInit = false, spectralStreamInit = false;
 
+            if (!soulStreamInit)
+            {
+                soulStream = searchContext.CreateSoulJokerStream(ante);
+                var wouldBe = searchContext.GetNextJoker(ref soulStream);
+                if (wouldBe.Type != MotelyItemType.Perkeo) return false;
+            }
             for (int i = 0; i < 2; i++)
             {
-                if (!soulStreamInit)
-                {
-                    soulStream = searchContext.CreateSoulJokerStream(ante);
-                    soulStreamInit = true;
-                    var wouldBe = searchContext.GetNextJoker(ref soulStream);
-                    if (wouldBe.Type != MotelyItemType.Perkeo || wouldBe.Edition != MotelyItemEdition.Negative) return false;
-                }
-
                 if (!boosterPackStreamInit)
                 {
                     boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante!=1, false);
@@ -47,7 +45,6 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                 }
 
                 var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
-
                 if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                 {
                     if (!tarotStreamInit)
@@ -58,7 +55,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
                     if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
                     {
-                            return true;
+                        return true;
                     }
                 }
 
@@ -72,9 +69,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
                     if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                     {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(ante);
-                        if (searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo)
-                            return true;
+                        return true;
                     }
                 }
             }
