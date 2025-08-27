@@ -24,6 +24,24 @@ public ref struct MotelyVectorRunState
     {
         VoucherStateBitfield |= Vector256.Create(1 << (int)voucher);
     }
+    
+    public void ActivateVoucherForMask(MotelyVoucher voucher, VectorMask mask) 
+    {
+        // Only activate voucher for lanes where mask is true
+        // Create a vector with the voucher bit in each lane
+        var voucherBit = Vector256.Create(1 << (int)voucher);
+        
+        // Create mask vector: -1 (all bits set) for true lanes, 0 for false lanes
+        Span<int> maskElements = stackalloc int[8];
+        for (int i = 0; i < 8; i++)
+        {
+            maskElements[i] = mask[i] ? -1 : 0;
+        }
+        var maskVector = Vector256.Create<int>(maskElements);
+        
+        // AND the voucher bit with the mask to only set it for true lanes
+        VoucherStateBitfield |= Vector256.BitwiseAnd(voucherBit, maskVector);
+    }
 
     public void ActivateVoucher(VectorEnum256<MotelyVoucher> voucherVector)
     {
