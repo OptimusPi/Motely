@@ -262,16 +262,9 @@ namespace Motely
                     .WithThreadCount(threads);
             }
             
-            // If still no search settings (shouldn't happen), create empty voucher filter
-            if (searchSettings == null)
-            {
-                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
-                    new MotelyJsonFilterDesc(FilterCategory.Voucher, new List<MotelyJsonConfig.MotleyJsonFilterClause>()))
-                    .WithThreadCount(threads);
-            }
             
             // Return settings - scoring will be added separately via WithSeedScoreProvider
-            return searchSettings;
+            return searchSettings!;
         }
         
         private static FilterCategory GetFilterCategory(MotelyFilterItemType itemType)
@@ -298,11 +291,32 @@ namespace Motely
 
             string normalizedFilterName = filterName.ToLower().Trim();
             
-            // Setup progress callback for all filters
+            // Setup progress callback for all filters  
             DateTime lastProgressUpdate = DateTime.UtcNow;
+            DateTime progressStartTime = DateTime.UtcNow;
             Action<ulong, ulong, ulong, double> progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
             {
+                // Limit update frequency to prevent console spam
+                var now = DateTime.UtcNow;
+                var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+                if (timeSinceLastUpdate < 100) return; // Update at most every 100ms
+                lastProgressUpdate = now;
                 
+                var elapsedMS = (now - progressStartTime).TotalMilliseconds;
+                string timeLeftFormatted = "calculating...";
+                if (total > 0 && completed > 0)
+                {
+                    double portionFinished = (double)completed / total;
+                    double timeLeft = elapsedMS / portionFinished - elapsedMS;
+                    TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
+                    if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+                    else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                }
+                double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
+                string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+                var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
+                string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
+                Console.Write($"\r{progressLine}                    \r{progressLine}");
             };
 
             IMotelySearch search;
@@ -311,10 +325,11 @@ namespace Motely
                 var settings = new MotelySearchSettings<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>(new PerkeoObservatoryFilterDesc())
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize)
-                    //.WithProgressCallback(progressCallback)
+                    .WithProgressCallback(progressCallback)
                     .WithResultCallback((seed, score, details) =>
                     {
                         Console.WriteLine($"\r{seed}                                                  ");
+                        MotelySearch<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>.RestoreProgressLine();
                     });
 
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
@@ -345,10 +360,11 @@ namespace Motely
                 var settings = new MotelySearchSettings<TrickeoglyphFilterDesc.TrickeoglyphFilter>(new TrickeoglyphFilterDesc())
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize)
-                    //.WithProgressCallback(progressCallback)
+                    .WithProgressCallback(progressCallback)
                     .WithResultCallback((seed, score, details) =>
                     {
                         Console.WriteLine($"\r{seed}                                                  ");
+                        MotelySearch<TrickeoglyphFilterDesc.TrickeoglyphFilter>.RestoreProgressLine();
                     });
 
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
@@ -382,6 +398,7 @@ namespace Motely
                     .WithResultCallback((seed, score, details) =>
                     {
                         Console.WriteLine($"{seed}");
+                        MotelySearch<NegativeCopyFilterDesc.NegativeCopyFilter>.RestoreProgressLine();
                     });
 
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
@@ -415,6 +432,7 @@ namespace Motely
                     .WithResultCallback((seed, score, details) =>
                     {
                         Console.WriteLine($"{seed}");
+                        MotelySearch<SoulTestFilterDesc.SoulTestFilter>.RestoreProgressLine();
                     });
 
                 if (startBatch > 0) settings = settings.WithStartBatchIndex(startBatch);
@@ -448,8 +466,37 @@ namespace Motely
             Console.WriteLine($"🔍 Running Motely filter: {filterName}" +
                 (!string.IsNullOrEmpty(specificSeed) ? $" on seed: {specificSeed}" : ""));
 
+            var searchStopwatch = System.Diagnostics.Stopwatch.StartNew();
             search.Start();
             search.AwaitCompletion();
+            searchStopwatch.Stop();
+            
+            // Print completion summary
+            Console.WriteLine("\n✅ Search completed");
+            
+            // Calculate and display performance metrics
+            ulong totalSeedsSearched = search.CompletedBatchCount * (ulong)Math.Pow(35, batchSize);
+            var duration = searchStopwatch.Elapsed;
+            
+            Console.WriteLine($"   Total seeds searched: {totalSeedsSearched:N0}");
+            
+            // Show performance
+            double durationMs = duration.TotalMilliseconds;
+            if (durationMs >= 1)
+            {
+                double seedsPerMs = totalSeedsSearched / durationMs;
+                Console.WriteLine($"   Time elapsed: {duration.TotalSeconds:F2} seconds");
+                Console.WriteLine($"   Performance: {seedsPerMs:N0} seeds/ms");
+            }
+            else
+            {
+                Console.WriteLine($"   Time elapsed: < 1 ms (instant)");
+                if (totalSeedsSearched > 0)
+                {
+                    double seedsPerMs = totalSeedsSearched / 0.001; // Assume 1 microsecond minimum
+                    Console.WriteLine($"   Performance: > {seedsPerMs:N0} seeds/ms");
+                }
+            }
             return 0;
         }
 
@@ -509,11 +556,20 @@ namespace Motely
                     DebugLogger.Log("--- End Config ---\n");
                 }
 
+                string lastProgressLine = "";
                 Action<MotelySeedScoreTally> onResultFound = (score) =>
                 {
-                    // Clear the progress line before printing CSV
-                    Console.Write("\r                                                                                \r");
+                    // Clear the current line (progress line)
+                    Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
+                    
+                    // Print the result
                     Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
+                    
+                    // Restore the last known progress line
+                    if (!string.IsNullOrEmpty(lastProgressLine))
+                    {
+                        Console.Write(lastProgressLine);
+                    }
                 };
 
                 var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound, scoreOnly);
@@ -576,9 +632,34 @@ namespace Motely
                 // Apply minimum score cutoff
                 // Minimum score cutoff is handled by the filter itself
 
-                // Progress callback - currently disabled for CLI (MotelySearch.cs has emoji progress)
-                // But this callback is available for UI integration
-                // Note: seedsSearched is already calculated correctly in the callback
+                // Progress callback for emoji progress display
+                DateTime progressStartTime = DateTime.UtcNow;
+                DateTime lastProgressUpdate = DateTime.UtcNow;
+                searchSettings = searchSettings.WithProgressCallback((completed, total, seedsSearched, seedsPerMs) =>
+                {
+                    // Limit update frequency to prevent console spam
+                    var now = DateTime.UtcNow;
+                    var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+                    if (timeSinceLastUpdate < 100) return; // Update at most every 100ms
+                    lastProgressUpdate = now;
+                    
+                    var elapsedMS = (now - progressStartTime).TotalMilliseconds;
+                    string timeLeftFormatted = "calculating...";
+                    if (total > 0 && completed > 0)
+                    {
+                        double portionFinished = (double)completed / total;
+                        double timeLeft = elapsedMS / portionFinished - elapsedMS;
+                        TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
+                        if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+                        else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                    }
+                    double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
+                    string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+                    var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
+                    string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
+                    lastProgressLine = $"\r{progressLine}"; // Store for restoration after result print
+                    Console.Write($"\r{progressLine}                    \r{progressLine}");
+                });
 
                 // Start timing before search begins
                 var searchStopwatch = Stopwatch.StartNew();
