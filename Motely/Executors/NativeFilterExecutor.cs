@@ -35,11 +35,11 @@ namespace Motely.Executors
             // Create progress callback
             DateTime lastProgressUpdate = DateTime.UtcNow;
             DateTime progressStartTime = DateTime.UtcNow;
-            Action<ulong, ulong, ulong, double> progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
+            Action<long, long, long, double> progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
             {
                 var now = DateTime.UtcNow;
                 var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
-                if (timeSinceLastUpdate < 100) return;
+
                 lastProgressUpdate = now;
                 
                 var elapsedMS = (now - progressStartTime).TotalMilliseconds;
@@ -108,7 +108,7 @@ namespace Motely.Executors
             return 0;
         }
         
-        private IMotelySearch CreateFilterSearch(string filterName, Action<ulong, ulong, ulong, double> progressCallback)
+        private IMotelySearch CreateFilterSearch(string filterName, Action<long, long, long, double> progressCallback)
         {
             var seeds = LoadSeeds();
             var filterDesc = GetFilterDescriptor(filterName);
@@ -128,20 +128,16 @@ namespace Motely.Executors
         
         // Single method that builds the search with ALL the common settings
         private IMotelySearch BuildSearch<TFilter>(IMotelySeedFilterDesc<TFilter> filterDesc, 
-            Action<ulong, ulong, ulong, double> progressCallback, List<string>? seeds) 
+            Action<long, long, long, double> progressCallback, List<string>? seeds) 
             where TFilter : struct, IMotelySeedFilter
         {
             var settings = new MotelySearchSettings<TFilter>(filterDesc)
                 .WithThreadCount(_params.Threads)
                 .WithBatchCharacterCount(_params.BatchSize)
                 .WithProgressCallback(progressCallback);
-                
-            // Apply chained filters BEFORE setting result callback
+    
             settings = ApplyChainedFilters(settings);
             
-            // Don't set a custom result callback - let Motely use its default which prints seeds
-            // and increments the MatchingSeeds counter
-                
             settings = settings.WithStartBatchIndex(_params.StartBatch-1);
             if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex(_params.EndBatch);
             
@@ -223,19 +219,18 @@ namespace Motely.Executors
         {
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
             
-            // Simple: just show what actually happened
-            var seedsSearched = LoadSeeds()?.Count ?? (int)(search.CompletedBatchCount * Math.Pow(35, _params.BatchSize));
+            // Use the actual tracked counts from the search
             var lastBatch = search.CompletedBatchCount > 0 ? _params.StartBatch + search.CompletedBatchCount - 1 : 0;
             
             Console.WriteLine($"   Last batch: {lastBatch}");
-            Console.WriteLine($"   Seeds searched: ~{seedsSearched:N0}");
-            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");
+            Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
+            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds:N0}");
             
             if (duration.TotalMilliseconds >= 1)
             {
-                var speed = (double)seedsSearched / duration.TotalMilliseconds;
+                var speed = (double)search.TotalSeedsSearched / duration.TotalMilliseconds;
                 Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
-                Console.WriteLine($"   Speed: ~{speed:N0} seeds/ms");
+                Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
         }
     }

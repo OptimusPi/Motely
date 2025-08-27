@@ -57,6 +57,21 @@ public struct MotelyJsonSeedScoreDesc(
         _learnedCutoff = Cutoff;
         _resultsFound = 0;
 
+        // Cache voucher streams for vectorizable Must clauses
+        if (Config.Must != null)
+        {
+            foreach (var clause in Config.Must)
+            {
+                if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.EffectiveAntes != null)
+                {
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        ctx.CacheAnteFirstVoucher(ante);
+                    }
+                }
+            }
+        }
+
         return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound, ScoreOnlyMode);
     }
 
@@ -77,10 +92,36 @@ public struct MotelyJsonSeedScoreDesc(
             var autoCutoff = AutoCutoff;
             var onResultFound = OnResultFound;
             var scoreOnlyMode = ScoreOnlyMode;
-            var mask = VectorMask.AllBitsSet;
             
-
-            searchContext.SearchIndividualSeeds(mask, (ref MotelySingleSearchContext singleCtx) =>
+            // SIMPLE VECTORIZED PRE-FILTER for vouchers only
+            var preFilterMask = VectorMask.AllBitsSet;
+            var vectorRunState = new MotelyVectorRunState();
+            
+            // Try to vectorize simple voucher Must clauses
+            if (config.Must?.Count > 0)
+            {
+                foreach (var clause in config.Must)
+                {
+                    if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && 
+                        clause.VoucherEnum.HasValue && 
+                        clause.EffectiveAntes != null)
+                    {
+                        var voucherMask = VectorMask.NoBitsSet;
+                        foreach (var ante in clause.EffectiveAntes)
+                        {
+                            var vouchers = searchContext.GetAnteFirstVoucher(ante, vectorRunState);
+                            var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
+                            voucherMask |= matches; // OR - voucher can appear at any ante
+                        }
+                        preFilterMask &= voucherMask;
+                        if (preFilterMask.IsAllFalse()) 
+                            return; // No seeds pass, exit early
+                    }
+                }
+            }
+            
+            // NOW process individual seeds, but ONLY those that passed vectorized checks
+            searchContext.SearchIndividualSeeds(preFilterMask, (ref MotelySingleSearchContext singleCtx) =>
             {
                 // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
                 var runState = new MotelyRunState();
