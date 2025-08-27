@@ -1,4 +1,4 @@
-
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
 namespace Motely;
@@ -17,6 +17,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
     public struct PerkeoObservatoryFilter() : IMotelySeedFilter
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool CheckAnteForPerkeo(int ante, ref MotelySingleSearchContext searchContext)
         {
             MotelySingleTarotStream tarotStream = default;
@@ -27,7 +28,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             bool soulStreamInit = false;
             bool boosterPackStreamInit = false;
 
-            
+
             bool tarotStreamInit = false, spectralStreamInit = false;
 
             if (!soulStreamInit)
@@ -40,7 +41,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             {
                 if (!boosterPackStreamInit)
                 {
-                    boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante!=1, false);
+                    boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante != 1, false);
                     boosterPackStreamInit = true;
                 }
 
@@ -77,6 +78,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(1);
@@ -92,6 +94,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             vouchers = searchContext.GetAnteFirstVoucher(2, voucherState);
 
             matching &= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
+
 
             return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
             {
