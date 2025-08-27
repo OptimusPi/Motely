@@ -148,6 +148,12 @@ namespace Motely.Executors
             string lastProgressLine = "";
             Action<MotelySeedScoreTally> onResultFound = (score) =>
             {
+                // Skip output in silent mode
+                if (_params.Silent)
+                {
+                    return;
+                }
+                
                 Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
                 Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
                 if (!string.IsNullOrEmpty(lastProgressLine))

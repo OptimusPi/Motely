@@ -134,6 +134,7 @@ namespace Motely.Executors
             var settings = new MotelySearchSettings<TFilter>(filterDesc)
                 .WithThreadCount(_params.Threads)
                 .WithBatchCharacterCount(_params.BatchSize)
+                .WithSilent(_params.Silent)
                 .WithProgressCallback(progressCallback);
     
             settings = ApplyChainedFilters(settings);
@@ -220,7 +221,7 @@ namespace Motely.Executors
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
             
             // Use the actual tracked counts from the search
-            var lastBatch = search.CompletedBatchCount > 0 ? _params.StartBatch + search.CompletedBatchCount - 1 : 0;
+            var lastBatch = search.CompletedBatchCount > 0 ? _params.StartBatch + search.CompletedBatchCount : 0;
             
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
