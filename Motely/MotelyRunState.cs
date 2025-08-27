@@ -14,10 +14,31 @@ public ref struct MotelyRunState
     }
     public int VoucherBitfield;
     public bool ShowmanActive;
-    
-    public HashSet<MotelyBossBlind>? UsedBosses;
+
+    public HashSet<MotelyBossBlind> UsedBosses;
     public int LastProcessedBossAnte;
-    public MotelySinglePrngStream BossPrngStream; // Persistent PRNG stream for boss generation
+
+    public void InitializeBossTracking()
+    {
+        UsedBosses ??= new HashSet<MotelyBossBlind>();
+        LastProcessedBossAnte = 0;
+    }
+    
+    public void MarkBossUsed(MotelyBossBlind boss)
+    {
+        UsedBosses ??= new HashSet<MotelyBossBlind>();
+        UsedBosses.Add(boss);
+    }
+    
+    public void IncrementBossAnte()
+    {
+        LastProcessedBossAnte++;
+    }
+    
+    public void ClearUsedBosses(Predicate<MotelyBossBlind> predicate)
+    {
+        UsedBosses?.RemoveWhere(predicate);
+    }
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {
