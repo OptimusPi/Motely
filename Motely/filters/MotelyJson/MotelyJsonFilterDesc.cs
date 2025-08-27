@@ -26,49 +26,92 @@ public struct MotelyJsonFilterDesc(
 
     public MotelyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Cache relevant streams based on what clauses need
-        if (_category == FilterCategory.Voucher && Clauses.Count > 0)
+        // Cache relevant streams based on what clauses need - no LINQ!
+        bool[] antesNeeded = new bool[9]; // Antes 1-8
+        
+        foreach (var clause in Clauses)
         {
-            // Cache only the antes we actually need
-            var neededAntes = Clauses
-                .Where(c => c.EffectiveAntes != null)
-                .SelectMany(c => c.EffectiveAntes)
-                .Distinct()
-                .OrderBy(a => a);
-            
-            foreach (var ante in neededAntes)
+            if (clause.EffectiveAntes != null)
             {
-                ctx.CacheAnteFirstVoucher(ante);
+                foreach (var ante in clause.EffectiveAntes)
+                {
+                    if (ante >= 1 && ante <= 8)
+                        antesNeeded[ante] = true;
+                }
             }
         }
-        else if (_category == FilterCategory.Joker && Clauses.Count > 0)
+        
+        // Cache based on category
+        if (_category == FilterCategory.Voucher || _category == FilterCategory.Mixed)
         {
-            // Cache pack streams for antes that need them
-            var neededAntes = Clauses
-                .Where(c => c.EffectiveAntes != null)
-                .SelectMany(c => c.EffectiveAntes)
-                .Distinct()
-                .OrderBy(a => a);
-            
-            foreach (var ante in neededAntes)
+            for (int ante = 1; ante <= 8; ante++)
             {
-                ctx.CacheBoosterPackStream(ante);
+                if (antesNeeded[ante])
+                    ctx.CacheAnteFirstVoucher(ante);
+            }
+        }
+        
+        if (_category == FilterCategory.Joker || _category == FilterCategory.Mixed)
+        {
+            for (int ante = 1; ante <= 8; ante++)
+            {
+                if (antesNeeded[ante])
+                    ctx.CacheBoosterPackStream(ante);
             }
         }
         
         return new MotelyFilter(_category, Clauses);
     }
 
+    // Precomputed voucher clause for hot path
+    private readonly struct OptimizedVoucherClause
+    {
+        public readonly MotelyVoucher Voucher;
+        public readonly int[] Antes;
+        
+        public OptimizedVoucherClause(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        {
+            Voucher = clause.VoucherEnum!.Value;
+            Antes = clause.EffectiveAntes ?? Array.Empty<int>();
+        }
+    }
+    
     public struct MotelyFilter : IMotelySeedFilter
     {
         private readonly FilterCategory _category;
         private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses;
+        private readonly OptimizedVoucherClause[]? _voucherClauses;
         private readonly int _maxAnte;
         
         public MotelyFilter(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
         {
             _category = category;
             Clauses = clauses;
+            
+            // Precompute voucher clauses for hot path - no LINQ allocations!
+            int voucherCount = 0;
+            foreach (var clause in clauses)
+            {
+                if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
+                    voucherCount++;
+            }
+            
+            if (voucherCount > 0)
+            {
+                _voucherClauses = new OptimizedVoucherClause[voucherCount];
+                int index = 0;
+                foreach (var clause in clauses)
+                {
+                    if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
+                    {
+                        _voucherClauses[index++] = new OptimizedVoucherClause(clause);
+                    }
+                }
+            }
+            else
+            {
+                _voucherClauses = null;
+            }
             
             // Pre-compute max ante to avoid doing it every time
             _maxAnte = 1;
@@ -105,54 +148,82 @@ public struct MotelyJsonFilterDesc(
                 FilterCategory.Joker => FilterJokers(ref searchContext),
                 FilterCategory.PlayingCard => FilterPlayingCards(ref searchContext),
                 FilterCategory.Boss => FilterBosses(ref searchContext),
+                FilterCategory.Mixed => FilterMixed(ref searchContext),
                 _ => throw new ArgumentException($"Unknown filter category: {_category}")
             };
         }
 
         #region Vector Filtering Methods
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VectorMask FilterMixed(ref MotelyVectorSearchContext ctx)
+        {
+            // For now, just delegate to the appropriate filter based on first clause type
+            // This avoids the hardcoded PerkeoObservatory logic
+            if (Clauses.Count == 0)
+                return VectorMask.AllBitsSet;
+                
+            // Check what types we have
+            bool hasVouchers = false;
+            bool hasJokers = false;
+            
+            foreach (var clause in Clauses)
+            {
+                if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
+                    hasVouchers = true;
+                else if (clause.ItemTypeEnum == MotelyFilterItemType.Joker || clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)  
+                    hasJokers = true;
+            }
+            
+            // For now, if we have vouchers, use voucher filter (vectorized)
+            // If we have jokers, we have to use the non-vectorized path
+            if (hasVouchers && !hasJokers)
+            {
+                // Just vouchers - use the vectorized voucher filter
+                return FilterVouchers(ref ctx);
+            }
+            else if (hasJokers && !hasVouchers)
+            {
+                // Just jokers - use the joker filter
+                return FilterJokers(ref ctx);
+            }
+            else
+            {
+                // Mixed vouchers and jokers - need to handle both
+                // Start with vouchers (vectorized)
+                var mask = FilterVouchers(ref ctx);
+                
+                // Then filter by jokers if any seeds passed voucher check
+                if (!mask.IsAllFalse())
+                {
+                    mask = FilterJokers(ref ctx) & mask;
+                }
+                
+                return mask;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterVouchers(ref MotelyVectorSearchContext ctx)
         {
+            if (_voucherClauses == null || _voucherClauses.Length == 0)
+                return VectorMask.AllBitsSet;
+                
             var mask = VectorMask.AllBitsSet;
             var state = new MotelyVectorRunState();
             
-            // Early exit optimization: check ante 1 Telescope first  
-            // This is the most selective filter for PerkeoObservatory
-            foreach (var clause in Clauses)
+            // Use precomputed voucher clauses
+            foreach (ref readonly var clause in _voucherClauses.AsSpan())
             {
-                if (clause.VoucherEnum == MotelyVoucher.Telescope && 
-                    (clause.EffectiveAntes?.Contains(1) ?? false))
-                {
-                    var vouchers = ctx.GetAnteFirstVoucher(1);
-                    VectorMask telescopeMask = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-                    if (telescopeMask.IsAllFalse())
-                        return VectorMask.NoBitsSet;  // Early exit - no Telescope, no point continuing
-                    mask = telescopeMask;
-                    state.ActivateVoucher(MotelyVoucher.Telescope);
-                    break;
-                }
-            }
-
-            // Check remaining voucher clauses
-            foreach (var clause in Clauses)
-            {
-                Debug.Assert(clause.VoucherEnum.HasValue, "FilterVouchers requires VoucherEnum");
-                
-                // Skip Telescope if already handled
-                if (clause.VoucherEnum == MotelyVoucher.Telescope && 
-                    (clause.EffectiveAntes?.Contains(1) ?? false))
-                    continue;
-                
                 var clauseMask = VectorMask.NoBitsSet;
 
                 // Check if this voucher appears at ANY of its required antes
-                foreach (var ante in clause.EffectiveAntes ?? [])
+                foreach (var ante in clause.Antes)
                 {
                     if (ante <= _maxAnte)
                     {
                         var vouchers = ctx.GetAnteFirstVoucher(ante, state);
-                        var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
+                        var matches = VectorEnum256.Equals(vouchers, clause.Voucher);
                         clauseMask |= matches;  // OR - voucher can appear at any of its antes
                     }
                 }
@@ -161,9 +232,9 @@ public struct MotelyJsonFilterDesc(
                 if (clauseMask.IsAllFalse())
                     return VectorMask.NoBitsSet;  // Required voucher not found
                 
-                // Activate voucher for all matching lanes (imperfect but simpler)
+                // Activate voucher only for matching lanes
                 if (!clauseMask.IsAllFalse())
-                    state.ActivateVoucher(clause.VoucherEnum.Value);
+                    state.ActivateVoucherForMask(clause.Voucher, clauseMask);
                 
                 mask &= clauseMask;  // AND - all required vouchers must be present
                 
@@ -730,4 +801,7 @@ public enum FilterCategory
 
     // Jokers and "SoulJoker" in same category
     Joker,
+    
+    // Combined filter for multiple categories
+    Mixed,
 }

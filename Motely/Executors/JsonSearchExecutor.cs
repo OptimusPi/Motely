@@ -178,7 +178,7 @@ namespace Motely.Executors
                 searchSettings = searchSettings.WithStake(stake);
                 
             // Set batch range
-            searchSettings = searchSettings.WithStartBatchIndex(_params.StartBatch-1);
+            searchSettings = searchSettings.WithStartBatchIndex(_params.StartBatch);
             if (_params.EndBatch > 0)
                 searchSettings = searchSettings.WithEndBatchIndex(_params.EndBatch);
             else
@@ -239,19 +239,18 @@ namespace Motely.Executors
         {
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
             
-            // Simple: just show what actually happened
-            var seedsSearched = seeds?.Count ?? (long)(search.CompletedBatchCount * Math.Pow(35, _params.BatchSize));
-            var lastBatchIndex = search.CompletedBatchCount > 0 ? (ulong)_params.StartBatch + search.CompletedBatchCount : 0;
+            // Use the actual tracked counts from the search
+            long lastBatchIndex = search.CompletedBatchCount > 0 ? _params.StartBatch + search.CompletedBatchCount : 0;
             
             Console.WriteLine($"   Last batch Index: {lastBatchIndex}");
-            Console.WriteLine($"   Seeds searched: ~{seedsSearched:N0}");
-            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");
+            Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
+            Console.WriteLine($"   Seeds matched: {MotelyJsonSeedScoreDesc.ResultsFound:N0}");
             
             if (duration.TotalMilliseconds >= 1)
             {
-                var speed = (double)seedsSearched / duration.TotalMilliseconds;
+                var speed = (double)search.TotalSeedsSearched / duration.TotalMilliseconds;
                 Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
-                Console.WriteLine($"   Speed: ~{speed:N0} seeds/ms");
+                Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
         }
     }
@@ -264,12 +263,13 @@ namespace Motely.Executors
         public int Threads { get; set; } = Environment.ProcessorCount;
         public int BatchSize { get; set; } = 1;
         public long StartBatch { get; set; } = 0;
-        public ulong EndBatch { get; set; } = 0;
+        public long EndBatch { get; set; } = 0;
         public int Cutoff { get; set; } = 0;
         public bool AutoCutoff { get; set; } = false;
         public bool EnableDebug { get; set; } = false;
         public bool NoFancy { get; set; } = false;
         public bool ScoreOnly { get; set; } = false;
+        public bool Silent { get; set; } = false;
         public string? SpecificSeed { get; set; }
         public string? Wordlist { get; set; }
         public string? Keyword { get; set; }
