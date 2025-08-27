@@ -10,13 +10,11 @@ public ref struct MotelySingleBossStream
 {
     public MotelySinglePrngStream PrngStream;
     public MotelySingleResampleStream ResampleStream;
-    public HashSet<MotelyBossBlind> UsedBosses;
     
-    public MotelySingleBossStream(MotelySinglePrngStream prngStream, MotelySingleResampleStream resampleStream, HashSet<MotelyBossBlind> usedBosses)
+    public MotelySingleBossStream(MotelySinglePrngStream prngStream, MotelySingleResampleStream resampleStream)
     {
         PrngStream = prngStream;
         ResampleStream = resampleStream;
-        UsedBosses = usedBosses;
     }
 }
 
@@ -85,19 +83,21 @@ ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelySingleBossStream CreateBossStream(ref MotelyRunState runState, int ante)
+    public MotelySingleBossStream CreateBossStream()
     {
-        // Create resample stream for handling locked bosses
-        var resampleStream = CreateResampleStream(MotelyPrngKeys.Boss, false);
-        
-        return new MotelySingleBossStream(runState.BossPrngStream, resampleStream, runState.UsedBosses);
+        // Create boss PRNG stream - always the same seed for consistency
+        return new()
+        {
+            PrngStream = CreatePrngStream(MotelyPrngKeys.Boss, false),
+            ResampleStream = CreateResampleStream(MotelyPrngKeys.Boss, false)
+        };  
     }
 
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelyBossBlind GetNextBoss(ref MotelySingleBossStream bossStream, int ante)
+    public MotelyBossBlind GetNextBoss(ref MotelySingleBossStream bossStream, ref MotelyRunState runState, int ante)
     {
         bool isFinisherAnte = (ante % 8 == 0);
         
@@ -112,7 +112,7 @@ ref partial struct MotelySingleSearchContext
             bool isFinisher = IsFinisherBoss(boss);
             bool correctType = (isFinisherAnte && isFinisher) || (!isFinisherAnte && !isFinisher);
             bool meetsAnteRequirement = ante >= GetBossMinAnte(boss);
-            bool notAlreadyUsed = !bossStream.UsedBosses.Contains(boss);
+            bool notAlreadyUsed = !runState.UsedBosses.Contains(boss);
             
             if (correctType && meetsAnteRequirement && notAlreadyUsed)
             {
@@ -124,7 +124,7 @@ ref partial struct MotelySingleSearchContext
         if (bossPool.Count == 0)
         {
             // Clear only the bosses of the current type
-            bossStream.UsedBosses.RemoveWhere(b => isFinisherAnte ? IsFinisherBoss(b) : !IsFinisherBoss(b));
+            runState.ClearUsedBosses(b => isFinisherAnte ? IsFinisherBoss(b) : !IsFinisherBoss(b));
             
             // Rebuild pool
             for (int i = 0; i < BOSSES.Length; i++)
@@ -147,15 +147,12 @@ ref partial struct MotelySingleSearchContext
             throw new InvalidOperationException($"No valid bosses available for ante {ante}");
         }
         
-        // Sort pool by Lua key for consistent ordering (matching OpenCL behavior)
         bossPool.Sort((a, b) => GetLuaKey(a).CompareTo(GetLuaKey(b)));
-        
-        // Select boss from pool using PRNG
         int bossIndex = GetNextRandomInt(ref bossStream.PrngStream, 0, bossPool.Count);
         MotelyBossBlind selectedBoss = bossPool[bossIndex];
         
         // Mark boss as used
-        bossStream.UsedBosses.Add(selectedBoss);
+        runState.MarkBossUsed(selectedBoss);
         
         return selectedBoss;
     }
@@ -201,9 +198,7 @@ ref partial struct MotelySingleSearchContext
         // Initialize if needed
         if (runState.UsedBosses == null)
         {
-            runState.UsedBosses = new HashSet<MotelyBossBlind>();
-            runState.LastProcessedBossAnte = 0;
-            runState.BossPrngStream = CreatePrngStream(MotelyPrngKeys.Boss);
+            runState.InitializeBossTracking();
         }
         
         // Check if we need to catch up to the requested ante
@@ -214,13 +209,23 @@ ref partial struct MotelySingleSearchContext
 
         // Process antes sequentially to maintain state
         MotelyBossBlind selectedBoss = MotelyBossBlind.TheHook;
+        
+        // Create ONE boss stream and advance through all needed antes
+        var bossStream = CreateBossStream();
+        
+        // Fast-forward through already processed antes to consume PRNG values
+        var tempState = new MotelyRunState();
+        tempState.InitializeBossTracking();
+        for (int i = 1; i <= runState.LastProcessedBossAnte; i++)
+        {
+            GetNextBoss(ref bossStream, ref tempState, i);
+        }
+        
+        // Now process the remaining antes with the actual state
         while (runState.LastProcessedBossAnte < ante)
         {
-            runState.LastProcessedBossAnte++;
-            var bossStream = CreateBossStream(ref runState, runState.LastProcessedBossAnte);
-            selectedBoss = GetNextBoss(ref bossStream, runState.LastProcessedBossAnte);
-            // Update persistent PRNG state
-            runState.BossPrngStream = bossStream.PrngStream;
+            runState.IncrementBossAnte();
+            selectedBoss = GetNextBoss(ref bossStream, ref runState, runState.LastProcessedBossAnte);
         }
 
         return selectedBoss;
