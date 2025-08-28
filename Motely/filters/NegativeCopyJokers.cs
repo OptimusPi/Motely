@@ -1,261 +1,221 @@
-
 using System.Runtime.Intrinsics;
 
 namespace Motely;
 
 public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilterDesc.NegativeCopyFilter>
 {
-
     public NegativeCopyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        ctx.CacheAnteFirstVoucher(1);
-        ctx.CacheAnteFirstVoucher(2);
-        ctx.CacheAnteFirstVoucher(3);
-        ctx.CacheAnteFirstVoucher(4);
-
-        ctx.CacheBoosterPackStream(1);
-        ctx.CacheBoosterPackStream(2);
-        ctx.CacheBoosterPackStream(3);
-        ctx.CacheBoosterPackStream(4);
-        ctx.CacheBoosterPackStream(5);
-        ctx.CacheBoosterPackStream(6);
-        ctx.CacheBoosterPackStream(7);
-        ctx.CacheBoosterPackStream(8);
+        // Only cache booster pack streams - we'll check jokers directly
+        for (int ante = 1; ante <= 8; ante++)
+        {
+            ctx.CacheBoosterPackStream(ante);
+        }
         return new NegativeCopyFilter();
     }
 
     public struct NegativeCopyFilter() : IMotelySeedFilter
     {
-        public static int CheckSoulJokerInAnte(int ante, MotelyItemType targetJoker, ref MotelySingleSearchContext searchContext, MotelyItemEdition? requiredEdition = null)
-        {
-            MotelySingleTarotStream tarotStream = default;
-            MotelySingleSpectralStream spectralStream = default;
-            MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateSoulJokerStream(ante);
-
-            var soulJoker = searchContext.GetNextJoker(ref soulStream);
-            if (soulJoker.Type == targetJoker)
-            {
-                if (requiredEdition.HasValue)
-                {
-                    if (soulJoker.Edition != requiredEdition.Value) return 0;
-                }
-            }
-            else return 0;
-
-            var boosterPackStream = searchContext.CreateBoosterPackStream(ante, false, ante != 1);
-            bool spectralStreamInit = false;
-            bool tarotStreamInit = false;
-
-            // Check pack slots 0-5 for ante 8 (Canio), 0-3 for ante 1 (Perkeo)
-            int maxPackSlots = ante == 1 ? 4 : 6;
-            for (int i = 0; i < maxPackSlots; i++)
-            {
-                var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
-
-
-                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                {
-                    if (!spectralStreamInit)
-                    {
-                        spectralStreamInit = true;
-                        spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
-                    }
-                    if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
-                    {
-                        return 1;
-                    }
-                }
-
-                if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
-                {
-
-                    if (!tarotStreamInit)
-                    {
-                        tarotStreamInit = true;
-                        tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);
-                    }
-                    if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
-                    {
-                        return 1;
-                    }
-                }
-
-            }
-            // if there is no packs then I guess u can check for tags at this point lol
-            var tagStream = searchContext.CreateTagStream(ante);
-            var smallBlindTag = searchContext.GetNextTag(ref tagStream);
-            if (smallBlindTag == MotelyTag.CharmTag) return 1;
-            var bigBlindTag = searchContext.GetNextTag(ref tagStream);
-            if (bigBlindTag == MotelyTag.CharmTag) return 1;
-
-            return 0;
-        }
-
-        public static int CheckJokerInAnte(int ante, MotelyItemType targetJoker, ref MotelySingleSearchContext ctx, MotelyItemEdition? requiredEdition = null)
-        {
-            var boosterPackStream = ctx.CreateBoosterPackStream(ante, false, ante != 1);
-            var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
-
-            int score = 0;
-            MotelyShopStreamFlags ShopFlags = MotelyShopStreamFlags.ExcludeTarots
-            | MotelyShopStreamFlags.ExcludePlanets;
-
-            MotelyJokerStreamFlags JokerFlags = (targetJoker == MotelyItemType.Showman) ?
-                MotelyJokerStreamFlags.ExcludeStickers
-                | MotelyJokerStreamFlags.ExcludeCommonJokers :
-                    MotelyJokerStreamFlags.ExcludeStickers
-                    | MotelyJokerStreamFlags.ExcludeCommonJokers
-                    | MotelyJokerStreamFlags.ExcludeUncommonJokers;
-            
-
-            // Shop Queue
-            MotelySingleShopItemStream shopStream = ctx.CreateShopItemStream(ante,
-                ShopFlags,
-                JokerFlags);
-
-            var slots = ante switch
-            {
-                1 => 4,
-                2 => 12,
-                3 => 25,
-                _ => 35
-            };
-
-            for (int i = 0; i < slots; i++)
-            {
-                var shopItem = ctx.GetNextShopItem(ref shopStream);
-                if (shopItem.Type == targetJoker)
-                {
-                    if (requiredEdition.HasValue)
-                    {
-                        score += shopItem.Edition == requiredEdition.Value ? 1 : 0;
-                    }
-                    else score++;
-                }
-            }
-
-            int maxPackSlots = ante == 1 ? 4 : 6;
-            for (int i = 0; i < maxPackSlots; i++)
-            {
-                var pack = ctx.GetNextBoosterPack(ref boosterPackStream);
-                var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
-                for (int j = 0; j < contents.Length; j++)
-                {
-                    var item = contents[j];
-                    if (item.Type == targetJoker)
-                    {
-                        if (requiredEdition.HasValue)
-                        {
-                            if (item.Edition == requiredEdition.Value)
-                                score++;
-                        }
-                        else
-                            score++;
-                    }
-                }
-            }
-            return score;
-        }
-
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            MotelyVectorRunState voucherState = new();
-            VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(1);
-            VectorMask matchingTele = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-            VectorMask matchingObservatory = VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-            voucherState.ActivateVoucher(vouchers);
-
-            vouchers = searchContext.GetAnteFirstVoucher(2, voucherState);
-            matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-            matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-            voucherState.ActivateVoucher(vouchers);
-
-            vouchers = searchContext.GetAnteFirstVoucher(3, voucherState);
-            matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-            matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-            voucherState.ActivateVoucher(vouchers);
-
-            vouchers = searchContext.GetAnteFirstVoucher(4, voucherState);
-            matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-            matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-            voucherState.ActivateVoucher(vouchers);
-
-            vouchers = searchContext.GetAnteFirstVoucher(5, voucherState);
-            matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-            matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-            voucherState.ActivateVoucher(vouchers);
-
-            vouchers = searchContext.GetAnteFirstVoucher(6, voucherState);
-            matchingTele |= VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-            matchingObservatory |= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-            voucherState.ActivateVoucher(vouchers);
+            // Do a FULL vectorized check for Showman across all shop slots and buffoon packs
+            VectorMask hasPotential = VectorMask.NoBitsSet;
             
-            if (matchingObservatory.IsAllFalse())
-                return Vector512<double>.Zero;
-
-            // STEP 2: Individual processing for SHOULD clauses (soul jokers)
-            return searchContext.SearchIndividualSeeds(matchingObservatory, (ref MotelySingleSearchContext searchContext) =>
+            // Check ALL shop slots and buffoon packs for Showman in antes 1-8
+            for (int ante = 1; ante <= 8; ante++)
             {
-                // Passed MUST requirements, now check SHOULD for bonus scoring
-
-                // check 8 antes:
-                int hasPerkeoNegative = 0;
-                int hasPerkeo = 0;
-                int Nbps = 0;
-                int Nbss = 0;
-                int Bps = 0;
-                int Bss = 0;
-                int Ninvis = 0;
-                int invis = 0;
-                int showman = 0;
-
-                hasPerkeoNegative += CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext);
-                hasPerkeo += CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext);
-                Nbps += CheckJokerInAnte(1, MotelyItemType.Blueprint, ref searchContext, MotelyItemEdition.Negative);
-                Nbss += CheckJokerInAnte(1, MotelyItemType.Brainstorm, ref searchContext, MotelyItemEdition.Negative);
-                Bps += CheckJokerInAnte(1, MotelyItemType.Blueprint, ref searchContext);
-                Bss += CheckJokerInAnte(1, MotelyItemType.Brainstorm, ref searchContext);
-                Ninvis += CheckJokerInAnte(1, MotelyItemType.InvisibleJoker, ref searchContext, MotelyItemEdition.Negative);
-                invis += CheckJokerInAnte(1, MotelyItemType.InvisibleJoker, ref searchContext);
-                showman += CheckJokerInAnte(1, MotelyItemType.Showman, ref searchContext);
-
-
-
-                for (int ante = 2; ante < 4; ante++)
+                // Check ALL shop slots for Showman
+                var shopStream = searchContext.CreateShopItemStream(ante, 
+                    MotelyShopStreamFlags.ExcludeTarots | MotelyShopStreamFlags.ExcludePlanets,
+                    MotelyJokerStreamFlags.Default);
+                
+                int shopSlots = ante switch
                 {
-                    hasPerkeoNegative += CheckSoulJokerInAnte(ante, MotelyItemType.Perkeo, ref searchContext);
-                    hasPerkeo += CheckSoulJokerInAnte(ante, MotelyItemType.Perkeo, ref searchContext);
-                    Nbps += CheckJokerInAnte(ante, MotelyItemType.Blueprint, ref searchContext, MotelyItemEdition.Negative);
-                    Nbss += CheckJokerInAnte(ante, MotelyItemType.Brainstorm, ref searchContext, MotelyItemEdition.Negative);
-                    Bps += CheckJokerInAnte(ante, MotelyItemType.Blueprint, ref searchContext);
-                    Bss += CheckJokerInAnte(ante, MotelyItemType.Brainstorm, ref searchContext);
-                    Ninvis += CheckJokerInAnte(ante, MotelyItemType.InvisibleJoker, ref searchContext, MotelyItemEdition.Negative);
-                    invis += CheckJokerInAnte(ante, MotelyItemType.InvisibleJoker, ref searchContext);
-                    showman += CheckJokerInAnte(ante, MotelyItemType.Showman, ref searchContext);
-                }
-
-                if (showman == 0 || (invis + Bps + Bss < 1))
-                    return false;
-
-
-                for (int ante = 4; ante < 10; ante++)
+                    1 => 4,
+                    2 => 12,
+                    3 => 25,
+                    _ => 35
+                };
+                
+                // Check ALL shop slots
+                for (int i = 0; i < shopSlots; i++)
                 {
-                    Nbps += CheckJokerInAnte(ante, MotelyItemType.Blueprint, ref searchContext, MotelyItemEdition.Negative);
-                    Nbss += CheckJokerInAnte(ante, MotelyItemType.Brainstorm, ref searchContext, MotelyItemEdition.Negative);
-                    Bps += CheckJokerInAnte(ante, MotelyItemType.Blueprint, ref searchContext);
-                    Bss += CheckJokerInAnte(ante, MotelyItemType.Brainstorm, ref searchContext);
-                    Ninvis += CheckJokerInAnte(ante, MotelyItemType.InvisibleJoker, ref searchContext, MotelyItemEdition.Negative);
-                    invis += CheckJokerInAnte(ante, MotelyItemType.InvisibleJoker, ref searchContext);
+                    var shopItem = searchContext.GetNextShopItem(ref shopStream);
+                    hasPotential |= VectorEnum256.Equals(shopItem.Type, MotelyItemType.Showman);
                 }
-
-                var score = hasPerkeo + hasPerkeoNegative + Nbps + Nbss + Ninvis + invis + Bss + Bps;
-                var negScore = hasPerkeoNegative + Nbps + Nbss + Ninvis;
-                if (negScore > 2)
+                
+                // Check ALL buffoon packs for Showman
+                var boosterPackStream = searchContext.CreateBoosterPackStream(ante, false, ante != 1);
+                var buffoonStream = searchContext.CreateBuffoonPackJokerStream(ante);
+                
+                int maxPackSlots = ante == 1 ? 4 : 6;
+                for (int i = 0; i < maxPackSlots; i++)
                 {
-                    Console.WriteLine($"pifreaklovesyou,{score},{hasPerkeo},{hasPerkeoNegative},{Nbps},{Nbss},{Ninvis},{invis},{Bss},{Bps},Seed=");
-                    return true;
+                    var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+                    
+                    // Only process buffoon packs
+                    VectorMask isBuffoonPack = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Buffoon);
+                    if (isBuffoonPack.IsPartiallyTrue())
+                    {
+                        // For vectorized check, we need to check each possible pack size
+                        // Check Normal size packs
+                        VectorMask isNormalSize = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Normal);
+                        if ((isBuffoonPack & isNormalSize).IsPartiallyTrue())
+                        {
+                            var contents = searchContext.GetNextBuffoonPackContents(ref buffoonStream, MotelyBoosterPackSize.Normal);
+                            for (int j = 0; j < contents.Length; j++)
+                            {
+                                hasPotential |= VectorEnum256.Equals(contents[j].Type, MotelyItemType.Showman) & isBuffoonPack & isNormalSize;
+                            }
+                        }
+                        
+                        // Check Jumbo size packs
+                        VectorMask isJumboSize = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Jumbo);
+                        if ((isBuffoonPack & isJumboSize).IsPartiallyTrue())
+                        {
+                            var contents = searchContext.GetNextBuffoonPackContents(ref buffoonStream, MotelyBoosterPackSize.Jumbo);
+                            for (int j = 0; j < contents.Length; j++)
+                            {
+                                hasPotential |= VectorEnum256.Equals(contents[j].Type, MotelyItemType.Showman) & isBuffoonPack & isJumboSize;
+                            }
+                        }
+                        
+                        // Check Mega size packs
+                        VectorMask isMegaSize = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega);
+                        if ((isBuffoonPack & isMegaSize).IsPartiallyTrue())
+                        {
+                            var contents = searchContext.GetNextBuffoonPackContents(ref buffoonStream, MotelyBoosterPackSize.Mega);
+                            for (int j = 0; j < contents.Length; j++)
+                            {
+                                hasPotential |= VectorEnum256.Equals(contents[j].Type, MotelyItemType.Showman) & isBuffoonPack & isMegaSize;
+                            }
+                        }
+                    }
                 }
-                return false;
+            }
+            
+            // Early exit if no Showman potential
+            if (hasPotential.IsAllFalse())
+                return VectorMask.NoBitsSet;
+            
+            // Now do full individual processing for seeds with potential
+            return searchContext.SearchIndividualSeeds(hasPotential, (ref MotelySingleSearchContext ctx) =>
+            {
+                int blueprintCount = 0;
+                int brainstormCount = 0;
+                int invisibleCount = 0;
+                int showmanCount = 0;
+                int negativeShowmanCount = 0;
+                int negativeBlueprint = 0;
+                int negativeBrainstorm = 0;
+                int negativeInvisible = 0;
+                
+                // Check all 8 antes thoroughly
+                for (int ante = 1; ante <= 8; ante++)
+                {
+                    // Check shop items
+                    var shopStream = ctx.CreateShopItemStream(ante, 
+                        MotelyShopStreamFlags.ExcludeTarots | MotelyShopStreamFlags.ExcludePlanets,
+                        MotelyJokerStreamFlags.Default);
+                    
+                    int shopSlots = ante switch
+                    {
+                        1 => 4,
+                        2 => 12,
+                        3 => 25,
+                        _ => 35
+                    };
+                    
+                    for (int i = 0; i < shopSlots; i++)
+                    {
+                        var shopItem = ctx.GetNextShopItem(ref shopStream);
+                        
+                        if (shopItem.Type == MotelyItemType.Showman)
+                            showmanCount++;
+                        
+                        if (shopItem.Type == MotelyItemType.Blueprint)
+                        {
+                            blueprintCount++;
+                            if (shopItem.Edition == MotelyItemEdition.Negative)
+                                negativeBlueprint++;
+                        }
+                        
+                        if (shopItem.Type == MotelyItemType.Brainstorm)
+                        {
+                            brainstormCount++;
+                            if (shopItem.Edition == MotelyItemEdition.Negative)
+                                negativeBrainstorm++;
+                        }
+                        
+                        if (shopItem.Type == MotelyItemType.InvisibleJoker)
+                        {
+                            invisibleCount++;
+                            if (shopItem.Edition == MotelyItemEdition.Negative)
+                                negativeInvisible++;
+                        }
+                    }
+                    
+                    // Check buffoon packs
+                    var boosterPackStream = ctx.CreateBoosterPackStream(ante, ante > 1, false);
+                    var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
+                    
+                    int maxPackSlots = ante == 1 ? 4 : 6;
+                    for (int i = 0; i < maxPackSlots; i++)
+                    {
+                        var pack = ctx.GetNextBoosterPack(ref boosterPackStream);
+                        
+                        if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                        {
+                            var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
+                            
+                            for (int j = 0; j < contents.Length; j++)
+                            {
+                                var item = contents[j];
+
+                                if (item.Type == MotelyItemType.Showman)
+                                {
+                                    if (item.Edition == MotelyItemEdition.Negative)
+                                        negativeShowmanCount++;
+                                    else
+                                        showmanCount++;
+                                }
+
+                                else if (item.Type == MotelyItemType.Blueprint)
+                                {
+                                    if (item.Edition == MotelyItemEdition.Negative)
+                                        negativeBlueprint++;
+                                    else blueprintCount++;
+                                }
+
+                                else if (item.Type == MotelyItemType.Brainstorm)
+                                {
+                                    if (item.Edition == MotelyItemEdition.Negative)
+                                        negativeBrainstorm++;
+                                    else brainstormCount++;
+                                }
+
+                                else if (item.Type == MotelyItemType.InvisibleJoker)
+                                {
+                                    if (item.Edition == MotelyItemEdition.Negative)
+                                        negativeInvisible++;
+                                    else invisibleCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Calculate total scores
+                int totalCopyJokers = blueprintCount + brainstormCount + invisibleCount;
+                int totalNegatives = negativeBlueprint + negativeBrainstorm + negativeInvisible + negativeShowmanCount;
+                int showmanScore = Math.Min(showmanCount, 1);
+                int endScore = Math.Min(totalCopyJokers, 5) + totalNegatives;
+
+                if (endScore < 7) return false;
+                Console.WriteLine($"\nScore:{endScore}\n  Showman:{showmanScore} BP:{blueprintCount} BS:{brainstormCount} Inv:{invisibleCount}\n  -Showman:{negativeShowmanCount} -BP:{negativeBlueprint} -BS:{negativeBrainstorm} -Inv:{negativeInvisible}");
+                
+                // Return true for any seed with Showman + copy jokers
+                return true;
             });
         }
     }
