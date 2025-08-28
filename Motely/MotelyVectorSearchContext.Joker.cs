@@ -72,11 +72,11 @@ unsafe partial struct MotelyVectorSearchContext
             RentalPrngStream = (!flags.HasFlag(MotelyJokerStreamFlags.ExcludeStickers) && Stake >= MotelyStake.Gold) ?
                 CreatePrngStream(rentalSource + ante, isCached) : MotelyVectorPrngStream.Invalid,
             CommonJokerPrngStream = !flags.HasFlag(MotelyJokerStreamFlags.ExcludeCommonJokers) ?
-                CreatePrngStream(MotelyPrngKeys.JokerCommon + streamSuffix) : MotelyVectorPrngStream.Invalid,
+                CreatePrngStream(MotelyPrngKeys.JokerCommon + streamSuffix, isCached) : MotelyVectorPrngStream.Invalid,
             UncommonJokerPrngStream = !flags.HasFlag(MotelyJokerStreamFlags.ExcludeUncommonJokers) ?
-                CreatePrngStream(MotelyPrngKeys.JokerUncommon + streamSuffix) : MotelyVectorPrngStream.Invalid,
+                CreatePrngStream(MotelyPrngKeys.JokerUncommon + streamSuffix, isCached) : MotelyVectorPrngStream.Invalid,
             RareJokerPrngStream = !flags.HasFlag(MotelyJokerStreamFlags.ExcludeRareJokers) ?
-                CreatePrngStream(MotelyPrngKeys.JokerRare + streamSuffix) : MotelyVectorPrngStream.Invalid,
+                CreatePrngStream(MotelyPrngKeys.JokerRare + streamSuffix, isCached) : MotelyVectorPrngStream.Invalid,
         };
     }
 
@@ -156,10 +156,28 @@ unsafe partial struct MotelyVectorSearchContext
         Vector512<double> stickerPoll = GetNextRandom(ref eternalPerishableStream);
 
         Vector256<int> eternalMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(Vector512.GreaterThan(stickerPoll, Vector512.Create(0.7)));
+        
+        // Mask out jokers that cannot be eternal (self-destruct or activate on sell)
+        var cannotBeEternalMask = 
+            VectorEnum256.Equals(item.Type, MotelyItemType.Cavendish) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.DietCola) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.GrosMichel) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.IceCream) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.InvisibleJoker) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.Luchador) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.MrBones) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.Popcorn) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.Ramen) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.Seltzer) |
+            VectorEnum256.Equals(item.Type, MotelyItemType.TurtleBean);
+        
+        // Only apply eternal to jokers that can be eternal
+        eternalMask &= ~cannotBeEternalMask;
         item = item.WithEternal(eternalMask);
 
         if (Stake < MotelyStake.Orange) return item;
 
+        // Only apply perishable if not eternal
         Vector256<int> perishableMask = ~eternalMask & MotelyVectorUtils.ShrinkDoubleMaskToInt(Vector512.GreaterThan(stickerPoll, Vector512.Create(0.4)));
         item = item.WithPerishable(perishableMask);
 
