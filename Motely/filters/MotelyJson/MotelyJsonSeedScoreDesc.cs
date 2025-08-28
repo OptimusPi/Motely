@@ -305,7 +305,11 @@ public struct MotelyJsonSeedScoreDesc(
 
                 // Calculate scores for SHOULD clauses using comprehensive scanning like NegativeCopyJokers
                 int totalScore = 0;  // Start at 0, not 1!
-                var scores = new List<int>();
+                
+                // Use stackalloc to avoid heap allocation in hot path
+                const int MaxShouldClauses = 32;
+                Span<int> scoresBuffer = stackalloc int[MaxShouldClauses];
+                int scoreCount = 0;
 
                 if (config.Should?.Count > 0)
                 {
@@ -314,7 +318,11 @@ public struct MotelyJsonSeedScoreDesc(
                         // Use comprehensive counting across all relevant antes
                         int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
                         int score = count * should.Score;
-                        scores.Add(count);
+                        
+                        if (scoreCount < MaxShouldClauses)
+                        {
+                            scoresBuffer[scoreCount++] = count;
+                        }
                         totalScore += score;
                         
                         // DebugLogger.Log($"[Should] {should.ItemTypeEnum} {should.Value}: found {count}, score {score}"); // DISABLED FOR PERFORMANCE
@@ -334,6 +342,14 @@ public struct MotelyJsonSeedScoreDesc(
                         int length = singleCtx.GetSeed(seedPtr);
                         seedStr = new string(seedPtr, 0, length);
                     }
+                    
+                    // Copy scores from stack to heap only when we need to return them
+                    var scores = new List<int>(scoreCount);
+                    for (int i = 0; i < scoreCount; i++)
+                    {
+                        scores.Add(scoresBuffer[i]);
+                    }
+                    
                     var seedScore = new MotelySeedScoreTally(seedStr, totalScore, scores);
                     onResultFound(seedScore); // RICH CALLBACK!
                     
