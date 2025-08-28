@@ -264,10 +264,17 @@ namespace Motely.Filters;
         /// <returns>True if loading and validation succeeded, false otherwise</returns>
         public static bool TryLoadFromJsonFile(string jsonPath, [NotNullWhen(true)] out MotelyJsonConfig? config)
         {
+            return TryLoadFromJsonFile(jsonPath, out config, out _);
+        }
+        
+        public static bool TryLoadFromJsonFile(string jsonPath, [NotNullWhen(true)] out MotelyJsonConfig? config, out string? error)
+        {
             config = null;
+            error = null;
             
             if (!File.Exists(jsonPath))
             {
+                error = $"File not found: {jsonPath}";
                 return false;
             }
 
@@ -285,6 +292,7 @@ namespace Motely.Filters;
                 var deserializedConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(json, options);
                 if (deserializedConfig == null)
                 {
+                    error = "Failed to deserialize JSON - result was null";
                     return false;
                 }
                 
@@ -296,8 +304,16 @@ namespace Motely.Filters;
                 config = deserializedConfig;
                 return true;
             }
+            catch (JsonException jex)
+            {
+                // Get the line and position info for JSON errors
+                error = $"JSON syntax error at line {jex.LineNumber}, position {jex.BytePositionInLine}: {jex.Message}";
+                DebugLogger.Log($"Config loading failed for {jsonPath}: {error}");
+                return false;
+            }
             catch (Exception ex)
             {
+                error = ex.Message;
                 DebugLogger.Log($"Config loading failed for {jsonPath}: {ex.Message}");
                 return false;
             }

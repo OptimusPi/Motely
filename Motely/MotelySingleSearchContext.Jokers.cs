@@ -171,6 +171,23 @@ unsafe ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
+    private static bool CanBeEternal(MotelyItem item)
+    {
+        // Jokers that self-destruct or activate on sell cannot receive the Eternal Sticker
+        var joker = (MotelyJoker)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+        return joker != MotelyJoker.Cavendish && 
+               joker != MotelyJoker.DietCola &&
+               joker != MotelyJoker.GrosMichel && 
+               joker != MotelyJoker.IceCream && 
+               joker != MotelyJoker.InvisibleJoker &&
+               joker != MotelyJoker.Luchador &&
+               joker != MotelyJoker.MrBones &&
+               joker != MotelyJoker.Popcorn && 
+               joker != MotelyJoker.Ramen && 
+               joker != MotelyJoker.Seltzer && 
+               joker != MotelyJoker.TurtleBean;
+    }
+
     private MotelyItem ApplyNextStickers(MotelyItem item, ref MotelySinglePrngStream eternalPerishableStream, ref MotelySinglePrngStream rentalStream)
     {
         if (Stake < MotelyStake.Black) return item;
@@ -179,11 +196,19 @@ unsafe ref partial struct MotelySingleSearchContext
 
         double stickerPoll = GetNextRandom(ref eternalPerishableStream);
 
-        item = item.WithEternal(stickerPoll > 0.7);
+        // Only apply Eternal if the joker can be eternal
+        if (CanBeEternal(item))
+        {
+            item = item.WithEternal(stickerPoll > 0.7);
+        }
 
         if (Stake < MotelyStake.Orange) return item;
 
-        item = item.WithPerishable(stickerPoll > 0.4 && stickerPoll <= 0.7);
+        // Only apply Perishable if not already Eternal
+        if (!item.IsEternal)
+        {
+            item = item.WithPerishable(stickerPoll > 0.4 && stickerPoll <= 0.7);
+        }
 
         if (Stake < MotelyStake.Gold) return item;
 

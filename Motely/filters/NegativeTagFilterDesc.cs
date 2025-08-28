@@ -11,7 +11,9 @@ public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterD
         for (int ante = 2; ante <= 4; ante++)
             ctx.CacheTagStream(ante);
 
-        return new NegativeTagFilter();
+        var filter = new NegativeTagFilter();
+        DebugLogger.Log($"Created NegativeTagFilter: {filter}");
+        return filter;
     }
 
     public struct NegativeTagFilter() : IMotelySeedFilter

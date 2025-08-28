@@ -27,19 +27,17 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             MotelySingleJokerFixedRarityStream soulStream = default;
             MotelySingleBoosterPackStream boosterPackStream = default;
 
-            bool soulStreamInit = false;
+   
             bool boosterPackStreamInit = false;
 
 
             bool tarotStreamInit = false, spectralStreamInit = false;
 
-            if (!soulStreamInit)
-            {
-                soulStream = searchContext.CreateSoulJokerStream(ante);
-                var wouldBe = searchContext.GetNextJoker(ref soulStream);
-                if (wouldBe.Type != MotelyItemType.Perkeo || wouldBe.Edition != MotelyItemEdition.Negative) return false;
-            }
-            for (int i = 0; i < 2; i++)
+            soulStream = searchContext.CreateSoulJokerStream(ante);
+            var wouldBe = searchContext.GetNextJoker(ref soulStream);
+            if (wouldBe.Type != MotelyItemType.Perkeo) return false;
+            
+            for (int i = 0; i < 3; i++)
             {
                 if (!boosterPackStreamInit)
                 {
@@ -87,23 +85,27 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             VectorMask hasTelescope = VectorMask.NoBitsSet;
             VectorMask hasObservatory = VectorMask.NoBitsSet;
             MotelyVectorRunState voucherState = new();
-            
-            for (int ante = 1; ante <= 6; ante++)
+
+            // Process antes in order to properly handle voucher activation chain
+            for (int ante = 1; ante <= 5; ante++)
             {
                 VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(ante, voucherState);
                 
+                // Check if Telescope appears at this ante
                 VectorMask isTelescope = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-                VectorMask isObservatory = VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-                
                 hasTelescope |= isTelescope;
+                
+                // CRITICAL: Activate Telescope BEFORE checking for Observatory
+                voucherState.ActivateVoucherForMask(MotelyVoucher.Telescope, isTelescope);
+                
+                // Observatory can ONLY appear if Telescope is already active
+                VectorMask isObservatory = VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
                 hasObservatory |= isObservatory;
                 
-                // Update voucher state for seeds that got telescope or observatory
-                voucherState.ActivateVoucherForMask(MotelyVoucher.Telescope, isTelescope);
+                // Activate Observatory if found
                 voucherState.ActivateVoucherForMask(MotelyVoucher.Observatory, isObservatory);
             }
             
-            // Must have both Telescope and Observatory
             VectorMask matching = hasTelescope & hasObservatory;
             
             if (matching.IsAllFalse())
