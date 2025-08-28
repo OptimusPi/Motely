@@ -15,13 +15,15 @@ namespace Motely.Executors
     {
         private readonly string _filterName;
         private readonly string? _chainFilters;
+        private readonly string? _scoreConfig;
         private readonly SearchParameters _params;
         private bool _cancelled = false;
         
-        public NativeFilterExecutor(string filterName, SearchParameters parameters, string? chainFilters = null)
+        public NativeFilterExecutor(string filterName, SearchParameters parameters, string? chainFilters = null, string? scoreConfig = null)
         {
             _filterName = filterName;
             _chainFilters = chainFilters;
+            _scoreConfig = scoreConfig;
             _params = parameters;
         }
         
@@ -73,7 +75,8 @@ namespace Motely.Executors
             
             Console.WriteLine($"🔍 Running native filter: {_filterName}" +
                 (!string.IsNullOrEmpty(_params.SpecificSeed) ? $" on seed: {_params.SpecificSeed}" : "") +
-                (!string.IsNullOrEmpty(_chainFilters) ? $" with chained filters: {_chainFilters}" : ""));
+                (!string.IsNullOrEmpty(_chainFilters) ? $" with chained filters: {_chainFilters}" : "") +
+                (!string.IsNullOrEmpty(_scoreConfig) ? $" with scoring: {_scoreConfig}" : ""));
             
             // DEBUG: Help identify non-determinism
             Console.WriteLine($"   DEBUG: Thread count: {_params.Threads}");
@@ -139,6 +142,8 @@ namespace Motely.Executors
                 .WithProgressCallback(progressCallback);
     
             settings = ApplyChainedFilters(settings);
+            settings = ApplyScoring(settings);
+            settings = ApplyCsvScoring(settings, filterDesc);
             
             settings = settings.WithStartBatchIndex(_params.StartBatch-1);
             if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex(_params.EndBatch);
@@ -161,6 +166,7 @@ namespace Motely.Executors
                 "trickeoglyph" => new TrickeoglyphFilterDesc(),
                 "negativecopy" => new NegativeCopyFilterDesc(),
                 "negativetags" => new NegativeTagFilterDesc(),
+                "negativetag" => new NegativeTagFilterDesc(),
                 "soultest" => new SoulTestFilterDesc(),
                 _ => throw new ArgumentException($"Unknown filter: {filterName}")
             };
@@ -175,26 +181,169 @@ namespace Motely.Executors
             
             foreach (var filter in filters)
             {
-                var descriptor = GetFilterDescriptor(filter);
-                
-                // Unfortunately C# doesn't let us do this dynamically without reflection
-                // So we still need the switch, but at least it's cleaner
-                settings = descriptor switch
+                // Check if it's a JSON filter (contains .json or exists as json file)
+                if (filter.EndsWith(".json") || IsJsonFilter(filter))
                 {
-                    NaNSeedFilterDesc d => settings.WithAdditionalFilter(d),
-                    PerkeoObservatoryFilterDesc d => settings.WithAdditionalFilter(d),
-                    TrickeoglyphFilterDesc d => settings.WithAdditionalFilter(d),
-                    NegativeCopyFilterDesc d => settings.WithAdditionalFilter(d),
-                    NegativeTagFilterDesc d => settings.WithAdditionalFilter(d),
-                    SoulTestFilterDesc d => settings.WithAdditionalFilter(d),
-                    PassthroughFilterDesc d => settings.WithAdditionalFilter(d),
-                    _ => throw new ArgumentException($"Unknown chain filter type: {descriptor.GetType()}")
-                };
-                
-                Console.WriteLine($"   + Chained filter: {filter}");
+                    // Load JSON filter
+                    var config = LoadJsonConfig(filter);
+                    var jsonFilter = new MotelyJsonFilterDesc(FilterCategory.Mixed, config.Must.ToList());
+                    settings = settings.WithAdditionalFilter(jsonFilter);
+                    Console.WriteLine($"   + Chained JSON filter: {filter}");
+                }
+                else
+                {
+                    // Native filter
+                    var descriptor = GetFilterDescriptor(filter);
+                    
+                    settings = descriptor switch
+                    {
+                        NaNSeedFilterDesc d => settings.WithAdditionalFilter(d),
+                        PerkeoObservatoryFilterDesc d => settings.WithAdditionalFilter(d),
+                        TrickeoglyphFilterDesc d => settings.WithAdditionalFilter(d),
+                        NegativeCopyFilterDesc d => settings.WithAdditionalFilter(d),
+                        NegativeTagFilterDesc d => settings.WithAdditionalFilter(d),
+                        SoulTestFilterDesc d => settings.WithAdditionalFilter(d),
+                        PassthroughFilterDesc d => settings.WithAdditionalFilter(d),
+                        _ => throw new ArgumentException($"Unknown chain filter type: {descriptor.GetType()}")
+                    };
+                    
+                    Console.WriteLine($"   + Chained filter: {filter}");
+                }
             }
             
             return settings;
+        }
+        
+        private bool IsJsonFilter(string filter)
+        {
+            // Check if JSON file exists
+            string fileName = filter.EndsWith(".json") ? filter : filter + ".json";
+            string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
+            return File.Exists(jsonItemFiltersPath) || (Path.IsPathRooted(filter) && File.Exists(filter));
+        }
+        
+        private MotelyJsonConfig LoadJsonConfig(string configPath)
+        {
+            if (Path.IsPathRooted(configPath) && File.Exists(configPath))
+            {
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
+                    throw new InvalidOperationException($"Config loading failed for: {configPath}");
+                return config;
+            }
+            
+            string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
+            string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
+            if (File.Exists(jsonItemFiltersPath))
+            {
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
+                    throw new InvalidOperationException($"Config loading failed for: {jsonItemFiltersPath}");
+                return config;
+            }
+            
+            throw new FileNotFoundException($"Could not find JSON config file: {configPath}");
+        }
+        
+        private MotelySearchSettings<T> ApplyScoring<T>(MotelySearchSettings<T> settings) where T : struct, IMotelySeedFilter
+        {
+            if (string.IsNullOrEmpty(_scoreConfig))
+                return settings;
+                
+            // Load the JSON config for scoring
+            var config = LoadScoringConfig(_scoreConfig);
+            
+            // Print CSV header
+            PrintResultsHeader(config);
+            
+            // Create scoring provider with callbacks
+            string lastProgressLine = "";
+            Action<MotelySeedScoreTally> onResultFound = (score) =>
+            {
+                if (_params.Silent)
+                    return;
+                    
+                Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
+                Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
+                if (!string.IsNullOrEmpty(lastProgressLine))
+                    Console.Write(lastProgressLine);
+            };
+            
+            // Use cutoff from params if provided
+            int cutoff = _params.Cutoff;
+            bool autoCutoff = _params.AutoCutoff;
+            
+            var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound, ScoreOnlyMode: false);
+            
+            return settings.WithSeedScoreProvider(scoreDesc);
+        }
+        
+        private MotelyJsonConfig LoadScoringConfig(string configPath)
+        {
+            if (Path.IsPathRooted(configPath) && File.Exists(configPath))
+            {
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
+                    throw new InvalidOperationException($"Config loading failed for: {configPath}");
+                return config;
+            }
+            
+            string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
+            string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
+            if (File.Exists(jsonItemFiltersPath))
+            {
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
+                    throw new InvalidOperationException($"Config loading failed for: {jsonItemFiltersPath}");
+                return config;
+            }
+            
+            throw new FileNotFoundException($"Could not find JSON scoring config file: {configPath}");
+        }
+        
+        private MotelySearchSettings<TFilter> ApplyCsvScoring<TFilter>(MotelySearchSettings<TFilter> settings, IMotelySeedFilterDesc<TFilter> filterDesc) 
+            where TFilter : struct, IMotelySeedFilter
+        {
+            // Check if --csvScore is specified
+            if (string.IsNullOrEmpty(_params.CsvScore))
+                return settings;
+            
+            // Special handling for NegativeCopyFilterDesc with CSV scoring
+            if (filterDesc is NegativeCopyFilterDesc && _params.CsvScore == "native")
+            {
+                // Print CSV header
+                Console.WriteLine("Seed,Score,Showman,Blueprint,Brainstorm,Invisible,NegShowman,NegBlueprint,NegBrainstorm,NegInvisible");
+                
+                // Create score handler
+                Action<Filters.NegativeCopyJokersScore> onResultFound = (score) =>
+                {
+                    // Apply cutoff if specified
+                    if (_params.Cutoff > 0 && score.Score < _params.Cutoff)
+                        return;
+                        
+                    Console.WriteLine($"{score.Seed},{score.Score}," +
+                        $"{score.ShowmanCount},{score.BlueprintCount},{score.BrainstormCount},{score.InvisibleCount}," +
+                        $"{score.NegativeShowmanCount},{score.NegativeBlueprintCount},{score.NegativeBrainstormCount},{score.NegativeInvisibleCount}");
+                };
+                
+                // Create the score descriptor
+                var scoreDesc = new Filters.NegativeCopyJokersScoreDesc(_params.Cutoff, _params.AutoCutoff, onResultFound);
+                return settings.WithSeedScoreProvider(scoreDesc);
+            }
+            
+            return settings;
+        }
+        
+        private void PrintResultsHeader(MotelyJsonConfig config)
+        {
+            Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
+            var header = "Seed,TotalScore";
+            
+            if (config.Should != null)
+            {
+                foreach (var should in config.Should)
+                {
+                    var col = should.Label ?? should.Value ?? should.Type;
+                    header += $",{col}";
+                }
+            }
+            Console.WriteLine(header);
         }
         
         private List<string>? LoadSeeds()

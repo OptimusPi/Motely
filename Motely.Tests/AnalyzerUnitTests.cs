@@ -12,22 +12,23 @@ public sealed class AnalyzerUnitTests
     [InlineData("ALEEBOOO")]
     [InlineData("12345678")]
     [InlineData("1234567")]
-    public async Task TestAnalyzer_Seeds(string seed)
+    [InlineData("KK1XD111", MotelyDeck.Ghost, MotelyStake.Black)]
+    public async Task TestAnalyzer_Seeds(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
     {
         // Arrange
         // seed param passed in via InlineData from Theory attribute
 
         // Act
-        var actualOutput = GetAnalyzerOutput(seed);
+        var actualOutput = GetAnalyzerOutput(seed, deck, stake);
 
         // Assert using Verify - this will create a nice diff view
         await Verify(actualOutput)
             .UseFileName($"analyzer_output_{seed}");
     }
 
-    private string GetAnalyzerOutput(string seed)
+    private string GetAnalyzerOutput(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
     {
-        return MotelySeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White)).ToString();
+        return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
 
     [Fact]

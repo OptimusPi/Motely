@@ -1,20 +1,81 @@
 {
-  "name": "PerkeoAnte1Test",
-  "description": "finds ante 1 perkeo. simple.",
+  "name": "NegativeSkipCopy",
+  "description": "finds copy jokers after negativetags",
   "author": "pifreak",
   "dateCreated": "2025-08-24T05:46:12.6691000Z",
   "must": [
     {
-      "type": "souljoker",
-      "value": "Perkeo",
+      "type": "Joker",
+      "value":"OopsAll6s",
+      "antes": [1],
       "sources": {
-        "packSlots": [0,1,2,3]
+        "packSlots": [0]
+      }
+    },
+    {
+      "type": "SpectralCard",
+      "value": "Ankh",
+      "antes": [1],
+      "sources": {
+        "packSlots": [1]
+      }
+    },
+    {
+      "type": "Joker",
+      "value":"SpaceJoker",
+      "antes": [2,3]
+    },
+    {
+      "type": "Joker",
+      "value":"Supernova",
+      "antes": [2,3,4]
+    }
+
+  ],
+  "should": [
+        {
+      "type": "souljoker",
+      "value":"Perkeo",
+      "antes": [1,2,3,4,5,6]
+    },
+            {
+      "type": "Joker",
+      "value":"InvisibleJoker",
+      "antes": [2,3]
+    },
+    {
+      "type": "Joker",
+      "value":"Showman",
+      "antes": [2,3,4,5,6]
+    },
+    {
+      "type": "SmallBlindTag",
+      "value": "NegativeTag",
+      "antes": [2,3,4,5,6,7]
+    },
+    {
+      "type": "PlayingCard",
+      "label": "Lucky card",
+      "value":"Any",
+      "Enhancement": "Lucky",
+      "antes": [1,2,3,4],
+      "sources": {
+        "packSlots": [0,1,2,3,4,5]
       },
-      "antes": [1,2,3,4,5,6,7,8]
+      "score": 2
+    },
+    {
+      "type": "joker",
+      "value": "OopsAll6s",
+      "antes": [2,3,4,5,6,7,8],
+      "score": 2
+    },
+    {
+      "type": "joker",
+      "value": "HangingChad",
+      "antes": [2,3,4,5,6,7,8],
+      "score": 2
     }
   ],
-  "mustNot": [],
-  "scoring": {
-    "type": "sum"
-  }
+  "mustNot": []
 }
