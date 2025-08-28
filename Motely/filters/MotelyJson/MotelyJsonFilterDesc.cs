@@ -19,24 +19,37 @@ public struct MotelyJsonFilterDesc(
     : IMotelySeedFilterDesc<MotelyJsonFilterDesc.MotelyFilter>
 {
     private readonly FilterCategory _category = category;
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses = clauses;
+    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses = clauses ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
 
     public readonly string Name => $"Everybody loves Wee Joker";
     public readonly string Description => $"pifreak loves you!";
 
     public MotelyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        // Log filter creation for debugging
+        DebugLogger.Log($"Creating MotelyJsonFilter: Category={_category}, Clauses={Clauses.Count}");
+        if (Clauses != null)
+        {
+            foreach (var clause in Clauses)
+            {
+                DebugLogger.Log($"  - {clause.ItemTypeEnum}: {clause.Value} @ antes {string.Join(",", clause.EffectiveAntes ?? new int[0])}");
+            }
+        }
+        
         // Cache relevant streams based on what clauses need - no LINQ!
         bool[] antesNeeded = new bool[9]; // Antes 1-8
         
-        foreach (var clause in Clauses)
+        if (Clauses != null)
         {
-            if (clause.EffectiveAntes != null)
+            foreach (var clause in Clauses)
             {
-                foreach (var ante in clause.EffectiveAntes)
+                if (clause.EffectiveAntes != null)
                 {
-                    if (ante >= 1 && ante <= 8)
-                        antesNeeded[ante] = true;
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        if (ante >= 1 && ante <= 8)
+                            antesNeeded[ante] = true;
+                    }
                 }
             }
         }
@@ -56,7 +69,26 @@ public struct MotelyJsonFilterDesc(
             for (int ante = 1; ante <= 8; ante++)
             {
                 if (antesNeeded[ante])
+                {
                     ctx.CacheBoosterPackStream(ante);
+                    // Also cache shop jokers if any clauses need shop slots
+                    bool needShopJokers = false;
+                    if (Clauses != null)
+                    {
+                        foreach (var clause in Clauses)
+                        {
+                            if (clause.Sources?.ShopSlots?.Length > 0)
+                            {
+                                needShopJokers = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (needShopJokers)
+                    {
+                        ctx.CacheShopJokerStream(ante);
+                    }
+                }
             }
         }
         
@@ -79,28 +111,31 @@ public struct MotelyJsonFilterDesc(
     public struct MotelyFilter : IMotelySeedFilter
     {
         private readonly FilterCategory _category;
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses;
+        private List<MotelyJsonConfig.MotleyJsonFilterClause>? Clauses; // Make nullable
         private readonly OptimizedVoucherClause[]? _voucherClauses;
         private readonly int _maxAnte;
         
         public MotelyFilter(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
         {
             _category = category;
-            Clauses = clauses;
+            Clauses = clauses ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
             
             // Precompute voucher clauses for hot path - no LINQ allocations!
             int voucherCount = 0;
-            foreach (var clause in clauses)
+            if (Clauses != null)
             {
-                if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
-                    voucherCount++;
+                foreach (var clause in Clauses)
+                {
+                    if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
+                        voucherCount++;
+                }
             }
             
             if (voucherCount > 0)
             {
                 _voucherClauses = new OptimizedVoucherClause[voucherCount];
                 int index = 0;
-                foreach (var clause in clauses)
+                foreach (var clause in Clauses)
                 {
                     if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
                     {
@@ -115,9 +150,9 @@ public struct MotelyJsonFilterDesc(
             
             // Pre-compute max ante to avoid doing it every time
             _maxAnte = 1;
-            if (clauses.Count > 0)
+            if (Clauses != null && Clauses.Count > 0)
             {
-                foreach (var clause in clauses)
+                foreach (var clause in Clauses)
                 {
                     if (clause.EffectiveAntes != null && clause.EffectiveAntes.Length > 0)
                     {
@@ -130,15 +165,28 @@ public struct MotelyJsonFilterDesc(
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
+            // Handle default-constructed struct
+            if (Clauses == null)
+            {
+                DebugLogger.Log($"=== MotelyJsonFilter.Filter called with null Clauses (default struct?) ===");
+                return VectorMask.AllBitsSet;
+            }
+            
+            DebugLogger.Log($"=== MotelyJsonFilter.Filter called: Category={_category}, Clauses={Clauses.Count} ===");
+            
             // If no clauses, pass everything through (for scoreOnly mode)
             // Don't call ANY filter methods if there's nothing to filter!
             if (Clauses.Count == 0)
+            {
+                DebugLogger.Log("  No clauses, passing all seeds through");
                 return VectorMask.AllBitsSet;
+            }
 
-            return _category switch
+            DebugLogger.Log($"  Dispatching to {_category} filter method...");
+            var result = _category switch
             {
                 FilterCategory.Voucher => FilterVouchers(ref searchContext),
                 FilterCategory.Tag => FilterTags(ref searchContext),
@@ -151,19 +199,34 @@ public struct MotelyJsonFilterDesc(
                 FilterCategory.Mixed => FilterMixed(ref searchContext),
                 _ => throw new ArgumentException($"Unknown filter category: {_category}")
             };
+            
+            if (!result.IsAllFalse())
+            {
+                DebugLogger.Log($"  ✓ Filter result: Some seeds passed!");
+            }
+            else
+            {
+                DebugLogger.Log($"  ✗ Filter result: No seeds passed");
+            }
+            
+            return result;
         }
 
         #region Vector Filtering Methods
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private VectorMask FilterMixed(ref MotelyVectorSearchContext ctx)
         {
-            // For now, just delegate to the appropriate filter based on first clause type
-            // This avoids the hardcoded PerkeoObservatory logic
-            if (Clauses.Count == 0)
+            // This shouldn't be called with proper slicing!
+            // But if it is, handle it properly
+            
+            // Empty filter - pass everything through
+            if (Clauses == null || Clauses.Count == 0)
                 return VectorMask.AllBitsSet;
                 
-            // Check what types we have
+            DebugLogger.Log($"FilterMixed called with {Clauses.Count} clauses - delegating to proper filters");
+            
+            // Check what we have
             bool hasVouchers = false;
             bool hasJokers = false;
             
@@ -171,78 +234,109 @@ public struct MotelyJsonFilterDesc(
             {
                 if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
                     hasVouchers = true;
-                else if (clause.ItemTypeEnum == MotelyFilterItemType.Joker || clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)  
+                else if (clause.ItemTypeEnum == MotelyFilterItemType.Joker || clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
                     hasJokers = true;
             }
             
-            // For now, if we have vouchers, use voucher filter (vectorized)
-            // If we have jokers, we have to use the non-vectorized path
+            // Route to the appropriate filter
             if (hasVouchers && !hasJokers)
             {
-                // Just vouchers - use the vectorized voucher filter
                 return FilterVouchers(ref ctx);
             }
             else if (hasJokers && !hasVouchers)
             {
-                // Just jokers - use the joker filter
                 return FilterJokers(ref ctx);
             }
-            else
+            else if (hasVouchers && hasJokers)
             {
-                // Mixed vouchers and jokers - need to handle both
-                // Start with vouchers (vectorized)
-                var mask = FilterVouchers(ref ctx);
-                
-                // Then filter by jokers if any seeds passed voucher check
-                if (!mask.IsAllFalse())
+                // Both - apply vouchers first then jokers
+                var result = FilterVouchers(ref ctx);
+                if (!result.IsAllFalse())
                 {
-                    mask = FilterJokers(ref ctx) & mask;
+                    result &= FilterJokers(ref ctx);
                 }
-                
-                return mask;
+                return result;
             }
+            
+            // Unknown clause types
+            DebugLogger.Log($"WARNING: FilterMixed has unknown clause types");
+            return VectorMask.AllBitsSet;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private VectorMask FilterVouchers(ref MotelyVectorSearchContext ctx)
         {
             if (_voucherClauses == null || _voucherClauses.Length == 0)
+            {
+                DebugLogger.Log("FilterVouchers: No voucher clauses, passing all");
                 return VectorMask.AllBitsSet;
+            }
                 
+            DebugLogger.Log($"FilterVouchers: Checking {_voucherClauses.Length} voucher clauses");
             var mask = VectorMask.AllBitsSet;
             var state = new MotelyVectorRunState();
             
-            // Use precomputed voucher clauses
-            foreach (ref readonly var clause in _voucherClauses.AsSpan())
+            // CRITICAL: Process vouchers in ANTE order, not clause order!
+            // This ensures Telescope is activated before checking for Observatory
+            var clauseMasks = new VectorMask[_voucherClauses.Length];
+            
+            // Process each ante in order
+            for (int ante = 1; ante <= 8; ante++)
             {
-                var clauseMask = VectorMask.NoBitsSet;
-
-                // Check if this voucher appears at ANY of its required antes
-                foreach (var ante in clause.Antes)
+                // Get the voucher for this ante ONCE
+                var vouchers = ctx.GetAnteFirstVoucher(ante, state);
+                
+                // Now check all voucher clauses that care about this ante
+                for (int i = 0; i < _voucherClauses.Length; i++)
                 {
-                    if (ante <= _maxAnte)
+                    ref readonly var clause = ref _voucherClauses[i];
+                    
+                    // Skip if this clause doesn't check this ante
+                    bool checkThisAnte = false;
+                    foreach (var a in clause.Antes)
                     {
-                        var vouchers = ctx.GetAnteFirstVoucher(ante, state);
-                        var matches = VectorEnum256.Equals(vouchers, clause.Voucher);
-                        clauseMask |= matches;  // OR - voucher can appear at any of its antes
+                        if (a == ante)
+                        {
+                            checkThisAnte = true;
+                            break;
+                        }
                     }
+                    if (!checkThisAnte) continue;
+                    
+                    VectorMask matches = VectorEnum256.Equals(vouchers, clause.Voucher);
+                    
+                    clauseMasks[i] |= matches;  // OR - voucher can appear at any of its antes
                 }
-
-                // This voucher must appear at at least one of its antes
-                if (clauseMask.IsAllFalse())
+                
+                // CRITICAL: Activate whatever voucher we found AFTER checking - this updates the state for FUTURE antes!
+                // This ensures that if we find Telescope in ante 3, Observatory can appear in antes 4+
+                state.ActivateVoucher(vouchers);
+            }
+            
+            // Now check that all required vouchers were found
+            for (int i = 0; i < _voucherClauses.Length; i++)
+            {
+                if (clauseMasks[i].IsAllFalse())
+                {
+                    DebugLogger.Log($"  Voucher {_voucherClauses[i].Voucher} not found in any ante, failing batch");
                     return VectorMask.NoBitsSet;  // Required voucher not found
-                
-                // Activate voucher only for matching lanes
-                if (!clauseMask.IsAllFalse())
-                    state.ActivateVoucherForMask(clause.Voucher, clauseMask);
-                
-                mask &= clauseMask;  // AND - all required vouchers must be present
+                }
+                mask &= clauseMasks[i];  // AND - all required vouchers must be present
                 
                 // Early exit if no seeds left
                 if (mask.IsAllFalse())
+                {
+                    DebugLogger.Log($"  No seeds have all required vouchers");
                     return VectorMask.NoBitsSet;
+                }
             }
 
+            if (!mask.IsAllFalse())
+            {
+                // Count matching seeds (VectorMask is a wrapper around Vector512<double>)
+                DebugLogger.Log($"  FilterVouchers: Some seeds passed all voucher checks in this batch");
+            }
+            
             return mask;
         }
 
@@ -559,44 +653,48 @@ public struct MotelyJsonFilterDesc(
             return mask;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private VectorMask FilterJokers(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(Joker) called with empty clauses");
-            
-            // Use scalar path for now - soul joker logic is too complex for vectorization
-            var clauses = Clauses;
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
+            if (Clauses == null || Clauses.Count == 0)
             {
-                var runState = new MotelyRunState();
-                foreach (var clause in clauses)
+                DebugLogger.Log($"FilterJokers: No clauses, passing all seeds");
+                return VectorMask.AllBitsSet;
+            }
+            
+            // Filter to only joker-type clauses
+            var jokerClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+            foreach (var clause in Clauses)
+            {
+                if (clause.ItemTypeEnum == MotelyFilterItemType.Joker || clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
                 {
-                    bool found = false;
-                    foreach (var ante in clause.EffectiveAntes ?? [])
-                    {
-                        int count = 0;
-                        if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
-                        {
-                            count = MotelyJsonScoring.CountSoulJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true);
-                        }
-                        else
-                        {
-                            count = MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true);
-                        }
-                        
-                        if (count > 0)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) return false; // This clause not satisfied
+                    jokerClauses.Add(clause);
                 }
-                return true; // All clauses satisfied
-            });
+            }
+            
+            if (jokerClauses.Count == 0)
+            {
+                DebugLogger.Log($"FilterJokers: No joker clauses, passing all seeds");
+                return VectorMask.AllBitsSet;
+            }
+            
+            // Check if we have any soul jokers - those require scalar path
+            bool hasSoulJokers = false;
+            foreach (var clause in jokerClauses)
+            {
+                if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+                {
+                    hasSoulJokers = true;
+                    break;
+                }
+            }
+            
+            // Try vectorized path for ALL jokers including soul jokers!
+            DebugLogger.Log($"FilterJokers: Using VECTORIZED path for {jokerClauses.Count} joker clauses (including soul jokers)");
+            return FilterJokersVectorized(ref ctx, jokerClauses);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private VectorMask FilterJokersVectorized(ref MotelyVectorSearchContext ctx, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
         {
             // Better approach: iterate through each ante's items ONCE and check all clauses
@@ -618,21 +716,37 @@ public struct MotelyJsonFilterDesc(
             }
             
             // Process each ante IN ORDER to preserve PRNG state consistency
-            var sortedAntes = clausesByAnte.Keys.OrderBy(a => a).ToList();
-            foreach (var ante in sortedAntes)
+            // Avoid LINQ allocation - process antes 1-8 in order
+            for (int ante = 1; ante <= 8; ante++)
             {
-                var anteClauses = clausesByAnte[ante];
+                if (!clausesByAnte.TryGetValue(ante, out var anteClauses))
+                    continue;
                 
                 // Check if any clauses need shops
-                bool needShops = anteClauses.Any(c => c.clause.Sources?.ShopSlots?.Length > 0);
+                bool needShops = false;
+                foreach (var c in anteClauses)
+                {
+                    if (c.clause.Sources?.ShopSlots?.Length > 0)
+                    {
+                        needShops = true;
+                        break;
+                    }
+                }
                 if (needShops)
                 {
                     // Find max shop slot we need to check
-                    int maxShopSlot = anteClauses
-                        .Where(c => c.clause.Sources?.ShopSlots != null)
-                        .SelectMany(c => c.clause.Sources!.ShopSlots!)
-                        .DefaultIfEmpty(-1)
-                        .Max();
+                    int maxShopSlot = -1;
+                    foreach (var c in anteClauses)
+                    {
+                        if (c.clause.Sources?.ShopSlots != null)
+                        {
+                            foreach (var slot in c.clause.Sources.ShopSlots)
+                            {
+                                if (slot > maxShopSlot)
+                                    maxShopSlot = slot;
+                            }
+                        }
+                    }
                     
                     if (maxShopSlot >= 0)
                     {
@@ -673,24 +787,54 @@ public struct MotelyJsonFilterDesc(
                 }
                 
                 // Check if any clauses need packs
-                bool needPacks = anteClauses.Any(c => c.clause.Sources?.PackSlots?.Length > 0);
+                bool needPacks = false;
+                foreach (var c in anteClauses)
+                {
+                    if (c.clause.Sources?.PackSlots?.Length > 0)
+                    {
+                        needPacks = true;
+                        break;
+                    }
+                }
                 if (needPacks)
                 {
-                    int maxPackSlot = anteClauses
-                        .Where(c => c.clause.Sources?.PackSlots != null)
-                        .SelectMany(c => c.clause.Sources!.PackSlots!)
-                        .DefaultIfEmpty(-1)
-                        .Max();
+                    int maxPackSlot = -1;
+                    foreach (var c in anteClauses)
+                    {
+                        if (c.clause.Sources?.PackSlots != null)
+                        {
+                            foreach (var slot in c.clause.Sources.PackSlots)
+                            {
+                                if (slot > maxPackSlot)
+                                    maxPackSlot = slot;
+                            }
+                        }
+                    }
                     
                     if (maxPackSlot >= 0)
                     {
-                        var boosterStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
-                        var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante, isCached: false);
+                        // Use cached stream if available (we cached it in CreateFilter)
+                        var boosterStream = ctx.CreateBoosterPackStream(ante, isCached: true, generatedFirstPack: false);
+                        var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante, isCached: true);
                         
                         for (int slot = 0; slot <= maxPackSlot; slot++)
                         {
                             var pack = ctx.GetNextBoosterPack(ref boosterStream);
                             VectorMask isBuffoon = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Buffoon);
+                            
+                            // Debug: Log what pack types we're seeing in ante 1, slot 0
+                            if (ante == 1 && slot == 0)
+                            {
+                                if (!isBuffoon.IsAllFalse())
+                                {
+                                    DebugLogger.Log($"Found Buffoon pack in ante {ante} slot {slot}!");
+                                }
+                                else
+                                {
+                                    // Just log it - we'll see if buffoon packs are rare in ante 1 slot 0
+                                    DebugLogger.Log($"Ante 1 slot 0: Not a Buffoon pack");
+                                }
+                            }
                             
                             if (!isBuffoon.IsAllFalse())
                             {
@@ -726,13 +870,112 @@ public struct MotelyJsonFilterDesc(
                     }
                 }
                 
-                // Check soul jokers
-                var soulJokerClauses = anteClauses.Where(c => c.clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList();
-                if (soulJokerClauses.Any())
+                // Check soul jokers (vectorized!)
+                bool hasSoulJokerClauses = false;
+                foreach (var c in anteClauses)
                 {
-                    // Soul jokers need special handling - check packs for The Soul
-                    // For now, fall back to scalar for soul jokers
-                    // TODO: Implement proper vectorized soul joker checking
+                    if (c.clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+                    {
+                        hasSoulJokerClauses = true;
+                        break;
+                    }
+                }
+                if (hasSoulJokerClauses)
+                {
+                    // VECTORIZED soul joker checking!
+                    // 1. First check what the soul joker WOULD be
+                    var soulJokerStream = ctx.CreateSoulJokerStream(ante);
+                    var soulJoker = ctx.GetNextJoker(ref soulJokerStream);
+                    
+                    // 2. Check if any soul joker clause matches this joker
+                    foreach (var (clauseIndex, clause) in anteClauses)
+                    {
+                        if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+                        {
+                            VectorMask soulJokerMatches = VectorMask.NoBitsSet;
+                            
+                            if (clause.IsWildcard || !clause.JokerEnum.HasValue)
+                            {
+                                // Any soul joker is fine
+                                soulJokerMatches = VectorMask.AllBitsSet;
+                            }
+                            else
+                            {
+                                // Check if it matches the requested soul joker
+                                var targetType = (MotelyItemType)clause.JokerEnum.Value;
+                                soulJokerMatches = VectorEnum256.Equals(soulJoker.Type, targetType);
+                            }
+                            
+                            // 3. Now check if The Soul card appears in packs
+                            if (!soulJokerMatches.IsAllFalse())
+                            {
+                                // Check first 3 packs for The Soul card
+                                var packStream = ctx.CreateBoosterPackStream(ante, isCached: true, generatedFirstPack: false);
+                                var tarotStream = ctx.CreateArcanaPackTarotStream(ante, isCached: true);
+                                var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, isCached: true);
+                                
+                                VectorMask hasTheSoul = VectorMask.NoBitsSet;
+                                
+                                for (int packIdx = 0; packIdx < 3; packIdx++)
+                                {
+                                    var pack = ctx.GetNextBoosterPack(ref packStream);
+                                    var packType = pack.GetPackType();
+                                    
+                                    // Check if it's an Arcana pack
+                                    VectorMask isArcana = VectorEnum256.Equals(packType, MotelyBoosterPackType.Arcana);
+                                    if (!isArcana.IsAllFalse())
+                                    {
+                                        // Check if The Soul is in the Arcana pack
+                                        // We need to handle different pack sizes - most are Normal
+                                        var packSizeVector = pack.GetPackSize();
+                                        var normalSize = VectorEnum256.Equals(packSizeVector, MotelyBoosterPackSize.Normal);
+                                        var jumboSize = VectorEnum256.Equals(packSizeVector, MotelyBoosterPackSize.Jumbo);
+                                        var megaSize = VectorEnum256.Equals(packSizeVector, MotelyBoosterPackSize.Mega);
+                                        
+                                        // Check normal size packs (most common)
+                                        if (!Vector256.EqualsAll(normalSize, Vector256<int>.Zero))
+                                        {
+                                            var hasTheSoulNormal = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, MotelyBoosterPackSize.Normal);
+                                            hasTheSoul |= isArcana & new VectorMask(MotelyVectorUtils.VectorMaskToIntMask(normalSize)) & hasTheSoulNormal;
+                                        }
+                                        
+                                        // Check jumbo packs
+                                        if (!Vector256.EqualsAll(jumboSize, Vector256<int>.Zero))
+                                        {
+                                            var hasTheSoulJumbo = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, MotelyBoosterPackSize.Jumbo);
+                                            hasTheSoul |= isArcana & new VectorMask(MotelyVectorUtils.VectorMaskToIntMask(jumboSize)) & hasTheSoulJumbo;
+                                        }
+                                        
+                                        // Check mega packs
+                                        if (!Vector256.EqualsAll(megaSize, Vector256<int>.Zero))
+                                        {
+                                            var hasTheSoulMega = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, MotelyBoosterPackSize.Mega);
+                                            hasTheSoul |= isArcana & new VectorMask(MotelyVectorUtils.VectorMaskToIntMask(megaSize)) & hasTheSoulMega;
+                                        }
+                                    }
+                                    
+                                    // Check if it's a Spectral pack
+                                    VectorMask isSpectral = VectorEnum256.Equals(packType, MotelyBoosterPackType.Spectral);
+                                    if (!isSpectral.IsAllFalse())
+                                    {
+                                        // Check if The Soul is in the Spectral pack
+                                        var packSizeVector = pack.GetPackSize();
+                                        var normalSize = VectorEnum256.Equals(packSizeVector, MotelyBoosterPackSize.Normal);
+                                        
+                                        // Spectral packs are always normal size
+                                        if (!Vector256.EqualsAll(normalSize, Vector256<int>.Zero))
+                                        {
+                                            var hasTheSoulSpectral = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, MotelyBoosterPackSize.Normal);
+                                            hasTheSoul |= isSpectral & new VectorMask(MotelyVectorUtils.VectorMaskToIntMask(normalSize)) & hasTheSoulSpectral;
+                                        }
+                                    }
+                                }
+                                
+                                // Only count as found if soul joker matches AND The Soul appears
+                                clauseMasks[clauseIndex] |= soulJokerMatches & hasTheSoul;
+                            }
+                        }
+                    }
                 }
             }
             

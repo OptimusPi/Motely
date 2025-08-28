@@ -17,16 +17,16 @@ public static class MotelyJsonScoring
     public static int TarotCardsTally(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
         Debug.Assert(clause.TarotEnum.HasValue, "TarotCardsTally requires TarotEnum");
-        Debug.Assert(clause.Sources != null, "TarotCardsTally requires Sources");
-        Debug.Assert(clause.Sources.PackSlots != null, "TarotCardsTally requires PackSlots");
-        Debug.Assert(clause.Sources.ShopSlots != null, "TarotCardsTally requires ShopSlots");
         int tally = 0;
+        
+        // Default sources if not specified
+        var shopSlots = clause.Sources?.ShopSlots ?? Array.Empty<int>();
+        var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 }; // Default to first 4 pack slots
 
         // Check shop slots
-        if (clause.Sources.ShopSlots.Length > 0)
+        if (shopSlots.Length > 0)
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
-            var shopSlots = clause.Sources.ShopSlots;
             int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
             
             for (int i = 0; i <= maxSlot; i++)
@@ -45,12 +45,14 @@ public static class MotelyJsonScoring
         }
 
         // Check pack slots
-        if (clause.Sources?.PackSlots?.Length > 0)
+        if (packSlots.Length > 0)
         {
-            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+            // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var tarotStream = ctx.CreateArcanaPackTarotStream(ante); // Create ONCE before loop
-            var packSlots = clause.Sources.PackSlots;
-            int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
+            // When no specific slots specified, check more packs to find arcana/spectral packs
+            int maxPackSlot = packSlots.Length > 0 ? packSlots.Max() : 5; // Check up to 6 packs by default
+            int packCount = (clause.MaxPackSlot ?? maxPackSlot) + 1;
             
             for (int i = 0; i < packCount; i++)
             {
@@ -67,7 +69,7 @@ public static class MotelyJsonScoring
                     {
                         for (int j = 0; j < contents.Length; j++)
                         {
-                            if (contents[j].Type == (MotelyItemType)clause.TarotEnum.Value)
+                            if (contents[j].GetTarot() == clause.TarotEnum.Value)
                             {
                                 tally++;
                                 if (earlyExit) return tally; // Early exit for filtering
@@ -113,7 +115,8 @@ public static class MotelyJsonScoring
         // Check pack slots
         if (clause.Sources?.PackSlots?.Length > 0)
         {
-            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+            // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
             var packSlots = clause.Sources.PackSlots;
             int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
@@ -185,7 +188,8 @@ public static class MotelyJsonScoring
         // Check pack slots
         if (clause.Sources?.PackSlots?.Length > 0)
         {
-            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+            // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
             var packSlots = clause.Sources.PackSlots;
             int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
@@ -248,7 +252,8 @@ public static class MotelyJsonScoring
         Debug.Assert(clause.Sources?.PackSlots != null, "CountPlayingCardOccurrences requires PackSlots");
         
         int tally = 0;
-        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+        // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
         var cardStream = ctx.CreateStandardPackCardStream(ante); // Create ONCE before loop
         var packSlots = clause.Sources.PackSlots;
         int packCount = (clause.MaxPackSlot ?? packSlots.Max()) + 1;
@@ -292,7 +297,8 @@ public static class MotelyJsonScoring
     {
         int tally = 0;
         var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
-        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+        // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
 
         if (clause.Sources?.ShopSlots?.Length > 0)
         {
@@ -309,7 +315,7 @@ public static class MotelyJsonScoring
                         CheckWildcardMatch(joker, clause.WildcardEnum);
                     if (matches && CheckEditionAndStickers(item, clause))
                     {
-                        // TODO: runState.AddOwnedJoker(item);
+                        runState.AddOwnedJoker(item);
                         if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
                         {
                             runState.ActivateShowman();
@@ -344,7 +350,7 @@ public static class MotelyJsonScoring
                             CheckWildcardMatch(joker, clause.WildcardEnum);
                         if (matches && CheckEditionAndStickers(item, clause))
                         {
-                            // TODO: runState.AddOwnedJoker(item);
+                            runState.AddOwnedJoker(item);
                             if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
                             {
                                 runState.ActivateShowman();
@@ -366,48 +372,70 @@ public static class MotelyJsonScoring
         // Simple approach for scoring: just iterate and count matches
         // No fancy stream management - we know very few seeds get here
         int tally = 0;
-        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: false);
+        // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+        var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
+        // Don't cache soul stream - we might check multiple packs and need to track position correctly
         var soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
         
         // Just check the packs we care about
         var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 };
         int maxPacks = ante == 1 ? 4 : 6;
+        
+        // Create the tarot stream ONCE for checking all Arcana packs
+        var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true, isCached: false);
+        var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true, isCached: false);
 
         for (int i = 0; i < maxPacks; i++)
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
-
-            if (packSlots.Contains(i) && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
+            
+            // We need to check ALL Arcana/Spectral packs to advance the stream properly
+            bool hasSoul = false;
+            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+            {
+                // Always check to advance the stream properly
+                hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+            }
+            else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+            {
+                // Always check to advance the stream properly
+                hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+            }
+            
+            // Only process packs we care about
+            if (packSlots.Contains(i) && hasSoul && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
             {
                 if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
-
-                bool hasSoul = false;
-                if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
-                {
-                    var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
-                    hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
-                }
-                else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                {
-                    var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true);
-                    hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
-                }
-
-                if (hasSoul)
+                
                 {
                     // Check if this soul pack has already been consumed by another clause
                     // TODO: if (runState.IsSoulPackConsumed(ante, i)) continue;
 
-                    // Get the soul joker and check if it matches
+                    // CRITICAL: Only consume from soul stream when we actually have The Soul card!
+                    // Get the soul joker - if we already own it and Showman isn't active, it will reroll
                     var soulJoker = ctx.GetNextJoker(ref soulStream);
-
-                    if (!clause.JokerEnum.HasValue || soulJoker.Type == new MotelyItem(clause.JokerEnum.Value).Type)
+                    // DebugLogger.Log($"[SoulJoker] Ante {ante}, pack {i}: Initial soul = {soulJoker.GetJoker()}, OwnedCount = {runState.OwnedJokers.Length}, ShowmanActive = {runState.ShowmanActive}"); // DISABLED FOR PERFORMANCE
+                    
+                    // Handle reroll for soul jokers - if we already own this and Showman isn't active, keep rerolling
+                    // The game uses a resample mechanism that cycles through legendaries until finding non-duplicate
+                    int rerollCount = 0;
+                    while (!runState.ShowmanActive && runState.OwnedJokers.Contains(soulJoker) && rerollCount < 5)
+                    {
+                        // Game rerolls to next soul joker when duplicate found
+                        // This simulates the resample mechanism for legendary jokers
+                        var prevJoker = soulJoker;
+                        soulJoker = ctx.GetNextJoker(ref soulStream);
+                        // DebugLogger.Log($"[SoulJoker] Reroll {rerollCount+1}: {prevJoker.GetJoker()} -> {soulJoker.GetJoker()}"); // DISABLED FOR PERFORMANCE
+                        rerollCount++;
+                    }
+                    
+                    if (!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)
                     {
                         // Check edition and stickers if specified
                         if (CheckEditionAndStickers(soulJoker, clause))
                         {
                             // TODO: runState.MarkSoulPackConsumed(ante, i);
-                            // TODO: runState.AddOwnedJoker(soulJoker);
+                            runState.AddOwnedJoker(soulJoker);
 
                             if (soulJoker.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
                             {
@@ -494,7 +522,7 @@ public static class MotelyJsonScoring
         {
             var voucher = ctx.GetAnteFirstVoucher(ante, runState);
             runState.ActivateVoucher(voucher);
-            // DebugLogger.Log($"[VoucherActivation] Ante {ante}: Activated {voucher}"); // DISABLED FOR PERFORMANCE
+            DebugLogger.Log($"[VoucherActivation] Ante {ante}: Found {voucher}, activated");
 
             // Special case: Hieroglyph gives a bonus voucher in the SAME ante
             if (voucher == MotelyVoucher.Hieroglyph)
@@ -541,7 +569,7 @@ public static class MotelyJsonScoring
         return false;
     }
     
-    private static bool CheckTagSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante)
+    public static bool CheckTagSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante)
     {
         Debug.Assert(clause.TagEnum.HasValue, "CheckTagSingle requires TagEnum");
         var tagStream = ctx.CreateTagStream(ante);
@@ -560,16 +588,20 @@ public static class MotelyJsonScoring
     {
         if (!clause.VoucherEnum.HasValue) return false;
         
+        // IMPORTANT: Check if it's already active from ActivateAllVouchers
+        if (runState.IsVoucherActive(clause.VoucherEnum.Value))
+            return true;
+            
         // Check if this voucher appears at the specified ante
         var voucher = ctx.GetAnteFirstVoucher(ante, runState);
+        DebugLogger.Log($"[CheckVoucherSingle] Ante {ante}: Looking for {clause.VoucherEnum.Value}, found {voucher}");
         if (voucher == clause.VoucherEnum.Value)
         {
             runState.ActivateVoucher(voucher);
             return true;
         }
         
-        // Also check if it's already active from a previous ante
-        return runState.IsVoucherActive(clause.VoucherEnum.Value);
+        return false;
     }
 
     public static int CountOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)

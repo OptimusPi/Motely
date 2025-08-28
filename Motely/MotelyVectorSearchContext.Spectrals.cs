@@ -119,4 +119,40 @@ ref partial struct MotelyVectorSearchContext
 
         return pack;
     }
+
+    public VectorMask GetNextSpectralPackHasTheSoul(ref MotelyVectorSpectralStream spectralStream, MotelyBoosterPackSize size)
+    {
+        Debug.Assert(spectralStream.IsSoulBlackHoleable, "Spectral pack does not have the soul.");
+        
+        int cardCount = MotelyBoosterPackType.Spectral.GetCardCount(size);
+        VectorMask hasTheSoul = VectorMask.NoBitsSet;
+        VectorMask hasBlackHole = VectorMask.NoBitsSet;
+        
+        for (int i = 0; i < cardCount; i++)
+        {
+            Vector512<double> random = GetNextRandom(ref spectralStream.SoulBlackHolePrngStream);
+            VectorMask isSoul = new VectorMask((uint)Vector512.ExtractMostSignificantBits(Vector512.GreaterThan(random, Vector512.Create(0.997))));
+            
+            if (!isSoul.IsAllFalse())
+            {
+                hasTheSoul |= isSoul;
+                
+                // Progress the stream for remaining cards
+                for (; i < cardCount; i++)
+                {
+                    Vector512<double> randomBH = GetNextRandom(ref spectralStream.SoulBlackHolePrngStream);
+                    hasBlackHole |= new VectorMask((uint)Vector512.ExtractMostSignificantBits(Vector512.GreaterThan(randomBH, Vector512.Create(0.997))));
+                }
+                break;
+            }
+            
+            if (!hasBlackHole.IsAllFalse())
+            {
+                Vector512<double> randomBH = GetNextRandom(ref spectralStream.SoulBlackHolePrngStream);
+                hasBlackHole |= new VectorMask((uint)Vector512.ExtractMostSignificantBits(Vector512.GreaterThan(randomBH, Vector512.Create(0.997))));
+            }
+        }
+        
+        return hasTheSoul;
+    }
 }

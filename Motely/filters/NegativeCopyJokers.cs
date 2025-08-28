@@ -123,7 +123,12 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
                         1 => 4,
                         2 => 12,
                         3 => 25,
-                        _ => 35
+                        4 => 35,
+                        5 => 45,
+                        6 => 55,
+                        7 => 65,
+                        8 => 75,
+                        _ => 25
                     };
                     
                     for (int i = 0; i < shopSlots; i++)
@@ -209,13 +214,10 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
                 int totalCopyJokers = blueprintCount + brainstormCount + invisibleCount;
                 int totalNegatives = negativeBlueprint + negativeBrainstorm + negativeInvisible + negativeShowmanCount;
                 int showmanScore = Math.Min(showmanCount, 1);
-                int endScore = Math.Min(totalCopyJokers, 5) + totalNegatives;
+                int endScore = Math.Min(totalCopyJokers, 6) + totalNegatives;
 
-                if (endScore < 7) return false;
-                Console.WriteLine($"\nScore:{endScore}\n  Showman:{showmanScore} BP:{blueprintCount} BS:{brainstormCount} Inv:{invisibleCount}\n  -Showman:{negativeShowmanCount} -BP:{negativeBlueprint} -BS:{negativeBrainstorm} -Inv:{negativeInvisible}");
-                
-                // Return true for any seed with Showman + copy jokers
-                return true;
+                // Return true if score meets threshold
+                return endScore >= 5;
             });
         }
     }

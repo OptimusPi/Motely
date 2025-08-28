@@ -24,6 +24,8 @@ namespace Motely
             var analyzeOption = app.Option<string>("--analyze <SEED>", "Analyze a specific seed", CommandOptionType.SingleValue);
             var nativeOption = app.Option<string>("-n|--native <FILTER>", "Run built-in native filter", CommandOptionType.SingleValue);
             var chainOption = app.Option<string>("--chain <FILTERS>", "Chain additional filters (comma-separated)", CommandOptionType.SingleValue);
+            var scoreOption = app.Option<string>("--score <JSON>", "Add JSON scoring to native filter", CommandOptionType.SingleValue);
+            var csvScoreOption = app.Option<string>("--csvScore <TYPE>", "Enable CSV scoring output (native for built-in)", CommandOptionType.SingleValue);
             
             // Search parameters
             var threadsOption = app.Option<int>("--threads <COUNT>", "Number of threads", CommandOptionType.SingleValue);
@@ -80,7 +82,8 @@ namespace Motely
                     Silent = silentOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
                     Wordlist = wordlistOption.Value(),
-                    Keyword = keywordOption.Value()
+                    Keyword = keywordOption.Value(),
+                    CsvScore = csvScoreOption.Value()
                 };
 
                 // Validate batch size
@@ -112,7 +115,17 @@ namespace Motely
                 {
                     // Native filter mode
                     var chainFilters = chainOption.Value();
-                    var executor = new NativeFilterExecutor(nativeFilter, parameters, chainFilters);
+                    var scoreConfig = scoreOption.Value();
+                    
+                    // Parse cutoff for native filters with scoring or CSV scoring
+                    if (!string.IsNullOrEmpty(scoreConfig) || !string.IsNullOrEmpty(parameters.CsvScore))
+                    {
+                        var cutoffStr = cutoffOption.Value() ?? "0";
+                        parameters.AutoCutoff = cutoffStr.ToLowerInvariant() == "auto";
+                        parameters.Cutoff = parameters.AutoCutoff ? 1 : (int.TryParse(cutoffStr, out var c) ? c : 0);
+                    }
+                    
+                    var executor = new NativeFilterExecutor(nativeFilter, parameters, chainFilters, scoreConfig);
                     return executor.Execute();
                 }
                 else
@@ -120,7 +133,7 @@ namespace Motely
                     // JSON config mode
                     var cutoffStr = cutoffOption.Value() ?? "0";
                     bool autoCutoff = cutoffStr.ToLowerInvariant() == "auto";
-                    parameters.Cutoff = autoCutoff ? 1 : (int.TryParse(cutoffStr, out var c) ? c : 0);
+                    parameters.Cutoff = autoCutoff ? 0 : (int.TryParse(cutoffStr, out var c) ? c : 0);
                     parameters.AutoCutoff = autoCutoff;
                     parameters.ScoreOnly = scoreOnlyOption.HasValue();
                     
@@ -155,24 +168,13 @@ namespace Motely
         {
             MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>? searchSettings = null;
             
-            if (!scoreOnly)
-            {
-                var mustClauses = config.Must.ToList();
-                
-                // Don't split by category - pass ALL clauses to a single filter!
-                // This allows proper vectorization instead of chaining
-                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
-                    new MotelyJsonFilterDesc(FilterCategory.Mixed, mustClauses))
-                    .WithThreadCount(threads)
-                    .WithBatchCharacterCount(batchSize);
-            }
-            else
-            {
-                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
-                    new MotelyJsonFilterDesc(FilterCategory.Mixed, new List<MotelyJsonConfig.MotleyJsonFilterClause>()))
-                    .WithThreadCount(threads)
-                    .WithBatchCharacterCount(batchSize);
-            }
+            // Simple approach - just pass all must clauses to FilterMixed
+            var mustClauses = scoreOnly ? new List<MotelyJsonConfig.MotleyJsonFilterClause>() : config.Must.ToList();
+            
+            searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                new MotelyJsonFilterDesc(FilterCategory.Mixed, mustClauses))
+                .WithThreadCount(threads)
+                .WithBatchCharacterCount(batchSize);
             
             return searchSettings!;
         }

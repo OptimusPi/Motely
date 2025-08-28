@@ -14,6 +14,7 @@ public ref struct MotelyRunState
     }
     public int VoucherBitfield;
     public bool ShowmanActive;
+    public MotelySingleItemSet OwnedJokers;
 
     public HashSet<MotelyBossBlind> UsedBosses;
     public int LastProcessedBossAnte;
@@ -53,5 +54,15 @@ public ref struct MotelyRunState
     public void ActivateShowman()
     {
         ShowmanActive = true;
+    }
+    
+    public void AddOwnedJoker(MotelyItem joker)
+    {
+        // Check if we haven't exceeded the max capacity
+        if (OwnedJokers.Length < MotelySingleItemSet.MaxLength)
+        {
+            OwnedJokers.Append(joker);
+        }
+        // If at max capacity, we just won't track more jokers (edge case)
     }
 }

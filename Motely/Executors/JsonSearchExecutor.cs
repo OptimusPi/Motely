@@ -124,8 +124,11 @@ namespace Motely.Executors
             if (Path.IsPathRooted(configPath) && File.Exists(configPath))
             {
                 DebugLogger.Log($"📁 Loading config from: {configPath}");
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config, out var error))
+                {
+                    Console.WriteLine($"❌ JSON Parse Error: {error}");
                     throw new InvalidOperationException($"Config loading failed for: {configPath}");
+                }
                 return config;
             }
             
@@ -134,8 +137,11 @@ namespace Motely.Executors
             if (File.Exists(jsonItemFiltersPath))
             {
                 DebugLogger.Log($"📁 Loading config from: {jsonItemFiltersPath}");
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config, out var error))
+                {
+                    Console.WriteLine($"❌ JSON Parse Error: {error}");
                     throw new InvalidOperationException($"Config loading failed for: {jsonItemFiltersPath}");
+                }
                 return config;
             }
             
@@ -154,28 +160,30 @@ namespace Motely.Executors
                     return;
                 }
                 
-                Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
+                if (!Console.IsOutputRedirected)
+                {
+                    Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
+                }
                 Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
                 if (!string.IsNullOrEmpty(lastProgressLine))
                     Console.Write(lastProgressLine);
             };
             
-            var scoreDesc = new MotelyJsonSeedScoreDesc(config, _params.Cutoff, _params.AutoCutoff, onResultFound, _params.ScoreOnly);
+            // For JSON filters, always use scoreOnly mode to avoid base filter issues
+            // This ensures the scoring provider handles all filtering and scoring
+            bool useScoreOnly = true; // Always true for JSON filters
+            
+            var scoreDesc = new MotelyJsonSeedScoreDesc(config, _params.Cutoff, _params.AutoCutoff, onResultFound, useScoreOnly);
             
             if (_params.AutoCutoff)
                 Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})");
             else
                 Console.WriteLine($"✅ Loaded config with cutoff: {_params.Cutoff}");
                 
-            var searchSettings = Program.CreateSliceChainedSearch(config, _params.Threads, _params.BatchSize, _params.ScoreOnly);
+            var searchSettings = Program.CreateSliceChainedSearch(config, _params.Threads, _params.BatchSize, useScoreOnly);
             
-            // Add scoring if needed
-            bool hasValidShouldClauses = config.Should != null && 
-                config.Should.Count > 0 && 
-                config.Should.Any(c => !string.IsNullOrEmpty(c.Type) || !string.IsNullOrEmpty(c.Value));
-                
-            if (hasValidShouldClauses || _params.ScoreOnly)
-                searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
+            // Add scoring - always needed for JSON filters
+            searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
                 
             // Apply deck and stake
             if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
@@ -279,5 +287,6 @@ namespace Motely.Executors
         public string? SpecificSeed { get; set; }
         public string? Wordlist { get; set; }
         public string? Keyword { get; set; }
+        public string? CsvScore { get; set; }
     }
 }
