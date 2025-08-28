@@ -8,10 +8,12 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
     public PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        ctx.CacheAnteFirstVoucher(1);
-        ctx.CacheAnteFirstVoucher(2);
-        ctx.CacheBoosterPackStream(1);
-        ctx.CacheBoosterPackStream(2);
+        // Cache vouchers for all antes we'll check
+        for (int ante = 1; ante <= 6; ante++)
+        {
+            ctx.CacheAnteFirstVoucher(ante);
+            ctx.CacheBoosterPackStream(ante);
+        }
         return new PerkeoObservatoryFilter();
     }
 
@@ -35,7 +37,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             {
                 soulStream = searchContext.CreateSoulJokerStream(ante);
                 var wouldBe = searchContext.GetNextJoker(ref soulStream);
-                if (wouldBe.Type != MotelyItemType.Perkeo) return false;
+                if (wouldBe.Type != MotelyItemType.Perkeo || wouldBe.Edition != MotelyItemEdition.Negative) return false;
             }
             for (int i = 0; i < 2; i++)
             {
@@ -81,24 +83,42 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(1);
-
-            VectorMask matching = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-
+            // Check for Telescope and Observatory vouchers appearing in any of the first 6 antes
+            VectorMask hasTelescope = VectorMask.NoBitsSet;
+            VectorMask hasObservatory = VectorMask.NoBitsSet;
+            MotelyVectorRunState voucherState = new();
+            
+            for (int ante = 1; ante <= 6; ante++)
+            {
+                VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(ante, voucherState);
+                
+                VectorMask isTelescope = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
+                VectorMask isObservatory = VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
+                
+                hasTelescope |= isTelescope;
+                hasObservatory |= isObservatory;
+                
+                // Update voucher state for seeds that got telescope or observatory
+                voucherState.ActivateVoucherForMask(MotelyVoucher.Telescope, isTelescope);
+                voucherState.ActivateVoucherForMask(MotelyVoucher.Observatory, isObservatory);
+            }
+            
+            // Must have both Telescope and Observatory
+            VectorMask matching = hasTelescope & hasObservatory;
+            
             if (matching.IsAllFalse())
                 return Vector512<double>.Zero;
 
-            MotelyVectorRunState voucherState = new();
-            voucherState.ActivateVoucher(MotelyVoucher.Telescope);
-
-            vouchers = searchContext.GetAnteFirstVoucher(2, voucherState);
-
-            matching &= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-
-
             return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
             {
-                return CheckAnteForPerkeo(1, ref searchContext) || CheckAnteForPerkeo(2, ref searchContext);
+                // We already know this seed has both vouchers from the vectorized check!
+                // Just check for NEGATIVE Perkeo in antes 1 through 5
+                for (int ante = 1; ante <= 5; ante++)
+                {
+                    if (CheckAnteForPerkeo(ante, ref searchContext))
+                        return true;
+                }
+                return false;
             });
         }
     }
