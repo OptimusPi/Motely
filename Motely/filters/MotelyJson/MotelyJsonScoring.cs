@@ -11,6 +11,32 @@ namespace Motely.Filters;
 /// </summary>
 public static class MotelyJsonScoring
 {
+    #region Helper Methods for Performance
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ArrayMax(int[] array)
+    {
+        if (array.Length == 0) return 0;
+        int max = array[0];
+        for (int i = 1; i < array.Length; i++)
+        {
+            if (array[i] > max) max = array[i];
+        }
+        return max;
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ArrayContains(int[] array, int value)
+    {
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (array[i] == value) return true;
+        }
+        return false;
+    }
+    
+    #endregion
+    
     #region Count Functions for Should Clauses
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -27,12 +53,12 @@ public static class MotelyJsonScoring
         if (shopSlots.Length > 0)
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
-            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
+            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
             
             for (int i = 0; i <= maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (shopSlots.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.TarotCard)
+                if (ArrayContains(shopSlots, i) && item.TypeCategory == MotelyItemTypeCategory.TarotCard)
                 {
                     var tarot = new MotelyItem(item.Value).GetTarot();
                     if (tarot == clause.TarotEnum.Value)
@@ -51,7 +77,7 @@ public static class MotelyJsonScoring
             var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var tarotStream = ctx.CreateArcanaPackTarotStream(ante); // Create ONCE before loop
             // When no specific slots specified, check more packs to find arcana/spectral packs
-            int maxPackSlot = packSlots.Length > 0 ? packSlots.Max() : 5; // Check up to 6 packs by default
+            int maxPackSlot = packSlots.Length > 0 ? ArrayMax(packSlots) : 5; // Check up to 6 packs by default
             int packCount = (clause.MaxPackSlot ?? maxPackSlot) + 1;
             
             for (int i = 0; i < packCount; i++)
@@ -64,7 +90,7 @@ public static class MotelyJsonScoring
                     var contents = ctx.GetNextArcanaPackContents(ref tarotStream, pack.GetPackSize());
                     
                     // Only score if this slot is in our filter
-                    if (packSlots.Contains(i) && 
+                    if (ArrayContains(packSlots, i) && 
                         !(clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega))
                     {
                         for (int j = 0; j < contents.Length; j++)
@@ -95,12 +121,12 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
+            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
             
             for (int i = 0; i <= maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (shopSlots.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.PlanetCard)
+                if (ArrayContains(shopSlots, i) && item.TypeCategory == MotelyItemTypeCategory.PlanetCard)
                 {
                     var planet = new MotelyItem(item.Value).GetPlanet();
                     if (planet == clause.PlanetEnum.Value)
@@ -119,7 +145,7 @@ public static class MotelyJsonScoring
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
             var packSlots = clause.Sources.PackSlots;
-            int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
+            int packCount = (clause.MaxPackSlot ?? ArrayMax(packSlots)) + 1;
             
             for (int i = 0; i < packCount; i++)
             {
@@ -129,7 +155,7 @@ public static class MotelyJsonScoring
                 {
                     var contents = ctx.GetNextCelestialPackContents(ref planetStream, pack.GetPackSize());
                     
-                    if (packSlots.Contains(i) && 
+                    if (ArrayContains(packSlots, i) && 
                         !(clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega))
                     {
                         for (int j = 0; j < contents.Length; j++)
@@ -160,12 +186,12 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
+            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
             
             for (int i = 0; i <= maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (shopSlots.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                if (ArrayContains(shopSlots, i) && item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
                 {
                     if (searchAnySpectral)
                     {
@@ -192,7 +218,7 @@ public static class MotelyJsonScoring
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
             var packSlots = clause.Sources.PackSlots;
-            int packCount = (clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0)) + 1;
+            int packCount = (clause.MaxPackSlot ?? ArrayMax(packSlots)) + 1;
             
             for (int i = 0; i < packCount; i++)
             {
@@ -202,7 +228,7 @@ public static class MotelyJsonScoring
                 {
                     var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
                     
-                    if (packSlots.Contains(i) && 
+                    if (ArrayContains(packSlots, i) && 
                         !(clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega))
                     {
                         for (int j = 0; j < contents.Length; j++)
@@ -256,7 +282,7 @@ public static class MotelyJsonScoring
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
         var cardStream = ctx.CreateStandardPackCardStream(ante); // Create ONCE before loop
         var packSlots = clause.Sources.PackSlots;
-        int packCount = (clause.MaxPackSlot ?? packSlots.Max()) + 1;
+        int packCount = (clause.MaxPackSlot ?? ArrayMax(packSlots)) + 1;
 
         for (int i = 0; i < packCount; i++)
         {
@@ -268,7 +294,7 @@ public static class MotelyJsonScoring
                 var contents = ctx.GetNextStandardPackContents(ref cardStream, pack.GetPackSize());
                 
                 // Only score if this slot is in our filter
-                if (packSlots.Contains(i) && 
+                if (ArrayContains(packSlots, i) && 
                     !(clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega))
                 {
                     for (int j = 0; j < contents.Length; j++)
@@ -303,11 +329,11 @@ public static class MotelyJsonScoring
         if (clause.Sources?.ShopSlots?.Length > 0)
         {
             var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot ?? (shopSlots.Length > 0 ? shopSlots.Max() : 0);
+            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
             for (int i = 0; i <= maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (shopSlots.Contains(i) && item.TypeCategory == MotelyItemTypeCategory.Joker)
+                if (ArrayContains(shopSlots, i) && item.TypeCategory == MotelyItemTypeCategory.Joker)
                 {
                     var joker = new MotelyItem(item.Value).GetJoker();
                     var matches = clause.JokerEnum.HasValue ?
@@ -332,11 +358,11 @@ public static class MotelyJsonScoring
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
             Debug.Assert(!buffoonStream.RarityPrngStream.IsInvalid, $"BuffoonStream RarityPrng should be valid for ante {ante}");
             var packSlots = clause.Sources.PackSlots;
-            int maxPackSlot = clause.MaxPackSlot ?? (packSlots.Length > 0 ? packSlots.Max() : 0);
+            int maxPackSlot = clause.MaxPackSlot ?? ArrayMax(packSlots);
             for (int i = 0; i <= maxPackSlot; i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (packSlots.Contains(i) && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                if (ArrayContains(packSlots, i) && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
                     if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
@@ -403,7 +429,7 @@ public static class MotelyJsonScoring
             }
             
             // Only process packs we care about
-            if (packSlots.Contains(i) && hasSoul && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
+            if (ArrayContains(packSlots, i) && hasSoul && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
             {
                 if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
                 
