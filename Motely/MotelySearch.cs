@@ -293,7 +293,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly MotelySearchParameters _searchParameters;
     private readonly Action<long, long, long, double>? _progressCallback;
     private readonly int _batchCharacterCount;
-    private readonly bool _silent;
+    internal readonly bool _silent;
 
     private readonly MotelySearchThread[] _threads;
     private readonly Barrier _pauseBarrier;
@@ -655,6 +655,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         public long MaxBatch { get; internal set; }
         public long SeedsPerBatch { get; internal set; }
+        
+        // Thread-local counters to avoid atomic operations
+        protected long ThreadLocalMatchingSeeds = 0;
+        protected long ThreadLocalTotalSeedsSearched = 0;
 
         [InlineArray(Motely.MaxSeedLength)]
         private struct FilterSeedBatchCharacters
@@ -729,6 +733,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             }
                         }
 
+                        // Final consolidation of thread-local counters before thread exits
+                        Interlocked.Add(ref Search._totalSeedsSearched, ThreadLocalTotalSeedsSearched);
+                        Interlocked.Add(ref Search._matchingSeeds, ThreadLocalMatchingSeeds);
+                        
                         // Assert we've reached either MaxBatch or the configured end batch
                         // Note: In Provider mode (list search), early completion due to filter elimination
                         // is valid and doesn't require reaching the full batch count
@@ -738,6 +746,9 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         return;
 
                     case MotelySearchStatus.Disposed:
+                        // Final consolidation if disposing
+                        Interlocked.Add(ref Search._totalSeedsSearched, ThreadLocalTotalSeedsSearched);
+                        Interlocked.Add(ref Search._matchingSeeds, ThreadLocalMatchingSeeds);
                         return;
                 }
 
@@ -763,6 +774,15 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 SearchBatch(batchIdx);
 
                 long completed = Interlocked.Increment(ref Search._completedBatchIndex);
+                
+                // Consolidate thread-local counters periodically (every 100 batches) or at specific points
+                if (completed % 100 == 0 || Search._status == MotelySearchStatus.Completed)
+                {
+                    Interlocked.Add(ref Search._totalSeedsSearched, ThreadLocalTotalSeedsSearched);
+                    Interlocked.Add(ref Search._matchingSeeds, ThreadLocalMatchingSeeds);
+                    ThreadLocalTotalSeedsSearched = 0;
+                    ThreadLocalMatchingSeeds = 0;
+                }
                 
                 // Report progress if callback is set
                 if (Search._progressCallback != null)
@@ -822,14 +842,14 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // This is the method for searching the base filter, we should not be searching additional filters
             Debug.Assert(!searchContextParams.IsAdditionalFilter);
 
-            // Count how many seeds we're actually searching in this batch
+            // Count how many seeds we're actually searching in this batch (thread-local)
             int seedCount = 0;
             for (int lane = 0; lane < Vector512<double>.Count; lane++)
             {
                 if (searchContextParams.IsLaneValid(lane))
                     seedCount++;
             }
-            Interlocked.Add(ref Search._totalSeedsSearched, seedCount);
+            ThreadLocalTotalSeedsSearched += seedCount;
 
             MotelyVectorSearchContext searchContext = new(in Search._searchParameters, in searchContextParams);
 
@@ -872,8 +892,16 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 if (searchResultMask[lane] && searchParams.IsLaneValid(lane))
                 {
-                    int length = searchParams.GetSeed(lane, seed);
-                    Search.ReportSeed(new Span<char>(seed, length));
+                    ThreadLocalMatchingSeeds++;  // Thread-local increment instead of atomic
+                    
+                    // Only extract and print seed if not silent
+                    if (!Search._silent)
+                    {
+                        int length = searchParams.GetSeed(lane, seed);
+                        // Direct console write, no atomic increment
+                        Console.Write("\r");
+                        Console.WriteLine(new Span<char>(seed, length).ToString());
+                    }
                 }
             }
         }

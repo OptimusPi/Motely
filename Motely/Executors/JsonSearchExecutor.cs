@@ -187,14 +187,14 @@ namespace Motely.Executors
             searchSettings = searchSettings.WithStartBatchIndex(_params.StartBatch);
             if (_params.EndBatch > 0)
                 searchSettings = searchSettings.WithEndBatchIndex(_params.EndBatch);
-            else
-                throw new InvalidOperationException("EndBatch must be greater than 0.");
                 
             // Progress callback
                 DateTime progressStartTime = DateTime.UtcNow;
             DateTime lastProgressUpdate = DateTime.UtcNow;
             searchSettings = searchSettings.WithProgressCallback((completed, total, seedsSearched, seedsPerMs) =>
             {
+                if (_params.Silent) return; // Skip progress display in silent mode
+                
                 var now = DateTime.UtcNow;
                 var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
                 if (timeSinceLastUpdate < 100) return;
@@ -250,7 +250,7 @@ namespace Motely.Executors
             
             Console.WriteLine($"   Last batch Index: {lastBatchIndex}");
             Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
-            Console.WriteLine($"   Seeds matched: {MotelyJsonSeedScoreDesc.ResultsFound:N0}");
+            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds:N0}");
             
             if (duration.TotalMilliseconds >= 1)
             {

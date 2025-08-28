@@ -116,6 +116,7 @@ namespace Motely.Executors
             // We need to handle each type explicitly since BuildSearch is generic
             return filterDesc switch
             {
+                NaNSeedFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 PerkeoObservatoryFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 PassthroughFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 TrickeoglyphFilterDesc d => BuildSearch(d, progressCallback, seeds),
@@ -154,6 +155,7 @@ namespace Motely.Executors
             var normalizedName = filterName.ToLower().Trim();
             return normalizedName switch
             {
+                "nanseed" => new NaNSeedFilterDesc(),
                 "perkeoobservatory" => new PerkeoObservatoryFilterDesc(),
                 "passthrough" => new PassthroughFilterDesc(),
                 "trickeoglyph" => new TrickeoglyphFilterDesc(),
@@ -179,6 +181,7 @@ namespace Motely.Executors
                 // So we still need the switch, but at least it's cleaner
                 settings = descriptor switch
                 {
+                    NaNSeedFilterDesc d => settings.WithAdditionalFilter(d),
                     PerkeoObservatoryFilterDesc d => settings.WithAdditionalFilter(d),
                     TrickeoglyphFilterDesc d => settings.WithAdditionalFilter(d),
                     NegativeCopyFilterDesc d => settings.WithAdditionalFilter(d),
