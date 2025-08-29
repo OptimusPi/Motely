@@ -98,7 +98,7 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
                 }
                 resultMask |= resultMask3p2;
             }
-            return VectorMask.AllBitsSet;
+            return resultMask;
         }
     }
 }
