@@ -678,17 +678,6 @@ public struct MotelyJsonFilterDesc(
                 return VectorMask.AllBitsSet;
             }
             
-            // Check if we have any soul jokers - those require scalar path
-            bool hasSoulJokers = false;
-            foreach (var clause in jokerClauses)
-            {
-                if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
-                {
-                    hasSoulJokers = true;
-                    break;
-                }
-            }
-            
             // Try vectorized path for ALL jokers including soul jokers!
             DebugLogger.Log($"FilterJokers: Using VECTORIZED path for {jokerClauses.Count} joker clauses (including soul jokers)");
             return FilterJokersVectorized(ref ctx, jokerClauses);
@@ -697,8 +686,6 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private VectorMask FilterJokersVectorized(ref MotelyVectorSearchContext ctx, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
         {
-            // Better approach: iterate through each ante's items ONCE and check all clauses
-            
             // Track which clauses have been satisfied (start with none satisfied)
             var clauseMasks = new VectorMask[clauses.Count];
             
