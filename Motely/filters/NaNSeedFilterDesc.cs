@@ -85,7 +85,7 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
             {
                 var key = PseudoHashKeys[i];
                 MotelyVectorPrngStream stream = searchContext.CreatePrngStream(key, true);
-                Vector512<double> prng = searchContext.GetNextPrngState(ref stream);
+                
 
                 // Magic numbers match any seeds
                 resultMask |= Vector512.Equals(stream.State, pointThreeTwo);
@@ -94,6 +94,8 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
                 {
                     Console.WriteLine($"\n🎰💥'{key}' PRNG Stream.State=0.3211483013596");
                 }
+
+                Vector512<double> prng = searchContext.GetNextPrngState(ref stream);
 
                 resultMask |= Vector512.Equals(stream.State, pointSixEight);
 
