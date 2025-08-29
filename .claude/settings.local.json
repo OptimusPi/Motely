@@ -14,7 +14,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(kill:*)",
       "Bash(find:*)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(dir JsonItemFilters)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "additionalDirectories": [

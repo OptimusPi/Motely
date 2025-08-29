@@ -10,53 +10,54 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
     {
         PseudoHashKeys = [
         //Joker probability/math operations
-        "lucky_money",
-        "lucky_mult", 
-        "misprint",
-        "bloodstone",
-        "parking",
-        "business",
-        "space",
-        "8ball",
-        "halu",
-        "gros_michel",
-        "cavendish",
+        // "lucky_money",
+        // "lucky_mult", 
+        // "misprint",
+        // "bloodstone",
+        // "parking",
+        // "business",
+        // "space",
+        // "8ball",
+        // "halu",
+        // "gros_michel",
+        // "cavendish",
 
-        // Boss blind effects
-        "wheel",
-        "hook",
-        "cerulean_bell",
-        "crimson_heart",
+        // // Boss blind effects
+        // "wheel",
+        // "hook",
+        // "cerulean_bell",
+        // "crimson_heart",
 
-        // Card modifications
-        "wheel_of_fortune",
-        "invisible",
-        "perkeo",
-        "madness",
-        "ankh_choice",
+        // // Card modifications
+        // "wheel_of_fortune",
+        // "invisible",
+        // "perkeo",
+        // "madness",
+        // "ankh_choice",
 
-        // Tarot/Spectral effects
-        "sigil",
-        "ouija",
-        "familiar_create",
-        "grim_create", 
-        "incantation_create",
-        "random_destroy",
-        "spe_card",
+        // // Tarot/Spectral effects
+        // "sigil",
+        // "ouija",
+        // "familiar_create",
+        // "grim_create", 
+        // "incantation_create",
+        // "random_destroy",
+        // "spe_card",
 
-        // Pack/shop generation
-        "stdset",
-        "stdseal",
-        "stdsealtype",
-        "omen_globe",
-        "cert_fr",
-        "certsl",
+        // // Pack/shop generation
+        // "stdset",
+        // "stdseal",
+        // "stdsealtype",
+        // "omen_globe",
+        // "cert_fr",
+        // "certsl",
 
-        // Other mechanics
-        "flipped_card",
-        "to_do",
-        "erratic",
-        "edition_deck"
+        // // Other mechanics
+        // "flipped_card",
+        // "to_do",
+        // "erratic",
+        // "edition_deck"
+        "erratic"
         ];
     }
 
@@ -81,7 +82,7 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
             for (int i = 0; i < PseudoHashKeys.Length; i++)
             {
                 var key = PseudoHashKeys[i];
-                MotelyVectorPrngStream stream = searchContext.CreatePrngStream(key, false);
+                MotelyVectorPrngStream stream = searchContext.CreatePrngStream(key, true);
                 VectorMask resultMask3p2 = Vector512.Equals(stream.State, Vector512.Create(0.3211483013596));
                 if (resultMask3p2.IsPartiallyTrue())
                 {
