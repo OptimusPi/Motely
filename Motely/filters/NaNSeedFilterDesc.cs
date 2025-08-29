@@ -72,40 +72,33 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
     public struct NaNSeedFilter(string[] pseudoHashKeys) : IMotelySeedFilter
     {
         public readonly string[] PseudoHashKeys = pseudoHashKeys;
-            //magic numbers 0.3211483013596 and 0.6882134081454 found by MaximumG9
-            Vector512<double> pointThreeTwo = Vector512.Create(0.3211483013596);
-            Vector512<double> pointSixEight = Vector512.Create(0.6882134081454);
 
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            // Check each PRNG key for NaN values
             VectorMask resultMask = VectorMask.NoBitsSet;
+            bool firstFind = true;
 
             for (int i = 0; i < PseudoHashKeys.Length; i++)
             {
                 var key = PseudoHashKeys[i];
-                MotelyVectorPrngStream stream = searchContext.CreatePrngStream(key, true);
-                
-
-                // Magic numbers match any seeds
-                resultMask |= Vector512.Equals(stream.State, pointThreeTwo);
-
-                if (resultMask.IsPartiallyTrue())
+                MotelyVectorPrngStream stream = searchContext.CreatePrngStream(key, false);
+                VectorMask resultMask3p2 = Vector512.Equals(stream.State, Vector512.Create(0.3211483013596));
+                if (resultMask3p2.IsPartiallyTrue())
                 {
-                    Console.WriteLine($"\n🎰💥'{key}' PRNG Stream.State=0.3211483013596");
+                    if (firstFind)
+                    {
+                        firstFind = false;
+                        Console.WriteLine("Found stream.State 0.3211483013596 value for key(s): ");
+                        Console.Write(key);
+                    }
+                    else
+                    {
+                        Console.Write(", " + key);
+                    }
                 }
-
-                Vector512<double> prng = searchContext.GetNextPrngState(ref stream);
-
-                resultMask |= Vector512.Equals(stream.State, pointSixEight);
-
-                if (resultMask.IsPartiallyTrue())
-                {
-                    Console.WriteLine($"\n🎰💥'{key}' PRNG Stream.State=0.6882134081454");
-                }
+                resultMask |= resultMask3p2;
             }
-            
-            return resultMask;
+            return VectorMask.AllBitsSet;
         }
     }
 }
