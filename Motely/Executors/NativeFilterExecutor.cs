@@ -186,9 +186,19 @@ namespace Motely.Executors
                 {
                     // Load JSON filter
                     var config = LoadJsonConfig(filter);
-                    var jsonFilter = new MotelyJsonFilterDesc(FilterCategory.Mixed, config.Must.ToList());
-                    settings = settings.WithAdditionalFilter(jsonFilter);
-                    Console.WriteLine($"   + Chained JSON filter: {filter}");
+                    
+                    // ONLY use Must clauses for filtering - Should clauses are for scoring only
+                    // MustNot would need special handling (not implemented yet)
+                    if (config.Must != null && config.Must.Count > 0)
+                    {
+                        var jsonFilter = new MotelyJsonFilterDesc(FilterCategory.Mixed, config.Must.ToList());
+                        settings = settings.WithAdditionalFilter(jsonFilter);
+                        Console.WriteLine($"   + Chained JSON filter: {filter} ({config.Must.Count} must clauses)");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"   + Skipping JSON filter: {filter} (no must clauses to chain)");
+                    }
                 }
                 else
                 {
@@ -261,7 +271,7 @@ namespace Motely.Executors
                 if (_params.Silent)
                     return;
                     
-                Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
+                try { Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r"); } catch { }
                 Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
                 if (!string.IsNullOrEmpty(lastProgressLine))
                     Console.Write(lastProgressLine);

@@ -69,14 +69,18 @@ public struct NegativeCopyJokersScoreDesc(
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void Score(ref MotelyVectorSearchContext searchContext)
+        public readonly void Score(ref MotelyVectorSearchContext searchContext, VectorMask baseFilterMask = default)
         {
             var cutoff = _cutoff;
             var autoCutoff = _autoCutoff;
             var onResultFound = _onResultFound;
             
+            // Caller MUST provide a valid mask with at least some bits set
+            System.Diagnostics.Debug.Assert(baseFilterMask.IsPartiallyTrue(), 
+                "Score() called with empty mask - this is a bug in the calling code!");
+            
             // Process each seed that already passed the base filter
-            searchContext.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext ctx) =>
+            searchContext.SearchIndividualSeeds(baseFilterMask, (ref MotelySingleSearchContext ctx) =>
             {
                 int blueprintCount = 0;
                 int brainstormCount = 0;

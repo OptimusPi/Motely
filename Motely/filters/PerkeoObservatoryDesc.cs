@@ -9,7 +9,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
     public PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // Cache vouchers for all antes we'll check
-        for (int ante = 1; ante <= 6; ante++)
+        for (int ante = 1; ante <= 5; ante++)
         {
             ctx.CacheAnteFirstVoucher(ante);
             ctx.CacheBoosterPackStream(ante);
@@ -37,7 +37,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             var wouldBe = searchContext.GetNextJoker(ref soulStream);
             if (wouldBe.Type != MotelyItemType.Perkeo) return false;
             
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 2; i++)
             {
                 if (!boosterPackStreamInit)
                 {
@@ -109,7 +109,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             VectorMask matching = hasTelescope & hasObservatory;
             
             if (matching.IsAllFalse())
-                return Vector512<double>.Zero;
+                return VectorMask.NoBitsSet;
 
             return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
             {

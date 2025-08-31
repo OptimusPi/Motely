@@ -415,6 +415,10 @@ public static class MotelyJsonScoring
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
             
+            // Check cheap conditions first
+            bool isPackSlotWeCareAbout = ArrayContains(packSlots, i);
+            bool isCorrectPackType = pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral;
+            
             // We need to check ALL Arcana/Spectral packs to advance the stream properly
             bool hasSoul = false;
             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
@@ -428,31 +432,25 @@ public static class MotelyJsonScoring
                 hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
             }
             
-            // Only process packs we care about
-            if (ArrayContains(packSlots, i) && hasSoul && (pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral))
+            // Only process packs we care about (cheap checks first, expensive hasSoul check last)
+            if (isPackSlotWeCareAbout && isCorrectPackType && hasSoul)
             {
                 if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
                 
                 {
-                    // Check if this soul pack has already been consumed by another clause
-                    // TODO: if (runState.IsSoulPackConsumed(ante, i)) continue;
-
                     // CRITICAL: Only consume from soul stream when we actually have The Soul card!
-                    // Get the soul joker - if we already own it and Showman isn't active, it will reroll
+                    // Get the soul joker
                     var soulJoker = ctx.GetNextJoker(ref soulStream);
-                    // DebugLogger.Log($"[SoulJoker] Ante {ante}, pack {i}: Initial soul = {soulJoker.GetJoker()}, OwnedCount = {runState.OwnedJokers.Length}, ShowmanActive = {runState.ShowmanActive}"); // DISABLED FOR PERFORMANCE
                     
-                    // Handle reroll for soul jokers - if we already own this and Showman isn't active, keep rerolling
-                    // The game uses a resample mechanism that cycles through legendaries until finding non-duplicate
-                    int rerollCount = 0;
-                    while (!runState.ShowmanActive && runState.OwnedJokers.Contains(soulJoker) && rerollCount < 5)
+                    // Handle duplicates if Showman isn't active
+                    // Soul jokers are legendary, so they reroll when duplicate found
+                    if (!runState.ShowmanActive && runState.OwnedJokers.Contains(soulJoker))
                     {
-                        // Game rerolls to next soul joker when duplicate found
-                        // This simulates the resample mechanism for legendary jokers
-                        var prevJoker = soulJoker;
-                        soulJoker = ctx.GetNextJoker(ref soulStream);
-                        // DebugLogger.Log($"[SoulJoker] Reroll {rerollCount+1}: {prevJoker.GetJoker()} -> {soulJoker.GetJoker()}"); // DISABLED FOR PERFORMANCE
-                        rerollCount++;
+                        // Keep getting next soul joker until we find non-duplicate (max 5 attempts)
+                        for (int rerollCount = 0; rerollCount < 5 && runState.OwnedJokers.Contains(soulJoker); rerollCount++)
+                        {
+                            soulJoker = ctx.GetNextJoker(ref soulStream);
+                        }
                     }
                     
                     if (!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)
@@ -540,7 +538,7 @@ public static class MotelyJsonScoring
 
     #endregion
 
-    #region Missing Methods - TODO: Implement
+    #region Helper Methods
 
     public static void ActivateAllVouchers(ref MotelySingleSearchContext ctx, ref MotelyRunState runState, int maxAnte)
     {
@@ -580,7 +578,7 @@ public static class MotelyJsonScoring
                 MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante),
                 MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante),
                 MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
-                MotelyFilterItemType.Boss => throw new NotImplementedException("Boss filtering is not yet implemented. The boss PRNG does not match the actual game behavior."),
+                MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState),
                 MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, clause, ante, ref runState),
                 _ => false
             };
@@ -610,6 +608,22 @@ public static class MotelyJsonScoring
         };
     }
 
+    public static bool CheckBossSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    {
+        if (!clause.BossEnum.HasValue) return false;
+            
+        try
+        {
+            MotelyBossBlind boss = ctx.GetBossForAnte(ante, ref runState);
+            return boss == clause.BossEnum.Value;
+        }
+        catch
+        {
+            // Boss generation can fail for some seeds
+            return false;
+        }
+    }
+
     public static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
     {
         if (!clause.VoucherEnum.HasValue) return false;
@@ -632,6 +646,12 @@ public static class MotelyJsonScoring
 
     public static int CountOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
+        // Special case for vouchers - they're not ante-specific, just check once
+        if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
+        {
+            return CountVoucherOccurrences(ref ctx, clause, ref runState);
+        }
+        
         int totalCount = 0;
         foreach (var ante in clause.EffectiveAntes)
         {
@@ -645,8 +665,7 @@ public static class MotelyJsonScoring
                 MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
                 MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
                 MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.Boss => throw new NotImplementedException("Boss filtering is not yet implemented. The boss PRNG does not match the actual game behavior."),
-                MotelyFilterItemType.Voucher => CountVoucherOccurrences(ref ctx, clause, ref runState),
+                MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
                 _ => 0
             };
             totalCount += anteCount;
