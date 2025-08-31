@@ -81,7 +81,7 @@ public struct MotelyJsonSeedScoreDesc(
         public static bool IsCancelled;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(ref MotelyVectorSearchContext searchContext)
+        public void Score(ref MotelyVectorSearchContext searchContext, VectorMask baseFilterMask = default)
         {
             if (IsCancelled)
                 return;
@@ -94,7 +94,7 @@ public struct MotelyJsonSeedScoreDesc(
             var scoreOnlyMode = ScoreOnlyMode;
             
             // SIMPLE VECTORIZED PRE-FILTER for vouchers only
-            var preFilterMask = VectorMask.AllBitsSet;
+            var preFilterMask = baseFilterMask;
             var vectorRunState = new MotelyVectorRunState();
             
             // DebugLogger.Log($"[Score] Starting vectorized pre-filter, Must clauses: {config.Must?.Count ?? 0}"); // DISABLED FOR PERFORMANCE
@@ -102,7 +102,10 @@ public struct MotelyJsonSeedScoreDesc(
             // Process vouchers in ante order to build up state correctly
             var voucherClauseMasks = new Dictionary<MotelyJsonConfig.MotleyJsonFilterClause, VectorMask>();
             
-            // Initialize masks for voucher clauses
+            // Pre-compute which clauses apply to which antes to avoid LINQ in hot path
+            var clausesByAnte = new List<MotelyJsonConfig.MotleyJsonFilterClause>[config.MaxVoucherAnte + 1];
+            
+            // Initialize masks for voucher clauses and build ante mapping
             if (config.Must?.Count > 0)
             {
                 foreach (var clause in config.Must)
@@ -110,6 +113,19 @@ public struct MotelyJsonSeedScoreDesc(
                     if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
                     {
                         voucherClauseMasks[clause] = VectorMask.NoBitsSet;
+                        
+                        // Pre-compute which antes this clause cares about
+                        if (clause.EffectiveAntes != null)
+                        {
+                            foreach (var ante in clause.EffectiveAntes)
+                            {
+                                if (ante <= config.MaxVoucherAnte)
+                                {
+                                    clausesByAnte[ante] ??= new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                                    clausesByAnte[ante].Add(clause);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -121,18 +137,19 @@ public struct MotelyJsonSeedScoreDesc(
                 {
                     var vouchers = searchContext.GetAnteFirstVoucher(ante, vectorRunState);
                     
-                    // Check all voucher clauses that care about this ante
-                    foreach (var kvp in voucherClauseMasks)
+                    // Check only the clauses that care about this ante (pre-computed!)
+                    var clausesForThisAnte = clausesByAnte[ante];
+                    if (clausesForThisAnte != null)
                     {
-                        var clause = kvp.Key;
-                        if (clause.EffectiveAntes?.Contains(ante) == true)
+                        foreach (var clause in clausesForThisAnte)
                         {
                             var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
-                            voucherClauseMasks[clause] = kvp.Value | matches; // OR - voucher can appear at any ante
+                            voucherClauseMasks[clause] |= matches; // OR - voucher can appear at any ante
                         }
                     }
                     
                     // THEN activate the voucher for future antes
+                    // Note: ActivateVoucher already respects lanes - it only activates where voucher != None
                     vectorRunState.ActivateVoucher(vouchers);
                 }
             }
@@ -145,7 +162,16 @@ public struct MotelyJsonSeedScoreDesc(
                     return; // No seeds pass, exit early
             }
             
-            // NOW process individual seeds, but ONLY those that passed vectorized checks
+            // If we have a base filter mask (from --native filter), combine it with our pre-filter
+            if (!baseFilterMask.Equals(default(VectorMask)))
+            {
+                preFilterMask &= baseFilterMask;
+                if (preFilterMask.IsAllFalse()) 
+                    return; // No seeds pass, exit early
+            }
+            
+            // Process individual seeds - use preFilterMask for additional filtering if needed
+            // When not in ScoreOnlyMode, this should be AllBitsSet for voucher-filtered seeds
             searchContext.SearchIndividualSeeds(preFilterMask, (ref MotelySingleSearchContext singleCtx) =>
             {
                 // DebugLogger.Log($"[Score] Processing individual seed"); // DISABLED FOR PERFORMANCE
@@ -160,8 +186,9 @@ public struct MotelyJsonSeedScoreDesc(
                     MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
                 }
 
-                // In scoreOnly mode, we need to validate Must clauses since there's no base filter
-                if (scoreOnlyMode && config.Must?.Count > 0)
+                // Always validate Must clauses - either as the only filter (scoreOnlyMode) 
+                // or as additional requirements on top of the base filter
+                if (config.Must?.Count > 0)
                 {
                     // SMART: Process vouchers FIRST in order, then other requirements
                     // This ensures Telescope is activated before checking Observatory
