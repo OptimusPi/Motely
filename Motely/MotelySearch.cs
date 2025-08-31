@@ -630,8 +630,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             _lastProgressLine = progressLine;
         }
         
-        // Just use carriage return overwriting - simpler and works better on Windows
-        Console.Write($"\r{progressLine}                    \r{progressLine}");
+        // Use carriage return to overwrite the current line
+        Console.Write($"\r{progressLine}");
     }
 
     public void Dispose()
