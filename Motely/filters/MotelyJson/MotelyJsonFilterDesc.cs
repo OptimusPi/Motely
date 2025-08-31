@@ -92,9 +92,21 @@ public struct MotelyJsonFilterDesc(
             }
         }
         
+        Debug.Assert(Clauses != null, "Clauses should never be null after null coalescing");
         return new MotelyFilter(_category, Clauses);
     }
 
+    // Fast array lookup helpers for hot path
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ArrayContains(int[] array, int value)
+    {
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (array[i] == value) return true;
+        }
+        return false;
+    }
+    
     // Precomputed voucher clause for hot path
     private readonly struct OptimizedVoucherClause
     {
@@ -124,6 +136,7 @@ public struct MotelyJsonFilterDesc(
             int voucherCount = 0;
             if (Clauses != null)
             {
+                Debug.Assert(Clauses != null, "Clauses checked for null above");
                 foreach (var clause in Clauses)
                 {
                     if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
@@ -135,6 +148,7 @@ public struct MotelyJsonFilterDesc(
             {
                 _voucherClauses = new OptimizedVoucherClause[voucherCount];
                 int index = 0;
+                Debug.Assert(Clauses != null, "Clauses checked for null above");
                 foreach (var clause in Clauses)
                 {
                     if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
@@ -343,7 +357,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterTags(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(Tag) called with empty clauses");
+            Debug.Assert(Clauses != null && Clauses.Count > 0, $"MotelyFilter(Tag) called with null or empty clauses");
             var mask = VectorMask.AllBitsSet;
 
             foreach (var clause in Clauses)
@@ -377,7 +391,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterTarots(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(TarotCard) called with empty clauses");
+            Debug.Assert(Clauses != null && Clauses.Count > 0, $"MotelyFilter(TarotCard) called with null or empty clauses");
             
             var mask = VectorMask.AllBitsSet;
             
@@ -385,23 +399,10 @@ public struct MotelyJsonFilterDesc(
             {
                 var clauseMask = VectorMask.NoBitsSet;
                 
-                // Handle wildcards with scalar fallback
-                if (clause.IsWildcard || !clause.TarotEnum.HasValue)
-                {
-                    var localClause = clause;
-                    return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-                    {
-                        var tempState = new MotelyRunState();
-                        foreach (var ante in localClause.EffectiveAntes ?? [])
-                        {
-                            if (MotelyJsonScoring.TarotCardsTally(ref singleCtx, localClause, ante, ref tempState, earlyExit: true) > 0)
-                                return true;
-                        }
-                        return false;
-                    });
-                }
-                
-                var targetItemType = (MotelyItemType)clause.TarotEnum.Value;
+                // Handle wildcards and specific tarots in vectorized path!
+                bool isWildcard = clause.IsWildcard || !clause.TarotEnum.HasValue;
+                Debug.Assert(isWildcard || clause.TarotEnum.HasValue, "TarotEnum must have value when not wildcard");
+                var targetItemType = isWildcard ? (MotelyItemType?)null : (MotelyItemType)clause.TarotEnum!.Value;
                 
                 foreach (var ante in clause.EffectiveAntes ?? [])
                 {
@@ -412,13 +413,28 @@ public struct MotelyJsonFilterDesc(
                         var shopStream = ctx.CreateShopItemStream(ante, 
                             MotelyShopStreamFlags.ExcludeJokers | MotelyShopStreamFlags.ExcludePlanets | MotelyShopStreamFlags.ExcludeSpectrals);
                         
-                        int maxSlot = shopSlots.Max();
+                        int maxSlot = -1;
+                        for (int i = 0; i < shopSlots.Length; i++)
+                        {
+                            if (shopSlots[i] > maxSlot) maxSlot = shopSlots[i];
+                        }
                         for (int i = 0; i <= maxSlot; i++)
                         {
                             var item = ctx.GetNextShopItem(ref shopStream);
-                            if (shopSlots.Contains(i))
+                            if (ArrayContains(shopSlots, i))
                             {
-                                var matches = VectorEnum256.Equals(item.Type, targetItemType);
+                                VectorMask matches;
+                                if (isWildcard)
+                                {
+                                    // VECTORIZED: Any tarot card matches
+                                    matches = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
+                                }
+                                else
+                                {
+                                    // VECTORIZED: Specific tarot
+                                    matches = VectorEnum256.Equals(item.Type, targetItemType!.Value);
+                                }
+                                
                                 if (clause.EditionEnum.HasValue)
                                     matches &= VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
                                 clauseMask |= matches;
@@ -433,11 +449,15 @@ public struct MotelyJsonFilterDesc(
                         var boosterStream = ctx.CreateBoosterPackStream(ante);
                         var tarotStream = ctx.CreateArcanaPackTarotStream(ante);
                         
-                        int maxPackSlot = packSlots.Max();
+                        int maxPackSlot = -1;
+                        for (int i = 0; i < packSlots.Length; i++)
+                        {
+                            if (packSlots[i] > maxPackSlot) maxPackSlot = packSlots[i];
+                        }
                         for (int i = 0; i <= maxPackSlot; i++)
                         {
                             var pack = ctx.GetNextBoosterPack(ref boosterStream);
-                            if (packSlots.Contains(i))
+                            if (ArrayContains(packSlots, i))
                             {
                                 VectorMask isArcana = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Arcana);
                                 if (isArcana.IsAllFalse()) continue;
@@ -451,7 +471,18 @@ public struct MotelyJsonFilterDesc(
                                 var contents = ctx.GetNextArcanaPackContents(ref tarotStream, MotelyBoosterPackSize.Normal);
                                 for (int j = 0; j < contents.Length; j++)
                                 {
-                                    var matches = VectorEnum256.Equals(contents[j].Type, targetItemType);
+                                    VectorMask matches;
+                                    if (isWildcard)
+                                    {
+                                        // VECTORIZED: Any tarot card matches
+                                        matches = VectorEnum256.Equals(contents[j].TypeCategory, MotelyItemTypeCategory.TarotCard);
+                                    }
+                                    else
+                                    {
+                                        // VECTORIZED: Specific tarot
+                                        matches = VectorEnum256.Equals(contents[j].Type, targetItemType!.Value);
+                                    }
+                                    
                                     if (clause.EditionEnum.HasValue)
                                         matches &= VectorEnum256.Equals(contents[j].Edition, clause.EditionEnum.Value);
                                     clauseMask |= matches;
@@ -471,7 +502,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterPlanets(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(PlanetCard) called with empty clauses");
+            Debug.Assert(Clauses != null && Clauses.Count > 0, $"MotelyFilter(PlanetCard) called with null or empty clauses");
             
             var mask = VectorMask.AllBitsSet;
             
@@ -479,22 +510,10 @@ public struct MotelyJsonFilterDesc(
             {
                 var clauseMask = VectorMask.NoBitsSet;
                 
-                // Handle wildcards with scalar fallback
-                if (clause.IsWildcard || !clause.PlanetEnum.HasValue)
-                {
-                    var localClause = clause;
-                    return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-                    {
-                        foreach (var ante in localClause.EffectiveAntes ?? [])
-                        {
-                            if (MotelyJsonScoring.CountPlanetOccurrences(ref singleCtx, localClause, ante, earlyExit: true) > 0)
-                                return true;
-                        }
-                        return false;
-                    });
-                }
-                
-                var targetItemType = (MotelyItemType)clause.PlanetEnum.Value;
+                // Handle wildcards and specific planets in vectorized path!
+                bool isWildcard = clause.IsWildcard || !clause.PlanetEnum.HasValue;
+                Debug.Assert(isWildcard || clause.PlanetEnum.HasValue, "PlanetEnum must have value when not wildcard");
+                var targetItemType = isWildcard ? (MotelyItemType?)null : (MotelyItemType)clause.PlanetEnum!.Value;
                 
                 foreach (var ante in clause.EffectiveAntes ?? [])
                 {
@@ -505,13 +524,28 @@ public struct MotelyJsonFilterDesc(
                         var shopStream = ctx.CreateShopItemStream(ante, 
                             MotelyShopStreamFlags.ExcludeJokers | MotelyShopStreamFlags.ExcludeTarots | MotelyShopStreamFlags.ExcludeSpectrals);
                         
-                        int maxSlot = shopSlots.Max();
+                        int maxSlot = -1;
+                        for (int i = 0; i < shopSlots.Length; i++)
+                        {
+                            if (shopSlots[i] > maxSlot) maxSlot = shopSlots[i];
+                        }
                         for (int i = 0; i <= maxSlot; i++)
                         {
                             var item = ctx.GetNextShopItem(ref shopStream);
-                            if (shopSlots.Contains(i))
+                            if (ArrayContains(shopSlots, i))
                             {
-                                var matches = VectorEnum256.Equals(item.Type, targetItemType);
+                                VectorMask matches;
+                                if (isWildcard)
+                                {
+                                    // VECTORIZED: Any planet card matches
+                                    matches = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.PlanetCard);
+                                }
+                                else
+                                {
+                                    // VECTORIZED: Specific planet
+                                    matches = VectorEnum256.Equals(item.Type, targetItemType!.Value);
+                                }
+                                
                                 if (clause.EditionEnum.HasValue)
                                     matches &= VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
                                 clauseMask |= matches;
@@ -526,11 +560,15 @@ public struct MotelyJsonFilterDesc(
                         var boosterStream = ctx.CreateBoosterPackStream(ante);
                         var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
                         
-                        int maxPackSlot = packSlots.Max();
+                        int maxPackSlot = -1;
+                        for (int i = 0; i < packSlots.Length; i++)
+                        {
+                            if (packSlots[i] > maxPackSlot) maxPackSlot = packSlots[i];
+                        }
                         for (int i = 0; i <= maxPackSlot; i++)
                         {
                             var pack = ctx.GetNextBoosterPack(ref boosterStream);
-                            if (packSlots.Contains(i))
+                            if (ArrayContains(packSlots, i))
                             {
                                 VectorMask isCelestial = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Celestial);
                                 if (isCelestial.IsAllFalse()) continue;
@@ -544,7 +582,18 @@ public struct MotelyJsonFilterDesc(
                                 var contents = ctx.GetNextCelestialPackContents(ref planetStream, MotelyBoosterPackSize.Normal);
                                 for (int j = 0; j < contents.Length; j++)
                                 {
-                                    var matches = VectorEnum256.Equals(contents[j].Type, targetItemType);
+                                    VectorMask matches;
+                                    if (isWildcard)
+                                    {
+                                        // VECTORIZED: Any planet card matches
+                                        matches = VectorEnum256.Equals(contents[j].TypeCategory, MotelyItemTypeCategory.PlanetCard);
+                                    }
+                                    else
+                                    {
+                                        // VECTORIZED: Specific planet
+                                        matches = VectorEnum256.Equals(contents[j].Type, targetItemType!.Value);
+                                    }
+                                    
                                     if (clause.EditionEnum.HasValue)
                                         matches &= VectorEnum256.Equals(contents[j].Edition, clause.EditionEnum.Value);
                                     clauseMask |= matches;
@@ -564,7 +613,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterSpectrals(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(SpectralCard) called with empty clauses");
+            Debug.Assert(Clauses != null && Clauses.Count > 0, $"MotelyFilter(SpectralCard) called with null or empty clauses");
             
             var mask = VectorMask.AllBitsSet;
             
@@ -572,22 +621,10 @@ public struct MotelyJsonFilterDesc(
             {
                 var clauseMask = VectorMask.NoBitsSet;
                 
-                // Handle wildcards with scalar fallback
-                if (clause.IsWildcard || !clause.SpectralEnum.HasValue)
-                {
-                    var localClause = clause;
-                    return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-                    {
-                        foreach (var ante in localClause.EffectiveAntes ?? [])
-                        {
-                            if (MotelyJsonScoring.CountSpectralOccurrences(ref singleCtx, localClause, ante, earlyExit: true) > 0)
-                                return true;
-                        }
-                        return false;
-                    });
-                }
-                
-                var targetItemType = (MotelyItemType)clause.SpectralEnum.Value;
+                // Handle wildcards and specific spectrals in vectorized path!
+                bool isWildcard = clause.IsWildcard || !clause.SpectralEnum.HasValue;
+                Debug.Assert(isWildcard || clause.SpectralEnum.HasValue, "SpectralEnum must have value when not wildcard");
+                var targetItemType = isWildcard ? (MotelyItemType?)null : (MotelyItemType)clause.SpectralEnum!.Value;
                 
                 foreach (var ante in clause.EffectiveAntes ?? [])
                 {
@@ -597,13 +634,28 @@ public struct MotelyJsonFilterDesc(
                     {
                         var shopStream = ctx.CreateShopItemStream(ante);
                         
-                        int maxSlot = shopSlots.Max();
+                        int maxSlot = -1;
+                        for (int i = 0; i < shopSlots.Length; i++)
+                        {
+                            if (shopSlots[i] > maxSlot) maxSlot = shopSlots[i];
+                        }
                         for (int i = 0; i <= maxSlot; i++)
                         {
                             var item = ctx.GetNextShopItem(ref shopStream);
-                            if (shopSlots.Contains(i))
+                            if (ArrayContains(shopSlots, i))
                             {
-                                var matches = VectorEnum256.Equals(item.Type, targetItemType);
+                                VectorMask matches;
+                                if (isWildcard)
+                                {
+                                    // VECTORIZED: Any spectral card matches
+                                    matches = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.SpectralCard);
+                                }
+                                else
+                                {
+                                    // VECTORIZED: Specific spectral
+                                    matches = VectorEnum256.Equals(item.Type, targetItemType!.Value);
+                                }
+                                
                                 if (clause.EditionEnum.HasValue)
                                     matches &= VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
                                 clauseMask |= matches;
@@ -618,11 +670,15 @@ public struct MotelyJsonFilterDesc(
                         var boosterStream = ctx.CreateBoosterPackStream(ante);
                         var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
                         
-                        int maxPackSlot = packSlots.Max();
+                        int maxPackSlot = -1;
+                        for (int i = 0; i < packSlots.Length; i++)
+                        {
+                            if (packSlots[i] > maxPackSlot) maxPackSlot = packSlots[i];
+                        }
                         for (int i = 0; i <= maxPackSlot; i++)
                         {
                             var pack = ctx.GetNextBoosterPack(ref boosterStream);
-                            if (packSlots.Contains(i))
+                            if (ArrayContains(packSlots, i))
                             {
                                 VectorMask isSpectral = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Spectral);
                                 if (isSpectral.IsAllFalse()) continue;
@@ -636,7 +692,18 @@ public struct MotelyJsonFilterDesc(
                                 var contents = ctx.GetNextSpectralPackContents(ref spectralStream, MotelyBoosterPackSize.Normal);
                                 for (int j = 0; j < contents.Length; j++)
                                 {
-                                    var matches = VectorEnum256.Equals(contents[j].Type, targetItemType);
+                                    VectorMask matches;
+                                    if (isWildcard)
+                                    {
+                                        // VECTORIZED: Any spectral card matches
+                                        matches = VectorEnum256.Equals(contents[j].TypeCategory, MotelyItemTypeCategory.SpectralCard);
+                                    }
+                                    else
+                                    {
+                                        // VECTORIZED: Specific spectral
+                                        matches = VectorEnum256.Equals(contents[j].Type, targetItemType!.Value);
+                                    }
+                                    
                                     if (clause.EditionEnum.HasValue)
                                         matches &= VectorEnum256.Equals(contents[j].Edition, clause.EditionEnum.Value);
                                     clauseMask |= matches;
@@ -689,16 +756,18 @@ public struct MotelyJsonFilterDesc(
             // Track which clauses have been satisfied (start with none satisfied)
             var clauseMasks = new VectorMask[clauses.Count];
             
-            // Group clauses by ante for efficient checking
-            var clausesByAnte = new Dictionary<int, List<(int clauseIndex, MotelyJsonConfig.MotleyJsonFilterClause clause)>>();
+            // Group clauses by ante - NO DICTIONARY ALLOCATION!
+            var clausesByAnte = new List<(int clauseIndex, MotelyJsonConfig.MotleyJsonFilterClause clause)>[8]; // Fixed array for antes 1-8
+            for (int i = 0; i < 8; i++)
+                clausesByAnte[i] = new List<(int, MotelyJsonConfig.MotleyJsonFilterClause)>();
+            
             for (int i = 0; i < clauses.Count; i++)
             {
                 var clause = clauses[i];
                 foreach (var ante in clause.EffectiveAntes ?? [])
                 {
-                    if (!clausesByAnte.ContainsKey(ante))
-                        clausesByAnte[ante] = new();
-                    clausesByAnte[ante].Add((i, clause));
+                    if (ante >= 1 && ante <= 8)
+                        clausesByAnte[ante - 1].Add((i, clause));
                 }
             }
             
@@ -706,7 +775,8 @@ public struct MotelyJsonFilterDesc(
             // Avoid LINQ allocation - process antes 1-8 in order
             for (int ante = 1; ante <= 8; ante++)
             {
-                if (!clausesByAnte.TryGetValue(ante, out var anteClauses))
+                var anteClauses = clausesByAnte[ante - 1];
+                if (anteClauses.Count == 0)
                     continue;
                 
                 // Check if any clauses need shops
@@ -748,7 +818,7 @@ public struct MotelyJsonFilterDesc(
                             // Check this item against all clauses that care about this slot
                             foreach (var (clauseIndex, clause) in anteClauses)
                             {
-                                if (clause.Sources?.ShopSlots?.Contains(slot) == true)
+                                if (clause.Sources?.ShopSlots != null && ArrayContains(clause.Sources.ShopSlots, slot))
                                 {
                                     VectorMask matches;
                                     if (clause.IsWildcard || !clause.JokerEnum.HasValue)
@@ -830,7 +900,7 @@ public struct MotelyJsonFilterDesc(
                                 // Check each joker in the pack against relevant clauses
                                 foreach (var (clauseIndex, clause) in anteClauses)
                                 {
-                                    if (clause.Sources?.PackSlots?.Contains(slot) == true)
+                                    if (clause.Sources?.PackSlots != null && ArrayContains(clause.Sources.PackSlots, slot))
                                     {
                                         for (int j = 0; j < contents.Length; j++)
                                         {
@@ -980,31 +1050,112 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterPlayingCards(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(PlayingCard) called with empty clauses");
+            Debug.Assert(Clauses != null && Clauses.Count > 0, $"MotelyFilter(PlayingCard) called with null or empty clauses");
             
-            // Playing cards are complex - they have suits and ranks, not simple item types
-            // For now we need to use scalar for proper wildcard and rank/suit matching
-            var clauses = Clauses;
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
+            // VECTORIZED playing card filtering using suit/rank vectors!
+            var mask = VectorMask.AllBitsSet;
+            
+            foreach (var clause in Clauses)
             {
-                foreach (var clause in clauses)
+                var clauseMask = VectorMask.NoBitsSet;
+                
+                foreach (var ante in clause.EffectiveAntes ?? [])
                 {
-                    foreach (var ante in clause.EffectiveAntes ?? [])
+                    // Check standard card packs
+                    var packSlots = clause.Sources?.PackSlots;
+                    if (packSlots != null && packSlots.Length > 0)
                     {
-                        if (MotelyJsonScoring.CountPlayingCardOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
-                            return true;
+                        var cardStream = ctx.CreateStandardPackCardStream(ante);
+                        var packStream = ctx.CreateBoosterPackStream(ante);
+                        
+                        int maxPackSlot = -1;
+                        for (int i = 0; i < packSlots.Length; i++)
+                        {
+                            if (packSlots[i] > maxPackSlot) maxPackSlot = packSlots[i];
+                        }
+                        
+                        for (int i = 0; i <= maxPackSlot; i++)
+                        {
+                            var pack = ctx.GetNextBoosterPack(ref packStream);
+                            if (ArrayContains(packSlots, i))
+                            {
+                                // Only process Standard packs
+                                VectorMask isStandard = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Standard);
+                                if (isStandard.IsAllFalse()) continue;
+                                
+                                // Handle pack sizes - assume Normal for now (most common)
+                                var contents = ctx.GetNextStandardPackContents(ref cardStream, MotelyBoosterPackSize.Normal);
+                                for (int j = 0; j < contents.Length; j++)
+                                {
+                                    var card = contents[j];
+                                    VectorMask matches = VectorMask.AllBitsSet;
+                                    
+                                    // VECTORIZED suit matching
+                                    if (clause.SuitEnum.HasValue)
+                                    {
+                                        matches &= VectorEnum256.Equals(card.PlayingCardSuit, clause.SuitEnum.Value);
+                                    }
+                                    
+                                    // VECTORIZED rank matching  
+                                    if (clause.RankEnum.HasValue)
+                                    {
+                                        matches &= VectorEnum256.Equals(card.PlayingCardRank, clause.RankEnum.Value);
+                                    }
+                                    
+                                    // Enhancement, edition, seal checks
+                                    if (clause.EnhancementEnum.HasValue)
+                                        matches &= VectorEnum256.Equals(card.Enhancement, clause.EnhancementEnum.Value);
+                                    if (clause.EditionEnum.HasValue)
+                                        matches &= VectorEnum256.Equals(card.Edition, clause.EditionEnum.Value);
+                                    if (clause.SealEnum.HasValue)
+                                        matches &= VectorEnum256.Equals(card.Seal, clause.SealEnum.Value);
+                                    
+                                    clauseMask |= matches;
+                                }
+                            }
+                        }
                     }
                 }
-                return false;
-            });
+                
+                mask &= clauseMask;
+                if (mask.IsAllFalse()) return mask;
+            }
+            
+            return mask;
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask FilterBosses(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(Clauses.Count > 0, $"MotelyFilter(Boss) called with empty clauses");
-            throw new NotImplementedException("Boss filtering is not yet implemented. The boss PRNG does not match the actual game behavior.");
+            Debug.Assert(Clauses != null && Clauses.Count > 0, $"MotelyFilter(Boss) called with null or empty clauses");
+            
+            // VECTORIZED boss filtering!
+            var mask = VectorMask.AllBitsSet;
+            
+            foreach (var clause in Clauses)
+            {
+                if (!clause.BossEnum.HasValue) continue;
+                
+                var clauseMask = VectorMask.NoBitsSet;
+                var targetBoss = clause.BossEnum.Value;
+                
+                foreach (var ante in clause.EffectiveAntes ?? [])
+                {
+                    // Use vectorized boss context
+                    var bossStream = ctx.CreateBossStream(ante);
+                    var boss = ctx.GetNextBoss(ref bossStream);
+                    
+                    // VECTORIZED boss comparison
+                    var matches = VectorEnum256.Equals(boss, targetBoss);
+                    clauseMask |= matches;
+                }
+                
+                mask &= clauseMask;
+                if (mask.IsAllFalse()) return mask;
+            }
+            
+            return mask;
         }
 
         #endregion
