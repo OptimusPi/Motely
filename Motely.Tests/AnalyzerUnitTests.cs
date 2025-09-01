@@ -1,5 +1,4 @@
 using Motely.Analysis;
-using static VerifyXunit.Verifier;
 
 namespace Motely.Tests;
 
