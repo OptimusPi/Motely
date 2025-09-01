@@ -168,8 +168,14 @@ namespace Motely
         {
             MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>? searchSettings = null;
             
-            // Simple approach - just pass all must clauses to FilterMixed
-            var mustClauses = scoreOnly ? new List<MotelyJsonConfig.MotleyJsonFilterClause>() : config.Must.ToList();
+            // MUST clauses go to FILTER, not scoring - they MUST pass to continue
+            var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+            
+            DebugLogger.Log($"[CreateSliceChainedSearch] scoreOnly={scoreOnly}, config.Must count={config.Must?.Count ?? 0}, mustClauses count={mustClauses.Count}");
+            foreach (var clause in mustClauses)
+            {
+                DebugLogger.Log($"  MUST clause: {clause.ItemTypeEnum} {clause.Value}");
+            }
             
             searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
                 new MotelyJsonFilterDesc(FilterCategory.Mixed, mustClauses))
@@ -184,7 +190,8 @@ namespace Motely
             return itemType switch
             {
                 MotelyFilterItemType.Voucher => FilterCategory.Voucher,
-                MotelyFilterItemType.Joker or MotelyFilterItemType.SoulJoker => FilterCategory.Joker,
+                MotelyFilterItemType.Joker => FilterCategory.Joker,
+                MotelyFilterItemType.SoulJoker => FilterCategory.SoulJoker, // NEW: Separate category
                 MotelyFilterItemType.TarotCard => FilterCategory.TarotCard,
                 MotelyFilterItemType.PlanetCard => FilterCategory.PlanetCard,
                 MotelyFilterItemType.SpectralCard => FilterCategory.SpectralCard,

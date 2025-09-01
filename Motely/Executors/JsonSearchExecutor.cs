@@ -169,18 +169,27 @@ namespace Motely.Executors
                     Console.Write(lastProgressLine);
             };
             
-            // Use proper filtering mode - scoreOnly should only be true when explicitly requested
-            // This ensures MUST clauses are properly filtered by the base filter
-            bool useScoreOnly = _params.ScoreOnly; // Use the actual ScoreOnly parameter
+            // NEVER use scoreOnly - it's broken and bypasses MUST filtering
+            bool useScoreOnly = false; // ALWAYS false - proper filtering required
             
-            var scoreDesc = new MotelyJsonSeedScoreDesc(config, _params.Cutoff, _params.AutoCutoff, onResultFound, useScoreOnly);
+            // Create a config copy with only SHOULD clauses for scoring (MUST is handled by filter)
+            var scoringConfig = new MotelyJsonConfig
+            {
+                Name = config.Name,
+                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>(), // Empty - MUST handled by filter
+                Should = config.Should, // Only score the SHOULD clauses
+                MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>() // Empty - filter handles this too
+            };
+            
+            var scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, _params.Cutoff, _params.AutoCutoff, onResultFound, useScoreOnly);
             
             if (_params.AutoCutoff)
                 Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})");
             else
                 Console.WriteLine($"✅ Loaded config with cutoff: {_params.Cutoff}");
                 
-            var searchSettings = Program.CreateSliceChainedSearch(config, _params.Threads, _params.BatchSize, useScoreOnly);
+            // ALWAYS use proper JSON filtering - never rely on external filters for MUST clauses
+            var searchSettings = Program.CreateSliceChainedSearch(config, _params.Threads, _params.BatchSize, false);
             
             // Add scoring - always needed for JSON filters
             searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
