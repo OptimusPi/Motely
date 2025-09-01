@@ -18,6 +18,7 @@ namespace Motely.Executors
         private readonly string? _scoreConfig;
         private readonly SearchParameters _params;
         private bool _cancelled = false;
+        private string? _autoScoreConfig = null; // Track auto-detected scoring
         
         public NativeFilterExecutor(string filterName, SearchParameters parameters, string? chainFilters = null, string? scoreConfig = null)
         {
@@ -198,6 +199,17 @@ namespace Motely.Executors
                     else
                     {
                         Console.WriteLine($"   + Skipping JSON filter: {filter} (no must clauses to chain)");
+                    }
+                    
+                    // AUTO-ADD SCORING: If chained JSON has SHOULD clauses, auto-add scoring 
+                    if (config.Should != null && config.Should.Count > 0)
+                    {
+                        Console.WriteLine($"   + Auto-adding scoring: {filter} ({config.Should.Count} should clauses)");
+                        // Set the auto-score config so ApplyScoring picks it up
+                        if (string.IsNullOrEmpty(_scoreConfig))
+                        {
+                            _autoScoreConfig = filter; // Auto-set score config to same filter
+                        }
                     }
                 }
                 else

@@ -208,6 +208,7 @@ public struct MotelyJsonFilterDesc(
                 FilterCategory.PlanetCard => FilterPlanets(ref searchContext),
                 FilterCategory.SpectralCard => FilterSpectrals(ref searchContext),
                 FilterCategory.Joker => FilterJokers(ref searchContext),
+                FilterCategory.SoulJoker => FilterSoulJokers(ref searchContext),
                 FilterCategory.PlayingCard => FilterPlayingCards(ref searchContext),
                 FilterCategory.Boss => FilterBosses(ref searchContext),
                 FilterCategory.Mixed => FilterMixed(ref searchContext),
@@ -252,6 +253,8 @@ public struct MotelyJsonFilterDesc(
                     hasJokers = true;
             }
             
+            DebugLogger.Log($"FilterMixed: hasVouchers={hasVouchers}, hasJokers={hasJokers}");
+            
             // Route to the appropriate filter
             if (hasVouchers && !hasJokers)
             {
@@ -259,17 +262,49 @@ public struct MotelyJsonFilterDesc(
             }
             else if (hasJokers && !hasVouchers)
             {
-                return FilterJokers(ref ctx);
+                // CRITICAL FIX: Pure joker filters also need unified processing for multiple clauses
+                DebugLogger.Log($"FilterMixed: Pure joker filter with {Clauses.Count} clauses - using unified processing");
+                var clauses = Clauses; // Copy for lambda
+                return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
+                {
+                    var runState = new MotelyRunState();
+                    
+                    // Check ALL joker clauses using consistent stream handling
+                    foreach (var clause in clauses)
+                    {
+                        bool clauseSatisfied = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
+                        if (!clauseSatisfied)
+                        {
+                            return false; // MUST clause failed
+                        }
+                    }
+                    return true; // All clauses satisfied
+                });
             }
             else if (hasVouchers && hasJokers)
             {
-                // Both - apply vouchers first then jokers
-                var result = FilterVouchers(ref ctx);
-                if (!result.IsAllFalse())
+                // CRITICAL FIX: Process all clauses together to avoid soul joker double-consumption
+                DebugLogger.Log($"FilterMixed: Using unified processing for {Clauses.Count} mixed clauses");
+                var clauses = Clauses; // Copy for lambda
+                return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
                 {
-                    result &= FilterJokers(ref ctx);
-                }
-                return result;
+                    var runState = new MotelyRunState();
+                    
+                    // Process all clauses in a unified way to avoid stream double-consumption
+                    // First activate all vouchers to set up state properly
+                    MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, 8);
+                    
+                    // Now check each clause using consistent stream handling
+                    foreach (var clause in clauses)
+                    {
+                        bool clauseSatisfied = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
+                        if (!clauseSatisfied)
+                        {
+                            return false; // MUST clause failed
+                        }
+                    }
+                    return true; // All clauses satisfied
+                });
             }
             
             // Unknown clause types
@@ -1158,6 +1193,69 @@ public struct MotelyJsonFilterDesc(
             return mask;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VectorMask FilterSoulJokers(ref MotelyVectorSearchContext ctx)
+        {
+            Debug.Assert(Clauses != null && Clauses.Count > 0, $"MotelyFilter(SoulJoker) called with null or empty clauses");
+            
+            // Following PerkeoObservatoryDesc pattern - early exit optimization
+            var mask = VectorMask.AllBitsSet;
+            
+            // Pre-calculate ante range from all soul joker clauses
+            int minAnte = int.MaxValue, maxAnte = 0;
+            foreach (var clause in Clauses)
+            {
+                if (clause.EffectiveAntes != null)
+                {
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        if (ante < minAnte) minAnte = ante;
+                        if (ante > maxAnte) maxAnte = ante;
+                    }
+                }
+            }
+            
+            if (minAnte == int.MaxValue) return VectorMask.NoBitsSet; // No valid antes
+            
+            DebugLogger.Log($"FilterSoulJokers: Processing {Clauses.Count} soul joker clauses, antes {minAnte}-{maxAnte}");
+            
+            // Use SearchIndividualSeeds for proper stream handling (like PerkeoObservatoryDesc)
+            var clauses = Clauses; // Copy for lambda
+            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
+            {
+                var runState = new MotelyRunState();
+                
+                // Unified ante loop - generate soul jokers once per ante, check ALL clauses
+                for (int ante = minAnte; ante <= maxAnte; ante++)
+                {
+                    bool anteHasClauses = false;
+                    foreach (var clause in clauses)
+                    {
+                        if (clause.EffectiveAntes?.Contains(ante) == true)
+                        {
+                            anteHasClauses = true;
+                            break;
+                        }
+                    }
+                    if (!anteHasClauses) continue;
+                    
+                    // Check each clause for this ante using consistent stream handling
+                    foreach (var clause in clauses)
+                    {
+                        if (clause.EffectiveAntes?.Contains(ante) == true)
+                        {
+                            bool clauseSatisfied = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
+                            if (!clauseSatisfied)
+                            {
+                                return false; // MUST clause failed
+                            }
+                        }
+                    }
+                }
+                return true; // All soul joker clauses satisfied
+            });
+        }
+
         #endregion
     }
 }
@@ -1180,8 +1278,9 @@ public enum FilterCategory
     // Standard
     PlayingCard,
 
-    // Jokers and "SoulJoker" in same category
+    // Jokers - separate categories for proper stream handling
     Joker,
+    SoulJoker,  // NEW: Soul jokers get their own category to avoid stream conflicts
     
     // Combined filter for multiple categories
     Mixed,
