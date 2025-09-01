@@ -169,9 +169,9 @@ namespace Motely.Executors
                     Console.Write(lastProgressLine);
             };
             
-            // For JSON filters, always use scoreOnly mode to avoid base filter issues
-            // This ensures the scoring provider handles all filtering and scoring
-            bool useScoreOnly = true; // Always true for JSON filters
+            // Use proper filtering mode - scoreOnly should only be true when explicitly requested
+            // This ensures MUST clauses are properly filtered by the base filter
+            bool useScoreOnly = _params.ScoreOnly; // Use the actual ScoreOnly parameter
             
             var scoreDesc = new MotelyJsonSeedScoreDesc(config, _params.Cutoff, _params.AutoCutoff, onResultFound, useScoreOnly);
             
