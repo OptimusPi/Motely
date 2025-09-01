@@ -177,6 +177,21 @@ public struct MotelyJsonSeedScoreDesc(
                 // DebugLogger.Log($"[Score] Processing individual seed"); // DISABLED FOR PERFORMANCE
                 // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
                 var runState = new MotelyRunState();
+                
+                // ALWAYS validate MUST clauses first - regardless of scoreOnly mode
+                if (config.Must?.Count > 0)
+                {
+                    foreach (var clause in config.Must)
+                    {
+                        bool clauseSatisfied = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
+                        if (!clauseSatisfied)
+                        {
+                            return false; // MUST clause failed - reject this seed completely
+                        }
+                    }
+                    // Reset runState after validation for clean scoring
+                    runState = new MotelyRunState();
+                }
 
                 // Activate all vouchers for scoring (using cached property)
                 // DebugLogger.Log($"[Score] MaxVoucherAnte: {config.MaxVoucherAnte}"); // DISABLED FOR PERFORMANCE
