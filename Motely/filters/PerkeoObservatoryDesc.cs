@@ -35,13 +35,13 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
             soulStream = searchContext.CreateSoulJokerStream(ante);
             var wouldBe = searchContext.GetNextJoker(ref soulStream);
-            if (wouldBe.Type != MotelyItemType.Perkeo) return false;
-            
-            for (int i = 0; i < 2; i++)
+            if (wouldBe.Type != MotelyItemType.Perkeo || wouldBe.Edition != MotelyItemEdition.Negative) return false;
+
+            for (int i = 0; i < 2 + ante; i++)
             {
                 if (!boosterPackStreamInit)
                 {
-                    boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante != 1, false);
+                    boosterPackStream = searchContext.CreateBoosterPackStream(ante, true, false);
                     boosterPackStreamInit = true;
                 }
 
@@ -78,7 +78,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             return false;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             // Check for Telescope and Observatory vouchers appearing in any of the first 6 antes
@@ -87,7 +87,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             MotelyVectorRunState voucherState = new();
 
             // Process antes in order to properly handle voucher activation chain
-            for (int ante = 1; ante <= 5; ante++)
+            for (int ante = 1; ante <= 3; ante++)
             {
                 VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(ante, voucherState);
                 
@@ -101,9 +101,6 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                 // Observatory can ONLY appear if Telescope is already active
                 VectorMask isObservatory = VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
                 hasObservatory |= isObservatory;
-                
-                // Activate Observatory if found
-                voucherState.ActivateVoucherForMask(MotelyVoucher.Observatory, isObservatory);
             }
             
             VectorMask matching = hasTelescope & hasObservatory;
@@ -114,8 +111,8 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
             {
                 // We already know this seed has both vouchers from the vectorized check!
-                // Just check for NEGATIVE Perkeo in antes 1 through 5
-                for (int ante = 1; ante <= 5; ante++)
+                // Just check for Perkeo in antes 1 through 3
+                for (int ante = 1; ante <= 3; ante++)
                 {
                     if (CheckAnteForPerkeo(ante, ref searchContext))
                         return true;
