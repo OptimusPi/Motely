@@ -562,26 +562,29 @@ public static class MotelyJsonScoring
 
     public static bool CheckSingleClause(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
-        Debug.Assert(clause.ItemTypeEnum != MotelyFilterItemType.Voucher, "CheckSingleClause should not be used for Voucher clauses");
+        // Vouchers are handled by CheckVoucherSingle in the switch statement below
         Debug.Assert(clause.EffectiveAntes != null, "CheckSingleClause requires EffectiveAntes");
         Debug.Assert(clause.EffectiveAntes.Length > 0, "CheckSingleClause requires non-empty EffectiveAntes");
 
         foreach (var ante in clause.EffectiveAntes)
         {
-            var found = clause.ItemTypeEnum switch
+            // Use the SAME logic as CountClause but with earlyExit optimization for MUST
+            var count = clause.ItemTypeEnum switch
             {
-                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: true) > 0,
-                MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: true) > 0,
-                MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: true) > 0,
-                MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
-                MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
-                MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante),
-                MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante),
-                MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: true) > 0,
-                MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState),
-                MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, clause, ante, ref runState),
-                _ => false
+                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: true),
+                MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
+                MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
+                MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
+                MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
+                MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
+                MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
+                MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
+                _ => 0
             };
+            
+            var found = count > 0;
 
             if (found)
             {
