@@ -169,19 +169,16 @@ namespace Motely.Executors
                     Console.Write(lastProgressLine);
             };
             
-            // NEVER use scoreOnly - it's broken and bypasses MUST filtering
-            bool useScoreOnly = false; // ALWAYS false - proper filtering required
-            
-            // Create a config copy with only SHOULD clauses for scoring (MUST is handled by filter)
+            // Scorer gets ONLY the SHOULD clauses - filters handle MUST
             var scoringConfig = new MotelyJsonConfig
             {
                 Name = config.Name,
-                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>(), // Empty - MUST handled by filter
-                Should = config.Should, // Only score the SHOULD clauses
-                MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>() // Empty - filter handles this too
+                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>(), // Empty - filters handle this
+                Should = config.Should, // ONLY the SHOULD clauses for scoring
+                MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>() // Empty - filters handle this
             };
             
-            var scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, _params.Cutoff, _params.AutoCutoff, onResultFound, useScoreOnly);
+            var scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, _params.Cutoff, _params.AutoCutoff, onResultFound);
             
             if (_params.AutoCutoff)
                 Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})");

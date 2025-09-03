@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Motely.Filters;
+using Motely.Utils;
 
 namespace Motely.Executors
 {
@@ -192,9 +193,17 @@ namespace Motely.Executors
                     // MustNot would need special handling (not implemented yet)
                     if (config.Must != null && config.Must.Count > 0)
                     {
-                        var jsonFilter = new MotelyJsonFilterDesc(FilterCategory.Mixed, config.Must.ToList());
-                        settings = settings.WithAdditionalFilter(jsonFilter);
-                        Console.WriteLine($"   + Chained JSON filter: {filter} ({config.Must.Count} must clauses)");
+                        // PROPER SLICING: Group clauses by category for optimal vectorization
+                        var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.Must);
+                        
+                        foreach (var (category, clauses) in clausesByCategory)
+                        {
+                            var slicedFilter = new MotelyJsonFilterDesc(category, clauses);
+                            settings = settings.WithAdditionalFilter(slicedFilter);
+                            Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
+                        }
+                        
+                        Console.WriteLine($"   + Total JSON filters chained: {clausesByCategory.Count} categories, {config.Must.Count} total clauses");
                     }
                     else
                     {
@@ -389,6 +398,7 @@ namespace Motely.Executors
             
             return null;
         }
+
         
         private void PrintSummary(IMotelySearch search, TimeSpan duration)
         {

@@ -143,7 +143,7 @@ public struct MotelyJsonSeedScoreDesc(
                     {
                         foreach (var clause in clausesForThisAnte)
                         {
-                            var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
+                            var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum!.Value);
                             voucherClauseMasks[clause] |= matches; // OR - voucher can appear at any ante
                         }
                     }

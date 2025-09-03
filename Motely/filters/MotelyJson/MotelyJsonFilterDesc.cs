@@ -26,15 +26,7 @@ public struct MotelyJsonFilterDesc(
 
     public MotelyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Log filter creation for debugging
-        DebugLogger.Log($"Creating MotelyJsonFilter: Category={_category}, Clauses={Clauses.Count}");
-        if (Clauses != null)
-        {
-            foreach (var clause in Clauses)
-            {
-                DebugLogger.Log($"  - {clause.ItemTypeEnum}: {clause.Value} @ antes {string.Join(",", clause.EffectiveAntes ?? new int[0])}");
-            }
-        }
+        // MotelyJsonFilter created
         
         // Cache relevant streams based on what clauses need - no LINQ!
         bool[] antesNeeded = new bool[9]; // Antes 1-8
@@ -182,24 +174,7 @@ public struct MotelyJsonFilterDesc(
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            // Handle default-constructed struct
-            if (Clauses == null)
-            {
-                DebugLogger.Log($"=== MotelyJsonFilter.Filter called with null Clauses (default struct?) ===");
-                return VectorMask.AllBitsSet;
-            }
-            
-            DebugLogger.Log($"=== MotelyJsonFilter.Filter called: Category={_category}, Clauses={Clauses.Count} ===");
-            
-            // If no clauses, pass everything through (for scoreOnly mode)
-            // Don't call ANY filter methods if there's nothing to filter!
-            if (Clauses.Count == 0)
-            {
-                DebugLogger.Log("  No clauses, passing all seeds through");
-                return VectorMask.AllBitsSet;
-            }
-
-            DebugLogger.Log($"  Dispatching to {_category} filter method...");
+            // Fast path - no logging, no defensive checks in hot loop
             var result = _category switch
             {
                 FilterCategory.Voucher => FilterVouchers(ref searchContext),
@@ -214,15 +189,6 @@ public struct MotelyJsonFilterDesc(
                 FilterCategory.Mixed => FilterMixed(ref searchContext),
                 _ => throw new ArgumentException($"Unknown filter category: {_category}")
             };
-            
-            if (!result.IsAllFalse())
-            {
-                DebugLogger.Log($"  ✓ Filter result: Some seeds passed!");
-            }
-            else
-            {
-                DebugLogger.Log($"  ✗ Filter result: No seeds passed");
-            }
             
             return result;
         }
@@ -239,7 +205,7 @@ public struct MotelyJsonFilterDesc(
             if (Clauses == null || Clauses.Count == 0)
                 return VectorMask.AllBitsSet;
                 
-            DebugLogger.Log($"FilterMixed called with {Clauses.Count} clauses - delegating to proper filters");
+            // FilterMixed called - delegating to proper filters
             
             // Check what we have
             bool hasVouchers = false;
@@ -253,7 +219,7 @@ public struct MotelyJsonFilterDesc(
                     hasJokers = true;
             }
             
-            DebugLogger.Log($"FilterMixed: hasVouchers={hasVouchers}, hasJokers={hasJokers}");
+            // Dispatch based on clause types
             
             // Route to the appropriate filter
             if (hasVouchers && !hasJokers)
@@ -263,13 +229,13 @@ public struct MotelyJsonFilterDesc(
             else if (hasJokers && !hasVouchers)
             {
                 // CRITICAL FIX: Pure joker filters also need unified processing for multiple clauses
-                DebugLogger.Log($"FilterMixed: Pure joker filter with {Clauses.Count} clauses - using unified processing");
+                // Pure joker filter - using unified processing
                 var clauses = Clauses; // Copy for lambda
                 return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
                 {
                     var runState = new MotelyRunState();
                     
-                    // Check ALL joker clauses using consistent stream handling
+                    // Check ALL clauses using consistent stream handling
                     foreach (var clause in clauses)
                     {
                         bool clauseSatisfied = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
@@ -284,7 +250,7 @@ public struct MotelyJsonFilterDesc(
             else if (hasVouchers && hasJokers)
             {
                 // CRITICAL FIX: Process all clauses together to avoid soul joker double-consumption
-                DebugLogger.Log($"FilterMixed: Using unified processing for {Clauses.Count} mixed clauses");
+                // Using unified processing for mixed clauses
                 var clauses = Clauses; // Copy for lambda
                 return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
                 {
@@ -308,7 +274,7 @@ public struct MotelyJsonFilterDesc(
             }
             
             // Unknown clause types
-            DebugLogger.Log($"WARNING: FilterMixed has unknown clause types");
+            // WARNING: FilterMixed has unknown clause types
             return VectorMask.AllBitsSet;
         }
 
@@ -316,12 +282,7 @@ public struct MotelyJsonFilterDesc(
         private VectorMask FilterVouchers(ref MotelyVectorSearchContext ctx)
         {
             if (_voucherClauses == null || _voucherClauses.Length == 0)
-            {
-                DebugLogger.Log("FilterVouchers: No voucher clauses, passing all");
                 return VectorMask.AllBitsSet;
-            }
-                
-            DebugLogger.Log($"FilterVouchers: Checking {_voucherClauses.Length} voucher clauses");
             var mask = VectorMask.AllBitsSet;
             var state = new MotelyVectorRunState();
             
@@ -367,7 +328,7 @@ public struct MotelyJsonFilterDesc(
             {
                 if (clauseMasks[i].IsAllFalse())
                 {
-                    DebugLogger.Log($"  Voucher {_voucherClauses[i].Voucher} not found in any ante, failing batch");
+                    
                     return VectorMask.NoBitsSet;  // Required voucher not found
                 }
                 mask &= clauseMasks[i];  // AND - all required vouchers must be present
@@ -375,7 +336,7 @@ public struct MotelyJsonFilterDesc(
                 // Early exit if no seeds left
                 if (mask.IsAllFalse())
                 {
-                    DebugLogger.Log($"  No seeds have all required vouchers");
+                    
                     return VectorMask.NoBitsSet;
                 }
             }
@@ -383,7 +344,7 @@ public struct MotelyJsonFilterDesc(
             if (!mask.IsAllFalse())
             {
                 // Count matching seeds (VectorMask is a wrapper around Vector512<double>)
-                DebugLogger.Log($"  FilterVouchers: Some seeds passed all voucher checks in this batch");
+                
             }
             
             return mask;
@@ -760,7 +721,7 @@ public struct MotelyJsonFilterDesc(
         {
             if (Clauses == null || Clauses.Count == 0)
             {
-                DebugLogger.Log($"FilterJokers: No clauses, passing all seeds");
+                
                 return VectorMask.AllBitsSet;
             }
             
@@ -776,12 +737,12 @@ public struct MotelyJsonFilterDesc(
             
             if (jokerClauses.Count == 0)
             {
-                DebugLogger.Log($"FilterJokers: No joker clauses, passing all seeds");
+                
                 return VectorMask.AllBitsSet;
             }
             
             // Try vectorized path for ALL jokers including soul jokers!
-            DebugLogger.Log($"FilterJokers: Using VECTORIZED path for {jokerClauses.Count} joker clauses (including soul jokers)");
+            
             return FilterJokersVectorized(ref ctx, jokerClauses);
         }
 
@@ -919,12 +880,12 @@ public struct MotelyJsonFilterDesc(
                             {
                                 if (!isBuffoon.IsAllFalse())
                                 {
-                                    DebugLogger.Log($"Found Buffoon pack in ante {ante} slot {slot}!");
+                                    
                                 }
                                 else
                                 {
                                     // Just log it - we'll see if buffoon packs are rare in ante 1 slot 0
-                                    DebugLogger.Log($"Ante 1 slot 0: Not a Buffoon pack");
+                                    
                                 }
                             }
                             
@@ -1217,42 +1178,34 @@ public struct MotelyJsonFilterDesc(
             
             if (minAnte == int.MaxValue) return VectorMask.NoBitsSet; // No valid antes
             
-            DebugLogger.Log($"FilterSoulJokers: Processing {Clauses.Count} soul joker clauses, antes {minAnte}-{maxAnte}");
-            
-            // Use SearchIndividualSeeds for proper stream handling (like PerkeoObservatoryDesc)
+            // SoulJokers require individual seed processing like native filters
+            // But optimized like PerkeoObservatoryDesc pattern
             var clauses = Clauses; // Copy for lambda
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
                 
-                // Unified ante loop - generate soul jokers once per ante, check ALL clauses
-                for (int ante = minAnte; ante <= maxAnte; ante++)
+                // Check each clause - all must pass
+                foreach (var clause in clauses)
                 {
-                    bool anteHasClauses = false;
-                    foreach (var clause in clauses)
-                    {
-                        if (clause.EffectiveAntes?.Contains(ante) == true)
-                        {
-                            anteHasClauses = true;
-                            break;
-                        }
-                    }
-                    if (!anteHasClauses) continue;
+                    bool clausePassed = false;
                     
-                    // Check each clause for this ante using consistent stream handling
-                    foreach (var clause in clauses)
+                    // Check each ante in the clause
+                    foreach (var ante in clause.EffectiveAntes ?? new int[0])
                     {
-                        if (clause.EffectiveAntes?.Contains(ante) == true)
+                        // Use optimized CheckSingleClause for soul jokers
+                        if (MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState))
                         {
-                            bool clauseSatisfied = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
-                            if (!clauseSatisfied)
-                            {
-                                return false; // MUST clause failed
-                            }
+                            clausePassed = true;
+                            break; // Found in this ante, clause passes
                         }
                     }
+                    
+                    if (!clausePassed)
+                        return false; // This clause failed
                 }
-                return true; // All soul joker clauses satisfied
+                
+                return true; // All clauses passed
             });
         }
 

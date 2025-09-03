@@ -3,6 +3,7 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.Executors;
 using Motely.Filters;
+using Motely.Utils;
 
 namespace Motely
 {
@@ -171,35 +172,53 @@ namespace Motely
             // MUST clauses go to FILTER, not scoring - they MUST pass to continue
             var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
             
-            DebugLogger.Log($"[CreateSliceChainedSearch] scoreOnly={scoreOnly}, config.Must count={config.Must?.Count ?? 0}, mustClauses count={mustClauses.Count}");
-            foreach (var clause in mustClauses)
+            // CreateSliceChainedSearch: Processing must clauses
+            
+            // PROPER SLICING: Group clauses by category for optimal vectorization
+            var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
+            
+            if (clausesByCategory.Count == 0)
             {
-                DebugLogger.Log($"  MUST clause: {clause.ItemTypeEnum} {clause.Value}");
+                // No must clauses - create empty filter
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                    new MotelyJsonFilterDesc(FilterCategory.Joker, new List<MotelyJsonConfig.MotleyJsonFilterClause>()))
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchSize);
+                Console.WriteLine("   + No must clauses - using passthrough filter");
+            }
+            else if (clausesByCategory.Count == 1)
+            {
+                // Single category - use as base filter
+                var (category, clauses) = clausesByCategory.First();
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                    new MotelyJsonFilterDesc(category, clauses))
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchSize);
+                Console.WriteLine($"   + Single {category} filter: {clauses.Count} clauses");
+            }
+            else
+            {
+                // Multiple categories - use proper slicing with chaining
+                var categories = clausesByCategory.ToList();
+                var (baseCategory, baseClauses) = categories[0];
+                
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                    new MotelyJsonFilterDesc(baseCategory, baseClauses))
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchSize);
+                Console.WriteLine($"   + Base {baseCategory} filter: {baseClauses.Count} clauses");
+                
+                for (int i = 1; i < categories.Count; i++)
+                {
+                    var (category, clauses) = categories[i];
+                    var chainedFilter = new MotelyJsonFilterDesc(category, clauses);
+                    searchSettings = searchSettings.WithAdditionalFilter(chainedFilter);
+                    Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
+                }
             }
             
-            searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
-                new MotelyJsonFilterDesc(FilterCategory.Mixed, mustClauses))
-                .WithThreadCount(threads)
-                .WithBatchCharacterCount(batchSize);
-            
+            Console.WriteLine($"   + Filter setup complete: {mustClauses.Count} total clauses");
             return searchSettings!;
-        }
-        
-        private static FilterCategory GetFilterCategory(MotelyFilterItemType itemType)
-        {
-            return itemType switch
-            {
-                MotelyFilterItemType.Voucher => FilterCategory.Voucher,
-                MotelyFilterItemType.Joker => FilterCategory.Joker,
-                MotelyFilterItemType.SoulJoker => FilterCategory.SoulJoker, // NEW: Separate category
-                MotelyFilterItemType.TarotCard => FilterCategory.TarotCard,
-                MotelyFilterItemType.PlanetCard => FilterCategory.PlanetCard,
-                MotelyFilterItemType.SpectralCard => FilterCategory.SpectralCard,
-                MotelyFilterItemType.PlayingCard => FilterCategory.PlayingCard,
-                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => FilterCategory.Tag,
-                MotelyFilterItemType.Boss => FilterCategory.Boss,
-                _ => FilterCategory.Joker
-            };
         }
     }
 }

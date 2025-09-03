@@ -3,59 +3,50 @@
   "description": "finds copy jokers after negativetags",
   "author": "pifreak",
   "dateCreated": "2025-08-24T05:46:12.6691000Z",
-  "deck": "ghost",
+  "deck": "Ghost",
   "stake": "Black",
   "must": [
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [2]},
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [3]},
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [6]},
     {
       "type": "Joker",
       "value": "Showman",
-      "antes": [1,2,3,4,5]
+      "antes": [1,2,3,4]
     }
   ],
   "should": [
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [2]},
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [3]},
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [6]},
-    {
-      "type": "Joker",
-      "value": "Showman",
-      "antes": [1,2,3,4,5]
-    },
-    {
-      "type": "Joker",
-      "value": "OopsAll6s",
-      "antes": [2],
-      "shopSlots": [2,3,4,5,6,7,8]
-    },
+    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [2], "score": 10 },
+    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [3], "score": 10 },
+    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [4], "score": 10 },
+    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [5], "score": 10 },
+    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [6], "score": 10 },
+    { "type": "Joker", "value": "OopsAll6s", "antes": [2], "shopSlots": [2,4,6,8,10], "score": 15 },
+    { "type": "Joker", "value": "OopsAll6s", "antes": [3], "shopSlots": [2,4,6,8,10], "score": 15 },
+    { "type": "Joker", "value": "OopsAll6s", "antes": [4], "shopSlots": [2,4,6,8,10,12,14], "score": 15 },
+    { "type": "Joker", "value": "OopsAll6s", "antes": [5], "shopSlots": [2,4,6,8,10,12,14,16], "score": 15 },
+    { "type": "Joker", "value": "OopsAll6s", "antes": [6], "shopSlots": [2,4,6,8,10,12,14,16], "score": 15 },
     {
       "type": "Joker",
       "value": "OopsAll6s",
-      "antes": [6],
-      "shopSlots": [2,3,4,5,6,7,8]
-    },
-    {
-      "type": "Joker",
-      "value": "OopsAll6s",
-      "antes": [3],
-      "shopSlots": [2,3,4,5,6,7,8]
+      "edition": "Negative",
+      "antes": [1],
+      "sources": {
+        "shopSlots": [
+          0,1,2,3
+        ],
+        "packSlots": [0,1,2,3]
+      },
+      "score": 17
     },
     {
       "type": "Joker",
       "value": "OopsAll6s",
       "edition": "Negative",
-      "antes": [4,5,6,7,8],
+      "antes": [2,3,4,5,6,7,8],
       "sources": {
         "shopSlots": [
-          0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,
-          31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,
-          61,62,63,64,65,66,67,68
+          0,1,2,3,4,5,6,7,8,9,10,11,12
         ],
         "packSlots": [0,1,2,3,4,5]
-      },
-      "score": 1
+      }, "score": 18
     }
   ],
   "mustNot": []
