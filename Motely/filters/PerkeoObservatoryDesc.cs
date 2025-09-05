@@ -81,7 +81,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            // Check for Telescope and Observatory vouchers appearing in any of the first 6 antes
+            // Check for Telescope and Observatory vouchers appearing in any of the first 3 antes
             VectorMask hasTelescope = VectorMask.NoBitsSet;
             VectorMask hasObservatory = VectorMask.NoBitsSet;
             MotelyVectorRunState voucherState = new();

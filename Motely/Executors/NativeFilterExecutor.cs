@@ -17,11 +17,11 @@ namespace Motely.Executors
         private readonly string _filterName;
         private readonly string? _chainFilters;
         private readonly string? _scoreConfig;
-        private readonly SearchParameters _params;
+        private readonly JsonSearchParams _params;
         private bool _cancelled = false;
         private string? _autoScoreConfig = null; // Track auto-detected scoring
         
-        public NativeFilterExecutor(string filterName, SearchParameters parameters, string? chainFilters = null, string? scoreConfig = null)
+        public NativeFilterExecutor(string filterName, JsonSearchParams parameters, string? chainFilters = null, string? scoreConfig = null)
         {
             _filterName = filterName;
             _chainFilters = chainFilters;
@@ -147,8 +147,8 @@ namespace Motely.Executors
             settings = ApplyScoring(settings);
             settings = ApplyCsvScoring(settings, filterDesc);
             
-            settings = settings.WithStartBatchIndex(_params.StartBatch-1);
-            if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex(_params.EndBatch);
+            settings = settings.WithStartBatchIndex((long)_params.StartBatch-1);
+            if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex((long)_params.EndBatch);
             
             if (seeds != null && seeds.Count > 0)
                 return settings.WithListSearch(seeds).Start();
@@ -198,8 +198,8 @@ namespace Motely.Executors
                         
                         foreach (var (category, clauses) in clausesByCategory)
                         {
-                            var slicedFilter = new MotelyJsonFilterDesc(category, clauses);
-                            settings = settings.WithAdditionalFilter(slicedFilter);
+                            // TODO: Use specialized filters - disabled for now
+                            break;
                             Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
                         }
                         
@@ -405,7 +405,7 @@ namespace Motely.Executors
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
             
             // Use the actual tracked counts from the search
-            var lastBatch = search.CompletedBatchCount > 0 ? _params.StartBatch + search.CompletedBatchCount : 0;
+            var lastBatch = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
             
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");

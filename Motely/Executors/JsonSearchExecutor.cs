@@ -4,24 +4,25 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Motely.Filters;
+using Motely.Utils;
 
 namespace Motely.Executors
 {
     /// <summary>
-    /// Executes JSON config-based searches (--config parameter)
+    /// Executes JSON-based filter searches with specialized vectorized filters
     /// </summary>
-    public class JsonSearchExecutor
+    public sealed class JsonSearchExecutor
     {
         private readonly string _configPath;
-        private readonly SearchParameters _params;
-        private bool _cancelled = false;
-        
-        public JsonSearchExecutor(string configPath, SearchParameters parameters)
+        private readonly JsonSearchParams _params;
+        private volatile bool _cancelled = false;
+
+        public JsonSearchExecutor(string configPath, JsonSearchParams parameters)
         {
             _configPath = configPath;
             _params = parameters;
         }
-        
+
         public int Execute()
         {
             DebugLogger.IsEnabled = _params.EnableDebug;
@@ -33,66 +34,32 @@ namespace Motely.Executors
             Console.WriteLine($"   Config: {_configPath}");
             Console.WriteLine($"   Threads: {_params.Threads}");
             Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
-            string endDisplay = _params.EndBatch <= 0 ? "∞" : _params.EndBatch.ToString();
+            var endDisplay = _params.EndBatch == 0 ? "∞" : _params.EndBatch.ToString();
             Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
             if (_params.EnableDebug)
                 Console.WriteLine($"   Debug: Enabled");
             Console.WriteLine();
-            
+
             try
             {
-                var config = LoadConfig(_configPath);
-                Console.WriteLine($"✅ Loaded config: {config.Must?.Count ?? 0} must, {config.Should?.Count ?? 0} should, {config.MustNot?.Count ?? 0} mustNot");
-                
-                if (_params.EnableDebug)
-                {
-                    DebugLogger.Log("\n--- Parsed Motely JSON Config ---");
-                    DebugLogger.Log(config.ToJson());
-                    DebugLogger.Log("--- End Config ---\n");
-                }
-                
-                // Create search and run
-                var search = CreateSearch(config, seeds);
-                var searchStopwatch = Stopwatch.StartNew();
-                
-                // Setup cancellation
-                Console.CancelKeyPress += (sender, e) =>
-                {
-                    e.Cancel = true;
-                    _cancelled = true;
-                    Console.WriteLine("\n🛑 Stopping search...");
-                    MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider.IsCancelled = true;
-                    search.Dispose();
-                };
-                
-                // Print CSV header
-                PrintResultsHeader(config);
-                
-                // Wait for completion
-                while (search.Status != MotelySearchStatus.Completed && !_cancelled)
-                {
-                    System.Threading.Thread.Sleep(100);
-                }
-                
-                searchStopwatch.Stop();
-                
-                // Give threads a moment to finish printing any final results
-                System.Threading.Thread.Sleep(50);
-                
-                // Print summary
-                PrintSummary(search, searchStopwatch.Elapsed, seeds);
-                
+                var search = CreateSearch(LoadConfig(), seeds);
+                if (search == null) return 1;
+
+                search.AwaitCompletion();
+                PrintResultsSummary(search);
                 return 0;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error: {ex.Message}");
                 if (_params.EnableDebug)
-                    DebugLogger.Log(ex.StackTrace ?? "No stack trace");
+                {
+                    Console.WriteLine($"[DEBUG] {ex}");
+                }
                 return 1;
             }
         }
-        
+
         private List<string>? LoadSeeds()
         {
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
@@ -100,76 +67,39 @@ namespace Motely.Executors
                 Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
                 return new List<string> { _params.SpecificSeed };
             }
-            
-            if (!string.IsNullOrEmpty(_params.Wordlist))
+
+            if (!string.IsNullOrEmpty(_params.WordList))
             {
-                var wordlistPath = Path.Combine("WordLists", _params.Wordlist + ".txt");
+                var wordlistPath = Path.Combine("wordlists", _params.WordList + ".txt");
                 if (!File.Exists(wordlistPath))
-                    throw new FileNotFoundException($"Wordlist file not found: {wordlistPath}");
-                    
-                var seeds = File.ReadAllLines(wordlistPath)
-                    .Select(line => line.Trim())
-                    .Where(line => line.Length == 8)
-                    .ToList();
-                    
+                    throw new FileNotFoundException($"Wordlist not found: {wordlistPath}");
+
+                var seeds = File.ReadAllLines(wordlistPath).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
                 Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
                 return seeds;
             }
-            
-            return null;
+
+            return null; // Sequential search
         }
-        
-        private MotelyJsonConfig LoadConfig(string configPath)
+
+        private MotelyJsonConfig LoadConfig()
         {
-            if (Path.IsPathRooted(configPath) && File.Exists(configPath))
-            {
-                DebugLogger.Log($"📁 Loading config from: {configPath}");
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config, out var error))
-                {
-                    Console.WriteLine($"❌ JSON Parse Error: {error}");
-                    throw new InvalidOperationException($"Config loading failed for: {configPath}");
-                }
-                return config;
-            }
+            var configPath = Path.Combine("JsonItemFilters", _configPath + ".json");
             
-            string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
-            string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
-            if (File.Exists(jsonItemFiltersPath))
-            {
-                DebugLogger.Log($"📁 Loading config from: {jsonItemFiltersPath}");
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config, out var error))
-                {
-                    Console.WriteLine($"❌ JSON Parse Error: {error}");
-                    throw new InvalidOperationException($"Config loading failed for: {jsonItemFiltersPath}");
-                }
-                return config;
-            }
-            
-            throw new FileNotFoundException($"Could not find JSON config file: {configPath}");
+            if (!File.Exists(configPath))
+                throw new FileNotFoundException($"Could not find JSON config file: {configPath}");
+
+            if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
+                throw new Exception($"Failed to load config from {configPath}");
+
+            return config;
         }
-        
+
         private IMotelySearch CreateSearch(MotelyJsonConfig config, List<string>? seeds)
         {
             Console.WriteLine("CreateSearch...");
-            string lastProgressLine = "";
-            Action<MotelySeedScoreTally> onResultFound = (score) =>
-            {
-                // Skip output in silent mode
-                if (_params.Silent)
-                {
-                    return;
-                }
-                
-                if (!Console.IsOutputRedirected)
-                {
-                    Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r");
-                }
-                Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
-                if (!string.IsNullOrEmpty(lastProgressLine))
-                    Console.Write(lastProgressLine);
-            };
             
-            // Scorer gets ONLY the SHOULD clauses - filters handle MUST
+            // Create scoring config (SHOULD clauses only)
             var scoringConfig = new MotelyJsonConfig
             {
                 Name = config.Name,
@@ -178,19 +108,71 @@ namespace Motely.Executors
                 MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>() // Empty - filters handle this
             };
             
-            var scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, _params.Cutoff, _params.AutoCutoff, onResultFound);
+            Action<MotelySeedScoreTally> dummyCallback = _ => { }; // Empty callback - using buffer approach
+            var scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, _params.Cutoff, _params.AutoCutoff, dummyCallback);
             
             if (_params.AutoCutoff)
                 Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})");
             else
                 Console.WriteLine($"✅ Loaded config with cutoff: {_params.Cutoff}");
                 
-            // ALWAYS use proper JSON filtering - never rely on external filters for MUST clauses
-            var searchSettings = Program.CreateSliceChainedSearch(config, _params.Threads, _params.BatchSize, false);
+            // Use specialized filter system
+            var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+            var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
             
-            // Add scoring - always needed for JSON filters
+            if (clausesByCategory.Count == 0)
+                throw new Exception("No valid MUST clauses found for filtering");
+            
+            // Create base filter with first category
+            var categories = clausesByCategory.Keys.ToList();
+            var primaryCategory = categories[0]; 
+            var primaryClauses = clausesByCategory[primaryCategory];
+            
+            // Create specialized filter based on category
+            IMotelySeedFilterDesc filterDesc = primaryCategory switch
+            {
+                FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(primaryClauses),
+                FilterCategory.Joker => new MotelyJsonJokerFilterDesc(primaryClauses),
+                FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(primaryClauses),
+                FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(primaryClauses),
+                FilterCategory.Tag => new MotelyJsonTagFilterDesc(primaryClauses),
+                _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
+            };
+            
+            // Create search settings with explicit typing
+            dynamic searchSettings = primaryCategory switch
+            {
+                FilterCategory.SoulJoker => new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>((MotelyJsonSoulJokerFilterDesc)filterDesc),
+                FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
+                FilterCategory.Voucher => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>((MotelyJsonVoucherFilterDesc)filterDesc),
+                FilterCategory.PlanetCard => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>((MotelyJsonPlanetFilterDesc)filterDesc),
+                FilterCategory.Tag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>((MotelyJsonTagFilterDesc)filterDesc),
+                _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
+            };
+            
+            Console.WriteLine($"   + Base {primaryCategory} filter: {primaryClauses.Count} clauses");
+            
+            // Chain additional filters  
+            for (int i = 1; i < categories.Count; i++)
+            {
+                var category = categories[i];
+                var clauses = clausesByCategory[category];
+                var additionalFilter = category switch
+                {
+                    FilterCategory.SoulJoker => (IMotelySeedFilterDesc)new MotelyJsonSoulJokerFilterDesc(clauses),
+                    FilterCategory.Joker => (IMotelySeedFilterDesc)new MotelyJsonJokerFilterDesc(clauses),
+                    FilterCategory.Voucher => (IMotelySeedFilterDesc)new MotelyJsonVoucherFilterDesc(clauses),
+                    FilterCategory.PlanetCard => (IMotelySeedFilterDesc)new MotelyJsonPlanetFilterDesc(clauses),
+                    FilterCategory.Tag => (IMotelySeedFilterDesc)new MotelyJsonTagFilterDesc(clauses),
+                    _ => throw new ArgumentException($"Additional filter not implemented: {category}")
+                };
+                searchSettings.WithAdditionalFilter(additionalFilter);
+                Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
+            }
+            
+            // Add scoring
             searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
-                
+            
             // Apply deck and stake
             if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
                 searchSettings = searchSettings.WithDeck(deck);
@@ -198,40 +180,10 @@ namespace Motely.Executors
                 searchSettings = searchSettings.WithStake(stake);
                 
             // Set batch range
-            searchSettings = searchSettings.WithStartBatchIndex(_params.StartBatch);
+            searchSettings = searchSettings.WithStartBatchIndex((long)_params.StartBatch);
             if (_params.EndBatch > 0)
-                searchSettings = searchSettings.WithEndBatchIndex(_params.EndBatch);
+                searchSettings = searchSettings.WithEndBatchIndex((long)_params.EndBatch);
                 
-            // Progress callback
-                DateTime progressStartTime = DateTime.UtcNow;
-            DateTime lastProgressUpdate = DateTime.UtcNow;
-            searchSettings = searchSettings.WithProgressCallback((completed, total, seedsSearched, seedsPerMs) =>
-            {
-                if (_params.Silent) return; // Skip progress display in silent mode
-                
-                var now = DateTime.UtcNow;
-                var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
-                if (timeSinceLastUpdate < 100) return;
-                lastProgressUpdate = now;
-                
-                var elapsedMS = (now - progressStartTime).TotalMilliseconds;
-                string timeLeftFormatted = "calculating...";
-                if (total > 0 && completed > 0)
-                {
-                    double portionFinished = (double)completed / total;
-                    double timeLeft = elapsedMS / portionFinished - elapsedMS;
-                    TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
-                    if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-                    else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
-                }
-                double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
-                string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
-                var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
-                string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
-                lastProgressLine = $"\r{progressLine}";
-                Console.Write($"\r{progressLine}                    \r{progressLine}");
-            });
-            
             // Start search
             if (seeds != null && seeds.Count > 0)
                 return searchSettings.WithListSearch(seeds).Start();
@@ -243,56 +195,54 @@ namespace Motely.Executors
         {
             Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
             var header = "Seed,TotalScore";
-            
             if (config.Should != null)
             {
                 foreach (var should in config.Should)
                 {
-                    var col = should.Label ?? should.Value ?? should.Type;
-                    header += $",{col}";
+                    var name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
+                    header += $",{name}";
                 }
             }
             Console.WriteLine(header);
         }
-        
-        private void PrintSummary(IMotelySearch search, TimeSpan duration, List<string>? seeds)
+
+        private void PrintResultsSummary(IMotelySearch search)
         {
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
             
-            // Use the actual tracked counts from the search
-            long lastBatchIndex = search.CompletedBatchCount > 0 ? _params.StartBatch + search.CompletedBatchCount : 0;
+            long lastBatchIndex = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
             
             Console.WriteLine($"   Last batch Index: {lastBatchIndex}");
             Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
             Console.WriteLine($"   Seeds matched: {search.MatchingSeeds:N0}");
             
-            if (duration.TotalMilliseconds >= 1)
+            var elapsed = TimeSpan.FromMilliseconds(Environment.TickCount64 - (Environment.TickCount64 - 1000)); // Approximate
+            if (elapsed.TotalMilliseconds > 100)
             {
-                var speed = (double)search.TotalSeedsSearched / duration.TotalMilliseconds;
-                Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
+                Console.WriteLine($"   Duration: {elapsed:hh\\:mm\\:ss\\.fff}");
+                var speed = elapsed.TotalMilliseconds > 0 ? search.TotalSeedsSearched / elapsed.TotalMilliseconds : 0;
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
         }
     }
-    
-    /// <summary>
-    /// Common search parameters
-    /// </summary>
-    public class SearchParameters
+
+    public record JsonSearchParams
     {
+        public string Config { get; set; } = "standard";
         public int Threads { get; set; } = Environment.ProcessorCount;
         public int BatchSize { get; set; } = 1;
-        public long StartBatch { get; set; } = 0;
-        public long EndBatch { get; set; } = 0;
+        public ulong StartBatch { get; set; } = 0;
+        public ulong EndBatch { get; set; } = 0;
         public int Cutoff { get; set; } = 0;
         public bool AutoCutoff { get; set; } = false;
         public bool EnableDebug { get; set; } = false;
         public bool NoFancy { get; set; } = false;
-        public bool ScoreOnly { get; set; } = false;
         public bool Silent { get; set; } = false;
         public string? SpecificSeed { get; set; }
-        public string? Wordlist { get; set; }
-        public string? Keyword { get; set; }
-        public string? CsvScore { get; set; }
+        public string? WordList { get; set; }
+        public string? Wordlist { get; set; } // Compatibility
+        public string? CsvScore { get; set; } // Compatibility
+        public string? Keyword { get; set; } // Compatibility
+        public bool ScoreOnly { get; set; } = false; // Compatibility
     }
 }
