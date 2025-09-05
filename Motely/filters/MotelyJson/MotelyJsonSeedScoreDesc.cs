@@ -81,14 +81,14 @@ public struct MotelyJsonSeedScoreDesc(
         public static bool IsCancelled;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(ref MotelyVectorSearchContext searchContext, VectorMask baseFilterMask = default)
+        public VectorMask Score(ref MotelyVectorSearchContext searchContext, MotelySeedScoreTally[] buffer, VectorMask baseFilterMask = default, int scoreThreshold = 0)
         {
             if (IsCancelled)
-                return;
+                return VectorMask.NoBitsSet;
 
             // Copy fields to local variables to avoid struct closure issues
             var config = Config;
-            var cutoff = Cutoff;
+            var cutoff = scoreThreshold > 0 ? scoreThreshold : Cutoff;
             var autoCutoff = AutoCutoff;
             var onResultFound = OnResultFound;
             var scoreOnlyMode = ScoreOnlyMode;
@@ -159,7 +159,7 @@ public struct MotelyJsonSeedScoreDesc(
             {
                 preFilterMask &= kvp.Value;
                 if (preFilterMask.IsAllFalse()) 
-                    return; // No seeds pass, exit early
+                    return VectorMask.NoBitsSet; // No seeds pass, exit early
             }
             
             // If we have a base filter mask (from --native filter), combine it with our pre-filter
@@ -167,12 +167,12 @@ public struct MotelyJsonSeedScoreDesc(
             {
                 preFilterMask &= baseFilterMask;
                 if (preFilterMask.IsAllFalse()) 
-                    return; // No seeds pass, exit early
+                    return VectorMask.NoBitsSet; // No seeds pass, exit early
             }
             
             // Process individual seeds - use preFilterMask for additional filtering if needed
             // When not in ScoreOnlyMode, this should be AllBitsSet for voucher-filtered seeds
-            searchContext.SearchIndividualSeeds(preFilterMask, (ref MotelySingleSearchContext singleCtx) =>
+            return searchContext.SearchIndividualSeeds(preFilterMask, (ref MotelySingleSearchContext singleCtx) =>
             {
                 // DebugLogger.Log($"[Score] Processing individual seed"); // DISABLED FOR PERFORMANCE
                 // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
@@ -393,6 +393,9 @@ public struct MotelyJsonSeedScoreDesc(
                     }
                     
                     var seedScore = new MotelySeedScoreTally(seedStr, totalScore, scores);
+                    
+                    // Write to buffer AND call callback for compatibility
+                    buffer[singleCtx.VectorLane] = seedScore;
                     onResultFound(seedScore); // RICH CALLBACK!
                     
                     return true; // Tell framework this seed passed
