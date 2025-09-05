@@ -41,8 +41,9 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
 
         public readonly bool CheckSeed(ref MotelySingleSearchContext ctx)
         {
-            // Create run state to track activated vouchers and boss state across antes
-            MotelyRunState runState = new();
+            // Create voucher state to track activated vouchers across antes
+            MotelyRunState voucherState = new();
+            MotelySingleBossStream bossStream = ctx.CreateBossStream();
 
             List<MotelyAnteAnalysis> antes = [];
 
@@ -59,8 +60,8 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
                     BuffoonStream = default
                 };
 
-                // Boss - pass run state to maintain boss tracking across antes
-                MotelyBossBlind boss = ctx.GetBossForAnte(ante, ref runState);
+                // Boss
+                MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, ref voucherState);
 
                 // Voucher - get with state for proper progression
                 MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, runState);
