@@ -6,63 +6,70 @@ namespace Motely;
 
 public ref struct MotelyRunState
 {
+
+    private static readonly int FinisherBossBlindMask;
+    private static readonly int NormalBossBlindMask;
+
     static MotelyRunState()
     {
         // Check that we can fit all the voucher state in an int
-        if (MotelyEnum<MotelyVoucher>.ValueCount > 32)
+        if (MotelyEnum<MotelyVoucher>.ValueCount > sizeof(int) * 8)
             throw new UnreachableException();
+
+        // Check that we can fit all the bosses state in an int
+        if (MotelyEnum<MotelyBossBlind>.ValueCount > sizeof(int) * 8)
+            throw new UnreachableException();
+
+
+        FinisherBossBlindMask = 0;
+        NormalBossBlindMask = 0;
+        foreach (MotelyBossBlind bossBlind in MotelyEnum<MotelyBossBlind>.Values)
+        {
+            if (bossBlind.GetBossType() == MotelyBossBlindType.Finisher)
+            {
+                FinisherBossBlindMask |= 1 << bossBlind.GetBossIndex();
+            }
+            else
+            {
+                NormalBossBlindMask |= 1 << bossBlind.GetBossIndex();
+            }
+        }
+
+
     }
+
     public int VoucherBitfield;
-    public bool ShowmanActive;
-    public MotelySingleItemSet OwnedJokers;
-
-    public HashSet<MotelyBossBlind> UsedBosses;
-    public int LastProcessedBossAnte;
-
-    public void InitializeBossTracking()
-    {
-        UsedBosses ??= new HashSet<MotelyBossBlind>();
-        LastProcessedBossAnte = 0;
-    }
-    
-    public void MarkBossUsed(MotelyBossBlind boss)
-    {
-        UsedBosses ??= new HashSet<MotelyBossBlind>();
-        UsedBosses.Add(boss);
-    }
-    
-    public void IncrementBossAnte()
-    {
-        LastProcessedBossAnte++;
-    }
-    
-    public void ClearUsedBosses(Predicate<MotelyBossBlind> predicate)
-    {
-        UsedBosses?.RemoveWhere(predicate);
-    }
+    public int BossBitfield;
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {
         VoucherBitfield |= 1 << (int)voucher;
     }
 
-    public bool IsVoucherActive(MotelyVoucher voucher)
+    public readonly bool IsVoucherActive(MotelyVoucher voucher)
     {
-        return (VoucherBitfield & (1 << (int) voucher)) != 0;
+        return (VoucherBitfield & (1 << (int)voucher)) != 0;
     }
 
-    public void ActivateShowman()
+    public void SeeBoss(MotelyBossBlind boss)
     {
-        ShowmanActive = true;
+        BossBitfield |= 1 << boss.GetBossIndex();
     }
-    
-    public void AddOwnedJoker(MotelyItem joker)
+
+    public readonly bool HasSeenBoss(MotelyBossBlind boss)
     {
-        // Check if we haven't exceeded the max capacity
-        if (OwnedJokers.Length < MotelySingleItemSet.MaxLength)
-        {
-            OwnedJokers.Append(joker);
-        }
-        // If at max capacity, we just won't track more jokers (edge case)
+        return (BossBitfield & (1 << boss.GetBossIndex())) != 0;
+    }
+
+    public void ResetFinisherBosses()
+    {
+        // Only allow normal boss bits to be set
+        BossBitfield &= NormalBossBlindMask;
+    }
+
+    public void ResetNormalBosses()
+    {
+        // Only allow finisher boss bits to be set
+        BossBitfield &= FinisherBossBlindMask;
     }
 }

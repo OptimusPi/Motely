@@ -6,26 +6,30 @@ public sealed class AnalyzerUnitTests
 {
 
     [Theory]
-    [InlineData("UNITTEST")]
+    [InlineData("1234567")]
+    [InlineData("12345678")]
     [InlineData("ALEEB")]
     [InlineData("ALEEBOOO")]
-    [InlineData("12345678")]
-    [InlineData("1234567")]
+    [InlineData("UNITTES")]
+    [InlineData("UNITTEST")]
     [InlineData("KK1XD111", MotelyDeck.Ghost, MotelyStake.Black)]
-    public async Task TestAnalyzer_Seeds(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
+    public async Task TestAnalyzer(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
     {
-        // Arrange
-        // seed param passed in via InlineData from Theory attribute
-
-        // Act
-        var actualOutput = GetAnalyzerOutput(seed, deck, stake);
+        string actualOutput = GetAnalyzerOutput(seed, deck, stake);
 
         // Assert using Verify - this will create a nice diff view
         await Verify(actualOutput)
-            .UseFileName($"analyzer_output_{seed}");
+            .UseFileName(seed)
+            .UseDirectory("seeds");
     }
 
     private string GetAnalyzerOutput(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
+    {
+        return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
+    }
+
+    // This method is now only used by other tests that don't use Verify yet
+    private void AssertOutputsMatch(string expected, string actual, string seed)
     {
         return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
