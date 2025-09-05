@@ -72,12 +72,12 @@ namespace Motely
                 }
 
                 // Build common parameters
-                var parameters = new SearchParameters
+                var parameters = new JsonSearchParams
                 {
                     Threads = threadsOption.ParsedValue,
                     BatchSize = batchSizeOption.ParsedValue,
-                    StartBatch = (long)startBatchOption.ParsedValue,
-                    EndBatch = endBatchOption.ParsedValue,
+                    StartBatch = (ulong)startBatchOption.ParsedValue,
+                    EndBatch = (ulong)endBatchOption.ParsedValue,
                     EnableDebug = debugOption.HasValue(),
                     NoFancy = noFancyOption.HasValue(),
                     Silent = silentOption.HasValue(),
@@ -99,7 +99,7 @@ namespace Motely
 
                 // Validate batch ranges
                 long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
-                if (parameters.EndBatch > maxBatches)
+                if ((long)parameters.EndBatch > maxBatches)
                 {
                     Console.WriteLine($"❌ endBatch too large: {parameters.EndBatch} (max for batchSize {parameters.BatchSize}: {maxBatches:N0})");
                     return 1;
@@ -164,10 +164,11 @@ namespace Motely
             return 0;
         }
 
-        // Keep this helper function since it's used by JsonSearchExecutor
-        public static MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter> CreateSliceChainedSearch(MotelyJsonConfig config, int threads, int batchSize, bool scoreOnly = false)
+        // TODO: Fix this method after specialized filters are complete
+        /*
+        public static MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter> CreateSliceChainedSearch(MotelyJsonConfig config, int threads, int batchSize, bool scoreOnly = false)
         {
-            MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>? searchSettings = null;
+            MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>? searchSettings = null;
             
             // MUST clauses go to FILTER, not scoring - they MUST pass to continue
             var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
@@ -180,7 +181,7 @@ namespace Motely
             if (clausesByCategory.Count == 0)
             {
                 // No must clauses - create empty filter
-                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyJsonFilter>(
                     new MotelyJsonFilterDesc(FilterCategory.Joker, new List<MotelyJsonConfig.MotleyJsonFilterClause>()))
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize);
@@ -190,7 +191,7 @@ namespace Motely
             {
                 // Single category - use as base filter
                 var (category, clauses) = clausesByCategory.First();
-                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyJsonFilter>(
                     new MotelyJsonFilterDesc(category, clauses))
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize);
@@ -202,7 +203,7 @@ namespace Motely
                 var categories = clausesByCategory.ToList();
                 var (baseCategory, baseClauses) = categories[0];
                 
-                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyFilter>(
+                searchSettings = new MotelySearchSettings<MotelyJsonFilterDesc.MotelyJsonFilter>(
                     new MotelyJsonFilterDesc(baseCategory, baseClauses))
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchSize);
@@ -220,5 +221,6 @@ namespace Motely
             Console.WriteLine($"   + Filter setup complete: {mustClauses.Count} total clauses");
             return searchSettings!;
         }
+        */
     }
 }

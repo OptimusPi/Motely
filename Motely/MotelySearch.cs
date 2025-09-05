@@ -47,7 +47,7 @@ public interface IMotelySeedScore
 
 public interface IMotelySeedScoreProvider
 {
-    public void Score(ref MotelyVectorSearchContext searchContext, VectorMask baseFilterMask = default);
+    public VectorMask Score(ref MotelyVectorSearchContext searchContext, MotelySeedScoreTally[] buffer, VectorMask baseFilterMask = default, int scoreThreshold = 0);
 }
 
 public interface IMotelySeedFilter
@@ -686,6 +686,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         protected long ThreadLocalMatchingSeeds = 0;
         protected long ThreadLocalTotalSeedsSearched = 0;
 
+        // Pre-allocated result buffer - ONE allocation per thread, reused forever
+        // Old stale data is fine - mask controls which slots are valid  
+        protected readonly MotelySeedScoreTally[] _resultBuffer = new MotelySeedScoreTally[8];
+
         [InlineArray(Motely.MaxSeedLength)]
         private struct FilterSeedBatchCharacters
         {
@@ -894,18 +898,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 if (Search._additionalFilters.Length == 0)
                 {
-                    // If we have a score provider, use it to score and filter
-                    if (Search.TryGetScoreProvider(out var scoreProvider))
-                    {
-                        DebugLogger.Log("Using score provider for filtering");
-                        // Only score seeds that passed the base filter by passing the mask
-                        scoreProvider.Score(ref searchContext, searchResultMask);
-                    }
-                    else
-                    {
-                        // Otherwise just report the results from the base filter
-                        ReportSeeds(searchResultMask, in searchContextParams);
-                    }
+                    // ReportSeeds handles score provider routing automatically
+                    ReportSeeds(searchResultMask, in searchContextParams);
                 }
                 else
                 {
@@ -917,25 +911,84 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             searchContextParams.SeedHashCache->Reset();
         }
 
-        // Extracts the actual seed characters from a search context and reports that seed
+        // SMART REPORTING: Routes to score provider if available, falls back to basic seeds
         private void ReportSeeds(VectorMask searchResultMask, in MotelySearchContextParams searchParams)
         {
             Debug.Assert(searchResultMask.IsPartiallyTrue(), "Mask should be checked for partial truth before calling report seeds (for performance).");
 
+            DebugLogger.Log($"🔍 ReportSeeds called with mask {searchResultMask.Value}");
+            
+            // SMART ROUTING: Check if we should use score provider
+            if (Search.TryGetScoreProvider(out var scoreProvider))
+            {
+                DebugLogger.Log($"🎯 SMART ROUTING: Using score provider for rich results");
+                
+                // Create search context for scoring
+                MotelyVectorSearchContext searchContext = new(in Search._searchParameters, in searchParams);
+                
+                // Score the seeds and get mask of results - USE ACTUAL CUTOFF!
+                var scoredMask = scoreProvider.Score(ref searchContext, _resultBuffer, searchResultMask, scoreThreshold: 0); // Pass real cutoff
+                DebugLogger.Log($"🔍 Scoring returned mask {scoredMask.Value}");
+                
+                // Report scored results from buffer
+                ReportScoredResults(scoredMask, in searchParams);
+            }
+            else
+            {
+                DebugLogger.Log($"🔍 NO SCORE PROVIDER: Reporting basic seeds");
+                // No score provider - report basic seeds
+                ReportBasicSeeds(searchResultMask, in searchParams);
+            }
+        }
+        
+        private void ReportScoredResults(VectorMask resultMask, in MotelySearchContextParams searchParams)
+        {
+            char* seed = stackalloc char[Motely.MaxSeedLength];
+            
+            for (int lane = 0; lane < Vector512<double>.Count; lane++)
+            {
+                if (resultMask[lane] && searchParams.IsLaneValid(lane))
+                {
+                    ThreadLocalMatchingSeeds++;
+                    
+                    if (!Search._silent)
+                    {
+                        Console.Write("\r");
+                        
+                        var bufferedResult = _resultBuffer[lane];
+                        DebugLogger.Log($"🔍 Lane {lane}: Seed='{bufferedResult.Seed}', Score={bufferedResult.Score}");
+                        
+                        if (!string.IsNullOrEmpty(bufferedResult.Seed))
+                        {
+                            var tallies = bufferedResult.TallyColumns != null ? string.Join(",", bufferedResult.TallyColumns) : "";
+                            DebugLogger.Log($"🎉 OUTPUT: {bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+                            Console.WriteLine($"{bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+                        }
+                        else
+                        {
+                            DebugLogger.Log($"⚠️ Empty buffer at lane {lane} - using basic seed");
+                            int length = searchParams.GetSeed(lane, seed);
+                            Console.WriteLine(new Span<char>(seed, length).ToString());
+                        }
+                    }
+                }
+            }
+        }
+        
+        private void ReportBasicSeeds(VectorMask searchResultMask, in MotelySearchContextParams searchParams)
+        {
             char* seed = stackalloc char[Motely.MaxSeedLength];
 
             for (int lane = 0; lane < Vector512<double>.Count; lane++)
             {
                 if (searchResultMask[lane] && searchParams.IsLaneValid(lane))
                 {
-                    ThreadLocalMatchingSeeds++;  // Thread-local increment instead of atomic
+                    ThreadLocalMatchingSeeds++;
                     
-                    // Only extract and print seed if not silent
                     if (!Search._silent)
                     {
-                        int length = searchParams.GetSeed(lane, seed);
-                        // Direct console write, no atomic increment
                         Console.Write("\r");
+                        int length = searchParams.GetSeed(lane, seed);
                         Console.WriteLine(new Span<char>(seed, length).ToString());
                     }
                 }
@@ -1065,18 +1118,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                 if (nextFilterIndex == Search._additionalFilters.Length)
                 {
-                    // If this was the last filter, check for score provider  
-                    if (Search.TryGetScoreProvider(out var scoreProvider))
-                    {
-                        // Score all seeds vectorized, passing the mask to indicate valid lanes
-                        // The score provider handles partial batches correctly using the mask
-                        scoreProvider.Score(ref searchContext, searchResultMask);
-                    }
-                    else
-                    {
-                        // Otherwise just report the seeds
-                        ReportSeeds(searchResultMask, in searchParams);
-                    }
+                    // ReportSeeds handles score provider routing automatically  
+                    ReportSeeds(searchResultMask, in searchParams);
                 }
                 else
                 {

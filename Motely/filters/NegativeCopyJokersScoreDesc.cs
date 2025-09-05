@@ -59,28 +59,25 @@ public struct NegativeCopyJokersScoreDesc(
     {
         private readonly int _cutoff;
         private readonly bool _autoCutoff;
-        private readonly Action<NegativeCopyJokersScore> _onResultFound;
-        
         public NegativeCopyJokersScoreProvider(int cutoff, bool autoCutoff, Action<NegativeCopyJokersScore> onResultFound)
         {
             _cutoff = cutoff;
             _autoCutoff = autoCutoff;
-            _onResultFound = onResultFound;
+            // onResultFound no longer needed - we use buffer directly!
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void Score(ref MotelyVectorSearchContext searchContext, VectorMask baseFilterMask = default)
+        public readonly VectorMask Score(ref MotelyVectorSearchContext searchContext, MotelySeedScoreTally[] buffer, VectorMask baseFilterMask = default, int scoreThreshold = 0)
         {
-            var cutoff = _cutoff;
+            var cutoff = scoreThreshold > 0 ? scoreThreshold : _cutoff;
             var autoCutoff = _autoCutoff;
-            var onResultFound = _onResultFound;
             
             // Caller MUST provide a valid mask with at least some bits set
             System.Diagnostics.Debug.Assert(baseFilterMask.IsPartiallyTrue(), 
                 "Score() called with empty mask - this is a bug in the calling code!");
             
             // Process each seed that already passed the base filter
-            searchContext.SearchIndividualSeeds(baseFilterMask, (ref MotelySingleSearchContext ctx) =>
+            return searchContext.SearchIndividualSeeds(baseFilterMask, (ref MotelySingleSearchContext ctx) =>
             {
                 int blueprintCount = 0;
                 int brainstormCount = 0;
@@ -217,15 +214,16 @@ public struct NegativeCopyJokersScoreDesc(
                 }
                 
                 // Create score object and notify
-                var score = new NegativeCopyJokersScore(
-                    seedStr, endScore,
+                // Convert to MotelySeedScoreTally for buffer compatibility
+                var tallies = new List<int> { 
                     showmanCount, blueprintCount, brainstormCount, invisibleCount,
-                    negativeShowmanCount, negativeBlueprint, negativeBrainstorm, negativeInvisible
-                );
+                    negativeShowmanCount, negativeBlueprint, negativeBrainstorm, negativeInvisible 
+                };
                 
-                onResultFound(score);
+                // Write to buffer at current lane position - NO CALLBACK!
+                buffer[ctx.VectorLane] = new MotelySeedScoreTally(seedStr, endScore, tallies);
                 
-                return true; // Continue processing
+                return true; // This seed passed
             });
         }
         
