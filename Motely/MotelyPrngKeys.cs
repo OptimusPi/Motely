@@ -44,7 +44,7 @@ public static class MotelyPrngKeys
 
     public const string Tags = "Tag";
     public const string Boss = "boss";
-
+    
     public const string ShopItemType = "cdt";
     public const string ShopItemSource = "sho";
     public const string ShopJokerEternalPerishableSource = "etperpoll";
