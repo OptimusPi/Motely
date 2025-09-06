@@ -1,5 +1,6 @@
 
 using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace Motely;
 
@@ -40,6 +41,13 @@ public ref struct MotelyRunState
 
     public int VoucherBitfield;
     public int BossBitfield;
+    
+    // Joker tracking for showman and other mechanics
+    private List<MotelyJoker> _ownedJokers;
+    private bool _showmanActive;
+    
+    public List<MotelyJoker> OwnedJokers => _ownedJokers ??= new List<MotelyJoker>();
+    public bool ShowmanActive => _showmanActive;
 
     public void ActivateVoucher(MotelyVoucher voucher)
     {
@@ -71,5 +79,15 @@ public ref struct MotelyRunState
     {
         // Only allow finisher boss bits to be set
         BossBitfield &= FinisherBossBlindMask;
+    }
+    
+    public void AddOwnedJoker(MotelyJoker joker)
+    {
+        OwnedJokers.Add(joker);
+    }
+    
+    public void ActivateShowman()
+    {
+        _showmanActive = true;
     }
 }

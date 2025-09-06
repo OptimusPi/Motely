@@ -41,12 +41,10 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
+            // Keep existing working logic but optimize it later
             var clausesForLambda = _clauses;
-            
-            // COPY NATIVE NEGATIVECOPYJOKERS LOGIC EXACTLY
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                // Check each joker clause using EXACT native pattern
                 foreach (var clause in clausesForLambda)
                 {
                     var runState = new MotelyRunState();
@@ -54,7 +52,7 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                     if (!found) return false;
                 }
                 
-                return true; // All joker clauses satisfied
+                return true;
             });
         }
     }
