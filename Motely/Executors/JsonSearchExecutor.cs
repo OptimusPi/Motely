@@ -123,6 +123,8 @@ namespace Motely.Executors
             if (clausesByCategory.Count == 0)
                 throw new Exception("No valid MUST clauses found for filtering");
             
+            // Boss filter now works with proper ante-loop structure
+            
             // Create base filter with first category
             var categories = clausesByCategory.Keys.ToList();
             var primaryCategory = categories[0]; 
@@ -135,6 +137,10 @@ namespace Motely.Executors
                 FilterCategory.Joker => new MotelyJsonJokerFilterDesc(primaryClauses),
                 FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(primaryClauses),
                 FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(primaryClauses),
+                FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(primaryClauses),
+                FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(primaryClauses),
+                FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(primaryClauses),
+                FilterCategory.Boss => new MotelyJsonBossFilterDesc(primaryClauses), // RE-ENABLED with proper structure
                 FilterCategory.Tag => new MotelyJsonTagFilterDesc(primaryClauses),
                 _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
             };
@@ -146,6 +152,10 @@ namespace Motely.Executors
                 FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
                 FilterCategory.Voucher => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>((MotelyJsonVoucherFilterDesc)filterDesc),
                 FilterCategory.PlanetCard => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>((MotelyJsonPlanetFilterDesc)filterDesc),
+                FilterCategory.TarotCard => new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>((MotelyJsonTarotCardFilterDesc)filterDesc),
+                FilterCategory.SpectralCard => new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>((MotelyJsonSpectralCardFilterDesc)filterDesc),
+                FilterCategory.PlayingCard => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>((MotelyJsonPlayingCardFilterDesc)filterDesc),
+                FilterCategory.Boss => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>((MotelyJsonBossFilterDesc)filterDesc),
                 FilterCategory.Tag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>((MotelyJsonTagFilterDesc)filterDesc),
                 _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
             };
@@ -163,6 +173,10 @@ namespace Motely.Executors
                     FilterCategory.Joker => (IMotelySeedFilterDesc)new MotelyJsonJokerFilterDesc(clauses),
                     FilterCategory.Voucher => (IMotelySeedFilterDesc)new MotelyJsonVoucherFilterDesc(clauses),
                     FilterCategory.PlanetCard => (IMotelySeedFilterDesc)new MotelyJsonPlanetFilterDesc(clauses),
+                    FilterCategory.TarotCard => (IMotelySeedFilterDesc)new MotelyJsonTarotCardFilterDesc(clauses),
+                    FilterCategory.SpectralCard => (IMotelySeedFilterDesc)new MotelyJsonSpectralCardFilterDesc(clauses),
+                    FilterCategory.PlayingCard => (IMotelySeedFilterDesc)new MotelyJsonPlayingCardFilterDesc(clauses),
+                    FilterCategory.Boss => (IMotelySeedFilterDesc)new MotelyJsonBossFilterDesc(clauses), // RE-ENABLED
                     FilterCategory.Tag => (IMotelySeedFilterDesc)new MotelyJsonTagFilterDesc(clauses),
                     _ => throw new ArgumentException($"Additional filter not implemented: {category}")
                 };
@@ -179,7 +193,9 @@ namespace Motely.Executors
             if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse<MotelyStake>(config.Stake, true, out var stake))
                 searchSettings = searchSettings.WithStake(stake);
                 
-            // Set batch range
+            // Set batch configuration
+            searchSettings = searchSettings.WithThreadCount(_params.Threads);
+            searchSettings = searchSettings.WithBatchCharacterCount(_params.BatchSize);
             searchSettings = searchSettings.WithStartBatchIndex((long)_params.StartBatch);
             if (_params.EndBatch > 0)
                 searchSettings = searchSettings.WithEndBatchIndex((long)_params.EndBatch);
@@ -216,7 +232,7 @@ namespace Motely.Executors
             Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
             Console.WriteLine($"   Seeds matched: {search.MatchingSeeds:N0}");
             
-            var elapsed = TimeSpan.FromMilliseconds(Environment.TickCount64 - (Environment.TickCount64 - 1000)); // Approximate
+            var elapsed = search.ElapsedTime;
             if (elapsed.TotalMilliseconds > 100)
             {
                 Console.WriteLine($"   Duration: {elapsed:hh\\:mm\\:ss\\.fff}");
