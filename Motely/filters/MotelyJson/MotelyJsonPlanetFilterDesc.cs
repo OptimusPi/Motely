@@ -43,25 +43,43 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterC
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            var anteClauses = new Dictionary<int, List<MotelyJsonConfig.MotleyJsonFilterClause>>();
+            // OPTIMIZED: No Dictionary, find min/max antes
+            int minAnte = 8, maxAnte = 1;
             foreach (var clause in _clauses)
             {
-                foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+                if (clause.EffectiveAntes != null)
                 {
-                    if (!anteClauses.ContainsKey(ante))
-                        anteClauses[ante] = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-                    anteClauses[ante].Add(clause);
+                    for (int i = 0; i < clause.EffectiveAntes.Length; i++)
+                    {
+                        var ante = clause.EffectiveAntes[i];
+                        if (ante < minAnte) minAnte = ante;
+                        if (ante > maxAnte) maxAnte = ante;
+                    }
                 }
             }
             
             var resultMask = VectorMask.AllBitsSet;
             
-            foreach (var ante in anteClauses.Keys.OrderBy(x => x))
+            // Process only required ante range  
+            for (int ante = minAnte; ante <= maxAnte; ante++)
             {
-                var clausesForThisAnte = anteClauses[ante];
-                
-                foreach (var clause in clausesForThisAnte)
+                foreach (var clause in _clauses)
                 {
+                    // Fast ante check - skip if not relevant for this clause
+                    bool relevantAnte = false;
+                    if (clause.EffectiveAntes != null)
+                    {
+                        for (int i = 0; i < clause.EffectiveAntes.Length; i++)
+                        {
+                            if (clause.EffectiveAntes[i] == ante)
+                            {
+                                relevantAnte = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!relevantAnte) continue;
+                    
                     var clauseMask = VectorMask.NoBitsSet;
                     
                     // Check pack slots (Celestial packs for planets)

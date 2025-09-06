@@ -37,7 +37,7 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
             var wouldBe = searchContext.GetNextJoker(ref soulStream);
             if (wouldBe.Type != MotelyItemType.Perkeo || wouldBe.Edition != MotelyItemEdition.Negative) return false;
 
-            for (int i = 0; i < 2 + ante; i++)
+            for (int i = 0; i < 4; i++)
             {
                 if (!boosterPackStreamInit)
                 {

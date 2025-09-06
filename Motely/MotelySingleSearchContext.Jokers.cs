@@ -154,7 +154,7 @@ unsafe ref partial struct MotelySingleSearchContext
         MotelySingleItemSet pack = new();
 
         for (int i = 0; i < size; i++)
-            pack.Append(GetNextJoker(ref jokerStream, ref pack));
+            pack.Append(GetNextJoker(ref jokerStream, in pack));
 
         return pack;
     }
@@ -200,25 +200,6 @@ unsafe ref partial struct MotelySingleSearchContext
                joker != MotelyItemType.TurtleBean;
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
-    private static bool CanBeEternal(MotelyItem item)
-    {
-        // Jokers that self-destruct or activate on sell cannot receive the Eternal Sticker
-        var joker = (MotelyJoker)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-        return joker != MotelyJoker.Cavendish && 
-               joker != MotelyJoker.DietCola &&
-               joker != MotelyJoker.GrosMichel && 
-               joker != MotelyJoker.IceCream && 
-               joker != MotelyJoker.InvisibleJoker &&
-               joker != MotelyJoker.Luchador &&
-               joker != MotelyJoker.MrBones &&
-               joker != MotelyJoker.Popcorn && 
-               joker != MotelyJoker.Ramen && 
-               joker != MotelyJoker.Seltzer && 
-               joker != MotelyJoker.TurtleBean;
-    }
 
     private MotelyItem ApplyNextStickers(MotelyItem item, ref MotelySinglePrngStream eternalPerishableStream, ref MotelySinglePrngStream rentalStream)
     {
@@ -295,7 +276,7 @@ unsafe ref partial struct MotelySingleSearchContext
     {
         Debug.Assert(stream.ResampleKey != null, "Joker stream should have resample key for duplicate handling in packs");
         
-        MotelyItem joker = GetNextJoker(ref stream);
+        MotelyItem joker = GetNextJokerInternal(ref stream, in Unsafe.NullRef<MotelySingleItemSet>());
         
         // If we got an excluded joker, don't check for duplicates
         if (joker.Type == MotelyItemType.JokerExcludedByStream)
@@ -372,12 +353,12 @@ unsafe ref partial struct MotelySingleSearchContext
     }
     
     public MotelyItem GetNextJoker(ref MotelySingleJokerStream stream)
-        => GetNextJoker(ref stream, ref Unsafe.NullRef<MotelySingleItemSet>());
+        => GetNextJokerInternal(ref stream, in Unsafe.NullRef<MotelySingleItemSet>());
 
 #if !DEBUG
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelyItem GetNextJoker(ref MotelySingleJokerStream stream, ref MotelySingleItemSet items)
+    private MotelyItem GetNextJokerInternal(ref MotelySingleJokerStream stream, in MotelySingleItemSet items)
     {
         MotelyJoker joker;
         MotelyJokerRarity rarity;
@@ -421,7 +402,7 @@ unsafe ref partial struct MotelySingleSearchContext
             joker = GetNextJoker<MotelyJokerCommon>(ref stream.CommonJokerPrngStream, MotelyJokerRarity.Common);
         }
 
-        if (!Unsafe.IsNullRef(ref items))
+        if (!Unsafe.IsNullRef(in items))
         {
             if (items.Contains((MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)joker)))
             {

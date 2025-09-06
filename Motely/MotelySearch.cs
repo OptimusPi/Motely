@@ -260,6 +260,7 @@ public interface IMotelySearch : IDisposable
     public long CompletedBatchCount { get; }
     public long TotalSeedsSearched { get; }
     public long MatchingSeeds { get; }
+    public TimeSpan ElapsedTime { get; }
 
     public void Start();
     public void AwaitCompletion();
@@ -334,6 +335,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public long CompletedBatchCount => _completedBatchIndex;
     private long _totalSeedsSearched;
     public long TotalSeedsSearched => _totalSeedsSearched;
+    public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
     private long _matchingSeeds;
     public long MatchingSeeds => _matchingSeeds;
 
@@ -532,7 +534,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         long thisCompletedCount = _completedBatchIndex - _startBatchIndex;
 
         // Determine effective exclusive end of range (handles configured end batch and thread max)
-        long effectiveMaxExclusive = _threads[0].MaxBatch;
+        // Use actual endBatch parameter instead of total possible batches
+        long effectiveMaxExclusive = _endBatchIndex != long.MaxValue ? _endBatchIndex : _threads[0].MaxBatch;
         if (effectiveMaxExclusive <= _startBatchIndex) // fallback guard
             effectiveMaxExclusive = _startBatchIndex + 1;
 
@@ -1339,6 +1342,11 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         static MotelySequentialSearchThread()
         {
+            InitializeSeedDigitVectors();
+        }
+        
+        private static void InitializeSeedDigitVectors()
+        {
             Span<double> vector = stackalloc double[Vector512<double>.Count];
 
             for (int i = 0; i < SeedDigitVectors.Length; i++)
@@ -1414,10 +1422,13 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 *(double*)&hashes[pseudohashKeyIdx] = num;
             }
 
-            // Start searching
+            // Start searching with bounds safety
             for (int vectorIndex = 0; vectorIndex < SeedDigitVectors.Length; vectorIndex++)
             {
-                SearchVector(_batchCharCount - 1, SeedDigitVectors[vectorIndex], hashes, 0);
+                if (vectorIndex >= 0 && vectorIndex < SeedDigitVectors.Length) // Extra safety check
+                {
+                    SearchVector(_batchCharCount - 1, SeedDigitVectors[vectorIndex], hashes, 0);
+                }
             }
         }
 

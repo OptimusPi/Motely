@@ -78,6 +78,17 @@ namespace Motely.Filters
                     continue;
                 }
                 
+                // CRITICAL: Detect common casing mistakes that cause silent failures
+                if (string.IsNullOrEmpty(item.Value) && !string.IsNullOrEmpty(item.Type))
+                {
+                    var rawJson = System.Text.Json.JsonSerializer.Serialize(item);
+                    if (rawJson.Contains("\"Value\"") || rawJson.Contains("\"Antes\"") || rawJson.Contains("\"Edition\""))
+                    {
+                        errors.Add($"{prefix}: Invalid property casing - use lowercase 'value', 'antes', 'edition' (found uppercase in JSON)");
+                        continue;
+                    }
+                }
+                
                 // Validate value based on type
                 switch (item.Type.ToLower())
                 {

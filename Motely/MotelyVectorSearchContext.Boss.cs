@@ -19,14 +19,10 @@ public struct MotelyVectorBossStream
         var bossCount = Enum.GetValues<MotelyBossBlind>().Length;
         Locked = new Vector256<int>[bossCount];
         
-        // Initialize: -1 for non-boss (small/big), 0 for unlocked bosses
+        // Initialize: all boss blinds start unlocked
         for (int i = 0; i < bossCount; i++)
         {
-            var boss = (MotelyBossBlind)i;
-            if (boss == MotelyBossBlind.SmallBlind || boss == MotelyBossBlind.BigBlind)
-                Locked[i] = Vector256.Create(-1); // Non-boss marker
-            else
-                Locked[i] = Vector256<int>.Zero; // All lanes unlocked
+            Locked[i] = Vector256<int>.Zero; // All lanes unlocked
         }
     }
 }
@@ -94,7 +90,7 @@ ref partial struct MotelyVectorSearchContext
             for (int i = 0; i < BOSSES.Length; i++)
             {
                 var boss = BOSSES[i];
-                bool isLocked = stream.Locked[(int)boss][lane] == 1;
+                bool isLocked = stream.Locked[boss.GetBossIndex()][lane] == 1;
                 
                 if (!isLocked)
                 {
@@ -116,7 +112,7 @@ ref partial struct MotelyVectorSearchContext
                     // Unlock finisher bosses
                     for (int i = FINISHER_START_INDEX; i < BOSSES.Length; i++)
                     {
-                        stream.Locked[(int)BOSSES[i]] = stream.Locked[(int)BOSSES[i]].WithElement(lane, 0);
+                        stream.Locked[BOSSES[i].GetBossIndex()] = stream.Locked[BOSSES[i].GetBossIndex()].WithElement(lane, 0);
                     }
                 }
                 else
@@ -124,7 +120,7 @@ ref partial struct MotelyVectorSearchContext
                     // Unlock regular bosses
                     for (int i = 0; i < FINISHER_START_INDEX; i++)
                     {
-                        stream.Locked[(int)BOSSES[i]] = stream.Locked[(int)BOSSES[i]].WithElement(lane, 0);
+                        stream.Locked[BOSSES[i].GetBossIndex()] = stream.Locked[BOSSES[i].GetBossIndex()].WithElement(lane, 0);
                     }
                 }
                 
@@ -132,7 +128,7 @@ ref partial struct MotelyVectorSearchContext
                 for (int i = 0; i < BOSSES.Length; i++)
                 {
                     var boss = BOSSES[i];
-                    bool isLocked = stream.Locked[(int)boss][lane] == 1;
+                    bool isLocked = stream.Locked[boss.GetBossIndex()][lane] == 1;
                     
                     if (!isLocked)
                     {
@@ -158,7 +154,7 @@ ref partial struct MotelyVectorSearchContext
                 results[lane] = (int)selected;
                 
                 // Lock the selected boss
-                stream.Locked[(int)selected] = stream.Locked[(int)selected].WithElement(lane, 1);
+                stream.Locked[selected.GetBossIndex()] = stream.Locked[selected.GetBossIndex()].WithElement(lane, 1);
             }
             else
             {

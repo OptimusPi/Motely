@@ -91,14 +91,31 @@ public struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilt
                     
                     foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
                     {
-                        var packStream = singleCtx.CreateBoosterPackStream(ante, true, false);
-                        for (int i = 0; i < 3; i++)
+                        // EXACT NATIVE PATTERN: Initialize streams with flags
+                        MotelySingleBoosterPackStream boosterPackStream = default;
+                        MotelySingleTarotStream tarotStream = default;
+                        MotelySingleSpectralStream spectralStream = default;
+                        bool boosterPackStreamInit = false;
+                        bool tarotStreamInit = false, spectralStreamInit = false;
+                        
+                        for (int i = 0; i < 2 + ante; i++)
                         {
-                            var pack = singleCtx.GetNextBoosterPack(ref packStream);
+                            if (!boosterPackStreamInit)
+                            {
+                                boosterPackStream = singleCtx.CreateBoosterPackStream(ante, true, false);
+                                boosterPackStreamInit = true;
+                            }
+                            
+                            var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
                             
                             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                             {
-                                var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
+                                if (!tarotStreamInit)
+                                {
+                                    tarotStreamInit = true;
+                                    tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
+                                }
+                                
                                 if (singleCtx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
                                 {
                                     foundSoulCard = true;
@@ -107,7 +124,12 @@ public struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilt
                             }
                             else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                             {
-                                var spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
+                                if (!spectralStreamInit)
+                                {
+                                    spectralStreamInit = true;
+                                    spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
+                                }
+                                
                                 if (singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                                 {
                                     foundSoulCard = true;

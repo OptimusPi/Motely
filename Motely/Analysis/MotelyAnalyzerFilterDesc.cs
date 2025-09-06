@@ -64,8 +64,8 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
                 MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, ref voucherState);
 
                 // Voucher - get with state for proper progression
-                MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, runState);
-                runState.ActivateVoucher(voucher);
+                MotelyVoucher voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
+                voucherState.ActivateVoucher(voucher);
 
                 // Tags
                 MotelySingleTagStream tagStream = ctx.CreateTagStream(ante);

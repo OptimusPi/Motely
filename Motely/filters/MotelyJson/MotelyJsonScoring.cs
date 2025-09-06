@@ -341,7 +341,7 @@ public static class MotelyJsonScoring
                         CheckWildcardMatch(joker, clause.WildcardEnum);
                     if (matches && CheckEditionAndStickers(item, clause))
                     {
-                        runState.AddOwnedJoker(item);
+                        runState.AddOwnedJoker((MotelyJoker)item.Type);
                         if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
                         {
                             runState.ActivateShowman();
@@ -376,7 +376,7 @@ public static class MotelyJsonScoring
                             CheckWildcardMatch(joker, clause.WildcardEnum);
                         if (matches && CheckEditionAndStickers(item, clause))
                         {
-                            runState.AddOwnedJoker(item);
+                            runState.AddOwnedJoker((MotelyJoker)item.Type);
                             if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
                             {
                                 runState.ActivateShowman();
@@ -444,10 +444,10 @@ public static class MotelyJsonScoring
                     
                     // Handle duplicates if Showman isn't active
                     // Soul jokers are legendary, so they reroll when duplicate found
-                    if (!runState.ShowmanActive && runState.OwnedJokers.Contains(soulJoker))
+                    if (!runState.ShowmanActive && runState.OwnedJokers.Contains((MotelyJoker)soulJoker.Type))
                     {
                         // Keep getting next soul joker until we find non-duplicate (max 5 attempts)
-                        for (int rerollCount = 0; rerollCount < 5 && runState.OwnedJokers.Contains(soulJoker); rerollCount++)
+                        for (int rerollCount = 0; rerollCount < 5 && runState.OwnedJokers.Contains((MotelyJoker)soulJoker.Type); rerollCount++)
                         {
                             soulJoker = ctx.GetNextJoker(ref soulStream);
                         }
@@ -459,7 +459,7 @@ public static class MotelyJsonScoring
                         if (CheckEditionAndStickers(soulJoker, clause))
                         {
                             // TODO: runState.MarkSoulPackConsumed(ante, i);
-                            runState.AddOwnedJoker(soulJoker);
+                            runState.AddOwnedJoker((MotelyJoker)soulJoker.Type);
 
                             if (soulJoker.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
                             {
@@ -546,7 +546,9 @@ public static class MotelyJsonScoring
         {
             var voucher = ctx.GetAnteFirstVoucher(ante, runState);
             runState.ActivateVoucher(voucher);
-            DebugLogger.Log($"[VoucherActivation] Ante {ante}: Found {voucher}, activated");
+    #if DEBUG
+        DebugLogger.Log($"[VoucherActivation] Ante {ante}: Found {voucher}, activated");
+#endif
 
             // Special case: Hieroglyph gives a bonus voucher in the SAME ante
             if (voucher == MotelyVoucher.Hieroglyph)
@@ -617,7 +619,8 @@ public static class MotelyJsonScoring
             
         try
         {
-            MotelyBossBlind boss = ctx.GetBossForAnte(ante, ref runState);
+            var bossStream = ctx.CreateBossStream();
+            MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, ref runState);
             return boss == clause.BossEnum.Value;
         }
         catch
@@ -637,7 +640,9 @@ public static class MotelyJsonScoring
             
         // Check if this voucher appears at the specified ante
         var voucher = ctx.GetAnteFirstVoucher(ante, runState);
+#if DEBUG
         DebugLogger.Log($"[CheckVoucherSingle] Ante {ante}: Looking for {clause.VoucherEnum.Value}, found {voucher}");
+#endif
         if (voucher == clause.VoucherEnum.Value)
         {
             runState.ActivateVoucher(voucher);
