@@ -24,6 +24,10 @@ public static class SpecializedFilterFactory
             FilterCategory.Joker => new MotelyJsonJokerFilterDesc(clauses),
             FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(clauses),
             FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(clauses),
+            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(clauses),
+            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(clauses),
+            FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(clauses),
+            FilterCategory.Boss => new MotelyJsonBossFilterDesc(clauses), // RE-ENABLED with proper structure
             FilterCategory.Tag => new MotelyJsonTagFilterDesc(clauses),
             _ => throw new ArgumentException($"Specialized filter not implemented for: {category}")
         };
@@ -40,6 +44,10 @@ public static class SpecializedFilterFactory
             MotelyJsonJokerFilterDesc jokerDesc => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(jokerDesc),
             MotelyJsonVoucherFilterDesc voucherDesc => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>(voucherDesc),
             MotelyJsonPlanetFilterDesc planetDesc => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>(planetDesc),
+            MotelyJsonTarotCardFilterDesc tarotDesc => new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>(tarotDesc),
+            MotelyJsonSpectralCardFilterDesc spectralDesc => new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>(spectralDesc),
+            MotelyJsonPlayingCardFilterDesc playingCardDesc => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>(playingCardDesc),
+            MotelyJsonBossFilterDesc bossDesc => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>(bossDesc),
             MotelyJsonTagFilterDesc tagDesc => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>(tagDesc),
             _ => throw new ArgumentException($"Search settings not implemented for: {filterDesc.GetType()}")
         };
