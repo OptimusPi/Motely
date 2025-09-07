@@ -42,9 +42,13 @@ namespace Motely.Executors
 
             try
             {
-                var search = CreateSearch(LoadConfig(), seeds);
+                var config = LoadConfig();
+                var search = CreateSearch(config, seeds);
                 if (search == null) return 1;
 
+                // Print CSV header
+                PrintResultsHeader(config);
+                
                 search.AwaitCompletion();
                 PrintResultsSummary(search);
                 return 0;
@@ -89,8 +93,8 @@ namespace Motely.Executors
             if (!File.Exists(configPath))
                 throw new FileNotFoundException($"Could not find JSON config file: {configPath}");
 
-            if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
-                throw new Exception($"Failed to load config from {configPath}");
+            if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config, out var error))
+                throw new Exception($"Failed to load config from {configPath}: {error}");
 
             return config;
         }
