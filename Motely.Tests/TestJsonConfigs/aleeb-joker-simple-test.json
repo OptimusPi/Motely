@@ -1,0 +1,18 @@
+{
+  "name": "ALEEB Simple Joker Test",
+  "description": "Test that ALEEB has Blueprint in Ante 2 without slot restriction",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "Joker",
+      "value": "Blueprint",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [0,1,2,3,4,5,6,7,8]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

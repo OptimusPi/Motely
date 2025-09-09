@@ -41,7 +41,7 @@ namespace Motely.Filters;
         public string Type { get; set; } = "";
         public string? Value { get; set; }
         public string? Label { get; set; }
-        public int[] Antes { get; set; } = [];
+        public int[]? Antes { get; set; }
         
         public int Score { get; set; } = 1;
         public int? Min { get; set; }
@@ -75,7 +75,7 @@ namespace Motely.Filters;
         [JsonIgnore]
         public int[] EffectiveAntes
         {
-            get => Antes;
+            get => Antes ?? [];
             set
             {
                 Antes = value;
@@ -129,8 +129,10 @@ namespace Motely.Filters;
             // Parse Value based on ItemType
             if (!string.IsNullOrEmpty(Value))
             {
-                // Check for wildcards first
-                if (Value.Equals("Any", StringComparison.OrdinalIgnoreCase))
+                // Wildcards
+                if (Value.Equals("Any", StringComparison.OrdinalIgnoreCase) || 
+                    Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
+                    Value.Equals("*", StringComparison.OrdinalIgnoreCase))
                 {
                     WildcardEnum = MotelyJsonConfigWildcards.AnyJoker; // Generic "Any" wildcard
                     IsWildcard = true;
@@ -192,6 +194,50 @@ namespace Motely.Filters;
                             TagTypeEnum = ItemTypeEnum == MotelyFilterItemType.SmallBlindTag 
                                 ? MotelyTagType.SmallBlind 
                                 : MotelyTagType.BigBlind;
+                            break;
+                        case MotelyFilterItemType.PlayingCard:
+                            // Parse "X of Y" format like "7 of Clubs"
+                            if (Value.Contains(" of "))
+                            {
+                                var parts = Value.Split(" of ", StringSplitOptions.RemoveEmptyEntries);
+                                if (parts.Length == 2)
+                                {
+                                    var rankStr = parts[0].Trim();
+                                    var suitStr = parts[1].Trim();
+                                    
+                                    // Parse rank
+                                    var rankEnum = rankStr switch
+                                    {
+                                        "2" => MotelyPlayingCardRank.Two,
+                                        "3" => MotelyPlayingCardRank.Three,
+                                        "4" => MotelyPlayingCardRank.Four,
+                                        "5" => MotelyPlayingCardRank.Five,
+                                        "6" => MotelyPlayingCardRank.Six,
+                                        "7" => MotelyPlayingCardRank.Seven,
+                                        "8" => MotelyPlayingCardRank.Eight,
+                                        "9" => MotelyPlayingCardRank.Nine,
+                                        "10" => MotelyPlayingCardRank.Ten,
+                                        "Jack" => MotelyPlayingCardRank.Jack,
+                                        "Queen" => MotelyPlayingCardRank.Queen,
+                                        "King" => MotelyPlayingCardRank.King,
+                                        "Ace" => MotelyPlayingCardRank.Ace,
+                                        _ => (MotelyPlayingCardRank?)null
+                                    };
+                                    
+                                    // Parse suit
+                                    var suitEnum = suitStr switch
+                                    {
+                                        "Clubs" => MotelyPlayingCardSuit.Club,
+                                        "Diamonds" => MotelyPlayingCardSuit.Diamond,
+                                        "Hearts" => MotelyPlayingCardSuit.Heart,
+                                        "Spades" => MotelyPlayingCardSuit.Spade,
+                                        _ => (MotelyPlayingCardSuit?)null
+                                    };
+                                    
+                                    if (rankEnum.HasValue) RankEnum = rankEnum.Value;
+                                    if (suitEnum.HasValue) SuitEnum = suitEnum.Value;
+                                }
+                            }
                             break;
                     }
                 }
@@ -322,7 +368,7 @@ namespace Motely.Filters;
         /// <summary>
         /// Post-process after deserialization
         /// </summary>
-        private void PostProcess()
+        public void PostProcess()
         {
             // Process all filter items
             foreach (var item in Must.Concat(Should).Concat(MustNot))
@@ -334,7 +380,6 @@ namespace Motely.Filters;
                 // item.PackSlots and item.ShopSlots should remain null if not provided
                 item.Stickers ??= [];
                 item.Antes ??= [1, 2, 3, 4, 5, 6, 7, 8]; // Default to all antes
-                // Don't overwrite Sources arrays if they already exist from JSON
                 if (item.Sources != null) 
                 {
                     item.Sources.PackSlots ??= [];
@@ -352,19 +397,12 @@ namespace Motely.Filters;
                         item.Sources = new SourcesConfig();
                     }
                     
-                    // Use flat properties if provided, otherwise keep existing Sources values
-                    if (item.PackSlots != null && item.PackSlots.Length > 0)
+                    if (item.PackSlots != null)
                     {
-                        // Debug check: warn if overwriting non-empty Sources
-                        Debug.Assert(item.Sources.PackSlots == null || item.Sources.PackSlots.Length == 0, 
-                            "Warning: Overwriting non-empty Sources.PackSlots with flat PackSlots property");
                         item.Sources.PackSlots = item.PackSlots;
                     }
-                    if (item.ShopSlots != null && item.ShopSlots.Length > 0)
+                    if (item.ShopSlots != null)
                     {
-                        // Debug check: warn if overwriting non-empty Sources
-                        Debug.Assert(item.Sources.ShopSlots == null || item.Sources.ShopSlots.Length == 0, 
-                            "Warning: Overwriting non-empty Sources.ShopSlots with flat ShopSlots property");
                         item.Sources.ShopSlots = item.ShopSlots;
                     }
                     if (item.RequireMega != null)
@@ -373,11 +411,15 @@ namespace Motely.Filters;
                         item.Sources.Tags = item.Tags.Value;
                 }
             
-                // Set default sources if not specified
+                // ALWAYS ensure Sources is non-null - this is CRITICAL for consistent behavior
                 if (item.Sources == null)
                 {
-                    item.Sources = GetDefaultSources(item.Type);
+                    item.Sources = GetDefaultSources(item.Type, item.Value, Deck);
                 }
+                
+                // ALWAYS ensure PackSlots and ShopSlots are non-null arrays
+                item.Sources.PackSlots ??= [];
+                item.Sources.ShopSlots ??= [];
             }
 
             // Second pass: compute per-item metadata (after overrides & masks) 
@@ -388,7 +430,7 @@ namespace Motely.Filters;
                 if (item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
                     item.MaxShopSlot = item.Sources.ShopSlots.Max();
 
-                item.IsWildcard = item.ItemTypeEnum == MotelyFilterItemType.Joker && item.WildcardEnum == MotelyJsonConfigWildcards.AnyJoker;
+                // IsWildcard already set in InitializeParsedEnums
             }
             
             // Compute MaxVoucherAnte once during PostProcess
@@ -410,9 +452,12 @@ namespace Motely.Filters;
                 }
             }
             MaxVoucherAnte = maxAnte;
+#if DEBUG
+            DebugLogger.Log($"[Config] MaxVoucherAnte calculated as: {MaxVoucherAnte}");
+#endif
         }
     
-        private static SourcesConfig GetDefaultSources(string itemType)
+        private static SourcesConfig GetDefaultSources(string itemType, string? itemValue, string deck)
         {
             return itemType switch
             {
@@ -422,12 +467,32 @@ namespace Motely.Filters;
                     PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
                     Tags = true
                 },
+                "spectralcard" => GetSpectralCardDefaultSources(itemValue, deck),
                 _ => new SourcesConfig
                 {
                     ShopSlots = new[] { 0, 1, 2, 3 },
                     PackSlots = new[] { 0, 1, 2, 3 },
                     Tags = true
                 }
+            };
+        }
+        
+        private static SourcesConfig GetSpectralCardDefaultSources(string? spectralCardValue, string deck)
+        {
+            // BlackHole and Soul spectral cards never appear in shop slots
+            bool isBlackHoleOrSoul = !string.IsNullOrEmpty(spectralCardValue) && 
+                (string.Equals(spectralCardValue, "BlackHole", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(spectralCardValue, "Soul", StringComparison.OrdinalIgnoreCase));
+            
+            // Other spectral cards only appear in shop slots with Ghost Deck
+            bool isGhostDeck = string.Equals(deck, "Ghost", StringComparison.OrdinalIgnoreCase);
+            
+            return new SourcesConfig
+            {
+                ShopSlots = isBlackHoleOrSoul ? Array.Empty<int>() : 
+                           (isGhostDeck ? new[] { 0, 1, 2, 3 } : Array.Empty<int>()),
+                PackSlots = new[] { 0, 1, 2, 3 },
+                Tags = true
             };
         }
         

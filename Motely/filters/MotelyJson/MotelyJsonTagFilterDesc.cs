@@ -14,9 +14,6 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
 {
     private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _tagClauses = tagClauses;
 
-    public readonly string Name => "JSON Tag Filter";
-    public readonly string Description => "Vectorized tag filtering";
-
     public MotelyJsonTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // Tags don't need special caching - they're built into ante structure

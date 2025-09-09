@@ -1,0 +1,19 @@
+{
+  "name": "ALEEB Playing Card Category Test",
+  "description": "Test that ALEEB matches Lucky 7 of Clubs in Ante 1 pack",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "PlayingCard",
+      "value": "7 of Clubs",
+      "stickers": ["Lucky"],
+      "antes": [1],
+      "sources": {
+        "packSlots": [2]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

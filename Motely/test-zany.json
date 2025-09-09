@@ -1,0 +1,15 @@
+{
+  "name": "Test Zany at Slot 1",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "Joker",
+      "value": "ZanyJoker",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [1]
+      }
+    }
+  ]
+}
