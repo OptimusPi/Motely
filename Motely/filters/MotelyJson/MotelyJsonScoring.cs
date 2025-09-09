@@ -611,17 +611,38 @@ public static class MotelyJsonScoring
     
     public static bool CheckTagSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante)
     {
-        Debug.Assert(clause.TagEnum.HasValue, "CheckTagSingle requires TagEnum");
+        Debug.Assert(clause.TagEnum.HasValue || (clause.TagEnums != null && clause.TagEnums.Count > 0), "CheckTagSingle requires TagEnum or TagEnums");
         var tagStream = ctx.CreateTagStream(ante);
         var smallTag = ctx.GetNextTag(ref tagStream);
         var bigTag = ctx.GetNextTag(ref tagStream);
 
-        return clause.TagTypeEnum switch
+        // Handle multi-value OR logic
+        if (clause.TagEnums != null && clause.TagEnums.Count > 0)
         {
-            MotelyTagType.SmallBlind => smallTag == clause.TagEnum.Value,
-            MotelyTagType.BigBlind => bigTag == clause.TagEnum.Value,
-            _ => smallTag == clause.TagEnum.Value || bigTag == clause.TagEnum.Value
-        };
+            foreach (var tagEnum in clause.TagEnums)
+            {
+                bool matches = clause.TagTypeEnum switch
+                {
+                    MotelyTagType.SmallBlind => smallTag == tagEnum,
+                    MotelyTagType.BigBlind => bigTag == tagEnum,
+                    _ => smallTag == tagEnum || bigTag == tagEnum
+                };
+                if (matches) return true;
+            }
+            return false;
+        }
+        // Handle single value
+        else if (clause.TagEnum.HasValue)
+        {
+            return clause.TagTypeEnum switch
+            {
+                MotelyTagType.SmallBlind => smallTag == clause.TagEnum.Value,
+                MotelyTagType.BigBlind => bigTag == clause.TagEnum.Value,
+                _ => smallTag == clause.TagEnum.Value || bigTag == clause.TagEnum.Value
+            };
+        }
+        
+        return false;
     }
 
     public static bool CheckBossSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)

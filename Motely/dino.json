@@ -1,0 +1,13 @@
+{
+  "name": "Dino Tag Test",
+  "description": "Test generic tag wildcard functionality",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "tag",
+      "value": "SpeedTag",
+      "antes": [2]
+    }
+  ]
+}

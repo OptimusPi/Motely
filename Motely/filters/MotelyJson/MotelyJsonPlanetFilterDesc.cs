@@ -101,11 +101,29 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                                 // Check contents
                                 for (int j = 0; j < contents.Length; j++)
                                 {
-
+                                    bool typeMatches = false;
                                     
-                                    bool typeMatches = clause.PlanetType.HasValue
-                                        ? contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value)
-                                        : contents[j].TypeCategory == MotelyItemTypeCategory.PlanetCard;
+                                    // Check multi-value OR match
+                                    if (clause.PlanetTypes?.Count > 0)
+                                    {
+                                        foreach (var planetType in clause.PlanetTypes)
+                                        {
+                                            if (contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)planetType))
+                                            {
+                                                typeMatches = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    // Fallback to single value or wildcard
+                                    else if (clause.PlanetType.HasValue)
+                                    {
+                                        typeMatches = contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value);
+                                    }
+                                    else
+                                    {
+                                        typeMatches = contents[j].TypeCategory == MotelyItemTypeCategory.PlanetCard;
+                                    }
                                     
                                     bool editionMatches = !clause.EditionEnum.HasValue ||
                                                         contents[j].Edition == clause.EditionEnum.Value;
@@ -138,17 +156,37 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                             // Check shop slot bitmask
                             if ((clause.ShopSlotBitmask & shopSlotBit) == 0) continue;
                             
-                            bool typeMatches = clause.PlanetType.HasValue
-                                 ? shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value)
-                                 : shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard;
-                            
-                            bool editionMatches = !clause.EditionEnum.HasValue ||
-                                                shopItem.Edition == clause.EditionEnum.Value;
-                            
-                            if (typeMatches && editionMatches)
-                            {
-                                clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
-                            }
+                            bool typeMatches = false;
+            
+            // Check multi-value OR match
+            if (clause.PlanetTypes?.Count > 0)
+            {
+                foreach (var planetType in clause.PlanetTypes)
+                {
+                    if (shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)planetType))
+                    {
+                        typeMatches = true;
+                        break;
+                    }
+                }
+            }
+            // Fallback to single value or wildcard
+            else if (clause.PlanetType.HasValue)
+            {
+                typeMatches = shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value);
+            }
+            else
+            {
+                typeMatches = shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard;
+            }
+            
+            bool editionMatches = !clause.EditionEnum.HasValue ||
+                                shopItem.Edition == clause.EditionEnum.Value;
+            
+            if (typeMatches && editionMatches)
+            {
+                clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
+            }
                          }
                     }
                 }

@@ -185,9 +185,29 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                                 // Check contents
                                 for (int j = 0; j < contents.Length; j++)
                                 {
-                                    bool typeMatches = clause.SpectralType.HasValue
-                                        ? contents[j].Type == (MotelyItemType)clause.SpectralType.Value
-                                        : contents[j].TypeCategory == MotelyItemTypeCategory.SpectralCard;
+                                    bool typeMatches = false;
+                                    
+                                    // Check multi-value OR match
+                                    if (clause.SpectralTypes?.Count > 0)
+                                    {
+                                        foreach (var spectralType in clause.SpectralTypes)
+                                        {
+                                            if (contents[j].Type == (MotelyItemType)spectralType)
+                                            {
+                                                typeMatches = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    // Fallback to single value or wildcard
+                                    else if (clause.SpectralType.HasValue)
+                                    {
+                                        typeMatches = contents[j].Type == (MotelyItemType)clause.SpectralType.Value;
+                                    }
+                                    else
+                                    {
+                                        typeMatches = contents[j].TypeCategory == MotelyItemTypeCategory.SpectralCard;
+                                    }
 
                                     bool editionMatches = !clause.EditionEnum.HasValue ||
                                                         contents[j].Edition == clause.EditionEnum.Value;

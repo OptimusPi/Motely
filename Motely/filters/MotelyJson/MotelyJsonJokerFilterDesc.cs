@@ -41,53 +41,13 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            // Quick vectorized check for potential jokers
-            VectorMask hasPotential = VectorMask.NoBitsSet;
-            
-            for (int ante = _minAnte; ante <= _maxAnte; ante++)
-            {
-                // Check shop slots for any jokers
-                var shopStream = ctx.CreateShopItemStream(ante);
-                int maxShopSlots = 10; // Default max shop slots for potential check
-                for (int shopSlot = 0; shopSlot < maxShopSlots; shopSlot++)
-                {
-                    var shopItem = ctx.GetNextShopItem(ref shopStream);
-                    var shopPotential = VectorEnum256.Equals(shopItem.TypeCategory, MotelyItemTypeCategory.Joker);
-                    hasPotential |= shopPotential;
-                }
-                
-                // Check buffoon packs for any jokers
-                var packStream = ctx.CreateBoosterPackStream(ante, generatedFirstPack: ante != 1);
-                var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
-                int totalPacks = ante == 1 ? 4 : 6;
-                for (int packSlot = 0; packSlot < totalPacks; packSlot++)
-                {
-                    var pack = ctx.GetNextBoosterPack(ref packStream);
-                    VectorMask isBuffoonPack = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Buffoon);
-                    
-                    if (isBuffoonPack.IsPartiallyTrue())
-                    {
-                        var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize()[0]);
-                        for (int j = 0; j < contents.Length; j++)
-                        {
-                            var packPotential = VectorEnum256.Equals(contents[j].TypeCategory, MotelyItemTypeCategory.Joker);
-                            hasPotential |= (packPotential & isBuffoonPack);
-                        }
-                    }
-                }
-            }
-            
-            // Early exit if no potential matches
-            if (hasPotential.IsAllFalse())
-                return VectorMask.NoBitsSet;
-            
             // Copy struct fields to local variables for lambda
             var clauses = _clauses;
             int minAnte = _minAnte;
             int maxAnte = _maxAnte;
             
-            // Now do full individual processing for seeds with potential
-            return ctx.SearchIndividualSeeds(hasPotential, (ref MotelySingleSearchContext singleCtx) =>
+            // Process all seeds directly with efficient bitmask filtering
+            return ctx.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
             {
                 VectorMask[] clauseMasks = new VectorMask[clauses.Count];
                 for (int i = 0; i < clauseMasks.Length; i++) clauseMasks[i] = VectorMask.NoBitsSet;
@@ -114,7 +74,26 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
                                 if (((clause.ShopSlotBitmask >> i) & 1) != 0 && item.TypeCategory == MotelyItemTypeCategory.Joker)
                                 {
                                     var joker = new MotelyItem(item.Value).GetJoker();
-                                    bool typeMatches = !clause.IsWildcard ? joker == clause.JokerType : true; // TODO: Add wildcard support
+                                    bool typeMatches = false;
+                                    
+                                    if (!clause.IsWildcard)
+                                    {
+                                        if (clause.JokerTypes?.Count > 0)
+                                        {
+                                            // Multi-value: OR logic - match any joker in the list
+                                            typeMatches = clause.JokerTypes.Contains(joker);
+                                        }
+                                        else
+                                        {
+                                            // Single value
+                                            typeMatches = joker == clause.JokerType;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        typeMatches = CheckWildcardMatch(joker, clause.WildcardEnum);
+                                    }
+                                    
                                     bool editionMatches = !clause.EditionEnum.HasValue || item.Edition == clause.EditionEnum.Value;
                                     
                                     if (typeMatches && editionMatches)
@@ -142,7 +121,25 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
                                     {
                                         var item = contents[j];
                                         var joker = item.GetJoker();
-                                        bool typeMatches = !clause.IsWildcard ? joker == clause.JokerType : true; // TODO: Add wildcard support
+                                        bool typeMatches = false;
+                                        
+                                        if (!clause.IsWildcard)
+                                        {
+                                            if (clause.JokerTypes?.Count > 0)
+                                            {
+                                                // Multi-value: OR logic - match any joker in the list
+                                                typeMatches = clause.JokerTypes.Contains(joker);
+                                            }
+                                            else
+                                            {
+                                                // Single value
+                                                typeMatches = joker == clause.JokerType;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            typeMatches = CheckWildcardMatch(joker, clause.WildcardEnum);
+                                        }
                                         bool editionMatches = !clause.EditionEnum.HasValue || item.Edition == clause.EditionEnum.Value;
                                         
                                         if (typeMatches && editionMatches)
@@ -168,7 +165,22 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
                 }
                 
                 return allClausesMatched;
-            });
-        }
+            });}
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool CheckWildcardMatch(MotelyJoker joker, MotelyJsonConfigWildcards? wildcard)
+    {
+        if (!wildcard.HasValue) return false;
+        if (wildcard == MotelyJsonConfigWildcards.AnyJoker) return true;
+
+        var rarity = (MotelyJokerRarity)((int)joker & Motely.JokerRarityMask);
+        return wildcard switch
+        {
+            MotelyJsonConfigWildcards.AnyCommon => rarity == MotelyJokerRarity.Common,
+            MotelyJsonConfigWildcards.AnyUncommon => rarity == MotelyJokerRarity.Uncommon,
+            MotelyJsonConfigWildcards.AnyRare => rarity == MotelyJokerRarity.Rare,
+            _ => false
+        };
     }
 }
