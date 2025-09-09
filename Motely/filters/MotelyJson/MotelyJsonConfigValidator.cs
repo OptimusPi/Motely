@@ -224,6 +224,19 @@ namespace Motely.Filters
                             var validTags = string.Join(", ", Enum.GetNames(typeof(MotelyTag)));
                             errors.Add($"{prefix}: Invalid tag '{item.Value}'. Valid tags are: {validTags}");
                         }
+                        
+                        // Validate that shopSlots and packSlots are not specified for tag filters
+                        if (item.Sources != null)
+                        {
+                            if (item.Sources.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+                            {
+                                warnings.Add($"{prefix}: 'shopSlots' specified for {item.Type} filter but tags don't use shop slots. This property will be ignored.");
+                            }
+                            if (item.Sources.PackSlots != null && item.Sources.PackSlots.Length > 0)
+                            {
+                                warnings.Add($"{prefix}: 'packSlots' specified for {item.Type} filter but tags don't use pack slots. This property will be ignored.");
+                            }
+                        }
                         break;
                         
                     case "voucher":

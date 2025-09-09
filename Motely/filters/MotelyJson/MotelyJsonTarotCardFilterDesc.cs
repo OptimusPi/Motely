@@ -158,9 +158,30 @@ public struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterClause> ta
                                         }
                                     }
                                     
-                                    bool typeMatches = clause.TarotType.HasValue
-                                        ? contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value)
-                                        : contents[j].TypeCategory == MotelyItemTypeCategory.TarotCard;
+                                    bool typeMatches = false;
+                                    
+                                    // Check for multi-value OR match
+                                    if (clause.TarotTypes != null && clause.TarotTypes.Count > 0)
+                                    {
+                                        foreach (var tarotType in clause.TarotTypes)
+                                        {
+                                            if (contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)tarotType))
+                                            {
+                                                typeMatches = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    // Fallback to single-value match
+                                    else if (clause.TarotType.HasValue)
+                                    {
+                                        typeMatches = contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value);
+                                    }
+                                    // Wildcard match
+                                    else
+                                    {
+                                        typeMatches = contents[j].TypeCategory == MotelyItemTypeCategory.TarotCard;
+                                    }
                                     
                                     if (typeMatches)
                                     {
@@ -203,9 +224,30 @@ public struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterClause> ta
                                 }
                             }
                             
-                            bool typeMatches = clause.TarotType.HasValue
-                                ? shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value)
-                                : shopItem.TypeCategory == MotelyItemTypeCategory.TarotCard;
+                            bool typeMatches = false;
+                            
+                            // Check for multi-value OR match
+                            if (clause.TarotTypes != null && clause.TarotTypes.Count > 0)
+                            {
+                                foreach (var tarotType in clause.TarotTypes)
+                                {
+                                    if (shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)tarotType))
+                                    {
+                                        typeMatches = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            // Fallback to single-value match
+                            else if (clause.TarotType.HasValue)
+                            {
+                                typeMatches = shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value);
+                            }
+                            // Wildcard match
+                            else
+                            {
+                                typeMatches = shopItem.TypeCategory == MotelyItemTypeCategory.TarotCard;
+                            }
                             
                             if (typeMatches)
                             {

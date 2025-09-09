@@ -66,7 +66,9 @@ public abstract class MotelyJsonFilterClause
 public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker JokerType { get; init; }
+    public List<MotelyJoker>? JokerTypes { get; init; }
     public bool IsWildcard { get; init; }
+    public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
     public ulong AnteBitmask { get; init; }
     public ulong ShopSlotBitmask { get; init; }
@@ -126,7 +128,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         return new MotelyJsonJokerFilterClause
         {
             JokerType = jsonClause.JokerEnum ?? MotelyJoker.Joker,
+            JokerTypes = jsonClause.JokerEnums?.Count > 0 ? jsonClause.JokerEnums : null,
             IsWildcard = jsonClause.IsWildcard,
+            WildcardEnum = jsonClause.WildcardEnum,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
             AnteBitmask = anteMask,
@@ -190,6 +194,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
 public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
 {
     public MotelyTarotCard? TarotType { get; init; }
+    public List<MotelyTarotCard>? TarotTypes { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
     public ulong AnteBitmask { get; init; }
@@ -246,6 +251,7 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
         return new MotelyJsonTarotFilterClause
         {
             TarotType = jsonClause.TarotEnum,
+            TarotTypes = jsonClause.TarotEnums?.Count > 0 ? jsonClause.TarotEnums : null,
             IsWildcard = jsonClause.IsWildcard,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
@@ -270,6 +276,7 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
 public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
 {
     public MotelyVoucher VoucherType { get; init; }
+    public List<MotelyVoucher>? VoucherTypes { get; init; }
     public ulong AnteBitmask { get; init; }
     
     public static MotelyJsonVoucherFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
@@ -285,6 +292,7 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
         return new MotelyJsonVoucherFilterClause
         {
             VoucherType = jsonClause.VoucherEnum ?? MotelyVoucher.Overstock,
+            VoucherTypes = jsonClause.VoucherEnums?.Count > 0 ? jsonClause.VoucherEnums : null,
             AnteBitmask = anteMask
         };
     }
@@ -304,6 +312,7 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
 public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
 {
     public MotelySpectralCard? SpectralType { get; init; }
+    public List<MotelySpectralCard>? SpectralTypes { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
     public ulong AnteBitmask { get; init; }
@@ -360,6 +369,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
         return new MotelyJsonSpectralFilterClause
         {
             SpectralType = jsonClause.SpectralEnum,
+            SpectralTypes = jsonClause.SpectralEnums?.Count > 0 ? jsonClause.SpectralEnums : null,
             IsWildcard = jsonClause.IsWildcard,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
@@ -384,6 +394,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
 public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
 {
     public MotelyPlanetCard? PlanetType { get; init; }
+    public List<MotelyPlanetCard>? PlanetTypes { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
     public ulong AnteBitmask { get; init; }
@@ -440,6 +451,7 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
         return new MotelyJsonPlanetFilterClause
         {
             PlanetType = jsonClause.PlanetEnum,
+            PlanetTypes = jsonClause.PlanetEnums?.Count > 0 ? jsonClause.PlanetEnums : null,
             IsWildcard = jsonClause.IsWildcard,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,

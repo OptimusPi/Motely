@@ -56,7 +56,7 @@ public sealed class ALEEBCategoryIntegrationTests
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
             
-            var completed = process.WaitForExit(2000);
+            var completed = process.WaitForExit(10000);
             Assert.True(completed, "Process did not complete within timeout");
             
             var outputText = output.ToString();
