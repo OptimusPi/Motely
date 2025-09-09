@@ -34,7 +34,7 @@ namespace Motely.Executors
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             
-            string normalizedFilterName = _filterName.ToLower().Trim();
+            string normalizedFilterName = _filterName.ToLower(System.Globalization.CultureInfo.CurrentCulture).Trim();
             
             // Create progress callback
             DateTime lastProgressUpdate = DateTime.UtcNow;
@@ -105,7 +105,7 @@ namespace Motely.Executors
             }
             
             // Give threads a moment to finish printing any final results
-            System.Threading.Thread.Sleep(50);
+            System.Threading.Thread.Sleep(100);
             
             searchStopwatch.Stop();
             PrintSummary(search, searchStopwatch.Elapsed);
@@ -123,6 +123,7 @@ namespace Motely.Executors
             {
                 NaNSeedFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 PerkeoObservatoryFilterDesc d => BuildSearch(d, progressCallback, seeds),
+                ObservatoryDesc d => BuildSearch(d, progressCallback, seeds),
                 PassthroughFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 TrickeoglyphFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 NegativeCopyFilterDesc d => BuildSearch(d, progressCallback, seeds),
@@ -145,7 +146,6 @@ namespace Motely.Executors
     
             settings = ApplyChainedFilters(settings);
             settings = ApplyScoring(settings);
-            settings = ApplyCsvScoring(settings, filterDesc);
             
             settings = settings.WithStartBatchIndex((long)_params.StartBatch-1);
             if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex((long)_params.EndBatch);
@@ -159,11 +159,12 @@ namespace Motely.Executors
         
         private object GetFilterDescriptor(string filterName)
         {
-            var normalizedName = filterName.ToLower().Trim();
+            var normalizedName = filterName.ToLower(System.Globalization.CultureInfo.CurrentCulture).Trim();
             return normalizedName switch
             {
                 "nanseed" => new NaNSeedFilterDesc(),
                 "perkeoobservatory" => new PerkeoObservatoryFilterDesc(),
+                "observatory" => new ObservatoryDesc(),
                 "passthrough" => new PassthroughFilterDesc(),
                 "trickeoglyph" => new TrickeoglyphFilterDesc(),
                 "negativecopy" => new NegativeCopyFilterDesc(),
@@ -193,13 +194,18 @@ namespace Motely.Executors
                     // MustNot would need special handling (not implemented yet)
                     if (config.Must != null && config.Must.Count > 0)
                     {
+                        // Initialize parsed enums for all clauses
+                        foreach (var clause in config.Must)
+                        {
+                            clause.InitializeParsedEnums();
+                        }
+                        
                         // PROPER SLICING: Group clauses by category for optimal vectorization
                         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.Must);
                         
                         foreach (var (category, clauses) in clausesByCategory)
                         {
-                            // TODO: Use specialized filters - disabled for now
-                            break;
+                            // Specialized filters now implemented
                             Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
                         }
                         
@@ -230,6 +236,7 @@ namespace Motely.Executors
                     {
                         NaNSeedFilterDesc d => settings.WithAdditionalFilter(d),
                         PerkeoObservatoryFilterDesc d => settings.WithAdditionalFilter(d),
+                        ObservatoryDesc d => settings.WithAdditionalFilter(d),
                         TrickeoglyphFilterDesc d => settings.WithAdditionalFilter(d),
                         NegativeCopyFilterDesc d => settings.WithAdditionalFilter(d),
                         NegativeTagFilterDesc d => settings.WithAdditionalFilter(d),
@@ -292,7 +299,15 @@ namespace Motely.Executors
                 if (_params.Silent)
                     return;
                     
-                try { Console.Write("\r" + new string(' ', Console.WindowWidth - 1) + "\r"); } catch { }
+                try 
+                {
+                    Console.Write($"\r{new string(' ', Math.Max(80, Console.WindowWidth - 1))}\r");
+                }
+                catch
+                {
+                    // Fallback if Console.WindowWidth fails
+                    Console.Write("\r" + new string(' ', 120) + "\r");
+                }
                 Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
                 if (!string.IsNullOrEmpty(lastProgressLine))
                     Console.Write(lastProgressLine);
@@ -302,7 +317,7 @@ namespace Motely.Executors
             int cutoff = _params.Cutoff;
             bool autoCutoff = _params.AutoCutoff;
             
-            var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound, ScoreOnlyMode: false);
+            var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound, ScoreOnlyMode: true);
             
             return settings.WithSeedScoreProvider(scoreDesc);
         }
@@ -327,40 +342,7 @@ namespace Motely.Executors
             
             throw new FileNotFoundException($"Could not find JSON scoring config file: {configPath}");
         }
-        
-        private MotelySearchSettings<TFilter> ApplyCsvScoring<TFilter>(MotelySearchSettings<TFilter> settings, IMotelySeedFilterDesc<TFilter> filterDesc) 
-            where TFilter : struct, IMotelySeedFilter
-        {
-            // Check if --csvScore is specified
-            if (string.IsNullOrEmpty(_params.CsvScore))
-                return settings;
-            
-            // Special handling for NegativeCopyFilterDesc with CSV scoring
-            if (filterDesc is NegativeCopyFilterDesc && _params.CsvScore == "native")
-            {
-                // Print CSV header
-                Console.WriteLine("Seed,Score,Showman,Blueprint,Brainstorm,Invisible,NegShowman,NegBlueprint,NegBrainstorm,NegInvisible");
-                
-                // Create score handler
-                Action<Filters.NegativeCopyJokersScore> onResultFound = (score) =>
-                {
-                    // Apply cutoff if specified
-                    if (_params.Cutoff > 0 && score.Score < _params.Cutoff)
-                        return;
-                        
-                    Console.WriteLine($"{score.Seed},{score.Score}," +
-                        $"{score.ShowmanCount},{score.BlueprintCount},{score.BrainstormCount},{score.InvisibleCount}," +
-                        $"{score.NegativeShowmanCount},{score.NegativeBlueprintCount},{score.NegativeBrainstormCount},{score.NegativeInvisibleCount}");
-                };
-                
-                // Create the score descriptor
-                var scoreDesc = new Filters.NegativeCopyJokersScoreDesc(_params.Cutoff, _params.AutoCutoff, onResultFound);
-                return settings.WithSeedScoreProvider(scoreDesc);
-            }
-            
-            return settings;
-        }
-        
+
         private void PrintResultsHeader(MotelyJsonConfig config)
         {
             Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");

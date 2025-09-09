@@ -1,0 +1,15 @@
+{
+  "name": "ALEEB Tag Category Test",
+  "description": "Test that ALEEB matches Handy Tag in Ante 2",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "BigBlindTag",
+      "value": "HandyTag",
+      "antes": [2]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

@@ -1,0 +1,28 @@
+{
+  "name": "Saturn Ante 2 Shop Slot 0 Test",
+  "description": "Test that Saturn appears in ante 2 shop slot 0",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "PlanetCard",
+      "value": "Saturn",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [0]
+      }
+    }
+  ],
+  "should": [
+    {
+      "type": "PlanetCard",
+      "value": "Saturn",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [0]
+      },
+      "score": 1
+    }
+  ],
+  "mustNot": []
+}

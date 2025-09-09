@@ -1,0 +1,18 @@
+{
+  "name": "ALEEB Planet Category Test",
+  "description": "Test that ALEEB matches Mars planet in Ante 4 Celestial pack",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "PlanetCard",
+      "value": "Mars",
+      "antes": [4],
+      "sources": {
+        "packSlots": [1]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

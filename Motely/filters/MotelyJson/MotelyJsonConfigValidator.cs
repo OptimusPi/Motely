@@ -78,19 +78,10 @@ namespace Motely.Filters
                     continue;
                 }
                 
-                // CRITICAL: Detect common casing mistakes that cause silent failures
-                if (string.IsNullOrEmpty(item.Value) && !string.IsNullOrEmpty(item.Type))
-                {
-                    var rawJson = System.Text.Json.JsonSerializer.Serialize(item);
-                    if (rawJson.Contains("\"Value\"") || rawJson.Contains("\"Antes\"") || rawJson.Contains("\"Edition\""))
-                    {
-                        errors.Add($"{prefix}: Invalid property casing - use lowercase 'value', 'antes', 'edition' (found uppercase in JSON)");
-                        continue;
-                    }
-                }
+                // Case insensitive parsing handles all casing - no validation needed
                 
                 // Validate value based on type
-                switch (item.Type.ToLower())
+                switch (item.Type.ToLower(System.Globalization.CultureInfo.CurrentCulture))
                 {
                     case "joker":
                         // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare", "AnyLegendary"
@@ -164,7 +155,7 @@ namespace Motely.Filters
                                     }
                                     else
                                     {
-                                        var validStickers = string.Join(", ", Enum.GetNames(typeof(MotelyJokerSticker)).Where(s => s != "None").Select(s => s.ToLower()));
+                                        var validStickers = string.Join(", ", Enum.GetNames(typeof(MotelyJokerSticker)).Where(s => s != "None").Select(s => s.ToLower(System.Globalization.CultureInfo.CurrentCulture)));
                                         errors.Add($"{prefix}: Invalid sticker '{sticker}'. Valid stickers are: {validStickers}");
                                     }
                                 }
@@ -277,7 +268,11 @@ namespace Motely.Filters
                 if (!string.IsNullOrEmpty(item.Edition))
                 {
                     bool typeSupportsEdition = item.Type.Equals("joker", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase);
+                                               item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase) ||
+                                               item.Type.Equals("playingcard", StringComparison.OrdinalIgnoreCase) ||
+                                               item.Type.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) ||
+                                               item.Type.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) ||
+                                               item.Type.Equals("planetcard", StringComparison.OrdinalIgnoreCase);
                     if (!typeSupportsEdition)
                     {
                         errors.Add($"{prefix}: Edition specified ('{item.Edition}') but type '{item.Type}' does not support editions (remove 'edition').");
