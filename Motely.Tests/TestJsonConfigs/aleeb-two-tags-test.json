@@ -1,0 +1,20 @@
+{
+  "name": "ALEEB Two Tags Test",
+  "description": "Test two tag requirements",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "SmallBlindTag",
+      "value": "SpeedTag",
+      "antes": [1]
+    },
+    {
+      "type": "BigBlindTag",
+      "value": "HandyTag",
+      "antes": [2]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

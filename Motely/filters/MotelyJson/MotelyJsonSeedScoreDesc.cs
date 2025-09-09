@@ -10,17 +10,47 @@ using System.Numerics;
 namespace Motely.Filters;
 
 
-public struct MotelySeedScoreTally : IMotelySeedScore
+public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 {
     public int Score { get; }
-    public List<int> TallyColumns { get; }
     public string Seed { get; }
-
-    public MotelySeedScoreTally(string seed, int score, List<int> tallyColumns)
+    
+    private fixed int _tallyValues[32];
+    private int _tallyCount;
+    
+    public MotelySeedScoreTally(string seed, int score)
     {
         Seed = seed;
         Score = score;
-        TallyColumns = tallyColumns;
+        _tallyCount = 0;
+    }
+    
+    public void AddTally(int value)
+    {
+        if (_tallyCount < 32)
+        {
+            _tallyValues[_tallyCount++] = value;
+        }
+    }
+    
+    public int GetTally(int index)
+    {
+        return index < _tallyCount ? _tallyValues[index] : 0;
+    }
+    
+    public int TallyCount => _tallyCount;
+    
+    public List<int> TallyColumns
+    {
+        get
+        {
+            var list = new List<int>(_tallyCount);
+            for (int i = 0; i < _tallyCount; i++)
+            {
+                list.Add(_tallyValues[i]);
+            }
+            return list;
+        }
     }
 }   
 
@@ -79,6 +109,9 @@ public struct MotelyJsonSeedScoreDesc(
         : IMotelySeedScoreProvider
     {
         public static bool IsCancelled;
+        
+        private const int MaxShouldClauses = 32;
+        [ThreadStatic] private static int[]? _threadLocalScoresBuffer;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Score(ref MotelyVectorSearchContext searchContext, MotelySeedScoreTally[] buffer, VectorMask baseFilterMask = default, int scoreThreshold = 0)
@@ -177,27 +210,16 @@ public struct MotelyJsonSeedScoreDesc(
                 // DebugLogger.Log($"[Score] Processing individual seed"); // DISABLED FOR PERFORMANCE
                 // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
                 var runState = new MotelyRunState();
-                
-                // ALWAYS validate MUST clauses first - regardless of scoreOnly mode
-                if (config.Must?.Count > 0)
-                {
-                    foreach (var clause in config.Must)
-                    {
-                        bool clauseSatisfied = MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState);
-                        if (!clauseSatisfied)
-                        {
-                            return false; // MUST clause failed - reject this seed completely
-                        }
-                    }
-                    // Reset runState after validation for clean scoring
-                    runState = new MotelyRunState();
-                }
 
                 // Activate all vouchers for scoring (using cached property)
-                // DebugLogger.Log($"[Score] MaxVoucherAnte: {config.MaxVoucherAnte}"); // DISABLED FOR PERFORMANCE
+#if DEBUG
+                DebugLogger.Log($"[Score] MaxVoucherAnte: {config.MaxVoucherAnte}");
+#endif
                 if (config.MaxVoucherAnte > 0)
                 {
-                    // DebugLogger.Log($"[Score] Activating all vouchers up to ante {config.MaxVoucherAnte}"); // DISABLED FOR PERFORMANCE
+#if DEBUG
+                    DebugLogger.Log($"[Score] Activating all vouchers up to ante {config.MaxVoucherAnte}");
+#endif
                     MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
                 }
 
@@ -270,7 +292,7 @@ public struct MotelyJsonSeedScoreDesc(
                                     break;
                                     
                                 case MotelyFilterItemType.Joker:
-                                    if (MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
+                                    if (MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, MotelyJsonJokerFilterClause.FromJsonClause(clause), ante, ref runState, earlyExit: true, originalClause: clause) > 0)
                                     {
                                         clauseSatisfied = true;
                                         break;
@@ -335,29 +357,17 @@ public struct MotelyJsonSeedScoreDesc(
                     }
                 }
 
-                // Check all MUST NOT clauses
-                if (config.MustNot?.Count > 0)
-                {
-                    foreach (var clause in config.MustNot)
-                    {
-                        if (MotelyJsonScoring.CheckSingleClause(ref singleCtx, clause, ref runState))
-                            return false;
-                    }
-                }
 
-                // Calculate scores for SHOULD clauses using comprehensive scanning like NegativeCopyJokers
-                int totalScore = 0;  // Start at 0, not 1!
+                int totalScore = 0;
                 
-                // Use stackalloc to avoid heap allocation in hot path
-                const int MaxShouldClauses = 32;
-                Span<int> scoresBuffer = stackalloc int[MaxShouldClauses];
+                _threadLocalScoresBuffer ??= new int[MaxShouldClauses];
+                var scoresBuffer = _threadLocalScoresBuffer;
                 int scoreCount = 0;
 
                 if (config.Should?.Count > 0)
                 {
                     foreach (var should in config.Should)
                     {
-                        // Use comprehensive counting across all relevant antes
                         int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
                         int score = count * should.Score;
                         
@@ -366,42 +376,34 @@ public struct MotelyJsonSeedScoreDesc(
                             scoresBuffer[scoreCount++] = count;
                         }
                         totalScore += score;
-                        
-                        // DebugLogger.Log($"[Should] {should.ItemTypeEnum} {should.Value}: found {count}, score {score}"); // DISABLED FOR PERFORMANCE
                     }
                 }
 
-                // Only return true if score meets threshold
-                if (totalScore >= GetCurrentCutoff(totalScore, autoCutoff, cutoff))
+                string seedStr;
+                unsafe
                 {
-                    // Track results for rarity calculation
-                    Interlocked.Increment(ref _resultsFound);
-
-                    string seedStr;
-                    unsafe
-                    {
-                        char* seedPtr = stackalloc char[9];
-                        int length = singleCtx.GetSeed(seedPtr);
-                        seedStr = new string(seedPtr, 0, length);
-                    }
-                    
-                    // Copy scores from stack to heap only when we need to return them
-                    var scores = new List<int>(scoreCount);
-                    for (int i = 0; i < scoreCount; i++)
-                    {
-                        scores.Add(scoresBuffer[i]);
-                    }
-                    
-                    var seedScore = new MotelySeedScoreTally(seedStr, totalScore, scores);
-                    
-                    // Write to buffer AND call callback for compatibility
-                    buffer[singleCtx.VectorLane] = seedScore;
-                    onResultFound(seedScore); // RICH CALLBACK!
-                    
-                    return true; // Tell framework this seed passed
+                    char* seedPtr = stackalloc char[9];
+                    int length = singleCtx.GetSeed(seedPtr);
+                    seedStr = new string(seedPtr, 0, length);
                 }
-
-                return false;
+                
+                var seedScore = new MotelySeedScoreTally(seedStr, totalScore);
+                for (int i = 0; i < scoreCount; i++)
+                {
+                    seedScore.AddTally(scoresBuffer[i]);
+                }
+                
+                buffer[singleCtx.VectorLane] = seedScore;
+                
+                // Apply cutoff filtering - only pass seeds that meet the threshold
+                var currentCutoff = GetCurrentCutoff(totalScore, autoCutoff, cutoff);
+                if (totalScore >= currentCutoff)
+                {
+                    Interlocked.Increment(ref _resultsFound);
+                    return true; // Pass this seed
+                }
+                
+                return false; // Filter out this seed
             });
         }
 

@@ -14,9 +14,6 @@ public struct MotelyJsonBossFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCla
 {
     private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _bossClauses = bossClauses;
 
-    public readonly string Name => "JSON Boss Filter";
-    public readonly string Description => "Vectorized boss blind filtering";
-
     public MotelyJsonBossFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // Find min/max antes for optimization
@@ -48,50 +45,39 @@ public struct MotelyJsonBossFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCla
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            // COPY EXACT SCORING PATTERN - use individual seed checking like MotelyJsonScoring
-            var clausesForLambda = _clauses;
-            return ctx.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
+            // PURE VECTORIZED BOSS FILTERING
+            var resultMask = VectorMask.AllBitsSet;
+            
+            foreach (var clause in _clauses)
             {
-                var runState = new MotelyRunState();
+                if (!clause.BossEnum.HasValue) continue;
                 
-                foreach (var clause in clausesForLambda)
+                var clauseMask = VectorMask.NoBitsSet;
+                
+                // Create boss stream ONCE and maintain state across antes
+                var bossStream = ctx.CreateBossStream(1); // Start from ante 1
+                
+                // Generate bosses for all antes up to the maximum needed
+                int maxAnte = clause.EffectiveAntes.Max();
+                var bosses = new VectorEnum256<MotelyBossBlind>[maxAnte];
+                
+                for (int ante = 1; ante <= maxAnte; ante++)
                 {
-                    if (clause.EffectiveAntes == null || !clause.BossEnum.HasValue) continue;
-                    
-                    bool clauseSatisfied = false;
-                    
-                    foreach (var ante in clause.EffectiveAntes)
-                    {
-                        try
-                        {
-                            var bossStream = singleCtx.CreateBossStream();
-                            var boss = singleCtx.GetBossForAnte(ref bossStream, ante, ref runState);
-                            
-#if DEBUG
-                            Console.WriteLine($"[BossFilter] Ante {ante}: found={boss}, target={clause.BossEnum.Value}, match={boss == clause.BossEnum.Value}");
-#endif
-                            
-                            if (boss == clause.BossEnum.Value)
-                            {
-                                clauseSatisfied = true;
-                                break;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            // Boss generation can fail for some seeds
-#if DEBUG
-                            Console.WriteLine($"[BossFilter] Ante {ante}: EXCEPTION {ex.Message}");
-#endif
-                            continue;
-                        }
-                    }
-                    
-                    if (!clauseSatisfied) return false;
+                    bosses[ante - 1] = ctx.GetNextBoss(ref bossStream);
                 }
                 
-                return true;
-            });
+                // Check if any of the requested antes match
+                foreach (var ante in clause.EffectiveAntes)
+                {
+                    VectorMask matches = VectorEnum256.Equals(bosses[ante - 1], clause.BossEnum.Value);
+                    clauseMask |= matches;
+                }
+                
+                resultMask &= clauseMask;
+                if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
+            }
+            
+            return resultMask;
         }
     }
 }

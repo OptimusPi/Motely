@@ -3,92 +3,35 @@
   "description": "finds copy jokers after negativetags",
   "author": "pifreak",
   "dateCreated": "2025-08-24T05:46:12.6691000Z",
-  "deck": "Ghost",
-  "stake": "Black",
+  "deck": "Red",
+  "stake": "White",
   "must": [
     {
-      "type": "SmallBlindTag",
-      "value": "CouponTag",
-      "antes": [1]
-    },
-    {
-      "type": "Joker",
-      "value": "Blueprint",
+      "type": "PlayingCard",
+      "rank": "King",
+      "Enhancement": "Glass",
+      "Seal": "Red",
       "antes": [1],
-      "sources": {
-        "packSlots": [0,1],
-        "shopSlots": [0,1]
+      "sources": { 
+        "PackSlots": [1]
       }
     },
     {
-      "type": "SoulJoker",
-      "value": "Perkeo",
-      "antes": [1],
-      "sources": {
-        "packSlots": [0,1]
-      }
-    },
-    {
-      "type": "SoulJoker",
-      "value": "Perkeo",
-      "antes": [2,3,4,5,6,7,8],
-      "sources": {
-        "packSlots": [0,1]
-      }
+        "type": "joker",
+        "value": "DNA",
+        "antes": [1,2,3]
     }
   ],
   "should": [
-    {
-      "type": "Joker",
-      "value": "Blueprint",
-      "edition": "Negative",
+     {
+      "type": "PlayingCard",
+      "rank": "King",
+      "Enhancement": "Glass",
+      "Seal": "Red",
       "antes": [1],
-      "sources": {
-        "packSlots": [0,1],
-        "shopSlots": [0,1]
-      },
-      "score": 24
-    },
-    {
-      "type": "SoulJoker",
-      "value": "any",
-      "edition": "Negative",
-      "antes": [1],
-      "sources": {
-        "packSlots": [1]
-      },
-      "score": 24
-    },
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [2], "score": 1 },
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [3], "score": 1 },
-    { "type": "SmallBlindTag", "Value": "NegativeTag", "Antes": [4], "score": 1 },
-    { "type": "Joker", "value": "OopsAll6s", "antes": [2], "shopSlots": [2,4,6,8,10], "score": 15 },
-    { "type": "Joker", "value": "OopsAll6s", "antes": [3], "shopSlots": [2,4,6,8,10,12], "score": 15 },
-    { "type": "Joker", "value": "OopsAll6s", "antes": [4], "shopSlots": [2,4,6,8,10,12,14], "score": 15 },
-    {
-      "type": "Joker",
-      "value": "OopsAll6s",
-      "edition": "Negative",
-      "antes": [1],
-      "sources": {
-        "shopSlots": [
-          0,1,2,3
-        ],
-        "packSlots": [0,1,2,3]
-      },
-      "score": 17
-    },
-    {
-      "type": "Joker",
-      "value": "OopsAll6s",
-      "edition": "Negative",
-      "antes": [2,3,4,5,6,7,8],
-      "sources": {
-        "shopSlots": [
-          0,1,2,3,4,5,6,7,8,9,10,11,12
-        ],
-        "packSlots": [0,1,2,3,4,5]
-      }, "score": 18
+      "sources": { 
+        "PackSlots": [1]
+      }
     }
   ],
   "mustNot": []

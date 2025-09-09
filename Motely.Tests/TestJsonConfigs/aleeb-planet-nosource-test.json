@@ -1,0 +1,15 @@
+{
+  "name": "ALEEB Planet No Source Test",
+  "description": "Test Saturn without source restriction",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "PlanetCard",
+      "value": "Saturn",
+      "antes": [2]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

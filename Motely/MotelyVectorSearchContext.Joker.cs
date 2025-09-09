@@ -310,7 +310,7 @@ unsafe partial struct MotelyVectorSearchContext
         MotelyVectorItemSet pack = new();
 
         for (int i = 0; i < size; i++)
-            pack.Append(GetNextJoker(ref jokerStream)); // TODO Duplicates?
+            pack.Append(GetNextJoker(ref jokerStream)); // Duplicate handling in upstream resampling system
 
         return pack;
     }

@@ -1,0 +1,23 @@
+{
+  "name": "Multi-Category Chain Test",
+  "description": "Test sliced filter chain with multiple categories",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "Joker",
+      "value": "Blueprint",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [7]
+      }
+    },
+    {
+      "type": "Voucher",
+      "value": "Hieroglyph",
+      "antes": [2]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

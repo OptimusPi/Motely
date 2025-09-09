@@ -98,15 +98,15 @@ public struct NegativeCopyJokersScoreDesc(
                     
                     int shopSlots = ante switch
                     {
-                        1 => 4,
-                        2 => 12,
-                        3 => 25,
-                        4 => 35,
-                        5 => 45,
-                        6 => 55,
-                        7 => 65,
-                        8 => 75,
-                        _ => 25
+                        1 => 15,
+                        2 => 50,
+                        3 => 50,
+                        4 => 50,
+                        5 => 50,
+                        6 => 50,
+                        7 => 50,
+                        8 => 50,
+                        _ => 50
                     };
                     
                     for (int i = 0; i < shopSlots; i++)
@@ -213,15 +213,17 @@ public struct NegativeCopyJokersScoreDesc(
                     seedStr = new string(seedPtr, 0, length);
                 }
                 
-                // Create score object and notify
-                // Convert to MotelySeedScoreTally for buffer compatibility
-                var tallies = new List<int> { 
-                    showmanCount, blueprintCount, brainstormCount, invisibleCount,
-                    negativeShowmanCount, negativeBlueprint, negativeBrainstorm, negativeInvisible 
-                };
+                var scoreTally = new MotelySeedScoreTally(seedStr, endScore);
+                scoreTally.AddTally(showmanCount);
+                scoreTally.AddTally(blueprintCount);
+                scoreTally.AddTally(brainstormCount);
+                scoreTally.AddTally(invisibleCount);
+                scoreTally.AddTally(negativeShowmanCount);
+                scoreTally.AddTally(negativeBlueprint);
+                scoreTally.AddTally(negativeBrainstorm);
+                scoreTally.AddTally(negativeInvisible);
                 
-                // Write to buffer at current lane position - NO CALLBACK!
-                buffer[ctx.VectorLane] = new MotelySeedScoreTally(seedStr, endScore, tallies);
+                buffer[ctx.VectorLane] = scoreTally;
                 
                 return true; // This seed passed
             });

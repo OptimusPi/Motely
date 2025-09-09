@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Motely.Filters;
@@ -7,145 +8,144 @@ using Motely.Filters;
 namespace Motely.Filters;
 
 /// <summary>
-/// Filters seeds based on soul joker criteria from JSON configuration.
+/// Fully vectorized soul joker filter using two-stage approach:
+/// 1. Pre-filter: Fast vectorized joker matching
+/// 2. Verify: Vectorized Soul card verification in packs
 /// </summary>
-public struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> soulJokerClauses)
+public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFilterClause> soulJokerClauses)
     : IMotelySeedFilterDesc<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>
 {
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _soulJokerClauses = soulJokerClauses;
-
-    public readonly string Name => "JSON Soul Joker Filter";
-    public readonly string Description => "Soul joker filtering with The Soul card verification";
+    private readonly List<MotelyJsonSoulJokerFilterClause> _soulJokerClauses = soulJokerClauses;
 
     public MotelyJsonSoulJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        foreach (var clause in _soulJokerClauses)
+        // Calculate ante range from bitmasks
+        var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_soulJokerClauses);
+
+        // Cache all streams we'll need
+        for (int ante = minAnte; ante <= maxAnte; ante++)
         {
-            if (clause.EffectiveAntes != null)
-            {
-                foreach (var ante in clause.EffectiveAntes)
-                {
-                    ctx.CacheBoosterPackStream(ante);
-                }
-            }
+            ctx.CacheSoulJokerStream(ante);
+            ctx.CacheBoosterPackStream(ante);
+            ctx.CacheArcanaPackTarotStream(ante);
+            // Note: No cache method exists for spectral streams in MotelyFilterCreationContext
         }
         
-        return new MotelyJsonSoulJokerFilter(_soulJokerClauses);
+        return new MotelyJsonSoulJokerFilter(_soulJokerClauses, minAnte, maxAnte);
     }
 
-    public struct MotelyJsonSoulJokerFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilter
+    public struct MotelyJsonSoulJokerFilter(List<MotelyJsonSoulJokerFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses = clauses;
+        private readonly List<MotelyJsonSoulJokerFilterClause> _clauses = clauses;
+        private readonly int _minAnte = minAnte;
+        private readonly int _maxAnte = maxAnte;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Count == 0)
-                return VectorMask.AllBitsSet;
+            Debug.Assert(_clauses != null && _clauses.Count > 0, "MotelyJsonSoulJokerFilter executed with no soul joker clauses!");
+
+            // STAGE 1: Pre-filter with vectorized joker matching
+            var jokerMask = VectorMask.AllBitsSet;
+            var clauseJokerMasks = new VectorMask[_clauses.Count];
+            for (int i = 0; i < clauseJokerMasks.Length; i++) clauseJokerMasks[i] = VectorMask.NoBitsSet;
             
-            // STEP 1: VECTORIZED soul joker type/edition pre-filtering 
-            var resultMask = VectorMask.AllBitsSet;
-            
-            foreach (var clause in _clauses)
+            // Check soul jokers
+            for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                var clauseMask = VectorMask.NoBitsSet;
+                ulong anteBit = 1UL << (ante - 1);
+                var soulJokerStream = ctx.CreateSoulJokerStream(ante);
+                var soulJokers = ctx.GetNextJoker(ref soulJokerStream);
                 
-                foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+                for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
                 {
-                    // VECTORIZED: Get soul joker for ALL 8 seeds at once
-                    var soulJokerStream = ctx.CreateSoulJokerStream(ante);
-                    var soulJokers = ctx.GetNextJoker(ref soulJokerStream);
+                    var clause = _clauses[clauseIndex];
+                    // Check ante bitmask
+                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
                     
-                    // VECTORIZED: Check type for ALL 8 seeds
                     VectorMask typeMatches = VectorMask.AllBitsSet;
-                    if (!clause.IsWildcard && clause.JokerEnum.HasValue)
+                    if (!clause.IsWildcard && clause.JokerType.HasValue)
                     {
-                        var targetType = (MotelyItemType)clause.JokerEnum.Value;
+                        var targetType = (MotelyItemType)clause.JokerType.Value;
                         typeMatches = VectorEnum256.Equals(soulJokers.Type, targetType);
                     }
                     
-                    // VECTORIZED: Check edition for ALL 8 seeds
                     VectorMask editionMatches = VectorMask.AllBitsSet;
                     if (clause.EditionEnum.HasValue)
                     {
                         editionMatches = VectorEnum256.Equals(soulJokers.Edition, clause.EditionEnum.Value);
                     }
                     
-                    clauseMask |= (typeMatches & editionMatches);
+                    clauseJokerMasks[clauseIndex] |= (typeMatches & editionMatches);
                 }
-                
-                resultMask &= clauseMask;
-                if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
             
-            // STEP 2: Individual Soul card checking for survivors only
-            if (resultMask.IsAllFalse())
-                return VectorMask.NoBitsSet;
-            
-            var clausesForLambda = _clauses;
-            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
+            // AND all joker criteria
+            for (int i = 0; i < clauseJokerMasks.Length; i++)
             {
-                foreach (var clause in clausesForLambda)
+                jokerMask &= clauseJokerMasks[i];
+                if (jokerMask.IsAllFalse()) return VectorMask.NoBitsSet;
+            }
+            
+            // STAGE 2: Verify The Soul card presence - FULLY VECTORIZED
+            var soulCardMask = VectorMask.AllBitsSet;
+            var clauseSoulMasks = new VectorMask[_clauses.Count];
+            for (int i = 0; i < clauseSoulMasks.Length; i++) clauseSoulMasks[i] = VectorMask.NoBitsSet;
+            
+            for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+            {
+                var clause = _clauses[clauseIndex];
+                VectorMask foundSoulForClause = VectorMask.NoBitsSet;
+                
+                // Check all antes set in the bitmask
+                for (int ante = _minAnte; ante <= _maxAnte; ante++)
                 {
-                    bool foundSoulCard = false;
+                    ulong anteBit = 1UL << (ante - 1);
+                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
+                    var boosterPackStream = ctx.CreateBoosterPackStream(ante);
+                    var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
+                    var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true);
                     
-                    foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+                    for (int packIndex = 0; packIndex < 2 + ante; packIndex++)
                     {
-                        // EXACT NATIVE PATTERN: Initialize streams with flags
-                        MotelySingleBoosterPackStream boosterPackStream = default;
-                        MotelySingleTarotStream tarotStream = default;
-                        MotelySingleSpectralStream spectralStream = default;
-                        bool boosterPackStreamInit = false;
-                        bool tarotStreamInit = false, spectralStreamInit = false;
+                        var pack = ctx.GetNextBoosterPack(ref boosterPackStream);
+                        var packType = pack.GetPackType();
                         
-                        for (int i = 0; i < 2 + ante; i++)
+                        
+                        // Check Arcana packs with vectorized method
+                        VectorMask isArcanaPack = VectorEnum256.Equals(packType, MotelyBoosterPackType.Arcana);
+                        if (isArcanaPack.IsPartiallyTrue())
                         {
-                            if (!boosterPackStreamInit)
-                            {
-                                boosterPackStream = singleCtx.CreateBoosterPackStream(ante, true, false);
-                                boosterPackStreamInit = true;
-                            }
-                            
-                            var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
-                            
-                            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
-                            {
-                                if (!tarotStreamInit)
-                                {
-                                    tarotStreamInit = true;
-                                    tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
-                                }
-                                
-                                if (singleCtx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
-                                {
-                                    foundSoulCard = true;
-                                    break;
-                                }
-                            }
-                            else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                            {
-                                if (!spectralStreamInit)
-                                {
-                                    spectralStreamInit = true;
-                                    spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
-                                }
-                                
-                                if (singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
-                                {
-                                    foundSoulCard = true;
-                                    break;
-                                }
-                            }
+                            // GetPackSize returns a vector, need to get the first value
+                            var packSize = pack.GetPackSize()[0];
+                            VectorMask hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, packSize);
+                            foundSoulForClause |= (isArcanaPack & hasSoul);
                         }
                         
-                        if (foundSoulCard) break;
+                        // Check Spectral packs with vectorized method
+                        VectorMask isSpectralPack = VectorEnum256.Equals(packType, MotelyBoosterPackType.Spectral);
+                        if (isSpectralPack.IsPartiallyTrue())
+                        {
+                            // GetPackSize returns a vector, need to get the first value
+                            var packSize = pack.GetPackSize()[0];
+                            VectorMask hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, packSize);
+                            foundSoulForClause |= (isSpectralPack & hasSoul);
+                        }
                     }
-                    
-                    if (!foundSoulCard) return false;
                 }
                 
-                return true;
-            });
+                clauseSoulMasks[clauseIndex] = foundSoulForClause;
+            }
+            
+            // AND all Soul card criteria
+            for (int i = 0; i < clauseSoulMasks.Length; i++)
+            {
+                soulCardMask &= clauseSoulMasks[i];
+                if (soulCardMask.IsAllFalse()) return VectorMask.NoBitsSet;
+            }
+            
+            // Return the intersection of both stages
+            return jokerMask & soulCardMask;
         }
     }
 }

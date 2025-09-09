@@ -106,7 +106,8 @@ public static partial class MotelySeedAnalyzer
 
             Debug.Assert(filterDesc.LastAnalysis != null);
         
-            Console.Write(filterDesc.LastAnalysis);
+            // Don't write to Console here - the caller should handle output
+            // Console.Write(filterDesc.LastAnalysis);
 
             return filterDesc.LastAnalysis;
         }

@@ -9,127 +9,189 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on planet card criteria from JSON configuration.
 /// </summary>
-public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> planetClauses)
+public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> planetClauses)
     : IMotelySeedFilterDesc<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>
 {
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _planetClauses = planetClauses;
-
-    public readonly string Name => "JSON Planet Filter";
-    public readonly string Description => "Vectorized planet card filtering";
+    private readonly List<MotelyJsonPlanetFilterClause> _planetClauses = planetClauses;
 
     public MotelyJsonPlanetFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        foreach (var clause in _planetClauses)
+        // Calculate ante range from bitmasks
+        var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_planetClauses);
+        
+        // Cache streams for needed antes
+        for (int ante = minAnte; ante <= maxAnte; ante++)
         {
-            if (clause.EffectiveAntes != null)
-            {
-                foreach (var ante in clause.EffectiveAntes)
-                {
-                    ctx.CacheBoosterPackStream(ante);
-                }
-            }
+            ctx.CacheShopStream(ante);
+            ctx.CacheBoosterPackStream(ante);
         }
         
-        return new MotelyJsonPlanetFilter(_planetClauses);
+        return new MotelyJsonPlanetFilter(_planetClauses, minAnte, maxAnte);
     }
 
-    public struct MotelyJsonPlanetFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilter
+    public struct MotelyJsonPlanetFilter(List<MotelyJsonPlanetFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses = clauses;
+        private readonly List<MotelyJsonPlanetFilterClause> _clauses = clauses;
+        private readonly int _minAnte = minAnte;
+        private readonly int _maxAnte = maxAnte;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            // OPTIMIZED: No Dictionary, find min/max antes
-            int minAnte = 8, maxAnte = 1;
-            foreach (var clause in _clauses)
-            {
-                if (clause.EffectiveAntes != null)
-                {
-                    for (int i = 0; i < clause.EffectiveAntes.Length; i++)
-                    {
-                        var ante = clause.EffectiveAntes[i];
-                        if (ante < minAnte) minAnte = ante;
-                        if (ante > maxAnte) maxAnte = ante;
-                    }
-                }
-            }
+            // Copy struct fields to local variables for lambda
+            var clauses = _clauses;
+            int minAnte = _minAnte;
+            int maxAnte = _maxAnte;
+            int maxShopSlotsNeeded = GetMaxShopSlotsNeeded();
             
-            var resultMask = VectorMask.AllBitsSet;
-            
-            // Process only required ante range  
-            for (int ante = minAnte; ante <= maxAnte; ante++)
-            {
-                foreach (var clause in _clauses)
-                {
-                    // Fast ante check - skip if not relevant for this clause
-                    bool relevantAnte = false;
-                    if (clause.EffectiveAntes != null)
-                    {
-                        for (int i = 0; i < clause.EffectiveAntes.Length; i++)
-                        {
-                            if (clause.EffectiveAntes[i] == ante)
-                            {
-                                relevantAnte = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!relevantAnte) continue;
-                    
-                    var clauseMask = VectorMask.NoBitsSet;
-                    
-                    // Check pack slots (Celestial packs for planets)
-                    if (clause.Sources?.PackSlots != null && clause.Sources.PackSlots.Length > 0)
-                    {
-                        var packStream = ctx.CreateBoosterPackStream(ante);
-                        var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
-                        var maxSlot = clause.Sources.PackSlots.Max();
-                        
-                        for (int slot = 0; slot <= maxSlot; slot++)
-                        {
-                            var pack = ctx.GetNextBoosterPack(ref packStream);
-                            
-                            if (clause.Sources.PackSlots.Contains(slot))
-                            {
-                                // VECTORIZED: Check if this is a Celestial pack
-                                VectorMask isCelestialPack = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Celestial);
+            // Search all seeds directly without vectorized potential check
+             return ctx.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
+             {
+
+                 
+                 VectorMask[] clauseMasks = new VectorMask[clauses.Count];
+                 for (int i = 0; i < clauseMasks.Length; i++)
+                     clauseMasks[i] = VectorMask.NoBitsSet;
+                 
+                 for (int ante = minAnte; ante <= maxAnte; ante++)
+                 {
+                     ulong anteBit = 1UL << (ante - 1);
+                     
+
+                     
+                     // Create streams ONCE per ante for performance and PRNG correctness
+                     var packStream = singleCtx.CreateBoosterPackStream(ante);
+                     var celestialStream = singleCtx.CreateCelestialPackPlanetStream(ante);
+                     var shopStream = singleCtx.CreateShopItemStream(ante);
+                     
+                     // Process packs - MUST iterate ALL packs to maintain PRNG state
+                      int totalPacks = ante == 1 ? 4 : 6;
+                     for (int packSlot = 0; packSlot < totalPacks; packSlot++)
+                     {
+                         var pack = singleCtx.GetNextBoosterPack(ref packStream);
+                         
+
+                         
+                         ulong packSlotBit = 1UL << packSlot;
+                         
+                         // Only process if it's a Celestial pack
+                          if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                         {
+                             var contents = singleCtx.GetNextCelestialPackContents(ref celestialStream, pack.GetPackSize());
+                             
+
+                             
+                             // Check each clause to see if it wants this pack slot
+                              for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
+                              {
+                                  var clause = clauses[clauseIndex];
+                                 
+
+                                 
+                                 // Check ante bitmask
+                                 if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) 
+                                     continue;
+                                 
+                                 // Check pack slot bitmask
+                                 if ((clause.PackSlotBitmask & packSlotBit) == 0) 
+                                     continue;
                                 
-                                if (isCelestialPack.IsPartiallyTrue())
+                                // Check contents
+                                for (int j = 0; j < contents.Length; j++)
                                 {
-                                    VectorMask isNormalSize = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Normal);
+
                                     
-                                    if ((isCelestialPack & isNormalSize).IsPartiallyTrue())
+                                    bool typeMatches = clause.PlanetType.HasValue
+                                        ? contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value)
+                                        : contents[j].TypeCategory == MotelyItemTypeCategory.PlanetCard;
+                                    
+                                    bool editionMatches = !clause.EditionEnum.HasValue ||
+                                                        contents[j].Edition == clause.EditionEnum.Value;
+                                    
+                                    if (typeMatches && editionMatches)
                                     {
-                                        var contents = ctx.GetNextCelestialPackContents(ref planetStream, MotelyBoosterPackSize.Normal);
-                                        
-                                        for (int j = 0; j < contents.Length; j++)
-                                        {
-                                            VectorMask typeMatches = clause.PlanetEnum.HasValue
-                                                ? VectorEnum256.Equals(contents[j].Type, (MotelyItemType)clause.PlanetEnum.Value)
-                                                : VectorEnum256.Equals(contents[j].TypeCategory, MotelyItemTypeCategory.PlanetCard);
-                                            
-                                            VectorMask editionMatches = VectorMask.AllBitsSet;
-                                            if (clause.EditionEnum.HasValue)
-                                                editionMatches = VectorEnum256.Equals(contents[j].Edition, clause.EditionEnum.Value);
-                                            
-                                            clauseMask |= (typeMatches & editionMatches & isCelestialPack & isNormalSize);
-                                        }
+                                        clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
                                     }
                                 }
                             }
                         }
                     }
                     
-                    resultMask &= clauseMask;
-                    if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
+                    // Process shop slots - MUST iterate ALL slots to maintain PRNG state
+                    int maxShopSlots = maxShopSlotsNeeded;
+                    
+                    for (int shopSlot = 0; shopSlot < maxShopSlots; shopSlot++)
+                    {
+                        var shopItem = singleCtx.GetNextShopItem(ref shopStream);
+                        
+                        ulong shopSlotBit = 1UL << shopSlot;
+                        
+                        // Check each clause to see if it wants this shop slot
+                         for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
+                         {
+                             var clause = clauses[clauseIndex];
+                            // Check ante bitmask
+                            if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
+                            
+                            // Check shop slot bitmask
+                            if ((clause.ShopSlotBitmask & shopSlotBit) == 0) continue;
+                            
+                            bool typeMatches = clause.PlanetType.HasValue
+                                 ? shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value)
+                                 : shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard;
+                            
+                            bool editionMatches = !clause.EditionEnum.HasValue ||
+                                                shopItem.Edition == clause.EditionEnum.Value;
+                            
+                            if (typeMatches && editionMatches)
+                            {
+                                clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
+                            }
+                         }
+                    }
+                }
+                
+                // Combine all clause results - ALL clauses must match
+                bool allClausesMatched = true;
+                for (int i = 0; i < clauseMasks.Length; i++)
+                {
+                    if (clauseMasks[i].IsAllFalse())
+                    {
+                        allClausesMatched = false;
+                        break;
+                    }
+                }
+                
+                return allClausesMatched;
+            });
+        }
+        
+        private int GetMaxShopSlotsNeeded()
+        {
+            if (_clauses == null || _clauses.Count == 0)
+                return 6; // Default 4/6 concept
+            
+            int maxSlot = 0;
+            foreach (var clause in _clauses)
+            {
+                if (clause.ShopSlotBitmask == 0)
+                    return 6; // No specific shop slots specified, use 4/6 concept
+                
+                // Find highest bit set in bitmask
+                ulong mask = clause.ShopSlotBitmask;
+                int slot = 0;
+                while (mask > 0)
+                {
+                    if ((mask & 1) != 0)
+                        maxSlot = Math.Max(maxSlot, slot);
+                    mask >>= 1;
+                    slot++;
                 }
             }
             
-            return resultMask;
+            return Math.Max(6, maxSlot + 1); // At least 6 slots for 4/6 concept
         }
     }
 }

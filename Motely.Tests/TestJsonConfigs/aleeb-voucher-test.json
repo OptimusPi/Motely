@@ -1,0 +1,15 @@
+{
+  "name": "ALEEB Voucher Category Test",
+  "description": "Test that ALEEB matches Hieroglyph voucher in Ante 2",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "Voucher",
+      "value": "Hieroglyph",
+      "antes": [2]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

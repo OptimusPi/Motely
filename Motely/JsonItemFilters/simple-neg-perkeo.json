@@ -9,20 +9,19 @@
       "edition": "Negative",
       "antes": [1],
       "sources": {
-        "packSlots": [1,2,3]
+        "packSlots": [1]
       }
     },
     {
       "type": "joker",
       "value": "OopsAll6s",
-      "edition": "Negative",
       "antes": [1],
       "sources": {
         "packSlots": [0]
       }
     },
     {
-      "type": "spectral",
+      "type": "spectralcard",
       "value": "ankh",
       "antes": [1],
       "requireMega": true

@@ -14,9 +14,6 @@ public struct MotelyJsonPlayingCardFilterDesc(List<MotelyJsonConfig.MotleyJsonFi
 {
     private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _playingCardClauses = playingCardClauses;
 
-    public readonly string Name => "JSON Playing Card Filter";
-    public readonly string Description => "Vectorized playing card filtering from Standard packs";
-
     public MotelyJsonPlayingCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         foreach (var clause in _playingCardClauses)
@@ -30,12 +27,25 @@ public struct MotelyJsonPlayingCardFilterDesc(List<MotelyJsonConfig.MotleyJsonFi
             }
         }
         
-        return new MotelyJsonPlayingCardFilter(_playingCardClauses);
+        // PRE-CALCULATE ANTE RANGE
+        int minAnte = int.MaxValue, maxAnte = int.MinValue;
+        foreach (var clause in _playingCardClauses)
+        {
+            foreach (var ante in clause.EffectiveAntes)
+            {
+                if (ante < minAnte) minAnte = ante;
+                if (ante > maxAnte) maxAnte = ante;
+            }
+        }
+        
+        return new MotelyJsonPlayingCardFilter(_playingCardClauses, minAnte, maxAnte);
     }
 
-    public struct MotelyJsonPlayingCardFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilter
+    public struct MotelyJsonPlayingCardFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
     {
         private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses = clauses;
+        private readonly int _minAnte = minAnte;
+        private readonly int _maxAnte = maxAnte;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)

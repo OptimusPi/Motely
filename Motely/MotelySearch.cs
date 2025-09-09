@@ -502,10 +502,21 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
             
             // Clear the progress line first by overwriting with spaces
-            Console.Write($"\r{new string(' ', Console.WindowWidth - 1)}\r");
+            try 
+            {
+                Console.Write($"\r{new string(' ', Math.Max(80, Console.WindowWidth - 1))}\r");
+            }
+            catch
+            {
+                // Fallback if Console.WindowWidth fails
+                Console.Write("\r" + new string(' ', 120) + "\r");
+            }
             
             // Now print the seed result on a clean line
             Console.WriteLine(sb.ToString());
+            
+            // Restore the progress line after CSV output
+            RestoreProgressLine();
         };
     }
 
@@ -565,9 +576,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         // Calculate seeds per millisecond using ACTUAL seeds searched
         double seedsPerMS = 0;
-        long actualSeedsSearched = _totalSeedsSearched;
-        if (elapsedMS > 1 && actualSeedsSearched > 0)
-            seedsPerMS = actualSeedsSearched / elapsedMS;
+        if (elapsedMS > 1 && _totalSeedsSearched > 0)
+            seedsPerMS = _totalSeedsSearched / elapsedMS;
 
         double pct = Math.Clamp(totalPortionFinished * 100, 0, 100);
 
@@ -579,8 +589,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         
         if (resultsFound > 0)
         {
-            long totalSeedsSearched = actualSeedsSearched;
-            double rarityPercent = ((double)resultsFound / totalSeedsSearched) * 100.0;
+            double rarityPercent = (double)resultsFound / _totalSeedsSearched * 100.0;
 
             if (rarityPercent >= 1.0)
             {
@@ -676,7 +685,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private abstract class MotelySearchThread : IDisposable
     {
 
-        public const int MAX_SEED_WAIT_MS = 99999;
+        public const int MAX_SEED_WAIT_MS = 9;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;

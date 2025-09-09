@@ -6,22 +6,41 @@
   "must": [
     {
         "type": "joker",
-        "value": "oopsAll6s",
+        "value": "OopsAll6s",
         "sources": {
-            "packSlots": [0]
+            "shopSlots": [0,1]
         },
         "antes": [1]
     },
+        {
+        "type": "joker",
+        "value": "luckycat",
+        "edition": "Negative",
+        "sources": {
+            "packSlots": [2]
+        },
+        "antes": [1]
+    }
+    
+  ],
+  "should": [
     {
-      "type": "spectralcard",
-      "value": "ankh",
+      "type": "TarotCard",
+      "value": "TheMagician",
+      "sources": {
+        "packSlots": [1]
+      },
+    "antes": [1]
+    },
+    {
+      "type": "PlayingCard",
+      "Enhancement": "Lucky",
       "sources": {
         "packSlots": [1]
       },
     "antes": [1]
     }
   ],
-  "should": [],
   "must-not": [],
   "scoring": {
     "type": "sum"

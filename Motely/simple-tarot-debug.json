@@ -1,0 +1,16 @@
+{
+  "name": "Simple Tarot Debug",
+  "description": "Debug tarot enum conversion",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "TarotCard",
+      "value": "TheFool",
+      "antes": [1],
+      "sources": {
+        "packSlots": [0, 1, 2, 3]
+      }
+    }
+  ]
+}

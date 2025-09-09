@@ -1,0 +1,55 @@
+{
+  "name": "ALEEB Verified Data Test",
+  "description": "Test with data verified from actual ALEEB analysis output",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "Joker",
+      "value": "Blueprint",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [7]
+      }
+    },
+    {
+      "type": "Joker",
+      "value": "TradingCard",
+      "antes": [1],
+      "sources": {
+        "shopSlots": [0]
+      }
+    },
+    {
+      "type": "Voucher",
+      "value": "MagicTrick",
+      "antes": [1]
+    },
+    {
+      "type": "Voucher",
+      "value": "Hieroglyph",
+      "antes": [2]
+    },
+    {
+      "type": "SmallBlindTag",
+      "value": "SpeedTag",
+      "antes": [1]
+    },
+    {
+      "type": "BigBlindTag",
+      "value": "HandyTag",
+      "antes": [2]
+    },
+    {
+      "type": "PlayingCard",
+      "value": "7 of Clubs",
+      "stickers": ["Lucky"],
+      "antes": [1],
+      "sources": {
+        "packSlots": [2]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

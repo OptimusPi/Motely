@@ -45,7 +45,6 @@ namespace Motely
             
             // JSON specific
             var cutoffOption = app.Option<string>("--cutoff <SCORE>", "Min score threshold", CommandOptionType.SingleValue);
-            var scoreOnlyOption = app.Option("--scoreOnly", "Score only mode", CommandOptionType.NoValue);
             
             // Output options
             var debugOption = app.Option("--debug", "Enable debug output", CommandOptionType.NoValue);
@@ -82,9 +81,7 @@ namespace Motely
                     NoFancy = noFancyOption.HasValue(),
                     Silent = silentOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
-                    Wordlist = wordlistOption.Value(),
-                    Keyword = keywordOption.Value(),
-                    CsvScore = csvScoreOption.Value()
+                    Wordlist = wordlistOption.Value()
                 };
 
                 // Validate batch size
@@ -118,8 +115,8 @@ namespace Motely
                     var chainFilters = chainOption.Value();
                     var scoreConfig = scoreOption.Value();
                     
-                    // Parse cutoff for native filters with scoring or CSV scoring
-                    if (!string.IsNullOrEmpty(scoreConfig) || !string.IsNullOrEmpty(parameters.CsvScore))
+                    // Parse cutoff for native filters with scoring or CSV scoringI he
+                    if (!string.IsNullOrEmpty(scoreConfig))
                     {
                         var cutoffStr = cutoffOption.Value() ?? "0";
                         parameters.AutoCutoff = cutoffStr.ToLowerInvariant() == "auto";
@@ -136,7 +133,6 @@ namespace Motely
                     bool autoCutoff = cutoffStr.ToLowerInvariant() == "auto";
                     parameters.Cutoff = autoCutoff ? 0 : (int.TryParse(cutoffStr, out var c) ? c : 0);
                     parameters.AutoCutoff = autoCutoff;
-                    parameters.ScoreOnly = scoreOnlyOption.HasValue();
                     
                     var executor = new JsonSearchExecutor(jsonOption.Value()!, parameters);
                     return executor.Execute();
@@ -160,7 +156,8 @@ namespace Motely
                 return 1;
             }
 
-            MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
+            var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
+            Console.Write(analysis);
             return 0;
         }
 

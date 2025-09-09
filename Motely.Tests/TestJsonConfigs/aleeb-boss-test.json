@@ -1,0 +1,15 @@
+{
+  "name": "ALEEB Boss Category Test",
+  "description": "Test that ALEEB matches The Arm boss in Ante 2",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "Boss",
+      "value": "TheArm",
+      "antes": [2]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}
