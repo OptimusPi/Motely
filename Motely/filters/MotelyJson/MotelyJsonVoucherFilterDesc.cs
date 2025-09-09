@@ -85,7 +85,22 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                     // Single bit test instead of Contains()!
                     if ((_clauses[i].AnteBitmask & anteBit) != 0)
                     {
-                        var matches = VectorEnum256.Equals(vouchers, _clauses[i].VoucherType);
+                        VectorMask matches = VectorMask.NoBitsSet;
+                        
+                        if (_clauses[i].VoucherTypes?.Count > 0)
+                        {
+                            // Multi-value: OR logic - match any voucher in the list
+                            foreach (var voucherType in _clauses[i].VoucherTypes)
+                            {
+                                matches |= VectorEnum256.Equals(vouchers, voucherType);
+                            }
+                        }
+                        else
+                        {
+                            // Single value
+                            matches = VectorEnum256.Equals(vouchers, _clauses[i].VoucherType);
+                        }
+                        
                         clauseMasks[i] |= matches;
                     }
                 }

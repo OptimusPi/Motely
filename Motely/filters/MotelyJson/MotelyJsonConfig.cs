@@ -40,6 +40,7 @@ namespace Motely.Filters;
     {
         public string Type { get; set; } = "";
         public string? Value { get; set; }
+        public string[]? Values { get; set; }
         public string? Label { get; set; }
         public int[]? Antes { get; set; }
         
@@ -99,6 +100,15 @@ namespace Motely.Filters;
         [JsonIgnore] public MotelyTag? TagEnum { get; set; }
         [JsonIgnore] public MotelyTagType TagTypeEnum { get; set; }
         [JsonIgnore] public MotelyBossBlind? BossEnum { get; set; }
+        
+        // Multi-value enum arrays for "values" property
+        [JsonIgnore] public List<MotelyJoker>? JokerEnums { get; set; }
+        [JsonIgnore] public List<MotelyVoucher>? VoucherEnums { get; set; }
+        [JsonIgnore] public List<MotelyTarotCard>? TarotEnums { get; set; }
+        [JsonIgnore] public List<MotelyPlanetCard>? PlanetEnums { get; set; }
+        [JsonIgnore] public List<MotelySpectralCard>? SpectralEnums { get; set; }
+        [JsonIgnore] public List<MotelyTag>? TagEnums { get; set; }
+        [JsonIgnore] public List<MotelyBossBlind>? BossEnums { get; set; }
         [JsonIgnore] public MotelyItemEdition? EditionEnum { get; set; }
         [JsonIgnore] public List<MotelyJokerSticker>? StickerEnums { get; set; }
         [JsonIgnore] public MotelyPlayingCardSuit? SuitEnum { get; set; }
@@ -118,6 +128,7 @@ namespace Motely.Filters;
                 "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
                 "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
                 "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
+                "tag" => MotelyFilterItemType.SmallBlindTag, // Generic tag wildcard - will be handled specially
                 "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
                 "bigblindtag" => MotelyFilterItemType.BigBlindTag,
                 "voucher" => MotelyFilterItemType.Voucher,
@@ -191,9 +202,17 @@ namespace Motely.Filters;
                         case MotelyFilterItemType.BigBlindTag:
                             if (Enum.TryParse<MotelyTag>(Value, true, out var tag))
                                 TagEnum = tag;
-                            TagTypeEnum = ItemTypeEnum == MotelyFilterItemType.SmallBlindTag 
-                                ? MotelyTagType.SmallBlind 
-                                : MotelyTagType.BigBlind;
+                            // Check if this was a generic "tag" type
+                            if (Type?.ToLowerInvariant() == "tag")
+                            {
+                                TagTypeEnum = MotelyTagType.Any; // Generic tag matches both small and big blind
+                            }
+                            else
+                            {
+                                TagTypeEnum = ItemTypeEnum == MotelyFilterItemType.SmallBlindTag 
+                                    ? MotelyTagType.SmallBlind 
+                                    : MotelyTagType.BigBlind;
+                            }
                             break;
                         case MotelyFilterItemType.PlayingCard:
                             // Parse "X of Y" format like "7 of Clubs"
@@ -258,6 +277,88 @@ namespace Motely.Filters;
                 {
                     if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var stickerEnum))
                         StickerEnums.Add(stickerEnum);
+                }
+            }
+            
+            // Parse Values array (multi-value support)
+            if (Values != null && Values.Length > 0)
+            {
+                // Validate mutual exclusivity with Value
+                if (!string.IsNullOrEmpty(Value))
+                    throw new ArgumentException("Cannot specify both 'Value' and 'Values' properties. Use only one.");
+                
+                // Parse multiple enum values based on type
+                switch (ItemTypeEnum)
+                {
+                    case MotelyFilterItemType.Joker:
+                    case MotelyFilterItemType.SoulJoker:
+                        JokerEnums = new List<MotelyJoker>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelyJoker>(value, true, out var joker))
+                                JokerEnums.Add(joker);
+                        }
+                        break;
+                    case MotelyFilterItemType.Voucher:
+                        VoucherEnums = new List<MotelyVoucher>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelyVoucher>(value, true, out var voucher))
+                                VoucherEnums.Add(voucher);
+                        }
+                        break;
+                    case MotelyFilterItemType.TarotCard:
+                        TarotEnums = new List<MotelyTarotCard>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelyTarotCard>(value, true, out var tarot))
+                                TarotEnums.Add(tarot);
+                        }
+                        break;
+                    case MotelyFilterItemType.PlanetCard:
+                        PlanetEnums = new List<MotelyPlanetCard>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelyPlanetCard>(value, true, out var planet))
+                                PlanetEnums.Add(planet);
+                        }
+                        break;
+                    case MotelyFilterItemType.SpectralCard:
+                        SpectralEnums = new List<MotelySpectralCard>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelySpectralCard>(value, true, out var spectral))
+                                SpectralEnums.Add(spectral);
+                        }
+                        break;
+                    case MotelyFilterItemType.SmallBlindTag:
+                    case MotelyFilterItemType.BigBlindTag:
+                        TagEnums = new List<MotelyTag>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelyTag>(value, true, out var tag))
+                                TagEnums.Add(tag);
+                        }
+                        // Set TagTypeEnum based on type
+                        if (Type?.ToLowerInvariant() == "tag")
+                        {
+                            TagTypeEnum = MotelyTagType.Any;
+                        }
+                        else
+                        {
+                            TagTypeEnum = ItemTypeEnum == MotelyFilterItemType.SmallBlindTag 
+                                ? MotelyTagType.SmallBlind 
+                                : MotelyTagType.BigBlind;
+                        }
+                        break;
+                    case MotelyFilterItemType.Boss:
+                        BossEnums = new List<MotelyBossBlind>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelyBossBlind>(value, true, out var boss))
+                                BossEnums.Add(boss);
+                        }
+                        break;
                 }
             }
             

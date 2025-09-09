@@ -51,18 +51,44 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                 {
                     var clauseMask = VectorMask.NoBitsSet;
                     
-                    if (clause.TagEnum.HasValue)
+                    if (clause.TagEnum.HasValue || (clause.TagEnums != null && clause.TagEnums.Count > 0))
                     {
                         var tagStream = ctx.CreateTagStream(ante);
                         var smallTag = ctx.GetNextTag(ref tagStream);
                         var bigTag = ctx.GetNextTag(ref tagStream);
                         
-                        var tagMatches = clause.TagTypeEnum switch
+                        VectorMask tagMatches;
+                        
+                        // Handle multiple values (OR logic) or single value
+                        if (clause.TagEnums != null && clause.TagEnums.Count > 0)
                         {
-                            MotelyTagType.SmallBlind => VectorEnum256.Equals(smallTag, clause.TagEnum.Value),
-                            MotelyTagType.BigBlind => VectorEnum256.Equals(bigTag, clause.TagEnum.Value),
-                            _ => VectorEnum256.Equals(smallTag, clause.TagEnum.Value) | VectorEnum256.Equals(bigTag, clause.TagEnum.Value)
-                        };
+                            // Multi-value: any tag in the list matches (OR logic)
+                            tagMatches = VectorMask.NoBitsSet;
+                            foreach (var tagEnum in clause.TagEnums)
+                            {
+                                var singleTagMatches = clause.TagTypeEnum switch
+                                {
+                                    MotelyTagType.SmallBlind => VectorEnum256.Equals(smallTag, tagEnum),
+                                    MotelyTagType.BigBlind => VectorEnum256.Equals(bigTag, tagEnum),
+                                    _ => VectorEnum256.Equals(smallTag, tagEnum) | VectorEnum256.Equals(bigTag, tagEnum)
+                                };
+                                tagMatches |= singleTagMatches;
+                            }
+                        }
+                        else if (clause.TagEnum.HasValue)
+                        {
+                            // Single value: original logic
+                            tagMatches = clause.TagTypeEnum switch
+                            {
+                                MotelyTagType.SmallBlind => VectorEnum256.Equals(smallTag, clause.TagEnum.Value),
+                                MotelyTagType.BigBlind => VectorEnum256.Equals(bigTag, clause.TagEnum.Value),
+                                _ => VectorEnum256.Equals(smallTag, clause.TagEnum.Value) | VectorEnum256.Equals(bigTag, clause.TagEnum.Value)
+                            };
+                        }
+                        else
+                        {
+                            tagMatches = VectorMask.NoBitsSet;
+                        }
                         
                         clauseMask |= tagMatches;
                     }
