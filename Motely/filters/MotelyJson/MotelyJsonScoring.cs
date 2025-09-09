@@ -53,7 +53,8 @@ public static class MotelyJsonScoring
         if (shopSlots.Length > 0)
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
-            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
+            // JSON slot indices are 0-based, so use them directly for loop bounds
+            int maxSlot = clause.MaxShopSlot.HasValue ? clause.MaxShopSlot.Value : ArrayMax(shopSlots);
             
             for (int i = 0; i <= maxSlot; i++)
             {
@@ -121,7 +122,8 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
+            // Convert 1-based JSON slot indices to 0-based for loop bounds
+            int maxSlot = clause.MaxShopSlot.HasValue ? (clause.MaxShopSlot.Value - 1) : (ArrayMax(shopSlots) - 1);
             
             for (int i = 0; i <= maxSlot; i++)
             {
@@ -186,7 +188,8 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
+            // Convert 1-based JSON slot indices to 0-based for loop bounds
+            int maxSlot = clause.MaxShopSlot.HasValue ? (clause.MaxShopSlot.Value - 1) : (ArrayMax(shopSlots) - 1);
             
             for (int i = 0; i <= maxSlot; i++)
             {
@@ -319,30 +322,33 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
+    public static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false, MotelyJsonConfig.MotleyJsonFilterClause? originalClause = null)
     {
         int tally = 0;
         var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
         // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
 
-        if (clause.Sources?.ShopSlots?.Length > 0)
+        // Use bitmask for efficient shop slot checking
+        var shopSlotBitmask = clause.ShopSlotBitmask;
+        
+        if (shopSlotBitmask != 0)
         {
-            var shopSlots = clause.Sources.ShopSlots;
-            int maxSlot = clause.MaxShopSlot ?? ArrayMax(shopSlots);
-            for (int i = 0; i <= maxSlot; i++)
+            // Process shop slots using bitmask for efficiency
+            for (int i = 0; i < 64 && shopSlotBitmask != 0; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (ArrayContains(shopSlots, i) && item.TypeCategory == MotelyItemTypeCategory.Joker)
+                // Check if this slot is in our bitmask
+                if (((shopSlotBitmask >> i) & 1) != 0 && item.TypeCategory == MotelyItemTypeCategory.Joker)
                 {
                     var joker = new MotelyItem(item.Value).GetJoker();
-                    var matches = clause.JokerEnum.HasValue ?
-                        joker == clause.JokerEnum.Value :
-                        CheckWildcardMatch(joker, clause.WildcardEnum);
-                    if (matches && CheckEditionAndStickers(item, clause))
+                    var matches = !clause.IsWildcard ?
+                        joker == clause.JokerType :
+                        CheckWildcardMatch(joker, originalClause?.WildcardEnum);
+                    if (matches && CheckEditionAndStickers(item, originalClause ?? new MotelyJsonConfig.MotleyJsonFilterClause()))
                     {
                         runState.AddOwnedJoker((MotelyJoker)item.Type);
-                        if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                        if (item.Type == MotelyItemType.Showman && clause.JokerType == MotelyJoker.Showman)
                         {
                             runState.ActivateShowman();
                         }
@@ -353,31 +359,33 @@ public static class MotelyJsonScoring
             }
         }
 
-        if (clause.Sources?.PackSlots?.Length > 0)
+        // Use bitmask for efficient pack slot checking
+        var packSlotBitmask = clause.PackSlotBitmask;
+        
+        if (packSlotBitmask != 0)
         {
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
             Debug.Assert(!buffoonStream.RarityPrngStream.IsInvalid, $"BuffoonStream RarityPrng should be valid for ante {ante}");
-            var packSlots = clause.Sources.PackSlots;
-            int maxPackSlot = clause.MaxPackSlot ?? ArrayMax(packSlots);
-            for (int i = 0; i <= maxPackSlot; i++)
+            // Process pack slots using bitmask for efficiency
+            for (int i = 0; i < 64 && packSlotBitmask != 0; i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (ArrayContains(packSlots, i) && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                if (((packSlotBitmask >> i) & 1) != 0 && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
-                    if (clause.Sources.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
+                    if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
                     var contents = ctx.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
                     for (int j = 0; j < contents.Length; j++)
                     {
                         var item = contents[j];
                         var joker = item.GetJoker();
-                        var matches = clause.JokerEnum.HasValue ?
-                            joker == clause.JokerEnum.Value :
-                            CheckWildcardMatch(joker, clause.WildcardEnum);
-                        if (matches && CheckEditionAndStickers(item, clause))
+                        var matches = !clause.IsWildcard ?
+                            joker == clause.JokerType :
+                            CheckWildcardMatch(joker, originalClause?.WildcardEnum);
+                        if (matches && CheckEditionAndStickers(item, originalClause ?? new MotelyJsonConfig.MotleyJsonFilterClause()))
                         {
                             runState.AddOwnedJoker((MotelyJoker)item.Type);
-                            if (item.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                            if (item.Type == MotelyItemType.Showman && clause.JokerType == MotelyJoker.Showman)
                             {
                                 runState.ActivateShowman();
                             }
@@ -542,6 +550,9 @@ public static class MotelyJsonScoring
 
     public static void ActivateAllVouchers(ref MotelySingleSearchContext ctx, ref MotelyRunState runState, int maxAnte)
     {
+#if DEBUG
+        DebugLogger.Log($"[VoucherActivation] Starting activation for maxAnte: {maxAnte}");
+#endif
         for (int ante = 1; ante <= maxAnte; ante++)
         {
             var voucher = ctx.GetAnteFirstVoucher(ante, runState);
@@ -573,7 +584,7 @@ public static class MotelyJsonScoring
             // Use the SAME logic as CountClause but with earlyExit optimization for MUST
             var count = clause.ItemTypeEnum switch
             {
-                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: true),
+                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(clause), ante, ref runState, earlyExit: true, originalClause: clause),
                 MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
@@ -665,7 +676,7 @@ public static class MotelyJsonScoring
         {
             var anteCount = clause.ItemTypeEnum switch
             {
-                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(clause), ante, ref runState, earlyExit: false, originalClause: clause),
                 MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrences(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),

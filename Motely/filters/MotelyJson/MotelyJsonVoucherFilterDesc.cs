@@ -9,23 +9,22 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on voucher criteria from JSON configuration.
 /// </summary>
-public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> voucherClauses)
+public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> voucherClauses)
     : IMotelySeedFilterDesc<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>
 {
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _voucherClauses = voucherClauses;
-
-    public readonly string Name => "JSON Voucher Filter";
-    public readonly string Description => "Vectorized voucher filtering with activation chains";
+    private readonly List<MotelyJsonVoucherFilterClause> _voucherClauses = voucherClauses;
 
     public MotelyJsonVoucherFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        // Cache only the antes we actually need
         foreach (var clause in _voucherClauses)
         {
-            if (clause.EffectiveAntes != null)
+            // Extract antes from bitmask
+            for (int bit = 0; bit < 64; bit++)
             {
-                foreach (var ante in clause.EffectiveAntes)
+                if ((clause.AnteBitmask & (1UL << bit)) != 0)
                 {
-                    ctx.CacheAnteFirstVoucher(ante);
+                    ctx.CacheAnteFirstVoucher(bit + 1);
                 }
             }
         }
@@ -33,39 +32,61 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonConfig.MotleyJsonFilter
         return new MotelyJsonVoucherFilter(_voucherClauses);
     }
 
-    public struct MotelyJsonVoucherFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilter
+    public struct MotelyJsonVoucherFilter : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses = clauses;
+        private readonly MotelyJsonVoucherFilterClause[] _clauses;
+        private readonly int _maxAnte;
+
+        public MotelyJsonVoucherFilter(List<MotelyJsonVoucherFilterClause> clauses)
+        {
+            _clauses = clauses.ToArray();
+            
+            // Pre-calculate max ante we need to check from bitmasks
+            _maxAnte = 0;
+            foreach (var clause in _clauses)
+            {
+                if (clause.AnteBitmask != 0)
+                {
+                    // Find highest set bit
+                    for (int bit = 63; bit >= 0; bit--)
+                    {
+                        if ((clause.AnteBitmask & (1UL << bit)) != 0)
+                        {
+                            _maxAnte = Math.Max(_maxAnte, bit + 1);
+                            break;
+                        }
+                    }
+                }
+            }
+            if (_maxAnte == 0) _maxAnte = 8; // Default if no antes specified
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Count == 0)
+            if (_clauses == null || _clauses.Length == 0)
                 return VectorMask.AllBitsSet;
             
-            // VECTORIZED voucher filtering like native PerkeoObservatory
+            // Stack-allocated clause masks - no heap allocation!
+            Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Length];
+            for (int i = 0; i < clauseMasks.Length; i++)
+                clauseMasks[i] = VectorMask.NoBitsSet;
+            
             var voucherState = new MotelyVectorRunState();
-            var clauseMasks = new Dictionary<MotelyJsonConfig.MotleyJsonFilterClause, VectorMask>();
             
-            foreach (var clause in _clauses)
-            {
-                clauseMasks[clause] = VectorMask.NoBitsSet;
-            }
-            
-            // Process antes in order for proper voucher activation
-            for (int ante = 1; ante <= 8; ante++)
+            // Only process antes we need
+            for (int ante = 1; ante <= _maxAnte; ante++)
             {
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
+                ulong anteBit = 1UL << (ante - 1);
                 
-                foreach (var clause in _clauses)
+                for (int i = 0; i < _clauses.Length; i++)
                 {
-                    if (clause.EffectiveAntes != null && clause.EffectiveAntes.Contains(ante))
+                    // Single bit test instead of Contains()!
+                    if ((_clauses[i].AnteBitmask & anteBit) != 0)
                     {
-                        if (clause.VoucherEnum.HasValue)
-                        {
-                            var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum.Value);
-                            clauseMasks[clause] |= matches;
-                        }
+                        var matches = VectorEnum256.Equals(vouchers, _clauses[i].VoucherType);
+                        clauseMasks[i] |= matches;
                     }
                 }
                 
@@ -74,9 +95,9 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonConfig.MotleyJsonFilter
             
             // All voucher clauses must be satisfied
             var resultMask = VectorMask.AllBitsSet;
-            foreach (var clauseMask in clauseMasks.Values)
+            for (int i = 0; i < clauseMasks.Length; i++)
             {
-                resultMask &= clauseMask;
+                resultMask &= clauseMasks[i];
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
             

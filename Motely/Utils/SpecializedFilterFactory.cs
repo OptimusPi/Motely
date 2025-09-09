@@ -20,17 +20,24 @@ public static class SpecializedFilterFactory
             
         return category switch
         {
-            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(clauses),
-            FilterCategory.Joker => new MotelyJsonJokerFilterDesc(clauses),
-            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(clauses),
-            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(clauses),
-            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(clauses),
-            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(clauses),
+            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)),
+            FilterCategory.Joker => CreateJokerFilterDesc(clauses),
+            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.ConvertClauses(clauses)),
+            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.ConvertClauses(clauses)),
+            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.ConvertClauses(clauses)),
+            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.ConvertClauses(clauses)),
             FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(clauses),
             FilterCategory.Boss => new MotelyJsonBossFilterDesc(clauses), // RE-ENABLED with proper structure
             FilterCategory.Tag => new MotelyJsonTagFilterDesc(clauses),
             _ => throw new ArgumentException($"Specialized filter not implemented for: {category}")
         };
+    }
+    
+    private static MotelyJsonJokerFilterDesc CreateJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+    {
+        // Convert to typed clauses
+        var typedClauses = MotelyJsonJokerFilterClause.ConvertClauses(clauses);
+        return new MotelyJsonJokerFilterDesc(typedClauses);
     }
     
     /// <summary>

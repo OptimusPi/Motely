@@ -1,0 +1,18 @@
+{
+  "name": "ALEEB Tarot Category Test",
+  "description": "Test that ALEEB matches The Empress tarot in Ante 1 pack",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "TarotCard",
+      "value": "TheEmpress",
+      "antes": [1],
+      "sources": {
+        "packSlots": [1]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}
