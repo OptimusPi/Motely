@@ -569,6 +569,12 @@ namespace Motely.Filters;
                     Tags = true
                 },
                 "spectralcard" => GetSpectralCardDefaultSources(itemValue, deck),
+                "tag" or "smallblindtag" or "bigblindtag" => new SourcesConfig
+                {
+                    ShopSlots = Array.Empty<int>(), // Tags don't appear in shop slots
+                    PackSlots = Array.Empty<int>(), // Tags don't appear in pack slots
+                    Tags = true
+                },
                 _ => new SourcesConfig
                 {
                     ShopSlots = new[] { 0, 1, 2, 3 },

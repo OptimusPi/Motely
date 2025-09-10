@@ -314,4 +314,57 @@ unsafe partial struct MotelyVectorSearchContext
 
         return pack;
     }
+
+    /// <summary>
+    /// Checks if a buffoon pack contains a specific joker type using vectorized operations.
+    /// This method follows the same pattern as GetNextSpectralPackHasTheSoul.
+    /// </summary>
+    /// <param name="jokerStream">The joker stream to consume from</param>
+    /// <param name="joker">The joker type to search for</param>
+    /// <param name="size">The size of the buffoon pack</param>
+    /// <returns>A VectorMask indicating which lanes have the target joker</returns>
+    public VectorMask GetNextBuffoonPackHasJoker(ref MotelyVectorJokerStream jokerStream, MotelyJoker joker, MotelyBoosterPackSize size)
+    {
+        return GetNextBuffoonPackHasJoker(ref jokerStream, new[] { joker }, size);
+    }
+    
+    /// <summary>
+    /// Checks if a buffoon pack contains any of the specified joker types using vectorized operations.
+    /// This method follows the same pattern as GetNextSpectralPackHasTheSoul.
+    /// </summary>
+    /// <param name="jokerStream">The joker stream to consume from</param>
+    /// <param name="jokersToMatch">Array of joker types to search for</param>
+    /// <param name="size">The size of the buffoon pack</param>
+    /// <returns>A VectorMask indicating which lanes have any of the target jokers</returns>
+    public VectorMask GetNextBuffoonPackHasJoker(ref MotelyVectorJokerStream jokerStream, MotelyJoker[] jokersToMatch, MotelyBoosterPackSize size)
+    {
+        int cardCount = MotelyBoosterPackType.Buffoon.GetCardCount(size);
+        
+        var result = VectorMask.NoBitsSet;
+         
+         // Convert jokers to item types for comparison
+         var targetJokerTypes = new MotelyItemType[jokersToMatch.Length];
+         for (int j = 0; j < jokersToMatch.Length; j++)
+         {
+             targetJokerTypes[j] = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokersToMatch[j]);
+         }
+         
+         // Check each joker in the pack
+         for (int i = 0; i < cardCount; i++)
+         {
+             var nextJoker = GetNextJoker(ref jokerStream);
+             
+             // Check if this joker matches any of the target jokers
+             var hasAnyTargetJoker = VectorMask.NoBitsSet;
+            for (int j = 0; j < targetJokerTypes.Length; j++)
+            {
+                var hasThisJoker = VectorEnum256.Equals(nextJoker.Type, targetJokerTypes[j]);
+                hasAnyTargetJoker |= hasThisJoker;
+            }
+            
+            result |= hasAnyTargetJoker;
+        }
+        
+        return result;
+    }
 }

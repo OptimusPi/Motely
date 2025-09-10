@@ -23,6 +23,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             ctx.CacheBoosterPackStream(ante);
+            ctx.CacheShopStream(ante);
         }
 
         return new MotelyJsonSpectralCardFilter(_spectralClauses, minAnte, maxAnte);
@@ -42,6 +43,11 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
 
             // Quick vectorized check for potential spectral cards
             VectorMask hasPotential = VectorMask.NoBitsSet;
+            
+            if (DebugLogger.IsEnabled)
+            {
+                DebugLogger.Log($"[DEBUG] SpectralFilter: Checking antes {_minAnte} to {_maxAnte}");
+            }
 
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
@@ -72,6 +78,10 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                         var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize()[0]);
                         for (int j = 0; j < contents.Length; j++)
                         {
+                            if (DebugLogger.IsEnabled)
+                            {
+                                DebugLogger.Log($"[DEBUG] Spectral pack slot {packSlot}, card {j}: Type={contents[j].Type}, TypeCategory={contents[j].TypeCategory}");
+                            }
                             var packPotential = VectorEnum256.Equals(contents[j].TypeCategory, MotelyItemTypeCategory.SpectralCard);
                             hasPotential |= (packPotential & isSpectralPack);
                         }
@@ -91,6 +101,8 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             }
 
             // Early exit if no potential matches
+            if (DebugLogger.IsEnabled)
+                DebugLogger.Log($"[DEBUG] SpectralFilter: hasPotential={hasPotential}");
             if (hasPotential.IsAllFalse())
                 return VectorMask.NoBitsSet;
 
@@ -101,13 +113,25 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             int maxShopSlotsNeeded = GetMaxShopSlotsNeeded();
 
             // Now do full individual processing for seeds with potential
+            if (DebugLogger.IsEnabled)
+                DebugLogger.Log($"[DEBUG] SpectralFilter: Searching individual seeds with hasPotential={hasPotential}");
             return ctx.SearchIndividualSeeds(hasPotential, (ref MotelySingleSearchContext singleCtx) =>
             {
-                VectorMask[] clauseMasks = new VectorMask[clauses.Count];
-                for (int i = 0; i < clauseMasks.Length; i++) clauseMasks[i] = VectorMask.NoBitsSet;
+                if (DebugLogger.IsEnabled)
+                    DebugLogger.Log($"[DEBUG] SpectralFilter: Processing individual seed");
+                // Stack-allocated to avoid heap allocation in hot path!
+                Span<bool> clauseMatches = stackalloc bool[clauses.Count];
+                for (int i = 0; i < clauseMatches.Length; i++) 
+                {
+                    clauseMatches[i] = false;
+                    if (DebugLogger.IsEnabled)
+                        DebugLogger.Log($"[DEBUG] Initialized clause {i} to false");
+                }
 
                 for (int ante = minAnte; ante <= maxAnte; ante++)
                 {
+                    if (DebugLogger.IsEnabled)
+                        DebugLogger.Log($"[DEBUG] SpectralFilter: Processing ante {ante}");
                     ulong anteBit = 1UL << (ante - 1);
 
                     // Create streams ONCE per ante for performance and PRNG correctness
@@ -130,21 +154,50 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                             // Check ante bitmask
                             if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
 
-                            // Check shop slot bitmask
-                            if ((clause.ShopSlotBitmask & shopSlotBit) == 0) continue;
+                            if (DebugLogger.IsEnabled && shopSlot == 0)
+                                DebugLogger.Log($"[DEBUG] Clause {clauseIndex}: Sources={clause.Sources}, PackSlots={clause.Sources?.PackSlots}, ShopSlots={clause.Sources?.ShopSlots}, PackSlotBitmask={clause.PackSlotBitmask:X}, ShopSlotBitmask={clause.ShopSlotBitmask:X}");
 
-                            bool typeMatches = clause.SpectralType.HasValue
-                                ? shopItem.Type == (MotelyItemType)clause.SpectralType.Value
-                                : shopItem.TypeCategory == MotelyItemTypeCategory.SpectralCard;
+                            // Skip shop checking if only packSlots were specified
+                            if (clause.Sources != null && clause.Sources.PackSlots != null && clause.Sources.PackSlots.Length > 0 && 
+                                (clause.Sources.ShopSlots == null || clause.Sources.ShopSlots.Length == 0)) 
+                            {
+                                if (DebugLogger.IsEnabled)
+                                    DebugLogger.Log($"[DEBUG] Skipping shop slot {shopSlot} for clause {clauseIndex} - only packSlots specified");
+                                continue;
+                            }
+
+                            // Check shop slot bitmask (0 means check all slots)
+                            if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0) continue;
+
+                            bool typeMatches;
+                            if (clause.SpectralType.HasValue && shopItem.TypeCategory == MotelyItemTypeCategory.SpectralCard)
+                            {
+                                var spectralCard = new MotelyItem(shopItem.Value).GetSpectral();
+                                typeMatches = spectralCard == clause.SpectralType.Value;
+                            }
+                            else if (!clause.SpectralType.HasValue)
+                            {
+                                typeMatches = shopItem.TypeCategory == MotelyItemTypeCategory.SpectralCard;
+                            }
+                            else
+                            {
+                                typeMatches = false;
+                            }
 
                             if (typeMatches)
                             {
                                 bool editionMatches = !clause.EditionEnum.HasValue ||
                                                     shopItem.Edition == clause.EditionEnum.Value;
 
-                                if (editionMatches)
+                                if (typeMatches && editionMatches)
                                 {
-                                    clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
+                                    if (DebugLogger.IsEnabled)
+                                    {
+                                        var spectralCard = shopItem.TypeCategory == MotelyItemTypeCategory.SpectralCard ? 
+                                            new MotelyItem(shopItem.Value).GetSpectral().ToString() : "NOT_SPECTRAL";
+                                        DebugLogger.Log($"[DEBUG] MATCH! Shop slot {shopSlot}: Type={shopItem.Type}, TypeCategory={shopItem.TypeCategory}, SpectralCard={spectralCard}, Setting clause {clauseIndex} to true");
+                                    }
+                                    clauseMatches[clauseIndex] = true;
                                 }
                             }
                         }
@@ -171,9 +224,9 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                                 // Check ante bitmask
                                 if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
 
-                                // Check pack slot bitmask
+                                // Check pack slot bitmask (0 means check all slots)
                                 ulong packSlotBit = 1UL << packSlot;
-                                if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                                if (clause.PackSlotBitmask != 0 && (clause.PackSlotBitmask & packSlotBit) == 0) continue;
 
                                 // Check pack size requirements if specified
                                 bool sizeMatches = true;
@@ -190,9 +243,10 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                                     // Check multi-value OR match
                                     if (clause.SpectralTypes?.Count > 0)
                                     {
+                                        var spectralCard = new MotelyItem(contents[j].Value).GetSpectral();
                                         foreach (var spectralType in clause.SpectralTypes)
                                         {
-                                            if (contents[j].Type == (MotelyItemType)spectralType)
+                                            if (spectralCard == spectralType)
                                             {
                                                 typeMatches = true;
                                                 break;
@@ -202,7 +256,10 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                                     // Fallback to single value or wildcard
                                     else if (clause.SpectralType.HasValue)
                                     {
-                                        typeMatches = contents[j].Type == (MotelyItemType)clause.SpectralType.Value;
+                                        var spectralCard = new MotelyItem(contents[j].Value).GetSpectral();
+                                        typeMatches = spectralCard == clause.SpectralType.Value;
+                                        if (DebugLogger.IsEnabled && packSlot == 3)
+                                            DebugLogger.Log($"[DEBUG] Comparing: spectralCard={spectralCard} vs clause.SpectralType={clause.SpectralType.Value}, typeMatches={typeMatches}");
                                     }
                                     else
                                     {
@@ -214,7 +271,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
 
                                     if (typeMatches && editionMatches && sizeMatches)
                                     {
-                                        clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
+                                        clauseMatches[clauseIndex] = true;
                                     }
                                 }
                             }
@@ -232,9 +289,9 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                                 // Check ante bitmask
                                 if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
 
-                                // Check pack slot bitmask
+                                // Check pack slot bitmask (0 means check all slots)
                                 ulong packSlotBit = 1UL << packSlot;
-                                if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                                if (clause.PackSlotBitmask != 0 && (clause.PackSlotBitmask & packSlotBit) == 0) continue;
 
                                 // Check pack size requirements if specified
                                 bool sizeMatches = true;
@@ -259,7 +316,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
 
                                     if (typeMatches && editionMatches && sizeMatches)
                                     {
-                                        clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
+                                        clauseMatches[clauseIndex] = true;
                                     }
                                 }
                             }
@@ -270,14 +327,19 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
 
                 // Combine all clause results - ALL clauses must match
                 bool allClausesMatched = true;
-                for (int i = 0; i < clauseMasks.Length; i++)
+                for (int i = 0; i < clauseMatches.Length; i++)
                 {
-                    if (clauseMasks[i].IsAllFalse())
+                    if (DebugLogger.IsEnabled)
+                        DebugLogger.Log($"[DEBUG] SpectralFilter: Clause {i} matches = {clauseMatches[i]}");
+                    if (!clauseMatches[i])
                     {
                         allClausesMatched = false;
                         break;
                     }
                 }
+                
+                if (DebugLogger.IsEnabled)
+                    DebugLogger.Log($"[DEBUG] SpectralFilter: allClausesMatched = {allClausesMatched}");
                 
                 return allClausesMatched;
             });

@@ -96,6 +96,15 @@ namespace Motely.Executors
             };
             
             var searchStopwatch = Stopwatch.StartNew();
+            
+            // Add debug output for batch range processing
+            if (_params.StartBatch > 0 || _params.EndBatch > 0)
+            {
+                Console.WriteLine($"   Processing batches: {_params.StartBatch} to {_params.EndBatch}");
+                Console.WriteLine($"   Seeds per batch: {Math.Pow(35, _params.BatchSize):N0}");
+                Console.WriteLine($"   Total seeds to search: {((_params.EndBatch - _params.StartBatch + 1) * Math.Pow(35, _params.BatchSize)):N0}");
+            }
+            
             search.Start();
             
             // Wait for completion using polling instead of blocking
@@ -147,7 +156,8 @@ namespace Motely.Executors
             settings = ApplyChainedFilters(settings);
             settings = ApplyScoring(settings);
             
-            settings = settings.WithStartBatchIndex((long)_params.StartBatch-1);
+            // FIX: Don't subtract 1 from StartBatch - use as-is for correct batch boundaries
+            settings = settings.WithStartBatchIndex((long)_params.StartBatch);
             if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex((long)_params.EndBatch);
             
             if (seeds != null && seeds.Count > 0)
@@ -160,6 +170,7 @@ namespace Motely.Executors
         private object GetFilterDescriptor(string filterName)
         {
             var normalizedName = filterName.ToLower(System.Globalization.CultureInfo.CurrentCulture).Trim();
+            Console.WriteLine($"   DEBUG: Loading filter descriptor for: {normalizedName}");
             return normalizedName switch
             {
                 "nanseed" => new NaNSeedFilterDesc(),
@@ -386,16 +397,34 @@ namespace Motely.Executors
         {
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
             
-            // Use the actual tracked counts from the search
-            var lastBatch = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
+            // FIX: Calculate actual seeds searched based on batch range
+            ulong totalSeedsSearched;
+            if (_params.StartBatch > 0 && _params.EndBatch > 0)
+            {
+                // Calculate based on actual batch range requested
+                ulong batchesSearched = (ulong)(_params.EndBatch - _params.StartBatch + 1);
+                totalSeedsSearched = batchesSearched * (ulong)Math.Pow(35, _params.BatchSize);
+            }
+            else if (search.TotalSeedsSearched > 0)
+            {
+                // Use the search's tracked count if available
+                totalSeedsSearched = (ulong)search.TotalSeedsSearched;
+            }
+            else
+            {
+                // Fallback to completed batch count
+                totalSeedsSearched = (ulong)search.CompletedBatchCount * (ulong)Math.Pow(35, _params.BatchSize);
+            }
+            
+            var lastBatch = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount - 1 : 0;
             
             Console.WriteLine($"   Last batch: {lastBatch}");
-            Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
+            Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
             Console.WriteLine($"   Seeds matched: {search.MatchingSeeds:N0}");
             
             if (duration.TotalMilliseconds >= 1)
             {
-                var speed = (double)search.TotalSeedsSearched / duration.TotalMilliseconds;
+                var speed = (double)totalSeedsSearched / duration.TotalMilliseconds;
                 Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
