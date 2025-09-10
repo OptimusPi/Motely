@@ -1,0 +1,12 @@
+{
+  "name": "Test No Sources",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "Joker",
+      "value": "Perkeo",
+      "antes": [2]
+    }
+  ]
+}
