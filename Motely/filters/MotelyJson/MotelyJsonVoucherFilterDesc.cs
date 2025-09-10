@@ -87,7 +87,7 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                     {
                         VectorMask matches = VectorMask.NoBitsSet;
                         
-                        if (_clauses[i].VoucherTypes?.Count > 0)
+                        if (_clauses[i].VoucherTypes is { Count: > 1 })
                         {
                             // Multi-value: OR logic - match any voucher in the list
                             foreach (var voucherType in _clauses[i].VoucherTypes)

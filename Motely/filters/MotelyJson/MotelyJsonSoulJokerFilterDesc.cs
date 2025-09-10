@@ -106,11 +106,19 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                     var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true);
                     var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true);
                     
-                    for (int packIndex = 0; packIndex < 2 + ante; packIndex++)
+                    // Determine max pack slot to check
+                    int maxPackSlot = clause.PackSlotBitmask == 0 ? (2 + ante) : 
+                        (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+                    
+                    for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
                     {
                         var pack = ctx.GetNextBoosterPack(ref boosterPackStream);
-                        var packType = pack.GetPackType();
                         
+                        // Skip if this pack slot isn't in our filter
+                        if (clause.PackSlotBitmask != 0 && ((clause.PackSlotBitmask >> packIndex) & 1) == 0) 
+                            continue;
+                        
+                        var packType = pack.GetPackType();
                         
                         // Check Arcana packs with vectorized method
                         VectorMask isArcanaPack = VectorEnum256.Equals(packType, MotelyBoosterPackType.Arcana);

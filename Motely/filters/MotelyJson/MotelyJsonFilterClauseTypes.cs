@@ -80,7 +80,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     public static MotelyJsonJokerFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
         ulong anteMask = 0;
-        var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
+        var effectiveAntes = jsonClause.EffectiveAntes;
         foreach (var ante in effectiveAntes)
         {
             if (ante >= 1 && ante <= 64)
@@ -159,6 +159,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     public MotelyJoker? JokerType { get; init; }
     public bool IsWildcard { get; init; }
     public ulong AnteBitmask { get; init; }
+    public ulong PackSlotBitmask { get; init; }  // Added to track which pack slots to check
     
     public static MotelyJsonSoulJokerFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -170,12 +171,24 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
                 anteMask |= (1UL << (ante - 1));
         }
         
+        // Build pack slot bitmask
+        ulong packSlotMask = 0;
+        if (jsonClause.Sources?.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 64)
+                    packSlotMask |= (1UL << slot);
+            }
+        }
+        
         return new MotelyJsonSoulJokerFilterClause
         {
             JokerType = jsonClause.JokerEnum,
             IsWildcard = jsonClause.IsWildcard,
             EditionEnum = jsonClause.EditionEnum,
-            AnteBitmask = anteMask
+            AnteBitmask = anteMask,
+            PackSlotBitmask = packSlotMask
         };
     }
     

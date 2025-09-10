@@ -8,6 +8,7 @@ namespace Motely.Filters;
 
 /// <summary>
 /// Filters seeds based on joker criteria from JSON configuration.
+/// REVERTED: Simple version that compiles with fixed slot range
 /// </summary>
 public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerClauses)
     : IMotelySeedFilterDesc<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>
@@ -16,10 +17,8 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
 
     public MotelyJsonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Calculate ante range from bitmasks
         var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_jokerClauses);
         
-        // Cache streams for needed antes
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             ctx.CacheShopStream(ante);
@@ -41,75 +40,55 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            // Copy struct fields to local variables for lambda
             var clauses = _clauses;
             int minAnte = _minAnte;
             int maxAnte = _maxAnte;
             
-            // Process all seeds directly with efficient bitmask filtering
             return ctx.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
             {
-                VectorMask[] clauseMasks = new VectorMask[clauses.Count];
-                for (int i = 0; i < clauseMasks.Length; i++) clauseMasks[i] = VectorMask.NoBitsSet;
+                Span<bool> clauseMatches = stackalloc bool[clauses.Count];
+                for (int i = 0; i < clauseMatches.Length; i++) clauseMatches[i] = false;
                 
-                // ANTE LOOP FIRST - using pre-calculated range
                 for (int ante = minAnte; ante <= maxAnte; ante++)
                 {
                     ulong anteBit = 1UL << (ante - 1);
                     
-                    // CLAUSE LOOP SECOND
                     for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
                     {
                         var clause = clauses[clauseIndex];
-                        // Check ante bitmask
                         if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
                         
-                        // Check shop slots using bitmask
+                        // ✅ FIXED: Check shop slots with extended range for slot 7+
                         if (clause.ShopSlotBitmask != 0)
                         {
                             var shopStream = singleCtx.CreateShopItemStream(ante, isCached: false);
-                            for (int i = 0; i < 64 && clause.ShopSlotBitmask != 0; i++)
+                            int maxSlot = GetMaxShopSlot(clause.ShopSlotBitmask, ante);
+                            
+                            for (int i = 0; i < maxSlot; i++)
                             {
                                 var item = singleCtx.GetNextShopItem(ref shopStream);
                                 if (((clause.ShopSlotBitmask >> i) & 1) != 0 && item.TypeCategory == MotelyItemTypeCategory.Joker)
                                 {
                                     var joker = new MotelyItem(item.Value).GetJoker();
-                                    bool typeMatches = false;
-                                    
-                                    if (!clause.IsWildcard)
-                                    {
-                                        if (clause.JokerTypes?.Count > 0)
-                                        {
-                                            // Multi-value: OR logic - match any joker in the list
-                                            typeMatches = clause.JokerTypes.Contains(joker);
-                                        }
-                                        else
-                                        {
-                                            // Single value
-                                            typeMatches = joker == clause.JokerType;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        typeMatches = CheckWildcardMatch(joker, clause.WildcardEnum);
-                                    }
-                                    
+                                    bool typeMatches = CheckJokerTypeMatch(joker, clause);
                                     bool editionMatches = !clause.EditionEnum.HasValue || item.Edition == clause.EditionEnum.Value;
                                     
                                     if (typeMatches && editionMatches)
                                     {
-                                        clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
+                                        clauseMatches[clauseIndex] = true;
                                     }
                                 }
                             }
                         }
                         
-                        // Check pack slots using bitmask
+                        // Check pack slots
                         if (clause.PackSlotBitmask != 0)
                         {
                             var packStream = singleCtx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
                             var buffoonStream = singleCtx.CreateBuffoonPackJokerStream(ante);
-                            for (int i = 0; i < 64 && clause.PackSlotBitmask != 0; i++)
+                            
+                            int maxPack = 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask);
+                            for (int i = 0; i < maxPack; i++)
                             {
                                 var pack = singleCtx.GetNextBoosterPack(ref packStream);
                                 if (((clause.PackSlotBitmask >> i) & 1) != 0 && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
@@ -121,30 +100,12 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
                                     {
                                         var item = contents[j];
                                         var joker = item.GetJoker();
-                                        bool typeMatches = false;
-                                        
-                                        if (!clause.IsWildcard)
-                                        {
-                                            if (clause.JokerTypes?.Count > 0)
-                                            {
-                                                // Multi-value: OR logic - match any joker in the list
-                                                typeMatches = clause.JokerTypes.Contains(joker);
-                                            }
-                                            else
-                                            {
-                                                // Single value
-                                                typeMatches = joker == clause.JokerType;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            typeMatches = CheckWildcardMatch(joker, clause.WildcardEnum);
-                                        }
+                                        bool typeMatches = CheckJokerTypeMatch(joker, clause);
                                         bool editionMatches = !clause.EditionEnum.HasValue || item.Edition == clause.EditionEnum.Value;
                                         
                                         if (typeMatches && editionMatches)
                                         {
-                                            clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
+                                            clauseMatches[clauseIndex] = true;
                                         }
                                     }
                                 }
@@ -153,11 +114,10 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
                     }
                 }
                 
-                // Combine all clause results - ALL clauses must match
                 bool allClausesMatched = true;
-                for (int i = 0; i < clauseMasks.Length; i++)
+                for (int i = 0; i < clauseMatches.Length; i++)
                 {
-                    if (clauseMasks[i].IsAllFalse())
+                    if (!clauseMatches[i])
                     {
                         allClausesMatched = false;
                         break;
@@ -165,7 +125,38 @@ public struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerC
                 }
                 
                 return allClausesMatched;
-            });}
+            });
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GetMaxShopSlot(ulong bitmask, int ante)
+        {
+            if (bitmask == 0) return ante == 1 ? 4 : 6; // Default 4/6 concept
+            
+            // Find highest bit + 1, but ensure minimum of 6 for ante 2+ to handle extended slots
+            int maxSpecified = 64 - System.Numerics.BitOperations.LeadingZeroCount(bitmask);
+            return ante == 1 ? Math.Max(4, maxSpecified) : Math.Max(6, maxSpecified);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool CheckJokerTypeMatch(MotelyJoker joker, MotelyJsonJokerFilterClause clause)
+        {
+            if (!clause.IsWildcard)
+            {
+                if (clause.JokerTypes?.Count > 0)
+                {
+                    return clause.JokerTypes.Contains(joker);
+                }
+                else
+                {
+                    return joker == clause.JokerType;
+                }
+            }
+            else
+            {
+                return CheckWildcardMatch(joker, clause.WildcardEnum);
+            }
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

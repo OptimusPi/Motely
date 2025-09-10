@@ -45,10 +45,18 @@ ref partial struct MotelyVectorSearchContext
 #endif
     public MotelyItemVector GetNextSpectral(ref MotelyVectorSpectralStream stream)
     {
-        if (stream.IsNull) return new MotelyItemVector(Vector256<int>.Zero);
+        if (stream.IsNull) 
+        {
+            if (DebugLogger.IsEnabled)
+                DebugLogger.Log($"[SPECTRAL] Stream is null! ResampleKey={stream.ResampleKey}");
+            return new MotelyItemVector(Vector256<int>.Zero);
+        }
 
         Vector256<int> items = Vector256<int>.Zero;
-        Vector512<double> activeMask = Vector512.Create(1.0);
+        Vector512<double> activeMask = Vector512<double>.AllBitsSet;
+        
+        if (DebugLogger.IsEnabled)
+            DebugLogger.Log($"[SPECTRAL] Initial activeMask={activeMask}");
 
         if (stream.IsSoulBlackHoleable)
         {
@@ -69,11 +77,21 @@ ref partial struct MotelyVectorSearchContext
         }
 
         if (Vector512.EqualsAll(activeMask, Vector512<double>.Zero))
+        {
+            if (DebugLogger.IsEnabled)
+                DebugLogger.Log($"[SPECTRAL] Early return - activeMask is all zeros, items={items}");
             return new MotelyItemVector(items);
+        }
 
+        // Note: We use the full ValueCount (18) here to match the single-seed implementation's PRNG behavior
+        // Soul (16) and BlackHole (17) will be filtered out in the resample loop below
         Vector256<int> spectralEnums = GetNextRandomInt(ref stream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelySpectralCard>.ValueCount, activeMask);
         Vector256<int> spectralItems = Vector256.BitwiseOr(spectralEnums, Vector256.Create((int)MotelyItemTypeCategory.SpectralCard));
-        items = Vector256.ConditionalSelect(MotelyVectorUtils.ShrinkDoubleMaskToInt(activeMask), spectralItems, items);
+        var shrunkMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(activeMask);
+        items = Vector256.ConditionalSelect(shrunkMask, spectralItems, items);
+        
+        if (DebugLogger.IsEnabled)
+            DebugLogger.Log($"[SPECTRAL] activeMask={activeMask}, shrunkMask={shrunkMask}, spectralEnums={spectralEnums}, spectralItems={spectralItems}, items={items}");
 
         int resampleCount = 0;
         while (true)
@@ -154,5 +172,53 @@ ref partial struct MotelyVectorSearchContext
         }
         
         return hasTheSoul;
+    }
+
+    public VectorMask GetNextSpectralPackHasThe(ref MotelyVectorSpectralStream spectralStream, MotelySpectralCard targetSpectral, MotelyBoosterPackSize size)
+    {
+        int cardCount = MotelyBoosterPackType.Spectral.GetCardCount(size);
+        VectorMask hasTarget = VectorMask.NoBitsSet;
+        
+        for (int i = 0; i < cardCount; i++)
+        {
+            var spectral = GetNextSpectral(ref spectralStream);
+            // Extract spectral card type using bit masking (similar to PlayingCardSuit pattern)
+            var spectralType = new VectorEnum256<MotelySpectralCard>(Vector256.BitwiseAnd(spectral.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
+            VectorMask isTarget = VectorEnum256.Equals(spectralType, targetSpectral);
+            hasTarget |= isTarget;
+            
+            // Early exit optimization - if all lanes have found the target, no need to continue
+            if (hasTarget.IsAllTrue())
+                break;
+        }
+        
+        return hasTarget;
+    }
+
+    public VectorMask GetNextSpectralPackHasThe(ref MotelyVectorSpectralStream spectralStream, MotelySpectralCard[] targetSpectrals, MotelyBoosterPackSize size)
+    {
+        int cardCount = MotelyBoosterPackType.Spectral.GetCardCount(size);
+        VectorMask hasAnyTarget = VectorMask.NoBitsSet;
+        
+        for (int i = 0; i < cardCount; i++)
+        {
+            var spectral = GetNextSpectral(ref spectralStream);
+            // Extract spectral card type using bit masking (similar to PlayingCardSuit pattern)
+            var spectralType = new VectorEnum256<MotelySpectralCard>(Vector256.BitwiseAnd(spectral.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
+            
+            VectorMask isAnyTarget = VectorMask.NoBitsSet;
+            foreach (var target in targetSpectrals)
+            {
+                isAnyTarget |= VectorEnum256.Equals(spectralType, target);
+            }
+            
+            hasAnyTarget |= isAnyTarget;
+            
+            // Early exit optimization - if all lanes have found any target, no need to continue
+            if (hasAnyTarget.IsAllTrue())
+                break;
+        }
+        
+        return hasAnyTarget;
     }
 }

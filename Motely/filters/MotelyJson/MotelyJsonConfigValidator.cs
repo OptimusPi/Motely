@@ -173,17 +173,8 @@ namespace Motely.Filters
                             }
                         }
 
-                        // Enforce explicit source specification ONLY for non-soul jokers (user demanded explicit slots for shop/pack joker searches).
-                        // Soul jokers may safely omit sources to mean: "any pack slot capable of producing The Soul" (original semantics).
-                        if (section == "must" && !item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase))
-                        {
-                            bool hasShop = item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0;
-                            bool hasPack = item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0;
-                            if (!hasShop && !hasPack)
-                            {
-                                errors.Add($"{prefix}: joker '{item.Value ?? "(any)"}' MUST clause missing explicit sources. Add 'sources.shopSlots' and/or 'sources.packSlots'.");
-                            }
-                        }
+                        // NOTE: Source validation removed - PostProcess() automatically defaults sources when missing.
+                        // The config loader now handles this transparently, so users don't need to specify sources explicitly.
                         break;
                         
                     case "tarot":

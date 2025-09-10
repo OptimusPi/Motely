@@ -200,4 +200,52 @@ ref partial struct MotelyVectorSearchContext
             tarots
         ));
     }
+
+    public VectorMask GetNextArcanaPackHasThe(ref MotelyVectorTarotStream tarotStream, MotelyTarotCard targetTarot, MotelyBoosterPackSize size)
+    {
+        int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
+        VectorMask hasTarget = VectorMask.NoBitsSet;
+        
+        for (int i = 0; i < cardCount; i++)
+        {
+            var tarot = GetNextTarot(ref tarotStream);
+            // Extract tarot card type using bit masking (similar to PlayingCardSuit pattern)
+            var tarotType = new VectorEnum256<MotelyTarotCard>(Vector256.BitwiseAnd(tarot.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
+            VectorMask isTarget = VectorEnum256.Equals(tarotType, targetTarot);
+            hasTarget |= isTarget;
+            
+            // Early exit optimization - if all lanes have found the target, no need to continue
+            if (hasTarget.IsAllTrue())
+                break;
+        }
+        
+        return hasTarget;
+    }
+
+    public VectorMask GetNextArcanaPackHasThe(ref MotelyVectorTarotStream tarotStream, MotelyTarotCard[] targetTarots, MotelyBoosterPackSize size)
+    {
+        int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
+        VectorMask hasAnyTarget = VectorMask.NoBitsSet;
+        
+        for (int i = 0; i < cardCount; i++)
+        {
+            var tarot = GetNextTarot(ref tarotStream);
+            // Extract tarot card type using bit masking (similar to PlayingCardSuit pattern)
+            var tarotType = new VectorEnum256<MotelyTarotCard>(Vector256.BitwiseAnd(tarot.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
+            
+            VectorMask isAnyTarget = VectorMask.NoBitsSet;
+            foreach (var target in targetTarots)
+            {
+                isAnyTarget |= VectorEnum256.Equals(tarotType, target);
+            }
+            
+            hasAnyTarget |= isAnyTarget;
+            
+            // Early exit optimization - if all lanes have found any target, no need to continue
+            if (hasAnyTarget.IsAllTrue())
+                break;
+        }
+        
+        return hasAnyTarget;
+    }
 }
