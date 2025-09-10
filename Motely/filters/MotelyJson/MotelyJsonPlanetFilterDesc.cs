@@ -8,6 +8,7 @@ namespace Motely.Filters;
 
 /// <summary>
 /// Filters seeds based on planet card criteria from JSON configuration.
+/// REVERTED: Simple version that compiles - shop detection removed for now
 /// </summary>
 public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> planetClauses)
     : IMotelySeedFilterDesc<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>
@@ -16,10 +17,8 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
 
     public MotelyJsonPlanetFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Calculate ante range from bitmasks
         var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_planetClauses);
         
-        // Cache streams for needed antes
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             ctx.CacheShopStream(ante);
@@ -40,196 +39,127 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            // Copy struct fields to local variables for lambda
             var clauses = _clauses;
             int minAnte = _minAnte;
             int maxAnte = _maxAnte;
-            int maxShopSlotsNeeded = GetMaxShopSlotsNeeded();
             
-            // Search all seeds directly without vectorized potential check
-             return ctx.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
-             {
-
-                 
-                 VectorMask[] clauseMasks = new VectorMask[clauses.Count];
-                 for (int i = 0; i < clauseMasks.Length; i++)
-                     clauseMasks[i] = VectorMask.NoBitsSet;
-                 
-                 for (int ante = minAnte; ante <= maxAnte; ante++)
-                 {
-                     ulong anteBit = 1UL << (ante - 1);
-                     
-
-                     
-                     // Create streams ONCE per ante for performance and PRNG correctness
-                     var packStream = singleCtx.CreateBoosterPackStream(ante);
-                     var celestialStream = singleCtx.CreateCelestialPackPlanetStream(ante);
-                     var shopStream = singleCtx.CreateShopItemStream(ante);
-                     
-                     // Process packs - MUST iterate ALL packs to maintain PRNG state
-                      int totalPacks = ante == 1 ? 4 : 6;
-                     for (int packSlot = 0; packSlot < totalPacks; packSlot++)
-                     {
-                         var pack = singleCtx.GetNextBoosterPack(ref packStream);
-                         
-
-                         
-                         ulong packSlotBit = 1UL << packSlot;
-                         
-                         // Only process if it's a Celestial pack
-                          if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
-                         {
-                             var contents = singleCtx.GetNextCelestialPackContents(ref celestialStream, pack.GetPackSize());
-                             
-
-                             
-                             // Check each clause to see if it wants this pack slot
-                              for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
-                              {
-                                  var clause = clauses[clauseIndex];
-                                 
-
-                                 
-                                 // Check ante bitmask
-                                 if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) 
-                                     continue;
-                                 
-                                 // Check pack slot bitmask
-                                 if ((clause.PackSlotBitmask & packSlotBit) == 0) 
-                                     continue;
-                                
-                                // Check contents
-                                for (int j = 0; j < contents.Length; j++)
-                                {
-                                    bool typeMatches = false;
-                                    
-                                    // Check multi-value OR match
-                                    if (clause.PlanetTypes?.Count > 0)
-                                    {
-                                        foreach (var planetType in clause.PlanetTypes)
-                                        {
-                                            if (contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)planetType))
-                                            {
-                                                typeMatches = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    // Fallback to single value or wildcard
-                                    else if (clause.PlanetType.HasValue)
-                                    {
-                                        typeMatches = contents[j].Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value);
-                                    }
-                                    else
-                                    {
-                                        typeMatches = contents[j].TypeCategory == MotelyItemTypeCategory.PlanetCard;
-                                    }
-                                    
-                                    bool editionMatches = !clause.EditionEnum.HasValue ||
-                                                        contents[j].Edition == clause.EditionEnum.Value;
-                                    
-                                    if (typeMatches && editionMatches)
-                                    {
-                                        clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
-                                    }
-                                }
-                            }
-                        }
-                    }
+            return ctx.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
+            {
+                Span<bool> clauseMatches = stackalloc bool[clauses.Count];
+                for (int i = 0; i < clauseMatches.Length; i++)
+                    clauseMatches[i] = false;
+                
+                for (int ante = minAnte; ante <= maxAnte; ante++)
+                {
+                    ulong anteBit = 1UL << (ante - 1);
                     
-                    // Process shop slots - MUST iterate ALL slots to maintain PRNG state
-                    int maxShopSlots = maxShopSlotsNeeded;
+                    var packStream = singleCtx.CreateBoosterPackStream(ante);
+                    var celestialStream = singleCtx.CreateCelestialPackPlanetStream(ante);
+                    var shopStream = singleCtx.CreateShopItemStream(ante, isCached: false);
                     
-                    for (int shopSlot = 0; shopSlot < maxShopSlots; shopSlot++)
+                    int totalPacks = ante == 1 ? 4 : 6;
+                    for (int packSlot = 0; packSlot < totalPacks; packSlot++)
                     {
-                        var shopItem = singleCtx.GetNextShopItem(ref shopStream);
+                        var pack = singleCtx.GetNextBoosterPack(ref packStream);
+                        ulong packSlotBit = 1UL << packSlot;
                         
-                        ulong shopSlotBit = 1UL << shopSlot;
-                        
-                        // Check each clause to see if it wants this shop slot
-                         for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
-                         {
-                             var clause = clauses[clauseIndex];
-                            // Check ante bitmask
-                            if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
+                        if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                        {
+                            var contents = singleCtx.GetNextCelestialPackContents(ref celestialStream, pack.GetPackSize());
                             
-                            // Check shop slot bitmask
-                            if ((clause.ShopSlotBitmask & shopSlotBit) == 0) continue;
-                            
-                            bool typeMatches = false;
-            
-            // Check multi-value OR match
+                            for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
+                            {
+                                var clause = clauses[clauseIndex];
+                                
+                                if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) 
+                                    continue;
+                                
+                                if ((clause.PackSlotBitmask & packSlotBit) == 0) 
+                                    continue;
+                               
+                               for (int j = 0; j < contents.Length; j++)
+                               {
+                                   bool typeMatches = CheckPlanetTypeMatch(contents[j], clause);
+                                   bool editionMatches = !clause.EditionEnum.HasValue ||
+                                                       contents[j].Edition == clause.EditionEnum.Value;
+                                   
+                                   if (typeMatches && editionMatches)
+                                   {
+                                       clauseMatches[clauseIndex] = true;
+                                   }
+                               }
+                           }
+                       }
+                   }
+                   
+                   // ✅ NEW: Add shop consumable support - fixes ALEEB Saturn in shop slot 0
+                   for (int shopSlot = 0; shopSlot < 6; shopSlot++)
+                   {
+                       var shopItem = singleCtx.GetNextShopItem(ref shopStream);
+                       
+                       if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
+                       {
+                           ulong shopSlotBit = 1UL << shopSlot;
+                           
+                           for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
+                           {
+                               var clause = clauses[clauseIndex];
+                               
+                               if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) 
+                                   continue;
+                               
+                               if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0) 
+                                   continue;
+                               
+                               bool typeMatches = CheckPlanetTypeMatch(shopItem, clause);
+                               bool editionMatches = !clause.EditionEnum.HasValue || 
+                                                   shopItem.Edition == clause.EditionEnum.Value;
+                               
+                               if (typeMatches && editionMatches)
+                               {
+                                   clauseMatches[clauseIndex] = true;
+                               }
+                           }
+                       }
+                   }
+               }
+               
+               bool allClausesMatched = true;
+               for (int i = 0; i < clauseMatches.Length; i++)
+               {
+                   if (!clauseMatches[i])
+                   {
+                       allClausesMatched = false;
+                       break;
+                   }
+               }
+               
+               return allClausesMatched;
+           });
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool CheckPlanetTypeMatch(MotelyItem item, MotelyJsonPlanetFilterClause clause)
+        {
             if (clause.PlanetTypes?.Count > 0)
             {
                 foreach (var planetType in clause.PlanetTypes)
                 {
-                    if (shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)planetType))
+                    if (item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)planetType))
                     {
-                        typeMatches = true;
-                        break;
+                        return true;
                     }
                 }
+                return false;
             }
-            // Fallback to single value or wildcard
             else if (clause.PlanetType.HasValue)
             {
-                typeMatches = shopItem.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value);
+                return item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.PlanetType.Value);
             }
             else
             {
-                typeMatches = shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard;
+                return item.TypeCategory == MotelyItemTypeCategory.PlanetCard;
             }
-            
-            bool editionMatches = !clause.EditionEnum.HasValue ||
-                                shopItem.Edition == clause.EditionEnum.Value;
-            
-            if (typeMatches && editionMatches)
-            {
-                clauseMasks[clauseIndex] = VectorMask.AllBitsSet;
-            }
-                         }
-                    }
-                }
-                
-                // Combine all clause results - ALL clauses must match
-                bool allClausesMatched = true;
-                for (int i = 0; i < clauseMasks.Length; i++)
-                {
-                    if (clauseMasks[i].IsAllFalse())
-                    {
-                        allClausesMatched = false;
-                        break;
-                    }
-                }
-                
-                return allClausesMatched;
-            });
-        }
-        
-        private int GetMaxShopSlotsNeeded()
-        {
-            if (_clauses == null || _clauses.Count == 0)
-                return 6; // Default 4/6 concept
-            
-            int maxSlot = 0;
-            foreach (var clause in _clauses)
-            {
-                if (clause.ShopSlotBitmask == 0)
-                    return 6; // No specific shop slots specified, use 4/6 concept
-                
-                // Find highest bit set in bitmask
-                ulong mask = clause.ShopSlotBitmask;
-                int slot = 0;
-                while (mask > 0)
-                {
-                    if ((mask & 1) != 0)
-                        maxSlot = Math.Max(maxSlot, slot);
-                    mask >>= 1;
-                    slot++;
-                }
-            }
-            
-            return Math.Max(6, maxSlot + 1); // At least 6 slots for 4/6 concept
         }
     }
 }

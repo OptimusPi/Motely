@@ -7,31 +7,48 @@
   "stake": "White",
   "must": [
     {
-      "type": "PlayingCard",
-      "rank": "King",
-      "Enhancement": "Glass",
-      "Seal": "Red",
-      "antes": [1],
-      "sources": { 
-        "PackSlots": [1]
-      }
+      "type": "SmallBlindTag",
+      "value": "CouponTag",
+      "antes": [1]
+    },
+    {
+        "type": "souljoker",
+        "value": "Perkeo",
+        "antes": [1],
+        "sources": {
+          "packSlots": [1]
+        }
     },
     {
         "type": "joker",
-        "value": "DNA",
+        "value": "Showman",
+        "antes": [1],
+        "sources": {
+          "shopSlots": [0,1]
+        }
+    },
+    {
+        "type": "joker",
+        "value": "SpaceJoker",
+        "antes": [2,3]
+    },
+        {
+        "type": "joker",
+        "value": "HangingChad",
         "antes": [1,2,3]
     }
+        
+    
   ],
   "should": [
-     {
-      "type": "PlayingCard",
-      "rank": "King",
-      "Enhancement": "Glass",
-      "Seal": "Red",
-      "antes": [1],
-      "sources": { 
-        "PackSlots": [1]
-      }
+    {
+        "type": "joker",
+        "values": ["Brainstorm","Blueprint"],
+        "antes": [1],
+        "sources": {
+          "shopSlots": [0,1],
+          "packSlots": [0,1]
+        }
     }
   ],
   "mustNot": []
