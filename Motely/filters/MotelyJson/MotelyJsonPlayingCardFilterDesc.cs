@@ -53,16 +53,18 @@ public struct MotelyJsonPlayingCardFilterDesc(List<MotelyJsonConfig.MotleyJsonFi
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            var resultMask = VectorMask.AllBitsSet;
+            // Copy struct members to locals to avoid CS1673
+            var clauses = _clauses;
             
-            foreach (var clause in _clauses)
+            // Fall back to single-seed search since vectorized playing card implementation is not ready
+            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                var clauseMask = VectorMask.NoBitsSet;
-                
-                foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+                // Check all clauses
+                foreach (var clause in clauses)
                 {
-                    // Use individual seed checking for playing cards since pack mechanics are complex
-                    return ctx.SearchIndividualSeeds(VectorMask.AllBitsSet, (ref MotelySingleSearchContext singleCtx) =>
+                    bool clauseMatched = false;
+                    
+                    foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
                     {
                         // DYNAMIC: Set generatedFirstPack based on default pack slots  
                         var packStream = singleCtx.CreateBoosterPackStream(ante, ante != 1, false);
@@ -95,19 +97,26 @@ public struct MotelyJsonPlayingCardFilterDesc(List<MotelyJsonConfig.MotleyJsonFi
                                     bool sealMatches = !clause.SealEnum.HasValue || card.Seal == clause.SealEnum.Value;
                                     
                                     if (editionMatches && sealMatches)
-                                        return true;
+                                    {
+                                        clauseMatched = true;
+                                        break;
+                                    }
                                 }
                             }
+                            
+                            if (clauseMatched) break;
                         }
-                        return false;
-                    });
+                        
+                        if (clauseMatched) break;
+                    }
+                    
+                    // If any clause didn't match, the seed doesn't match
+                    if (!clauseMatched) return false;
                 }
                 
-                resultMask &= clauseMask;
-                if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
-            }
-            
-            return resultMask;
+                // All clauses matched
+                return true;
+            });
         }
     }
 }

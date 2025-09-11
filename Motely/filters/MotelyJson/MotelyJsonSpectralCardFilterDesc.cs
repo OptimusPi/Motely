@@ -34,6 +34,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
         private readonly List<MotelyJsonSpectralFilterClause> _clauses = clauses;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
+        private readonly int _maxShopSlotsNeeded = CalculateMaxShopSlotsNeeded(clauses);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
@@ -41,324 +42,175 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
 
-            // Quick vectorized check for potential spectral cards
-            VectorMask hasPotential = VectorMask.NoBitsSet;
-            
-            if (DebugLogger.IsEnabled)
-            {
-                DebugLogger.Log($"[DEBUG] SpectralFilter: Checking antes {_minAnte} to {_maxAnte}");
-            }
+            // Initialize run state for voucher calculations  
+            var runState = ctx.Deck.GetDefaultRunState();
 
+            // Stack-allocated clause masks - accumulate results per clause across all antes
+            Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
+            for (int i = 0; i < clauseMasks.Length; i++)
+                clauseMasks[i] = VectorMask.NoBitsSet;
+
+            // Loop antes first, then clauses - ensures one stream per ante!
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                // Check shop slots for any spectral cards
-                var shopStream = ctx.CreateShopItemStream(ante);
-                // Use proper shop slot limits based on clause configuration
-                int maxShopSlots = GetMaxShopSlotsNeeded();
-                for (int shopSlot = 0; shopSlot < maxShopSlots; shopSlot++)
+                
+                for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
                 {
-                    var shopItem = ctx.GetNextShopItem(ref shopStream);
-                    var shopPotential = VectorEnum256.Equals(shopItem.TypeCategory, MotelyItemTypeCategory.SpectralCard);
-                    hasPotential |= shopPotential;
-                }
+                    var clause = _clauses[clauseIndex];
+                    ulong anteBit = 1UL << (ante - 1);
+                    
+                    // Skip ante if not in bitmask
+                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                        continue;
 
-                // Check spectral and arcana packs for any spectral cards
-                var packStream = ctx.CreateBoosterPackStream(ante);
-                var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-                var arcanaStream = ctx.CreateArcanaPackTarotStream(ante);
-                int totalPacks = ante == 1 ? 4 : 6;
-                for (int packSlot = 0; packSlot < totalPacks; packSlot++)
-                {
-                    var pack = ctx.GetNextBoosterPack(ref packStream);
-                    VectorMask isSpectralPack = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Spectral);
-                    VectorMask isArcanaPack = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Arcana);
+                    VectorMask clauseResult = VectorMask.NoBitsSet;
 
-                    if (isSpectralPack.IsPartiallyTrue())
+                    // Check shops if specified
+                    if (clause.ShopSlotBitmask != 0)
                     {
-                        var contents = ctx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize()[0]);
-                        for (int j = 0; j < contents.Length; j++)
-                        {
-                            if (DebugLogger.IsEnabled)
-                            {
-                                DebugLogger.Log($"[DEBUG] Spectral pack slot {packSlot}, card {j}: Type={contents[j].Type}, TypeCategory={contents[j].TypeCategory}");
-                            }
-                            var packPotential = VectorEnum256.Equals(contents[j].TypeCategory, MotelyItemTypeCategory.SpectralCard);
-                            hasPotential |= (packPotential & isSpectralPack);
-                        }
+                        // Use the self-contained shop spectral stream - NO SYNCHRONIZATION ISSUES!
+                        var shopSpectralStream = ctx.CreateShopSpectralStreamNew(ante);
+                        clauseResult |= CheckShopSpectralVectorizedNew(clause, ctx, ref shopSpectralStream);
                     }
 
-                    if (isArcanaPack.IsPartiallyTrue())
-                    {
-                        var contents = ctx.GetNextArcanaPackContents(ref arcanaStream, pack.GetPackSize()[0]);
-                        for (int j = 0; j < contents.Length; j++)
-                        {
-                            // Check for The Soul in Arcana packs
-                            var soulPotential = VectorEnum256.Equals(contents[j].Type, (MotelyItemType)MotelySpectralCard.Soul);
-                            hasPotential |= (soulPotential & isArcanaPack);
-                        }
-                    }
+                    // TODO: Pack slot checking can be added later if needed
+
+                    // Accumulate results for this clause across all antes (OR logic)
+                    clauseMasks[clauseIndex] |= clauseResult;
                 }
             }
-
-            // Early exit if no potential matches
-            if (DebugLogger.IsEnabled)
-                DebugLogger.Log($"[DEBUG] SpectralFilter: hasPotential={hasPotential}");
-            if (hasPotential.IsAllFalse())
-                return VectorMask.NoBitsSet;
-
-            // Copy struct fields to local variables for lambda
-            var clauses = _clauses;
-            int minAnte = _minAnte;
-            int maxAnte = _maxAnte;
-            int maxShopSlotsNeeded = GetMaxShopSlotsNeeded();
-
-            // Now do full individual processing for seeds with potential
-            if (DebugLogger.IsEnabled)
-                DebugLogger.Log($"[DEBUG] SpectralFilter: Searching individual seeds with hasPotential={hasPotential}");
-            return ctx.SearchIndividualSeeds(hasPotential, (ref MotelySingleSearchContext singleCtx) =>
+            
+            // AND all clause masks together - ALL clauses must match (like other filters)
+            VectorMask finalResult = VectorMask.AllBitsSet;
+            for (int i = 0; i < clauseMasks.Length; i++)
             {
-                if (DebugLogger.IsEnabled)
-                    DebugLogger.Log($"[DEBUG] SpectralFilter: Processing individual seed");
-                // Stack-allocated to avoid heap allocation in hot path!
-                Span<bool> clauseMatches = stackalloc bool[clauses.Count];
-                for (int i = 0; i < clauseMatches.Length; i++) 
-                {
-                    clauseMatches[i] = false;
-                    if (DebugLogger.IsEnabled)
-                        DebugLogger.Log($"[DEBUG] Initialized clause {i} to false");
-                }
-
-                for (int ante = minAnte; ante <= maxAnte; ante++)
-                {
-                    if (DebugLogger.IsEnabled)
-                        DebugLogger.Log($"[DEBUG] SpectralFilter: Processing ante {ante}");
-                    ulong anteBit = 1UL << (ante - 1);
-
-                    // Create streams ONCE per ante for performance and PRNG correctness
-                    var shopStream = singleCtx.CreateShopItemStream(ante);
-                    var packStream = singleCtx.CreateBoosterPackStream(ante);
-                    var spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante);
-                    var arcanaStream = singleCtx.CreateArcanaPackTarotStream(ante);
-
-                    // Process shop slots - MUST iterate ALL slots to maintain PRNG state
-                    for (int shopSlot = 0; shopSlot < maxShopSlotsNeeded; shopSlot++)
-                    {
-                        var shopItem = singleCtx.GetNextShopItem(ref shopStream);
-
-                        ulong shopSlotBit = 1UL << shopSlot;
-
-                        // Check each clause to see if it wants this shop slot
-                        for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
-                        {
-                            var clause = clauses[clauseIndex];
-                            // Check ante bitmask
-                            if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
-
-                            if (DebugLogger.IsEnabled && shopSlot == 0)
-                                DebugLogger.Log($"[DEBUG] Clause {clauseIndex}: Sources={clause.Sources}, PackSlots={clause.Sources?.PackSlots}, ShopSlots={clause.Sources?.ShopSlots}, PackSlotBitmask={clause.PackSlotBitmask:X}, ShopSlotBitmask={clause.ShopSlotBitmask:X}");
-
-                            // Skip shop checking if only packSlots were specified
-                            if (clause.Sources != null && clause.Sources.PackSlots != null && clause.Sources.PackSlots.Length > 0 && 
-                                (clause.Sources.ShopSlots == null || clause.Sources.ShopSlots.Length == 0)) 
-                            {
-                                if (DebugLogger.IsEnabled)
-                                    DebugLogger.Log($"[DEBUG] Skipping shop slot {shopSlot} for clause {clauseIndex} - only packSlots specified");
-                                continue;
-                            }
-
-                            // Check shop slot bitmask (0 means check all slots)
-                            if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0) continue;
-
-                            bool typeMatches;
-                            if (clause.SpectralType.HasValue && shopItem.TypeCategory == MotelyItemTypeCategory.SpectralCard)
-                            {
-                                var spectralCard = new MotelyItem(shopItem.Value).GetSpectral();
-                                typeMatches = spectralCard == clause.SpectralType.Value;
-                            }
-                            else if (!clause.SpectralType.HasValue)
-                            {
-                                typeMatches = shopItem.TypeCategory == MotelyItemTypeCategory.SpectralCard;
-                            }
-                            else
-                            {
-                                typeMatches = false;
-                            }
-
-                            if (typeMatches)
-                            {
-                                bool editionMatches = !clause.EditionEnum.HasValue ||
-                                                    shopItem.Edition == clause.EditionEnum.Value;
-
-                                if (typeMatches && editionMatches)
-                                {
-                                    if (DebugLogger.IsEnabled)
-                                    {
-                                        var spectralCard = shopItem.TypeCategory == MotelyItemTypeCategory.SpectralCard ? 
-                                            new MotelyItem(shopItem.Value).GetSpectral().ToString() : "NOT_SPECTRAL";
-                                        DebugLogger.Log($"[DEBUG] MATCH! Shop slot {shopSlot}: Type={shopItem.Type}, TypeCategory={shopItem.TypeCategory}, SpectralCard={spectralCard}, Setting clause {clauseIndex} to true");
-                                    }
-                                    clauseMatches[clauseIndex] = true;
-                                }
-                            }
-                        }
-                    }
-
-                    // Process packs - MUST iterate ALL packs to maintain PRNG state
-                    int totalPacks = ante == 1 ? 4 : 6;
-                    for (int packSlot = 0; packSlot < totalPacks; packSlot++)
-                    {
-                        var pack = singleCtx.GetNextBoosterPack(ref packStream);
-                        var packType = pack.GetPackType();
-                        VectorMask isSpectralPack = packType == MotelyBoosterPackType.Spectral ? VectorMask.AllBitsSet : VectorMask.NoBitsSet;
-                        VectorMask isArcanaPack = packType == MotelyBoosterPackType.Arcana ? VectorMask.AllBitsSet : VectorMask.NoBitsSet;
-
-                        // Process Spectral packs
-                        if (isSpectralPack.IsPartiallyTrue())
-                        {
-                            var contents = singleCtx.GetNextSpectralPackContents(ref spectralStream, pack.GetPackSize());
-
-                            // Check each clause to see if it wants this pack slot
-                            for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
-                            {
-                                var clause = clauses[clauseIndex];
-                                // Check ante bitmask
-                                if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
-
-                                // Check pack slot bitmask (0 means check all slots)
-                                ulong packSlotBit = 1UL << packSlot;
-                                if (clause.PackSlotBitmask != 0 && (clause.PackSlotBitmask & packSlotBit) == 0) continue;
-
-                                // Check pack size requirements if specified
-                                bool sizeMatches = true;
-                                if (clause.Sources?.RequireMega is true)
-                                {
-                                    sizeMatches = pack.GetPackSize() == MotelyBoosterPackSize.Mega;
-                                }
-
-                                // Check contents
-                                for (int j = 0; j < contents.Length; j++)
-                                {
-                                    bool typeMatches = false;
-                                    
-                                    // Check multi-value OR match
-                                    if (clause.SpectralTypes?.Count > 0)
-                                    {
-                                        var spectralCard = new MotelyItem(contents[j].Value).GetSpectral();
-                                        foreach (var spectralType in clause.SpectralTypes)
-                                        {
-                                            if (spectralCard == spectralType)
-                                            {
-                                                typeMatches = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    // Fallback to single value or wildcard
-                                    else if (clause.SpectralType.HasValue)
-                                    {
-                                        var spectralCard = new MotelyItem(contents[j].Value).GetSpectral();
-                                        typeMatches = spectralCard == clause.SpectralType.Value;
-                                        if (DebugLogger.IsEnabled && packSlot == 3)
-                                            DebugLogger.Log($"[DEBUG] Comparing: spectralCard={spectralCard} vs clause.SpectralType={clause.SpectralType.Value}, typeMatches={typeMatches}");
-                                    }
-                                    else
-                                    {
-                                        typeMatches = contents[j].TypeCategory == MotelyItemTypeCategory.SpectralCard;
-                                    }
-
-                                    bool editionMatches = !clause.EditionEnum.HasValue ||
-                                                        contents[j].Edition == clause.EditionEnum.Value;
-
-                                    if (typeMatches && editionMatches && sizeMatches)
-                                    {
-                                        clauseMatches[clauseIndex] = true;
-                                    }
-                                }
-                            }
-                        }
-
-                        // Also check Arcana packs for The Soul (it's a spectral card that can appear there)
-                        if (isArcanaPack.IsPartiallyTrue())
-                        {
-                            var contents = singleCtx.GetNextArcanaPackContents(ref arcanaStream, pack.GetPackSize());
-
-                            // Check each clause to see if it wants this pack slot
-                            for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
-                            {
-                                var clause = clauses[clauseIndex];
-                                // Check ante bitmask
-                                if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
-
-                                // Check pack slot bitmask (0 means check all slots)
-                                ulong packSlotBit = 1UL << packSlot;
-                                if (clause.PackSlotBitmask != 0 && (clause.PackSlotBitmask & packSlotBit) == 0) continue;
-
-                                // Check pack size requirements if specified
-                                bool sizeMatches = true;
-                                if (clause.Sources?.RequireMega == true)
-                                {
-                                    sizeMatches = pack.GetPackSize() == MotelyBoosterPackSize.Mega;
-                                }
-
-                                // Check contents - The Soul is a spectral card that can appear in Arcana packs
-                                for (int j = 0; j < contents.Length; j++)
-                                {
-                                    // Check if it's The Soul specifically
-                                    bool typeMatches = false;
-                                    if (clause.SpectralType.HasValue && clause.SpectralType.Value == MotelySpectralCard.Soul)
-                                    {
-                                        // Check if this is The Soul card (it's a spectral card in Arcana packs)
-                                        typeMatches = contents[j].Type == (MotelyItemType)MotelySpectralCard.Soul;
-                                    }
-
-                                    bool editionMatches = !clause.EditionEnum.HasValue ||
-                                                        contents[j].Edition == clause.EditionEnum.Value;
-
-                                    if (typeMatches && editionMatches && sizeMatches)
-                                    {
-                                        clauseMatches[clauseIndex] = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                }
-
-                // Combine all clause results - ALL clauses must match
-                bool allClausesMatched = true;
-                for (int i = 0; i < clauseMatches.Length; i++)
-                {
-                    if (DebugLogger.IsEnabled)
-                        DebugLogger.Log($"[DEBUG] SpectralFilter: Clause {i} matches = {clauseMatches[i]}");
-                    if (!clauseMatches[i])
-                    {
-                        allClausesMatched = false;
-                        break;
-                    }
-                }
-                
-                if (DebugLogger.IsEnabled)
-                    DebugLogger.Log($"[DEBUG] SpectralFilter: allClausesMatched = {allClausesMatched}");
-                
-                return allClausesMatched;
-            });
+                finalResult &= clauseMasks[i];
+                if (finalResult.IsAllFalse()) return VectorMask.NoBitsSet;
+            }
+            
+            return finalResult;
         }
 
-        private int GetMaxShopSlotsNeeded()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static VectorMask CheckShopVectorizedPrecomputed(MotelyJsonSpectralFilterClause clause, MotelyItemVector[] shopItems)
         {
-            int maxSlots = 0;
-            foreach (var clause in _clauses)
+            VectorMask shopResult = VectorMask.NoBitsSet;
+            
+            // Check each shop slot specified in the bitmask
+            for (int shopSlot = 0; shopSlot < shopItems.Length; shopSlot++)
             {
-                for (int slot = 0; slot < 64; slot++)
+                ulong shopSlotBit = 1UL << shopSlot;
+                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0)
+                    continue;
+                
+                var shopItem = shopItems[shopSlot];
+                
+                // Check type match
+                VectorMask typeMatches = VectorMask.AllBitsSet;
+                if (clause.SpectralType.HasValue)
                 {
-                    if ((clause.ShopSlotBitmask & (1UL << slot)) != 0)
-                    {
-                        maxSlots = Math.Max(maxSlots, slot + 1);
-                    }
+                    // First check if it's a spectral card category
+                    VectorMask isSpectralCard = VectorEnum256.Equals(shopItem.TypeCategory, MotelyItemTypeCategory.SpectralCard);
+                    
+                    // Then check specific spectral type by converting item value to spectral
+                    var targetSpectralType = (MotelyItemType)clause.SpectralType.Value;
+                    VectorMask correctSpectralType = VectorEnum256.Equals(shopItem.Type, targetSpectralType);
+                    
+                    typeMatches = isSpectralCard & correctSpectralType;
+                }
+                else
+                {
+                    // Wildcard match - any spectral card
+                    typeMatches = VectorEnum256.Equals(shopItem.TypeCategory, MotelyItemTypeCategory.SpectralCard);
+                }
+                
+                // Check edition match
+                VectorMask editionMatches = VectorMask.AllBitsSet;
+                if (clause.EditionEnum.HasValue)
+                {
+                    editionMatches = VectorEnum256.Equals(shopItem.Edition, clause.EditionEnum.Value);
+                }
+                
+                // Combine type and edition
+                VectorMask slotMatches = typeMatches & editionMatches;
+                shopResult |= slotMatches;
+            }
+            
+            return shopResult;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int CalculateMaxShopSlotsNeeded(List<MotelyJsonSpectralFilterClause> clauses)
+        {
+            int maxSlotNeeded = 0;
+            foreach (var clause in clauses)
+            {
+                if (clause.ShopSlotBitmask != 0)
+                {
+                    int clauseMaxSlot = 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
+                    maxSlotNeeded = Math.Max(maxSlotNeeded, clauseMaxSlot);
+                }
+                else
+                {
+                    // If no slot restrictions, check a reasonable number of slots (e.g., 10)
+                    maxSlotNeeded = Math.Max(maxSlotNeeded, 10);
                 }
             }
-            return Math.Max(maxSlots, 5); // Default minimum
+            return maxSlotNeeded;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private VectorMask CheckShopSpectralVectorizedNew(MotelyJsonSpectralFilterClause clause, MotelyVectorSearchContext ctx, 
+            ref MotelyVectorShopSpectralStream shopSpectralStream)
+        {
+            VectorMask foundInShop = VectorMask.NoBitsSet;
+            
+            // Calculate max slot we need to check
+            int maxSlot = clause.ShopSlotBitmask == 0 ? _maxShopSlotsNeeded :
+                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask));
+            
+            // Check each shop slot using the self-contained stream
+            for (int slot = 0; slot < maxSlot; slot++)
+            {
+                ulong slotBit = 1UL << slot;
+                
+                // Get spectral for this slot using self-contained stream - handles slot types internally!
+                var spectralItem = shopSpectralStream.GetNext(ref ctx);
+                
+                // Skip if this slot isn't in the bitmask (0 = check all slots)
+                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
+                    continue;
+                
+                // Check if item is SpectralExcludedByStream (not a spectral slot)
+                VectorMask isActualSpectral = VectorMask.AllBitsSet;
+                for (int lane = 0; lane < 8; lane++)
+                {
+                    if (spectralItem.Value[lane] == (int)MotelyItemType.SpectralExcludedByStream)
+                        isActualSpectral[lane] = false;
+                }
+                
+                if (isActualSpectral.IsPartiallyTrue())
+                {
+                    // Check if the spectral matches our clause criteria
+                    VectorMask typeMatches = VectorMask.AllBitsSet;
+                    if (clause.SpectralType.HasValue)
+                    {
+                        var targetSpectralType = (MotelyItemType)clause.SpectralType.Value;
+                        typeMatches = VectorEnum256.Equals(spectralItem.Type, targetSpectralType);
+                    }
+                    
+                    VectorMask editionMatches = VectorMask.AllBitsSet;
+                    if (clause.EditionEnum.HasValue)
+                    {
+                        editionMatches = VectorEnum256.Equals(spectralItem.Edition, clause.EditionEnum.Value);
+                    }
+                    
+                    VectorMask matches = typeMatches & editionMatches;
+                    foundInShop |= (isActualSpectral & matches);
+                }
+            }
+
+            return foundInShop;
         }
     }
 }

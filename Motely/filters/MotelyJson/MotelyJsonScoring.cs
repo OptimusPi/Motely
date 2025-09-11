@@ -651,6 +651,13 @@ public static class MotelyJsonScoring
             
         try
         {
+            // Use cached bosses if available (for scoring)
+            if (runState.CachedBosses != null && ante > 0 && ante <= runState.CachedBosses.Length)
+            {
+                return runState.CachedBosses[ante - 1] == clause.BossEnum.Value;
+            }
+            
+            // Fallback to generating bosses (for filtering)
             var bossStream = ctx.CreateBossStream();
             MotelyBossBlind boss = ctx.GetBossForAnte(ref bossStream, ante, ref runState);
             return boss == clause.BossEnum.Value;
