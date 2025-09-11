@@ -97,7 +97,88 @@
   ],
   "should": [
     {
-      
+      "type": "Joker",
+      "value": "Blueprint",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [7]
+      }
+    },
+    {
+      "type": "Joker",
+      "value": "TradingCard",
+      "antes": [1]
+    },
+    {
+      "type": "Voucher",
+      "value": "MagicTrick",
+      "antes": [1]
+    },
+    {
+      "type": "Voucher",
+      "value": "Hieroglyph",
+      "antes": [2]
+    },
+    {
+      "type": "Boss",
+      "value": "TheWindow",
+      "antes": [1]
+    },
+    {
+      "type": "Boss",
+      "value": "TheArm",
+      "antes": [2]
+    },
+    {
+      "type": "Boss",
+      "value": "TheMouth",
+      "antes": [3]
+    },
+    {
+      "type": "SmallBlindTag",
+      "value": "SpeedTag",
+      "antes": [1]
+    },
+    {
+      "type": "BigBlindTag",
+      "value": "HandyTag",
+      "antes": [2]
+    },
+    {
+      "type": "TarotCard",
+      "value": "TheEmpress",
+      "antes": [1],
+      "sources": {
+        "packSlots": [1]
+      }
+    },
+    {
+      "type": "TarotCard",
+      "value": "TheTower",
+      "antes": [2],
+      "sources": {
+        "shopSlots": [28]
+      }
+    },
+    {
+      "type": "PlayingCard",
+      "value": "7 of Clubs",
+      "stickers": ["Lucky"],
+      "antes": [1],
+      "sources": {
+        "packSlots": [1]
+      }
+    },
+    {
+      "type": "PlayingCard",
+      "value": "9 of Spades",
+      "stickers": ["Blue Seal"],
+      "antes": [2],
+      "sources": {
+        "packSlots": [1]
+      }
+    },
+    {
       "type": "PlanetCard",
       "value": "Mars",
       "antes": [4],

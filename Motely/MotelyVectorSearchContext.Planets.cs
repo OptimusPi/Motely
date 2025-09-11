@@ -54,10 +54,38 @@ ref partial struct MotelyVectorSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector GetNextPlanet(ref MotelyVectorPlanetStream planetStream)
     {
+        return GetNextPlanet(ref planetStream, Vector512<double>.AllBitsSet);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelyItemVector GetNextShopPlanetOrNull(ref MotelyVectorPlanetStream planetStream, ref MotelyVectorPrngStream itemTypeStream,
+        Vector512<double> totalRate, Vector512<double> tarotRate, Vector512<double> planetRate)
+    {
+        // Check what type this slot is
+        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
+        itemTypePoll -= Vector512.Create(20.0); // Skip joker range
+        itemTypePoll -= tarotRate; // Skip tarot range
+        var isPlanetSlot = Vector512.LessThan(itemTypePoll, planetRate);
+        
+        // Only advance planet stream for planet slots
+        var planet = GetNextPlanet(ref planetStream, isPlanetSlot);
+        
+        // Return planet or None for non-planet slots
+        var planetIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isPlanetSlot);
+        var noneItem = Vector256<int>.Zero;
+        
+        return new MotelyItemVector(
+            Vector256.ConditionalSelect(planetIntMask, planet.Value, noneItem)
+        );
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelyItemVector GetNextPlanet(ref MotelyVectorPlanetStream planetStream, in Vector512<double> mask)
+    {
         Vector512<double> blackHoleMask;
         if (planetStream.IsBlackHoleable)
         {
-            blackHoleMask = Vector512.GreaterThan(GetNextRandom(ref planetStream.BlackHolePrngStream), Vector512.Create(0.997));
+            blackHoleMask = mask & Vector512.GreaterThan(GetNextRandom(ref planetStream.BlackHolePrngStream, mask), Vector512.Create(0.997));
         }
         else
         {
@@ -71,9 +99,11 @@ ref partial struct MotelyVectorSearchContext
         }
         else
         {
+            // Only advance PRNG for lanes that need it (using mask and not black hole mask)
+            var planetMask = mask & ~blackHoleMask;
             planets = GetNextRandomInt(
                 ref planetStream.ResampleStream.InitialPrngStream,
-                0, MotelyEnum<MotelyPlanetCard>.ValueCount, ~blackHoleMask
+                0, MotelyEnum<MotelyPlanetCard>.ValueCount, planetMask
             );
             planets = Vector256.Create((int)MotelyItemTypeCategory.PlanetCard) | planets;
         }

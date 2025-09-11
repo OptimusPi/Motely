@@ -30,7 +30,7 @@ public struct MotelyJsonBossFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCla
             }
         }
 
-        return new MotelyJsonBossFilter(_bossClauses, _bossClauses[0].EffectiveAntes[0], _bossClauses[^1].EffectiveAntes[^1]);
+        return new MotelyJsonBossFilter(_bossClauses, minAnte, maxAnte);
     }
 
     public struct MotelyJsonBossFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
@@ -45,39 +45,43 @@ public struct MotelyJsonBossFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCla
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            // PURE VECTORIZED BOSS FILTERING
-            var resultMask = VectorMask.AllBitsSet;
+            // Copy struct members to locals to avoid CS1673
+            var clauses = _clauses;
+            var maxAnte = _maxAnte;
             
-            foreach (var clause in _clauses)
+            // Fall back to single-seed search since vectorized boss implementation is not ready
+            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                if (!clause.BossEnum.HasValue) continue;
+                // Generate bosses for all needed antes
+                var bossStream = singleCtx.CreateBossStream();
+                var bosses = new MotelyBossBlind[Math.Max(maxAnte, 8)];
+                var state = new MotelyRunState(); // Need state for GetBossForAnte
                 
-                var clauseMask = VectorMask.NoBitsSet;
-                
-                // Create boss stream ONCE and maintain state across antes
-                var bossStream = ctx.CreateBossStream(1); // Start from ante 1
-                
-                // Generate bosses for all antes up to the maximum needed
-                int maxAnte = clause.EffectiveAntes.Max();
-                var bosses = new VectorEnum256<MotelyBossBlind>[maxAnte];
-                
-                for (int ante = 1; ante <= maxAnte; ante++)
+                for (int ante = 1; ante <= Math.Max(maxAnte, 8); ante++)
                 {
-                    bosses[ante - 1] = ctx.GetNextBoss(ref bossStream);
+                    bosses[ante - 1] = singleCtx.GetBossForAnte(ref bossStream, ante, ref state);
                 }
                 
-                // Check if any of the requested antes match
-                foreach (var ante in clause.EffectiveAntes)
+                // Check all clauses
+                foreach (var clause in clauses)
                 {
-                    VectorMask matches = VectorEnum256.Equals(bosses[ante - 1], clause.BossEnum.Value);
-                    clauseMask |= matches;
+                    if (!clause.BossEnum.HasValue) continue;
+                    
+                    bool matched = false;
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        if (ante <= maxAnte && bosses[ante - 1] == clause.BossEnum.Value)
+                        {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!matched) return false;
                 }
                 
-                resultMask &= clauseMask;
-                if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
-            }
-            
-            return resultMask;
+                return true;
+            });
         }
     }
 }

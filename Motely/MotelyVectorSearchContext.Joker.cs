@@ -196,6 +196,27 @@ unsafe partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
+    public MotelyItemVector GetNextShopJokerOrNull(ref MotelyVectorJokerStream jokerStream, ref MotelyVectorPrngStream itemTypeStream, Vector512<double> totalRate)
+    {
+        // Check what type this slot is
+        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
+        var isJokerSlot = Vector512.LessThan(itemTypePoll, Vector512.Create(20.0)); // ShopJokerRate
+        
+        // Only advance joker stream for joker slots
+        var joker = GetNextJoker(ref jokerStream, isJokerSlot);
+        
+        // Return joker or None for non-joker slots
+        var jokerIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isJokerSlot);
+        var noneItem = Vector256<int>.Zero;
+        
+        return new MotelyItemVector(
+            Vector256.ConditionalSelect(jokerIntMask, joker.Value, noneItem)
+        );
+    }
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     public MotelyItemVector GetNextJoker(ref MotelyVectorJokerFixedRarityStream stream)
     {
 
@@ -236,16 +257,24 @@ unsafe partial struct MotelyVectorSearchContext
 #endif
     public MotelyItemVector GetNextJoker(ref MotelyVectorJokerStream stream)
     {
+        return GetNextJoker(ref stream, Vector512<double>.AllBitsSet);
+    }
+
+#if !DEBUG
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelyItemVector GetNextJoker(ref MotelyVectorJokerStream stream, Vector512<double> mask)
+    {
 
         MotelyItemVector jokers;
 
         // Pick the joker
         {
-            Vector512<double> rarityPoll = GetNextRandom(ref stream.RarityPrngStream);
+            Vector512<double> rarityPoll = GetNextRandom(ref stream.RarityPrngStream, mask);
 
-            Vector512<double> rareMask = Vector512.GreaterThan(rarityPoll, Vector512.Create(0.95));
-            Vector512<double> uncommonMask = ~rareMask & Vector512.GreaterThan(rarityPoll, Vector512.Create(0.7));
-            Vector512<double> commonMask = ~rareMask & ~uncommonMask;
+            Vector512<double> rareMask = Vector512.GreaterThan(rarityPoll, Vector512.Create(0.95)) & mask;
+            Vector512<double> uncommonMask = ~rareMask & Vector512.GreaterThan(rarityPoll, Vector512.Create(0.7)) & mask;
+            Vector512<double> commonMask = ~rareMask & ~uncommonMask & mask;
 
             Vector256<int> rareJokers = stream.DoesProvideRareJokers ?
                 GetNextJoker<MotelyJokerRare>(ref stream.RareJokerPrngStream, MotelyJokerRarity.Rare, rareMask) :
@@ -313,58 +342,5 @@ unsafe partial struct MotelyVectorSearchContext
             pack.Append(GetNextJoker(ref jokerStream)); // Duplicate handling in upstream resampling system
 
         return pack;
-    }
-
-    /// <summary>
-    /// Checks if a buffoon pack contains a specific joker type using vectorized operations.
-    /// This method follows the same pattern as GetNextSpectralPackHasTheSoul.
-    /// </summary>
-    /// <param name="jokerStream">The joker stream to consume from</param>
-    /// <param name="joker">The joker type to search for</param>
-    /// <param name="size">The size of the buffoon pack</param>
-    /// <returns>A VectorMask indicating which lanes have the target joker</returns>
-    public VectorMask GetNextBuffoonPackHasJoker(ref MotelyVectorJokerStream jokerStream, MotelyJoker joker, MotelyBoosterPackSize size)
-    {
-        return GetNextBuffoonPackHasJoker(ref jokerStream, new[] { joker }, size);
-    }
-    
-    /// <summary>
-    /// Checks if a buffoon pack contains any of the specified joker types using vectorized operations.
-    /// This method follows the same pattern as GetNextSpectralPackHasTheSoul.
-    /// </summary>
-    /// <param name="jokerStream">The joker stream to consume from</param>
-    /// <param name="jokersToMatch">Array of joker types to search for</param>
-    /// <param name="size">The size of the buffoon pack</param>
-    /// <returns>A VectorMask indicating which lanes have any of the target jokers</returns>
-    public VectorMask GetNextBuffoonPackHasJoker(ref MotelyVectorJokerStream jokerStream, MotelyJoker[] jokersToMatch, MotelyBoosterPackSize size)
-    {
-        int cardCount = MotelyBoosterPackType.Buffoon.GetCardCount(size);
-        
-        var result = VectorMask.NoBitsSet;
-         
-         // Convert jokers to item types for comparison
-         var targetJokerTypes = new MotelyItemType[jokersToMatch.Length];
-         for (int j = 0; j < jokersToMatch.Length; j++)
-         {
-             targetJokerTypes[j] = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokersToMatch[j]);
-         }
-         
-         // Check each joker in the pack
-         for (int i = 0; i < cardCount; i++)
-         {
-             var nextJoker = GetNextJoker(ref jokerStream);
-             
-             // Check if this joker matches any of the target jokers
-             var hasAnyTargetJoker = VectorMask.NoBitsSet;
-            for (int j = 0; j < targetJokerTypes.Length; j++)
-            {
-                var hasThisJoker = VectorEnum256.Equals(nextJoker.Type, targetJokerTypes[j]);
-                hasAnyTargetJoker |= hasThisJoker;
-            }
-            
-            result |= hasAnyTargetJoker;
-        }
-        
-        return result;
     }
 }

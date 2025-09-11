@@ -30,24 +30,18 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
             if (_clauses == null || _clauses.Count == 0)
                 return VectorMask.AllBitsSet;
             
-            var anteClauses = new Dictionary<int, List<MotelyJsonConfig.MotleyJsonFilterClause>>();
-            foreach (var clause in _clauses)
+            // Stack-allocated clause masks - accumulate results per clause across all antes
+            Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
+            for (int i = 0; i < clauseMasks.Length; i++)
+                clauseMasks[i] = VectorMask.NoBitsSet;
+
+            // Process each clause across all its antes
+            for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
             {
-                foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
-                {
-                    if (!anteClauses.ContainsKey(ante))
-                        anteClauses[ante] = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-                    anteClauses[ante].Add(clause);
-                }
-            }
-            
-            var resultMask = VectorMask.AllBitsSet;
-            
-            foreach (var ante in anteClauses.Keys.OrderBy(x => x))
-            {
-                var clausesForThisAnte = anteClauses[ante];
+                var clause = _clauses[clauseIndex];
                 
-                foreach (var clause in clausesForThisAnte)
+                // OR across all antes for this clause
+                foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
                 {
                     var clauseMask = VectorMask.NoBitsSet;
                     
@@ -93,9 +87,17 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                         clauseMask |= tagMatches;
                     }
                     
-                    resultMask &= clauseMask;
-                    if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
+                    // Accumulate results for this clause across all antes (OR logic)
+                    clauseMasks[clauseIndex] |= clauseMask;
                 }
+            }
+
+            // All clauses must be satisfied (AND logic)
+            var resultMask = VectorMask.AllBitsSet;
+            for (int i = 0; i < clauseMasks.Length; i++)
+            {
+                resultMask &= clauseMasks[i];
+                if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
             
             return resultMask;

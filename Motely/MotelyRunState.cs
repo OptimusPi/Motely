@@ -46,6 +46,9 @@ public ref struct MotelyRunState
     private List<MotelyJoker> _ownedJokers;
     private bool _showmanActive;
     
+    // Boss caching for scoring - generated once per seed to maintain state
+    public MotelyBossBlind[]? CachedBosses;
+    
     public List<MotelyJoker> OwnedJokers => _ownedJokers ??= new List<MotelyJoker>();
     public bool ShowmanActive => _showmanActive;
 

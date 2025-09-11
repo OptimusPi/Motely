@@ -45,6 +45,41 @@ ref partial struct MotelyVectorSearchContext
 #endif
     public MotelyItemVector GetNextSpectral(ref MotelyVectorSpectralStream stream)
     {
+        return GetNextSpectral(ref stream, Vector512<double>.AllBitsSet);
+    }
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelyItemVector GetNextShopSpectralOrNull(ref MotelyVectorSpectralStream spectralStream, ref MotelyVectorPrngStream itemTypeStream,
+        Vector512<double> totalRate, Vector512<double> tarotRate, Vector512<double> planetRate, 
+        Vector512<double> playingCardRate, Vector512<double> spectralRate)
+    {
+        // Check what type this slot is
+        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
+        itemTypePoll -= Vector512.Create(20.0); // Skip joker range
+        itemTypePoll -= tarotRate; // Skip tarot range
+        itemTypePoll -= planetRate; // Skip planet range  
+        itemTypePoll -= playingCardRate; // Skip playing card range
+        var isSpectralSlot = Vector512.LessThan(itemTypePoll, spectralRate);
+        
+        // Only advance spectral stream for spectral slots
+        var spectral = GetNextSpectral(ref spectralStream, isSpectralSlot);
+        
+        // Return spectral or None for non-spectral slots
+        var spectralIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isSpectralSlot);
+        var noneItem = Vector256<int>.Zero;
+        
+        return new MotelyItemVector(
+            Vector256.ConditionalSelect(spectralIntMask, spectral.Value, noneItem)
+        );
+    }
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelyItemVector GetNextSpectral(ref MotelyVectorSpectralStream stream, in Vector512<double> mask)
+    {
         if (stream.IsNull) 
         {
             if (DebugLogger.IsEnabled)
@@ -53,7 +88,7 @@ ref partial struct MotelyVectorSearchContext
         }
 
         Vector256<int> items = Vector256<int>.Zero;
-        Vector512<double> activeMask = Vector512<double>.AllBitsSet;
+        Vector512<double> activeMask = mask;
         
         if (DebugLogger.IsEnabled)
             DebugLogger.Log($"[SPECTRAL] Initial activeMask={activeMask}");
@@ -61,7 +96,7 @@ ref partial struct MotelyVectorSearchContext
         if (stream.IsSoulBlackHoleable)
         {
             Vector512<double> randomSoul = GetNextRandom(ref stream.SoulBlackHolePrngStream, activeMask);
-            Vector512<double> maskSoul = Vector512.GreaterThan(randomSoul, Vector512.Create(0.997));
+            Vector512<double> maskSoul = activeMask & Vector512.GreaterThan(randomSoul, Vector512.Create(0.997));
             Vector256<int> maskSoulInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(maskSoul);
             items = Vector256.ConditionalSelect(maskSoulInt, Vector256.Create((int)MotelyItemType.Soul), items);
             activeMask = Vector512.AndNot(activeMask, maskSoul);
@@ -69,7 +104,7 @@ ref partial struct MotelyVectorSearchContext
             if (!Vector512.EqualsAll(activeMask, Vector512<double>.Zero))
             {
                 Vector512<double> randomBH = GetNextRandom(ref stream.SoulBlackHolePrngStream, activeMask);
-                Vector512<double> maskBH = Vector512.GreaterThan(randomBH, Vector512.Create(0.997));
+                Vector512<double> maskBH = activeMask & Vector512.GreaterThan(randomBH, Vector512.Create(0.997));
                 Vector256<int> maskBHInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(maskBH);
                 items = Vector256.ConditionalSelect(maskBHInt, Vector256.Create((int)MotelyItemType.BlackHole), items);
                 activeMask = Vector512.AndNot(activeMask, maskBH);
@@ -114,14 +149,6 @@ ref partial struct MotelyVectorSearchContext
         return new MotelyItemVector(items);
     }
 
-    // Helper method for filtering spectral cards in vector context
-    public VectorMask FilterSpectralCard(int ante, MotelySpectralCard targetSpectral, string source = MotelyPrngKeys.ShopItemSource)
-    {
-        var spectralStream = CreateSpectralStream(source, ante, true, false, true);
-        var spectralChoices = MotelyEnum<MotelySpectralCard>.Values;
-        var spectrals = GetNextRandomElement(ref spectralStream.ResampleStream.InitialPrngStream, spectralChoices);
-        return VectorEnum256.Equals(spectrals, targetSpectral);
-    }
     
     public MotelyVectorItemSet GetNextSpectralPackContents(ref MotelyVectorSpectralStream spectralStream, MotelyBoosterPackSize size)
         => GetNextSpectralPackContents(ref spectralStream, MotelyBoosterPackType.Spectral.GetCardCount(size));

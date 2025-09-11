@@ -4,10 +4,20 @@
   "deck": "Red",
   "stake": "White",
   "must": [
+   {
+      "type": "Boss",
+      "value": "TheWindow",
+      "antes": [1]
+    },
     {
       "type": "Boss",
       "value": "TheArm",
       "antes": [2]
+    },
+    {
+      "type": "Boss",
+      "value": "TheMouth",
+      "antes": [3]
     }
   ],
   "should": [],

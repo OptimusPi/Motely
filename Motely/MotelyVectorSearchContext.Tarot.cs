@@ -85,11 +85,38 @@ ref partial struct MotelyVectorSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyItemVector GetNextTarot(ref MotelyVectorTarotStream tarotStream)
     {
+        return GetNextTarot(ref tarotStream, Vector512<double>.AllBitsSet);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelyItemVector GetNextShopTarotOrNull(ref MotelyVectorTarotStream tarotStream, ref MotelyVectorPrngStream itemTypeStream, 
+        Vector512<double> totalRate, Vector512<double> tarotRate)
+    {
+        // Check what type this slot is
+        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
+        itemTypePoll -= Vector512.Create(20.0); // Skip joker range
+        var isTarotSlot = Vector512.LessThan(itemTypePoll, tarotRate);
+        
+        // Only advance tarot stream for tarot slots
+        var tarot = GetNextTarot(ref tarotStream, isTarotSlot);
+        
+        // Return tarot or None for non-tarot slots
+        var tarotIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isTarotSlot);
+        var noneItem = Vector256<int>.Zero;
+        
+        return new MotelyItemVector(
+            Vector256.ConditionalSelect(tarotIntMask, tarot.Value, noneItem)
+        );
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MotelyItemVector GetNextTarot(ref MotelyVectorTarotStream tarotStream, in Vector512<double> mask)
+    {
         Vector512<double> soulMask;
 
         if (tarotStream.IsSoulable)
         {
-            soulMask = Vector512.GreaterThan(GetNextRandom(ref tarotStream.SoulPrngStream), Vector512.Create(0.997));
+            soulMask = mask & Vector512.GreaterThan(GetNextRandom(ref tarotStream.SoulPrngStream, mask), Vector512.Create(0.997));
         }
         else
         {
@@ -104,9 +131,11 @@ ref partial struct MotelyVectorSearchContext
         }
         else
         {
+            // Only advance PRNG for lanes that need it (using mask and not soul mask)
+            var tarotMask = mask & ~soulMask;
             tarots = GetNextRandomInt(
                 ref tarotStream.ResampleStream.InitialPrngStream,
-                0, MotelyEnum<MotelyTarotCard>.ValueCount, ~soulMask
+                0, MotelyEnum<MotelyTarotCard>.ValueCount, tarotMask
             );
 
             tarots = Vector256.Create((int)MotelyItemTypeCategory.TarotCard) | tarots;
@@ -122,14 +151,6 @@ ref partial struct MotelyVectorSearchContext
             Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
             tarots
         ));
-    }
-
-    public VectorMask FilterTarotCard(int ante, MotelyTarotCard tarot)
-    {
-        var tarotStream = CreatePrngStream(MotelyPrngKeys.Tarot + MotelyPrngKeys.ShopItemSource + ante, true);
-        var tarotChoices = MotelyEnum<MotelyTarotCard>.Values;
-        var tarots = GetNextRandomElement(ref tarotStream, tarotChoices);
-        return VectorEnum256.Equals(tarots, tarot);
     }
 
     public MotelyItemVector GetNextTarot(ref MotelyVectorTarotStream tarotStream, in MotelyVectorItemSet itemSet)

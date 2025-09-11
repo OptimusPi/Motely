@@ -186,6 +186,7 @@ namespace Motely.Executors
 
             Console.WriteLine($"   + Base {primaryCategory} filter: {primaryClauses.Count} clauses");
 
+
             // Chain additional filters  
             for (int i = 1; i < categories.Count; i++)
             {

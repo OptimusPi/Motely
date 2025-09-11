@@ -222,6 +222,52 @@ public struct MotelyJsonSeedScoreDesc(
 #endif
                     MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
                 }
+                
+                // Pre-generate all bosses to maintain state across scoring checks
+                // Find max ante needed for boss checks
+                int maxBossAnte = 0;
+                if (config.Must != null)
+                {
+                    foreach (var clause in config.Must)
+                    {
+                        if (clause.ItemTypeEnum == MotelyFilterItemType.Boss && clause.EffectiveAntes != null)
+                        {
+                            foreach (var ante in clause.EffectiveAntes)
+                            {
+                                if (ante > maxBossAnte) maxBossAnte = ante;
+                            }
+                        }
+                    }
+                }
+                if (config.Should != null)
+                {
+                    foreach (var clause in config.Should)
+                    {
+                        if (clause.ItemTypeEnum == MotelyFilterItemType.Boss && clause.EffectiveAntes != null)
+                        {
+                            foreach (var ante in clause.EffectiveAntes)
+                            {
+                                if (ante > maxBossAnte) maxBossAnte = ante;
+                            }
+                        }
+                    }
+                }
+                
+                // Generate and cache all bosses if needed
+                MotelyBossBlind[]? cachedBosses = null;
+                if (maxBossAnte > 0)
+                {
+                    cachedBosses = new MotelyBossBlind[maxBossAnte];
+                    var bossStream = singleCtx.CreateBossStream();
+                    var bossState = new MotelyRunState(); // Separate state for boss generation
+                    for (int ante = 1; ante <= maxBossAnte; ante++)
+                    {
+                        cachedBosses[ante - 1] = singleCtx.GetBossForAnte(ref bossStream, ante, ref bossState);
+                    }
+                    
+                    // Store cached bosses in runState for use by scoring functions
+                    runState.CachedBosses = cachedBosses;
+                }
 
                 // Always validate Must clauses - either as the only filter (scoreOnlyMode) 
                 // or as additional requirements on top of the base filter
