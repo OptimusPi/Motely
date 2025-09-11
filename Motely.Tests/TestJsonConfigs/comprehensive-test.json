@@ -1,0 +1,70 @@
+{
+  "name": "Comprehensive Test Configuration",
+  "description": "Generic comprehensive test that can be used with any seed",
+  "deck": "Red",
+  "stake": "White",
+  "must": [],
+  "should": [
+    {
+      "type": "Joker",
+      "value": "Blueprint",
+      "antes": [1, 2, 3, 4, 5, 6, 7, 8]
+    },
+    {
+      "type": "Joker",
+      "value": "TradingCard",
+      "antes": [1, 2, 3, 4, 5, 6, 7, 8]
+    },
+    {
+      "type": "Voucher",
+      "value": "MagicTrick",
+      "antes": [1, 2, 3, 4, 5, 6, 7, 8]
+    },
+    {
+      "type": "Boss",
+      "value": "TheWindow",
+      "antes": [1]
+    },
+    {
+      "type": "Boss",
+      "value": "TheArm",
+      "antes": [2]
+    },
+    {
+      "type": "Boss",
+      "value": "TheMouth",
+      "antes": [3]
+    },
+    {
+      "type": "SmallBlindTag",
+      "value": "SpeedTag",
+      "antes": [1, 2, 3, 4, 5]
+    },
+    {
+      "type": "BigBlindTag",
+      "value": "HandyTag",
+      "antes": [1, 2, 3, 4, 5]
+    },
+    {
+      "type": "TarotCard",
+      "value": "TheEmpress",
+      "antes": [1, 2, 3, 4, 5]
+    },
+    {
+      "type": "TarotCard",
+      "value": "TheTower",
+      "antes": [1, 2, 3, 4, 5]
+    },
+    {
+      "type": "PlayingCard",
+      "value": "7 of Clubs",
+      "antes": [1, 2, 3, 4, 5]
+    },
+    {
+      "type": "PlanetCard",
+      "value": "Mars",
+      "antes": [1, 2, 3, 4, 5, 6, 7, 8]
+    }
+  ],
+  "mustNot": []
+}
