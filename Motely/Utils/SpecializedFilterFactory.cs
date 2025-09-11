@@ -21,7 +21,7 @@ public static class SpecializedFilterFactory
         return category switch
         {
             FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)),
-            FilterCategory.Joker => CreateJokerFilterDesc(clauses),
+            FilterCategory.Joker => new MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterClause.ConvertClauses(clauses)),
             FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.ConvertClauses(clauses)),
             FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.ConvertClauses(clauses)),
             FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.ConvertClauses(clauses)),
@@ -31,13 +31,6 @@ public static class SpecializedFilterFactory
             FilterCategory.Tag => new MotelyJsonTagFilterDesc(clauses),
             _ => throw new ArgumentException($"Specialized filter not implemented for: {category}")
         };
-    }
-    
-    private static MotelyJsonJokerFilterDesc CreateJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
-    {
-        // Convert to typed clauses
-        var typedClauses = MotelyJsonJokerFilterClause.ConvertClauses(clauses);
-        return new MotelyJsonJokerFilterDesc(typedClauses);
     }
     
     /// <summary>
@@ -85,6 +78,7 @@ public static class SpecializedFilterFactory
             var clauses = clausesByCategory[category];
             var additionalFilter = CreateSpecializedFilter(category, clauses);
             searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
+            
         }
         
         return searchSettings;
