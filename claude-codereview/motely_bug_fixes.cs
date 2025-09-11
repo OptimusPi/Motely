@@ -26,7 +26,7 @@ public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         
         // ✅ FIX: Create boss stream ONCE and maintain state across antes
         // This matches the pattern used in MotelyAnalyzerFilterDesc.cs
-        var bossStream = ctx.CreateBossStream(); // Remove ante parameter
+        var bossStream = ctx.CreateBossStream();
         
         // ✅ FIX: Generate all bosses sequentially to maintain PRNG state
         // The original bug was creating a new stream for each ante

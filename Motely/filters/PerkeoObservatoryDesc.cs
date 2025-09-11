@@ -95,7 +95,6 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
                 VectorMask isTelescope = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
                 hasTelescope |= isTelescope;
                 
-                // CRITICAL: Activate Telescope BEFORE checking for Observatory
                 voucherState.ActivateVoucherForMask(MotelyVoucher.Telescope, isTelescope);
                 
                 // Observatory can ONLY appear if Telescope is already active

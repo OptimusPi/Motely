@@ -1130,7 +1130,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                 if (nextFilterIndex == Search._additionalFilters.Length)
                 {
-                    // ReportSeeds handles score provider routing automatically  
+                    // ReportSeeds handles score provider routing automatically
                     ReportSeeds(searchResultMask, in searchParams);
                 }
                 else

@@ -65,7 +65,7 @@ public abstract class MotelyJsonFilterClause
 /// </summary>
 public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 {
-    public MotelyJoker JokerType { get; init; }
+    public MotelyJoker? JokerType { get; init; }
     public List<MotelyJoker>? JokerTypes { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
@@ -127,7 +127,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         
         return new MotelyJsonJokerFilterClause
         {
-            JokerType = jsonClause.JokerEnum ?? MotelyJoker.Joker,
+            JokerType = jsonClause.JokerEnum,
             JokerTypes = jsonClause.JokerEnums?.Count > 0 ? jsonClause.JokerEnums : null,
             IsWildcard = jsonClause.IsWildcard,
             WildcardEnum = jsonClause.WildcardEnum,
