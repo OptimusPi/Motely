@@ -1084,6 +1084,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         private void SearchFilterBatch(int filterIndex, FilterSeedBatch* filterBatch)
         {
             Debug.Assert(filterBatch->SeedCount != 0, "Batch should have seeds");
+            
+            DebugLogger.Log($"[SearchFilterBatch] Called with filterIndex={filterIndex}, seedCount={filterBatch->SeedCount}");
 
             // Zero out unused lanes for partial batches (Tacodiva's approach)
             for (int i = filterBatch->SeedCount; i < Vector512<double>.Count; i++)
@@ -1114,6 +1116,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 throw new InvalidOperationException($"Additional filter at index {filterIndex} is null!");
             }
             
+            DebugLogger.Log($"[SearchFilterBatch] Calling filter type: {filter.GetType().Name}");
+            
             VectorMask searchResultMask;
             try
             {
@@ -1123,6 +1127,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 throw new InvalidOperationException($"Filter.Filter() threw NullReferenceException. Filter type: {filter.GetType()}, Index: {filterIndex}", ex);
             }
+            
+            DebugLogger.Log($"[SearchFilterBatch] Filter returned mask: {searchResultMask.Value:X}");
 
             if (searchResultMask.IsPartiallyTrue())
             {

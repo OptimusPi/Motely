@@ -347,8 +347,9 @@ public static class MotelyJsonScoring
                     var joker = new MotelyItem(item.Value).GetJoker();
                     var matches = !clause.IsWildcard ?
                         joker == clause.JokerType :
-                        CheckWildcardMatch(joker, originalClause?.WildcardEnum);
-                    if (matches && CheckEditionAndStickers(item, originalClause ?? new MotelyJsonConfig.MotleyJsonFilterClause()))
+                        CheckWildcardMatch(joker, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                    // FIXED: Check edition using the clause directly which now has EditionEnum and StickerEnums
+                    if (matches && CheckEditionAndStickers(item, clause))
                     {
                         runState.AddOwnedJoker((MotelyJoker)item.Type);
                         if (item.Type == MotelyItemType.Showman && clause.JokerType == MotelyJoker.Showman)
@@ -384,8 +385,9 @@ public static class MotelyJsonScoring
                         var joker = item.GetJoker();
                         var matches = !clause.IsWildcard ?
                             joker == clause.JokerType :
-                            CheckWildcardMatch(joker, originalClause?.WildcardEnum);
-                        if (matches && CheckEditionAndStickers(item, originalClause ?? new MotelyJsonConfig.MotleyJsonFilterClause()))
+                            CheckWildcardMatch(joker, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                        // FIXED: Check edition using the clause directly which now has EditionEnum and StickerEnums
+                        if (matches && CheckEditionAndStickers(item, clause))
                         {
                             runState.AddOwnedJoker((MotelyJoker)item.Type);
                             if (item.Type == MotelyItemType.Showman && clause.JokerType == MotelyJoker.Showman)
@@ -531,6 +533,33 @@ public static class MotelyJsonScoring
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool CheckEditionAndStickers(in MotelyItem item, MotelyJsonConfig.MotleyJsonFilterClause clause)
+    {
+        if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+            return false;
+
+        if (clause.StickerEnums?.Count > 0)
+        {
+            foreach (var sticker in clause.StickerEnums)
+            {
+                var hasSticker = sticker switch
+                {
+                    MotelyJokerSticker.Eternal => item.IsEternal,
+                    MotelyJokerSticker.Perishable => item.IsPerishable,
+                    MotelyJokerSticker.Rental => item.IsRental,
+                    _ => true
+                };
+                if (!hasSticker) return false;
+            }
+        }
+
+        return true;
+    }
+    
+    /// <summary>
+    /// Overload for MotelyJsonJokerFilterClause to properly check edition and stickers
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool CheckEditionAndStickers(in MotelyItem item, MotelyJsonJokerFilterClause clause)
     {
         if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
             return false;
