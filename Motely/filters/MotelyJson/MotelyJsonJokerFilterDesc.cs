@@ -64,7 +64,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
-                    if (clause.ShopSlotBitmask != 0)
+                    // Check shops - ShopSlotBitmask=0 means check ALL slots, not skip!
+                    if (clause.Sources == null || clause.Sources.ShopSlots == null || clause.Sources.ShopSlots.Length > 0)
                     {
                         // Use the self-contained shop joker stream - NO SYNCHRONIZATION ISSUES!
                         var shopJokerStream = ctx.CreateShopJokerStreamNew(ante);
@@ -232,35 +233,32 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
             
-            // Calculate max slot we need to check
-            int maxSlot = clause.ShopSlotBitmask == 0 ? _maxShopSlotsNeeded : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask));
+            // ALWAYS iterate through ALL shop slots to maintain stream sync!
+            // If no bitmask specified (0), check all slots
+            // If bitmask specified, still need to iterate through all slots but only check specified ones
+            int maxSlot = _maxShopSlotsNeeded; // Always use the max slots needed, not just up to highest bit!
             
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
             {
-                ulong slotBit = 1UL << slot;
-                
-                // Get joker for this slot using self-contained stream - handles slot types internally!
+                // ALWAYS get the next item to maintain stream synchronization
                 var jokerItem = shopJokerStream.GetNext(ref ctx);
                 
-                // Skip if this slot isn't in the bitmask (0 = check all slots)
-                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
-                    continue;
-                
-                // Check if item is JokerExcludedByStream (not a joker slot)
-                VectorMask isActualJoker = VectorMask.AllBitsSet;
-                for (int lane = 0; lane < 8; lane++)
+                // Only check/score if this slot is in the bitmask (0 = check all slots)
+                if (clause.ShopSlotBitmask == 0 || ((clause.ShopSlotBitmask >> slot) & 1) != 0)
                 {
-                    if (jokerItem.Value[lane] == (int)MotelyItemType.JokerExcludedByStream)
-                        isActualJoker[lane] = false;
-                }
-                
-                if (isActualJoker.IsPartiallyTrue())
-                {
-                    // Check if the joker matches our clause criteria
-                    VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                    foundInShop |= (isActualJoker & matches);
+                    // PURE VECTORIZED CHECK - no per-lane loops!
+                    // Check if it's not JokerExcludedByStream using SIMD compare
+                    var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+                    var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
+                    VectorMask isActualJoker = isNotExcluded;
+
+                    if (!isActualJoker.IsAllFalse())
+                    {
+                        // Check if the joker matches our clause criteria
+                        VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                        foundInShop |= (isActualJoker & matches);
+                    }
                 }
             }
 
@@ -272,48 +270,32 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         {
             VectorMask matches = VectorMask.AllBitsSet;
 
-            // Check type if specified
+            // Check type if specified - PURE SIMD, no loops over lanes!
             if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
             {
                 VectorMask typeMatch = VectorMask.NoBitsSet;
                 foreach (var jokerType in clause.JokerTypes)
                 {
                     var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
-                    var eqResult = VectorEnum256.Equals(item.Type, targetType);
-                    uint mask = 0;
-                    for (int i = 0; i < 8; i++)
-                        if (eqResult[i] == -1) mask |= (1u << i);
-                    typeMatch |= new VectorMask(mask);
+                    typeMatch |= VectorEnum256.Equals(item.Type, targetType);
                 }
                 matches &= typeMatch;
             }
             else if (clause.JokerType != null)
             {
                 var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType);
-                var eqResult = VectorEnum256.Equals(item.Type, targetType);
-                uint mask = 0;
-                for (int i = 0; i < 8; i++)
-                    if (eqResult[i] == -1) mask |= (1u << i);
-                matches &= new VectorMask(mask);
+                matches &= VectorEnum256.Equals(item.Type, targetType);
             }
             else
             {
                 // Match any joker
-                var eqResult = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
-                uint mask = 0;
-                for (int i = 0; i < 8; i++)
-                    if (eqResult[i] == -1) mask |= (1u << i);
-                matches &= new VectorMask(mask);
+                matches &= VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
             }
 
-            // Check edition if specified
+            // Check edition if specified - PURE SIMD!
             if (clause.EditionEnum.HasValue)
             {
-                var eqResult = VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
-                uint mask = 0;
-                for (int i = 0; i < 8; i++)
-                    if (eqResult[i] == -1) mask |= (1u << i);
-                matches &= new VectorMask(mask);
+                matches &= VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
             }
 
             return matches;

@@ -334,8 +334,11 @@ public static class MotelyJsonScoring
         
         if (shopSlotBitmask != 0)
         {
-            // Process shop slots using bitmask for efficiency
-            for (int i = 0; i < 64 && shopSlotBitmask != 0; i++)
+            // Need to find the highest bit set to know how many slots to check
+            int maxSlot = 64 - System.Numerics.BitOperations.LeadingZeroCount(shopSlotBitmask);
+            
+            // Process shop slots - must read ALL slots up to max to keep stream in sync
+            for (int i = 0; i < maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
                 // Check if this slot is in our bitmask
@@ -410,9 +413,11 @@ public static class MotelyJsonScoring
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
         // Don't cache soul stream - we might check multiple packs and need to track position correctly
         var soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
-        
+
         // Just check the packs we care about
-        var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 };
+        var packSlots = clause.Sources?.PackSlots ?? (
+                ante == 1 ? new[] { 0, 1, 2, 3 } : new[] { 0, 1, 2, 3, 4, 5 }
+        ); // Default to first 4 packs for ante 1, first 6 for ante 2+
         int maxPacks = ante == 1 ? 4 : 6;
         
         // Create the tarot stream ONCE for checking all Arcana packs
@@ -460,6 +465,10 @@ public static class MotelyJsonScoring
                             soulJoker = ctx.GetNextJoker(ref soulStream);
                         }
                     }
+                    
+                    #if DEBUG
+                    System.Console.WriteLine($"[DEBUG] SoulJoker check - Joker from stream: {soulJoker.GetJoker()}, Clause JokerEnum: {clause.JokerEnum}, Match: {(!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)}");
+                    #endif
                     
                     if (!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)
                     {
