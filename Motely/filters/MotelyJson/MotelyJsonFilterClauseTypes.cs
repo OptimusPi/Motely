@@ -89,43 +89,10 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
                 anteMask |= (1UL << (ante - 1));
         }
         
-        ulong shopMask = 0;
-        if (jsonClause.Sources?.ShopSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.ShopSlots)
-            {
-                // JSON slot indices are already 0-based
-                if (slot >= 0 && slot < 64)
-                    shopMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
-        }
-        else
-        {
-            shopMask = 0UL; // If Sources exists but shopSlots not specified, match no shop slots
-        }
-        
-        ulong packMask = 0;
-        if (jsonClause.Sources?.PackSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.PackSlots)
-            {
-                // JSON slot indices are already 0-based
-                if (slot >= 0 && slot < 64)
-                    packMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            packMask = 0UL; // If no Sources specified at all, match no pack slots (legacy behavior)
-        }
-        else
-        {
-            packMask = 0UL; // If Sources exists but packSlots not specified, match no pack slots
-        }
+        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // No computation in the hot path!
+        ulong shopMask = jsonClause.ComputedShopSlotBitmask;
+        ulong packMask = jsonClause.ComputedPackSlotBitmask;
         
         return new MotelyJsonJokerFilterClause
         {
@@ -227,42 +194,10 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
                 anteMask |= (1UL << (ante - 1));
         }
         
-        ulong packMask = 0;
-        if (jsonClause.Sources?.PackSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.PackSlots)
-            {
-                if (slot >= 0 && slot < 64)
-                    packMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            packMask = ~0UL; // If no Sources specified at all, match all pack slots for backwards compatibility
-        }
-        else
-        {
-            packMask = 0UL; // If Sources exists but packSlots not specified, match no pack slots
-        }
-        
-        ulong shopMask = 0;
-        if (jsonClause.Sources?.ShopSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.ShopSlots)
-            {
-                // JSON slot indices are already 0-based
-                if (slot >= 0 && slot < 64)
-                    shopMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
-        }
-        else
-        {
-            shopMask = 0UL; // If Sources exists but shopSlots not specified, match no shop slots
-        }
+        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // No computation in the hot path!
+        ulong packMask = jsonClause.ComputedPackSlotBitmask;
+        ulong shopMask = jsonClause.ComputedShopSlotBitmask;
         
         return new MotelyJsonTarotFilterClause
         {
@@ -345,42 +280,10 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
                 anteMask |= (1UL << (ante - 1));
         }
         
-        ulong shopMask = 0;
-        if (jsonClause.Sources?.ShopSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.ShopSlots)
-            {
-                // JSON slot indices are already 0-based
-                if (slot >= 0 && slot < 64)
-                    shopMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
-        }
-        else
-        {
-            shopMask = 0UL; // If Sources exists but shopSlots not specified, match no shop slots
-        }
-        
-        ulong packMask = 0;
-        if (jsonClause.Sources?.PackSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.PackSlots)
-            {
-                if (slot >= 0 && slot < 64)
-                    packMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            packMask = ~0UL; // If no Sources specified at all, match all pack slots for backwards compatibility
-        }
-        else
-        {
-            packMask = 0UL; // If Sources exists but packSlots not specified, match no pack slots
-        }
+        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // No computation in the hot path!
+        ulong shopMask = jsonClause.ComputedShopSlotBitmask;
+        ulong packMask = jsonClause.ComputedPackSlotBitmask;
         
         return new MotelyJsonSpectralFilterClause
         {
@@ -427,42 +330,10 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
                 anteMask |= (1UL << (ante - 1));
         }
         
-        ulong shopMask = 0;
-        if (jsonClause.Sources?.ShopSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.ShopSlots)
-            {
-                // JSON slot indices are already 0-based
-                if (slot >= 0 && slot < 64)
-                    shopMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
-        }
-        else
-        {
-            shopMask = 0UL; // If Sources exists but shopSlots not specified, match no shop slots
-        }
-        
-        ulong packMask = 0;
-        if (jsonClause.Sources?.PackSlots != null)
-        {
-            foreach (var slot in jsonClause.Sources.PackSlots)
-            {
-                if (slot >= 0 && slot < 64)
-                    packMask |= (1UL << slot);
-            }
-        }
-        else if (jsonClause.Sources == null)
-        {
-            packMask = 0UL; // If no Sources specified at all, match no pack slots (legacy behavior)
-        }
-        else
-        {
-            packMask = 0UL; // If Sources exists but packSlots not specified, match no pack slots
-        }
+        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // No computation in the hot path!
+        ulong shopMask = jsonClause.ComputedShopSlotBitmask;
+        ulong packMask = jsonClause.ComputedPackSlotBitmask;
         
         return new MotelyJsonPlanetFilterClause
         {
