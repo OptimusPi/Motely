@@ -5,8 +5,14 @@
    Batch Size: 1 chars
    Range: 0 to Γê₧
 
+WARNINGS:
+  ΓÜá∩╕Å  must[1]: 'sources' specified but type 'voucher' doesn't use sources (will be ignored)
 CreateSearch...
+WARNINGS:
+  ΓÜá∩╕Å  must[1]: 'sources' specified but type 'voucher' doesn't use sources (will be ignored)
 Γ£à Loaded config with cutoff: 0
+[FILTER SETUP] Base filter: Joker with 1 clauses
+[FILTER SETUP] Additional filter 0: Voucher with 1 clauses
    + Base Joker filter: 1 clauses
    + Chained Voucher filter: 1 clauses
 # Deck: Red, Stake: White

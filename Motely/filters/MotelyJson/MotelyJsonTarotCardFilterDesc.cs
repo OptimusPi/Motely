@@ -90,7 +90,12 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
 
-            return resultMask;
+            // ALWAYS verify with individual seed search to avoid SIMD bugs with pack streams
+            var clauses = _clauses;
+            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
+            {
+                return CheckTarotIndividualStatic(ref singleCtx, clauses);
+            });
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -306,9 +311,8 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 VectorMask isArcanaPack = VectorEnum256.Equals(packType, MotelyBoosterPackType.Arcana);
                 if (isArcanaPack.IsPartiallyTrue())
                 {
-                    // GetPackSize returns a vector, need to get the first value
-                    var packSize = pack.GetPackSize()[0];
-                    var contents = ctx.GetNextArcanaPackContents(ref arcanaStream, packSize);
+                    // FIXED: Always consume maximum pack size (5) to avoid stream desync
+                    var contents = ctx.GetNextArcanaPackContents(ref arcanaStream, MotelyBoosterPackSize.Mega);
                     
                     // Check each card in the pack
                     for (int cardIndex = 0; cardIndex < contents.Length; cardIndex++)
@@ -402,6 +406,188 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             }
 
             return foundInShop;
+        }
+
+        private static bool CheckTarotIndividualStatic(ref MotelySingleSearchContext ctx, List<MotelyJsonTarotFilterClause> clauses)
+        {
+            // Check each clause - all must be satisfied
+            foreach (var clause in clauses)
+            {
+                bool clauseSatisfied = false;
+                
+                // Check all antes in the clause's bitmask
+                for (int ante = 1; ante <= 64; ante++)
+                {
+                    ulong anteBit = 1UL << (ante - 1);
+                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                        continue;
+                        
+                    // Check shops if specified
+                    if (clause.ShopSlotBitmask != 0)
+                    {
+                        var shopTarotStream = ctx.CreateShopTarotStream(ante);
+                        if (CheckShopTarotsSingle(ref ctx, ref shopTarotStream, clause))
+                        {
+                            clauseSatisfied = true;
+                            break;
+                        }
+                    }
+                    
+                    // Check packs if specified
+                    if (clause.PackSlotBitmask != 0)
+                    {
+                        if (CheckPackTarotsSingle(ref ctx, ante, clause))
+                        {
+                            clauseSatisfied = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!clauseSatisfied)
+                    return false; // This clause wasn't satisfied
+            }
+            
+            return true; // All clauses satisfied
+        }
+        
+        private static bool CheckShopTarotsSingle(ref MotelySingleSearchContext ctx, ref MotelySingleTarotStream stream, MotelyJsonTarotFilterClause clause)
+        {
+            // Calculate max slot to check
+            int maxSlot = clause.ShopSlotBitmask == 0 ? 16 : 
+                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask));
+            
+            for (int slot = 0; slot < maxSlot; slot++)
+            {
+                ulong slotBit = 1UL << slot;
+                
+                // Skip if this slot isn't in the bitmask (0 = check all)
+                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
+                    continue;
+                
+                var tarot = ctx.GetNextTarot(ref stream);
+                
+                // Skip if not a tarot slot
+                if (tarot.Type == MotelyItemType.TarotExcludedByStream)
+                    continue;
+                
+                // Check if it matches our criteria
+                bool matches = true;
+                
+                // Check type
+                if (clause.TarotTypes?.Count > 0)
+                {
+                    bool typeMatch = false;
+                    foreach (var tarotType in clause.TarotTypes)
+                    {
+                        if (tarot.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)tarotType))
+                        {
+                            typeMatch = true;
+                            break;
+                        }
+                    }
+                    matches &= typeMatch;
+                }
+                else if (clause.TarotType.HasValue)
+                {
+                    matches &= tarot.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value);
+                }
+                
+                // Check edition
+                if (clause.EditionEnum.HasValue)
+                {
+                    matches &= tarot.Edition == clause.EditionEnum.Value;
+                }
+                
+                if (matches)
+                    return true;
+            }
+            
+            return false;
+        }
+        
+        private static bool CheckPackTarotsSingle(ref MotelySingleSearchContext ctx, int ante, MotelyJsonTarotFilterClause clause)
+        {
+            var packStream = ctx.CreateBoosterPackStream(ante);
+            var arcanaStream = ctx.CreateArcanaPackTarotStream(ante);
+            
+            // Determine max pack slot to check
+            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
+                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            
+            for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
+            {
+                var pack = ctx.GetNextBoosterPack(ref packStream);
+                
+                // Skip if this pack slot isn't in our filter
+                if (clause.PackSlotBitmask != 0)
+                {
+                    ulong packSlotBit = 1UL << packSlot;
+                    if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                }
+                
+                // Check if it's an Arcana pack
+                if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
+                    continue;
+                
+                // Check requireMega if specified in sources
+                if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
+                    continue; // Skip non-Mega packs if Mega is required
+                
+                // Get the actual pack size for this individual seed
+                var packSize = pack.GetPackSize();
+                
+                var contents = ctx.GetNextArcanaPackContents(ref arcanaStream, packSize);
+                
+                int actualPackSize = packSize switch
+                {
+                    MotelyBoosterPackSize.Normal => 2,
+                    MotelyBoosterPackSize.Jumbo => 3,
+                    MotelyBoosterPackSize.Mega => 5,
+                    _ => 2
+                };
+                
+                // Check each card in the pack
+                for (int cardIndex = 0; cardIndex < actualPackSize; cardIndex++)
+                {
+                    var card = contents[cardIndex];
+                    
+                    if (card.TypeCategory != MotelyItemTypeCategory.TarotCard)
+                        continue;
+                    
+                    bool matches = true;
+                    
+                    // Check type
+                    if (clause.TarotTypes?.Count > 0)
+                    {
+                        bool typeMatch = false;
+                        foreach (var tarotType in clause.TarotTypes)
+                        {
+                            if (card.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)tarotType))
+                            {
+                                typeMatch = true;
+                                break;
+                            }
+                        }
+                        matches &= typeMatch;
+                    }
+                    else if (clause.TarotType.HasValue)
+                    {
+                        matches &= card.Type == (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value);
+                    }
+                    
+                    // Check edition
+                    if (clause.EditionEnum.HasValue)
+                    {
+                        matches &= card.Edition == clause.EditionEnum.Value;
+                    }
+                    
+                    if (matches)
+                        return true;
+                }
+            }
+            
+            return false;
         }
     }
 }

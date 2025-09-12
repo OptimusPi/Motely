@@ -166,7 +166,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             if (clause.ShopSlotBitmask != 0)
                             {
                                 var shopStream = singleCtx.CreateShopItemStream(ante, isCached: false);
-                                if (CheckShopJokersSingle(ref singleCtx, clause, ante, ref shopStream))
+                                if (CheckShopJokersSingleStatic(ref singleCtx, clause, ante, ref shopStream))
                                 {
                                     clauseSatisfied = true;
                                     break;
@@ -177,7 +177,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             if (clause.PackSlotBitmask != 0)
                             {
                                 var packStream = singleCtx.CreateBoosterPackStream(ante, generatedFirstPack: ante != 1, isCached: false);
-                                if (CheckPackJokersSingle(ref singleCtx, clause, ante, ref packStream))
+                                if (CheckPackJokersSingleStatic(ref singleCtx, clause, ante, ref packStream))
                                 {
                                     clauseSatisfied = true;
                                     break;
@@ -246,7 +246,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             // ALWAYS iterate through ALL shop slots to maintain stream sync!
             // If no bitmask specified (0), check all slots
             // If bitmask specified, still need to iterate through all slots but only check specified ones
-            int maxSlot = _maxShopSlotsNeeded; // Always use the max slots needed, not just up to highest bit!
+            int maxSlot = MaxShopSlotsNeeded; // Always use the max slots needed, not just up to highest bit!
             
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
@@ -331,7 +331,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             VectorMask isValidPosition = i switch
                             {
                                 0 or 1 => VectorMask.AllBitsSet, // All packs have at least 2 cards
-                                2 => VectorEnum256.GreaterThanOrEqual(packSizes, MotelyBoosterPackSize.Jumbo),
+                                2 => ~VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Normal),
                                 3 or 4 => VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Mega),
                                 _ => VectorMask.NoBitsSet
                             };
@@ -432,7 +432,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CheckShopJokersSingle(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelySingleShopItemStream shopStream)
+        private static bool CheckShopJokersSingleStatic(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelySingleShopItemStream shopStream)
         {
             int maxSlot = clause.ShopSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
                 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
@@ -463,7 +463,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CheckPackJokersSingle(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelySingleBoosterPackStream packStream)
+        private static bool CheckPackJokersSingleStatic(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelySingleBoosterPackStream packStream)
         {
             int maxPacks = ante == 1 ? 4 : 6;
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
@@ -477,7 +477,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     // Get the correct number of jokers based on pack size
                     int packSize = pack.GetPackSize() switch
                     {
-                        MotelyBoosterPackSize.Standard => 2,
+                        MotelyBoosterPackSize.Normal => 2,
                         MotelyBoosterPackSize.Jumbo => 3,
                         MotelyBoosterPackSize.Mega => 5,
                         _ => 2

@@ -7,6 +7,8 @@
 
 CreateSearch...
 Γ£à Loaded config with cutoff: 0
+[FILTER SETUP] Base filter: SoulJoker with 1 clauses
+[FILTER SETUP] Additional filter 0: Joker with 1 clauses
    + Base SoulJoker filter: 1 clauses
    + Chained Joker filter: 1 clauses
 # Deck: Red, Stake: White

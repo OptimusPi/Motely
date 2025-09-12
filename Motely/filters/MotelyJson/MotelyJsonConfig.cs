@@ -88,6 +88,14 @@ namespace Motely.Filters;
         public int? MaxShopSlot { get; set; }
         public int? MaxPackSlot { get; set; }
         
+        // CRITICAL: Pre-computed bitmasks set during CONFIG VALIDATION
+        // These are computed ONCE at config load, NOT in the hot path!
+        [JsonIgnore] 
+        public ulong ComputedShopSlotBitmask { get; set; }
+        
+        [JsonIgnore] 
+        public ulong ComputedPackSlotBitmask { get; set; }
+        
         // Pre-parsed enum (set during initialization, immutable after)
         [JsonIgnore] 
         public MotelyFilterItemType ItemTypeEnum { get; private set; }
