@@ -100,6 +100,10 @@ namespace Motely.Executors
         private IMotelySearch CreateSearch(MotelyJsonConfig config, List<string>? seeds)
         {
             Console.WriteLine("CreateSearch...");
+            
+            // CRITICAL: Validate and normalize config ONCE at load time!
+            // This removes ALL ambiguity from the hot path!
+            MotelyJsonConfigValidator.ValidateConfig(config);
 
             // Create scoring config (SHOULD clauses + voucher Must clauses for activation)
             var voucherMustClauses = config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList() ?? [];

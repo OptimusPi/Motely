@@ -78,6 +78,13 @@ namespace Motely.Filters
                     continue;
                 }
                 
+                // CRITICAL: Initialize parsed enums FIRST
+                item.InitializeParsedEnums();
+                
+                // CRITICAL: Normalize Sources for ALL item types that support them
+                // This happens ONCE at config load, NOT in the hot path!
+                NormalizeSourcesForItem(item, prefix, errors, warnings);
+                
                 // Case insensitive parsing handles all casing - no validation needed
                 
                 // Validate value based on type
@@ -312,6 +319,166 @@ namespace Motely.Filters
                 if (section == "should" && item.Score <= 0)
                 {
                     errors.Add($"{prefix}: Score must be positive for 'should' items (got {item.Score})");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// CRITICAL: Normalizes Sources at CONFIG LOAD TIME.
+        /// NO AMBIGUITY IN THE HOT PATH!
+        /// </summary>
+        private static void NormalizeSourcesForItem(MotelyJsonConfig.MotleyJsonFilterClause item, string prefix, List<string> errors, List<string> warnings)
+        {
+            // Only normalize for types that support sources
+            if (item.ItemTypeEnum != MotelyFilterItemType.Joker && 
+                item.ItemTypeEnum != MotelyFilterItemType.SoulJoker &&
+                item.ItemTypeEnum != MotelyFilterItemType.PlayingCard &&
+                item.ItemTypeEnum != MotelyFilterItemType.TarotCard &&
+                item.ItemTypeEnum != MotelyFilterItemType.PlanetCard &&
+                item.ItemTypeEnum != MotelyFilterItemType.SpectralCard)
+            {
+                // This type doesn't use sources
+                if (item.Sources != null)
+                {
+                    warnings.Add($"{prefix}: 'sources' specified but type '{item.Type}' doesn't use sources (will be ignored)");
+                }
+                // DON'T create bitmasks for non-source types!
+                item.ComputedShopSlotBitmask = 0;
+                item.ComputedPackSlotBitmask = 0;
+                return;
+            }
+            
+            // NORMALIZE SOURCES - Be EXPLICIT!
+            if (item.Sources == null)
+            {
+                // No sources specified AT ALL
+                // DON'T create a Sources object - leave it null!
+                // The hot path will check the bitmasks which will be 0
+                
+                // Warn for ALL types that typically need sources
+                if (item.ItemTypeEnum == MotelyFilterItemType.Joker || 
+                    item.ItemTypeEnum == MotelyFilterItemType.SoulJoker ||
+                    item.ItemTypeEnum == MotelyFilterItemType.TarotCard ||
+                    item.ItemTypeEnum == MotelyFilterItemType.PlanetCard ||
+                    item.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
+                {
+                    warnings.Add($"{prefix}: No 'sources' specified for {item.Type}. Will NOT check shops or packs. Add 'sources' with 'shopSlots' and/or 'packSlots' to specify where to look.");
+                }
+                
+                // Set bitmasks to 0 (no sources)
+                item.ComputedShopSlotBitmask = 0;
+                item.ComputedPackSlotBitmask = 0;
+                return; // Early return - no Sources object to process
+            }
+            else
+            {
+                // Sources exists - normalize the arrays
+                
+                // Normalize ShopSlots
+                if (item.Sources.ShopSlots == null)
+                {
+                    // Sources exists but ShopSlots not specified = NO shops
+                    item.Sources.ShopSlots = Array.Empty<int>();
+                }
+                else if (item.Sources.ShopSlots.Length == 0)
+                {
+                    // Empty array explicitly = NO shops (already correct)
+                    // Don't warn, this is explicit user intent
+                }
+                else
+                {
+                    // Validate shop slot indices
+                    var uniqueShopSlots = new HashSet<int>();
+                    foreach (var slot in item.Sources.ShopSlots)
+                    {
+                        if (slot < 0 || slot >= 64)
+                        {
+                            errors.Add($"{prefix}: Invalid shop slot {slot} (must be 0-63)");
+                        }
+                        else if (!uniqueShopSlots.Add(slot))
+                        {
+                            warnings.Add($"{prefix}: Duplicate shop slot {slot}");
+                        }
+                    }
+                    
+                    // Sort and deduplicate
+                    item.Sources.ShopSlots = uniqueShopSlots.OrderBy(x => x).ToArray();
+                }
+                
+                // Normalize PackSlots
+                if (item.Sources.PackSlots == null)
+                {
+                    // Sources exists but PackSlots not specified = NO packs
+                    item.Sources.PackSlots = Array.Empty<int>();
+                }
+                else if (item.Sources.PackSlots.Length == 0)
+                {
+                    // Empty array explicitly = NO packs (already correct)
+                }
+                else
+                {
+                    // Validate pack slot indices
+                    var uniquePackSlots = new HashSet<int>();
+                    foreach (var slot in item.Sources.PackSlots)
+                    {
+                        if (slot < 0)
+                        {
+                            errors.Add($"{prefix}: Invalid pack slot {slot} (must be >= 0)");
+                        }
+                        else if (slot >= 6)
+                        {
+                            warnings.Add($"{prefix}: Pack slot {slot} may not exist (ante 1 has 4 packs, ante 2+ has 6 packs)");
+                        }
+                        
+                        if (!uniquePackSlots.Add(slot))
+                        {
+                            warnings.Add($"{prefix}: Duplicate pack slot {slot}");
+                        }
+                    }
+                    
+                    // Sort and deduplicate
+                    item.Sources.PackSlots = uniquePackSlots.OrderBy(x => x).ToArray();
+                }
+                
+                // Validate RequireMega
+                if (item.Sources.RequireMega == true)
+                {
+                    if (item.Sources.PackSlots == null || item.Sources.PackSlots.Length == 0)
+                    {
+                        errors.Add($"{prefix}: 'requireMega' is true but no pack slots specified");
+                    }
+                }
+            }
+            
+            // Now compute the bitmasks ONCE at config load time!
+            // The hot path will just check these pre-computed values
+            item.ComputedShopSlotBitmask = 0;
+            item.ComputedPackSlotBitmask = 0;
+            
+            if (item.Sources != null)
+            {
+                // Compute shop bitmask
+                if (item.Sources.ShopSlots != null)
+                {
+                    foreach (var slot in item.Sources.ShopSlots)
+                    {
+                        if (slot >= 0 && slot < 64)
+                        {
+                            item.ComputedShopSlotBitmask |= (1UL << slot);
+                        }
+                    }
+                }
+                
+                // Compute pack bitmask
+                if (item.Sources.PackSlots != null)
+                {
+                    foreach (var slot in item.Sources.PackSlots)
+                    {
+                        if (slot >= 0 && slot < 64)
+                        {
+                            item.ComputedPackSlotBitmask |= (1UL << slot);
+                        }
+                    }
                 }
             }
         }
