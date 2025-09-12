@@ -1,0 +1,59 @@
+{
+  "name": "weee",
+  "description": "Negative: Hack, Wee, BP",
+  "author": "ian",
+  "dateCreated": "2025-09-11T05:46:12.6691000Z",
+  "deck": "Plasma",
+  "stake": "White",
+  "must": [
+    {
+        "type": "smallblindtag",
+        "value": "negativetag",
+        "antes": [2]
+    },
+    {
+        "type": "joker",
+        "value": "WeeJoker",
+        "edition": "Negative",
+        "antes": [1],
+        "sources": {
+            "shopSlots": [1,2],
+            "packSlots": [0,1,2,3,4]
+        }
+    },
+    {
+        "type": "joker",
+        "value": "Blueprint",
+        "antes": [2],
+        "sources": {
+            "shopSlots": [2,4,6,8]
+        }
+    }
+  ],
+  "should": [
+     {
+        "type": "joker",
+        "value": "WeeJoker",
+        "edition": "Negative",
+        "antes": [1],
+        "sources": {
+            "shopSlots": [0,1]
+        }
+    },
+    {
+        "type": "joker",
+        "value": "Hack",
+        "antes": [2],
+        "sources": {
+            "shopSlots": [2]
+        }
+    },
+    {
+        "type": "joker",
+        "value": "Blueprint",
+        "edition": "Negative",
+        "antes": [1,2,3]
+    }
+  ],
+  "mustNot": []
+}

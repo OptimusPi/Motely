@@ -67,6 +67,8 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker? JokerType { get; init; }
     public List<MotelyJoker>? JokerTypes { get; init; }
+    public new MotelyItemEdition? EditionEnum { get; init; }  // ADDED: Preserve edition requirements (new keyword to hide base class member)
+    public List<MotelyJokerSticker>? StickerEnums { get; init; }  // ADDED: Preserve sticker requirements
     public bool IsWildcard { get; init; }
     public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
@@ -99,7 +101,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         }
         else if (jsonClause.Sources == null)
         {
-            shopMask = ~0UL; // If no Sources specified at all, match all shop slots for backwards compatibility
+            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
         }
         else
         {
@@ -133,6 +135,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             WildcardEnum = jsonClause.WildcardEnum,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
+            StickerEnums = jsonClause.StickerEnums,  // ADDED: Preserve sticker requirements
             AnteBitmask = anteMask,
             ShopSlotBitmask = shopMask,
             PackSlotBitmask = packMask
@@ -254,7 +257,7 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
         }
         else if (jsonClause.Sources == null)
         {
-            shopMask = ~0UL; // If no Sources specified at all, match all shop slots for backwards compatibility
+            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
         }
         else
         {
@@ -354,7 +357,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
         }
         else if (jsonClause.Sources == null)
         {
-            shopMask = ~0UL; // If no Sources specified at all, match all shop slots for backwards compatibility
+            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
         }
         else
         {
@@ -436,7 +439,7 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
         }
         else if (jsonClause.Sources == null)
         {
-            shopMask = ~0UL; // If no Sources specified at all, match all shop slots for backwards compatibility
+            shopMask = 0UL; // If no Sources specified at all, match NO shop slots (user must be explicit)
         }
         else
         {

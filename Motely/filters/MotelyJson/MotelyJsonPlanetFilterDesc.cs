@@ -91,37 +91,38 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                            }
                        }
                    }
-                   
-                   // ✅ NEW: Add shop consumable support - fixes ALEEB Saturn in shop slot 0
+
+                    // ✅ NEW: Add shop consumable support - fixes ALEEB Saturn in shop slot 0\
+                   // TODO dont use hard coded "6" here, what the fuck?
                    for (int shopSlot = 0; shopSlot < 6; shopSlot++)
-                   {
-                       var shopItem = singleCtx.GetNextShopItem(ref shopStream);
-                       
-                       if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
-                       {
-                           ulong shopSlotBit = 1UL << shopSlot;
-                           
-                           for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
-                           {
-                               var clause = clauses[clauseIndex];
-                               
-                               if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) 
-                                   continue;
-                               
-                               if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0) 
-                                   continue;
-                               
-                               bool typeMatches = CheckPlanetTypeMatch(shopItem, clause);
-                               bool editionMatches = !clause.EditionEnum.HasValue || 
-                                                   shopItem.Edition == clause.EditionEnum.Value;
-                               
-                               if (typeMatches && editionMatches)
-                               {
-                                   clauseMatches[clauseIndex] = true;
-                               }
-                           }
-                       }
-                   }
+                    {
+                        var shopItem = singleCtx.GetNextShopItem(ref shopStream);
+
+                        if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
+                        {
+                            ulong shopSlotBit = 1UL << shopSlot;
+
+                            for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
+                            {
+                                var clause = clauses[clauseIndex];
+
+                                if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                                    continue;
+
+                                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0)
+                                    continue;
+
+                                bool typeMatches = CheckPlanetTypeMatch(shopItem, clause);
+                                bool editionMatches = !clause.EditionEnum.HasValue ||
+                                                    shopItem.Edition == clause.EditionEnum.Value;
+
+                                if (typeMatches && editionMatches)
+                                {
+                                    clauseMatches[clauseIndex] = true;
+                                }
+                            }
+                        }
+                    }
                }
                
                bool allClausesMatched = true;

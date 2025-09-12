@@ -27,8 +27,13 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
+            DebugLogger.Log($"[TAG FILTER] Called with {_clauses?.Count ?? 0} clauses");
+            
             if (_clauses == null || _clauses.Count == 0)
+            {
+                DebugLogger.Log("[TAG FILTER] No clauses - returning AllBitsSet");
                 return VectorMask.AllBitsSet;
+            }
             
             // Stack-allocated clause masks - accumulate results per clause across all antes
             Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
@@ -96,10 +101,17 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
             var resultMask = VectorMask.AllBitsSet;
             for (int i = 0; i < clauseMasks.Length; i++)
             {
+                DebugLogger.Log($"[TAG FILTER] Clause {i} mask: {clauseMasks[i].Value:X}");
                 resultMask &= clauseMasks[i];
-                if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
+                DebugLogger.Log($"[TAG FILTER] Result after clause {i}: {resultMask.Value:X}");
+                if (resultMask.IsAllFalse()) 
+                {
+                    DebugLogger.Log("[TAG FILTER] All false after AND - returning NoBitsSet");
+                    return VectorMask.NoBitsSet;
+                }
             }
             
+            DebugLogger.Log($"[TAG FILTER] Final result: {resultMask.Value:X}");
             return resultMask;
         }
     }

@@ -154,6 +154,13 @@ namespace Motely.Executors
             List<FilterCategory> categories = [.. clausesByCategory.Keys];
             FilterCategory primaryCategory = categories[0];
             List<MotelyJsonConfig.MotleyJsonFilterClause> primaryClauses = clausesByCategory[primaryCategory];
+            
+            // Debug logging for filter setup
+            Console.WriteLine($"[FILTER SETUP] Base filter: {primaryCategory} with {primaryClauses.Count} clauses");
+            for (int i = 1; i < categories.Count; i++)
+            {
+                Console.WriteLine($"[FILTER SETUP] Additional filter {i-1}: {categories[i]} with {clausesByCategory[categories[i]].Count} clauses");
+            }
 
             IMotelySeedFilterDesc filterDesc = primaryCategory switch
             {
