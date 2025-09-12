@@ -330,6 +330,9 @@ public struct MotelyJsonSeedScoreDesc(
                             {
                                     
                                 case MotelyFilterItemType.SoulJoker:
+                                    #if DEBUG
+                                    System.Console.WriteLine($"[DEBUG] Processing SoulJoker Must clause - Value: {clause.Value}, JokerEnum: {clause.JokerEnum}, Ante: {ante}");
+                                    #endif
                                     if (MotelyJsonScoring.CountSoulJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: true) > 0)
                                     {
                                         clauseSatisfied = true;

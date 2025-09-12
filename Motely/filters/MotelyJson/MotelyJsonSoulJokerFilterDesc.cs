@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using Motely.Filters;
 
 namespace Motely.Filters;
@@ -22,10 +23,13 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
         // Calculate ante range from bitmasks
         var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_soulJokerClauses);
 
-        // Cache all streams we'll need
+        // Cache all streams we'll need for BOTH vectorized and individual checks
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
+            // For vectorized pre-filter
             ctx.CacheSoulJokerStream(ante);
+            
+            // For individual seed validation
             ctx.CacheBoosterPackStream(ante);
             ctx.CacheArcanaPackTarotStream(ante);
             // Note: No cache method exists for spectral streams in MotelyFilterCreationContext
@@ -43,29 +47,16 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static bool CheckAnteForSoulJoker(int ante, MotelyJsonSoulJokerFilterClause clause, ref MotelySingleSearchContext searchContext)
         {
-            var soulStream = searchContext.CreateSoulJokerStream(ante);
-            var wouldBe = searchContext.GetNextJoker(ref soulStream);
-            
-            // Check if joker type matches
-            if (!clause.IsWildcard && clause.JokerType.HasValue)
-            {
-                if (wouldBe.Type != (MotelyItemType)clause.JokerType.Value) return false;
-            }
-            
-            // Check if edition matches
-            if (clause.EditionEnum.HasValue)
-            {
-                if (wouldBe.Edition != clause.EditionEnum.Value) return false;
-            }
-            
-            // Now verify Soul cards are actually obtainable from packs
+            // FIRST check if The Soul card exists in any packs
             MotelySingleTarotStream tarotStream = default;
             MotelySingleSpectralStream spectralStream = default;
             MotelySingleBoosterPackStream boosterPackStream = default;
             bool boosterPackStreamInit = false;
             bool tarotStreamInit = false, spectralStreamInit = false;
+            bool foundSoulInPack = false;
             
-            int maxPackSlot = clause.PackSlotBitmask == 0 ? (2 + ante) : 
+            // Default: Check first 4 packs for ante 1, first 6 for ante 2+
+            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
                 (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
             
             for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
@@ -92,7 +83,8 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                     
                     if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
                     {
-                        return true;
+                        foundSoulInPack = true;
+                        break;
                     }
                 }
                 
@@ -106,96 +98,111 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                     
                     if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                     {
-                        return true;
+                        foundSoulInPack = true;
+                        break;
                     }
                 }
             }
             
-            return false;
+            // If no Soul card found in any pack, return false
+            if (!foundSoulInPack)
+                return false;
+            
+            // NOW check if the soul joker matches what we're looking for
+            var soulStream = searchContext.CreateSoulJokerStream(ante);
+            var wouldBe = searchContext.GetNextJoker(ref soulStream);
+            
+            // Direct enum comparisons
+            if (!clause.IsWildcard && clause.JokerType.HasValue)
+            {
+                if (wouldBe.GetJoker() != clause.JokerType.Value) return false;
+            }
+            
+            // Direct edition comparison
+            if (clause.EditionEnum.HasValue)
+            {
+                if (wouldBe.Edition != clause.EditionEnum.Value) return false;
+            }
+            
+            return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clauses != null && _clauses.Count > 0, "MotelyJsonSoulJokerFilter executed with no soul joker clauses!");
-
-            // STAGE 1: Vectorized fast pre-check - eliminate 99%+ of seeds by checking soul joker stream
-            var jokerMask = VectorMask.AllBitsSet;
-            var clauseJokerMasks = new VectorMask[_clauses.Count];
-            for (int i = 0; i < clauseJokerMasks.Length; i++) clauseJokerMasks[i] = VectorMask.NoBitsSet;
+            Debug.Assert(_clauses != null && _clauses.Count > 0, "MotelyJsonSoulJokerFilter called with null or empty clauses");
             
-            for (int ante = _minAnte; ante <= _maxAnte; ante++)
+            // STAGE 1: Vectorized pre-filter - check if the soul joker matches what we're looking for
+            VectorMask matchingMask = VectorMask.AllBitsSet;
+            
+            foreach (var clause in _clauses)
             {
-                ulong anteBit = 1UL << (ante - 1);
-                var soulJokerStream = ctx.CreateSoulJokerStream(ante);
-                var soulJokers = ctx.GetNextJoker(ref soulJokerStream);
+                VectorMask clauseMask = VectorMask.NoBitsSet;
                 
-                for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+                // Check each ante in the clause's bitmask
+                for (int ante = 1; ante <= 8; ante++)
                 {
-                    var clause = _clauses[clauseIndex];
-                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
+                    if ((clause.AnteBitmask & (1UL << (ante - 1))) == 0) continue;
                     
-                    VectorMask typeMatches = VectorMask.AllBitsSet;
-                    if (!clause.IsWildcard && clause.JokerType.HasValue)
+                    // Get the soul joker for this ante (vectorized)
+                    var soulStream = ctx.CreateSoulJokerStream(ante);
+                    var soulJoker = ctx.GetNextJoker(ref soulStream);
+                    
+                    // Check if it matches what we're looking for
+                    if (clause.JokerType.HasValue && !clause.IsWildcard)
                     {
-                        var targetType = (MotelyItemType)clause.JokerType.Value;
-                        typeMatches = VectorEnum256.Equals(soulJokers.Type, targetType);
+                        // Extract just the joker type from the item
+                        var jokerType = new VectorEnum256<MotelyJoker>(
+                            Vector256.BitwiseAnd(soulJoker.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask))
+                        );
+                        VectorMask matches = VectorEnum256.Equals(jokerType, clause.JokerType.Value);
+                        clauseMask |= matches; // OR - can match at any ante
+                    }
+                    else
+                    {
+                        clauseMask = VectorMask.AllBitsSet; // Wildcard matches all
                     }
                     
-                    VectorMask editionMatches = VectorMask.AllBitsSet;
+                    // Check edition if specified
                     if (clause.EditionEnum.HasValue)
                     {
-                        editionMatches = VectorEnum256.Equals(soulJokers.Edition, clause.EditionEnum.Value);
+                        VectorMask editionMatches = VectorEnum256.Equals(soulJoker.Edition, clause.EditionEnum.Value);
+                        clauseMask &= editionMatches; // AND with edition requirement
                     }
-                    
-                    var combinedMatches = typeMatches & editionMatches;
-                    clauseJokerMasks[clauseIndex] |= combinedMatches;
                 }
-            }
-
-            // Fast fail - exit early if pre-check eliminates all seeds
-            for (int i = 0; i < clauseJokerMasks.Length; i++)
-            {
-                jokerMask &= clauseJokerMasks[i];
-                if (jokerMask.IsAllFalse()) return VectorMask.NoBitsSet; // FAST EXIT!
-            }
-            
-            // STAGE 2: Drop to individual seeds for pack verification (handles variable pack sizes)
-            var clauses = _clauses; // Capture for lambda
-            int minAnte = _minAnte, maxAnte = _maxAnte; // Capture for lambda
-            
-            return ctx.SearchIndividualSeeds(jokerMask, (ref MotelySingleSearchContext singleCtx) =>
-            {
-                // We already know from Stage 1 that the soul joker exists and matches!
-                // Track which clauses have been satisfied
-                var clausesSatisfied = new bool[clauses.Count];
                 
-                // Check all antes in order (ante loop outside, clauses inside)
-                for (int ante = minAnte; ante <= maxAnte; ante++)
+                matchingMask &= clauseMask; // AND - all clauses must pass
+                if (matchingMask.IsAllFalse())
+                    return VectorMask.NoBitsSet; // Early exit if no seeds match
+            }
+            
+            // STAGE 2: Individual seed validation to verify The Soul is actually obtainable
+            var clauses = _clauses; // Copy for lambda
+            return ctx.SearchIndividualSeeds(matchingMask, (ref MotelySingleSearchContext singleCtx) =>
+            {
+                // Check each clause - ALL must pass (AND logic)
+                foreach (var clause in clauses)
                 {
-                    for (int clauseIndex = 0; clauseIndex < clauses.Count; clauseIndex++)
+                    bool clauseMatched = false;
+                    
+                    // Check each ante in the clause's bitmask
+                    for (int ante = 1; ante <= 8; ante++)
                     {
-                        // Skip if this clause is already satisfied
-                        if (clausesSatisfied[clauseIndex]) continue;
+                        if ((clause.AnteBitmask & (1UL << (ante - 1))) == 0) continue;
                         
-                        var clause = clauses[clauseIndex];
-                        ulong anteBit = 1UL << (ante - 1);
-                        if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) continue;
-                        
+                        // Use the static method that checks both soul joker AND The Soul card availability
                         if (CheckAnteForSoulJoker(ante, clause, ref singleCtx))
                         {
-                            clausesSatisfied[clauseIndex] = true;
+                            clauseMatched = true;
+                            break; // This clause is satisfied
                         }
                     }
+                    
+                    if (!clauseMatched)
+                        return false; // This clause failed, seed doesn't match
                 }
                 
-                // All clauses must be satisfied
-                for (int i = 0; i < clausesSatisfied.Length; i++)
-                {
-                    if (!clausesSatisfied[i]) return false;
-                }
-                
-                return true;
+                return true; // All clauses passed
             });
         }
     }
