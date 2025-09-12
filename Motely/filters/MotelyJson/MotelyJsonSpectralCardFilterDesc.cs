@@ -112,8 +112,8 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     // First check if it's a spectral card category
                     VectorMask isSpectralCard = VectorEnum256.Equals(shopItem.TypeCategory, MotelyItemTypeCategory.SpectralCard);
                     
-                    // Then check specific spectral type by converting item value to spectral
-                    var targetSpectralType = (MotelyItemType)clause.SpectralType.Value;
+                    // Construct the correct MotelyItemType for the spectral card
+                    var targetSpectralType = (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)clause.SpectralType.Value);
                     VectorMask correctSpectralType = VectorEnum256.Equals(shopItem.Type, targetSpectralType);
                     
                     typeMatches = isSpectralCard & correctSpectralType;
