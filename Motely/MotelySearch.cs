@@ -910,6 +910,21 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             if (searchResultMask.IsPartiallyTrue())
             {
+                // Debug: Show which seeds pass the base filter
+                if (DebugLogger.IsEnabled)
+                {
+                    for (int lane = 0; lane < Vector512<double>.Count; lane++)
+                    {
+                        if (searchResultMask[lane] && searchContextParams.IsLaneValid(lane))
+                        {
+                            char* seedBuf = stackalloc char[Motely.MaxSeedLength];
+                            int len = searchContextParams.GetSeed(lane, seedBuf);
+                            var seedStr = new string(seedBuf, 0, len);
+                            DebugLogger.Log($"[FILTER PASS] Seed {seedStr} passed BASE filter");
+                        }
+                    }
+                }
+                
                 if (Search._additionalFilters.Length == 0)
                 {
                     // ReportSeeds handles score provider routing automatically
@@ -926,7 +941,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
 
         // SMART REPORTING: Routes to score provider if available, falls back to basic seeds
-        private void ReportSeeds(VectorMask searchResultMask, in MotelySearchContextParams searchParams)
+        protected void ReportSeeds(VectorMask searchResultMask, in MotelySearchContextParams searchParams)
         {
             Debug.Assert(searchResultMask.IsPartiallyTrue(), "Mask should be checked for partial truth before calling report seeds (for performance).");
 
@@ -1009,7 +1024,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
-        private void BatchSeeds(int filterIndex, VectorMask searchResultMask, in MotelySearchContextParams searchParams)
+        protected void BatchSeeds(int filterIndex, VectorMask searchResultMask, in MotelySearchContextParams searchParams)
         {
             FilterSeedBatch* filterBatch = &_filterSeedBatches[filterIndex];
 
@@ -1298,20 +1313,11 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         private void SearchSingleSeed(ReadOnlySpan<char> seed)
         {
-            if (seed.Length == 0) return;
-            char* seedLastCharacters = stackalloc char[Motely.MaxSeedLength];
+            char* seedLastCharacters = stackalloc char[Motely.MaxSeedLength - 1];
 
             // Calculate the partial psuedohash cache
             for (int pseudohashKeyIdx = 0; pseudohashKeyIdx < Search._pseudoHashKeyLengthCount; pseudohashKeyIdx++)
             {
-                if (Search._pseudoHashKeyLengths == null)
-                {
-                    throw new InvalidOperationException($"_pseudoHashKeyLengths is null!");
-                }
-                if (pseudohashKeyIdx >= Search._pseudoHashKeyLengthCount)
-                {
-                    throw new InvalidOperationException($"pseudohashKeyIdx {pseudohashKeyIdx} >= _pseudoHashKeyLengthCount {Search._pseudoHashKeyLengthCount}");
-                }
                 int pseudohashKeyLength = Search._pseudoHashKeyLengths[pseudohashKeyIdx];
 
                 double num = 1;
@@ -1331,13 +1337,117 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             Vector512<double> firstCharacterVector = Vector512.CreateScalar((double)seed[0]);
 
-            SearchSeeds(new MotelySearchContextParams(
+            // Special handling for single seed - only count it once
+            SearchSingleSeedSpecial(new MotelySearchContextParams(
                 _hashCache,
                 seed.Length,
                 seed.Length - 1,
                 seedLastCharacters,
                 &firstCharacterVector
             ));
+        }
+        
+        // Special version that handles a single seed vectorized across all lanes
+        protected void SearchSingleSeedSpecial(in MotelySearchContextParams searchContextParams)
+        {
+            // Only count ONE seed, not 8
+            ThreadLocalTotalSeedsSearched += 1;
+
+            MotelyVectorSearchContext searchContext = new(in Search._searchParameters, in searchContextParams);
+            VectorMask searchResultMask = Search._baseFilter.Filter(ref searchContext);
+
+            if (searchResultMask.IsPartiallyTrue())
+            {
+                // Debug: Show which seeds pass the base filter
+                if (DebugLogger.IsEnabled)
+                {
+                    for (int lane = 0; lane < Vector512<double>.Count; lane++)
+                    {
+                        if (searchResultMask[lane] && searchContextParams.IsLaneValid(lane))
+                        {
+                            char* seedBuf = stackalloc char[Motely.MaxSeedLength];
+                            int len = searchContextParams.GetSeed(lane, seedBuf);
+                            var seedStr = new string(seedBuf, 0, len);
+                            DebugLogger.Log($"[FILTER PASS] Seed {seedStr} passed BASE filter");
+                        }
+                    }
+                }
+                
+                if (Search._additionalFilters.Length == 0)
+                {
+                    // No additional filters - report the result
+                    if (Search.TryGetScoreProvider(out var scoreProvider))
+                    {
+                        // Score provider path
+                        var scoredMask = scoreProvider.Score(ref searchContext, _resultBuffer, searchResultMask, scoreThreshold: 0);
+                        if (scoredMask.IsPartiallyTrue())
+                        {
+                            ThreadLocalMatchingSeeds += 1;
+                            if (!Search._silent)
+                            {
+                                // Find first matching lane and report it
+                                for (int lane = 0; lane < Vector512<double>.Count; lane++)
+                                {
+                                    if (scoredMask[lane])
+                                    {
+                                        var bufferedResult = _resultBuffer[lane];
+                                        if (!string.IsNullOrEmpty(bufferedResult.Seed))
+                                        {
+                                            var tallies = bufferedResult.TallyColumns != null ? string.Join(",", bufferedResult.TallyColumns) : "";
+                                            Console.WriteLine($"{bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Basic reporting - count once
+                        ThreadLocalMatchingSeeds += 1;
+                        if (!Search._silent)
+                        {
+                            char* seed = stackalloc char[Motely.MaxSeedLength];
+                            int length = searchContextParams.GetSeed(0, seed);
+                            Console.WriteLine(new Span<char>(seed, length).ToString());
+                        }
+                    }
+                }
+                else
+                {
+                    // For additional filters, only batch once even if multiple lanes match
+                    VectorMask singleLaneMask = VectorMask.NoBitsSet;
+                    for (int lane = 0; lane < Vector512<double>.Count; lane++)
+                    {
+                        if (searchResultMask[lane])
+                        {
+                            singleLaneMask[lane] = true;
+                            break;
+                        }
+                    }
+                    BatchSeeds(0, singleLaneMask, in searchContextParams);
+                }
+            }
+
+            searchContextParams.SeedHashCache->Reset();
+        }
+        
+        // Special reporting for when a single seed is duplicated across all lanes
+        private void ReportSingleDuplicatedSeed(VectorMask searchResultMask, in MotelySearchContextParams searchParams)
+        {
+            // The seed passed in ANY lane means it passed (since it's the same seed)
+            if (!searchResultMask.IsPartiallyTrue()) return;
+            
+            // Only count and report once, not for each lane
+            ThreadLocalMatchingSeeds++;
+            
+            if (!Search._silent)
+            {
+                char* seed = stackalloc char[Motely.MaxSeedLength];
+                int length = searchParams.GetSeed(0, seed); // Get from lane 0 (all lanes have same seed)
+                Console.WriteLine(new Span<char>(seed, length).ToString());
+            }
         }
 
         public new void Dispose()
