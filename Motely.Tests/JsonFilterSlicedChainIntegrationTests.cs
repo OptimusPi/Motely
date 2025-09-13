@@ -60,7 +60,7 @@ public sealed class JsonFilterSlicedChainIntegrationTests
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         
-        var completed = process.WaitForExit(30000); // 30 second timeout
+        var completed = process.WaitForExit(3000); // 3 second timeout
         Assert.True(completed, "Process did not complete within timeout");
         
         var outputText = output.ToString();
@@ -146,7 +146,7 @@ public sealed class JsonFilterSlicedChainIntegrationTests
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
             
-            var completed = process.WaitForExit(30000);
+            var completed = process.WaitForExit(3000);
             Assert.True(completed, "Process did not complete within timeout");
             
             var outputText = output.ToString();

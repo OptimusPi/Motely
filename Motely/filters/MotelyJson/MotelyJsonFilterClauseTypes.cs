@@ -130,6 +130,8 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     public bool IsWildcard { get; init; }
     public ulong AnteBitmask { get; init; }
     public ulong PackSlotBitmask { get; init; }  // Added to track which pack slots to check
+    public bool RequireMega { get; init; }  // Extracted from Sources for optimization
+    public bool Satisfied { get; set; }  // Track if this clause has been satisfied
     
     public static MotelyJsonSoulJokerFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -158,7 +160,9 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             IsWildcard = jsonClause.IsWildcard,
             EditionEnum = jsonClause.EditionEnum,
             AnteBitmask = anteMask,
-            PackSlotBitmask = packSlotMask
+            PackSlotBitmask = packSlotMask,
+            RequireMega = jsonClause.Sources?.RequireMega ?? false,
+            Satisfied = false
         };
     }
     
