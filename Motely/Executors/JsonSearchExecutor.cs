@@ -45,10 +45,12 @@ namespace Motely.Executors
 
                 search.AwaitCompletion();
 
+                Console.Out.Flush();
                 Thread.Sleep(100);
                 Console.Out.Flush();
 
                 PrintResultsSummary(search);
+                Console.Out.Flush();
                 return 0;
             }
             catch (Exception ex)
@@ -67,7 +69,15 @@ namespace Motely.Executors
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
                 Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
-                return [_params.SpecificSeed];
+                // VECTOR LANE DEBUG: Duplicate the seed 8 times to fill all vector lanes
+                // This helps identify vector lane confusion bugs in scoring
+                var seeds = new List<string>();
+                for (int i = 0; i < 8; i++)
+                {
+                    seeds.Add(_params.SpecificSeed);
+                }
+                Console.WriteLine($"   🐛 DEBUG: Duplicated seed 8x to test for vector lane bugs");
+                return seeds;
             }
 
             if (!string.IsNullOrEmpty(_params.Wordlist))
@@ -78,7 +88,7 @@ namespace Motely.Executors
                     throw new FileNotFoundException($"Wordlist not found: {wordlistPath}");
                 }
 
-                List<string> seeds = File.ReadAllLines(wordlistPath).Where(static s => !string.IsNullOrWhiteSpace(s)).ToList();
+                List<string> seeds = [.. File.ReadAllLines(wordlistPath).Where(static s => !string.IsNullOrWhiteSpace(s))];
                 Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
                 return seeds;
             }

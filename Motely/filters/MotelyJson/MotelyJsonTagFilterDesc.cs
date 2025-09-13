@@ -16,7 +16,32 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
 
     public MotelyJsonTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Tags don't need special caching - they're built into ante structure
+        // Tags don't use pack streams themselves, but we need to cache them
+        // in case this is the base filter and subsequent filters need them
+        if (_tagClauses != null && _tagClauses.Count > 0)
+        {
+            // Find all antes used by tag clauses
+            var allAntes = new HashSet<int>();
+            foreach (var clause in _tagClauses)
+            {
+                if (clause.EffectiveAntes != null)
+                {
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        allAntes.Add(ante);
+                    }
+                }
+            }
+            
+            // Cache pack streams for all antes to support chained filters
+            // This prevents NullReferenceException when Tag is the base filter
+            foreach (var ante in allAntes)
+            {
+                ctx.CacheBoosterPackStream(ante);
+                ctx.CacheTagStream(ante);  // Also cache tag stream for efficiency
+            }
+        }
+        
         return new MotelyJsonTagFilter(_tagClauses);
     }
 

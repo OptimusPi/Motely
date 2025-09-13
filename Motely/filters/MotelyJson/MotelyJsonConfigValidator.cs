@@ -28,7 +28,7 @@ namespace Motely.Filters
             ValidateFilterItems(config.Must, "must", errors, warnings, stake);
             ValidateFilterItems(config.Should, "should", errors, warnings, stake);
             ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake);
-            
+
             // Validate deck
             if (!string.IsNullOrEmpty(config.Deck) && !Enum.TryParse<MotelyDeck>(config.Deck, true, out _))
             {
@@ -86,6 +86,38 @@ namespace Motely.Filters
                 NormalizeSourcesForItem(item, prefix, errors, warnings);
                 
                 // Case insensitive parsing handles all casing - no validation needed
+                
+                // Check for common Value vs Values confusion
+                // Both are valid, but mixing them or using wrong type is an error
+                if (!string.IsNullOrEmpty(item.Value) && item.Values != null && item.Values.Length > 0)
+                {
+                    // This is already caught in InitializeParsedEnums, but provide helpful message here
+                    errors.Add($"{prefix}: Cannot specify both 'value' and 'values'. Use 'value' for a single item or 'values' for multiple items (OR matching)");
+                }
+                
+                // Special validation for Values array with single item - likely user meant Value
+                if (item.Values != null && item.Values.Length == 1 && string.IsNullOrEmpty(item.Value))
+                {
+                    // Warn that they might have meant to use 'value' instead
+                    warnings.Add($"{prefix}: Found 'values' array with single item: \"{item.Values[0]}\". Did you mean to use 'value' (single string) instead? Note: 'values' is still valid for OR matching.");
+                }
+                
+                // Playing cards don't use Value or Values - they use Suit and Rank
+                if (item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture) == "playingcard")
+                {
+                    if (!string.IsNullOrEmpty(item.Value))
+                    {
+                        // Special case: allow "X of Y" format for backwards compatibility
+                        if (!item.Value.Contains(" of "))
+                        {
+                            errors.Add($"{prefix}: Playing cards should use 'suit' and 'rank' properties, not 'value'. Example: \"suit\": \"Hearts\", \"rank\": \"7\"");
+                        }
+                    }
+                    if (item.Values != null && item.Values.Length > 0)
+                    {
+                        errors.Add($"{prefix}: Playing cards don't support 'values' array. Use 'suit' and 'rank' properties instead");
+                    }
+                }
                 
                 // Validate value based on type
                 switch (item.Type.ToLower(System.Globalization.CultureInfo.CurrentCulture))
@@ -246,18 +278,24 @@ namespace Motely.Filters
                         break;
                         
                     case "playingcard":
-                        // Validate suit if specified
-                        if (!string.IsNullOrEmpty(item.Suit) && !Enum.TryParse<MotelyPlayingCardSuit>(item.Suit, true, out _))
+                        // Validate suit if specified (allow "Any" as wildcard)
+                        if (!string.IsNullOrEmpty(item.Suit) && 
+                            !item.Suit.Equals("Any", StringComparison.OrdinalIgnoreCase) &&
+                            !item.Suit.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                            !Enum.TryParse<MotelyPlayingCardSuit>(item.Suit, true, out _))
                         {
                             var validSuits = string.Join(", ", Enum.GetNames(typeof(MotelyPlayingCardSuit)));
-                            errors.Add($"{prefix}: Invalid suit '{item.Suit}'. Valid suits are: {validSuits}");
+                            errors.Add($"{prefix}: Invalid suit '{item.Suit}'. Valid suits are: {validSuits}, Any, *");
                         }
                         
-                        // Validate rank if specified
-                        if (!string.IsNullOrEmpty(item.Rank) && !Enum.TryParse<MotelyPlayingCardRank>(item.Rank, true, out _))
+                        // Validate rank if specified (allow "Any" as wildcard)
+                        if (!string.IsNullOrEmpty(item.Rank) && 
+                            !item.Rank.Equals("Any", StringComparison.OrdinalIgnoreCase) &&
+                            !item.Rank.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                            !Enum.TryParse<MotelyPlayingCardRank>(item.Rank, true, out _))
                         {
                             var validRanks = string.Join(", ", Enum.GetNames(typeof(MotelyPlayingCardRank)));
-                            errors.Add($"{prefix}: Invalid rank '{item.Rank}'. Valid ranks are: {validRanks}");
+                            errors.Add($"{prefix}: Invalid rank '{item.Rank}'. Valid ranks are: {validRanks}, Any, *");
                         }
                         break;
                         
@@ -330,6 +368,7 @@ namespace Motely.Filters
         private static void NormalizeSourcesForItem(MotelyJsonConfig.MotleyJsonFilterClause item, string prefix, List<string> errors, List<string> warnings)
         {
             // Only normalize for types that support sources
+            // Tags, bosses, and vouchers don't have sources - they appear at fixed positions
             if (item.ItemTypeEnum != MotelyFilterItemType.Joker && 
                 item.ItemTypeEnum != MotelyFilterItemType.SoulJoker &&
                 item.ItemTypeEnum != MotelyFilterItemType.PlayingCard &&
@@ -337,8 +376,15 @@ namespace Motely.Filters
                 item.ItemTypeEnum != MotelyFilterItemType.PlanetCard &&
                 item.ItemTypeEnum != MotelyFilterItemType.SpectralCard)
             {
-                // This type doesn't use sources
-                if (item.Sources != null)
+                // This type doesn't use sources - but don't warn for common cases
+                // Tags, bosses, and vouchers are expected to not have sources
+                bool isExpectedNoSource = 
+                    item.ItemTypeEnum == MotelyFilterItemType.Voucher ||
+                    item.ItemTypeEnum == MotelyFilterItemType.Boss ||
+                    item.ItemTypeEnum == MotelyFilterItemType.BigBlindTag ||
+                    item.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag;
+                
+                if (item.Sources != null && !isExpectedNoSource)
                 {
                     warnings.Add($"{prefix}: 'sources' specified but type '{item.Type}' doesn't use sources (will be ignored)");
                 }

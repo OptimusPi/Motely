@@ -408,88 +408,80 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
     {
-        // Simple approach for scoring: just iterate and count matches
-        // No fancy stream management - we know very few seeds get here
         int tally = 0;
         // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
-        // Don't cache soul stream - we might check multiple packs and need to track position correctly
         var soulStream = ctx.CreateSoulJokerStream(ante, MotelyJokerStreamFlags.Default);
 
-        // Just check the packs we care about
         var packSlots = clause.Sources?.PackSlots ?? (
                 ante == 1 ? new[] { 0, 1, 2, 3 } : new[] { 0, 1, 2, 3, 4, 5 }
-        ); // Default to first 4 packs for ante 1, first 6 for ante 2+
+        );
         int maxPacks = ante == 1 ? 4 : 6;
         
-        // Create the tarot stream ONCE for checking all Arcana packs
+        // Create streams ONCE for checking all packs
         var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true, isCached: false);
         var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: true, isCached: false);
 
+        // CRITICAL FIX: Always iterate through ALL packs to keep PRNG streams synchronized!
+        // Even if we don't care about certain pack slots, we MUST read them to advance the streams
         for (int i = 0; i < maxPacks; i++)
         {
             var pack = ctx.GetNextBoosterPack(ref packStream);
             
-            // Check cheap conditions first
-            bool isPackSlotWeCareAbout = ArrayContains(packSlots, i);
-            bool isCorrectPackType = pack.GetPackType() == MotelyBoosterPackType.Arcana || pack.GetPackType() == MotelyBoosterPackType.Spectral;
-            
-            // We need to check ALL Arcana/Spectral packs to advance the stream properly
+            // Always check if pack has soul to advance the streams (REQUIRED for sync)
             bool hasSoul = false;
             if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
             {
-                // Always check to advance the stream properly
                 hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
             }
             else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
             {
-                // Always check to advance the stream properly
                 hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
             }
             
-            // Only process packs we care about (cheap checks first, expensive hasSoul check last)
-            if (isPackSlotWeCareAbout && isCorrectPackType && hasSoul)
+            // Only SCORE if this pack slot is in our filter AND has soul
+            bool isPackSlotWeCareAbout = ArrayContains(packSlots, i);
+            if (isPackSlotWeCareAbout && hasSoul)
             {
                 if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
                 
+                // Get the soul joker (advances soul stream)
+                var soulJoker = ctx.GetNextJoker(ref soulStream);
+                
+                // Handle duplicates if Showman isn't active
+                if (!runState.ShowmanActive && runState.OwnedJokers.Contains((MotelyJoker)soulJoker.Type))
                 {
-                    // CRITICAL: Only consume from soul stream when we actually have The Soul card!
-                    // Get the soul joker
-                    var soulJoker = ctx.GetNextJoker(ref soulStream);
-                    
-                    // Handle duplicates if Showman isn't active
-                    // Soul jokers are legendary, so they reroll when duplicate found
-                    if (!runState.ShowmanActive && runState.OwnedJokers.Contains((MotelyJoker)soulJoker.Type))
+                    // Keep getting next soul joker until we find non-duplicate (max 5 attempts)
+                    for (int rerollCount = 0; rerollCount < 5 && runState.OwnedJokers.Contains((MotelyJoker)soulJoker.Type); rerollCount++)
                     {
-                        // Keep getting next soul joker until we find non-duplicate (max 5 attempts)
-                        for (int rerollCount = 0; rerollCount < 5 && runState.OwnedJokers.Contains((MotelyJoker)soulJoker.Type); rerollCount++)
-                        {
-                            soulJoker = ctx.GetNextJoker(ref soulStream);
-                        }
-                    }
-                    
-                    #if DEBUG
-                    System.Console.WriteLine($"[DEBUG] SoulJoker check - Joker from stream: {soulJoker.GetJoker()}, Clause JokerEnum: {clause.JokerEnum}, Match: {(!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)}");
-                    #endif
-                    
-                    if (!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)
-                    {
-                        // Check edition and stickers if specified
-                        if (CheckEditionAndStickers(soulJoker, clause))
-                        {
-                            // TODO: runState.MarkSoulPackConsumed(ante, i);
-                            runState.AddOwnedJoker((MotelyJoker)soulJoker.Type);
-
-                            if (soulJoker.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
-                            {
-                                runState.ActivateShowman();
-                            }
-
-                            tally++;
-                            if (earlyExit) return tally; // Early exit for Must clauses
-                        }
+                        soulJoker = ctx.GetNextJoker(ref soulStream);
                     }
                 }
+                
+                // Check if it matches our clause
+                if (!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)
+                {
+                    // Check edition and stickers if specified
+                    if (CheckEditionAndStickers(soulJoker, clause))
+                    {
+                        runState.AddOwnedJoker((MotelyJoker)soulJoker.Type);
+
+                        if (soulJoker.Type == MotelyItemType.Showman && clause.JokerEnum == MotelyJoker.Showman)
+                        {
+                            runState.ActivateShowman();
+                        }
+
+                        tally++;
+                        if (earlyExit) return tally;
+                    }
+                }
+            }
+            // If hasSoul but we don't care about this slot, we still consumed the soul stream position
+            // This is correct - each soul pack consumes one soul joker from the stream
+            else if (hasSoul)
+            {
+                // Advance soul stream even though we don't score this pack
+                ctx.GetNextJoker(ref soulStream);
             }
         }
 

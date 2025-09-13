@@ -255,6 +255,14 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     // FIXED: Always consume maximum pack size (5) to avoid stream desync
                     var contents = ctx.GetNextSpectralPackContents(ref spectralStream, MotelyBoosterPackSize.Mega);
                     
+                    // Check requireMega constraint if specified
+                    VectorMask packSizeOk = VectorMask.AllBitsSet;
+                    if (clause.Sources?.RequireMega == true)
+                    {
+                        var packSize = pack.GetPackSize();
+                        packSizeOk = VectorEnum256.Equals(packSize, MotelyBoosterPackSize.Mega);
+                    }
+                    
                     // Check each card in the pack
                     for (int cardIndex = 0; cardIndex < contents.Length; cardIndex++)
                     {
@@ -288,7 +296,8 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                                 editionMatches = VectorEnum256.Equals(card.Edition, clause.EditionEnum.Value);
                             }
                             
-                            VectorMask matches = (isSpectralPack & isSpectralCard & typeMatches & editionMatches);
+                            // Include packSizeOk mask if requireMega is specified
+                            VectorMask matches = (isSpectralPack & packSizeOk & isSpectralCard & typeMatches & editionMatches);
                             foundInPacks |= matches;
                         }
                     }

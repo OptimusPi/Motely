@@ -128,53 +128,18 @@ namespace Motely.Filters;
         
         public void InitializeParsedEnums()
         {
-            // Parse ItemTypeEnum from Type string
-            ItemTypeEnum = Type?.ToLowerInvariant() switch
-            {
-                "joker" => MotelyFilterItemType.Joker,
-                "souljoker" => MotelyFilterItemType.SoulJoker,
-                "tarot" or "tarotcard" => MotelyFilterItemType.TarotCard,
-                "planet" or "planetcard" => MotelyFilterItemType.PlanetCard,
-                "spectral" or "spectralcard" => MotelyFilterItemType.SpectralCard,
-                "tag" => MotelyFilterItemType.SmallBlindTag, // Generic tag wildcard - will be handled specially
-                "smallblindtag" => MotelyFilterItemType.SmallBlindTag,
-                "bigblindtag" => MotelyFilterItemType.BigBlindTag,
-                "voucher" => MotelyFilterItemType.Voucher,
-                "playingcard" => MotelyFilterItemType.PlayingCard,
-                "boss" => MotelyFilterItemType.Boss,
-                _ => throw new ArgumentException($"Unknown filter item type: {Type}")
-            };
+            // PERFORMANCE FIX: Use pre-computed dictionary instead of ToLowerInvariant() + switch
+            ItemTypeEnum = MotelyJsonPerformanceUtils.ParseItemType(Type);
             
             // Parse Value based on ItemType
             if (!string.IsNullOrEmpty(Value))
             {
-                // Wildcards
-                if (Value.Equals("Any", StringComparison.OrdinalIgnoreCase) || 
-                    Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
-                    Value.Equals("*", StringComparison.OrdinalIgnoreCase))
+                // PERFORMANCE FIX: Use pre-computed wildcard parsing
+                var (isWildcard, wildcard) = MotelyJsonPerformanceUtils.ParseWildcard(Value);
+                if (isWildcard)
                 {
-                    WildcardEnum = MotelyJsonConfigWildcards.AnyJoker; // Generic "Any" wildcard
                     IsWildcard = true;
-                }
-                else if (Value.Equals("AnyCommon", StringComparison.OrdinalIgnoreCase))
-                {
-                    WildcardEnum = MotelyJsonConfigWildcards.AnyCommon;
-                    IsWildcard = true;
-                }
-                else if (Value.Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase))
-                {
-                    WildcardEnum = MotelyJsonConfigWildcards.AnyUncommon;
-                    IsWildcard = true;
-                }
-                else if (Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase))
-                {
-                    WildcardEnum = MotelyJsonConfigWildcards.AnyRare;
-                    IsWildcard = true;
-                }
-                else if (Value.Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase))
-                {
-                    WildcardEnum = MotelyJsonConfigWildcards.AnyLegendary;
-                    IsWildcard = true;
+                    WildcardEnum = wildcard;
                 }
                 else
                 {
@@ -373,11 +338,23 @@ namespace Motely.Filters;
             // Parse PlayingCard specific properties
             if (ItemTypeEnum == MotelyFilterItemType.PlayingCard)
             {
-                if (!string.IsNullOrEmpty(Suit) && Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit))
+                // Parse Suit - treat "Any" or "*" as not specified
+                if (!string.IsNullOrEmpty(Suit) && 
+                    !Suit.Equals("Any", StringComparison.OrdinalIgnoreCase) &&
+                    !Suit.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                    Enum.TryParse<MotelyPlayingCardSuit>(Suit, true, out var suit))
+                {
                     SuitEnum = suit;
+                }
                 
-                if (!string.IsNullOrEmpty(Rank) && Enum.TryParse<MotelyPlayingCardRank>(Rank, true, out var rank))
+                // Parse Rank - treat "Any" or "*" as not specified
+                if (!string.IsNullOrEmpty(Rank) && 
+                    !Rank.Equals("Any", StringComparison.OrdinalIgnoreCase) &&
+                    !Rank.Equals("*", StringComparison.OrdinalIgnoreCase) &&
+                    Enum.TryParse<MotelyPlayingCardRank>(Rank, true, out var rank))
+                {
                     RankEnum = rank;
+                }
                 
                 if (!string.IsNullOrEmpty(Seal) && Enum.TryParse<MotelyItemSeal>(Seal, true, out var seal))
                     SealEnum = seal;
@@ -462,7 +439,24 @@ namespace Motely.Filters;
             catch (JsonException jex)
             {
                 // Get the line and position info for JSON errors
-                error = $"JSON syntax error at line {jex.LineNumber}, position {jex.BytePositionInLine}: {jex.Message}";
+                var baseError = $"JSON syntax error at line {jex.LineNumber}, position {jex.BytePositionInLine}: {jex.Message}";
+                
+                // Provide helpful hints for common errors
+                if (jex.Message.Contains("System.String[]", StringComparison.OrdinalIgnoreCase) || 
+                    (jex.Message.Contains("values", StringComparison.OrdinalIgnoreCase) && 
+                     jex.Message.Contains("could not be converted", StringComparison.OrdinalIgnoreCase)))
+                {
+                    error = $"{baseError}\n💡 Hint: 'values' expects an array. Did you mean to use 'value' (single string) instead of 'values' (array)?\n   Example: \"value\": \"TheMagician\" or \"values\": [\"TheMagician\", \"TheHierophant\"]";
+                }
+                else if (jex.Message.Contains("cannot be mapped to") || jex.Message.Contains("Could not convert"))
+                {
+                    error = $"{baseError}\n💡 Hint: Check that array properties use [] brackets and single values don't.";
+                }
+                else
+                {
+                    error = baseError;
+                }
+                
                 DebugLogger.Log($"Config loading failed for {jsonPath}: {error}");
                 return false;
             }
@@ -488,7 +482,7 @@ namespace Motely.Filters;
                 // Normalize arrays - but DON'T initialize flat pack/shop slots as that breaks Sources merging
                 // item.PackSlots and item.ShopSlots should remain null if not provided
                 item.Stickers ??= [];
-                item.Antes ??= [1, 2, 3, 4, 5, 6, 7, 8]; // Default to all antes
+                item.Antes ??= MotelyConstants.DEFAULT_ANTES; // Default to all antes
                 if (item.Sources != null) 
                 {
                     item.Sources.PackSlots ??= [];
@@ -529,6 +523,10 @@ namespace Motely.Filters;
                 // ALWAYS ensure PackSlots and ShopSlots are non-null arrays
                 item.Sources.PackSlots ??= [];
                 item.Sources.ShopSlots ??= [];
+                
+                // PERFORMANCE FIX: Pre-compute bitmasks for O(1) slot lookups
+                item.ComputedShopSlotBitmask = MotelyJsonPerformanceUtils.ArrayToBitmask(item.Sources.ShopSlots);
+                item.ComputedPackSlotBitmask = MotelyJsonPerformanceUtils.ArrayToBitmask(item.Sources.PackSlots);
             }
 
             // Second pass: compute per-item metadata (after overrides & masks) 
