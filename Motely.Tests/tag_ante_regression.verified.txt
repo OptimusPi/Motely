@@ -5,11 +5,7 @@
    Batch Size: 1 chars
    Range: 0 to Γê₧
 
-WARNINGS:
-  ΓÜá∩╕Å  must[0]: 'sources' specified but type 'bigblindtag' doesn't use sources (will be ignored)
 CreateSearch...
-WARNINGS:
-  ΓÜá∩╕Å  must[0]: 'sources' specified but type 'bigblindtag' doesn't use sources (will be ignored)
 Γ£à Loaded config with cutoff: 0
 [FILTER SETUP] Base filter: Tag with 1 clauses
    + Base Tag filter: 1 clauses

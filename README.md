@@ -10,13 +10,13 @@ would not have the capabilities it has today without his support.
 
 ```bash
 # Search with a JSON filter
-dotnet run -c Release -- --json telescope-test --threads 16 --cutoff 2
+dotnet run -c Release -- --json PerkeoObservatory --threads 16 --cutoff 2
 
 # Use a native filter
-dotnet run -c Release -- --native negativecopy --threads 16
+dotnet run -c Release -- --native PerkeoObservatory --threads 16
 
 # Analyze a specific seed
-dotnet run -c Release -- --analyze ABCD1234
+dotnet run -c Release -- --analyze ALEEB
 ```
 
 ## CSV Scoring & Filter Chaining
@@ -86,8 +86,12 @@ Create in `JsonItemFilters/`:
 - `trickeoglyph`: Cartomancer + Hieroglyph
 - `soultest`: Soul joker testing
 
-## Performance Tips
-1. Use `--batchSize 4` or higher for better vectorization
-2. Soul joker filters work best in SHOULD clauses
-3. Redirect stderr to hide progress: `2>/dev/null`
-4. Place most restrictive filter first when chaining
+## Tweak the Batch Size 
+1. For the most responsive option, Use `--batchSize 1` to batch by one character count (35^1 = 35 seeds) 
+2. Use `--batchSize 2` to batch by two character count (35^2 = 1225 seeds)
+3. Use `--batchSize 3` to batch by three character count (35^3 = 42875 seeds)
+4. Use `--batchSize 4` to batch by four character count (35^4 = 1500625 seeds)
+
+Above this is senseless and not recommended.
+Use a higher batch size for less responsive CLI updates but faster searching!
+I like to use --batchSize 2 or maybe 3 usually for a good balance, but I would use --batchSize 4 for overnight searches.

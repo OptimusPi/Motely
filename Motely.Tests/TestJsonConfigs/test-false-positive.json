@@ -1,0 +1,36 @@
+{
+  "name": "False Positive Test - Seed 57B82111",
+  "description": "This should NOT match seed 57B82111",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "SoulJoker",
+      "value": "Perkeo",
+      "sources": {
+        "packSlots": [1],
+        "requireMega": true
+      },
+      "antes": [1]
+    },
+    {
+      "type": "SpectralCard",
+      "value": "Ankh",
+      "sources": {
+        "packSlots": [1],
+        "requireMega": true
+      },
+      "antes": [1]
+    },
+    {
+      "type": "Joker",
+      "value": "OopsAll6s",
+      "sources": {
+        "packSlots": [0]
+      },
+      "antes": [1]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}
