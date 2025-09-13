@@ -5,14 +5,34 @@
    Batch Size: 1 chars
    Range: 0 to Γê₧
 
+WARNINGS:
+  ΓÜá∩╕Å  must[0]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[1]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[2]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[3]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[4]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[5]: 'sources' specified but type 'boss' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  should[0]: 'sources' specified but type 'smallblindtag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  should[1]: 'sources' specified but type 'bigblindtag' doesn't use sources (will be ignored)
 CreateSearch...
+WARNINGS:
+  ΓÜá∩╕Å  must[0]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[1]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[2]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[3]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[4]: 'sources' specified but type 'tag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  must[5]: 'sources' specified but type 'boss' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  should[0]: 'sources' specified but type 'smallblindtag' doesn't use sources (will be ignored)
+  ΓÜá∩╕Å  should[1]: 'sources' specified but type 'bigblindtag' doesn't use sources (will be ignored)
 Γ£à Loaded config with cutoff: 0
-[FILTER SETUP] Base filter: SoulJoker with 1 clauses
-[FILTER SETUP] Additional filter 0: Joker with 1 clauses
-   + Base SoulJoker filter: 1 clauses
-   + Chained Joker filter: 1 clauses
+[FILTER SETUP] Base filter: Tag with 5 clauses
+[FILTER SETUP] Additional filter 0: Boss with 1 clauses
+[FILTER SETUP] Additional filter 1: Joker with 2 clauses
+   + Base Tag filter: 5 clauses
+   + Chained Boss filter: 1 clauses
+   + Chained Joker filter: 2 clauses
 # Deck: Red, Stake: White
-Seed,TotalScore,Perkeo,Bull
+Seed,TotalScore,smallblindtag,bigblindtag
 
 ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 Γ£à SEARCH COMPLETED

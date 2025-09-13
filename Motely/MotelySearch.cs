@@ -825,8 +825,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 long currentTime = Environment.TickCount64;
                 if ((currentTime - lastStatsUpdateTime) >= STATS_UPDATE_INTERVAL_MS)
                 {
-                    Interlocked.Add(ref Search._totalSeedsSearched, ThreadLocalTotalSeedsSearched);
-                    Interlocked.Add(ref Search._matchingSeeds, ThreadLocalMatchingSeeds);
+                    long localSeedsSearched = ThreadLocalTotalSeedsSearched;
+                    long localMatchingSeeds = ThreadLocalMatchingSeeds;
+                    Interlocked.Add(ref Search._totalSeedsSearched, localSeedsSearched);
+                    Interlocked.Add(ref Search._matchingSeeds, localMatchingSeeds);
                     ThreadLocalTotalSeedsSearched = 0;
                     ThreadLocalMatchingSeeds = 0;
                     lastStatsUpdateTime = currentTime;
