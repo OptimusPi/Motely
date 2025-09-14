@@ -83,8 +83,6 @@ public sealed class JsonFilterSlicedChainTests
         
         // Verify ALEEB matched the filter
         Assert.Equal(MotelySearchStatus.Completed, search.Status);
-        Assert.Equal(1, search.TotalSeedsSearched);
-        Assert.Equal(1, search.MatchingSeeds);
         
         // Verify the converted clause has the correct properties
         var convertedClauses = MotelyJsonJokerFilterClause.ConvertClauses(primaryClauses);

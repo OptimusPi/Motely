@@ -194,41 +194,4 @@ public static class MotelyJsonPerformanceUtils
     }
     
     #endregion
-    
-    #region Shop Slot Calculations  
-    
-    /// <summary>
-    /// Get the maximum shop slots for a given ante
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetMaxShopSlots(int ante)
-    {
-        return ante == 1 ? MotelyConstants.ANTE_1_MAX_SHOP_SLOTS : MotelyConstants.ANTE_2_MAX_SHOP_SLOTS;
-    }
-    
-    /// <summary>
-    /// Get the maximum pack count for a given ante
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetMaxPackCount(int ante)
-    {
-        return ante == 1 ? MotelyConstants.ANTE_1_MAX_PACKS : MotelyConstants.ANTE_2_MAX_PACKS;
-    }
-    
-    /// <summary>
-    /// Get pack size as integer for a given pack size enum
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetPackSizeInt(MotelyBoosterPackSize packSize)
-    {
-        return packSize switch
-        {
-            MotelyBoosterPackSize.Normal => MotelyConstants.STANDARD_PACK_SIZE,
-            MotelyBoosterPackSize.Jumbo => MotelyConstants.JUMBO_PACK_SIZE,
-            MotelyBoosterPackSize.Mega => MotelyConstants.MEGA_PACK_SIZE,
-            _ => MotelyConstants.STANDARD_PACK_SIZE
-        };
-    }
-    
-    #endregion
 }
