@@ -38,6 +38,7 @@ namespace Motely
             var seedOption = app.Option<string>("--seed <SEED>", "Specific seed", CommandOptionType.SingleValue);
             var wordlistOption = app.Option<string>("--wordlist <WL>", "Wordlist file", CommandOptionType.SingleValue);
             var keywordOption = app.Option<string>("--keyword <KEYWORD>", "Generate from keyword", CommandOptionType.SingleValue);
+            var randomOption = app.Option<int>("--random <COUNT>", "Test with random seeds", CommandOptionType.SingleValue);
             
             // Game options
             var deckOption = app.Option<string>("--deck <DECK>", "Deck to use", CommandOptionType.SingleValue);
@@ -81,7 +82,8 @@ namespace Motely
                     NoFancy = noFancyOption.HasValue(),
                     Silent = silentOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
-                    Wordlist = wordlistOption.Value()
+                    Wordlist = wordlistOption.Value(),
+                    RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null
                 };
 
                 // Validate batch size
