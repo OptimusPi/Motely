@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Motely.Filters;
@@ -16,6 +17,9 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
 
     public MotelyJsonTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        Debug.Assert(_tagClauses != null, "Tag filter clauses should not be null");
+        Debug.Assert(_tagClauses.Count > 0, "Tag filter clauses should not be empty");
+
         // Tags don't use pack streams themselves, but we need to cache them
         // in case this is the base filter and subsequent filters need them
         if (_tagClauses != null && _tagClauses.Count > 0)
@@ -32,7 +36,7 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                     }
                 }
             }
-            
+
             // Cache pack streams for all antes to support chained filters
             // This prevents NullReferenceException when Tag is the base filter
             foreach (var ante in allAntes)
@@ -42,7 +46,7 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
             }
         }
         
-        return new MotelyJsonTagFilter(_tagClauses);
+        return new MotelyJsonTagFilter(_tagClauses!);
     }
 
     public struct MotelyJsonTagFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilter
@@ -60,27 +64,38 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                 return VectorMask.AllBitsSet;
             }
             
+            // Calculate ante range for optimized iteration
+            var (minAnte, maxAnte) = CalculateAnteRange(_clauses);
+            
             // Stack-allocated clause masks - accumulate results per clause across all antes
             Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
             for (int i = 0; i < clauseMasks.Length; i++)
                 clauseMasks[i] = VectorMask.NoBitsSet;
 
-            // Process each clause across all its antes
-            for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+            // OPTIMIZED: Loop antes first (like joker filter), then clauses - ensures one stream per ante!
+            for (int ante = minAnte; ante <= maxAnte; ante++)
             {
-                var clause = _clauses[clauseIndex];
+                // Create fresh tag stream to avoid interference from other filters
+                var tagStream = ctx.CreateTagStream(ante, isCached: false);
+                var smallTag = ctx.GetNextTag(ref tagStream);
+                var bigTag = ctx.GetNextTag(ref tagStream);
                 
-                // OR across all antes for this clause
-                foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+                // DEBUG: Log tag generation for specific seed
+                if (DebugLogger.IsEnabled)
                 {
-                    var clauseMask = VectorMask.NoBitsSet;
+                    DebugLogger.Log($"[TAG FILTER] Ante {ante}: smallTag={smallTag}, bigTag={bigTag}");
+                }
+                
+                for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+                {
+                    var clause = _clauses[clauseIndex];
+                    
+                    // Skip if this ante isn't in clause's effective antes
+                    if (clause.EffectiveAntes != null && !clause.EffectiveAntes.Contains(ante))
+                        continue;
                     
                     if (clause.TagEnum.HasValue || (clause.TagEnums != null && clause.TagEnums.Count > 0))
                     {
-                        var tagStream = ctx.CreateTagStream(ante);
-                        var smallTag = ctx.GetNextTag(ref tagStream);
-                        var bigTag = ctx.GetNextTag(ref tagStream);
-                        
                         VectorMask tagMatches;
                         
                         // Handle multiple values (OR logic) or single value
@@ -114,19 +129,59 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                             tagMatches = VectorMask.NoBitsSet;
                         }
                         
-                        clauseMask |= tagMatches;
+                        // Accumulate results for this clause across all antes (OR logic)
+                        clauseMasks[clauseIndex] |= tagMatches;
+                    }
+                }
+                
+                // OPTIMIZED: Early exit check after each ante (like joker filter)
+                bool canEarlyExit = false;
+                for (int i = 0; i < _clauses.Count; i++)
+                {
+                    var clause = _clauses[i];
+                    // Check if this clause has any antes left to check
+                    bool hasAntesRemaining = false;
+                    if (clause.EffectiveAntes != null)
+                    {
+                        foreach (var futureAnte in clause.EffectiveAntes)
+                        {
+                            if (futureAnte > ante)
+                            {
+                                hasAntesRemaining = true;
+                                break;
+                            }
+                        }
                     }
                     
-                    // Accumulate results for this clause across all antes (OR logic)
-                    clauseMasks[clauseIndex] |= clauseMask;
+                    // If this clause has no matches and no antes left to check, we can exit
+                    if (clauseMasks[i].IsAllFalse() && !hasAntesRemaining)
+                    {
+                        canEarlyExit = true;
+                        break;
+                    }
+                }
+                
+                if (canEarlyExit)
+                {
+                    DebugLogger.Log("[TAG FILTER] Early exit - clause cannot be satisfied");
+                    return VectorMask.NoBitsSet;
                 }
             }
 
             // All clauses must be satisfied (AND logic)
+            // CRITICAL FIX: If any clause found nothing (NoBitsSet), the entire filter fails!
             var resultMask = VectorMask.AllBitsSet;
             for (int i = 0; i < clauseMasks.Length; i++)
             {
                 DebugLogger.Log($"[TAG FILTER] Clause {i} mask: {clauseMasks[i].Value:X}");
+                
+                // FIX: If this clause found nothing across all antes, fail immediately
+                if (clauseMasks[i].IsAllFalse())
+                {
+                    DebugLogger.Log($"[TAG FILTER] Clause {i} found no matches - failing all seeds");
+                    return VectorMask.NoBitsSet;
+                }
+                
                 resultMask &= clauseMasks[i];
                 DebugLogger.Log($"[TAG FILTER] Result after clause {i}: {resultMask.Value:X}");
                 if (resultMask.IsAllFalse()) 
@@ -136,8 +191,101 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                 }
             }
             
-            DebugLogger.Log($"[TAG FILTER] Final result: {resultMask.Value:X}");
-            return resultMask;
+            DebugLogger.Log($"[TAG FILTER] Vectorized result: {resultMask.Value:X}");
+            
+            // OPTIMIZED: Add individual seed verification (like joker filter) to ensure correctness
+            if (resultMask.IsAllFalse())
+            {
+                return VectorMask.NoBitsSet;
+            }
+            
+            // Verify each passing seed individually to avoid SIMD bugs
+            var clauses = _clauses; // Copy to local for lambda capture
+            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
+            {
+                // Re-check all clauses for this individual seed
+                foreach (var clause in clauses)
+                {
+                    bool clauseSatisfied = false;
+                    
+                    // Check all antes for this clause
+                    foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+                    {
+                        var tagStream = singleCtx.CreateTagStream(ante, isCached: false);
+                        var smallTag = singleCtx.GetNextTag(ref tagStream);
+                        var bigTag = singleCtx.GetNextTag(ref tagStream);
+                        
+                        bool tagMatches = false;
+                        
+                        if (clause.TagEnums != null && clause.TagEnums.Count > 0)
+                        {
+                            // Multi-value check
+                            foreach (var tagEnum in clause.TagEnums)
+                            {
+                                bool singleMatch = clause.TagTypeEnum switch
+                                {
+                                    MotelyTagType.SmallBlind => smallTag == tagEnum,
+                                    MotelyTagType.BigBlind => bigTag == tagEnum,
+                                    _ => smallTag == tagEnum || bigTag == tagEnum
+                                };
+                                if (singleMatch)
+                                {
+                                    tagMatches = true;
+                                    break;
+                                }
+                            }
+                        }
+                        else if (clause.TagEnum.HasValue)
+                        {
+                            // Single value check
+                            tagMatches = clause.TagTypeEnum switch
+                            {
+                                MotelyTagType.SmallBlind => smallTag == clause.TagEnum.Value,
+                                MotelyTagType.BigBlind => bigTag == clause.TagEnum.Value,
+                                _ => smallTag == clause.TagEnum.Value || bigTag == clause.TagEnum.Value
+                            };
+                        }
+                        
+                        if (tagMatches)
+                        {
+                            clauseSatisfied = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!clauseSatisfied)
+                        return false; // This seed doesn't satisfy this clause
+                }
+                
+                return true; // All clauses satisfied
+            });
+        }
+        
+        private static (int minAnte, int maxAnte) CalculateAnteRange(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+        {
+            int minAnte = int.MaxValue;
+            int maxAnte = int.MinValue;
+            
+            foreach (var clause in clauses)
+            {
+                if (clause.EffectiveAntes != null)
+                {
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        minAnte = Math.Min(minAnte, ante);
+                        maxAnte = Math.Max(maxAnte, ante);
+                    }
+                }
+            }
+            
+            // Default to reasonable range if no antes specified
+            if (minAnte == int.MaxValue)
+            {
+                minAnte = 1;
+                maxAnte = 8;
+            }
+            
+            return (minAnte, maxAnte);
         }
     }
 }
