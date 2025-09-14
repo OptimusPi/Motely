@@ -123,10 +123,19 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             }
 
             // All clauses must be satisfied (AND logic)
+            // CRITICAL FIX: If any clause found nothing (NoBitsSet), the entire filter fails!
             var resultMask = VectorMask.AllBitsSet;
             for (int i = 0; i < clauseMasks.Length; i++)
             {
                 DebugLogger.Log($"[JOKER VECTORIZED] Clause {i} mask: {clauseMasks[i].Value:X}");
+                
+                // FIX: If this clause found nothing across all antes, fail immediately
+                if (clauseMasks[i].IsAllFalse())
+                {
+                    DebugLogger.Log($"[JOKER VECTORIZED] Clause {i} found no matches - failing all seeds");
+                    return VectorMask.NoBitsSet;
+                }
+                
                 resultMask &= clauseMasks[i];
                 DebugLogger.Log($"[JOKER VECTORIZED] Result after clause {i}: {resultMask.Value:X}");
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
@@ -141,13 +150,18 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                 return VectorMask.NoBitsSet;
             }
 
-            // TODO vectorize when packs are different somehow? Help me tacodiva, you're my only hope!
-            // Pass in the potential passing seeds
-             if (Clauses == null || Clauses.Count == 0)
-                return VectorMask.AllBitsSet;
-            
             // Copy struct fields to local variables for lambda
             var clauses = Clauses; // Copy _clauses to a local variable
+            var minAnte = MinAnte;
+            var maxAnte = MaxAnte;
+            
+            // FIX: Ensure we have clauses to check
+            if (clauses == null || clauses.Count == 0)
+            {
+                DebugLogger.Log("[JOKER FILTER] ERROR: No clauses for individual verification!");
+                return VectorMask.NoBitsSet; // NO seeds should pass without clauses!
+            }
+            
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
                 {
                     // Re-check all clauses for this individual seed
@@ -155,8 +169,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     {
                         bool clauseSatisfied = false;
 
-                        // Check all antes for this clause
-                        for (int ante = _minAnte; ante <= _maxAnte; ante++)
+                        // Check all antes for this clause - use local variables!
+                        for (int ante = minAnte; ante <= maxAnte; ante++)
                         {
                             ulong anteBit = 1UL << (ante - 1);
                             if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
@@ -218,10 +232,10 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     // Check if this slot has a joker
                     var isJoker = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
                     
-                    // Check if any lanes have jokers
+                    // Check if any lanes have jokers - ONLY CHECK VALID LANES!
                     uint jokerMask = 0;
                     for (int i = 0; i < 8; i++)
-                        if (isJoker[i] == -1) jokerMask |= (1u << i);
+                        if (ctx.IsLaneValid(i) && isJoker[i] == -1) jokerMask |= (1u << i);
                     
                     if (jokerMask != 0) // Any lanes have jokers
                     {
@@ -471,26 +485,19 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             for (int packIndex = 0; packIndex < maxPacks; packIndex++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
+                var packSize = pack.GetPackSize();
                 
                 if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
-                    // Get the correct number of jokers based on pack size
-                    int packSize = pack.GetPackSize() switch
-                    {
-                        MotelyBoosterPackSize.Normal => 2,
-                        MotelyBoosterPackSize.Jumbo => 3,
-                        MotelyBoosterPackSize.Mega => 5,
-                        _ => 2
-                    };
-                    
+
                     var packContents = ctx.GetNextBuffoonPackContents(ref buffoonStream, packSize);
-                    
+
                     // Check if this pack slot is in our bitmask
                     if (((clause.PackSlotBitmask >> packIndex) & 1) != 0)
                     {
                         if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                             continue;
-                        
+
                         for (int i = 0; i < packContents.Length; i++)
                         {
                             var item = packContents[i];
@@ -498,7 +505,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             bool matches = !clause.IsWildcard ?
                                 joker == clause.JokerType :
                                 CheckWildcardMatch(joker, clause.WildcardEnum);
-                            
+
                             if (matches && CheckEditionAndStickersSingle(item, clause))
                             {
                                 return true;

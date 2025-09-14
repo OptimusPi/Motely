@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using Motely.Filters;
 
 namespace Motely.Filters;
@@ -85,9 +86,16 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             }
             
             // AND all clause masks together - ALL clauses must match (like other filters)
+            // CRITICAL FIX: If any clause found nothing (NoBitsSet), the entire filter fails!
             VectorMask finalResult = VectorMask.AllBitsSet;
             for (int i = 0; i < clauseMasks.Length; i++)
             {
+                // FIX: If this clause found nothing across all antes, fail immediately
+                if (clauseMasks[i].IsAllFalse())
+                {
+                    return VectorMask.NoBitsSet;
+                }
+                
                 finalResult &= clauseMasks[i];
                 if (finalResult.IsAllFalse()) return VectorMask.NoBitsSet;
             }
@@ -181,22 +189,18 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
             {
-                ulong slotBit = 1UL << slot;
-                
-                // Get spectral for this slot using self-contained stream - handles slot types internally!
+                // ALWAYS get spectral for this slot to maintain stream synchronization!
                 var spectralItem = shopSpectralStream.GetNext(ref ctx);
                 
-                // Skip if this slot isn't in the bitmask (0 = check all slots)
+                // Only SCORE/MATCH if this slot is in the bitmask (0 = check all slots)
+                ulong slotBit = 1UL << slot;
                 if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
-                    continue;
+                    continue; // Don't score this slot, but we already consumed from stream
                 
-                // Check if item is SpectralExcludedByStream (not a spectral slot)
-                VectorMask isActualSpectral = VectorMask.AllBitsSet;
-                for (int lane = 0; lane < 8; lane++)
-                {
-                    if (spectralItem.Value[lane] == (int)MotelyItemType.SpectralExcludedByStream)
-                        isActualSpectral[lane] = false;
-                }
+                // Check if item is SpectralExcludedByStream (not a spectral slot) using SIMD
+                var excludedValue = Vector256.Create((int)MotelyItemType.SpectralExcludedByStream);
+                var isNotExcluded = ~Vector256.Equals(spectralItem.Value, excludedValue);
+                VectorMask isActualSpectral = isNotExcluded;
                 
                 if (isActualSpectral.IsPartiallyTrue())
                 {
@@ -204,7 +208,8 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     VectorMask typeMatches = VectorMask.AllBitsSet;
                     if (clause.SpectralType.HasValue)
                     {
-                        var targetSpectralType = (MotelyItemType)clause.SpectralType.Value;
+                        // FIX: Properly construct the MotelyItemType by combining category and spectral type
+                        var targetSpectralType = (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)clause.SpectralType.Value);
                         typeMatches = VectorEnum256.Equals(spectralItem.Type, targetSpectralType);
                     }
                     
@@ -239,34 +244,52 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
-                // Skip if this pack slot isn't in our filter
+                // Check if this pack slot should be evaluated
+                bool shouldCheckThisSlot = true;
                 if (clause.PackSlotBitmask != 0)
                 {
                     ulong packSlotBit = 1UL << packSlot;
-                    if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                    shouldCheckThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
                 }
                 
                 var packType = pack.GetPackType();
                 
                 // Check Spectral packs with vectorized method
                 VectorMask isSpectralPack = VectorEnum256.Equals(packType, MotelyBoosterPackType.Spectral);
+                // ALWAYS consume spectral stream if it's a spectral pack to maintain sync
                 if (isSpectralPack.IsPartiallyTrue())
                 {
-                    // FIXED: Always consume maximum pack size (5) to avoid stream desync
-                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, MotelyBoosterPackSize.Mega);
+                    // Get pack sizes for proper stream consumption
+                    var packSizes = pack.GetPackSize();
+
+                    // Use the vectorized version that consumes correct number per lane!
+                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, 5);
+
+                    
+                    // Only evaluate if we should check this slot
+                    if (!shouldCheckThisSlot) continue;
                     
                     // Check requireMega constraint if specified
                     VectorMask packSizeOk = VectorMask.AllBitsSet;
                     if (clause.Sources?.RequireMega == true)
                     {
-                        var packSize = pack.GetPackSize();
-                        packSizeOk = VectorEnum256.Equals(packSize, MotelyBoosterPackSize.Mega);
+                        packSizeOk = VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Mega);
                     }
                     
-                    // Check each card in the pack
-                    for (int cardIndex = 0; cardIndex < contents.Length; cardIndex++)
+                    // Check each card in the pack (up to max possible)
+                    for (int cardIndex = 0; cardIndex < MotelyVectorItemSet.MaxLength; cardIndex++)
                     {
                         var card = contents[cardIndex];
+                        
+                        // Create mask for lanes where this card position actually exists in the pack
+                        // We still need this check, but simpler: just check if the cardIndex is within pack size
+                        VectorMask cardExistsInPack = cardIndex switch
+                        {
+                            0 or 1 => VectorMask.AllBitsSet, // All packs have at least 2 cards
+                            2 => ~VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Normal), // Jumbo and Mega have 3rd card
+                            3 or 4 => VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Mega), // Only Mega has 4th and 5th cards
+                            _ => VectorMask.NoBitsSet
+                        };
                         
                         // Check if this is a spectral card that matches our clause
                         VectorMask isSpectralCard = VectorEnum256.Equals(card.TypeCategory, MotelyItemTypeCategory.SpectralCard);
@@ -296,15 +319,18 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                                 editionMatches = VectorEnum256.Equals(card.Edition, clause.EditionEnum.Value);
                             }
                             
-                            // Include packSizeOk mask if requireMega is specified
-                            VectorMask matches = (isSpectralPack & packSizeOk & isSpectralCard & typeMatches & editionMatches);
+                            // Only match if card exists in this pack size AND matches our criteria
+                            VectorMask matches = (isSpectralPack & packSizeOk & cardExistsInPack & isSpectralCard & typeMatches & editionMatches);
                             foundInPacks |= matches;
                         }
                     }
                 }
             }
             
-            return foundInPacks;
+            return ctx.SearchIndividualSeeds(foundInPacks, (ref MotelySingleSearchContext singleCtx) =>
+            {
+                return CheckPackSpectralsSingle(ref singleCtx, ante, clause);
+            });
         }
 
         private static bool CheckSpectralIndividualStatic(ref MotelySingleSearchContext ctx, List<MotelyJsonSpectralFilterClause> clauses)
@@ -358,13 +384,13 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             
             for (int slot = 0; slot < maxSlot; slot++)
             {
-                ulong slotBit = 1UL << slot;
-                
-                // Skip if this slot isn't in the bitmask (0 = check all)
-                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
-                    continue;
-                
+                // ALWAYS get spectral to maintain stream synchronization!
                 var spectral = ctx.GetNextSpectral(ref stream);
+                
+                // Only SCORE/MATCH if this slot is in the bitmask (0 = check all)
+                ulong slotBit = 1UL << slot;
+                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
+                    continue; // Don't score this slot, but we already consumed from stream
                 
                 // Skip if not a spectral slot
                 if (spectral.Type == MotelyItemType.SpectralExcludedByStream)
@@ -418,27 +444,34 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
-                // Skip if this pack slot isn't in our filter
+                // Check if this pack slot should be evaluated
+                bool shouldCheckThisSlot = true;
                 if (clause.PackSlotBitmask != 0)
                 {
                     ulong packSlotBit = 1UL << packSlot;
-                    if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                    shouldCheckThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
                 }
                 
                 // Check if it's a Spectral pack
-                if (pack.GetPackType() != MotelyBoosterPackType.Spectral)
-                    continue;
+                bool isSpectralPack = pack.GetPackType() == MotelyBoosterPackType.Spectral;
                 
-                // Check requireMega if specified in sources
-                if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
-                    continue; // Skip non-Mega packs if Mega is required
-                
-                // Get the actual pack size for this individual seed
-                var packSize = pack.GetPackSize();
-                
-                var contents = ctx.GetNextSpectralPackContents(ref spectralStream, packSize);
-                
-                int actualPackSize = packSize switch
+                // ALWAYS consume spectral stream if it's a spectral pack to maintain sync
+                if (isSpectralPack)
+                {
+                    // Get the actual pack size for this individual seed
+                    var packSize = pack.GetPackSize();
+                    
+                    // Always consume max size (5) to maintain consistency with vectorized path
+                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, MotelyBoosterPackSize.Mega);
+                    
+                    // Only evaluate if we should check this slot
+                    if (!shouldCheckThisSlot) continue;
+                    
+                    // Check requireMega if specified in sources
+                    if (clause.Sources?.RequireMega == true && packSize != MotelyBoosterPackSize.Mega)
+                        continue; // Skip non-Mega packs if Mega is required
+                    
+                    int actualPackSize = packSize switch
                 {
                     MotelyBoosterPackSize.Normal => 2,
                     MotelyBoosterPackSize.Jumbo => 3,
@@ -446,7 +479,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     _ => 2
                 };
                 
-                // Check each card in the pack
+                // Check each card in the pack (only up to actual size)
                 for (int cardIndex = 0; cardIndex < actualPackSize; cardIndex++)
                 {
                     var card = contents[cardIndex];
@@ -484,6 +517,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     if (matches)
                         return true;
                 }
+                } // Close the if (isSpectralPack) block
             }
             
             return false;

@@ -122,7 +122,7 @@ internal unsafe readonly struct MotelySearchContextParams(PartialSeedHashCache* 
 
         for (; i < SeedLastCharactersLength; i++)
         {
-            output[i] = (char)((double*)SeedLastCharacters)[i * Vector512<double>.Count + lane];
+            output[i] = (char)((double*)SeedLastCharacters)[i * Motely.MaxVectorWidth + lane];
         }
 
         for (; i < SeedLength; i++)
@@ -173,7 +173,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     {
         uint results = 0;
 
-        for (int lane = 0; lane < Vector512<double>.Count; lane++)
+        for (int lane = 0; lane < Motely.MaxVectorWidth; lane++)
         {
             if (IsLaneValid(lane))
             {
@@ -200,7 +200,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
 
         uint maskShift = mask.Value;
 
-        for (int lane = 0; lane < Vector512<double>.Count; lane++)
+        for (int lane = 0; lane < Motely.MaxVectorWidth; lane++)
         {
             if ((maskShift & 1) != 0 && IsLaneValid(lane))
             {
