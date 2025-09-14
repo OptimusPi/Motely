@@ -83,9 +83,16 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             }
 
             // All clauses must be satisfied (AND logic)
+            // CRITICAL FIX: If any clause found nothing (NoBitsSet), the entire filter fails!
             var resultMask = VectorMask.AllBitsSet;
             for (int i = 0; i < clauseMasks.Length; i++)
             {
+                // FIX: If this clause found nothing across all antes, fail immediately
+                if (clauseMasks[i].IsAllFalse())
+                {
+                    return VectorMask.NoBitsSet;
+                }
+                
                 resultMask &= clauseMasks[i];
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
@@ -118,15 +125,15 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 // Check if this slot has a tarot
                 var isTarot = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
                 
-                // Check if any lanes have tarots (result is -1 for true, 0 for false)
+                // Check if any lanes have tarots (result is -1 for true, 0 for false) - ONLY CHECK VALID LANES!
                 uint tarotMask = 0;
                 for (int i = 0; i < 8; i++)
-                    if (isTarot[i] == -1) tarotMask |= (1u << i);
+                    if (ctx.IsLaneValid(i) && isTarot[i] == -1) tarotMask |= (1u << i);
                 
                 if (tarotMask != 0) // Any lanes have tarots
                 {
                     // Check if it matches our clause
-                    VectorMask matches = CheckTarotMatchesClause(item, clause);
+                    VectorMask matches = CheckTarotMatchesClause(item, clause, ref ctx);
                     foundInShop |= matches;
                 }
             }
@@ -135,7 +142,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask CheckShopVectorizedPrecomputed(MotelyJsonTarotFilterClause clause, MotelyItemVector[] shopItems)
+        private VectorMask CheckShopVectorizedPrecomputed(MotelyJsonTarotFilterClause clause, MotelyItemVector[] shopItems, ref MotelyVectorSearchContext ctx)
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
 
@@ -150,16 +157,16 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     // Check if this slot has a tarot
                     var isTarot = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
                     
-                    // Check if any lanes have tarots
+                    // Check if any lanes have tarots - ONLY CHECK VALID LANES!
                     uint tarotMask = 0;
                     for (int i = 0; i < 8; i++)
-                        if (isTarot[i] == -1) tarotMask |= (1u << i);
+                        if (ctx.IsLaneValid(i) && isTarot[i] == -1) tarotMask |= (1u << i);
                     
                     if (tarotMask != 0) // Any lanes have tarots
                     {
                         DebugLogger.Log($"[TAROT VECTORIZED] Found tarot at shop slot {slot}: {item.Type[0]}, expecting: {clause.TarotType}");
                         // Check if it matches our clause
-                        VectorMask matches = CheckTarotMatchesClause(item, clause);
+                        VectorMask matches = CheckTarotMatchesClause(item, clause, ref ctx);
                         DebugLogger.Log($"[TAROT VECTORIZED] Matches mask={matches.Value:X}");
                         foundInShop |= matches;
                         if (!foundInShop.IsAllFalse()) break; // Found a match, can stop
@@ -185,16 +192,16 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                         // Check if this slot has a tarot
                         var isTarot = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
                         
-                        // Check if any lanes have tarots
+                        // Check if any lanes have tarots - ONLY CHECK VALID LANES!
                         uint tarotMask = 0;
                         for (int i = 0; i < 8; i++)
-                            if (isTarot[i] == -1) tarotMask |= (1u << i);
+                            if (ctx.IsLaneValid(i) && isTarot[i] == -1) tarotMask |= (1u << i);
                         
                         if (tarotMask != 0) // Any lanes have tarots
                         {
                             DebugLogger.Log($"[TAROT VECTORIZED] Found tarot at shop slot {slot}: {item.Type[0]}, expecting: {clause.TarotType}");
                             // Check if it matches our clause
-                            VectorMask matches = CheckTarotMatchesClause(item, clause);
+                            VectorMask matches = CheckTarotMatchesClause(item, clause, ref ctx);
                             DebugLogger.Log($"[TAROT VECTORIZED] Matches mask={matches.Value:X}");
                             foundInShop |= matches;
                         }
@@ -206,7 +213,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask CheckTarotMatchesClause(MotelyItemVector item, MotelyJsonTarotFilterClause clause)
+        private VectorMask CheckTarotMatchesClause(MotelyItemVector item, MotelyJsonTarotFilterClause clause, ref MotelyVectorSearchContext ctx)
         {
             VectorMask matches = VectorMask.AllBitsSet;
 
@@ -220,7 +227,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     var eqResult = VectorEnum256.Equals(item.Type, targetType);
                     uint mask = 0;
                     for (int i = 0; i < 8; i++)
-                        if (eqResult[i] == -1) mask |= (1u << i);
+                        if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
                     typeMatch |= new VectorMask(mask);
                 }
                 matches &= typeMatch;
@@ -231,7 +238,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 var eqResult = VectorEnum256.Equals(item.Type, targetType);
                 uint mask = 0;
                 for (int i = 0; i < 8; i++)
-                    if (eqResult[i] == -1) mask |= (1u << i);
+                    if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
                 matches &= new VectorMask(mask);
             }
             else
@@ -240,7 +247,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 var eqResult = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
                 uint mask = 0;
                 for (int i = 0; i < 8; i++)
-                    if (eqResult[i] == -1) mask |= (1u << i);
+                    if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
                 matches &= new VectorMask(mask);
             }
 
@@ -250,7 +257,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 var eqResult = VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
                 uint mask = 0;
                 for (int i = 0; i < 8; i++)
-                    if (eqResult[i] == -1) mask |= (1u << i);
+                    if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
                 matches &= new VectorMask(mask);
             }
 
@@ -298,11 +305,12 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
-                // Skip if this pack slot isn't in our filter
+                // Check if this pack slot should be evaluated for scoring
+                bool shouldEvaluateThisSlot = true;
                 if (clause.PackSlotBitmask != 0)
                 {
                     ulong packSlotBit = 1UL << packSlot;
-                    if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                    shouldEvaluateThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
                 }
                 
                 var packType = pack.GetPackType();
@@ -313,6 +321,9 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 {
                     // FIXED: Always consume maximum pack size (5) to avoid stream desync
                     var contents = ctx.GetNextArcanaPackContents(ref arcanaStream, MotelyBoosterPackSize.Mega);
+                    
+                    // Only evaluate/score if this slot should be checked
+                    if (!shouldEvaluateThisSlot) continue;
                     
                     // Check each card in the pack
                     for (int cardIndex = 0; cardIndex < contents.Length; cardIndex++)
@@ -400,7 +411,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 if (isActualTarot.IsPartiallyTrue())
                 {
                     // Check if the tarot matches our clause criteria
-                    VectorMask matches = CheckTarotMatchesClause(tarotItem, clause);
+                    VectorMask matches = CheckTarotMatchesClause(tarotItem, clause, ref ctx);
                     foundInShop |= (isActualTarot & matches);
                 }
             }
@@ -519,27 +530,32 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
-                // Skip if this pack slot isn't in our filter
+                // Check if this pack slot should be evaluated for scoring
+                bool shouldEvaluateThisSlot = true;
                 if (clause.PackSlotBitmask != 0)
                 {
                     ulong packSlotBit = 1UL << packSlot;
-                    if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                    shouldEvaluateThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
                 }
                 
                 // Check if it's an Arcana pack
-                if (pack.GetPackType() != MotelyBoosterPackType.Arcana)
-                    continue;
+                bool isArcanaPack = pack.GetPackType() == MotelyBoosterPackType.Arcana;
                 
-                // Check requireMega if specified in sources
-                if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
-                    continue; // Skip non-Mega packs if Mega is required
-                
-                // Get the actual pack size for this individual seed
-                var packSize = pack.GetPackSize();
-                
-                var contents = ctx.GetNextArcanaPackContents(ref arcanaStream, packSize);
-                
-                int actualPackSize = packSize switch
+                // ALWAYS consume arcana stream if it's an arcana pack to maintain sync
+                if (isArcanaPack)
+                {
+                    // Get the actual pack size for this individual seed
+                    var packSize = pack.GetPackSize();
+                    var contents = ctx.GetNextArcanaPackContents(ref arcanaStream, packSize);
+                    
+                    // Only evaluate/score if this slot should be checked
+                    if (!shouldEvaluateThisSlot) continue;
+                    
+                    // Check requireMega if specified in sources
+                    if (clause.Sources?.RequireMega == true && packSize != MotelyBoosterPackSize.Mega)
+                        continue; // Skip non-Mega packs if Mega is required
+                    
+                    int actualPackSize = packSize switch
                 {
                     MotelyBoosterPackSize.Normal => 2,
                     MotelyBoosterPackSize.Jumbo => 3,
@@ -585,6 +601,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     if (matches)
                         return true;
                 }
+                } // Close the if (isArcanaPack) block
             }
             
             return false;

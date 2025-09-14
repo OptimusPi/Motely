@@ -372,6 +372,9 @@ namespace Motely.Filters;
         // Pre-computed expensive calculations (set during PostProcess, immutable after)
         [JsonIgnore]
         public int MaxVoucherAnte { get; private set; }
+        
+        [JsonIgnore]
+        public int MaxBossAnte { get; private set; }
 
         public class SourcesConfig
         {
@@ -482,7 +485,7 @@ namespace Motely.Filters;
                 // Normalize arrays - but DON'T initialize flat pack/shop slots as that breaks Sources merging
                 // item.PackSlots and item.ShopSlots should remain null if not provided
                 item.Stickers ??= [];
-                item.Antes ??= MotelyConstants.DEFAULT_ANTES; // Default to all antes
+                item.Antes ??= [1, 2, 3, 4, 5, 6, 7, 8]; // Default to all antes
                 if (item.Sources != null) 
                 {
                     item.Sources.PackSlots ??= [];
@@ -561,6 +564,23 @@ namespace Motely.Filters;
             MaxVoucherAnte = maxAnte;
 #if DEBUG
             DebugLogger.Log($"[Config] MaxVoucherAnte calculated as: {MaxVoucherAnte}");
+#endif
+
+            // Compute MaxBossAnte once during PostProcess
+            int maxBossAnte = 0;
+            if (Should != null)
+            {
+                foreach (var clause in Should)
+                {
+                    if (clause.ItemTypeEnum == MotelyFilterItemType.Boss && clause.EffectiveAntes != null)
+                    {
+                        maxBossAnte = Math.Max(maxBossAnte, clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
+                    }
+                }
+            }
+            MaxBossAnte = maxBossAnte;
+#if DEBUG
+            DebugLogger.Log($"[Config] MaxBossAnte calculated as: {MaxBossAnte}");
 #endif
         }
     

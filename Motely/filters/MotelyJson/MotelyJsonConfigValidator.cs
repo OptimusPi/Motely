@@ -103,7 +103,8 @@ namespace Motely.Filters
                 }
                 
                 // Playing cards don't use Value or Values - they use Suit and Rank
-                if (item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture) == "playingcard")
+                if (item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture) == "playingcard" ||
+                    item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture) == "standardcard")
                 {
                     if (!string.IsNullOrEmpty(item.Value))
                     {
@@ -120,7 +121,7 @@ namespace Motely.Filters
                 }
                 
                 // Validate value based on type
-                switch (item.Type.ToLower(System.Globalization.CultureInfo.CurrentCulture))
+                switch (item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture))
                 {
                     case "joker":
                         // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare", "AnyLegendary"
