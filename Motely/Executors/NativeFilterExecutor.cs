@@ -405,11 +405,6 @@ namespace Motely.Executors
                 ulong batchesSearched = (ulong)(_params.EndBatch - _params.StartBatch + 1);
                 totalSeedsSearched = batchesSearched * (ulong)Math.Pow(35, _params.BatchSize);
             }
-            else if (search.TotalSeedsSearched > 0)
-            {
-                // Use the search's tracked count if available
-                totalSeedsSearched = (ulong)search.TotalSeedsSearched;
-            }
             else
             {
                 // Fallback to completed batch count
@@ -420,7 +415,7 @@ namespace Motely.Executors
             
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
-            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds:N0}");
+            // Seeds matched tracking removed
             
             if (duration.TotalMilliseconds >= 1)
             {

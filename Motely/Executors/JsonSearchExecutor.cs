@@ -21,9 +21,17 @@ namespace Motely.Executors
             Console.WriteLine($"🔍 Motely Ouija Search Starting");
             Console.WriteLine($"   Config: {_configPath}");
             Console.WriteLine($"   Threads: {_params.Threads}");
-            Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
-            string endDisplay = _params.EndBatch == 0 ? "∞" : _params.EndBatch.ToString();
-            Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
+            
+            if (_params.RandomSeeds.HasValue)
+            {
+                Console.WriteLine($"   Mode: Random ({_params.RandomSeeds} seeds)");
+            }
+            else
+            {
+                Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
+                string endDisplay = _params.EndBatch == 0 ? "∞" : _params.EndBatch.ToString();
+                Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
+            }
             if (_params.EnableDebug)
             {
                 Console.WriteLine($"   Debug: Enabled");
@@ -40,8 +48,11 @@ namespace Motely.Executors
                     return 1;
                 }
 
-                // Print CSV header
-                PrintResultsHeader(config);
+                // Print CSV header if we have SHOULD clauses for scoring
+                if (config.Should?.Count > 0)
+                {
+                    PrintResultsHeader(config);
+                }
 
                 search.AwaitCompletion();
 
@@ -69,14 +80,13 @@ namespace Motely.Executors
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
                 Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
-                // VECTOR LANE DEBUG: Duplicate the seed 8 times to fill all vector lanes
-                // This helps identify vector lane confusion bugs in scoring
-                var seeds = new List<string>();
-                for (int i = 0; i < 8; i++)
+                // Return just the specific seed - let the system handle partial batches
+                var seeds = new List<string>()
                 {
-                    seeds.Add(_params.SpecificSeed);
-                }
-                Console.WriteLine($"   🐛 DEBUG: Duplicated seed 8x to test for vector lane bugs");
+                    _params.SpecificSeed
+                };
+                
+                Console.WriteLine($"   Using vectorized search with dummy padding seeds");
                 return seeds;
             }
 
@@ -125,17 +135,39 @@ namespace Motely.Executors
                 MustNot = [] // Empty - filters handle this
             };
             
-            // Initialize parsed enums for scoring config clauses
-            foreach (var clause in voucherMustClauses.Concat(config.Should ?? []))
+            // Initialize parsed enums for scoring config clauses  
+            // NOTE: Don't re-initialize SHOULD clauses if they're the same objects as MUST clauses!
+            foreach (var clause in voucherMustClauses)
             {
                 clause.InitializeParsedEnums();
+            }
+            
+            // Only initialize SHOULD clauses if they haven't been initialized already
+            if (config.Should != null)
+            {
+                foreach (var shouldClause in config.Should)
+                {
+                    // Check if this clause was already initialized as part of MUST clauses
+                    bool alreadyInitialized = config.Must?.Contains(shouldClause) == true;
+                    if (!alreadyInitialized)
+                    {
+                        shouldClause.InitializeParsedEnums();
+                    }
+                }
             }
             
             // Process the scoring config to calculate MaxVoucherAnte
             scoringConfig.PostProcess();
 
-            static void dummyCallback(MotelySeedScoreTally _) { } // Empty callback - using buffer approach
-            MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, dummyCallback);
+            // Create callback for CSV output - always output when scoring
+            Action<MotelySeedScoreTally> scoreCallback = (MotelySeedScoreTally result) => 
+            {
+                // Output CSV format: Seed,TotalScore,col1,col2,...
+                var scores = string.Join(",", result.TallyColumns.Select(v => v.ToString()));
+                Console.WriteLine($"{result.Seed},{result.Score},{scores}");
+            };
+            
+            MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback);
 
             if (_params.AutoCutoff)
             {
@@ -207,7 +239,6 @@ namespace Motely.Executors
 
             Console.WriteLine($"   + Base {primaryCategory} filter: {primaryClauses.Count} clauses");
 
-
             // Chain additional filters  
             for (int i = 1; i < categories.Count; i++)
             {
@@ -230,11 +261,13 @@ namespace Motely.Executors
                 Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
             }
 
-            // Add scoring only if there are SHOULD clauses or complex MUST requirements
-            bool needsScoring = (config.Should?.Count > 0) || (config.MustNot?.Count > 0);
+            // Add scoring when SHOULD clauses exist
+            bool needsScoring = (config.Should?.Count > 0);
             if (needsScoring)
             {
                 searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
+                // Always enable CSV output when scoring
+                searchSettings = searchSettings.WithCsvOutput(true);
             }
 
             // Apply deck and stake
@@ -258,9 +291,21 @@ namespace Motely.Executors
             }
 
             // Start search
-            return seeds != null && seeds.Count > 0
-                ? (IMotelySearch)searchSettings.WithListSearch(seeds).Start()
-                : (IMotelySearch)searchSettings.WithSequentialSearch().Start();
+            if (_params.RandomSeeds.HasValue)
+            {
+                // Use random seed provider for testing
+                return (IMotelySearch)searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+            }
+            else if (seeds != null && seeds.Count > 0)
+            {
+                // Use provided seed list
+                return (IMotelySearch)searchSettings.WithListSearch(seeds).Start();
+            }
+            else
+            {
+                // Use sequential search
+                return (IMotelySearch)searchSettings.WithSequentialSearch().Start();
+            }
         }
 
         private static void PrintResultsHeader(MotelyJsonConfig config)
@@ -288,14 +333,14 @@ namespace Motely.Executors
             long lastBatchIndex = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
 
             Console.WriteLine($"   Last batch Index: {lastBatchIndex}");
-            Console.WriteLine($"   Seeds searched: {search.TotalSeedsSearched:N0}");
-            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds:N0}");
+            // Seeds tracking removed
 
             TimeSpan elapsed = search.ElapsedTime;
             if (elapsed.TotalMilliseconds > 100)
             {
                 Console.WriteLine($"   Duration: {elapsed:hh\\:mm\\:ss\\.fff}");
-                double speed = search.TotalSeedsSearched / elapsed.TotalMilliseconds;
+                // Speed calculation removed due to missing TotalSeedsSearched
+                double speed = 0;
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
             Console.WriteLine(new string('═', 60));
@@ -316,5 +361,6 @@ namespace Motely.Executors
         public bool Silent { get; set; }
         public string? SpecificSeed { get; set; }
         public string? Wordlist { get; set; }
+        public int? RandomSeeds { get; set; }
     }
 }

@@ -24,7 +24,7 @@ public sealed class WordlistValidationTests
         var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"run -c Release -- --json {Path.GetFileNameWithoutExtension(configFileName)} --wordlist {wordlistName}",
+            Arguments = $"run -c Release -- --json {Path.GetFileNameWithoutExtension(configFileName)} --wordlist {wordlistName} --silent",
             WorkingDirectory = motelyProjectDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,

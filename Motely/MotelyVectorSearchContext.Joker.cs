@@ -343,4 +343,37 @@ unsafe partial struct MotelyVectorSearchContext
 
         return pack;
     }
+    
+    /// <summary>
+    /// Gets buffoon pack contents with masked PRNG advancement - only valid lanes advance their streams.
+    /// Uses OrNull pattern to ensure PRNG synchronization in partial batches.
+    /// </summary>
+    public MotelyVectorItemSet GetNextBuffoonPackContentsMasked(ref MotelyVectorJokerStream jokerStream, MotelyBoosterPackSize size, Vector512<double> validLanesMask)
+        => GetNextBuffoonPackContentsMasked(ref jokerStream, MotelyBoosterPackType.Buffoon.GetCardCount(size), validLanesMask);
+    
+    public MotelyVectorItemSet GetNextBuffoonPackContentsMasked(ref MotelyVectorJokerStream jokerStream, int size, Vector512<double> validLanesMask)
+    {
+        Debug.Assert(size <= MotelyVectorItemSet.MaxLength);
+
+        MotelyVectorItemSet pack = new();
+        
+        // Convert double mask to int mask for conditional selection
+        var validIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(validLanesMask);
+        var noneItem = Vector256<int>.Zero;
+
+        for (int i = 0; i < size; i++)
+        {
+            // Only advance PRNG for valid lanes
+            var joker = GetNextJoker(ref jokerStream, validLanesMask);
+            
+            // Use ConditionalSelect: valid lanes get joker, invalid lanes get None
+            var maskedJoker = new MotelyItemVector(
+                Vector256.ConditionalSelect(validIntMask, joker.Value, noneItem)
+            );
+            
+            pack.Append(maskedJoker);
+        }
+
+        return pack;
+    }
 }

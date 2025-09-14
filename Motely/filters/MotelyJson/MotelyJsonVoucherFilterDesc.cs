@@ -109,9 +109,16 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             }
             
             // All voucher clauses must be satisfied
+            // CRITICAL FIX: If any clause found nothing (NoBitsSet), the entire filter fails!
             var resultMask = VectorMask.AllBitsSet;
             for (int i = 0; i < clauseMasks.Length; i++)
             {
+                // FIX: If this clause found nothing across all antes, fail immediately
+                if (clauseMasks[i].IsAllFalse())
+                {
+                    return VectorMask.NoBitsSet;
+                }
+                
                 resultMask &= clauseMasks[i];
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }

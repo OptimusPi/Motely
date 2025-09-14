@@ -82,9 +82,16 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
             }
 
             // All clauses must be satisfied (AND logic)
+            // CRITICAL FIX: If any clause found nothing (NoBitsSet), the entire filter fails!
             var resultMask = VectorMask.AllBitsSet;
             for (int i = 0; i < clauseMasks.Length; i++)
             {
+                // FIX: If this clause found nothing across all antes, fail immediately
+                if (clauseMasks[i].IsAllFalse())
+                {
+                    return VectorMask.NoBitsSet;
+                }
+                
                 resultMask &= clauseMasks[i];
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
@@ -115,7 +122,10 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                         
                         if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
                         {
-                            // Check requireMega if specified in sources for any clause
+                            // ALWAYS consume celestial stream first to maintain sync
+                            var contents = singleCtx.GetNextCelestialPackContents(ref celestialStream, pack.GetPackSize());
+                            
+                            // Then check if we should evaluate this pack
                             bool skipPack = false;
                             for (int clauseIndex = 0; clauseIndex < clausesCopy.Count; clauseIndex++)
                             {
@@ -129,8 +139,6 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                                 }
                             }
                             if (skipPack) continue;
-                            
-                            var contents = singleCtx.GetNextCelestialPackContents(ref celestialStream, pack.GetPackSize());
                             
                             for (int clauseIndex = 0; clauseIndex < clausesCopy.Count; clauseIndex++)
                             {
@@ -232,11 +240,12 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
-                // Skip if this pack slot isn't in our filter
+                // Check if this pack slot should be evaluated for scoring
+                bool shouldEvaluateThisSlot = true;
                 if (clause.PackSlotBitmask != 0)
                 {
                     ulong packSlotBit = 1UL << packSlot;
-                    if ((clause.PackSlotBitmask & packSlotBit) == 0) continue;
+                    shouldEvaluateThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
                 }
                 
                 var packType = pack.GetPackType();
@@ -247,6 +256,9 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                 {
                     // FIXED: Always consume maximum pack size (5) to avoid stream desync
                     var contents = ctx.GetNextCelestialPackContents(ref celestialStream, MotelyBoosterPackSize.Mega);
+                    
+                    // Only evaluate/score if this slot should be checked
+                    if (!shouldEvaluateThisSlot) continue;
                     
                     // Check each card in the pack
                     for (int cardIndex = 0; cardIndex < contents.Length; cardIndex++)
