@@ -27,36 +27,62 @@ namespace Motely.Filters;
     public class MotelyJsonConfig
     {
         // Metadata fields
+        [JsonPropertyName("name")]
         public string? Name { get; set; }
+        [JsonPropertyName("author")]
         public string? Author { get; set; }
+        [JsonPropertyName("description")]
         public string? Description { get; set; }
+        [JsonPropertyName("dateCreated")]
         public DateTime? DateCreated { get; set; }
+        [JsonPropertyName("deck")]
+        public string? Deck { get; set; } = "Red";
+        [JsonPropertyName("stake")]
+        public string? Stake { get; set; } = "White";
     
+        [JsonPropertyName("must")]
         public List<MotleyJsonFilterClause> Must { get; set; } = new();
+        [JsonPropertyName("should")]
         public List<MotleyJsonFilterClause> Should { get; set; } = new();
+        [JsonPropertyName("mustNot")]
         public List<MotleyJsonFilterClause> MustNot { get; set; } = new();
         
     public class MotleyJsonFilterClause
     {
+        [JsonPropertyName("type")]
         public string Type { get; set; } = "";
+        [JsonPropertyName("value")]
         public string? Value { get; set; }
+        [JsonPropertyName("values")]
         public string[]? Values { get; set; }
+        [JsonPropertyName("label")]
         public string? Label { get; set; }
+        [JsonPropertyName("antes")]
         public int[]? Antes { get; set; }
         
+        [JsonPropertyName("score")]
         public int Score { get; set; } = 1;
+        [JsonPropertyName("min")]
         public int? Min { get; set; }
+        [JsonPropertyName("filterOrder")]
         public int? FilterOrder { get; set; }  // Optional ordering for slice chain optimization
+        [JsonPropertyName("edition")]
         public string? Edition { get; set; }
+        [JsonPropertyName("stickers")]
         public List<string>? Stickers { get; set; }
         
         // PlayingCard specific
+        [JsonPropertyName("suit")]
         public string? Suit { get; set; }
+        [JsonPropertyName("rank")]
         public string? Rank { get; set; }
+        [JsonPropertyName("seal")]
         public string? Seal { get; set; }
+        [JsonPropertyName("enhancement")]
         public string? Enhancement { get; set; }
         
         // Sources configuration
+        [JsonPropertyName("sources")]
         public SourcesConfig? Sources { get; set; }
         
         // Direct properties for backwards compatibility  
@@ -365,10 +391,6 @@ namespace Motely.Filters;
         }
     }
     
-        // Optional deck/stake settings
-        public string Deck { get; set; } = "Red";
-        public string Stake { get; set; } = "White";
-        
         // Pre-computed expensive calculations (set during PostProcess, immutable after)
         [JsonIgnore]
         public int MaxVoucherAnte { get; private set; }

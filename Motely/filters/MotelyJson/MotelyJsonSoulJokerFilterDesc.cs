@@ -55,9 +55,8 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
             bool tarotStreamInit = false, spectralStreamInit = false;
             bool foundSoulInPack = false;
             
-            // Default: Check first 4 packs for ante 1, first 6 for ante 2+
-            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            // Simple: Check first 4 packs for ante 1, first 6 for ante 2+ (like PerkeoObservatory)
+            int maxPackSlot = ante == 1 ? 4 : 6;
             
             for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
             {
@@ -165,15 +164,13 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                     var soulStream = ctx.CreateSoulJokerStream(ante);
                     var soulJoker = ctx.GetNextJoker(ref soulStream);
                     
-                    // Check if it matches what we're looking for
+                    // Check if it matches what we're looking for - use MotelyItemType like PerkeoObservatory
                     VectorMask anteMatches;
                     if (clause.JokerType.HasValue && !clause.IsWildcard)
                     {
-                        // Extract just the joker type from the item
-                        var jokerType = new VectorEnum256<MotelyJoker>(
-                            Vector256.BitwiseAnd(soulJoker.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask))
-                        );
-                        anteMatches = VectorEnum256.Equals(jokerType, clause.JokerType.Value);
+                        // Convert MotelyJoker enum to MotelyItemType like the working Joker filter does
+                        var targetItemType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                        anteMatches = VectorEnum256.Equals(soulJoker.Type, targetItemType);
                     }
                     else
                     {
@@ -224,7 +221,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                     // Track which pack slots have soul cards
                     int? soulPackSlot = null;
 
-                    // Find where The Soul card actually is (there's only ONE per ante)
+                    // Find where The Soul card actually is (there's only ONE per ante) - simple logic
                     int maxPackSlot = ante == 1 ? 4 : 6;
                     MotelyBoosterPackSize? soulPackSize = null;
                     for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
