@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Xunit;
 using Motely.Filters;
@@ -11,48 +13,41 @@ namespace Motely.Tests
         [Fact]
         public void SoulJoker_Must_Filter_Should_Find_Perkeo()
         {
-            // Arrange - Create a config that looks for Perkeo soul joker in ante 1
-            var config = new MotelyJsonConfig
+            var output = RunMotelyWithJsonConfig("souljoker-must-perkeo.json");
+            
+            // Verify the filter was created and matched
+            Assert.Contains("+ Base SoulJoker filter:", output);
+            Assert.Contains("ALEEB", output);
+            Assert.Contains("SEARCH COMPLETED", output);
+            Assert.Contains("Seeds matched: 1", output);
+        }
+        
+        private static string RunMotelyWithJsonConfig(string configFileName)
+        {
+            var motelyProjectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Motely"));
+            
+            var startInfo = new ProcessStartInfo
             {
-                Name = "Test Perkeo SoulJoker",
-                Deck = "Ghost",
-                Stake = "White",
-                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
-                {
-                    new MotelyJsonConfig.MotleyJsonFilterClause
-                    {
-                        Type = "SoulJoker",
-                        Value = "Perkeo",
-                        Antes = new[] { 1 }
-                    }
-                }
+                FileName = "dotnet",
+                Arguments = $"run -c Release -- --seed ALEEB --json {Path.GetFileNameWithoutExtension(configFileName)}",
+                WorkingDirectory = motelyProjectDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
             };
-            
-            // Initialize parsed enums
-            foreach (var clause in config.Must)
+
+            using var process = Process.Start(startInfo);
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
             {
-                clause.InitializeParsedEnums();
+                throw new Exception($"Motely process failed with exit code {process.ExitCode}. Error: {error}");
             }
-            
-            // Act - Create the filter
-            var soulJokerClauses = MotelyJsonSoulJokerFilterClause.ConvertClauses(config.Must);
-            var filterDesc = new MotelyJsonSoulJokerFilterDesc(soulJokerClauses);
-            
-            // Create search settings
-            var searchSettings = new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(filterDesc)
-                .WithDeck(MotelyDeck.Ghost)
-                .WithStake(MotelyStake.White)
-                .WithThreadCount(1)
-                .WithBatchCharacterCount(1)
-                .WithEndBatchIndex(1000);
-            
-            // Start search
-            var search = searchSettings.WithSequentialSearch().Start();
-            search.AwaitCompletion();
-            
-            // Assert - We should find some results
-            // The search completed without throwing an exception, which means the filter worked
-            Assert.NotNull(search);
+
+            return output;
         }
         
         [Fact]
