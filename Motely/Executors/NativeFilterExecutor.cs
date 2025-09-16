@@ -415,7 +415,7 @@ namespace Motely.Executors
             
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
-            // Seeds matched tracking removed
+            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");
             
             if (duration.TotalMilliseconds >= 1)
             {

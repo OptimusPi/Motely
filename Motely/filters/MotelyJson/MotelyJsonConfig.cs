@@ -120,7 +120,7 @@ namespace Motely.Filters;
         public ulong ComputedShopSlotBitmask { get; set; }
         
         [JsonIgnore] 
-        public ulong ComputedPackSlotBitmask { get; set; }
+        public ulong ComputedWantedPackSlots { get; set; }
         
         // Pre-parsed enum (set during initialization, immutable after)
         [JsonIgnore] 
@@ -173,9 +173,24 @@ namespace Motely.Filters;
                     switch (ItemTypeEnum)
                     {
                         case MotelyFilterItemType.Joker:
+                            if (Enum.TryParse<MotelyJoker>(Value, true, out var regularJoker))
+                            {
+                                JokerEnum = regularJoker;
+                                
+                                // Helpful error for common mistake: using "Perkeo" with regular Joker type
+                                if (regularJoker == MotelyJoker.Perkeo)
+                                {
+                                    throw new ArgumentException($"'{Value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker.");
+                                }
+                            }
+                            else if (string.Equals(Value, "Perkeo", StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new ArgumentException($"'{Value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker.");
+                            }
+                            break;
                         case MotelyFilterItemType.SoulJoker:
-                            if (Enum.TryParse<MotelyJoker>(Value, true, out var joker))
-                                JokerEnum = joker;
+                            if (Enum.TryParse<MotelyJoker>(Value, true, out var soulJoker))
+                                JokerEnum = soulJoker;
                             break;
                         case MotelyFilterItemType.Voucher:
                             if (Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
@@ -290,6 +305,24 @@ namespace Motely.Filters;
                 switch (ItemTypeEnum)
                 {
                     case MotelyFilterItemType.Joker:
+                        JokerEnums = new List<MotelyJoker>();
+                        foreach (var value in Values)
+                        {
+                            if (Enum.TryParse<MotelyJoker>(value, true, out var joker))
+                            {
+                                // Helpful error for common mistake: using "Perkeo" with regular Joker type
+                                if (joker == MotelyJoker.Perkeo)
+                                {
+                                    throw new ArgumentException($"'{value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker.");
+                                }
+                                JokerEnums.Add(joker);
+                            }
+                            else if (string.Equals(value, "Perkeo", StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new ArgumentException($"'{value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker.");
+                            }
+                        }
+                        break;
                     case MotelyFilterItemType.SoulJoker:
                         JokerEnums = new List<MotelyJoker>();
                         foreach (var value in Values)
@@ -551,7 +584,7 @@ namespace Motely.Filters;
                 
                 // PERFORMANCE FIX: Pre-compute bitmasks for O(1) slot lookups
                 item.ComputedShopSlotBitmask = MotelyJsonPerformanceUtils.ArrayToBitmask(item.Sources.ShopSlots);
-                item.ComputedPackSlotBitmask = MotelyJsonPerformanceUtils.ArrayToBitmask(item.Sources.PackSlots);
+                item.ComputedWantedPackSlots = MotelyJsonPerformanceUtils.ArrayToBitmask(item.Sources.PackSlots);
             }
 
             // Second pass: compute per-item metadata (after overrides & masks) 

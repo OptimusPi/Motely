@@ -35,6 +35,7 @@ public static class MotelyJsonScoring
         return false;
     }
     
+    
     #endregion
     
     #region Count Functions for Should Clauses
@@ -61,8 +62,7 @@ public static class MotelyJsonScoring
                 var item = ctx.GetNextShopItem(ref shopStream);
                 if (ArrayContains(shopSlots, i) && item.TypeCategory == MotelyItemTypeCategory.TarotCard)
                 {
-                    var tarot = new MotelyItem(item.Value).GetTarot();
-                    if (tarot == clause.TarotEnum.Value)
+                    if (item.Type == (MotelyItemType)clause.TarotEnum.Value)
                     {
                         tally++;
                         if (earlyExit) return tally; // Early exit for filtering
@@ -96,7 +96,7 @@ public static class MotelyJsonScoring
                     {
                         for (int j = 0; j < contents.Length; j++)
                         {
-                            if (contents[j].GetTarot() == clause.TarotEnum.Value)
+                            if (contents[j].Type == (MotelyItemType)clause.TarotEnum.Value)
                             {
                                 tally++;
                                 if (earlyExit) return tally; // Early exit for filtering
@@ -130,8 +130,7 @@ public static class MotelyJsonScoring
                 var item = ctx.GetNextShopItem(ref shopStream);
                 if (ArrayContains(shopSlots, i) && item.TypeCategory == MotelyItemTypeCategory.PlanetCard)
                 {
-                    var planet = new MotelyItem(item.Value).GetPlanet();
-                    if (planet == clause.PlanetEnum.Value)
+                    if (item.Type == (MotelyItemType)clause.PlanetEnum.Value)
                     {
                         tally++;
                         if (earlyExit) return tally;
@@ -147,7 +146,8 @@ public static class MotelyJsonScoring
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
             var packSlots = clause.Sources.PackSlots;
-            int packCount = (clause.MaxPackSlot ?? ArrayMax(packSlots)) + 1;
+            int maxPackSlot = ArrayMax(packSlots);
+            int packCount = (clause.MaxPackSlot ?? maxPackSlot) + 1;
             
             for (int i = 0; i < packCount; i++)
             {
@@ -180,7 +180,6 @@ public static class MotelyJsonScoring
     public static int CountSpectralOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, bool earlyExit = false)
     {
         bool searchAnySpectral = !clause.SpectralEnum.HasValue;
-        Debug.Assert(clause.SpectralEnum.HasValue, "CountSpectralOccurrences requires SpectralEnum");
         int tally = 0;
 
         // Check shop slots
@@ -203,8 +202,7 @@ public static class MotelyJsonScoring
                     }
                     else
                     {
-                        var spectral = new MotelyItem(item.Value).GetSpectral();
-                        if (spectral == clause.SpectralEnum.Value)
+                        if (item.Type == (MotelyItemType)clause.SpectralEnum.Value)
                         {
                             tally++;
                             if (earlyExit) return tally;
@@ -221,7 +219,8 @@ public static class MotelyJsonScoring
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
             var packSlots = clause.Sources.PackSlots;
-            int packCount = (clause.MaxPackSlot ?? ArrayMax(packSlots)) + 1;
+            int maxPackSlot = ArrayMax(packSlots);
+            int packCount = (clause.MaxPackSlot ?? maxPackSlot) + 1;
             
             for (int i = 0; i < packCount; i++)
             {
@@ -256,8 +255,7 @@ public static class MotelyJsonScoring
                                 }
                                 else
                                 {
-                                    var spectral = new MotelyItem(item.Value).GetSpectral();
-                                    if (spectral == clause.SpectralEnum.Value)
+                                    if (item.Type == (MotelyItemType)clause.SpectralEnum.Value)
                                     {
                                         tally++;
                                         if (earlyExit) return tally;
@@ -285,7 +283,8 @@ public static class MotelyJsonScoring
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
         var cardStream = ctx.CreateStandardPackCardStream(ante); // Create ONCE before loop
         var packSlots = clause.Sources.PackSlots;
-        int packCount = (clause.MaxPackSlot ?? ArrayMax(packSlots)) + 1;
+        int maxPackSlot = ArrayMax(packSlots);
+        int packCount = (clause.MaxPackSlot ?? maxPackSlot) + 1;
 
         for (int i = 0; i < packCount; i++)
         {
@@ -344,7 +343,7 @@ public static class MotelyJsonScoring
                 // Check if this slot is in our bitmask
                 if (((shopSlotBitmask >> i) & 1) != 0 && item.TypeCategory == MotelyItemTypeCategory.Joker)
                 {
-                    var joker = new MotelyItem(item.Value).GetJoker();
+                    var joker = (MotelyJoker)item.Type;
                     var matches = !clause.IsWildcard ?
                         joker == clause.JokerType :
                         CheckWildcardMatch(joker, originalClause?.WildcardEnum ?? clause.WildcardEnum);
@@ -363,18 +362,16 @@ public static class MotelyJsonScoring
             }
         }
 
-        // Use bitmask for efficient pack slot checking
-        var packSlotBitmask = clause.PackSlotBitmask;
-        
-        if (packSlotBitmask != 0)
+        // Use array for pack slot checking
+        if (clause.WantedPackSlots.Any(x => x))
         {
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
             Debug.Assert(!buffoonStream.RarityPrngStream.IsInvalid, $"BuffoonStream RarityPrng should be valid for ante {ante}");
-            // Process pack slots using bitmask for efficiency
-            for (int i = 0; i < 64 && packSlotBitmask != 0; i++)
+            // Process pack slots using simple array lookup
+            for (int i = 0; i < 6; i++) // Only 6 pack slots max
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (((packSlotBitmask >> i) & 1) != 0 && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                if (clause.WantedPackSlots[i] && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
                     if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
@@ -382,7 +379,7 @@ public static class MotelyJsonScoring
                     for (int j = 0; j < contents.Length; j++)
                     {
                         var item = contents[j];
-                        var joker = item.GetJoker();
+                        var joker = (MotelyJoker)item.Type;
                         var matches = !clause.IsWildcard ?
                             joker == clause.JokerType :
                             CheckWildcardMatch(joker, originalClause?.WildcardEnum ?? clause.WildcardEnum);
@@ -417,6 +414,7 @@ public static class MotelyJsonScoring
                 ante == 1 ? new[] { 0, 1, 2, 3 } : new[] { 0, 1, 2, 3, 4, 5 }
         );
         int maxPacks = ante == 1 ? 4 : 6;
+        int maxPackSlot = ArrayMax(packSlots);
         
         // Create streams ONCE for checking all packs
         var tarotStream = ctx.CreateArcanaPackTarotStream(ante, soulOnly: true, isCached: false);
@@ -459,7 +457,7 @@ public static class MotelyJsonScoring
                 }
                 
                 // Check if it matches our clause
-                if (!clause.JokerEnum.HasValue || soulJoker.GetJoker() == clause.JokerEnum.Value)
+                if (!clause.JokerEnum.HasValue || (MotelyJoker)soulJoker.Type == clause.JokerEnum.Value)
                 {
                     // Check edition and stickers if specified
                     if (CheckEditionAndStickers(soulJoker, clause))
