@@ -49,9 +49,18 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
         return new MotelyJsonTagFilter(_tagClauses!);
     }
 
-    public struct MotelyJsonTagFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses) : IMotelySeedFilter
+    public struct MotelyJsonTagFilter : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses = clauses;
+        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses;
+        private readonly int _minAnte;
+        private readonly int _maxAnte;
+
+        public MotelyJsonTagFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+        {
+            _clauses = clauses;
+            // Calculate ante range ONCE during filter creation, not in every Filter() call
+            (_minAnte, _maxAnte) = CalculateAnteRange(_clauses);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
@@ -64,19 +73,17 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                 return VectorMask.AllBitsSet;
             }
             
-            // Calculate ante range for optimized iteration
-            var (minAnte, maxAnte) = CalculateAnteRange(_clauses);
-            
+            // Use pre-calculated ante range for maximum performance
             // Stack-allocated clause masks - accumulate results per clause across all antes
             Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
             for (int i = 0; i < clauseMasks.Length; i++)
                 clauseMasks[i] = VectorMask.NoBitsSet;
 
             // OPTIMIZED: Loop antes first (like joker filter), then clauses - ensures one stream per ante!
-            for (int ante = minAnte; ante <= maxAnte; ante++)
+            for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                // Create fresh tag stream to avoid interference from other filters
-                var tagStream = ctx.CreateTagStream(ante, isCached: false);
+                // Use non-cached tag stream (working version)
+                var tagStream = ctx.CreateTagStream(ante);
                 var smallTag = ctx.GetNextTag(ref tagStream);
                 var bigTag = ctx.GetNextTag(ref tagStream);
                 
@@ -211,7 +218,7 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                     // Check all antes for this clause
                     foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
                     {
-                        var tagStream = singleCtx.CreateTagStream(ante, isCached: false);
+                        var tagStream = singleCtx.CreateTagStream(ante);
                         var smallTag = singleCtx.GetNextTag(ref tagStream);
                         var bigTag = singleCtx.GetNextTag(ref tagStream);
                         
