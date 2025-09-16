@@ -158,6 +158,7 @@ namespace Motely
                 return 1;
             }
 
+            Console.WriteLine($"🔍 Analyzing seed: '{seed}' with deck: {deck}, stake: {stake}");
             var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
             Console.Write(analysis);
             return 0;

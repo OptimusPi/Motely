@@ -12,7 +12,20 @@ public abstract class MotelyJsonFilterClause
     public MotelyItemEdition? EditionEnum { get; init; }
     
     /// <summary>
-    /// Calculate min and max antes from a collection of clauses using their bitmasks
+    /// Helper to convert WantedAntes array back to bitmask for compatibility
+    /// </summary>
+    private static ulong ConvertAntesToBitmask(bool[] wantedAntes)
+    {
+        ulong mask = 0;
+        for (int i = 0; i < Math.Min(wantedAntes.Length, 64); i++)
+        {
+            if (wantedAntes[i]) mask |= (1UL << i);
+        }
+        return mask;
+    }
+    
+    /// <summary>
+    /// Calculate min and max antes from a collection of clauses using their arrays
     /// </summary>
     public static (int minAnte, int maxAnte) CalculateAnteRange<T>(IEnumerable<T> clauses) 
         where T : MotelyJsonFilterClause
@@ -25,12 +38,12 @@ public abstract class MotelyJsonFilterClause
             // Get ante bitmask from derived class
             ulong anteMask = clause switch
             {
-                MotelyJsonJokerFilterClause j => j.AnteBitmask,
-                MotelyJsonSoulJokerFilterClause s => s.AnteBitmask,
-                MotelyJsonVoucherFilterClause v => v.AnteBitmask,
-                MotelyJsonTarotFilterClause t => t.AnteBitmask,
-                MotelyJsonSpectralFilterClause sp => sp.AnteBitmask,
-                MotelyJsonPlanetFilterClause p => p.AnteBitmask,
+                MotelyJsonJokerFilterClause j => ConvertAntesToBitmask(j.WantedAntes),
+                MotelyJsonSoulJokerFilterClause s => ConvertAntesToBitmask(s.WantedAntes),
+                MotelyJsonVoucherFilterClause v => ConvertAntesToBitmask(v.WantedAntes),
+                MotelyJsonTarotFilterClause t => ConvertAntesToBitmask(t.WantedAntes),
+                MotelyJsonSpectralFilterClause sp => ConvertAntesToBitmask(sp.WantedAntes),
+                MotelyJsonPlanetFilterClause p => ConvertAntesToBitmask(p.WantedAntes),
                 _ => 0
             };
             
@@ -72,27 +85,34 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     public bool IsWildcard { get; init; }
     public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
-    public ulong AnteBitmask { get; init; }
+    public bool[] WantedAntes { get; init; } = new bool[40];
     public ulong ShopSlotBitmask { get; init; }
-    public ulong PackSlotBitmask { get; init; }
+    public bool[] WantedPackSlots { get; init; } = new bool[6];
     
     /// <summary>
     /// Create from generic JSON config clause
     /// </summary>
     public static MotelyJsonJokerFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
-        ulong anteMask = 0;
+        bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes;
         foreach (var ante in effectiveAntes)
         {
-            if (ante >= 1 && ante <= 64)
-                anteMask |= (1UL << (ante - 1));
+            if (ante >= 0 && ante < 40)
+                wantedAntes[ante] = true;
         }
         
-        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // USE PRE-COMPUTED ARRAYS FROM CONFIG VALIDATION!
         // No computation in the hot path!
         ulong shopMask = jsonClause.ComputedShopSlotBitmask;
-        ulong packMask = jsonClause.ComputedPackSlotBitmask;
+        bool[] wantedPackSlots = new bool[6];
+        if (jsonClause.Sources?.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
         
         return new MotelyJsonJokerFilterClause
         {
@@ -103,9 +123,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
             StickerEnums = jsonClause.StickerEnums,  // ADDED: Preserve sticker requirements
-            AnteBitmask = anteMask,
+            WantedAntes = wantedAntes,
             ShopSlotBitmask = shopMask,
-            PackSlotBitmask = packMask
+            WantedPackSlots = wantedPackSlots
         };
     }
     
@@ -128,29 +148,55 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker? JokerType { get; init; }
     public bool IsWildcard { get; init; }
-    public ulong AnteBitmask { get; init; }
-    public ulong PackSlotBitmask { get; init; }  // Added to track which pack slots to check
+    public bool[] WantedAntes { get; init; } = new bool[40];
+    public bool[] WantedPackSlots { get; init; } = new bool[6];  // Track which pack slots to check
     public bool RequireMega { get; init; }  // Extracted from Sources for optimization
     public bool Satisfied { get; set; }  // Track if this clause has been satisfied
     
+    // Parameterless constructor for init syntax
+    public MotelyJsonSoulJokerFilterClause() { }
+    
+    // Helper constructor for tests - takes List<int> for antes and pack slots
+    public MotelyJsonSoulJokerFilterClause(MotelyJoker? jokerType, List<int> antes, List<int> packSlots, bool requireMega = false)
+    {
+        JokerType = jokerType;
+        IsWildcard = !jokerType.HasValue;
+        RequireMega = requireMega;
+        
+        // Convert antes list to bool array
+        WantedAntes = new bool[40];
+        foreach (var ante in antes)
+        {
+            if (ante >= 0 && ante < 40)
+                WantedAntes[ante] = true;
+        }
+        
+        // Convert pack slots list to bool array
+        WantedPackSlots = new bool[6];
+        foreach (var slot in packSlots)
+        {
+            if (slot >= 0 && slot < 6)
+                WantedPackSlots[slot] = true;
+        }
+    }
+    
     public static MotelyJsonSoulJokerFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
-        ulong anteMask = 0;
+        bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
         foreach (var ante in effectiveAntes)
         {
-            if (ante >= 1 && ante <= 64)
-                anteMask |= (1UL << (ante - 1));
+            if (ante >= 0 && ante < 40)
+                wantedAntes[ante] = true;
         }
         
-        // Build pack slot bitmask
-        ulong packSlotMask = 0;
+        // Build pack slot array
+        bool[] wantedPackSlots = new bool[6];
         if (jsonClause.Sources?.PackSlots != null)
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
             {
-                if (slot >= 0 && slot < 64)
-                    packSlotMask |= (1UL << slot);
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
         }
         
@@ -159,8 +205,8 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             JokerType = jsonClause.JokerEnum,
             IsWildcard = jsonClause.IsWildcard,
             EditionEnum = jsonClause.EditionEnum,
-            AnteBitmask = anteMask,
-            PackSlotBitmask = packSlotMask,
+            WantedAntes = wantedAntes,
+            WantedPackSlots = wantedPackSlots,
             RequireMega = jsonClause.Sources?.RequireMega ?? false,
             Satisfied = false
         };
@@ -184,24 +230,31 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     public List<MotelyTarotCard>? TarotTypes { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
-    public ulong AnteBitmask { get; init; }
-    public ulong PackSlotBitmask { get; init; }
+    public bool[] WantedAntes { get; init; } = new bool[40];
+    public bool[] WantedPackSlots { get; init; } = new bool[6];
     public ulong ShopSlotBitmask { get; init; }
     
     public static MotelyJsonTarotFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
-        ulong anteMask = 0;
+        bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
         foreach (var ante in effectiveAntes)
         {
-            if (ante >= 1 && ante <= 64)
-                anteMask |= (1UL << (ante - 1));
+            if (ante >= 0 && ante < 40)
+                wantedAntes[ante] = true;
         }
         
-        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // USE PRE-COMPUTED ARRAYS FROM CONFIG VALIDATION!
         // No computation in the hot path!
-        ulong packMask = jsonClause.ComputedPackSlotBitmask;
         ulong shopMask = jsonClause.ComputedShopSlotBitmask;
+        bool[] wantedPackSlots = new bool[6];
+        if (jsonClause.Sources?.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
         
         return new MotelyJsonTarotFilterClause
         {
@@ -210,8 +263,8 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
             IsWildcard = jsonClause.IsWildcard,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
-            AnteBitmask = anteMask,
-            PackSlotBitmask = packMask,
+            WantedAntes = wantedAntes,
+            WantedPackSlots = wantedPackSlots,
             ShopSlotBitmask = shopMask
         };
     }
@@ -232,23 +285,23 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
 {
     public MotelyVoucher VoucherType { get; init; }
     public List<MotelyVoucher>? VoucherTypes { get; init; }
-    public ulong AnteBitmask { get; init; }
+    public bool[] WantedAntes { get; init; } = new bool[40];
     
     public static MotelyJsonVoucherFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
-        ulong anteMask = 0;
+        bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
         foreach (var ante in effectiveAntes)
         {
-            if (ante >= 1 && ante <= 64)
-                anteMask |= (1UL << (ante - 1));
+            if (ante >= 0 && ante < 40)
+                wantedAntes[ante] = true;
         }
         
         return new MotelyJsonVoucherFilterClause
         {
             VoucherType = jsonClause.VoucherEnum ?? MotelyVoucher.Overstock,
             VoucherTypes = jsonClause.VoucherEnums?.Count > 0 ? jsonClause.VoucherEnums : null,
-            AnteBitmask = anteMask
+            WantedAntes = wantedAntes
         };
     }
     
@@ -270,24 +323,31 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     public List<MotelySpectralCard>? SpectralTypes { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
-    public ulong AnteBitmask { get; init; }
+    public bool[] WantedAntes { get; init; } = new bool[40];
     public ulong ShopSlotBitmask { get; init; }
-    public ulong PackSlotBitmask { get; init; }
+    public bool[] WantedPackSlots { get; init; } = new bool[6];
     
     public static MotelyJsonSpectralFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
-        ulong anteMask = 0;
+        bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
         foreach (var ante in effectiveAntes)
         {
-            if (ante >= 1 && ante <= 64)
-                anteMask |= (1UL << (ante - 1));
+            if (ante >= 0 && ante < 40)
+                wantedAntes[ante] = true;
         }
         
-        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // USE PRE-COMPUTED ARRAYS FROM CONFIG VALIDATION!
         // No computation in the hot path!
         ulong shopMask = jsonClause.ComputedShopSlotBitmask;
-        ulong packMask = jsonClause.ComputedPackSlotBitmask;
+        bool[] wantedPackSlots = new bool[6];
+        if (jsonClause.Sources?.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
         
         return new MotelyJsonSpectralFilterClause
         {
@@ -296,9 +356,9 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
             IsWildcard = jsonClause.IsWildcard,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
-            AnteBitmask = anteMask,
+            WantedAntes = wantedAntes,
             ShopSlotBitmask = shopMask,
-            PackSlotBitmask = packMask
+            WantedPackSlots = wantedPackSlots
         };
     }
     
@@ -320,24 +380,31 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     public List<MotelyPlanetCard>? PlanetTypes { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
-    public ulong AnteBitmask { get; init; }
+    public bool[] WantedAntes { get; init; } = new bool[40];
     public ulong ShopSlotBitmask { get; init; }
-    public ulong PackSlotBitmask { get; init; }
+    public bool[] WantedPackSlots { get; init; } = new bool[6];
     
     public static MotelyJsonPlanetFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
-        ulong anteMask = 0;
+        bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
         foreach (var ante in effectiveAntes)
         {
-            if (ante >= 1 && ante <= 64)
-                anteMask |= (1UL << (ante - 1));
+            if (ante >= 0 && ante < 40)
+                wantedAntes[ante] = true;
         }
         
-        // USE PRE-COMPUTED BITMASKS FROM CONFIG VALIDATION!
+        // USE PRE-COMPUTED ARRAYS FROM CONFIG VALIDATION!
         // No computation in the hot path!
         ulong shopMask = jsonClause.ComputedShopSlotBitmask;
-        ulong packMask = jsonClause.ComputedPackSlotBitmask;
+        bool[] wantedPackSlots = new bool[6];
+        if (jsonClause.Sources?.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
         
         return new MotelyJsonPlanetFilterClause
         {
@@ -346,9 +413,9 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
             IsWildcard = jsonClause.IsWildcard,
             Sources = jsonClause.Sources,
             EditionEnum = jsonClause.EditionEnum,
-            AnteBitmask = anteMask,
+            WantedAntes = wantedAntes,
             ShopSlotBitmask = shopMask,
-            PackSlotBitmask = packMask
+            WantedPackSlots = wantedPackSlots
         };
     }
     
