@@ -165,6 +165,58 @@ ref partial struct MotelyVectorSearchContext
         return pack;
     }
 
+    public MotelyVectorItemSet GetNextSpectralPackContentsPerLane(ref MotelyVectorSpectralStream spectralStream, VectorEnum256<MotelyBoosterPackSize> packSizes, VectorMask isSpectralPack)
+    {
+        MotelyVectorItemSet pack = new();
+
+        // Create masks for different pack sizes
+        VectorMask isNormalSize = VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Normal);   // 2 cards
+        VectorMask isJumboSize = VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Jumbo);    // 4 cards
+        VectorMask isMegaSize = VectorEnum256.Equals(packSizes, MotelyBoosterPackSize.Mega);      // 4 cards
+
+        // Pre-allocate mask elements buffer outside the loop to avoid stack overflow warning
+        Span<int> maskElements = stackalloc int[8];
+
+        // Always generate the maximum possible cards (5) to maintain stream synchronization
+        // But mask out results for lanes that shouldn't use certain card positions
+        for (int cardIndex = 0; cardIndex < MotelyVectorItemSet.MaxLength; cardIndex++)
+        {
+            var spectralCard = GetNextSpectral(ref spectralStream);
+            
+            // Create mask for lanes where this card position should be valid
+            VectorMask shouldIncludeCard = cardIndex switch
+            {
+                0 or 1 => VectorMask.AllBitsSet, // All pack sizes have at least 2 cards
+                2 or 3 => VectorMask.AllBitsSet ^ isNormalSize,  // Jumbo and Mega have 3rd and 4th cards (NOT Normal)
+                4 => VectorMask.NoBitsSet,       // No pack size has a 5th card
+                _ => VectorMask.NoBitsSet
+            };
+
+            // Apply mask to spectral card - for lanes where card shouldn't exist, 
+            // we still generated it (for stream sync) but mark it as invalid
+            if (!shouldIncludeCard.IsAllTrue())
+            {
+                // Create conditional selection masks manually using bit operations
+                for (int i = 0; i < 8; i++)
+                {
+                    maskElements[i] = shouldIncludeCard[i] ? -1 : 0; // -1 = all bits set, 0 = no bits set
+                }
+                var selectionMask = Vector256.Create<int>(maskElements);
+                
+                // For invalid lanes, use the special marker value
+                var invalidType = Vector256.Create((int)MotelyItemType.SpectralExcludedByStream);
+                var maskedType = Vector256.ConditionalSelect(selectionMask, spectralCard.Type.HardwareVector, invalidType);
+                
+                // Create new spectral card with the masked type
+                spectralCard = new MotelyItemVector(maskedType);
+            }
+
+            pack.Append(spectralCard);
+        }
+
+        return pack;
+    }
+
     public VectorMask GetNextSpectralPackHasTheSoul(ref MotelyVectorSpectralStream spectralStream, MotelyBoosterPackSize size)
     {
         Debug.Assert(spectralStream.IsSoulBlackHoleable, "Spectral pack does not have the soul.");

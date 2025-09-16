@@ -63,8 +63,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     var clause = Clauses[clauseIndex];
                     ulong anteBit = 1UL << (ante - 1);
                     
-                    // Skip ante if not in bitmask
-                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                    // Skip ante if not wanted
+                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
@@ -78,7 +78,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                         clauseResult |= CheckShopJokerVectorizedNew(clause, ctx, ref shopJokerStream);
                     }
 
-                    if (clause.PackSlotBitmask != 0)
+                    if (clause.WantedPackSlots.Any(x => x))
                     {
                         // Check buffoon packs for jokers
                         var packStream = ctx.CreateBoosterPackStream(ante, isCached: true, generatedFirstPack: ante != 1);
@@ -103,7 +103,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     for (int futureAnte = ante + 1; futureAnte <= _maxAnte; futureAnte++)
                     {
                         ulong futureBit = 1UL << (futureAnte - 1);
-                        if (clause.AnteBitmask == 0 || (clause.AnteBitmask & futureBit) != 0)
+                        if (!clause.WantedAntes.Any(x => x) || clause.WantedAntes[futureAnte])
                         {
                             hasAntesRemaining = true;
                             break;
@@ -173,7 +173,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                         for (int ante = minAnte; ante <= maxAnte; ante++)
                         {
                             ulong anteBit = 1UL << (ante - 1);
-                            if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                            if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                                 continue;
 
                             // Check shops only if ShopSlotBitmask is non-zero
@@ -188,7 +188,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             }
 
                             // Check packs
-                            if (clause.PackSlotBitmask != 0)
+                            if (clause.WantedPackSlots.Any(x => x))
                             {
                                 var packStream = singleCtx.CreateBoosterPackStream(ante, generatedFirstPack: ante != 1, isCached: false);
                                 if (CheckPackJokersSingleStatic(ref singleCtx, clause, ante, ref packStream))
@@ -299,9 +299,9 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             // Ante 1: exactly 4 packs, Ante 2+: exactly 6 packs  
             int actualPackLimit = ante == 1 ? 4 : 6;
             
-            // Check enough packs to cover the bitmask, but never exceed actual pack limit
-            int maxPacksToCheck = clause.PackSlotBitmask == 0 ? actualPackLimit : 
-                Math.Min(actualPackLimit, 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            // Check enough packs to cover the slots, but never exceed actual pack limit
+            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            int maxPacksToCheck = hasSpecificSlots ? actualPackLimit : actualPackLimit;
             
             for (int packIndex = 0; packIndex < maxPacksToCheck; packIndex++)
             {
@@ -324,8 +324,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     // Get ALL jokers from the pack (up to max size) to keep stream in sync
                     var packContents = ctx.GetNextBuffoonPackContents(ref buffoonStream, maxPackSize);
                     
-                    // Only SCORE if this pack slot is in our bitmask
-                    if (((clause.PackSlotBitmask >> packIndex) & 1) != 0)
+                    // Only SCORE if this pack slot is wanted
+                    if (!hasSpecificSlots || clause.WantedPackSlots[packIndex])
                     {
                         // Check if it's a Mega pack if required
                         if (clause.Sources?.RequireMega == true)
@@ -460,7 +460,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                 {
                     if (item.TypeCategory == MotelyItemTypeCategory.Joker)
                     {
-                        var joker = item.GetJoker();
+                        var joker = (MotelyJoker)item.Type;
                         bool matches = !clause.IsWildcard ?
                             joker == clause.JokerType :
                             CheckWildcardMatch(joker, clause.WildcardEnum);
@@ -492,8 +492,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
 
                     var packContents = ctx.GetNextBuffoonPackContents(ref buffoonStream, packSize);
 
-                    // Check if this pack slot is in our bitmask
-                    if (((clause.PackSlotBitmask >> packIndex) & 1) != 0)
+                    // Check if this pack slot is wanted
+                    if (!clause.WantedPackSlots.Any(x => x) || clause.WantedPackSlots[packIndex])
                     {
                         if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                             continue;
@@ -501,7 +501,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                         for (int i = 0; i < packContents.Length; i++)
                         {
                             var item = packContents[i];
-                            var joker = item.GetJoker();
+                            var joker = (MotelyJoker)item.Type;
                             bool matches = !clause.IsWildcard ?
                                 joker == clause.JokerType :
                                 CheckWildcardMatch(joker, clause.WildcardEnum);

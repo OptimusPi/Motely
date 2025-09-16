@@ -56,8 +56,8 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                     var clause = _clauses[clauseIndex];
                     ulong anteBit = 1UL << (ante - 1);
                     
-                    // Skip ante if not in bitmask
-                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                    // Skip ante if not wanted
+                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
@@ -71,7 +71,7 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                     }
 
                     // Check packs if specified  
-                    if (clause.PackSlotBitmask != 0)
+                    if (clause.WantedPackSlots.Any(x => x))
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
                     }
@@ -130,7 +130,7 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                             for (int clauseIndex = 0; clauseIndex < clausesCopy.Count; clauseIndex++)
                             {
                                 var clause = clausesCopy[clauseIndex];
-                                if ((clause.PackSlotBitmask & packSlotBit) != 0 && 
+                                if (clause.WantedPackSlots[packSlot] && 
                                     clause.Sources?.RequireMega == true && 
                                     pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                                 {
@@ -144,10 +144,10 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                             {
                                 var clause = clausesCopy[clauseIndex];
                                 
-                                if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0) 
+                                if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante]) 
                                     continue;
                                 
-                                if ((clause.PackSlotBitmask & packSlotBit) == 0) 
+                                if (!clause.WantedPackSlots[packSlot]) 
                                     continue;
                                
                                for (int j = 0; j < contents.Length; j++)
@@ -179,7 +179,7 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                             {
                                 var clause = clausesCopy[clauseIndex];
 
-                                if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                                if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                                     continue;
 
                                 if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0)
@@ -233,20 +233,15 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
             var celestialStream = ctx.CreateCelestialPackPlanetStream(ante);
             
             // Determine max pack slot to check
-            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
                 // Check if this pack slot should be evaluated for scoring
-                bool shouldEvaluateThisSlot = true;
-                if (clause.PackSlotBitmask != 0)
-                {
-                    ulong packSlotBit = 1UL << packSlot;
-                    shouldEvaluateThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
-                }
+                bool shouldEvaluateThisSlot = !hasSpecificSlots || clause.WantedPackSlots[packSlot];
                 
                 var packType = pack.GetPackType();
                 

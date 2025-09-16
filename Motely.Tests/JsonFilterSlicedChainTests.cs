@@ -89,7 +89,7 @@ public sealed class JsonFilterSlicedChainTests
         Assert.Single(convertedClauses);
         var jokerClause = convertedClauses[0];
         Assert.Equal(MotelyJoker.Blueprint, jokerClause.JokerType);
-        Assert.Equal(0b00000010UL, jokerClause.AnteBitmask); // Ante 2 only
+        Assert.True(jokerClause.WantedAntes[2]); // Ante 2 should be set
     }
     
     // Helper method matching JsonSearchExecutor.CreateJokerFilterDesc()
@@ -235,16 +235,16 @@ public sealed class JsonFilterSlicedChainTests
         
         var clause = convertedClauses[0];
         
-        // Calculate expected bitmask: antes 2, 4, 7
-        // Ante 2 = bit 1, Ante 4 = bit 3, Ante 7 = bit 6
-        ulong expectedMask = (1UL << 1) | (1UL << 3) | (1UL << 6); // 0b01001010
-        Assert.Equal(expectedMask, clause.AnteBitmask);
+        // Check expected antes: 2, 4, 7
+        Assert.True(clause.WantedAntes[2]); // Ante 2 should be set
+        Assert.True(clause.WantedAntes[4]); // Ante 4 should be set
+        Assert.True(clause.WantedAntes[7]); // Ante 7 should be set
         
-        // Extract antes from bitmask to verify
+        // Extract antes from array to verify
         var extractedAntes = new List<int>();
         for (int ante = 1; ante <= 8; ante++)
         {
-            if ((clause.AnteBitmask & (1UL << (ante - 1))) != 0)
+            if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
             {
                 extractedAntes.Add(ante);
             }
@@ -293,7 +293,7 @@ public sealed class JsonFilterSlicedChainTests
         Assert.Single(convertedClauses);
         var clause = convertedClauses[0];
         Assert.Equal(MotelyJoker.Perkeo, clause.JokerType);
-        Assert.Equal(0b00000100UL, clause.AnteBitmask); // Ante 3
+        Assert.True(clause.WantedAntes[3]); // Ante 3 should be set
         
         // Create the filter
         var filterDesc = new MotelyJsonSoulJokerFilterDesc(convertedClauses);
