@@ -97,6 +97,7 @@ public static partial class MotelySeedAnalyzer
             var searchSettings = new MotelySearchSettings<MotelyAnalyzerFilterDesc.AnalyzerFilter>(filterDesc)
                 .WithDeck(cfg.Deck)
                 .WithStake(cfg.Stake)
+                // broken for some reason, but it in theory SHOULD WORK!
                 .WithListSearch([cfg.Seed])
                 .WithThreadCount(1);
 

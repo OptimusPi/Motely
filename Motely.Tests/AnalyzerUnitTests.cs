@@ -28,12 +28,6 @@ public sealed class AnalyzerUnitTests
         return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
 
-    // This method is now only used by other tests that don't use Verify yet
-    private void AssertOutputsMatch(string expected, string actual, string seed)
-    {
-        Assert.Equal(expected, actual);
-    }
-
     [Fact]
     public void TestAnalyzer_PackContentsFormat()
     {

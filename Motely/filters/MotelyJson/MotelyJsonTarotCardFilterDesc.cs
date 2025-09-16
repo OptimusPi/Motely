@@ -57,8 +57,8 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     var clause = _clauses[clauseIndex];
                     ulong anteBit = 1UL << (ante - 1);
                     
-                    // Skip ante if not in bitmask
-                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                    // Skip ante if not wanted
+                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
@@ -72,7 +72,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     }
 
                     // Check packs if specified  
-                    if (clause.PackSlotBitmask != 0)
+                    if (clause.WantedPackSlots.Any(x => x))
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
                     }
@@ -298,20 +298,15 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             var arcanaStream = ctx.CreateArcanaPackTarotStream(ante);
             
             // Determine max pack slot to check
-            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
                 // Check if this pack slot should be evaluated for scoring
-                bool shouldEvaluateThisSlot = true;
-                if (clause.PackSlotBitmask != 0)
-                {
-                    ulong packSlotBit = 1UL << packSlot;
-                    shouldEvaluateThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
-                }
+                bool shouldEvaluateThisSlot = !hasSpecificSlots || clause.WantedPackSlots[packSlot];
                 
                 var packType = pack.GetPackType();
                 
@@ -430,7 +425,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 for (int ante = 1; ante <= 64; ante++)
                 {
                     ulong anteBit = 1UL << (ante - 1);
-                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                         continue;
                         
                     // Check shops if specified
@@ -445,7 +440,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     }
                     
                     // Check packs if specified
-                    if (clause.PackSlotBitmask != 0)
+                    if (clause.WantedPackSlots.Any(x => x))
                     {
                         if (CheckPackTarotsSingle(ref ctx, ante, clause))
                         {
@@ -523,20 +518,15 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             var arcanaStream = ctx.CreateArcanaPackTarotStream(ante);
             
             // Determine max pack slot to check
-            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
                 // Check if this pack slot should be evaluated for scoring
-                bool shouldEvaluateThisSlot = true;
-                if (clause.PackSlotBitmask != 0)
-                {
-                    ulong packSlotBit = 1UL << packSlot;
-                    shouldEvaluateThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
-                }
+                bool shouldEvaluateThisSlot = !hasSpecificSlots || clause.WantedPackSlots[packSlot];
                 
                 // Check if it's an Arcana pack
                 bool isArcanaPack = pack.GetPackType() == MotelyBoosterPackType.Arcana;

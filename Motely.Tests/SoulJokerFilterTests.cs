@@ -74,12 +74,11 @@ namespace Motely.Tests
         public void SoulJoker_Filter_Should_Match_Specific_Joker()
         {
             // Test that the filter correctly matches the specified joker type
-            var clause = new MotelyJsonSoulJokerFilterClause
-            {
-                JokerType = MotelyJoker.Perkeo,
-                AnteBitmask = 1, // Ante 1
-                PackSlotBitmask = 0 // Check all packs
-            };
+            var clause = new MotelyJsonSoulJokerFilterClause(
+                MotelyJoker.Perkeo,
+                new List<int> { 0 }, // Ante 1 only (0-based)
+                new List<int> { 0, 1, 2, 3, 4, 5 } // Check all pack slots
+            );
             
             // Create a filter with this clause
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(new List<MotelyJsonSoulJokerFilterClause> { clause });
@@ -87,10 +86,7 @@ namespace Motely.Tests
             // Verify the clause was properly created with the correct joker type
             Assert.NotNull(clause.JokerType);
             Assert.Equal(MotelyJoker.Perkeo, clause.JokerType.Value);
-            Assert.Equal(1UL, clause.AnteBitmask);
-            
-            // The filter descriptor was created successfully
-            Assert.NotNull(filterDesc);
+            Assert.True(clause.WantedAntes[0]); // Ante 1 should be true
         }
         
         [Fact]
@@ -163,7 +159,7 @@ namespace Motely.Tests
             
             var convertedClause = soulJokerClauses[0];
             Assert.Equal(MotelyJoker.Perkeo, convertedClause.JokerType);
-            Assert.Equal(1UL, convertedClause.AnteBitmask); // Ante 1 = bit 0
+            Assert.True(convertedClause.WantedAntes[0]); // Ante 1 = index 0
         }
     }
 }
