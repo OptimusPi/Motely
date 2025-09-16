@@ -333,14 +333,13 @@ namespace Motely.Executors
             long lastBatchIndex = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
 
             Console.WriteLine($"   Last batch Index: {lastBatchIndex}");
-            // Seeds tracking removed
+            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");
 
             TimeSpan elapsed = search.ElapsedTime;
             if (elapsed.TotalMilliseconds > 100)
             {
                 Console.WriteLine($"   Duration: {elapsed:hh\\:mm\\:ss\\.fff}");
-                // Speed calculation removed due to missing TotalSeedsSearched
-                double speed = 0;
+                double speed = (double)search.TotalSeedsSearched / elapsed.TotalMilliseconds;
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
             Console.WriteLine(new string('═', 60));

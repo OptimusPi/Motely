@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 
 namespace Motely;
@@ -115,7 +114,6 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
         return Value == other.Value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool Equals(object? obj)
     {
         return obj is MotelyItem item && Equals(item);
@@ -133,21 +131,4 @@ public readonly struct MotelyItem(int value) : IEquatable<MotelyItem>
     }
 
     public static implicit operator MotelyItem(MotelyItemType type) => new(type);
-
-    // --- Typed extractors (remove need for manual bit masking in consumers) ---
-    // All retain only the subtype bits and rarity bits (where applicable) while stripping category bits.
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyJoker GetJoker() => (MotelyJoker)(Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyTarotCard GetTarot() => (MotelyTarotCard)(Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyPlanetCard GetPlanet() => (MotelyPlanetCard)(Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelySpectralCard GetSpectral() => (MotelySpectralCard)(Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyPlayingCard GetPlayingCard() => (MotelyPlayingCard)(Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
 }
