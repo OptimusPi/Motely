@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -40,8 +41,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Count == 0)
-                return VectorMask.AllBitsSet;
+            Debug.Assert(_clauses.Count > 0, "Spectral card filter must have at least one clause");
 
             // Initialize run state for voucher calculations  
             var runState = ctx.Deck.GetDefaultRunState();
@@ -60,8 +60,8 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     var clause = _clauses[clauseIndex];
                     ulong anteBit = 1UL << (ante - 1);
                     
-                    // Skip ante if not in bitmask
-                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                    // Skip ante if not wanted
+                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
@@ -75,7 +75,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     }
 
                     // Check packs if specified
-                    if (clause.PackSlotBitmask != 0)
+                    if (clause.WantedPackSlots.Any(x => x))
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
                     }
@@ -237,20 +237,15 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
             
             // Determine max pack slot to check
-            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
                 // Check if this pack slot should be evaluated
-                bool shouldCheckThisSlot = true;
-                if (clause.PackSlotBitmask != 0)
-                {
-                    ulong packSlotBit = 1UL << packSlot;
-                    shouldCheckThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
-                }
+                bool shouldCheckThisSlot = !hasSpecificSlots || clause.WantedPackSlots[packSlot];
                 
                 var packType = pack.GetPackType();
                 
@@ -259,11 +254,11 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                 // ALWAYS consume spectral stream if it's a spectral pack to maintain sync
                 if (isSpectralPack.IsPartiallyTrue())
                 {
-                    // Get pack sizes for proper stream consumption
+                    // Get pack sizes for proper stream consumption per lane
                     var packSizes = pack.GetPackSize();
 
-                    // Use the vectorized version that consumes correct number per lane!
-                    var contents = ctx.GetNextSpectralPackContents(ref spectralStream, 5);
+                    // Use the new lane-aware version that consumes correct number per lane!
+                    var contents = ctx.GetNextSpectralPackContentsPerLane(ref spectralStream, packSizes, isSpectralPack);
 
                     
                     // Only evaluate if we should check this slot
@@ -344,7 +339,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                 for (int ante = 1; ante <= 64; ante++)
                 {
                     ulong anteBit = 1UL << (ante - 1);
-                    if (clause.AnteBitmask != 0 && (clause.AnteBitmask & anteBit) == 0)
+                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                         continue;
                         
                     // Check shops if specified
@@ -359,7 +354,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     }
                     
                     // Check packs if specified
-                    if (clause.PackSlotBitmask != 0)
+                    if (clause.WantedPackSlots.Any(x => x))
                     {
                         if (CheckPackSpectralsSingle(ref ctx, ante, clause))
                         {
@@ -436,21 +431,16 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             var packStream = ctx.CreateBoosterPackStream(ante);
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
             
-            // Determine max pack slot to check
-            int maxPackSlot = clause.PackSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.PackSlotBitmask));
+            // Determine max pack slot to check - simple logic!
+            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
                 
-                // Check if this pack slot should be evaluated
-                bool shouldCheckThisSlot = true;
-                if (clause.PackSlotBitmask != 0)
-                {
-                    ulong packSlotBit = 1UL << packSlot;
-                    shouldCheckThisSlot = (clause.PackSlotBitmask & packSlotBit) != 0;
-                }
+                // Check if this pack slot should be evaluated - simple array lookup!
+                bool shouldCheckThisSlot = !hasSpecificSlots || clause.WantedPackSlots[packSlot];
                 
                 // Check if it's a Spectral pack
                 bool isSpectralPack = pack.GetPackType() == MotelyBoosterPackType.Spectral;
