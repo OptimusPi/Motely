@@ -253,6 +253,24 @@ public struct MotelyJsonSeedScoreDesc(
                     }
                 }
                 
+                // ULTIMATE FIX: Re-verify ALL MUST clauses individually to catch chained filter false positives
+                if (config.Must?.Count > 0)
+                {
+                    foreach (var mustClause in config.Must)
+                    {
+                        // Reset state for each MUST clause verification
+                        var verifyState = new MotelyRunState();
+                        
+                        // Check if this MUST clause actually has any occurrences
+                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, mustClause, ref verifyState);
+                        if (count == 0)
+                        {
+                            // MUST clause not satisfied - REJECT this seed immediately
+                            return false;
+                        }
+                    }
+                }
+                
                 // Generate and cache all bosses if needed
                 MotelyBossBlind[]? cachedBosses = null;
                 if (maxBossAnte > 0)

@@ -19,12 +19,12 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
         // Cache only the antes we actually need
         foreach (var clause in _voucherClauses)
         {
-            // Extract antes from bitmask
-            for (int bit = 0; bit < 64; bit++)
+            // Extract antes from array
+            for (int ante = 0; ante < 40; ante++)
             {
-                if ((clause.AnteBitmask & (1UL << bit)) != 0)
+                if (clause.WantedAntes[ante])
                 {
-                    ctx.CacheAnteFirstVoucher(bit + 1);
+                    ctx.CacheAnteFirstVoucher(ante);
                 }
             }
         }
@@ -45,12 +45,12 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             _maxAnte = 0;
             foreach (var clause in _clauses)
             {
-                if (clause.AnteBitmask != 0)
+                if (clause.WantedAntes.Any(x => x))
                 {
                     // Find highest set bit
                     for (int bit = 63; bit >= 0; bit--)
                     {
-                        if ((clause.AnteBitmask & (1UL << bit)) != 0)
+                        if (clause.WantedAntes[bit + 1])
                         {
                             _maxAnte = Math.Max(_maxAnte, bit + 1);
                             break;
@@ -83,7 +83,7 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                 for (int i = 0; i < _clauses.Length; i++)
                 {
                     // Single bit test instead of Contains()!
-                    if ((_clauses[i].AnteBitmask & anteBit) != 0)
+                    if (_clauses[i].WantedAntes[ante])
                     {
                         VectorMask matches = VectorMask.NoBitsSet;
                         
@@ -123,7 +123,63 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
             
-            return resultMask;
+            if (resultMask.IsAllFalse())
+                return VectorMask.NoBitsSet;
+            
+            // Verify each passing seed individually to avoid SIMD bugs
+            var clauses = _clauses; // Copy to local for lambda capture
+            var maxAnte = _maxAnte; // Copy to local for lambda capture
+            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
+            {
+                var singleVoucherState = new MotelyRunState();
+                
+                // Re-check all clauses for this individual seed
+                foreach (var clause in clauses)
+                {
+                    bool clauseSatisfied = false;
+                    
+                    // Check all antes for this clause
+                    for (int ante = 1; ante <= maxAnte; ante++)
+                    {
+                        var voucher = singleCtx.GetAnteFirstVoucher(ante, singleVoucherState);
+                        singleVoucherState.ActivateVoucher(voucher);
+                        
+                        ulong anteBit = 1UL << (ante - 1);
+                        if (clause.WantedAntes[ante])
+                        {
+                            bool voucherMatches = false;
+                            if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 1)
+                            {
+                                // Multi-value check
+                                foreach (var voucherType in clause.VoucherTypes)
+                                {
+                                    if (voucher == voucherType)
+                                    {
+                                        voucherMatches = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Single value check
+                                voucherMatches = voucher == clause.VoucherType;
+                            }
+                            
+                            if (voucherMatches)
+                            {
+                                clauseSatisfied = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!clauseSatisfied)
+                        return false; // This seed doesn't satisfy this clause
+                }
+                
+                return true; // All clauses satisfied
+            });
         }
     }
 }
