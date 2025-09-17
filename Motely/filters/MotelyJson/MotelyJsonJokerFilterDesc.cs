@@ -69,8 +69,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
-                    // Check shops only if ShopSlotBitmask is non-zero (has shop slots to check)
-                    if (clause.ShopSlotBitmask != 0)
+                    // Check shops only if any shop slots are wanted
+                    if (clause.WantedShopSlots.Any(slot => slot))
                     {
                         // Use the self-contained shop joker stream - NO SYNCHRONIZATION ISSUES!
                         var shopJokerStream = ctx.CreateShopJokerStreamNew(ante);
@@ -164,9 +164,11 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
                 {
+                    DebugLogger.Log($"[JOKER INDIVIDUAL] Starting verification for seed, {clauses.Count} clauses");
                     // Re-check all clauses for this individual seed
                     foreach (var clause in clauses)
                     {
+                        DebugLogger.Log($"[JOKER INDIVIDUAL] Checking clause for {clause.JokerType}");
                         bool clauseSatisfied = false;
 
                         // Check all antes for this clause - use local variables!
@@ -176,14 +178,20 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                                 continue;
 
-                            // Check shops only if ShopSlotBitmask is non-zero
-                            if (clause.ShopSlotBitmask != 0)
+                            // Check shops only if any shop slots are wanted
+                            if (clause.WantedShopSlots.Any(slot => slot))
                             {
+                                DebugLogger.Log($"[JOKER INDIVIDUAL] Checking shop for {clause.JokerType} in ante {ante}");
                                 var shopStream = singleCtx.CreateShopItemStream(ante, isCached: false);
                                 if (CheckShopJokersSingleStatic(ref singleCtx, clause, ante, ref shopStream))
                                 {
+                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Found {clause.JokerType} in shop ante {ante}!");
                                     clauseSatisfied = true;
                                     break;
+                                }
+                                else
+                                {
+                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Did NOT find {clause.JokerType} in shop ante {ante}");
                                 }
                             }
 
@@ -200,9 +208,14 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                         }
 
                         if (!clauseSatisfied)
+                        {
+                            DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clause.JokerType} NOT satisfied - seed fails");
                             return false; // This seed doesn't satisfy this clause
+                        }
+                        DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clause.JokerType} satisfied!");
                     }
 
+                    DebugLogger.Log($"[JOKER INDIVIDUAL] All clauses satisfied - seed passes!");
                     return true; // All clauses satisfied
                 });
         }
@@ -214,18 +227,27 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
 
 
             // Calculate the highest slot we need to check
-            int maxSlot = clause.ShopSlotBitmask == 0 ? 0 : 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
+            // Find the highest wanted shop slot + 1 (for loop bounds)
+            int maxSlot = 0;
+            for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+            {
+                if (clause.WantedShopSlots[i])
+                {
+                    maxSlot = i + 1;
+                    break;
+                }
+            }
             
-            // Read through slots sequentially up to maxSlot, checking only those in the bitmask
+            // Read through slots sequentially up to maxSlot, checking only wanted slots
             for (int slot = 0; slot < maxSlot; slot++)
             {
-                ulong slotBit = 1UL << slot;
+                if (!clause.WantedShopSlots[slot]) continue;
                 
                 // Get the shop item - the stream handles all rate calculations internally
                 var item = ctx.GetNextShopItem(ref shopStream);
                 
                 // Check if this slot is in the bitmask
-                if ((clause.ShopSlotBitmask & slotBit) != 0)
+                // This check is now handled by the continue statement above
                 {
                     DebugLogger.Log($"[JOKER VECTORIZED] Checking shop slot {slot}: item type category={item.TypeCategory}");
                     
@@ -268,8 +290,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                 // ALWAYS get the next item to maintain stream synchronization
                 var jokerItem = shopJokerStream.GetNext(ref ctx);
                 
-                // Only check/score if this slot is in the bitmask (0 = check all slots)
-                if (clause.ShopSlotBitmask == 0 || ((clause.ShopSlotBitmask >> slot) & 1) != 0)
+                // Only check/score if this slot is wanted (or if no specific slots wanted, check all)
+                if (!clause.WantedShopSlots.Any(s => s) || clause.WantedShopSlots[slot])
                 {
                     // PURE VECTORIZED CHECK - no per-lane loops!
                     // Check if it's not JokerExcludedByStream using SIMD compare
@@ -421,7 +443,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                 }
                 else
                 {
-                    return joker == clause.JokerType;
+                    return clause.JokerType.HasValue && joker == clause.JokerType.Value;
                 }
             }
             else
@@ -448,25 +470,53 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool CheckShopJokersSingleStatic(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelySingleShopItemStream shopStream)
         {
-            int maxSlot = clause.ShopSlotBitmask == 0 ? (ante == 1 ? 4 : 6) : 
-                64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
+            DebugLogger.Log($"[SHOP CHECK] Looking for {clause.JokerType} in ante {ante}");
+            
+            // Determine how many slots to check
+            int maxSlot;
+            if (!clause.WantedShopSlots.Any(s => s))
+            {
+                // No specific slots wanted - use defaults
+                maxSlot = (ante == 1 ? 4 : 6);
+                DebugLogger.Log($"[SHOP CHECK] No specific slots wanted, checking all {maxSlot} slots");
+            }
+            else
+            {
+                // Find highest wanted slot + 1
+                maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                {
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        DebugLogger.Log($"[SHOP CHECK] Found wanted slot {i}, maxSlot = {maxSlot}");
+                        break;
+                    }
+                }
+            }
             
             for (int slot = 0; slot < maxSlot; slot++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
                 
-                // Check if this slot is in our bitmask (0 = check all)
-                if (clause.ShopSlotBitmask == 0 || ((clause.ShopSlotBitmask >> slot) & 1) != 0)
+                DebugLogger.Log($"[SHOP CHECK] Slot {slot}: {item.Type} (wanted: {(clause.WantedShopSlots.Any(s => s) ? clause.WantedShopSlots[slot] : "all")})");
+                
+                // Check if this slot is wanted (or if no specific slots wanted, check all)
+                if (!clause.WantedShopSlots.Any(s => s) || clause.WantedShopSlots[slot])
                 {
                     if (item.TypeCategory == MotelyItemTypeCategory.Joker)
                     {
-                        var joker = (MotelyJoker)item.Type;
-                        bool matches = !clause.IsWildcard ?
-                            joker == clause.JokerType :
-                            CheckWildcardMatch(joker, clause.WildcardEnum);
+                        DebugLogger.Log($"[SHOP CHECK] Found item {item.Type} in slot {slot}, looking for {clause.JokerType}");
+                        bool matches = !clause.IsWildcard && clause.JokerType.HasValue ?
+                            item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value) :
+                            CheckWildcardMatch((MotelyJoker)item.Type, clause.WildcardEnum);
+                        
+                        DebugLogger.Log($"[SHOP CHECK] Type match: {matches}, item.Type={(int)item.Type}, clause.JokerType={(int)clause.JokerType}");
+                        DebugLogger.Log($"[SHOP CHECK] Cast (MotelyJoker)item.Type={(int)(MotelyJoker)item.Type}");
                         
                         if (matches && CheckEditionAndStickersSingle(item, clause))
                         {
+                            DebugLogger.Log($"[SHOP CHECK] MATCH! Found {item.Type} in slot {slot}");
                             return true;
                         }
                     }
@@ -502,8 +552,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                         {
                             var item = packContents[i];
                             var joker = (MotelyJoker)item.Type;
-                            bool matches = !clause.IsWildcard ?
-                                joker == clause.JokerType :
+                            bool matches = !clause.IsWildcard && clause.JokerType.HasValue ?
+                                item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value) :
                                 CheckWildcardMatch(joker, clause.WildcardEnum);
 
                             if (matches && CheckEditionAndStickersSingle(item, clause))
@@ -548,10 +598,17 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             int maxSlotNeeded = 0;
             foreach (var clause in clauses)
             {
-                if (clause.ShopSlotBitmask != 0)
+                if (clause.WantedShopSlots.Any(s => s))
                 {
-                    int clauseMaxSlot = 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, clauseMaxSlot);
+                    // Find highest wanted slot + 1
+                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                    {
+                        if (clause.WantedShopSlots[i])
+                        {
+                            maxSlotNeeded = Math.Max(maxSlotNeeded, i + 1);
+                            break;
+                        }
+                    }
                 }
                 else
                 {

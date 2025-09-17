@@ -174,4 +174,57 @@ public unsafe static class MotelyVectorUtils
         if (sizeof(T) != 8) throw new InvalidOperationException();
         return (uint)Vector512.ExtractMostSignificantBits(vector);
     }
+
+    /// <summary>
+    /// Converts a VectorMask (uint bitmask) to Vector256&lt;int&gt; for ConditionalSelect.
+    /// Each bit in the mask becomes either -1 (all bits set) or 0 (no bits set) in the corresponding lane.
+    /// Replaces slow per-lane loops with single instruction.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<int> VectorMaskToConditionalSelectMask(VectorMask mask)
+    {
+        // Create a vector with lane indices [0, 1, 2, 3, 4, 5, 6, 7] as shift amounts
+        var laneIndices = Vector256.Create(0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u);
+        
+        // Create a vector with the mask bits replicated
+        var maskBits = Vector256.Create(mask.Value);
+        
+        // Shift right by lane index to get the bit for each lane in position 0
+        Vector256<uint> shiftedMask;
+        if (Avx2.IsSupported)
+        {
+            shiftedMask = Avx2.ShiftRightLogicalVariable(maskBits, laneIndices);
+        }
+        else
+        {
+            // Fallback for non-AVX2 systems - still better than scalar loop
+            shiftedMask = Vector256.Create(
+                maskBits[0] >> (int)laneIndices[0],
+                maskBits[1] >> (int)laneIndices[1],
+                maskBits[2] >> (int)laneIndices[2],
+                maskBits[3] >> (int)laneIndices[3],
+                maskBits[4] >> (int)laneIndices[4],
+                maskBits[5] >> (int)laneIndices[5],
+                maskBits[6] >> (int)laneIndices[6],
+                maskBits[7] >> (int)laneIndices[7]
+            );
+        }
+        
+        // Extract bit 0 from each lane (0 or 1)
+        var bitMask = Vector256.BitwiseAnd(shiftedMask, Vector256.Create(1u));
+        
+        // Convert 0/1 to 0/-1: negate to get 0/0xFFFFFFFF, then cast to int
+        return Vector256.Subtract(Vector256.Create(0u), bitMask).AsInt32();
+    }
+
+    /// <summary>
+    /// Converts a Vector256&lt;int&gt; comparison result to a uint bitmask.
+    /// Optimized replacement for manual lane checking loops.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint VectorizedComparisonToMask(Vector256<int> comparison)
+    {
+        // Get the comparison mask (each lane is either -1 or 0)
+        return Vector256.ExtractMostSignificantBits(comparison);
+    }
 }

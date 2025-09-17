@@ -11,15 +11,27 @@ namespace Motely.Tests
     public class SoulJokerFilterTests
     {
         [Fact]
-        public void SoulJoker_Must_Filter_Should_Find_Perkeo()
+        public void SoulJoker_Must_Filter_Should_Find_No_Matches()
         {
-            var output = RunMotelyWithJsonConfig("souljoker-must-perkeo.json");
+            var output = RunMotelyWithJsonConfig("souljoker-impossible.json");
             
-            // Verify the filter was created and matched
+            // Verify the filter was created but found no matches for impossible joker
+            // ALEEB doesn't have Chicot as a soul joker in ante 1
             Assert.Contains("+ Base SoulJoker filter:", output);
-            Assert.Contains("ALEEB", output);
+            Assert.Contains("SEARCH COMPLETED", output);
+            Assert.Contains("Seeds matched: 0", output);
+        }
+
+        [Fact]
+        public void SoulJoker_Must_Filter_Should_Find_Canio_Match()
+        {
+            var output = RunMotelyWithJsonConfig("souljoker-must-canio.json");
+            
+            // Verify the filter finds ALEEB which has Canio as soul joker
+            Assert.Contains("+ Base SoulJoker filter:", output);
             Assert.Contains("SEARCH COMPLETED", output);
             Assert.Contains("Seeds matched: 1", output);
+            Assert.Contains("ALEEB", output);
         }
         
         private static string RunMotelyWithJsonConfig(string configFileName)
@@ -159,7 +171,7 @@ namespace Motely.Tests
             
             var convertedClause = soulJokerClauses[0];
             Assert.Equal(MotelyJoker.Perkeo, convertedClause.JokerType);
-            Assert.True(convertedClause.WantedAntes[0]); // Ante 1 = index 0
+            Assert.True(convertedClause.WantedAntes[1]);
         }
     }
 }

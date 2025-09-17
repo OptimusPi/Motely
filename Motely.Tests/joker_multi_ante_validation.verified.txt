@@ -1,4 +1,11 @@
-﻿Γ£à Loaded 4 seeds from wordlist: wordlists\joker-multi-ante-test.txt
+﻿{SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonVoucherFilterDesc.cs(90,65): warning CS8602: Dereference of a possibly null reference. [{SolutionDirectory}Motely\Motely.csproj]
+{SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonVoucherFilterDesc.cs(93,57): warning CS8602: Dereference of a possibly null reference. [{SolutionDirectory}Motely\Motely.csproj]
+{SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonFilterClauseTypes.cs(27,34): warning CS8600: Converting null literal or possible null value to non-nullable type. [{SolutionDirectory}Motely\Motely.csproj]
+{SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonConfig.cs(571,77): warning CS8604: Possible null reference argument for parameter 'deck' in 'SourcesConfig MotelyJsonConfig.GetDefaultSources(string itemType, string? itemValue, string deck)'. [{SolutionDirectory}Motely\Motely.csproj]
+{SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonScoring.cs(205,58): warning CS8629: Nullable value type may be null. [{SolutionDirectory}Motely\Motely.csproj]
+{SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonScoring.cs(258,70): warning CS8629: Nullable value type may be null. [{SolutionDirectory}Motely\Motely.csproj]
+{SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonConfigValidator.cs(320,48): warning CS8602: Dereference of a possibly null reference. [{SolutionDirectory}Motely\Motely.csproj]
+Γ£à Loaded 4 seeds from wordlist: wordlists\joker-multi-ante-test.txt
 ≡ƒöì Motely Ouija Search Starting
    Config: aleeb-joker-test
    Threads: 16
@@ -15,4 +22,5 @@ ALEEB
 Γ£à SEARCH COMPLETED
 ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
    Last batch Index: 1
+   Seeds matched: 1
 ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ

@@ -64,7 +64,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
                     // Check shops if specified
-                    if (clause.ShopSlotBitmask != 0)
+                    if (clause.WantedShopSlots.Any(s => s))
                     {
                         // Use the self-contained shop tarot stream - NO SYNCHRONIZATION ISSUES!
                         var shopTarotStream = ctx.CreateShopTarotStreamNew(ante);
@@ -115,8 +115,8 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             {
                 ulong slotBit = 1UL << slot;
                 
-                // Skip if this slot isn't in the bitmask
-                if ((clause.ShopSlotBitmask & slotBit) == 0)
+                // Skip if this slot isn't in the wanted slots
+                if (!clause.WantedShopSlots[slot])
                     continue;
                 
                 // Get the shop item using the shared tarot-only stream
@@ -146,7 +146,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
 
-            if (clause.ShopSlotBitmask == 0)
+            if (!clause.WantedShopSlots.Any(s => s))
             {
                 // No slot restrictions - check all available slots
                 for (int slot = 0; slot < shopItems.Length; slot++)
@@ -176,15 +176,21 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             else
             {
                 // Calculate the highest slot we need to check
-                int maxSlot = 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
+                int maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                {
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        break;
+                    }
+                }
                 
                 // Check only the slots we precomputed
                 for (int slot = 0; slot < Math.Min(maxSlot, shopItems.Length); slot++)
                 {
-                    ulong slotBit = 1UL << slot;
-                    
-                    // Check if this slot is in the bitmask
-                    if ((clause.ShopSlotBitmask & slotBit) != 0)
+                    // Check if this slot is wanted
+                    if (clause.WantedShopSlots[slot])
                     {
                         var item = shopItems[slot];
                         DebugLogger.Log($"[TAROT VECTORIZED] Checking shop slot {slot}: item type category={item.TypeCategory}");
@@ -224,41 +230,25 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 foreach (var tarotType in clause.TarotTypes)
                 {
                     var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)tarotType);
-                    var eqResult = VectorEnum256.Equals(item.Type, targetType);
-                    uint mask = 0;
-                    for (int i = 0; i < 8; i++)
-                        if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
-                    typeMatch |= new VectorMask(mask);
+                    typeMatch |= VectorEnum256.Equals(item.Type, targetType);
                 }
                 matches &= typeMatch;
             }
             else if (clause.TarotType.HasValue)
             {
                 var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value);
-                var eqResult = VectorEnum256.Equals(item.Type, targetType);
-                uint mask = 0;
-                for (int i = 0; i < 8; i++)
-                    if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
-                matches &= new VectorMask(mask);
+                matches &= VectorEnum256.Equals(item.Type, targetType);
             }
             else
             {
                 // Match any tarot
-                var eqResult = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
-                uint mask = 0;
-                for (int i = 0; i < 8; i++)
-                    if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
-                matches &= new VectorMask(mask);
+                matches &= VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
             }
 
             // Check edition if specified
             if (clause.EditionEnum.HasValue)
             {
-                var eqResult = VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
-                uint mask = 0;
-                for (int i = 0; i < 8; i++)
-                    if (ctx.IsLaneValid(i) && eqResult[i] == -1) mask |= (1u << i);
-                matches &= new VectorMask(mask);
+                matches &= VectorEnum256.Equals(item.Edition, clause.EditionEnum.Value);
             }
 
             return matches;
@@ -359,9 +349,17 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             int maxSlotNeeded = 0;
             foreach (var clause in clauses)
             {
-                if (clause.ShopSlotBitmask != 0)
+                if (clause.WantedShopSlots.Any(s => s))
                 {
-                    int clauseMaxSlot = 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
+                    int clauseMaxSlot = 0;
+                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                    {
+                        if (clause.WantedShopSlots[i])
+                        {
+                            clauseMaxSlot = i + 1;
+                            break;
+                        }
+                    }
                     maxSlotNeeded = Math.Max(maxSlotNeeded, clauseMaxSlot);
                 }
                 else
@@ -380,8 +378,23 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             VectorMask foundInShop = VectorMask.NoBitsSet;
             
             // Calculate max slot we need to check
-            int maxSlot = clause.ShopSlotBitmask == 0 ? _maxShopSlotsNeeded : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask));
+            int maxSlot;
+            if (!clause.WantedShopSlots.Any(s => s))
+            {
+                maxSlot = _maxShopSlotsNeeded;
+            }
+            else
+            {
+                maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                {
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        break;
+                    }
+                }
+            }
             
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
@@ -391,8 +404,8 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 // Get tarot for this slot using self-contained stream - handles slot types internally!
                 var tarotItem = shopTarotStream.GetNext(ref ctx);
                 
-                // Skip if this slot isn't in the bitmask (0 = check all slots)
-                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
+                // Skip if this slot isn't wanted (no slots = check all slots)
+                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[slot])
                     continue;
                 
                 // Check if item is TarotExcludedByStream (not a tarot slot)
@@ -429,7 +442,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                         continue;
                         
                     // Check shops if specified
-                    if (clause.ShopSlotBitmask != 0)
+                    if (clause.WantedShopSlots.Any(s => s))
                     {
                         var shopTarotStream = ctx.CreateShopTarotStream(ante);
                         if (CheckShopTarotsSingle(ref ctx, ref shopTarotStream, clause))
@@ -460,15 +473,30 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         private static bool CheckShopTarotsSingle(ref MotelySingleSearchContext ctx, ref MotelySingleTarotStream stream, MotelyJsonTarotFilterClause clause)
         {
             // Calculate max slot to check
-            int maxSlot = clause.ShopSlotBitmask == 0 ? 16 : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask));
+            int maxSlot;
+            if (!clause.WantedShopSlots.Any(s => s))
+            {
+                maxSlot = 16;
+            }
+            else
+            {
+                maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                {
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        break;
+                    }
+                }
+            }
             
             for (int slot = 0; slot < maxSlot; slot++)
             {
                 ulong slotBit = 1UL << slot;
                 
-                // Skip if this slot isn't in the bitmask (0 = check all)
-                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
+                // Skip if this slot isn't wanted (no slots = check all)
+                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[slot])
                     continue;
                 
                 var tarot = ctx.GetNextTarot(ref stream);

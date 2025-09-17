@@ -1,9 +1,0 @@
-{
-    "must": [
-        {
-            "type": "SoulJoker",
-            "value": "*",
-            "antes": [1]
-        }
-    ]
-}

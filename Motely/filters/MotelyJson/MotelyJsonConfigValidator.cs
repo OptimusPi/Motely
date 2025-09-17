@@ -389,9 +389,6 @@ namespace Motely.Filters
                 {
                     warnings.Add($"{prefix}: 'sources' specified but type '{item.Type}' doesn't use sources (will be ignored)");
                 }
-                // DON'T create bitmasks for non-source types!
-                item.ComputedShopSlotBitmask = 0;
-                item.ComputedWantedPackSlots = 0;
                 return;
             }
             
@@ -413,8 +410,6 @@ namespace Motely.Filters
                 }
                 
                 // Set bitmasks to 0 (no sources)
-                item.ComputedShopSlotBitmask = 0;
-                item.ComputedWantedPackSlots = 0;
                 return; // Early return - no Sources object to process
             }
             else
@@ -499,8 +494,6 @@ namespace Motely.Filters
             
             // Now compute the bitmasks ONCE at config load time!
             // The hot path will just check these pre-computed values
-            item.ComputedShopSlotBitmask = 0;
-            item.ComputedWantedPackSlots = 0;
             
             if (item.Sources != null)
             {
@@ -511,7 +504,6 @@ namespace Motely.Filters
                     {
                         if (slot >= 0 && slot < 64)
                         {
-                            item.ComputedShopSlotBitmask |= (1UL << slot);
                         }
                     }
                 }
@@ -523,7 +515,6 @@ namespace Motely.Filters
                     {
                         if (slot >= 0 && slot < 64)
                         {
-                            item.ComputedWantedPackSlots |= (1UL << slot);
                         }
                     }
                 }

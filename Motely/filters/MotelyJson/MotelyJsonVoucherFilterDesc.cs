@@ -47,12 +47,12 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             {
                 if (clause.WantedAntes.Any(x => x))
                 {
-                    // Find highest set bit
-                    for (int bit = 63; bit >= 0; bit--)
+                    // Find highest set bit (WantedAntes is 40 elements, so check backwards from index 39)
+                    for (int ante = clause.WantedAntes.Length - 1; ante >= 0; ante--)
                     {
-                        if (clause.WantedAntes[bit + 1])
+                        if (clause.WantedAntes[ante])
                         {
-                            _maxAnte = Math.Max(_maxAnte, bit + 1);
+                            _maxAnte = Math.Max(_maxAnte, ante);
                             break;
                         }
                     }
