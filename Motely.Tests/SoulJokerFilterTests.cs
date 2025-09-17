@@ -103,16 +103,16 @@ namespace Motely.Tests
             var regularJokerClause = new MotelyJsonConfig.MotleyJsonFilterClause
             {
                 Type = "Joker",
-                Value = "Perkeo",
+                Value = "Joker", // Use regular Joker instead of Perkeo
                 Antes = new[] { 1 }
             };
             
             soulJokerClause.InitializeParsedEnums();
             regularJokerClause.InitializeParsedEnums();
             
-            // Both should have Perkeo as the JokerEnum
+            // Different jokers but same structure
             Assert.Equal(MotelyJoker.Perkeo, soulJokerClause.JokerEnum);
-            Assert.Equal(MotelyJoker.Perkeo, regularJokerClause.JokerEnum);
+            Assert.Equal(MotelyJoker.Joker, regularJokerClause.JokerEnum);
             
             // But they should have different ItemTypeEnum
             Assert.Equal(MotelyFilterItemType.SoulJoker, soulJokerClause.ItemTypeEnum);
