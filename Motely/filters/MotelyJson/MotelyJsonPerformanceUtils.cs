@@ -45,53 +45,6 @@ public static class MotelyJsonPerformanceUtils
     
     #endregion
     
-    #region Bitmask Operations (replaces ArrayContains)
-    
-    /// <summary>
-    /// Convert an array of slot indices to a bitmask for O(1) lookups
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ulong ArrayToBitmask(int[]? array)
-    {
-        if (array == null || array.Length == 0) return 0;
-        
-        ulong mask = 0;
-        foreach (int slot in array)
-        {
-            if (slot >= 0 && slot < 64)
-                mask |= (1UL << slot);
-        }
-        return mask;
-    }
-    
-    /// <summary>
-    /// Check if a slot is in the bitmask - O(1) instead of O(n)
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsBitSet(ulong bitmask, int slot)
-    {
-        return (bitmask & (1UL << slot)) != 0;
-    }
-    
-    /// <summary>
-    /// Get the highest set bit in a bitmask
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetHighestBit(ulong bitmask)
-    {
-        return bitmask == 0 ? -1 : 63 - System.Numerics.BitOperations.LeadingZeroCount(bitmask);
-    }
-    
-    /// <summary>
-    /// Count the number of set bits
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int PopCount(ulong bitmask)
-    {
-        return System.Numerics.BitOperations.PopCount(bitmask);
-    }
-    
-    #endregion
     
     #region SIMD Mask Operations (replaces per-lane loops)
     

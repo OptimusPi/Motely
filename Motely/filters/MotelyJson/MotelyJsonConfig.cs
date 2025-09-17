@@ -114,13 +114,6 @@ namespace Motely.Filters;
         public int? MaxShopSlot { get; set; }
         public int? MaxPackSlot { get; set; }
         
-        // CRITICAL: Pre-computed bitmasks set during CONFIG VALIDATION
-        // These are computed ONCE at config load, NOT in the hot path!
-        [JsonIgnore] 
-        public ulong ComputedShopSlotBitmask { get; set; }
-        
-        [JsonIgnore] 
-        public ulong ComputedWantedPackSlots { get; set; }
         
         // Pre-parsed enum (set during initialization, immutable after)
         [JsonIgnore] 
@@ -582,9 +575,6 @@ namespace Motely.Filters;
                 item.Sources.PackSlots ??= [];
                 item.Sources.ShopSlots ??= [];
                 
-                // PERFORMANCE FIX: Pre-compute bitmasks for O(1) slot lookups
-                item.ComputedShopSlotBitmask = MotelyJsonPerformanceUtils.ArrayToBitmask(item.Sources.ShopSlots);
-                item.ComputedWantedPackSlots = MotelyJsonPerformanceUtils.ArrayToBitmask(item.Sources.PackSlots);
             }
 
             // Second pass: compute per-item metadata (after overrides & masks) 
