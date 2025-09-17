@@ -62,8 +62,8 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
-                    // Check shops if specified
-                    if (clause.ShopSlotBitmask != 0)
+                    // Check shops if any shop slots wanted
+                    if (clause.WantedShopSlots.Any(s => s))
                     {
                         // Use the self-contained shop planet stream - NO SYNCHRONIZATION ISSUES!
                         var shopPlanetStream = ctx.CreateShopPlanetStream(ante);
@@ -173,8 +173,6 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
 
                         if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
                         {
-                            ulong shopSlotBit = 1UL << shopSlot;
-
                             for (int clauseIndex = 0; clauseIndex < clausesCopy.Count; clauseIndex++)
                             {
                                 var clause = clausesCopy[clauseIndex];
@@ -182,7 +180,7 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                                 if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                                     continue;
 
-                                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0)
+                                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[shopSlot])
                                     continue;
 
                                 bool typeMatches = CheckPlanetTypeMatch(shopItem, clause);
@@ -304,10 +302,16 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
             int maxSlotNeeded = 0;
             foreach (var clause in clauses)
             {
-                if (clause.ShopSlotBitmask != 0)
+                if (clause.WantedShopSlots.Any(s => s))
                 {
-                    int clauseMaxSlot = 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, clauseMaxSlot);
+                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                    {
+                        if (clause.WantedShopSlots[i])
+                        {
+                            maxSlotNeeded = Math.Max(maxSlotNeeded, i + 1);
+                            break;
+                        }
+                    }
                 }
                 else
                 {

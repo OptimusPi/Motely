@@ -156,9 +156,11 @@ namespace Motely.Executors
             settings = ApplyChainedFilters(settings);
             settings = ApplyScoring(settings);
             
-            // FIX: Don't subtract 1 from StartBatch - use as-is for correct batch boundaries
+            // Set batch boundaries
             settings = settings.WithStartBatchIndex((long)_params.StartBatch);
-            if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex((long)_params.EndBatch);
+            // FIX: EndBatchIndex is EXCLUSIVE in the API, but users expect INCLUSIVE
+            // Add 1 to make the command-line parameter inclusive
+            if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex((long)_params.EndBatch + 1);
             
             if (seeds != null && seeds.Count > 0)
                 return settings.WithListSearch(seeds).Start();
@@ -397,22 +399,20 @@ namespace Motely.Executors
         {
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
             
-            // FIX: Calculate actual seeds searched based on batch range
+            // FIXED: Calculate actual seeds searched correctly based on completed batches
             ulong totalSeedsSearched;
-            if (_params.StartBatch > 0 && _params.EndBatch > 0)
-            {
-                // Calculate based on actual batch range requested
-                ulong batchesSearched = (ulong)(_params.EndBatch - _params.StartBatch + 1);
-                totalSeedsSearched = batchesSearched * (ulong)Math.Pow(35, _params.BatchSize);
-            }
-            else
-            {
-                // Fallback to completed batch count
-                totalSeedsSearched = (ulong)search.CompletedBatchCount * (ulong)Math.Pow(35, _params.BatchSize);
-            }
+            ulong seedsPerBatch = (ulong)Math.Pow(35, _params.BatchSize);
             
-            var lastBatch = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount - 1 : 0;
+            // Use CompletedBatchCount for actual seeds searched
+            // CompletedBatchCount is the number of batches actually completed
+            totalSeedsSearched = (ulong)search.CompletedBatchCount * seedsPerBatch;
             
+            // Calculate the actual last batch processed
+            var lastBatch = _params.StartBatch > 0 
+                ? (long)_params.StartBatch + search.CompletedBatchCount - 1 
+                : search.CompletedBatchCount;
+            
+            Console.WriteLine($"   Batches completed: {search.CompletedBatchCount}");
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
             Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");

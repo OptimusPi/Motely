@@ -85,8 +85,6 @@ namespace Motely.Executors
                 {
                     _params.SpecificSeed
                 };
-                
-                Console.WriteLine($"   Using vectorized search with dummy padding seeds");
                 return seeds;
             }
 
