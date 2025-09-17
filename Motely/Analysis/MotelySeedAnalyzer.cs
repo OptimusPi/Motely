@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 
 namespace Motely.Analysis;
@@ -97,8 +98,7 @@ public static partial class MotelySeedAnalyzer
             var searchSettings = new MotelySearchSettings<MotelyAnalyzerFilterDesc.AnalyzerFilter>(filterDesc)
                 .WithDeck(cfg.Deck)
                 .WithStake(cfg.Stake)
-                // broken for some reason, but it in theory SHOULD WORK!
-                .WithListSearch([cfg.Seed])
+                .WithListSearch([cfg.Seed]) // Single seed analysis
                 .WithThreadCount(1);
 
             using var search = searchSettings.Start();

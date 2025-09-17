@@ -67,7 +67,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
                     // Check shops if specified
-                    if (clause.ShopSlotBitmask != 0)
+                    if (clause.WantedShopSlots.Any(s => s))
                     {
                         // Use the self-contained shop spectral stream - NO SYNCHRONIZATION ISSUES!
                         var shopSpectralStream = ctx.CreateShopSpectralStreamNew(ante);
@@ -117,7 +117,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             for (int shopSlot = 0; shopSlot < shopItems.Length; shopSlot++)
             {
                 ulong shopSlotBit = 1UL << shopSlot;
-                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & shopSlotBit) == 0)
+                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[shopSlot])
                     continue;
                 
                 var shopItem = shopItems[shopSlot];
@@ -162,9 +162,17 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             int maxSlotNeeded = 0;
             foreach (var clause in clauses)
             {
-                if (clause.ShopSlotBitmask != 0)
+                if (clause.WantedShopSlots.Any(s => s))
                 {
-                    int clauseMaxSlot = 64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask);
+                    int clauseMaxSlot = 0;
+                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                    {
+                        if (clause.WantedShopSlots[i])
+                        {
+                            clauseMaxSlot = i + 1;
+                            break;
+                        }
+                    }
                     maxSlotNeeded = Math.Max(maxSlotNeeded, clauseMaxSlot);
                 }
                 else
@@ -183,8 +191,23 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             VectorMask foundInShop = VectorMask.NoBitsSet;
             
             // Calculate max slot we need to check
-            int maxSlot = clause.ShopSlotBitmask == 0 ? _maxShopSlotsNeeded :
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask));
+            int maxSlot;
+            if (!clause.WantedShopSlots.Any(s => s))
+            {
+                maxSlot = _maxShopSlotsNeeded;
+            }
+            else
+            {
+                maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                {
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        break;
+                    }
+                }
+            }
             
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
@@ -192,9 +215,8 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                 // ALWAYS get spectral for this slot to maintain stream synchronization!
                 var spectralItem = shopSpectralStream.GetNext(ref ctx);
                 
-                // Only SCORE/MATCH if this slot is in the bitmask (0 = check all slots)
-                ulong slotBit = 1UL << slot;
-                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
+                // Only SCORE/MATCH if this slot is wanted (no slots = check all slots)
+                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[slot])
                     continue; // Don't score this slot, but we already consumed from stream
                 
                 // Check if item is SpectralExcludedByStream (not a spectral slot) using SIMD
@@ -343,7 +365,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                         continue;
                         
                     // Check shops if specified
-                    if (clause.ShopSlotBitmask != 0)
+                    if (clause.WantedShopSlots.Any(s => s))
                     {
                         var shopSpectralStream = ctx.CreateShopSpectralStream(ante);
                         if (CheckShopSpectralsSingle(ref ctx, ref shopSpectralStream, clause))
@@ -374,17 +396,31 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
         private static bool CheckShopSpectralsSingle(ref MotelySingleSearchContext ctx, ref MotelySingleSpectralStream stream, MotelyJsonSpectralFilterClause clause)
         {
             // Calculate max slot to check
-            int maxSlot = clause.ShopSlotBitmask == 0 ? 16 : 
-                (64 - System.Numerics.BitOperations.LeadingZeroCount(clause.ShopSlotBitmask));
+            int maxSlot;
+            if (!clause.WantedShopSlots.Any(s => s))
+            {
+                maxSlot = 16;
+            }
+            else
+            {
+                maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                {
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        break;
+                    }
+                }
+            }
             
             for (int slot = 0; slot < maxSlot; slot++)
             {
                 // ALWAYS get spectral to maintain stream synchronization!
                 var spectral = ctx.GetNextSpectral(ref stream);
                 
-                // Only SCORE/MATCH if this slot is in the bitmask (0 = check all)
-                ulong slotBit = 1UL << slot;
-                if (clause.ShopSlotBitmask != 0 && (clause.ShopSlotBitmask & slotBit) == 0)
+                // Only SCORE/MATCH if this slot is wanted (no slots = check all)
+                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[slot])
                     continue; // Don't score this slot, but we already consumed from stream
                 
                 // Skip if not a spectral slot
