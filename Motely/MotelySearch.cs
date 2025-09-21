@@ -369,14 +369,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             
             _additionalFilters = new IMotelySeedFilter[settings.AdditionalFilters.Count];
-
-            // FIX: Create a NEW context for each additional filter to avoid shared state corruption
             for (int i = 0; i < _additionalFilters.Length; i++)
             {
-                MotelyFilterCreationContext additionalFilterContext = new(in _searchParameters)
-                {
-                    IsAdditionalFilter = true
-                };
                 filterCreationContext.IsAdditionalFilter = true;
                 _additionalFilters[i] = settings.AdditionalFilters[i].CreateFilter(ref filterCreationContext);
             }
@@ -473,7 +467,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
 
-        double reportInterval = 3141;
         if (elapsedMS - _lastReportMS < reportInterval) return;
 
         _lastReportMS = elapsedMS;
@@ -672,7 +665,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             }
                         }
 
-                        Debug.Assert(Search._batchIndex >= MaxBatch);
+                        Debug.Assert(Search._batchIndex >= MaxBatch || Search._batchIndex >= Search._endBatchIndex);
                         return;
 
                     case MotelySearchStatus.Disposed:
@@ -708,6 +701,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                             if (batchWaitMS >= MAX_SEED_WAIT_MS)
                             {
                                 SearchFilterBatch(i, batch);
+                                // Reset handled inside SearchFilterBatch, but ensure it's actually reset
+                                Debug.Assert(batch->SeedCount == 0, "Batch should be reset after SearchFilterBatch");
                             }
                         }
                     }
@@ -736,10 +731,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // DEBUG: Log base filter results
             if (DebugLogger.IsEnabled)
             {
-                DebugLogger.Log($"[BASE FILTER] Returned mask: {searchResultMask.GetHashCode():X} (partially true: {searchResultMask.IsPartiallyTrue()})");
+                DebugLogger.Log($"[BASE FILTER] Returned mask: 0x{searchResultMask.Value:X} (partially true: {searchResultMask.IsPartiallyTrue()})");
                 for (int lane = 0; lane < 8; lane++)
                 {
-                    if (searchResultMask[lane])
+                    if (searchResultMask[lane] && searchContextParams.IsLaneValid(lane))
                     {
                         int length = searchContextParams.GetSeed(lane, seed);
                         string seedStr = new Span<char>(seed, length).ToString();
@@ -750,16 +745,23 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             if (searchResultMask.IsPartiallyTrue())
             {
+                DebugLogger.Log($"[BASE FILTER] Mask has partial results - routing to next stage");
                 if (Search._additionalFilters.Length == 0)
                 {
                     // If we have no additional filters, we can just report the results from the base filter
+                    DebugLogger.Log($"[BASE FILTER] No additional filters - reporting directly");
                     ReportSeeds(searchResultMask, in searchContextParams);
                 }
                 else
                 {
                     // Otherwise, we need to queue up the seeds for the first additional filter.
+                    DebugLogger.Log($"[BASE FILTER] Batching seeds for additional filter 0");
                     BatchSeeds(0, searchResultMask, in searchContextParams);
                 }
+            }
+            else
+            {
+                DebugLogger.Log($"[BASE FILTER] No partial results - nothing to process");
             }
 
             searchContextParams.SeedHashCache->Reset();
@@ -874,6 +876,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                             filterBatch->SeedLength = searchParams.SeedLength;
                         }
+                        // else: Same length - seedBatchIndex already equals current SeedCount, ready to use
                     }
 
                     ++filterBatch->SeedCount;
@@ -916,6 +919,20 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         private void SearchFilterBatch(int filterIndex, FilterSeedBatch* filterBatch)
         {
             Debug.Assert(filterBatch->SeedCount != 0);
+            
+            // DEBUG: Log what seeds are in this batch
+            char* debugSeed = stackalloc char[Motely.MaxSeedLength];
+            DebugLogger.Log($"[BATCH] Processing filter {filterIndex} with {filterBatch->SeedCount} seeds:");
+            for (int debugLane = 0; debugLane < filterBatch->SeedCount; debugLane++)
+            {
+                // Reconstruct seed for debugging
+                for (int j = 0; j < filterBatch->SeedLength; j++)
+                {
+                    debugSeed[j] = (char)((double*)&filterBatch->SeedCharacters)[j * Vector512<double>.Count + debugLane];
+                }
+                string seedStr = new Span<char>(debugSeed, filterBatch->SeedLength).ToString();
+                DebugLogger.Log($"[BATCH] Lane {debugLane}: {seedStr}");
+            }
 
             // Clear ALL characters in unused lanes to prevent garbage data
             for (int i = filterBatch->SeedCount; i < Vector512<double>.Count; i++)
@@ -935,7 +952,9 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             MotelyVectorSearchContext searchContext = new(in Search._searchParameters, in searchParams);
 
+            DebugLogger.Log($"[BATCH] About to call additional filter {filterIndex}");
             VectorMask searchResultMask = Search._additionalFilters[filterIndex].Filter(ref searchContext);
+            DebugLogger.Log($"[BATCH] Additional filter {filterIndex} returned mask: {searchResultMask.Value:X}");
 
             if (searchResultMask.IsPartiallyTrue())
             {
