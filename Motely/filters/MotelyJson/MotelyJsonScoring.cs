@@ -656,7 +656,7 @@ public static class MotelyJsonScoring
             var anteCount = clause.ItemTypeEnum switch
             {
                 MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(clause), ante, ref runState, earlyExit: false, originalClause: clause),
-                MotelyFilterItemType.SoulJoker => CheckSoulJokerForSeed(new List<MotelyJsonSoulJokerFilterClause> { MotelyJsonSoulJokerFilterClause.FromJsonClause(clause) }, ref ctx, earlyExit: false) ? 1 : 0,
+                MotelyFilterItemType.SoulJoker => CheckSoulJokerForSpecificAnte(ref ctx, MotelyJsonSoulJokerFilterClause.FromJsonClause(clause), ante, ref runState) ? 1 : 0,
                 MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
                 MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
@@ -669,6 +669,53 @@ public static class MotelyJsonScoring
             totalCount += anteCount;
         }
         return totalCount;
+    }
+    
+    /// <summary>
+    /// Count soul joker occurrences - can find multiple soul jokers in a single seed
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
+    {
+        int totalCount = 0;
+        
+        // Check each ante specified in the clause
+        foreach (var ante in clause.EffectiveAntes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 })
+        {
+            // Use the existing soul joker logic but don't early exit - count all occurrences
+            var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
+            if (CheckSoulJokerForSpecificAnte(ref ctx, soulClause, ante, ref runState))
+            {
+                totalCount++;
+            }
+        }
+        
+        return totalCount;
+    }
+    
+    /// <summary>
+    /// Check for soul joker in a specific ante only (not all antes)
+    /// </summary>
+    private static bool CheckSoulJokerForSpecificAnte(ref MotelySingleSearchContext ctx, MotelyJsonSoulJokerFilterClause clause, int targetAnte, ref MotelyRunState runState)
+    {
+        // Use the existing CheckSoulJokerForSeed logic but limit to single ante
+        var singleAnteClause = new MotelyJsonSoulJokerFilterClause
+        {
+            JokerType = clause.JokerType,
+            JokerItemType = clause.JokerItemType,
+            IsWildcard = clause.IsWildcard,
+            EditionEnum = clause.EditionEnum,
+            RequireMega = clause.RequireMega,
+            WantedAntes = new bool[40], // Only the target ante
+            WantedPackSlots = clause.WantedPackSlots
+        };
+        
+        // Set only the target ante as wanted
+        if (targetAnte > 0 && targetAnte <= 40)
+            singleAnteClause.WantedAntes[targetAnte - 1] = true;
+            
+        // Use the existing robust soul joker checking logic
+        return CheckSoulJokerForSeed(new List<MotelyJsonSoulJokerFilterClause> { singleAnteClause }, ref ctx, earlyExit: true);
     }
     
             /// <summary>

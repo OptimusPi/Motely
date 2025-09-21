@@ -194,8 +194,45 @@ namespace Motely.Executors
 
             // Boss filter now works with proper ante-loop structure
 
-            // Create base filter with first category
+            // BYPASS BROKEN CHAINING: Use composite filter for multiple categories
             List<FilterCategory> categories = [.. clausesByCategory.Keys];
+            
+            if (categories.Count > 1)
+            {
+                // Multiple categories - use composite filter to avoid broken chaining
+                Console.WriteLine($"[COMPOSITE] Creating composite filter with {categories.Count} filter types");
+                var compositeFilter = new MotelyCompositeFilterDesc(mustClauses);
+                var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
+                
+                // Apply all the same settings
+                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck))
+                    compositeSettings = compositeSettings.WithDeck(compositeDeck);
+                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake))
+                    compositeSettings = compositeSettings.WithStake(compositeStake);
+                    
+                compositeSettings = compositeSettings.WithThreadCount(_params.Threads);
+                compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
+                compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
+                if (_params.EndBatch > 0)
+                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch);
+                    
+                bool compositeNeedsScoring = (config.Should?.Count > 0);
+                if (compositeNeedsScoring)
+                {
+                    compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
+                    compositeSettings = compositeSettings.WithCsvOutput(true);
+                }
+                
+                // Start search with composite filter (no chaining needed!)
+                if (_params.RandomSeeds.HasValue)
+                    return (IMotelySearch)compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                else if (seeds != null && seeds.Count > 0)
+                    return (IMotelySearch)compositeSettings.WithListSearch(seeds).Start();
+                else
+                    return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
+            }
+            
+            // Single category - use normal single filter (no chaining issues)
             FilterCategory primaryCategory = categories[0];
             List<MotelyJsonConfig.MotleyJsonFilterClause> primaryClauses = clausesByCategory[primaryCategory];
             

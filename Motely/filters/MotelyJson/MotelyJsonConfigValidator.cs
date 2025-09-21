@@ -279,8 +279,9 @@ namespace Motely.Filters
                         break;
                         
                     case "playingcard":
+                    case "standardcard":
                         // Validate suit if specified (allow "Any" as wildcard)
-                        if (!string.IsNullOrEmpty(item.Suit) && 
+                        if (!string.IsNullOrEmpty(item.Suit) &&
                             !item.Suit.Equals("Any", StringComparison.OrdinalIgnoreCase) &&
                             !item.Suit.Equals("*", StringComparison.OrdinalIgnoreCase) &&
                             !Enum.TryParse<MotelyPlayingCardSuit>(item.Suit, true, out _))

@@ -27,6 +27,7 @@ namespace Motely
             var chainOption = app.Option<string>("--chain <FILTERS>", "Chain additional filters (comma-separated)", CommandOptionType.SingleValue);
             var scoreOption = app.Option<string>("--score <JSON>", "Add JSON scoring to native filter", CommandOptionType.SingleValue);
             var csvScoreOption = app.Option<string>("--csvScore <TYPE>", "Enable CSV scoring output (native for built-in)", CommandOptionType.SingleValue);
+            var timeOption = app.Option<int>("--time <SECONDS>", "Progress report interval in seconds (default: 1200)", CommandOptionType.SingleValue);
             
             // Search parameters
             var threadsOption = app.Option<int>("--threads <COUNT>", "Number of threads", CommandOptionType.SingleValue);
@@ -61,6 +62,7 @@ namespace Motely
             cutoffOption.DefaultValue = "0";
             deckOption.DefaultValue = "Red";
             stakeOption.DefaultValue = "White";
+            timeOption.DefaultValue = 1200;
 
             app.OnExecute(() =>
             {

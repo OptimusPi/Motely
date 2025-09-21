@@ -52,7 +52,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                 clauseMasks[i] = VectorMask.NoBitsSet;
 
             // Loop antes first, then clauses - ensures one stream per ante!
-            for (int ante = _minAnte; ante <= _maxAnte; ante++)
+            for (int ante = _minAnte; ante <= _maxAnte && ante < _clauses[0].WantedAntes.Length; ante++)
             {
                 
                 for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
@@ -61,12 +61,12 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                     ulong anteBit = 1UL << (ante - 1);
                     
                     // Skip ante if not wanted
-                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
+                    if (!clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
-                    // Check shops if specified
+                    // Check shops only if we have shop slots to check
                     if (clause.WantedShopSlots.Any(s => s))
                     {
                         // Use the self-contained shop spectral stream - NO SYNCHRONIZATION ISSUES!
@@ -74,7 +74,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                         clauseResult |= CheckShopSpectralVectorizedNew(clause, ctx, ref shopSpectralStream);
                     }
 
-                    // Check packs if specified
+                    // Check packs only if we have pack slots to check
                     if (clause.WantedPackSlots.Any(x => x))
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
@@ -357,14 +357,14 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             {
                 bool clauseSatisfied = false;
                 
-                // Check all antes in the clause's bitmask
-                for (int ante = 1; ante <= 64; ante++)
+                // Check all antes in the clause's bitmask (up to array size)
+                for (int ante = 1; ante < clause.WantedAntes.Length; ante++)
                 {
                     ulong anteBit = 1UL << (ante - 1);
                     if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
                         continue;
                         
-                    // Check shops if specified
+                    // Check shops only if we have shop slots to check
                     if (clause.WantedShopSlots.Any(s => s))
                     {
                         var shopSpectralStream = ctx.CreateShopSpectralStream(ante);
@@ -375,7 +375,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                         }
                     }
                     
-                    // Check packs if specified
+                    // Check packs only if we have pack slots to check
                     if (clause.WantedPackSlots.Any(x => x))
                     {
                         if (CheckPackSpectralsSingle(ref ctx, ante, clause))
