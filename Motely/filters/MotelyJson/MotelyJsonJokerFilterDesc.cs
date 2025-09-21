@@ -168,7 +168,8 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     // Re-check all clauses for this individual seed
                     foreach (var clause in clauses)
                     {
-                        DebugLogger.Log($"[JOKER INDIVIDUAL] Checking clause for {clause.JokerType}");
+                        string clauseJokerName = clause.JokerTypes?.Count > 0 ? string.Join("|", clause.JokerTypes) : clause.JokerType?.ToString() ?? "Unknown";
+                        DebugLogger.Log($"[JOKER INDIVIDUAL] Checking clause for {clauseJokerName}");
                         bool clauseSatisfied = false;
 
                         // Check all antes for this clause - use local variables!
@@ -181,17 +182,18 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             // Check shops only if any shop slots are wanted
                             if (clause.WantedShopSlots.Any(slot => slot))
                             {
-                                DebugLogger.Log($"[JOKER INDIVIDUAL] Checking shop for {clause.JokerType} in ante {ante}");
+                                string jokerName = clause.JokerTypes?.Count > 0 ? string.Join("|", clause.JokerTypes) : clause.JokerType?.ToString() ?? "Unknown";
+                                DebugLogger.Log($"[JOKER INDIVIDUAL] Checking shop for {jokerName} in ante {ante}");
                                 var shopStream = singleCtx.CreateShopItemStream(ante, isCached: false);
                                 if (CheckShopJokersSingleStatic(ref singleCtx, clause, ante, ref shopStream))
                                 {
-                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Found {clause.JokerType} in shop ante {ante}!");
+                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Found {jokerName} in shop ante {ante}!");
                                     clauseSatisfied = true;
                                     break;
                                 }
                                 else
                                 {
-                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Did NOT find {clause.JokerType} in shop ante {ante}");
+                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Did NOT find {jokerName} in shop ante {ante}");
                                 }
                             }
 
@@ -209,10 +211,10 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
 
                         if (!clauseSatisfied)
                         {
-                            DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clause.JokerType} NOT satisfied - seed fails");
+                            DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clauseJokerName} NOT satisfied - seed fails");
                             return false; // This seed doesn't satisfy this clause
                         }
-                        DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clause.JokerType} satisfied!");
+                        DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clauseJokerName} satisfied!");
                     }
 
                     DebugLogger.Log($"[JOKER INDIVIDUAL] All clauses satisfied - seed passes!");
@@ -507,11 +509,34 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                     if (item.TypeCategory == MotelyItemTypeCategory.Joker)
                     {
                         DebugLogger.Log($"[SHOP CHECK] Found item {item.Type} in slot {slot}, looking for {clause.JokerType}");
-                        bool matches = !clause.IsWildcard && clause.JokerType.HasValue ?
-                            item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value) :
-                            CheckWildcardMatch((MotelyJoker)item.Type, clause.WildcardEnum);
+                        bool matches = false;
+                        if (!clause.IsWildcard)
+                        {
+                            if (clause.JokerTypes?.Count > 0)
+                            {
+                                // Multi-value: check if item matches any of the joker types
+                                foreach (var jokerType in clause.JokerTypes)
+                                {
+                                    var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                                    if (item.Type == targetType)
+                                    {
+                                        matches = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else if (clause.JokerType.HasValue)
+                            {
+                                // Single value: original logic
+                                matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                            }
+                        }
+                        else
+                        {
+                            matches = CheckWildcardMatch((MotelyJoker)item.Type, clause.WildcardEnum);
+                        }
                         
-                        DebugLogger.Log($"[SHOP CHECK] Type match: {matches}, item.Type={(int)item.Type}, clause.JokerType={(int)clause.JokerType}");
+                        DebugLogger.Log($"[SHOP CHECK] Type match: {matches}, item.Type={(int)item.Type}");
                         DebugLogger.Log($"[SHOP CHECK] Cast (MotelyJoker)item.Type={(int)(MotelyJoker)item.Type}");
                         
                         if (matches && CheckEditionAndStickersSingle(item, clause))
@@ -552,9 +577,32 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                         {
                             var item = packContents[i];
                             var joker = (MotelyJoker)item.Type;
-                            bool matches = !clause.IsWildcard && clause.JokerType.HasValue ?
-                                item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value) :
-                                CheckWildcardMatch(joker, clause.WildcardEnum);
+                            bool matches = false;
+                            if (!clause.IsWildcard)
+                            {
+                                if (clause.JokerTypes?.Count > 0)
+                                {
+                                    // Multi-value: check if item matches any of the joker types
+                                    foreach (var jokerType in clause.JokerTypes)
+                                    {
+                                        var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                                        if (item.Type == targetType)
+                                        {
+                                            matches = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                else if (clause.JokerType.HasValue)
+                                {
+                                    // Single value: original logic
+                                    matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                                }
+                            }
+                            else
+                            {
+                                matches = CheckWildcardMatch(joker, clause.WildcardEnum);
+                            }
 
                             if (matches && CheckEditionAndStickersSingle(item, clause))
                             {
