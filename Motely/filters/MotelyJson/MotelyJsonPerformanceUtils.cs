@@ -29,6 +29,7 @@ public static class MotelyJsonPerformanceUtils
         ["bigblindtag"] = MotelyFilterItemType.BigBlindTag,
         ["voucher"] = MotelyFilterItemType.Voucher,
         ["playingcard"] = MotelyFilterItemType.PlayingCard,
+        ["standardcard"] = MotelyFilterItemType.PlayingCard,
         ["boss"] = MotelyFilterItemType.Boss
     };
     
