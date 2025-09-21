@@ -19,12 +19,12 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
         // Cache only the antes we actually need
         foreach (var clause in _voucherClauses)
         {
-            // Extract antes from array
-            for (int ante = 0; ante < 40; ante++)
+            // Extract antes from array (ante is 1-based, but we're iterating 0-based array)
+            for (int anteIndex = 0; anteIndex < 40; anteIndex++)
             {
-                if (clause.WantedAntes[ante])
+                if (clause.WantedAntes[anteIndex])
                 {
-                    ctx.CacheAnteFirstVoucher(ante);
+                    ctx.CacheAnteFirstVoucher(anteIndex); // Antes are 0-based
                 }
             }
         }
@@ -50,7 +50,7 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                     // Find highest set bit (WantedAntes is 40 elements, so check backwards from index 39)
                     for (int ante = clause.WantedAntes.Length - 1; ante >= 0; ante--)
                     {
-                        if (clause.WantedAntes[ante])
+                        if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
                         {
                             _maxAnte = Math.Max(_maxAnte, ante);
                             break;
@@ -75,15 +75,15 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             var voucherState = new MotelyVectorRunState();
             
             // Only process antes we need
-            for (int ante = 1; ante <= _maxAnte; ante++)
+            for (int ante = 0; ante <= _maxAnte && ante < _clauses[0].WantedAntes.Length; ante++)
             {
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
-                ulong anteBit = 1UL << (ante - 1);
+                ulong anteBit = 1UL << ante;
                 
                 for (int i = 0; i < _clauses.Length; i++)
                 {
-                    // Single bit test instead of Contains()!
-                    if (_clauses[i].WantedAntes[ante])
+                    // Check if this ante is wanted
+                    if (ante < _clauses[i].WantedAntes.Length && _clauses[i].WantedAntes[ante])
                     {
                         VectorMask matches = VectorMask.NoBitsSet;
                         
@@ -139,13 +139,13 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                     bool clauseSatisfied = false;
                     
                     // Check all antes for this clause
-                    for (int ante = 1; ante <= maxAnte; ante++)
+                    for (int ante = 0; ante <= maxAnte && ante < clause.WantedAntes.Length; ante++)
                     {
                         var voucher = singleCtx.GetAnteFirstVoucher(ante, singleVoucherState);
                         singleVoucherState.ActivateVoucher(voucher);
                         
-                        ulong anteBit = 1UL << (ante - 1);
-                        if (clause.WantedAntes[ante])
+                        ulong anteBit = 1UL << ante;
+                        if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
                         {
                             bool voucherMatches = false;
                             if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 1)
