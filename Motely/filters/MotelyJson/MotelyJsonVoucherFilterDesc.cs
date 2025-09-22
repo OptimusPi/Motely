@@ -40,25 +40,19 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
         public MotelyJsonVoucherFilter(List<MotelyJsonVoucherFilterClause> clauses)
         {
             _clauses = clauses.ToArray();
-            
-            // Pre-calculate max ante we need to check from bitmasks
             _maxAnte = 0;
             foreach (var clause in _clauses)
             {
-                if (clause.WantedAntes.Any(x => x))
+                for (int ante = clause.WantedAntes.Length - 1; ante >= 0; ante--)
                 {
-                    // Find highest set bit (WantedAntes is 40 elements, so check backwards from index 39)
-                    for (int ante = clause.WantedAntes.Length - 1; ante >= 0; ante--)
+                    if (clause.WantedAntes[ante])
                     {
-                        if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
-                        {
-                            _maxAnte = Math.Max(_maxAnte, ante);
-                            break;
-                        }
+                        _maxAnte = Math.Max(_maxAnte, ante);
+                        break;
                     }
                 }
             }
-            if (_maxAnte == 0) _maxAnte = 8; // Default if no antes specified
+            if (_maxAnte == 0) _maxAnte = 8;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -67,29 +61,21 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             if (_clauses == null || _clauses.Length == 0)
                 return VectorMask.AllBitsSet;
             
-            // Stack-allocated clause masks - no heap allocation!
-            Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Length];
-            for (int i = 0; i < clauseMasks.Length; i++)
-                clauseMasks[i] = VectorMask.NoBitsSet;
-            
+            var resultMask = VectorMask.NoBitsSet;
             var voucherState = new MotelyVectorRunState();
             
-            // Only process antes we need
-            for (int ante = 0; ante <= _maxAnte && ante < _clauses[0].WantedAntes.Length; ante++)
+            for (int ante = 1; ante <= _maxAnte; ante++)
             {
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
-                ulong anteBit = 1UL << ante;
                 
                 for (int i = 0; i < _clauses.Length; i++)
                 {
-                    // Check if this ante is wanted
                     if (ante < _clauses[i].WantedAntes.Length && _clauses[i].WantedAntes[ante])
                     {
                         VectorMask matches = VectorMask.NoBitsSet;
                         
                         if (_clauses[i].VoucherTypes != null && _clauses[i].VoucherTypes.Count > 1)
                         {
-                            // Multi-value: OR logic - match any voucher in the list
                             foreach (var voucherType in _clauses[i].VoucherTypes)
                             {
                                 matches |= VectorEnum256.Equals(vouchers, voucherType);
@@ -97,88 +83,72 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                         }
                         else
                         {
-                            // Single value
                             matches = VectorEnum256.Equals(vouchers, _clauses[i].VoucherType);
                         }
                         
-                        clauseMasks[i] |= matches;
+                        resultMask |= matches;
                     }
                 }
                 
                 voucherState.ActivateVoucher(vouchers);
-            }
-            
-            // All voucher clauses must be satisfied
-            // CRITICAL FIX: If any clause found nothing (NoBitsSet), the entire filter fails!
-            var resultMask = VectorMask.AllBitsSet;
-            for (int i = 0; i < clauseMasks.Length; i++)
-            {
-                // FIX: If this clause found nothing across all antes, fail immediately
-                if (clauseMasks[i].IsAllFalse())
-                {
-                    return VectorMask.NoBitsSet;
-                }
                 
-                resultMask &= clauseMasks[i];
-                if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
+                if (resultMask.IsAllTrue())
+                    return resultMask;
             }
             
             if (resultMask.IsAllFalse())
                 return VectorMask.NoBitsSet;
             
-            // Verify each passing seed individually to avoid SIMD bugs
             var clauses = _clauses; // Copy to local for lambda capture
             var maxAnte = _maxAnte; // Copy to local for lambda capture
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                var singleVoucherState = new MotelyRunState();
+                var runState = new MotelyRunState();
                 
-                // Re-check all clauses for this individual seed
                 foreach (var clause in clauses)
                 {
+                    // Convert WantedAntes bool array to EffectiveAntes int array for the shared function
+                    var effectiveAntes = new List<int>();
+                    for (int i = 0; i < clause.WantedAntes.Length; i++)
+                    {
+                        if (clause.WantedAntes[i])
+                            effectiveAntes.Add(i);
+                    }
+                    
                     bool clauseSatisfied = false;
                     
-                    // Check all antes for this clause
-                    for (int ante = 0; ante <= maxAnte && ante < clause.WantedAntes.Length; ante++)
+                    if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 1)
                     {
-                        var voucher = singleCtx.GetAnteFirstVoucher(ante, singleVoucherState);
-                        singleVoucherState.ActivateVoucher(voucher);
-                        
-                        ulong anteBit = 1UL << ante;
-                        if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
+                        // Check if ANY of the voucher types appear
+                        foreach (var voucherType in clause.VoucherTypes)
                         {
-                            bool voucherMatches = false;
-                            if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 1)
+                            var tempClause = new MotelyJsonConfig.MotleyJsonFilterClause
                             {
-                                // Multi-value check
-                                foreach (var voucherType in clause.VoucherTypes)
-                                {
-                                    if (voucher == voucherType)
-                                    {
-                                        voucherMatches = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // Single value check
-                                voucherMatches = voucher == clause.VoucherType;
-                            }
-                            
-                            if (voucherMatches)
+                                VoucherEnum = voucherType,
+                                EffectiveAntes = effectiveAntes.ToArray()
+                            };
+                            if (MotelyJsonScoring.CheckVoucherForClause(ref singleCtx, tempClause, ref runState))
                             {
                                 clauseSatisfied = true;
                                 break;
                             }
                         }
                     }
+                    else
+                    {
+                        var tempClause = new MotelyJsonConfig.MotleyJsonFilterClause
+                        {
+                            VoucherEnum = clause.VoucherType,
+                            EffectiveAntes = effectiveAntes.ToArray()
+                        };
+                        clauseSatisfied = MotelyJsonScoring.CheckVoucherForClause(ref singleCtx, tempClause, ref runState);
+                    }
                     
                     if (!clauseSatisfied)
-                        return false; // This seed doesn't satisfy this clause
+                        return false;
                 }
                 
-                return true; // All clauses satisfied
+                return true;
             });
         }
     }

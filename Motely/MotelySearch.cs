@@ -472,10 +472,13 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         _lastReportMS = elapsedMS;
 
-        long thisCompletedCount = _completedBatchCount - _startBatchIndex;
+        long thisCompletedCount = _completedBatchCount;
+        
+        // Calculate total batches to process (from start to max)
+        long totalBatchesToProcess = _threads[0].MaxBatch - _startBatchIndex;
 
-        double totalPortionFinished = _completedBatchCount / (double)_threads[0].MaxBatch;
-        double thisPortionFinished = thisCompletedCount / (double)_threads[0].MaxBatch;
+        double totalPortionFinished = totalBatchesToProcess > 0 ? _completedBatchCount / (double)totalBatchesToProcess : 0;
+        double thisPortionFinished = totalPortionFinished;
         double totalTimeEstimate = elapsedMS / thisPortionFinished;
         double timeLeft = totalTimeEstimate - elapsedMS;
 

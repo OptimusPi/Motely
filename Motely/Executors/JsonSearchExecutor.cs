@@ -123,12 +123,15 @@ namespace Motely.Executors
             // This removes ALL ambiguity from the hot path!
             MotelyJsonConfigValidator.ValidateConfig(config);
 
-            // Create scoring config (SHOULD clauses + voucher Must clauses for activation)
+            // Create scoring config (SHOULD clauses + ALL voucher clauses for activation)
             var voucherMustClauses = config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList() ?? [];
+            var voucherShouldClauses = config.Should?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList() ?? [];
+            var allVoucherClauses = voucherMustClauses.Concat(voucherShouldClauses).ToList();
+            
             MotelyJsonConfig scoringConfig = new()
             {
                 Name = config.Name,
-                Must = voucherMustClauses, // Include voucher Must clauses for MaxVoucherAnte calculation
+                Must = allVoucherClauses, // Include ALL voucher clauses for MaxVoucherAnte calculation
                 Should = config.Should, // ONLY the SHOULD clauses for scoring
                 MustNot = [] // Empty - filters handle this
             };

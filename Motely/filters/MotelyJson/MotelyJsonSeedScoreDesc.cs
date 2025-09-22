@@ -212,14 +212,8 @@ public struct MotelyJsonSeedScoreDesc(
                 var runState = new MotelyRunState();
 
                 // Activate all vouchers for scoring (using cached property)
-#if DEBUG
-                DebugLogger.Log($"[Score] MaxVoucherAnte: {config.MaxVoucherAnte}");
-#endif
                 if (config.MaxVoucherAnte > 0)
                 {
-#if DEBUG
-                    DebugLogger.Log($"[Score] Activating all vouchers up to ante {config.MaxVoucherAnte}");
-#endif
                     MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
                 }
                 
@@ -303,32 +297,14 @@ public struct MotelyJsonSeedScoreDesc(
                             
                         bool clauseSatisfied = false;
                         
-                        // Check if voucher is already active from ActivateAllVouchers
-                        if (clause.VoucherEnum.HasValue && runState.IsVoucherActive(clause.VoucherEnum.Value))
+                        // Use shared voucher checking logic
+                        foreach (var ante in clause.EffectiveAntes ?? [])
                         {
-                            clauseSatisfied = true;
-                        }
-                        else
-                        {
-                            // Check if it appears in any required ante
-                            foreach (var ante in clause.EffectiveAntes ?? [])
+                            if (MotelyJsonScoring.CheckVoucherSingle(ref singleCtx, clause, ante, ref runState))
                             {
-                                if (MotelyJsonScoring.CheckVoucherSingle(ref singleCtx, clause, ante, ref runState))
-                                {
-                                    clauseSatisfied = true;
-                                    break;
-                                }
+                                clauseSatisfied = true;
+                                break;
                             }
-                        }
-                        
-                        if (!clauseSatisfied)
-                        {
-                            // DebugLogger.Log($"[Score] Voucher clause not satisfied: {clause.Value}"); // DISABLED FOR PERFORMANCE
-                            return false;
-                        }
-                        else
-                        {
-                            // DebugLogger.Log($"[Score] Voucher clause satisfied: {clause.Value}"); // DISABLED FOR PERFORMANCE
                         }
                     }
                     

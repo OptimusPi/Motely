@@ -464,14 +464,8 @@ public static class MotelyJsonScoring
     {
         if (!clause.VoucherEnum.HasValue) return 0;
 
-        // Simple: just check if the voucher is active (it was activated during ActivateAllVouchers)
-        if (voucherState.IsVoucherActive(clause.VoucherEnum.Value))
-        {
-            // DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} is active, giving 1 point"); // DISABLED FOR PERFORMANCE
-            return 1;
-        }
-
-        return 0;
+        // Check if voucher appears using the shared function
+        return CheckVoucherForClause(ref ctx, clause, ref voucherState) ? 1 : 0;
     }
 
     #endregion
@@ -670,26 +664,56 @@ public static class MotelyJsonScoring
         }
     }
 
-    public static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    public static bool CheckVoucherForClause(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState voucherState)
     {
         if (!clause.VoucherEnum.HasValue) return false;
-
-        // IMPORTANT: Check if it's already active from ActivateAllVouchers
-        if (runState.IsVoucherActive(clause.VoucherEnum.Value))
-            return true;
-
-        // Check if this voucher appears at the specified ante
-        var voucher = ctx.GetAnteFirstVoucher(ante, runState);
-#if DEBUG
-        DebugLogger.Log($"[CheckVoucherSingle] Ante {ante}: Looking for {clause.VoucherEnum.Value}, found {voucher}");
-#endif
-        if (voucher == clause.VoucherEnum.Value)
+        
+        // Find the max ante we need to check
+        int maxAnte = 8;
+        if (clause.EffectiveAntes != null && clause.EffectiveAntes.Length > 0)
         {
-            runState.ActivateVoucher(voucher);
-            return true;
+            maxAnte = clause.EffectiveAntes[clause.EffectiveAntes.Length - 1];
         }
-
+        
+        // Loop from ante 1 to maxAnte, building voucher state
+        for (int ante = 1; ante <= maxAnte; ante++)
+        {
+            var voucher = ctx.GetAnteFirstVoucher(ante, voucherState);
+            
+            // Check if this is the voucher we want and it's in an ante we care about
+            if (voucher == clause.VoucherEnum.Value && 
+                (clause.EffectiveAntes == null || ArrayContains(clause.EffectiveAntes, ante)))
+            {
+                voucherState.ActivateVoucher(voucher);
+                return true;
+            }
+            
+            voucherState.ActivateVoucher(voucher);
+            
+            // Handle Hieroglyph bonus voucher
+            if (voucher == MotelyVoucher.Hieroglyph)
+            {
+                var voucherStream = ctx.CreateVoucherStream(ante);
+                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, voucherState);
+                
+                if (bonusVoucher == clause.VoucherEnum.Value && 
+                    (clause.EffectiveAntes == null || ArrayContains(clause.EffectiveAntes, ante)))
+                {
+                    voucherState.ActivateVoucher(bonusVoucher);
+                    return true;
+                }
+                
+                voucherState.ActivateVoucher(bonusVoucher);
+            }
+        }
+        
         return false;
+    }
+
+    public static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int targetAnte, ref MotelyRunState runState)
+    {
+        // This is called for a specific ante check - just delegate to the main function
+        return CheckVoucherForClause(ref ctx, clause, ref runState);
     }
 
     public static int CountOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)

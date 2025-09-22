@@ -52,7 +52,7 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
                 clauseMasks[i] = VectorMask.NoBitsSet;
 
             // Loop antes first, then clauses - ensures one stream per ante!
-            for (int ante = _minAnte; ante <= _maxAnte && ante < _clauses[0].WantedAntes.Length; ante++)
+            for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
                 
                 for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
