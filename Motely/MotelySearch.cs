@@ -334,6 +334,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
 
     private double _lastReportMS;
+    private readonly double reportInterval = 5000; // Report every 5 seconds
     
     private readonly Action<long, long, long, double>? _progressCallback;
     private readonly int _batchCharacterCount;
