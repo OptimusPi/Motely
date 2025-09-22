@@ -349,10 +349,35 @@ public static class MotelyJsonScoring
                 // Check if this slot is wanted
                 if (clause.WantedShopSlots[i] && item.TypeCategory == MotelyItemTypeCategory.Joker)
                 {
-                    // FIXED: Use proper ItemType comparison instead of broken cast
-                    var matches = !clause.IsWildcard && clause.JokerType.HasValue ?
-                        item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value) :
-                        CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                    // FIXED: Handle both single joker AND multi-value joker arrays
+                    bool matches = false;
+                    
+                    if (!clause.IsWildcard)
+                    {
+                        if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
+                        {
+                            // Multi-value: Check if item matches ANY of the specified jokers
+                            foreach (var jokerType in clause.JokerTypes)
+                            {
+                                var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                                if (item.Type == targetType)
+                                {
+                                    matches = true;
+                                    break;
+                                }
+                            }
+                        }
+                        else if (clause.JokerType.HasValue)
+                        {
+                            // Single value: original logic
+                            matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                        }
+                    }
+                    else
+                    {
+                        // Wildcard matching
+                        matches = CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                    }
                     // FIXED: Check edition using the clause directly which now has EditionEnum and StickerEnums
                     if (matches && CheckEditionAndStickers(item, clause))
                     {
@@ -385,10 +410,35 @@ public static class MotelyJsonScoring
                     for (int j = 0; j < contents.Length; j++)
                     {
                         var item = contents[j];
-                        // FIXED: Use proper ItemType comparison instead of broken cast
-                        var matches = !clause.IsWildcard && clause.JokerType.HasValue ?
-                            item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value) :
-                            CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                        // FIXED: Handle both single joker AND multi-value joker arrays (pack slots)
+                        bool matches = false;
+                        
+                        if (!clause.IsWildcard)
+                        {
+                            if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
+                            {
+                                // Multi-value: Check if item matches ANY of the specified jokers
+                                foreach (var jokerType in clause.JokerTypes)
+                                {
+                                    var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                                    if (item.Type == targetType)
+                                    {
+                                        matches = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else if (clause.JokerType.HasValue)
+                            {
+                                // Single value: original logic
+                                matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                            }
+                        }
+                        else
+                        {
+                            // Wildcard matching
+                            matches = CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                        }
                         // FIXED: Check edition using the clause directly which now has EditionEnum and StickerEnums
                         if (matches && CheckEditionAndStickers(item, clause))
                         {
