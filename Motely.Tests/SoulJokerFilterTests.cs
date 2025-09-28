@@ -50,7 +50,8 @@ namespace Motely.Tests
             };
 
             using var process = Process.Start(startInfo);
-            string output = process.StandardOutput.ReadToEnd();
+            Assert.NotNull(process);
+            string output = process!.StandardOutput.ReadToEnd();
             string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
 

@@ -28,6 +28,14 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         return new MotelyJsonTarotCardFilter(_tarotClauses, minAnte, maxAnte);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool HasAnyTrue(bool[] array)
+    {
+        for (int i = 0; i < array.Length; i++)
+            if (array[i]) return true;
+        return false;
+    }
+    
     public struct MotelyJsonTarotCardFilter(List<MotelyJsonTarotFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
     {
         private readonly List<MotelyJsonTarotFilterClause> _clauses = clauses;
@@ -48,31 +56,53 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             // Initialize run state for voucher calculations
             var runState = ctx.Deck.GetDefaultRunState();
             
-            // Loop antes first, then clauses - ensures one stream per ante!
+            // Pre-calculate which clauses need which streams
+            bool[] clauseNeedsShop = new bool[_clauses.Count];
+            bool[] clauseNeedsPack = new bool[_clauses.Count];
+            for (int i = 0; i < _clauses.Count; i++)
+            {
+                var clause = _clauses[i];
+                clauseNeedsShop[i] = HasAnyTrue(clause.WantedShopSlots);
+                clauseNeedsPack[i] = HasAnyTrue(clause.WantedPackSlots);
+            }
+            
+            // Loop antes first, create streams ONCE per ante
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
+                // Check if ANY clause needs streams for this ante
+                bool anyNeedsShop = false;
+                for (int i = 0; i < _clauses.Count; i++)
+                {
+                    if (_clauses[i].WantedAntes[ante])
+                    {
+                        if (clauseNeedsShop[i]) anyNeedsShop = true;
+                    }
+                }
                 
+                // Create streams ONCE if needed
+                MotelyVectorShopTarotStream shopStream = default;
+                if (anyNeedsShop)
+                    shopStream = ctx.CreateShopTarotSlotStream(ante);
+                
+                // Now check all clauses with these shared streams
                 for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
                 {
                     var clause = _clauses[clauseIndex];
-                    ulong anteBit = 1UL << (ante - 1);
                     
                     // Skip ante if not wanted
-                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
+                    if (!clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
                     // Check shops if specified
-                    if (clause.WantedShopSlots.Any(s => s))
+                    if (clauseNeedsShop[clauseIndex])
                     {
-                        // Use the self-contained shop tarot stream - NO SYNCHRONIZATION ISSUES!
-                        var shopTarotStream = ctx.CreateShopTarotStreamNew(ante);
-                        clauseResult |= CheckShopTarotVectorizedNew(clause, ctx, ref shopTarotStream);
+                        clauseResult |= CheckShopTarotSlotVectorized(clause, ctx, ref shopStream);
                     }
 
                     // Check packs if specified  
-                    if (clause.WantedPackSlots.Any(x => x))
+                    if (clauseNeedsPack[clauseIndex])
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
                     }
@@ -372,7 +402,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask CheckShopTarotVectorizedNew(MotelyJsonTarotFilterClause clause, MotelyVectorSearchContext ctx, 
+        private VectorMask CheckShopTarotSlotVectorized(MotelyJsonTarotFilterClause clause, MotelyVectorSearchContext ctx, 
             ref MotelyVectorShopTarotStream shopTarotStream)
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;

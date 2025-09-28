@@ -184,26 +184,56 @@ namespace Motely.Filters;
                         case MotelyFilterItemType.SoulJoker:
                             if (Enum.TryParse<MotelyJoker>(Value, true, out var soulJoker))
                                 JokerEnum = soulJoker;
+                            else if (!string.IsNullOrEmpty(Value))
+                            {
+                                var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
+                                throw new ArgumentException($"Invalid soul joker value: '{Value}'. Valid legendary jokers include: {validJokers.Substring(0, Math.Min(200, validJokers.Length))}...");
+                            }
                             break;
                         case MotelyFilterItemType.Voucher:
                             if (Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
                                 VoucherEnum = voucher;
+                            else
+                            {
+                                var validVouchers = string.Join(", ", Enum.GetNames(typeof(MotelyVoucher)));
+                                throw new ArgumentException($"Invalid voucher value: '{Value}'. Valid vouchers are: {validVouchers}");
+                            }
                             break;
                         case MotelyFilterItemType.TarotCard:
                             if (Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
                                 TarotEnum = tarot;
+                            else if (!string.IsNullOrEmpty(Value))
+                            {
+                                var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
+                                throw new ArgumentException($"Invalid tarot card value: '{Value}'. Valid tarot cards are: {validTarots}");
+                            }
                             break;
                         case MotelyFilterItemType.PlanetCard:
                             if (Enum.TryParse<MotelyPlanetCard>(Value, true, out var planet))
                                 PlanetEnum = planet;
+                            else if (!string.IsNullOrEmpty(Value))
+                            {
+                                var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
+                                throw new ArgumentException($"Invalid planet card value: '{Value}'. Valid planet cards are: {validPlanets}");
+                            }
                             break;
                         case MotelyFilterItemType.SpectralCard:
                             if (Enum.TryParse<MotelySpectralCard>(Value, true, out var spectral))
                                 SpectralEnum = spectral;
+                            else if (!string.IsNullOrEmpty(Value))
+                            {
+                                var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
+                                throw new ArgumentException($"Invalid spectral card value: '{Value}'. Valid spectral cards are: {validSpectrals}");
+                            }
                             break;
                         case MotelyFilterItemType.Boss:
                             if (Enum.TryParse<MotelyBossBlind>(Value, true, out var boss))
                                 BossEnum = boss;
+                            else if (!string.IsNullOrEmpty(Value))
+                            {
+                                var validBosses = string.Join(", ", Enum.GetNames(typeof(MotelyBossBlind)));
+                                throw new ArgumentException($"Invalid boss value: '{Value}'. Valid bosses are: {validBosses}");
+                            }
                             break;
                         case MotelyFilterItemType.SmallBlindTag:
                         case MotelyFilterItemType.BigBlindTag:
@@ -274,6 +304,11 @@ namespace Motely.Filters;
             {
                 if (Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
                     EditionEnum = edition;
+                else
+                {
+                    var validEditions = string.Join(", ", Enum.GetNames(typeof(MotelyItemEdition)));
+                    throw new ArgumentException($"Invalid edition value: '{Edition}'. Valid editions are: {validEditions}");
+                }
             }
             
             // Parse Stickers
@@ -284,6 +319,11 @@ namespace Motely.Filters;
                 {
                     if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var stickerEnum))
                         StickerEnums.Add(stickerEnum);
+                    else
+                    {
+                        var validStickers = string.Join(", ", Enum.GetNames(typeof(MotelyJokerSticker)));
+                        throw new ArgumentException($"Invalid sticker value: '{sticker}'. Valid stickers are: {validStickers}");
+                    }
                 }
             }
             
@@ -314,6 +354,11 @@ namespace Motely.Filters;
                             {
                                 throw new ArgumentException($"'{value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker.");
                             }
+                            else
+                            {
+                                var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
+                                throw new ArgumentException($"Invalid joker value: '{value}'. Valid jokers are: {validJokers}");
+                            }
                         }
                         break;
                     case MotelyFilterItemType.SoulJoker:
@@ -322,6 +367,11 @@ namespace Motely.Filters;
                         {
                             if (Enum.TryParse<MotelyJoker>(value, true, out var joker))
                                 JokerEnums.Add(joker);
+                            else
+                            {
+                                var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
+                                throw new ArgumentException($"Invalid soul joker value: '{value}'. Valid soul jokers are: {validJokers}");
+                            }
                         }
                         break;
                     case MotelyFilterItemType.Voucher:
@@ -330,6 +380,11 @@ namespace Motely.Filters;
                         {
                             if (Enum.TryParse<MotelyVoucher>(value, true, out var voucher))
                                 VoucherEnums.Add(voucher);
+                            else
+                            {
+                                var validVouchers = string.Join(", ", Enum.GetNames(typeof(MotelyVoucher)));
+                                throw new ArgumentException($"Invalid voucher value: '{value}'. Valid vouchers are: {validVouchers}");
+                            }
                         }
                         break;
                     case MotelyFilterItemType.TarotCard:
@@ -338,6 +393,11 @@ namespace Motely.Filters;
                         {
                             if (Enum.TryParse<MotelyTarotCard>(value, true, out var tarot))
                                 TarotEnums.Add(tarot);
+                            else
+                            {
+                                var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
+                                throw new ArgumentException($"Invalid tarot card value: '{value}'. Valid tarot cards are: {validTarots}");
+                            }
                         }
                         break;
                     case MotelyFilterItemType.PlanetCard:
@@ -346,6 +406,11 @@ namespace Motely.Filters;
                         {
                             if (Enum.TryParse<MotelyPlanetCard>(value, true, out var planet))
                                 PlanetEnums.Add(planet);
+                            else
+                            {
+                                var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
+                                throw new ArgumentException($"Invalid planet card value: '{value}'. Valid planet cards are: {validPlanets}");
+                            }
                         }
                         break;
                     case MotelyFilterItemType.SpectralCard:
@@ -354,6 +419,11 @@ namespace Motely.Filters;
                         {
                             if (Enum.TryParse<MotelySpectralCard>(value, true, out var spectral))
                                 SpectralEnums.Add(spectral);
+                            else
+                            {
+                                var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
+                                throw new ArgumentException($"Invalid spectral card value: '{value}'. Valid spectral cards are: {validSpectrals}");
+                            }
                         }
                         break;
                     case MotelyFilterItemType.SmallBlindTag:
@@ -363,6 +433,11 @@ namespace Motely.Filters;
                         {
                             if (Enum.TryParse<MotelyTag>(value, true, out var tag))
                                 TagEnums.Add(tag);
+                            else
+                            {
+                                var validTags = string.Join(", ", Enum.GetNames(typeof(MotelyTag)));
+                                throw new ArgumentException($"Invalid tag value: '{value}'. Valid tags are: {validTags}");
+                            }
                         }
                         // Set TagTypeEnum based on type
                         if (Type?.ToLowerInvariant() == "tag")
@@ -382,6 +457,11 @@ namespace Motely.Filters;
                         {
                             if (Enum.TryParse<MotelyBossBlind>(value, true, out var boss))
                                 BossEnums.Add(boss);
+                            else
+                            {
+                                var validBosses = string.Join(", ", Enum.GetNames(typeof(MotelyBossBlind)));
+                                throw new ArgumentException($"Invalid boss blind value: '{value}'. Valid boss blinds are: {validBosses}");
+                            }
                         }
                         break;
                 }
@@ -568,7 +648,7 @@ namespace Motely.Filters;
                 // ALWAYS ensure Sources is non-null - this is CRITICAL for consistent behavior
                 if (item.Sources == null)
                 {
-                    item.Sources = GetDefaultSources(item.Type, item.Value, Deck);
+                    item.Sources = GetDefaultSources(item.Type, item.Value, Deck ?? "Red");
                 }
                 
                 // ALWAYS ensure PackSlots and ShopSlots are non-null arrays

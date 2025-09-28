@@ -262,6 +262,8 @@ public interface IMotelySearch : IDisposable
     public void Start();
     public void AwaitCompletion();
     public void Pause();
+    public void Stop();
+    public void PrintFinalReport();
 }
 
 internal unsafe interface IInternalMotelySearch : IMotelySearch
@@ -327,7 +329,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     
     public long BatchIndex => _batchIndex;
     public long CompletedBatchCount => _completedBatchCount;
-    public long TotalSeedsSearched => 0; // Stub for now
+    public long TotalSeedsSearched => _completedBatchCount * _threads[0].SeedsPerBatch;
     public long MatchingSeeds => _matchingSeeds;
     
     
@@ -335,6 +337,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private double _lastReportMS;
     private readonly double reportInterval = 5000; // Report every 5 seconds
+    private bool _isFirstReport = true; // Track if this is the first progress report
     
     private readonly Action<long, long, long, double>? _progressCallback;
     private readonly int _batchCharacterCount;
@@ -342,6 +345,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly bool _csvOutput;
 
     private readonly Stopwatch _elapsedTime = new();
+    private bool _finalReportPrinted = false;
 
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
@@ -456,6 +460,87 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _elapsedTime.Stop();
     }
 
+    public void Stop()
+    {
+        // First pause the search
+        Pause();
+        
+        // Then print the final report
+        PrintFinalReport();
+        
+        // Mark that we're being called from Stop to prevent Dispose from printing again
+        _finalReportPrinted = true;
+        
+        // Finally dispose of resources
+        Dispose();
+    }
+
+    public void PrintFinalReport()
+    {
+        // Prevent printing the report multiple times
+        if (_finalReportPrinted)
+            return;
+        _finalReportPrinted = true;
+        
+        // Stop the timer if it's still running
+        if (_elapsedTime.IsRunning)
+            _elapsedTime.Stop();
+            
+        // Clear the bottom line if we were showing progress
+        if (!_csvOutput && !_silent)
+        {
+            FancyConsole.SetBottomLine(null);
+        }
+        
+        // Calculate final statistics
+        long totalBatches = _completedBatchCount;
+        // Calculate seeds per batch properly - for sequential search it's based on character count
+        long seedsPerBatch = _threads.Length > 0 && _threads[0].SeedsPerBatch > 0 
+            ? _threads[0].SeedsPerBatch 
+            : (long)Math.Pow(Motely.SeedDigits.Length, _batchCharacterCount);
+        long totalSeeds = totalBatches * seedsPerBatch;
+        double totalMs = _elapsedTime.Elapsed.TotalMilliseconds;
+        double seedsPerMs = totalMs > 0 ? totalSeeds / totalMs : 0;
+        
+        // Format elapsed time
+        string elapsedFormatted;
+        var elapsed = _elapsedTime.Elapsed;
+        if (elapsed.Days == 0) 
+            elapsedFormatted = $"{elapsed:hh\\:mm\\:ss\\.fff}";
+        else 
+            elapsedFormatted = $"{elapsed:d\\:hh\\:mm\\:ss\\.fff}";
+        
+        // Print final report
+        if (!_silent)
+        {
+            if (_csvOutput)
+            {
+                // CSV mode - print as comments
+                Console.WriteLine($"# === SEARCH COMPLETED ===");
+                Console.WriteLine($"# Total seeds searched: {totalSeeds:N0}");
+                Console.WriteLine($"# Matching seeds found: {_matchingSeeds:N0}");
+                Console.WriteLine($"# Total time: {elapsedFormatted}");
+                Console.WriteLine($"# Average speed: {Math.Round(seedsPerMs)} seeds/ms");
+                Console.WriteLine($"# =======================");
+            }
+            else
+            {
+                // Normal mode - print as regular output
+                Console.WriteLine();
+                Console.WriteLine("=== SEARCH COMPLETED ===");
+                Console.WriteLine($"Total seeds searched: {totalSeeds:N0}");
+                Console.WriteLine($"Matching seeds found: {_matchingSeeds:N0}");
+                Console.WriteLine($"Total time: {elapsedFormatted}");
+                Console.WriteLine($"Average speed: {Math.Round(seedsPerMs)} seeds/ms");
+                Console.WriteLine("=======================");
+            }
+        }
+        
+        // Call progress callback one final time with completion status
+        _progressCallback?.Invoke(_completedBatchCount, _threads[0].MaxBatch - _startBatchIndex, 
+                                  _matchingSeeds, totalMs);
+    }
+
     private void ReportSeed(ReadOnlySpan<char> seed)
     {
         Interlocked.Increment(ref _matchingSeeds);
@@ -483,17 +568,26 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         double timeLeft = totalTimeEstimate - elapsedMS;
 
         string timeLeftFormatted;
-        bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
-        // Clamp to max TimeSpan if too large - for very slow searches
-        if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
+        
+        // Show "Warming up..." on the first report instead of wildly inaccurate time estimates
+        if (_isFirstReport)
         {
-            timeLeftFormatted = "--:--:--";
+            timeLeftFormatted = "Warming up...";
         }
         else
         {
-            TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
-            if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-            else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+            bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
+            // Clamp to max TimeSpan if too large - for very slow searches
+            if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
+            {
+                timeLeftFormatted = "--:--:--";
+            }
+            else
+            {
+                TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
+                if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+                else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+            }
         }
 
         // Calculate seeds per millisecond
@@ -506,18 +600,38 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         if (_csvOutput)
         {
             // In CSV mode, print progress as a CSV comment (lines starting with #)
-            Console.WriteLine($"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            if (timeLeftFormatted == "Warming up...")
+            {
+                Console.WriteLine($"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% {timeLeftFormatted} ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
+            else
+            {
+                Console.WriteLine($"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
         }
         else
         {
             // Normal mode - use fancy bottom line
-            FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            if (timeLeftFormatted == "Warming up...")
+            {
+                FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% {timeLeftFormatted} ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
+            else
+            {
+                FancyConsole.SetBottomLine($"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            }
         }
+        
+        // Mark that we've shown the first report
+        _isFirstReport = false;
 
     }
 
     public void Dispose()
     {
+        // Don't print final report in Dispose - let the executor handle it
+        // This avoids duplicate reports when JsonSearchExecutor manages the lifecycle
+        
         Pause();
 
         // Atomically replace paused state with Disposed state
@@ -1234,12 +1348,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             _nonBatchCharCount = Motely.MaxSeedLength - _batchCharCount;
             MaxBatch = (long)Math.Pow(Motely.SeedDigits.Length, _nonBatchCharCount);
-
-            // Safety check for pseudoHashKeyLengthCount to prevent null pointer issues
-            if (Search._pseudoHashKeyLengthCount <= 0)
-            {
-                throw new InvalidOperationException($"Invalid pseudoHashKeyLengthCount: {Search._pseudoHashKeyLengthCount}. Search may not be properly initialized.");
-            }
 
             _hashes = (Vector512<double>*)Marshal.AllocHGlobal(sizeof(Vector512<double>) * Search._pseudoHashKeyLengthCount * (_batchCharCount + 1));
 

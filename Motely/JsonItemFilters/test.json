@@ -1,12 +1,12 @@
 {
-  "name": "test",
-  "description": "test is fucking ankh works bro",
+  "name": "Sneed",
+  "description": "could you find a seed that gives you an ancient joker and some copiers with an ankh and a dusk to retrigger",
   "author": "pifreak",
   "dateCreated": "2025-08-16T05:46:12.6691000Z",
   "must": [
     {
         "type": "joker",
-        "value": "oopsAll6s",
+        "value": "Blueprint",
         "antes": [1],
         "sources": {
             "packSlots": [0]
@@ -14,14 +14,55 @@
     },
     {
       "type": "spectralcard",
-      "value": "dejaVu",
+      "value": "ankh",
       "sources": {
-        "packSlots": [1]
+        "packSlots": [1],
+        "requireMega": true
+      },
+      "antes": [1]
+    },
+    {
+      "type": "souljoker",
+      "value": "Triboulet",
+      "sources": {
+        "packSlots": [1],
+        "requireMega": true
       },
       "antes": [1]
     }
   ],
   "should": [
+    {
+      "type": "Joker",
+      "values": ["Blueprint", "Brainstorm", "InvisibleJoker"],
+      "antes": [1],
+      "score": 1000
+    },
+    {
+      "type": "Joker",
+      "values": ["Blueprint", "Brainstorm", "InvisibleJoker"],
+      "antes": [2],
+      "score": 500
+    },
+    {
+      "type": "Joker",
+      "values": ["Blueprint", "Brainstorm", "InvisibleJoker"],
+      "antes": [3,4,5],
+      "score": 100
+    },
+    {
+      "type": "Joker",
+      "values": ["Blueprint", "Brainstorm", "InvisibleJoker"],
+      "antes": [6,7,8],
+      "score": 10
+    },
+    {
+      "type": "Joker",
+      "values": ["Blueprint", "Brainstorm", "InvisibleJoker"],
+      "edition": "Negative",
+      "antes": [1,2,3,4,5,6,7,8],
+      "score": 1
+    }
   ],
   "mustNot": [],
   "scoring": {

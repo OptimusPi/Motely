@@ -33,34 +33,66 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
         return new MotelyJsonSoulJokerFilter(_soulJokerClauses, minAnte, maxAnte);
     }
 
+    // Pre-calculated data for hot path optimization
+    private struct ClausePreCalc
+    {
+        public bool HasPackSlots;
+        
+        public static ClausePreCalc[] CreateArray(List<MotelyJsonSoulJokerFilterClause> clauses)
+        {
+            var result = new ClausePreCalc[clauses.Count];
+            for (int i = 0; i < clauses.Count; i++)
+            {
+                var clause = clauses[i];
+                result[i] = new ClausePreCalc
+                {
+                    HasPackSlots = clause.WantedPackSlots != null && HasAnyTrue(clause.WantedPackSlots)
+                };
+            }
+            return result;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasAnyTrue(bool[] array)
+        {
+            for (int i = 0; i < array.Length; i++)
+                if (array[i]) return true;
+            return false;
+        }
+    }
+    
     public struct MotelyJsonSoulJokerFilter(List<MotelyJsonSoulJokerFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
     {
         private readonly List<MotelyJsonSoulJokerFilterClause> _clauses = clauses;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
+        private readonly int _clauseCount = clauses.Count;
+        private readonly ClausePreCalc[] _preCalc = ClausePreCalc.CreateArray(clauses);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clauses != null && _clauses.Count > 0, "MotelyJsonSoulJokerFilter called with null or empty clauses");
+            Debug.Assert(_clauses != null && _clauseCount > 0, "MotelyJsonSoulJokerFilter called with null or empty clauses");
             
             // STAGE 1: Vectorized pre-filter - check if the soul joker matches what we're looking for
             // CRITICAL: Loop ANTES first, then clauses - to match individual validation order
             VectorMask matchingMask = VectorMask.AllBitsSet;
             
             // Create a mask for each clause
-            VectorMask[] clauseMasks = new VectorMask[_clauses.Count];
+            VectorMask[] clauseMasks = new VectorMask[_clauseCount];
             for (int i = 0; i < clauseMasks.Length; i++)
                 clauseMasks[i] = VectorMask.NoBitsSet;
             
             // Loop ANTES first for proper stream synchronization
-            for (int ante = 1; ante <= 8; ante++)
+            // Start from ante 0 to support ante 0 filters!
+            for (int ante = 0; ante <= 8; ante++)
             {
-                // Skip antes that no clause cares about
+                // Skip antes that no clause cares about (optimized loop)
                 bool anteNeeded = false;
-                for (int i = 0; i < _clauses.Count; i++)
+                for (int i = 0; i < _clauseCount; i++)
                 {
-                    if (ante < _clauses[i].WantedAntes.Length && _clauses[i].WantedAntes[ante])
+                    var wantedAntes = _clauses[i].WantedAntes;
+                    if (ante < wantedAntes.Length && wantedAntes[ante])
                     {
                         anteNeeded = true;
                         break;
@@ -73,7 +105,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                 var soulJoker = ctx.GetNextJoker(ref soulStream);
                 
                 // Check each clause against this same soul joker
-                for (int clauseIdx = 0; clauseIdx < _clauses.Count; clauseIdx++)
+                for (int clauseIdx = 0; clauseIdx < _clauseCount; clauseIdx++)
                 {
                     var clause = _clauses[clauseIdx];
                     
@@ -138,19 +170,9 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                 {
                     return MotelyJsonScoring.CheckSoulJokerForSeed(validClauses, ref singleCtx, true); // earlyExit=true for filter
                 }
-                catch (NullReferenceException ex)
+                catch (NullReferenceException)
                 {
-                    Console.WriteLine($"[DEBUG] NullRef in CheckSoulJokerForSeed - ValidClauses: {validClauses?.Count}, Exception: {ex.Message}");
-                    Console.WriteLine($"[DEBUG] Stack: {ex.StackTrace}");
-                    if (validClauses != null)
-                    {
-                        for (int i = 0; i < validClauses.Count; i++)
-                        {
-                            var clause = validClauses[i];
-                            Console.WriteLine($"[DEBUG] Clause {i}: WantedAntes={clause?.WantedAntes?.Length}, WantedPackSlots={clause?.WantedPackSlots?.Length}");
-                        }
-                    }
-                    throw; // Re-throw after logging
+                    throw;
                 }
             });
         }

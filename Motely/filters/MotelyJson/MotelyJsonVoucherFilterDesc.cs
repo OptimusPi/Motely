@@ -19,12 +19,12 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
         // Cache only the antes we actually need
         foreach (var clause in _voucherClauses)
         {
-            // Extract antes from array (ante is 1-based, but we're iterating 0-based array)
+            // Extract antes from array (ante is 0-based in WantedAntes, but 1-based for CacheAnteFirstVoucher)
             for (int anteIndex = 0; anteIndex < 40; anteIndex++)
             {
                 if (clause.WantedAntes[anteIndex])
                 {
-                    ctx.CacheAnteFirstVoucher(anteIndex); // Antes are 0-based
+                    ctx.CacheAnteFirstVoucher(anteIndex + 1); // Convert to 1-based ante number
                 }
             }
         }
@@ -32,14 +32,49 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
         return new MotelyJsonVoucherFilter(_voucherClauses);
     }
 
+    // Pre-calculated data for hot path optimization
+    private struct ClausePreCalc
+    {
+        public bool HasMultipleTypes;
+        public int TypeCount;
+        public int[] EffectiveAntes; // Pre-calculated from WantedAntes
+        
+        public static ClausePreCalc[] CreateArray(MotelyJsonVoucherFilterClause[] clauses)
+        {
+            var result = new ClausePreCalc[clauses.Length];
+            for (int i = 0; i < clauses.Length; i++)
+            {
+                var clause = clauses[i];
+                var effectiveAntes = new List<int>();
+                for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
+                {
+                    if (clause.WantedAntes[ante])
+                        effectiveAntes.Add(ante); // Just use the ante index directly
+                }
+                
+                result[i] = new ClausePreCalc
+                {
+                    HasMultipleTypes = clause.VoucherTypes != null && clause.VoucherTypes.Count > 1,
+                    TypeCount = clause.VoucherTypes?.Count ?? 1,
+                    EffectiveAntes = effectiveAntes.ToArray()
+                };
+            }
+            return result;
+        }
+    }
+    
     public struct MotelyJsonVoucherFilter : IMotelySeedFilter
     {
         private readonly MotelyJsonVoucherFilterClause[] _clauses;
         private readonly int _maxAnte;
+        private readonly int _clauseCount;
+        private readonly ClausePreCalc[] _preCalc;
 
         public MotelyJsonVoucherFilter(List<MotelyJsonVoucherFilterClause> clauses)
         {
             _clauses = clauses.ToArray();
+            _clauseCount = _clauses.Length;
+            _preCalc = ClausePreCalc.CreateArray(_clauses);
             _maxAnte = 0;
             foreach (var clause in _clauses)
             {
@@ -47,7 +82,7 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                 {
                     if (clause.WantedAntes[ante])
                     {
-                        _maxAnte = Math.Max(_maxAnte, ante);
+                        _maxAnte = Math.Max(_maxAnte, ante + 1); // Convert 0-based index to 1-based ante
                         break;
                     }
                 }
@@ -58,94 +93,118 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Length == 0)
+            if (_clauses == null || _clauseCount == 0)
                 return VectorMask.AllBitsSet;
             
-            var resultMask = VectorMask.NoBitsSet;
             var voucherState = new MotelyVectorRunState();
+            VectorMask result = VectorMask.AllBitsSet;
             
-            for (int ante = 1; ante <= _maxAnte; ante++)
+            // SIMPLE: For each clause, check if ANY of its wanted antes has the voucher
+            for (int i = 0; i < _clauseCount; i++)
             {
-                var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
+                var clause = _clauses[i];
+                var preCalc = _preCalc[i];
+                VectorMask clauseMatch = VectorMask.NoBitsSet;
                 
-                for (int i = 0; i < _clauses.Length; i++)
+                // Get vouchers for each ante this clause wants
+                if (preCalc.EffectiveAntes != null)
                 {
-                    if (ante < _clauses[i].WantedAntes.Length && _clauses[i].WantedAntes[ante])
+                    for (int j = 0; j < preCalc.EffectiveAntes.Length; j++)
                     {
-                        VectorMask matches = VectorMask.NoBitsSet;
+                        int ante = preCalc.EffectiveAntes[j];
+                        var vouchers = ctx.GetAnteFirstVoucher(ante, in voucherState);
                         
-                        if (_clauses[i].VoucherTypes != null && _clauses[i].VoucherTypes.Count > 1)
-                        {
-                            foreach (var voucherType in _clauses[i].VoucherTypes)
-                            {
-                                matches |= VectorEnum256.Equals(vouchers, voucherType);
-                            }
-                        }
-                        else
-                        {
-                            matches = VectorEnum256.Equals(vouchers, _clauses[i].VoucherType);
-                        }
+                        // Check if this ante has the voucher we want
+                        var mask = VectorEnum256.Equals(vouchers, clause.VoucherType);
+                        clauseMatch |= mask;
                         
-                        resultMask |= matches;
+                        // Activate vouchers for state management
+                        voucherState.ActivateVoucher(vouchers);
+                        
+                        // Special handling for Hieroglyph - check the bonus voucher too
+                        VectorMask hieroglyphMask = VectorEnum256.Equals(vouchers, MotelyVoucher.Hieroglyph);
+                        if (hieroglyphMask.IsPartiallyTrue())
+                        {
+                            // Get the bonus voucher that would appear after Hieroglyph reset
+                            var voucherStream = ctx.CreateVoucherStream(ante);
+                            var bonusVouchers = ctx.GetNextVoucher(ref voucherStream, in voucherState);
+                            
+                            // Check if the bonus voucher matches this clause
+                            var bonusMask = VectorEnum256.Equals(bonusVouchers, clause.VoucherType);
+                            clauseMatch |= bonusMask;
+                            
+                            // Activate bonus vouchers for seeds that had Hieroglyph
+                            voucherState.ActivateVoucher(bonusVouchers);
+                        }
                     }
                 }
                 
-                voucherState.ActivateVoucher(vouchers);
-                
-                if (resultMask.IsAllTrue())
-                    return resultMask;
+                // AND with result - ALL clauses must match
+                result &= clauseMatch;
+                if (result.IsAllFalse()) return VectorMask.NoBitsSet;
             }
             
-            if (resultMask.IsAllFalse())
+            if (result.IsAllFalse())
                 return VectorMask.NoBitsSet;
             
             var clauses = _clauses; // Copy to local for lambda capture
             var maxAnte = _maxAnte; // Copy to local for lambda capture
-            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
+            var preCalcArray = _preCalc; // Copy to local for lambda capture
+            return ctx.SearchIndividualSeeds(result, (ref MotelySingleSearchContext singleCtx) =>
             {
                 var runState = new MotelyRunState();
+                var vouchers = new MotelyVoucher[maxAnte + 1]; // Direct indexing: vouchers[1] = ante 1
                 
+                // Get all vouchers upfront (like boss filter does)
+                var bonusVouchers = new MotelyVoucher[maxAnte + 1]; // Store Hieroglyph bonuses
+                for (int ante = 1; ante <= maxAnte; ante++)
+                {
+                    vouchers[ante] = singleCtx.GetAnteFirstVoucher(ante, in runState);
+                    runState.ActivateVoucher(vouchers[ante]);
+                    
+                    // If it's Hieroglyph, also get and store the bonus voucher
+                    if (vouchers[ante] == MotelyVoucher.Hieroglyph)
+                    {
+                        var voucherStream = singleCtx.CreateVoucherStream(ante);
+                        bonusVouchers[ante] = singleCtx.GetNextVoucher(ref voucherStream, in runState);
+                        runState.ActivateVoucher(bonusVouchers[ante]);
+                    }
+                }
+                
+                // Check all clauses (simple like boss filter)
                 foreach (var clause in clauses)
                 {
-                    // Convert WantedAntes bool array to EffectiveAntes int array for the shared function
-                    var effectiveAntes = new List<int>();
-                    for (int i = 0; i < clause.WantedAntes.Length; i++)
-                    {
-                        if (clause.WantedAntes[i])
-                            effectiveAntes.Add(i);
-                    }
+                    bool matched = false;
                     
-                    bool clauseSatisfied = false;
-                    
-                    if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 1)
+                    // Use preCalc.EffectiveAntes if available (like boss filter)
+                    var preCalc = preCalcArray[Array.IndexOf(clauses, clause)];
+                    if (preCalc.EffectiveAntes != null)
                     {
-                        // Check if ANY of the voucher types appear
-                        foreach (var voucherType in clause.VoucherTypes)
+                        foreach (var ante in preCalc.EffectiveAntes)
                         {
-                            var tempClause = new MotelyJsonConfig.MotleyJsonFilterClause
+                            if (ante <= maxAnte)
                             {
-                                VoucherEnum = voucherType,
-                                EffectiveAntes = effectiveAntes.ToArray()
-                            };
-                            if (MotelyJsonScoring.CheckVoucherForClause(ref singleCtx, tempClause, ref runState))
-                            {
-                                clauseSatisfied = true;
-                                break;
+                                var voucher = vouchers[ante];
+                                // Check primary voucher
+                                if (clause.VoucherType == voucher || 
+                                    (clause.VoucherTypes != null && clause.VoucherTypes.Contains(voucher)))
+                                {
+                                    matched = true;
+                                    break;
+                                }
+                                // Also check Hieroglyph bonus voucher if applicable
+                                if (bonusVouchers[ante] != default && 
+                                    (clause.VoucherType == bonusVouchers[ante] || 
+                                     (clause.VoucherTypes != null && clause.VoucherTypes.Contains(bonusVouchers[ante]))))
+                                {
+                                    matched = true;
+                                    break;
+                                }
                             }
                         }
                     }
-                    else
-                    {
-                        var tempClause = new MotelyJsonConfig.MotleyJsonFilterClause
-                        {
-                            VoucherEnum = clause.VoucherType,
-                            EffectiveAntes = effectiveAntes.ToArray()
-                        };
-                        clauseSatisfied = MotelyJsonScoring.CheckVoucherForClause(ref singleCtx, tempClause, ref runState);
-                    }
                     
-                    if (!clauseSatisfied)
-                        return false;
+                    if (!matched) return false;
                 }
                 
                 return true;

@@ -1,0 +1,14 @@
+{
+    "Must": [
+        {
+            "type": "SpectralCard",
+            "value": "Ouija",
+            "antes": [3],
+            "sources": {
+                "packSlots": [0,1,2,3,4,5]
+            }
+        }
+    ],
+    "Should": [],
+    "MustNot": []
+}

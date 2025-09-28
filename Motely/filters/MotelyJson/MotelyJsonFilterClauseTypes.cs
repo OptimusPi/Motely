@@ -24,7 +24,7 @@ public abstract class MotelyJsonFilterClause
         foreach (var clause in clauses)
         {
             // Get ante array from derived class
-            bool[] wantedAntes = clause switch
+            bool[]? wantedAntes = clause switch
             {
                 MotelyJsonJokerFilterClause j => j.WantedAntes,
                 MotelyJsonSoulJokerFilterClause s => s.WantedAntes,
@@ -89,8 +89,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
                 wantedAntes[ante] = true;
         }
         
-        // Create shop slots bool array directly from source
+        // Create shop slots bool array - check both new format (Sources) and old format (direct)
         bool[] wantedShopSlots = new bool[64];
+        // First check new format
         if (jsonClause.Sources?.ShopSlots != null)
         {
             foreach (var slot in jsonClause.Sources.ShopSlots)
@@ -98,10 +99,28 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
             }
         }
+        // Fall back to old format if no sources
+        else if (jsonClause.ShopSlots != null)
+        {
+            foreach (var slot in jsonClause.ShopSlots)
+            {
+                if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
+            }
+        }
+        
         bool[] wantedPackSlots = new bool[6];
+        // First check new format
         if (jsonClause.Sources?.PackSlots != null)
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
+        // Fall back to old format if no sources
+        else if (jsonClause.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.PackSlots)
             {
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
@@ -242,8 +261,9 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
                 wantedAntes[ante] = true;
         }
         
-        // Create shop slots bool array directly from source
+        // Create shop slots bool array - check both new format (Sources) and old format (direct)
         bool[] wantedShopSlots = new bool[64];
+        // First check new format
         if (jsonClause.Sources?.ShopSlots != null)
         {
             foreach (var slot in jsonClause.Sources.ShopSlots)
@@ -251,10 +271,28 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
             }
         }
+        // Fall back to old format if no sources
+        else if (jsonClause.ShopSlots != null)
+        {
+            foreach (var slot in jsonClause.ShopSlots)
+            {
+                if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
+            }
+        }
+        
         bool[] wantedPackSlots = new bool[6];
+        // First check new format
         if (jsonClause.Sources?.PackSlots != null)
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
+        // Fall back to old format if no sources
+        else if (jsonClause.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.PackSlots)
             {
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
@@ -341,8 +379,9 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
                 wantedAntes[ante] = true;
         }
         
-        // Create shop slots bool array directly from source
+        // Create shop slots bool array - check both new format (Sources) and old format (direct)
         bool[] wantedShopSlots = new bool[64];
+        // First check new format
         if (jsonClause.Sources?.ShopSlots != null)
         {
             foreach (var slot in jsonClause.Sources.ShopSlots)
@@ -350,10 +389,28 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
             }
         }
+        // Fall back to old format if no sources
+        else if (jsonClause.ShopSlots != null)
+        {
+            foreach (var slot in jsonClause.ShopSlots)
+            {
+                if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
+            }
+        }
+        
         bool[] wantedPackSlots = new bool[6];
+        // First check new format
         if (jsonClause.Sources?.PackSlots != null)
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
+        // Fall back to old format if no sources
+        else if (jsonClause.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.PackSlots)
             {
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
@@ -404,8 +461,9 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
                 wantedAntes[ante] = true;
         }
         
-        // Create shop slots bool array directly from source
+        // Create shop slots bool array - check both new format (Sources) and old format (direct)
         bool[] wantedShopSlots = new bool[64];
+        // First check new format
         if (jsonClause.Sources?.ShopSlots != null)
         {
             foreach (var slot in jsonClause.Sources.ShopSlots)
@@ -413,10 +471,28 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
             }
         }
+        // Fall back to old format if no sources
+        else if (jsonClause.ShopSlots != null)
+        {
+            foreach (var slot in jsonClause.ShopSlots)
+            {
+                if (slot >= 0 && slot < 64) wantedShopSlots[slot] = true;
+            }
+        }
+        
         bool[] wantedPackSlots = new bool[6];
+        // First check new format
         if (jsonClause.Sources?.PackSlots != null)
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
+            {
+                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+            }
+        }
+        // Fall back to old format if no sources
+        else if (jsonClause.PackSlots != null)
+        {
+            foreach (var slot in jsonClause.PackSlots)
             {
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
