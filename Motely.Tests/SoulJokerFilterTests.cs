@@ -34,14 +34,14 @@ namespace Motely.Tests
             Assert.Contains("ALEEB", output);
         }
         
-        private static string RunMotelyWithJsonConfig(string configFileName)
+        private static string RunMotelyWithJsonConfig(string configFileName, string seed = "ALEEB")
         {
             var motelyProjectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Motely"));
             
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run -c Release -- --seed ALEEB --json {Path.GetFileNameWithoutExtension(configFileName)}",
+                Arguments = $"run -c Release -- --seed {seed} --json {Path.GetFileNameWithoutExtension(configFileName)}",
                 WorkingDirectory = motelyProjectDir,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -81,24 +81,47 @@ namespace Motely.Tests
             Assert.True(clause.JokerEnum.HasValue, "JokerEnum should be set for SoulJoker");
             Assert.Equal(MotelyJoker.Perkeo, clause.JokerEnum.Value);
         }
-        
+
         [Fact]
         public void SoulJoker_Filter_Should_Match_Specific_Joker()
         {
             // Test that the filter correctly matches the specified joker type
             var clause = new MotelyJsonSoulJokerFilterClause(
                 MotelyJoker.Perkeo,
-                new List<int> { 0 }, // Ante 1 only (0-based)
-                new List<int> { 0, 1, 2, 3, 4, 5 } // Check all pack slots
+                new List<int> { 1 }, // Ante 1 only
+                new List<int> { 0, 1, 2, 3 } // Check all pack slots
             );
-            
+
             // Create a filter with this clause
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(new List<MotelyJsonSoulJokerFilterClause> { clause });
-            
+
             // Verify the clause was properly created with the correct joker type
             Assert.NotNull(clause.JokerType);
             Assert.Equal(MotelyJoker.Perkeo, clause.JokerType.Value);
-            Assert.True(clause.WantedAntes[0]); // Ante 1 should be true
+            Assert.False(clause.WantedAntes[0]); // Ante 0 should be false
+            Assert.True(clause.WantedAntes[1]); // Ante 1 should be true - the one we set above
+            Assert.False(clause.WantedAntes[2]); // Ante 2 should be false
+        }
+
+        [Fact]
+        public void SoulJoker_Filter_Finds_Ante_Zero()
+        {
+            // Test that the filter correctly matches the specified joker type
+            var clause = new MotelyJsonSoulJokerFilterClause(
+                MotelyJoker.Perkeo,
+                new List<int> { 0 }, // Ante 0 can be obtained if player finds the Hieroglyph in Ante 1.
+                new List<int> { 0, 1, 2, 3 } // Check all pack slots
+            );
+
+            // Create a filter with this clause
+            var filterDesc = new MotelyJsonSoulJokerFilterDesc(new List<MotelyJsonSoulJokerFilterClause> { clause });
+
+            // Verify the clause was properly created with the correct joker type
+            Assert.NotNull(clause.JokerType);
+            Assert.Equal(MotelyJoker.Perkeo, clause.JokerType.Value);
+            Assert.True(clause.WantedAntes[0]); // Ante 0 should be true - the one we set above
+            Assert.False(clause.WantedAntes[1]); // Ante 1 should be false
+            Assert.False(clause.WantedAntes[2]); // Ante 2 should be false
         }
         
         [Fact]
