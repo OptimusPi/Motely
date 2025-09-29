@@ -463,59 +463,15 @@ public static class MotelyJsonScoring
     public static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState voucherState)
     {
         if (!clause.VoucherEnum.HasValue) return 0;
-        if (clause.EffectiveAntes == null) return 0;
 
-        // IMPORTANT: We need to build up voucher state from ante 1 to the max ante
-        // to ensure prerequisites are met (e.g., Observatory requires Telescope)
-        var localState = new MotelyRunState();
-        int count = 0;
-        
-        // Find the max ante we need to check
-        int maxAnte = 0;
-        foreach (var ante in clause.EffectiveAntes)
+        // Simple: just check if the voucher is active (it was activated during ActivateAllVouchers)
+        if (voucherState.IsVoucherActive(clause.VoucherEnum.Value))
         {
-            if (ante > maxAnte) maxAnte = ante;
+            // DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} is active, giving 1 point"); // DISABLED FOR PERFORMANCE
+            return 1;
         }
-        
-        // Build up state from ante 1 to maxAnte
-        for (int ante = 1; ante <= maxAnte; ante++)
-        {
-            var voucher = ctx.GetAnteFirstVoucher(ante, in localState);
-            
-            // Check if this ante is one we're looking for
-            bool isTargetAnte = false;
-            foreach (var targetAnte in clause.EffectiveAntes)
-            {
-                if (targetAnte == ante)
-                {
-                    isTargetAnte = true;
-                    break;
-                }
-            }
-            
-            if (isTargetAnte && voucher == clause.VoucherEnum.Value)
-            {
-                count++;
-            }
-            
-            // Always activate the voucher to maintain state
-            localState.ActivateVoucher(voucher);
-            
-            // Handle Hieroglyph bonus voucher
-            if (voucher == MotelyVoucher.Hieroglyph)
-            {
-                var voucherStream = ctx.CreateVoucherStream(ante);
-                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, in localState);
-                
-                if (isTargetAnte && bonusVoucher == clause.VoucherEnum.Value)
-                {
-                    count++;
-                }
-                localState.ActivateVoucher(bonusVoucher);
-            }
-        }
-        
-        return count;
+
+        return 0;
     }
 
     #endregion
@@ -697,9 +653,9 @@ public static class MotelyJsonScoring
         try
         {
             // Use cached bosses if available (for scoring)
-            if (runState.CachedBosses != null && ante > 0 && ante <= runState.CachedBosses.Length)
+            if (runState.CachedBosses != null && ante >= 0 && ante < runState.CachedBosses.Length)
             {
-                return runState.CachedBosses[ante - 1] == clause.BossEnum.Value;
+                return runState.CachedBosses[ante] == clause.BossEnum.Value;
             }
 
             // Fallback to generating bosses (for filtering)
@@ -714,67 +670,26 @@ public static class MotelyJsonScoring
         }
     }
 
-    public static bool CheckVoucherForClause(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState voucherState)
+    public static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
     {
         if (!clause.VoucherEnum.HasValue) return false;
-        
-        // Find the max ante we need to check
-        int maxAnte = 8; // Default to ante 8
-        bool checkAllAntes = false;
-        
-        if (clause.EffectiveAntes != null && clause.EffectiveAntes.Length > 0)
-        {
-            // Find the maximum ante value in the array
-            foreach (var ante in clause.EffectiveAntes)
-            {
-                if (ante > maxAnte) maxAnte = ante;
-            }
-        }
-        else
-        {
-            // No specific antes specified - check all antes up to 8
-            checkAllAntes = true;
-        }
-        
-        // Loop from ante 1 to maxAnte, building voucher state
-        for (int ante = 1; ante <= maxAnte; ante++)
-        {
-            var voucher = ctx.GetAnteFirstVoucher(ante, in voucherState);
-            
-            // Check if this is the voucher we want and it's in an ante we care about
-            if (voucher == clause.VoucherEnum.Value && 
-                (checkAllAntes || (clause.EffectiveAntes != null && ArrayContains(clause.EffectiveAntes, ante))))
-            {
-                voucherState.ActivateVoucher(voucher);
-                return true;
-            }
-            
-            voucherState.ActivateVoucher(voucher);
-            
-            // Handle Hieroglyph bonus voucher
-            if (voucher == MotelyVoucher.Hieroglyph)
-            {
-                var voucherStream = ctx.CreateVoucherStream(ante);
-                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, voucherState);
-                
-                if (bonusVoucher == clause.VoucherEnum.Value && 
-                    (checkAllAntes || (clause.EffectiveAntes != null && ArrayContains(clause.EffectiveAntes, ante))))
-                {
-                    voucherState.ActivateVoucher(bonusVoucher);
-                    return true;
-                }
-                
-                voucherState.ActivateVoucher(bonusVoucher);
-            }
-        }
-        
-        return false;
-    }
 
-    public static bool CheckVoucherSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int targetAnte, ref MotelyRunState runState)
-    {
-        // This is called for a specific ante check - just delegate to the main function
-        return CheckVoucherForClause(ref ctx, clause, ref runState);
+        // IMPORTANT: Check if it's already active from ActivateAllVouchers
+        if (runState.IsVoucherActive(clause.VoucherEnum.Value))
+            return true;
+
+        // Check if this voucher appears at the specified ante
+        var voucher = ctx.GetAnteFirstVoucher(ante, runState);
+#if DEBUG
+        DebugLogger.Log($"[CheckVoucherSingle] Ante {ante}: Looking for {clause.VoucherEnum.Value}, found {voucher}");
+#endif
+        if (voucher == clause.VoucherEnum.Value)
+        {
+            runState.ActivateVoucher(voucher);
+            return true;
+        }
+
+        return false;
     }
 
     public static int CountOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
@@ -845,8 +760,8 @@ public static class MotelyJsonScoring
             WantedPackSlots = clause.WantedPackSlots
         };
         
-        // Set only the target ante as wanted (including ante 0!)
-        if (targetAnte >= 0 && targetAnte <= 40)
+        // Set only the target ante as wanted
+        if (targetAnte >= 0 && targetAnte < 40)
             singleAnteClause.WantedAntes[targetAnte] = true;
             
         // Use the existing robust soul joker checking logic
@@ -869,10 +784,9 @@ public static class MotelyJsonScoring
                 bool[] clauseSatisfied = new bool[clauses.Count];
             
             // Loop ANTES first - create streams ONCE per ante, check ALL clauses
-            // Start from ante 0 to support ante 0 filters!
-            for (int ante = 0; ante <= 8; ante++)
+            for (int ante = 1; ante <= 8; ante++)
             {
-                // Skip antes that no clause cares about - use proper array indexing
+                // Skip antes that no clause cares about - use proper array indexing (ante is 1-based)
                 bool anteNeeded = false;
                 foreach (var clause in clauses)
                 {
@@ -888,24 +802,17 @@ public static class MotelyJsonScoring
                 var soulStream = searchContext.CreateSoulJokerStream(ante);
                 var soulJoker = searchContext.GetNextJoker(ref soulStream);
                 
-                // Set pack slots based on ante
-                // Ante 0 and 1 have 4 packs, ante 2+ have 6 packs
-                int maxPackSlot = (ante == 0 || ante == 1) ? 4 : 6;
+                // FIXED: Create pack streams ONCE per ante, OUTSIDE clause loop (like PerkeoObservatory)
+                // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+                var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante != 1, false);
+                var tarotStream = searchContext.CreateArcanaPackTarotStream(ante, false);
+                var spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, false);
                 
-                // Only create pack streams if we have packs to check
-                if (maxPackSlot > 0)
-                {
-                    // FIXED: Create pack streams ONCE per ante, OUTSIDE clause loop (like PerkeoObservatory)
-                    // IMPORTANT: Ante 0 and ante 2+ need generatedFirstPack: true to skip the phantom first Buffoon pack!
-                    // Only ante 1 (first real ante) doesn't skip the first pack
-                    var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante != 1, false);
-                    var tarotStream = searchContext.CreateArcanaPackTarotStream(ante, false);
-                    var spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, false);
-                    
-                    bool tarotStreamInit = false, spectralStreamInit = false;
+                int maxPackSlot = ante == 1 ? 4 : 6;
+                bool tarotStreamInit = false, spectralStreamInit = false;
                 
-                    // Walk through each pack slot ONCE, checking ALL clauses against each pack
-                    for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
+                // Walk through each pack slot ONCE, checking ALL clauses against each pack
+                for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
                 {
                     var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
                     
@@ -973,15 +880,18 @@ public static class MotelyJsonScoring
                         }
                     }
                 }
-                } // Close the if (maxPackSlot > 0) block
             }
             
             // For filter: return true only if ALL clauses satisfied
             // For scoring: return count of satisfied clauses (but we return bool for now)
             return matchedClauses == clauses.Count;
             }
-            catch (NullReferenceException)
+            catch (NullReferenceException ex)
             {
+                Console.WriteLine($"[DEBUG] NullRef INSIDE CheckSoulJokerForSeed: {ex.Message}");
+                Console.WriteLine($"[DEBUG] Full Stack: {ex.StackTrace}");
+                Console.WriteLine($"[DEBUG] Clauses count: {clauses?.Count}");
+                Console.WriteLine($"[DEBUG] SearchContext is ref struct - can't check null easily");
                 throw;
             }
         }

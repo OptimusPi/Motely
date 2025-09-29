@@ -318,14 +318,13 @@ namespace Motely.Filters
                 // Validate edition if specified
                 if (!string.IsNullOrEmpty(item.Edition))
                 {
-                    bool typeSupportsEdition = item.Type != null && (
-                                               item.Type.Equals("joker", StringComparison.OrdinalIgnoreCase) ||
+                    bool typeSupportsEdition = item.Type.Equals("joker", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("playingcard", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("standardcard", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("planetcard", StringComparison.OrdinalIgnoreCase));
+                                               item.Type.Equals("planetcard", StringComparison.OrdinalIgnoreCase);
                     if (!typeSupportsEdition)
                     {
                         errors.Add($"{prefix}: Edition specified ('{item.Edition}') but type '{item.Type}' does not support editions (remove 'edition').");

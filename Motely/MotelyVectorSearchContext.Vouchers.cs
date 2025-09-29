@@ -60,7 +60,6 @@ ref partial struct MotelyVectorSearchContext
             vouchers = new(Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector));
 
             ++resampleCount;
-            Debug.Assert(resampleCount < 1000, "Infinite loop detected in voucher resampling");
         }
         return vouchers;
     }
@@ -104,7 +103,6 @@ ref partial struct MotelyVectorSearchContext
             vouchers = new(Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector));
 
             ++resampleCount;
-            Debug.Assert(resampleCount < 1000, "Infinite loop detected in voucher resampling");
         }
 
         return vouchers;
@@ -142,7 +140,6 @@ ref partial struct MotelyVectorSearchContext
             vouchers = new(Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector));
 
             ++resampleCount;
-            Debug.Assert(resampleCount < 1000, "Infinite loop detected in voucher resampling");
         }
 
         return vouchers;

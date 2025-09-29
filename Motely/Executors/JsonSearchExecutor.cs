@@ -39,59 +39,10 @@ namespace Motely.Executors
 
             Console.WriteLine();
 
-            IMotelySearch? search = null;
-            MotelyJsonConfig? config = null;
-            
-            // Set up Ctrl+C handler to ensure summary prints
-            bool ctrlCPressed = false;
-            Console.CancelKeyPress += (sender, e) =>
-            {
-                if (!ctrlCPressed)
-                {
-                    ctrlCPressed = true;
-                    e.Cancel = true; // Prevent immediate termination on first press
-                    
-                    if (search != null)
-                    {
-                        Console.WriteLine("\n🛑 Stopping search...");
-                        
-                        // Immediately pause the search
-                        try
-                        {
-                            search.Pause();
-                            
-                            // Print the final summary
-                            PrintResultsSummary(search);
-                            Console.Out.Flush();
-                            
-                            // Clean up
-                            search.Dispose();
-                        }
-                        catch (Exception ex)
-                        {
-                            // If something fails, at least try to print what went wrong
-                            Console.WriteLine($"\n❌ Error during shutdown: {ex.Message}");
-                            try { search.Dispose(); } catch { }
-                        }
-                        finally
-                        {
-                            // ALWAYS exit the application, no matter what happens
-                            Environment.Exit(0);
-                        }
-                    }
-                }
-                else
-                {
-                    // Second Ctrl+C - force immediate termination
-                    e.Cancel = false;
-                    Console.WriteLine("\n⛔ Force quitting...");
-                }
-            };
-
             try
             {
-                config = LoadConfig();
-                search = CreateSearch(config, seeds);
+                MotelyJsonConfig config = LoadConfig();
+                IMotelySearch search = CreateSearch(config, seeds);
                 if (search == null)
                 {
                     return 1;
@@ -103,28 +54,14 @@ namespace Motely.Executors
                     PrintResultsHeader(config);
                 }
 
-                // Poll for completion instead of blocking
-                while (search.Status == MotelySearchStatus.Running && !ctrlCPressed)
-                {
-                    Thread.Sleep(100);
-                }
-                
-                // If we were interrupted, wait a bit for threads to finish current batch
-                if (ctrlCPressed && search.Status == MotelySearchStatus.Paused)
-                {
-                    Thread.Sleep(200); // Give threads time to finish current batch
-                }
+                search.AwaitCompletion();
 
                 Console.Out.Flush();
                 Thread.Sleep(100);
                 Console.Out.Flush();
 
-                // Print summary once before returning
-                if (search != null)
-                {
-                    PrintResultsSummary(search);
-                    Console.Out.Flush();
-                }
+                PrintResultsSummary(search);
+                Console.Out.Flush();
                 return 0;
             }
             catch (Exception ex)
@@ -135,14 +72,6 @@ namespace Motely.Executors
                     Console.WriteLine($"[DEBUG] {ex}");
                 }
                 return 1;
-            }
-            finally
-            {
-                // Just dispose the search, don't print summary again
-                if (search != null)
-                {
-                    search.Dispose();
-                }
             }
         }
 
@@ -194,16 +123,13 @@ namespace Motely.Executors
             // This removes ALL ambiguity from the hot path!
             MotelyJsonConfigValidator.ValidateConfig(config);
 
-            // Create scoring config (SHOULD clauses + ALL voucher clauses for activation)
+            // Create scoring config (SHOULD clauses + voucher Must clauses for activation)
             var voucherMustClauses = config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList() ?? [];
-            var voucherShouldClauses = config.Should?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList() ?? [];
-            var allVoucherClauses = voucherMustClauses.Concat(voucherShouldClauses).ToList();
-            
             MotelyJsonConfig scoringConfig = new()
             {
                 Name = config.Name,
-                Must = allVoucherClauses, // Include ALL voucher clauses for MaxVoucherAnte calculation
-                Should = config.Should ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>(), // ONLY the SHOULD clauses for scoring
+                Must = voucherMustClauses, // Include voucher Must clauses for MaxVoucherAnte calculation
+                Should = config.Should, // ONLY the SHOULD clauses for scoring
                 MustNot = [] // Empty - filters handle this
             };
             
@@ -239,8 +165,7 @@ namespace Motely.Executors
                 Console.WriteLine($"{result.Seed},{result.Score},{scores}");
             };
             
-            // When using as a score provider with filters, must be in ScoreOnlyMode
-            MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback, ScoreOnlyMode: true);
+            MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback);
 
             if (_params.AutoCutoff)
             {
@@ -426,9 +351,7 @@ namespace Motely.Executors
             {
                 foreach (MotelyJsonConfig.MotleyJsonFilterClause should in config.Should)
                 {
-                    string name = !string.IsNullOrEmpty(should.Label) ? should.Label
-                                : !string.IsNullOrEmpty(should.Value) ? should.Value 
-                                : should.Type;
+                    string name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
                     header += $",{name}";
                 }
             }

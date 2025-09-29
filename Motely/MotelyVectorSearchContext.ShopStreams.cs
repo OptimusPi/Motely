@@ -148,7 +148,7 @@ public ref struct MotelyVectorShopSpectralStream
 ref partial struct MotelyVectorSearchContext
 {
     // Create the new self-contained shop streams
-    public MotelyVectorShopJokerStream CreateShopJokerSlotStream(int ante, 
+    public MotelyVectorShopJokerStream CreateShopJokerStreamNew(int ante, 
         MotelyJokerStreamFlags jokerFlags = MotelyJokerStreamFlags.Default, bool isCached = false)
     {
         var runState = Deck.GetDefaultRunState();
@@ -179,7 +179,7 @@ ref partial struct MotelyVectorSearchContext
         return stream;
     }
     
-    public MotelyVectorShopTarotStream CreateShopTarotSlotStream(int ante, bool isCached = false)
+    public MotelyVectorShopTarotStream CreateShopTarotStreamNew(int ante, bool isCached = false)
     {
         var runState = Deck.GetDefaultRunState();
         var stream = new MotelyVectorShopTarotStream();
@@ -209,7 +209,7 @@ ref partial struct MotelyVectorSearchContext
         return stream;
     }
     
-    public MotelyVectorShopPlanetStream CreateShopPlanetSlotStream(int ante, bool isCached = false)
+    public MotelyVectorShopPlanetStream CreateShopPlanetStreamNew(int ante, bool isCached = false)
     {
         var runState = Deck.GetDefaultRunState();
         var stream = new MotelyVectorShopPlanetStream();
@@ -239,7 +239,7 @@ ref partial struct MotelyVectorSearchContext
         return stream;
     }
     
-    public MotelyVectorShopSpectralStream CreateShopSpectralSlotStream(int ante, bool isCached = false)
+    public MotelyVectorShopSpectralStream CreateShopSpectralStreamNew(int ante, bool isCached = false)
     {
         var runState = Deck.GetDefaultRunState();
         var stream = new MotelyVectorShopSpectralStream();

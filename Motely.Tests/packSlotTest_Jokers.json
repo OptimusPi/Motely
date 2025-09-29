@@ -1,0 +1,32 @@
+{
+    "Must": [
+        {
+            "type": "Joker",
+            "value": "RedCard",
+            "antes": [1],
+            "sources": {
+                "packSlots": [0]
+            }
+        }
+    ],
+    "Should": [
+        {
+            "type": "Joker",
+            "value": "Riffraff",
+            "antes": [1],
+            "sources": {
+                "packSlots": [0]
+            }
+        }
+    ],
+    "MustNot": [
+        {
+            "type": "Joker",
+            "value": "Blueprint",
+            "antes": [1],
+            "sources": {
+                "packSlots": [0,1,2,3]
+            }
+        }
+    ]
+}

@@ -139,8 +139,7 @@ public struct MotelyJsonSeedScoreDesc(
             var clausesByAnte = new List<MotelyJsonConfig.MotleyJsonFilterClause>[config.MaxVoucherAnte + 1];
             
             // Initialize masks for voucher clauses and build ante mapping
-            // Skip filtering when in ScoreOnlyMode - just score what was passed in
-            if (!scoreOnlyMode && config.Must?.Count > 0)
+            if (config.Must?.Count > 0)
             {
                 foreach (var clause in config.Must)
                 {
@@ -165,8 +164,7 @@ public struct MotelyJsonSeedScoreDesc(
             }
             
             // Process each ante in order, activating vouchers and checking clauses
-            // Skip filtering when in ScoreOnlyMode
-            if (!scoreOnlyMode && config.MaxVoucherAnte > 0)
+            if (config.MaxVoucherAnte > 0)
             {
                 for (int ante = 1; ante <= config.MaxVoucherAnte; ante++)
                 {
@@ -190,15 +188,11 @@ public struct MotelyJsonSeedScoreDesc(
             }
             
             // Now apply all voucher clause masks to the pre-filter
-            // Skip when in ScoreOnlyMode
-            if (!scoreOnlyMode)
+            foreach (var kvp in voucherClauseMasks)
             {
-                foreach (var kvp in voucherClauseMasks)
-                {
-                    preFilterMask &= kvp.Value;
-                    if (preFilterMask.IsAllFalse()) 
-                        return VectorMask.NoBitsSet; // No seeds pass, exit early
-                }
+                preFilterMask &= kvp.Value;
+                if (preFilterMask.IsAllFalse()) 
+                    return VectorMask.NoBitsSet; // No seeds pass, exit early
             }
             
             // If we have a base filter mask (from --native filter), combine it with our pre-filter
@@ -215,9 +209,19 @@ public struct MotelyJsonSeedScoreDesc(
             {
                 // DebugLogger.Log($"[Score] Processing individual seed"); // DISABLED FOR PERFORMANCE
                 // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
-                
-                // Initialize run state for tracking vouchers and bosses
                 var runState = new MotelyRunState();
+
+                // Activate all vouchers for scoring (using cached property)
+#if DEBUG
+                DebugLogger.Log($"[Score] MaxVoucherAnte: {config.MaxVoucherAnte}");
+#endif
+                if (config.MaxVoucherAnte > 0)
+                {
+#if DEBUG
+                    DebugLogger.Log($"[Score] Activating all vouchers up to ante {config.MaxVoucherAnte}");
+#endif
+                    MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
+                }
                 
                 // Pre-generate all bosses to maintain state across scoring checks
                 // Find max ante needed for boss checks
@@ -249,28 +253,16 @@ public struct MotelyJsonSeedScoreDesc(
                     }
                 }
                 
-                // Calculate and cache vouchers ONCE if any clause needs them
-                MotelyVoucher[]? cachedVouchers = null;
-                if (config.MaxVoucherAnte > 0)
-                {
-                    cachedVouchers = new MotelyVoucher[config.MaxVoucherAnte];
-                    for (int ante = 1; ante <= config.MaxVoucherAnte; ante++)
-                    {
-                        var voucher = singleCtx.GetAnteFirstVoucher(ante, in runState);
-                        cachedVouchers[ante - 1] = voucher;
-                        runState.ActivateVoucher(voucher);
-                    }
-                }
-                
                 // ULTIMATE FIX: Re-verify ALL MUST clauses individually to catch chained filter false positives
-                // Skip when in ScoreOnlyMode - seeds already passed the filter
-                if (!scoreOnlyMode && config.Must?.Count > 0)
+                if (config.Must?.Count > 0)
                 {
                     foreach (var mustClause in config.Must)
                     {
+                        // Reset state for each MUST clause verification
+                        var verifyState = new MotelyRunState();
+                        
                         // Check if this MUST clause actually has any occurrences
-                        // Pass runState which already has vouchers activated
-                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, mustClause, ref runState);
+                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, mustClause, ref verifyState);
                         if (count == 0)
                         {
                             // MUST clause not satisfied - REJECT this seed immediately
@@ -283,12 +275,12 @@ public struct MotelyJsonSeedScoreDesc(
                 MotelyBossBlind[]? cachedBosses = null;
                 if (maxBossAnte > 0)
                 {
-                    cachedBosses = new MotelyBossBlind[maxBossAnte];
+                    cachedBosses = new MotelyBossBlind[maxBossAnte + 1]; // +1 to handle 0-based indexing
                     var bossStream = singleCtx.CreateBossStream();
                     var bossState = new MotelyRunState(); // Separate state for boss generation
-                    for (int ante = 1; ante <= maxBossAnte; ante++)
+                    for (int ante = 0; ante <= maxBossAnte; ante++)
                     {
-                        cachedBosses[ante - 1] = singleCtx.GetBossForAnte(ref bossStream, ante, ref bossState);
+                        cachedBosses[ante] = singleCtx.GetBossForAnte(ref bossStream, ante, ref bossState);
                     }
                     
                     // Store cached bosses in runState for use by scoring functions
@@ -302,7 +294,7 @@ public struct MotelyJsonSeedScoreDesc(
                     // SMART: Process vouchers FIRST in order, then other requirements
                     // This ensures Telescope is activated before checking Observatory
                     
-                    // Step 1: Check all voucher requirements using cached vouchers
+                    // Step 1: Check all voucher requirements (they depend on each other)
                     // PERFORMANCE: Avoid LINQ in hot path - iterate directly
                     foreach (var clause in config.Must)
                     {
@@ -311,26 +303,33 @@ public struct MotelyJsonSeedScoreDesc(
                             
                         bool clauseSatisfied = false;
                         
-                        // Check against cached vouchers to avoid recalculation
-                        if (cachedVouchers != null && clause.EffectiveAntes != null)
+                        // Check if voucher is already active from ActivateAllVouchers
+                        if (clause.VoucherEnum.HasValue && runState.IsVoucherActive(clause.VoucherEnum.Value))
                         {
-                            foreach (var ante in clause.EffectiveAntes)
+                            clauseSatisfied = true;
+                        }
+                        else
+                        {
+                            // Check if it appears in any required ante
+                            foreach (var ante in clause.EffectiveAntes ?? [])
                             {
-                                if (ante >= 1 && ante <= cachedVouchers.Length)
+                                if (MotelyJsonScoring.CheckVoucherSingle(ref singleCtx, clause, ante, ref runState))
                                 {
-                                    var voucherAtAnte = cachedVouchers[ante - 1];
-                                    if ((clause.Value != null && voucherAtAnte.ToString() == clause.Value) ||
-                                        (clause.Values != null && clause.Values.Contains(voucherAtAnte.ToString())))
-                                    {
-                                        clauseSatisfied = true;
-                                        break;
-                                    }
+                                    clauseSatisfied = true;
+                                    break;
                                 }
                             }
                         }
                         
                         if (!clauseSatisfied)
+                        {
+                            // DebugLogger.Log($"[Score] Voucher clause not satisfied: {clause.Value}"); // DISABLED FOR PERFORMANCE
                             return false;
+                        }
+                        else
+                        {
+                            // DebugLogger.Log($"[Score] Voucher clause satisfied: {clause.Value}"); // DISABLED FOR PERFORMANCE
+                        }
                     }
                     
                     // Step 2: Check all other requirements

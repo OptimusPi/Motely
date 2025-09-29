@@ -148,7 +148,7 @@ public sealed class JsonFilterSlicedChainTests
                 new MotelyJsonConfig.MotleyJsonFilterClause
                 {
                     Type = "TarotCard",
-                    Value = "TheFool",
+                    Value = "The Fool",
                     Antes = new int[] { 1 },
                     Sources = new MotelyJsonConfig.SourcesConfig
                     {

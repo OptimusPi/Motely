@@ -54,7 +54,7 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                 for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
                 {
                     var clause = _clauses[clauseIndex];
-                    ulong anteBit = 1UL << (ante - 1);
+                    ulong anteBit = 1UL << ante;
                     
                     // Skip ante if not wanted
                     if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
@@ -96,118 +96,43 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                 if (resultMask.IsAllFalse()) return VectorMask.NoBitsSet;
             }
 
-            // ALWAYS verify with individual seed search to avoid SIMD bugs with pack streams
-            var clausesCopy = _clauses;
-            var minAnteCopy = _minAnte;
-            var maxAnteCopy = _maxAnte;
+            // USE THE SHARED FUNCTION - same logic as scoring!
+            var clauses = _clauses;
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                Span<bool> clauseMatches = stackalloc bool[clausesCopy.Count];
-                for (int i = 0; i < clauseMatches.Length; i++)
-                    clauseMatches[i] = false;
+                var state = new MotelyRunState();
                 
-                for (int ante = minAnteCopy; ante <= maxAnteCopy; ante++)
+                // Check all clauses using the SAME shared function used in scoring
+                foreach (var clause in clauses)
                 {
-                    ulong anteBit = 1UL << (ante - 1);
-                    
-                    var packStream = singleCtx.CreateBoosterPackStream(ante);
-                    var celestialStream = singleCtx.CreateCelestialPackPlanetStream(ante);
-                    var shopStream = singleCtx.CreateShopItemStream(ante, isCached: false);
-                    
-                    int totalPacks = ante == 1 ? 4 : 6;
-                    for (int packSlot = 0; packSlot < totalPacks; packSlot++)
+                    bool matched = false;
+                    foreach (int ante in clause.WantedAntes.Select((value, index) => new { value, index }).Where(x => x.value).Select(x => x.index))
                     {
-                        var pack = singleCtx.GetNextBoosterPack(ref packStream);
-                        ulong packSlotBit = 1UL << packSlot;
+                        // Convert specialized clause back to generic clause for shared function
+                        var genericClause = new MotelyJsonConfig.MotleyJsonFilterClause
+                        {
+                            Type = "PlanetCard",
+                            Value = clause.PlanetType?.ToString(),
+                            PlanetEnum = clause.PlanetType,
+                            Sources = new MotelyJsonConfig.SourcesConfig
+                            {
+                                ShopSlots = clause.WantedShopSlots.Select((value, index) => new { value, index }).Where(x => x.value).Select(x => x.index).ToArray(),
+                                PackSlots = clause.WantedPackSlots.Select((value, index) => new { value, index }).Where(x => x.value).Select(x => x.index).ToArray()
+                            }
+                        };
                         
-                        if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
+                        if (MotelyJsonScoring.CountPlanetOccurrences(ref singleCtx, genericClause, ante, earlyExit: true) > 0)
                         {
-                            // ALWAYS consume celestial stream first to maintain sync
-                            var contents = singleCtx.GetNextCelestialPackContents(ref celestialStream, pack.GetPackSize());
-                            
-                            // Then check if we should evaluate this pack
-                            bool skipPack = false;
-                            for (int clauseIndex = 0; clauseIndex < clausesCopy.Count; clauseIndex++)
-                            {
-                                var clause = clausesCopy[clauseIndex];
-                                if (clause.WantedPackSlots[packSlot] && 
-                                    clause.Sources?.RequireMega == true && 
-                                    pack.GetPackSize() != MotelyBoosterPackSize.Mega)
-                                {
-                                    skipPack = true;
-                                    break;
-                                }
-                            }
-                            if (skipPack) continue;
-                            
-                            for (int clauseIndex = 0; clauseIndex < clausesCopy.Count; clauseIndex++)
-                            {
-                                var clause = clausesCopy[clauseIndex];
-                                
-                                if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante]) 
-                                    continue;
-                                
-                                if (!clause.WantedPackSlots[packSlot]) 
-                                    continue;
-                               
-                               for (int j = 0; j < contents.Length; j++)
-                               {
-                                   bool typeMatches = CheckPlanetTypeMatch(contents[j], clause);
-                                   bool editionMatches = !clause.EditionEnum.HasValue ||
-                                                       contents[j].Edition == clause.EditionEnum.Value;
-                                   
-                                   if (typeMatches && editionMatches)
-                                   {
-                                       clauseMatches[clauseIndex] = true;
-                                   }
-                               }
-                           }
-                       }
-                   }
-
-                    // ✅ NEW: Add shop consumable support - fixes ALEEB Saturn in shop slot 0\
-                   // TODO dont use hard coded "6" here, what the fuck?
-                   for (int shopSlot = 0; shopSlot < 6; shopSlot++)
-                    {
-                        var shopItem = singleCtx.GetNextShopItem(ref shopStream);
-
-                        if (shopItem.TypeCategory == MotelyItemTypeCategory.PlanetCard)
-                        {
-                            for (int clauseIndex = 0; clauseIndex < clausesCopy.Count; clauseIndex++)
-                            {
-                                var clause = clausesCopy[clauseIndex];
-
-                                if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
-                                    continue;
-
-                                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[shopSlot])
-                                    continue;
-
-                                bool typeMatches = CheckPlanetTypeMatch(shopItem, clause);
-                                bool editionMatches = !clause.EditionEnum.HasValue ||
-                                                    shopItem.Edition == clause.EditionEnum.Value;
-
-                                if (typeMatches && editionMatches)
-                                {
-                                    clauseMatches[clauseIndex] = true;
-                                }
-                            }
+                            matched = true;
+                            break;
                         }
                     }
-               }
-               
-               bool allClausesMatched = true;
-               for (int i = 0; i < clauseMatches.Length; i++)
-               {
-                   if (!clauseMatches[i])
-                   {
-                       allClausesMatched = false;
-                       break;
-                   }
-               }
-               
-               return allClausesMatched;
-           });
+                    
+                    if (!matched) return false;
+                }
+                
+                return true;
+            });
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
