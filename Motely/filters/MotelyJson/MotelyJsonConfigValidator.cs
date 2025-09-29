@@ -322,6 +322,7 @@ namespace Motely.Filters
                                                item.Type.Equals("joker", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("playingcard", StringComparison.OrdinalIgnoreCase) ||
+                                               item.Type.Equals("standardcard", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) ||
                                                item.Type.Equals("planetcard", StringComparison.OrdinalIgnoreCase));
