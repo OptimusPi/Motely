@@ -65,22 +65,31 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                 for (int clauseIndex = 0; clauseIndex < Clauses.Count; clauseIndex++)
                 {
                     var clause = Clauses[clauseIndex];
-                    ulong anteBit = 1UL << ante; // Fixed: ante is already 0-based, no need for -1
                     
-                    // Skip ante if not wanted
-                    if (clause.WantedAntes.Any(x => x) && ante < clause.WantedAntes.Length && !clause.WantedAntes[ante])
+                    // Skip ante if not wanted - SIMPLE CHECK, NO BITWHACKING
+                    if (ante < clause.WantedAntes.Length && !clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
-                    // Check shops only if any shop slots are wanted
-                    if (clause.WantedShopSlots.Any(slot => slot))
+                    // Check shops only if any shop slots are wanted - NO LINQ BULLSHIT
+                    bool hasShopSlots = false;
+                    for (int i = 0; i < clause.WantedShopSlots.Length; i++)
+                    {
+                        if (clause.WantedShopSlots[i]) { hasShopSlots = true; break; }
+                    }
+                    if (hasShopSlots)
                     {
                         // Use the already-created stream for this ante
                         clauseResult |= CheckShopJokerVectorizedNew(clause, ctx, ref shopJokerStream);
                     }
 
-                    if (clause.WantedPackSlots.Any(x => x))
+                    bool hasPackSlots = false;
+                    for (int i = 0; i < clause.WantedPackSlots.Length; i++)
+                    {
+                        if (clause.WantedPackSlots[i]) { hasPackSlots = true; break; }
+                    }
+                    if (hasPackSlots)
                     {
                         // Use the already-created streams for this ante
                         clauseResult |= CheckPackJokersVectorized(clause, ctx, ref packStream, ref buffoonStream, ante);
@@ -97,12 +106,11 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                 for (int i = 0; i < Clauses.Count; i++)
                 {
                     var clause = Clauses[i];
-                    // Check if this clause has any antes left to check
+                    // Check if this clause has any antes left to check - NO BITWHACKING
                     bool hasAntesRemaining = false;
                     for (int futureAnte = ante + 1; futureAnte <= _maxAnte; futureAnte++)
                     {
-                        ulong futureBit = 1UL << (futureAnte - 1);
-                        if (!clause.WantedAntes.Any(x => x) || clause.WantedAntes[futureAnte])
+                        if (futureAnte < clause.WantedAntes.Length && clause.WantedAntes[futureAnte])
                         {
                             hasAntesRemaining = true;
                             break;
@@ -171,15 +179,19 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                         DebugLogger.Log($"[JOKER INDIVIDUAL] Checking clause for {clauseJokerName}");
                         bool clauseSatisfied = false;
 
-                        // Check all antes for this clause - use local variables!
+                        // Check all antes for this clause - CLEAN AND SIMPLE
                         for (int ante = minAnte; ante <= maxAnte; ante++)
                         {
-                            ulong anteBit = 1UL << ante;
-                            if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
+                            if (ante < clause.WantedAntes.Length && !clause.WantedAntes[ante])
                                 continue;
 
-                            // Check shops only if any shop slots are wanted
-                            if (clause.WantedShopSlots.Any(slot => slot))
+                            // Check shops only if any shop slots are wanted - NO LINQ
+                            bool hasShopSlots2 = false;
+                            for (int i = 0; i < clause.WantedShopSlots.Length; i++)
+                            {
+                                if (clause.WantedShopSlots[i]) { hasShopSlots2 = true; break; }
+                            }
+                            if (hasShopSlots2)
                             {
                                 string jokerName = clause.JokerTypes?.Count > 0 ? string.Join("|", clause.JokerTypes) : clause.JokerType?.ToString() ?? "Unknown";
                                 DebugLogger.Log($"[JOKER INDIVIDUAL] Checking shop for {jokerName} in ante {ante}");
@@ -196,8 +208,13 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                                 }
                             }
 
-                            // Check packs
-                            if (clause.WantedPackSlots.Any(x => x))
+                            // Check packs - NO LINQ
+                            bool hasPackSlots2 = false;
+                            for (int i = 0; i < clause.WantedPackSlots.Length; i++)
+                            {
+                                if (clause.WantedPackSlots[i]) { hasPackSlots2 = true; break; }
+                            }
+                            if (hasPackSlots2)
                             {
                                 var packStream = singleCtx.CreateBoosterPackStream(ante, generatedFirstPack: ante != 1, isCached: false);
                                 if (CheckPackJokersSingleStatic(ref singleCtx, clause, ante, ref packStream))
@@ -473,9 +490,14 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         {
             DebugLogger.Log($"[SHOP CHECK] Looking for {clause.JokerType} in ante {ante}");
             
-            // Determine how many slots to check
+            // Determine how many slots to check - NO LINQ
             int maxSlot;
-            if (!clause.WantedShopSlots.Any(s => s))
+            bool hasAnyShopSlots = false;
+            for (int i = 0; i < clause.WantedShopSlots.Length; i++)
+            {
+                if (clause.WantedShopSlots[i]) { hasAnyShopSlots = true; break; }
+            }
+            if (!hasAnyShopSlots)
             {
                 // No specific slots wanted - use defaults
                 maxSlot = (ante == 1 ? 4 : 6);
@@ -500,10 +522,10 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
                 
-                DebugLogger.Log($"[SHOP CHECK] Slot {slot}: {item.Type} (wanted: {(clause.WantedShopSlots.Any(s => s) ? clause.WantedShopSlots[slot] : "all")})");
+                DebugLogger.Log($"[SHOP CHECK] Slot {slot}: {item.Type} (wanted: {(hasAnyShopSlots ? clause.WantedShopSlots[slot] : "all")})");
                 
                 // Check if this slot is wanted (or if no specific slots wanted, check all)
-                if (!clause.WantedShopSlots.Any(s => s) || clause.WantedShopSlots[slot])
+                if (!hasAnyShopSlots || clause.WantedShopSlots[slot])
                 {
                     if (item.TypeCategory == MotelyItemTypeCategory.Joker)
                     {
@@ -566,8 +588,13 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
 
                     var packContents = ctx.GetNextBuffoonPackContents(ref buffoonStream, packSize);
 
-                    // Check if this pack slot is wanted
-                    if (!clause.WantedPackSlots.Any(x => x) || clause.WantedPackSlots[packIndex])
+                    // Check if this pack slot is wanted - NO LINQ
+                    bool hasAnyPackSlots = false;
+                    for (int i = 0; i < clause.WantedPackSlots.Length; i++)
+                    {
+                        if (clause.WantedPackSlots[i]) { hasAnyPackSlots = true; break; }
+                    }
+                    if (!hasAnyPackSlots || clause.WantedPackSlots[packIndex])
                     {
                         if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                             continue;
