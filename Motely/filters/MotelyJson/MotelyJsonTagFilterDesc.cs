@@ -210,7 +210,7 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
             var clauses = _clauses; // Copy to local for lambda capture
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                var state = new MotelyRunState();
+                
                 
                 // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)

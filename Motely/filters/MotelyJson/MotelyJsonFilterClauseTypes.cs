@@ -24,7 +24,7 @@ public abstract class MotelyJsonFilterClause
         foreach (var clause in clauses)
         {
             // Get ante array from derived class
-            bool[] wantedAntes = clause switch
+            bool[]? wantedAntes = clause switch
             {
                 MotelyJsonJokerFilterClause j => j.WantedAntes,
                 MotelyJsonSoulJokerFilterClause s => s.WantedAntes,

@@ -318,13 +318,13 @@ namespace Motely.Filters
                 // Validate edition if specified
                 if (!string.IsNullOrEmpty(item.Edition))
                 {
-                    bool typeSupportsEdition = item.Type.Equals("joker", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("playingcard", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("standardcard", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) ||
-                                               item.Type.Equals("planetcard", StringComparison.OrdinalIgnoreCase);
+                    bool typeSupportsEdition = item.Type?.Equals("joker", StringComparison.OrdinalIgnoreCase) == true ||
+                                               item.Type?.Equals("souljoker", StringComparison.OrdinalIgnoreCase) == true ||
+                                               item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase) == true ||
+                                               item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase) == true ||
+                                               item.Type?.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) == true ||
+                                               item.Type?.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) == true ||
+                                               item.Type?.Equals("planetcard", StringComparison.OrdinalIgnoreCase) == true;
                     if (!typeSupportsEdition)
                     {
                         errors.Add($"{prefix}: Edition specified ('{item.Edition}') but type '{item.Type}' does not support editions (remove 'edition').");
