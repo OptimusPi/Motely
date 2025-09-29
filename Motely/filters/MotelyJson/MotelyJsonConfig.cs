@@ -571,9 +571,8 @@ namespace Motely.Filters;
                     item.Sources = GetDefaultSources(item.Type, item.Value, Deck ?? "Red");
                 }
                 
-                // ALWAYS ensure PackSlots and ShopSlots are non-null arrays
-                item.Sources.PackSlots ??= [];
-                item.Sources.ShopSlots ??= [];
+                item.Sources.PackSlots ??= new[] { 0, 1, 2, 3 };
+                item.Sources.ShopSlots ??= new[] { 0, 1, 2, 3 };
                 
             }
 

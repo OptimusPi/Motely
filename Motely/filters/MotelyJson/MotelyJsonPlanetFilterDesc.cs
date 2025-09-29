@@ -54,16 +54,15 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                 for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
                 {
                     var clause = _clauses[clauseIndex];
-                    ulong anteBit = 1UL << ante;
                     
                     // Skip ante if not wanted
-                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
+                    if (!clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
                     // Check shops if any shop slots wanted
-                    if (clause.WantedShopSlots.Any(s => s))
+                    if (HasShopSlots(clause.WantedShopSlots))
                     {
                         // Use the self-contained shop planet stream - NO SYNCHRONIZATION ISSUES!
                         var shopPlanetStream = ctx.CreateShopPlanetStream(ante);
@@ -71,7 +70,7 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
                     }
 
                     // Check packs if specified  
-                    if (clause.WantedPackSlots.Any(x => x))
+                    if (HasPackSlots(clause.WantedPackSlots))
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
                     }
@@ -156,7 +155,7 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
             var celestialStream = ctx.CreateCelestialPackPlanetStream(ante);
             
             // Determine max pack slot to check
-            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
             int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
@@ -222,12 +221,28 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasShopSlots(bool[] slots)
+        {
+            for (int i = 0; i < slots.Length; i++)
+                if (slots[i]) return true;
+            return false;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasPackSlots(bool[] slots)
+        {
+            for (int i = 0; i < slots.Length; i++)
+                if (slots[i]) return true;
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CalculateMaxShopSlotsNeeded(List<MotelyJsonPlanetFilterClause> clauses)
         {
             int maxSlotNeeded = 0;
             foreach (var clause in clauses)
             {
-                if (clause.WantedShopSlots.Any(s => s))
+                if (HasShopSlots(clause.WantedShopSlots))
                 {
                     for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
                     {

@@ -55,16 +55,15 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
                 {
                     var clause = _clauses[clauseIndex];
-                    ulong anteBit = 1UL << ante;
                     
                     // Skip ante if not wanted
-                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
+                    if (!clause.WantedAntes[ante])
                         continue;
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
                     // Check shops if specified
-                    if (clause.WantedShopSlots.Any(s => s))
+                    if (HasShopSlots(clause.WantedShopSlots))
                     {
                         // Use the self-contained shop tarot stream - NO SYNCHRONIZATION ISSUES!
                         var shopTarotStream = ctx.CreateShopTarotStreamNew(ante);
@@ -72,7 +71,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     }
 
                     // Check packs if specified  
-                    if (clause.WantedPackSlots.Any(x => x))
+                    if (HasPackSlots(clause.WantedPackSlots))
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
                     }
@@ -144,7 +143,6 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             // Check each shop slot based on the bitmask
             for (int slot = 0; slot < 64; slot++) // Check up to 64 slots (bitmask size)
             {
-                ulong slotBit = 1UL << slot;
                 
                 // Skip if this slot isn't in the wanted slots
                 if (!clause.WantedShopSlots[slot])
@@ -177,7 +175,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
 
-            if (!clause.WantedShopSlots.Any(s => s))
+            if (!HasShopSlots(clause.WantedShopSlots))
             {
                 // No slot restrictions - check all available slots
                 for (int slot = 0; slot < shopItems.Length; slot++)
@@ -319,7 +317,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             var arcanaStream = ctx.CreateArcanaPackTarotStream(ante);
             
             // Determine max pack slot to check
-            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
             int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
@@ -375,12 +373,28 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasShopSlots(bool[] slots)
+        {
+            for (int i = 0; i < slots.Length; i++)
+                if (slots[i]) return true;
+            return false;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasPackSlots(bool[] slots)
+        {
+            for (int i = 0; i < slots.Length; i++)
+                if (slots[i]) return true;
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CalculateMaxShopSlotsNeeded(List<MotelyJsonTarotFilterClause> clauses)
         {
             int maxSlotNeeded = 0;
             foreach (var clause in clauses)
             {
-                if (clause.WantedShopSlots.Any(s => s))
+                if (HasShopSlots(clause.WantedShopSlots))
                 {
                     int clauseMaxSlot = 0;
                     for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
@@ -410,7 +424,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             
             // Calculate max slot we need to check
             int maxSlot;
-            if (!clause.WantedShopSlots.Any(s => s))
+            if (!HasShopSlots(clause.WantedShopSlots))
             {
                 maxSlot = _maxShopSlotsNeeded;
             }
@@ -430,13 +444,12 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
             {
-                ulong slotBit = 1UL << slot;
                 
                 // Get tarot for this slot using self-contained stream - handles slot types internally!
                 var tarotItem = shopTarotStream.GetNext(ref ctx);
                 
                 // Skip if this slot isn't wanted (no slots = check all slots)
-                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[slot])
+                if (HasShopSlots(clause.WantedShopSlots) && !clause.WantedShopSlots[slot])
                     continue;
                 
                 // Check if item is TarotExcludedByStream (not a tarot slot)
@@ -468,12 +481,11 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                 // Check all antes in the clause's bitmask
                 for (int ante = 1; ante <= 64; ante++)
                 {
-                    ulong anteBit = 1UL << ante;
-                    if (clause.WantedAntes.Any(x => x) && !clause.WantedAntes[ante])
+                    if (!clause.WantedAntes[ante])
                         continue;
                         
                     // Check shops if specified
-                    if (clause.WantedShopSlots.Any(s => s))
+                    if (HasShopSlots(clause.WantedShopSlots))
                     {
                         var shopTarotStream = ctx.CreateShopTarotStream(ante);
                         if (CheckShopTarotsSingle(ref ctx, ref shopTarotStream, clause))
@@ -484,7 +496,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
                     }
                     
                     // Check packs if specified
-                    if (clause.WantedPackSlots.Any(x => x))
+                    if (HasPackSlots(clause.WantedPackSlots))
                     {
                         if (CheckPackTarotsSingle(ref ctx, ante, clause))
                         {
@@ -505,7 +517,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
         {
             // Calculate max slot to check
             int maxSlot;
-            if (!clause.WantedShopSlots.Any(s => s))
+            if (!HasShopSlots(clause.WantedShopSlots))
             {
                 maxSlot = 16;
             }
@@ -524,10 +536,9 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             
             for (int slot = 0; slot < maxSlot; slot++)
             {
-                ulong slotBit = 1UL << slot;
                 
                 // Skip if this slot isn't wanted (no slots = check all)
-                if (clause.WantedShopSlots.Any(s => s) && !clause.WantedShopSlots[slot])
+                if (HasShopSlots(clause.WantedShopSlots) && !clause.WantedShopSlots[slot])
                     continue;
                 
                 var tarot = ctx.GetNextTarot(ref stream);
@@ -577,7 +588,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             var arcanaStream = ctx.CreateArcanaPackTarotStream(ante);
             
             // Determine max pack slot to check
-            bool hasSpecificSlots = clause.WantedPackSlots.Any(x => x);
+            bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
             int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)

@@ -45,7 +45,7 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             _maxAnte = 0;
             foreach (var clause in _clauses)
             {
-                if (clause.WantedAntes.Any(x => x))
+                if (HasAntes(clause.WantedAntes))
                 {
                     // Find highest set bit (WantedAntes is 40 elements, so check backwards from index 39)
                     for (int ante = clause.WantedAntes.Length - 1; ante >= 0; ante--)
@@ -78,7 +78,6 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             for (int ante = 0; ante <= _maxAnte && ante < _clauses[0].WantedAntes.Length; ante++)
             {
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
-                ulong anteBit = 1UL << ante;
                 
                 for (int i = 0; i < _clauses.Length; i++)
                 {
@@ -144,7 +143,6 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                         var voucher = singleCtx.GetAnteFirstVoucher(ante, singleVoucherState);
                         singleVoucherState.ActivateVoucher(voucher);
                         
-                        ulong anteBit = 1UL << ante;
                         if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
                         {
                             bool voucherMatches = false;
@@ -180,6 +178,14 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                 
                 return true; // All clauses satisfied
             });
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasAntes(bool[] antes)
+        {
+            for (int i = 0; i < antes.Length; i++)
+                if (antes[i]) return true;
+            return false;
         }
     }
 }
