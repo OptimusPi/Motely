@@ -206,65 +206,29 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                 return VectorMask.NoBitsSet;
             }
             
-            // Verify each passing seed individually to avoid SIMD bugs
+            // USE THE SHARED FUNCTION - same logic as scoring!
             var clauses = _clauses; // Copy to local for lambda capture
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                // Re-check all clauses for this individual seed
+                
+                
+                // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)
                 {
-                    bool clauseSatisfied = false;
-                    
-                    // Check all antes for this clause
+                    bool matched = false;
                     foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
                     {
-                        var tagStream = singleCtx.CreateTagStream(ante);
-                        var smallTag = singleCtx.GetNextTag(ref tagStream);
-                        var bigTag = singleCtx.GetNextTag(ref tagStream);
-                        
-                        bool tagMatches = false;
-                        
-                        if (clause.TagEnums != null && clause.TagEnums.Count > 0)
+                        if (MotelyJsonScoring.CheckTagSingle(ref singleCtx, clause, ante))
                         {
-                            // Multi-value check
-                            foreach (var tagEnum in clause.TagEnums)
-                            {
-                                bool singleMatch = clause.TagTypeEnum switch
-                                {
-                                    MotelyTagType.SmallBlind => smallTag == tagEnum,
-                                    MotelyTagType.BigBlind => bigTag == tagEnum,
-                                    _ => smallTag == tagEnum || bigTag == tagEnum
-                                };
-                                if (singleMatch)
-                                {
-                                    tagMatches = true;
-                                    break;
-                                }
-                            }
-                        }
-                        else if (clause.TagEnum.HasValue)
-                        {
-                            // Single value check
-                            tagMatches = clause.TagTypeEnum switch
-                            {
-                                MotelyTagType.SmallBlind => smallTag == clause.TagEnum.Value,
-                                MotelyTagType.BigBlind => bigTag == clause.TagEnum.Value,
-                                _ => smallTag == clause.TagEnum.Value || bigTag == clause.TagEnum.Value
-                            };
-                        }
-                        
-                        if (tagMatches)
-                        {
-                            clauseSatisfied = true;
+                            matched = true;
                             break;
                         }
                     }
                     
-                    if (!clauseSatisfied)
-                        return false; // This seed doesn't satisfy this clause
+                    if (!matched) return false;
                 }
                 
-                return true; // All clauses satisfied
+                return true;
             });
         }
         

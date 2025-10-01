@@ -37,7 +37,8 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
     public MotelyVectorPrngStream InitialPrngStream = initialPrngStream;
     public MotelyResampleStreams ResamplePrngStreams;
     public int ResamplePrngStreamInitCount;
-    public List<object>? HighResamplePrngStreams;
+    // AUDIT ISSUE #1: Use StrongBox instead of boxing to object to avoid GC allocations
+    public List<StrongBox<MotelyVectorPrngStream>>? HighResamplePrngStreams;
     public bool IsCached = isCached;
     public readonly bool IsInvalid => InitialPrngStream.IsInvalid;
 
@@ -64,8 +65,9 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
 
             for (int i = 0; i < HighResamplePrngStreams.Count; i++)
             {
+                // AUDIT ISSUE #1: Access StrongBox.Value instead of unboxing
                 stream.HighResamplePrngStreams.Add(
-                    Unsafe.Unbox<MotelyVectorPrngStream>(HighResamplePrngStreams[i]).CreateSingleStream(lane)
+                    HighResamplePrngStreams[i].Value.CreateSingleStream(lane)
                 );
             }
         }
@@ -132,6 +134,22 @@ internal unsafe readonly struct MotelySearchContextParams(PartialSeedHashCache* 
 
         return SeedLength;
     }
+}
+
+// AUDIT ISSUE #4: Hoisted vector constants to avoid repeated creation in hot paths
+internal static class MotelyVectorConstants
+{
+    // PRNG iteration constants
+    public static readonly Vector512<double> PrngMultiplier = Vector512.Create(1.72431234);
+    public static readonly Vector512<double> PrngAddend = Vector512.Create(2.134453429141);
+    public static readonly Vector512<double> PrngRoundingFactor = Vector512.Create(10000000000000.0);
+
+    // Pseudo-hash constants
+    public static readonly Vector512<double> HashConstant = Vector512.Create(1.1239285023);
+    public static readonly Vector512<double> Pi = Vector512.Create(Math.PI);
+
+    // Common constants
+    public static readonly Vector512<double> Two = Vector512.Create(2.0);
 }
 
 public readonly unsafe ref partial struct MotelyVectorSearchContext
@@ -259,13 +277,12 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         // Then we vectorize and do the last characters of the seed
         Vector512<double> numVector = Vector512.Create(num);
 
+        // AUDIT ISSUE #4: Use hoisted constants instead of creating in loop
         for (int i = seedLastCharacterLength - 1; i >= 0; i--)
         {
-            numVector = Vector512.Divide(Vector512.Create(1.1239285023), numVector);
-
+            numVector = Vector512.Divide(MotelyVectorConstants.HashConstant, numVector);
             numVector = Vector512.Multiply(numVector, SeedLastCharacters[i]);
-
-            numVector = Vector512.Multiply(numVector, Math.PI);
+            numVector = Vector512.Multiply(numVector, MotelyVectorConstants.Pi);
             numVector = Vector512.Add(numVector, Vector512.Create((i + keyLength + 1) * Math.PI));
 
             Vector512<double> intPart = Vector512.Floor(numVector);
@@ -280,13 +297,12 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
 #endif
     private static Vector512<double> InternalPseudoHash(string key, Vector512<double> partialHash)
     {
+        // AUDIT ISSUE #4: Use hoisted constants instead of creating in loop
         for (int i = key.Length - 1; i >= 0; i--)
         {
-            partialHash = Vector512.Divide(Vector512.Create(1.1239285023), partialHash);
-
+            partialHash = Vector512.Divide(MotelyVectorConstants.HashConstant, partialHash);
             partialHash = Vector512.Multiply(partialHash, key[i]);
-
-            partialHash = Vector512.Multiply(partialHash, Math.PI);
+            partialHash = Vector512.Multiply(partialHash, MotelyVectorConstants.Pi);
             partialHash = Vector512.Add(partialHash, Vector512.Create((i + 1) * Math.PI));
 
             Vector512<double> intPart = Vector512.Floor(partialHash);
@@ -376,21 +392,19 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     //         return Math.Floor(x * InvPrec) / InvPrec;
     //     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    // AUDIT ISSUE #3 & #4: Always inline critical hot paths + use hoisted constants
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static Vector512<double> IteratePRNG(Vector512<double> state)
     {
-        state = Vector512.Multiply(state, 1.72431234);
-        state = Vector512.Add(state, Vector512.Create(2.134453429141));
+        state = Vector512.Multiply(state, MotelyVectorConstants.PrngMultiplier);
+        state = Vector512.Add(state, MotelyVectorConstants.PrngAddend);
 
         Vector512<double> intPart = Vector512.Floor(state);
         state = Vector512.Subtract(state, intPart);
 
-        state = Vector512.Multiply(state, 10000000000000);
-
+        state = Vector512.Multiply(state, MotelyVectorConstants.PrngRoundingFactor);
         state = Vector512.Round(state, MidpointRounding.AwayFromZero);
-        state = Vector512.Divide(state, 10000000000000);
+        state = Vector512.Divide(state, MotelyVectorConstants.PrngRoundingFactor);
 
         return state;
     }
@@ -403,73 +417,56 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return new(PseudoHash(key, isCached));
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    // AUDIT ISSUE #3 & #4: Always inline + optimize critical PRNG hot paths, use hoisted constants
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> GetNextPrngState(ref MotelyVectorPrngStream stream)
     {
         return stream.State = IteratePRNG(stream.State);
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> GetNextPrngState(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
     {
         return stream.State = Vector512.ConditionalSelect(mask, IteratePRNG(stream.State), stream.State);
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> IteratePseudoSeed(ref MotelyVectorPrngStream stream)
     {
-        return (GetNextPrngState(ref stream) + SeedHashCache->GetSeedHashVector()) / Vector512.Create<double>(2);
+        return (GetNextPrngState(ref stream) + SeedHashCache->GetSeedHashVector()) / MotelyVectorConstants.Two;
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> IteratePseudoSeed(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
     {
-        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector()) / Vector512.Create<double>(2);
+        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector()) / MotelyVectorConstants.Two;
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> GetNextPseudoSeed(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
     {
-        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector()) / Vector512.Create<double>(2);
+        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector()) / MotelyVectorConstants.Two;
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> GetNextRandom(ref MotelyVectorPrngStream stream)
     {
         return VectorLuaRandom.Random(IteratePseudoSeed(ref stream));
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> GetNextRandom(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
     {
         return VectorLuaRandom.Random(GetNextPseudoSeed(ref stream, mask));
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector256<int> GetNextRandomInt(ref MotelyVectorPrngStream stream, int min, int max)
     {
         return VectorLuaRandom.RandInt(IteratePseudoSeed(ref stream), min, max);
     }
 
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector256<int> GetNextRandomInt(ref MotelyVectorPrngStream stream, int min, int max, in Vector512<double> mask)
     {
         return VectorLuaRandom.RandInt(IteratePseudoSeed(ref stream, mask), min, max);
@@ -536,20 +533,18 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
 
             Debug.Assert(resampleStream.HighResamplePrngStreams != null);
 
+            // AUDIT ISSUE #1: Use StrongBox to avoid boxing allocations
             if (resample < resampleStream.HighResamplePrngStreams.Count)
             {
-                return ref Unsafe.Unbox<MotelyVectorPrngStream>(resampleStream.HighResamplePrngStreams[resample]);
+                return ref resampleStream.HighResamplePrngStreams[resample].Value;
             }
 
-            object prngStreamObject = new MotelyVectorPrngStream();
+            var prngStreamBox = new StrongBox<MotelyVectorPrngStream>();
+            resampleStream.HighResamplePrngStreams.Add(prngStreamBox);
 
-            resampleStream.HighResamplePrngStreams.Add(prngStreamObject);
+            prngStreamBox.Value = CreateResamplePrngStream(key, resample, resampleStream.IsCached);
 
-            ref MotelyVectorPrngStream prngStream = ref Unsafe.Unbox<MotelyVectorPrngStream>(prngStreamObject);
-
-            prngStream = CreateResamplePrngStream(key, resample, resampleStream.IsCached);
-
-            return ref prngStream;
+            return ref prngStreamBox.Value;
         }
     }
 }

@@ -653,9 +653,9 @@ public static class MotelyJsonScoring
         try
         {
             // Use cached bosses if available (for scoring)
-            if (runState.CachedBosses != null && ante > 0 && ante <= runState.CachedBosses.Length)
+            if (runState.CachedBosses != null && ante >= 0 && ante < runState.CachedBosses.Length)
             {
-                return runState.CachedBosses[ante - 1] == clause.BossEnum.Value;
+                return runState.CachedBosses[ante] == clause.BossEnum.Value;
             }
 
             // Fallback to generating bosses (for filtering)
@@ -761,8 +761,8 @@ public static class MotelyJsonScoring
         };
         
         // Set only the target ante as wanted
-        if (targetAnte > 0 && targetAnte <= 40)
-            singleAnteClause.WantedAntes[targetAnte - 1] = true;
+        if (targetAnte >= 0 && targetAnte < 40)
+            singleAnteClause.WantedAntes[targetAnte] = true;
             
         // Use the existing robust soul joker checking logic
         return CheckSoulJokerForSeed(new List<MotelyJsonSoulJokerFilterClause> { singleAnteClause }, ref ctx, earlyExit: true);

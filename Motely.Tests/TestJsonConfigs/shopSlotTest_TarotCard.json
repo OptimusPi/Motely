@@ -1,0 +1,40 @@
+{
+    "Must": [
+        {
+            "type": "TarotCard",
+            "value": "TheEmpress",
+            "antes": [1],
+            "sources": {
+                "shopSlots": [2]
+            }
+        }
+    ],
+    "Should": [
+        {
+            "type": "TarotCard",
+            "value": "TheWorld",
+            "antes": [2],
+            "sources": {
+                "shopSlots": [11]
+            }
+        },
+        {
+            "type": "TarotCard",
+            "value": "TheTower",
+            "antes": [2],
+            "sources": {
+                "shopSlots": [28]
+            }
+        }
+    ],
+    "MustNot": [
+        {
+            "type": "TarotCard",
+            "value": "TheFool",
+            "antes": [1],
+            "sources": {
+                "shopSlots": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+            }
+        }
+    ]
+}

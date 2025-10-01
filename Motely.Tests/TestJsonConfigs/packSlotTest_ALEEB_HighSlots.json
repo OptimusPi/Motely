@@ -1,0 +1,15 @@
+{
+    "deck": "Red",
+    "stake": "White",
+    "Must": [
+        {
+            "type": "Joker",
+            "value": "AnyJoker",
+            "antes": [2, 3],
+            "sources": {
+                "packSlots": [5]
+            }
+        }
+    ],
+    "comment": "Test that checks pack slot 5 specifically - should only work in antes with 6 packs (ante 2+)"
+}
