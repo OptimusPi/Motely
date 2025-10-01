@@ -1,0 +1,40 @@
+{
+    "Must": [
+        {
+            "type": "TarotCard",
+            "value": "Temperance",
+            "antes": [1],
+            "sources": {
+                "packSlots": [1]
+            }
+        }
+    ],
+    "Should": [
+        {
+            "type": "TarotCard",
+            "value": "TheEmpress",
+            "antes": [1],
+            "sources": {
+                "packSlots": [1]
+            }
+        },
+        {
+            "type": "TarotCard",
+            "value": "TheDevil",
+            "antes": [1],
+            "sources": {
+                "packSlots": [3]
+            }
+        }
+    ],
+    "MustNot": [
+        {
+            "type": "TarotCard",
+            "value": "Judgement",
+            "antes": [1],
+            "sources": {
+                "packSlots": [0,1,2,3]
+            }
+        }
+    ]
+}

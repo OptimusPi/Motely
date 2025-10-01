@@ -15,16 +15,14 @@ namespace Motely.Executors
     public class NativeFilterExecutor
     {
         private readonly string _filterName;
-        private readonly string? _chainFilters;
         private readonly string? _scoreConfig;
         private readonly JsonSearchParams _params;
         private bool _cancelled = false;
-        private string? _autoScoreConfig = null; // Track auto-detected scoring
-        
-        public NativeFilterExecutor(string filterName, JsonSearchParams parameters, string? chainFilters = null, string? scoreConfig = null)
+        private List<string>? _searchSeeds = null;
+
+        public NativeFilterExecutor(string filterName, JsonSearchParams parameters, string? scoreConfig = null)
         {
             _filterName = filterName;
-            _chainFilters = chainFilters;
             _scoreConfig = scoreConfig;
             _params = parameters;
         }
@@ -36,32 +34,38 @@ namespace Motely.Executors
             
             string normalizedFilterName = _filterName.ToLower(System.Globalization.CultureInfo.CurrentCulture).Trim();
             
-            // Create progress callback
-            DateTime lastProgressUpdate = DateTime.UtcNow;
-            DateTime progressStartTime = DateTime.UtcNow;
-            Action<long, long, long, double> progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
-            {
-                var now = DateTime.UtcNow;
-                var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+            // Progress callback - only used in silent mode or when fancy console is disabled
+            // Otherwise FancyConsole handles progress display at the bottom line
+            Action<long, long, long, double>? progressCallback = null;
 
-                lastProgressUpdate = now;
-                
-                var elapsedMS = (now - progressStartTime).TotalMilliseconds;
-                string timeLeftFormatted = "calculating...";
-                if (total > 0 && completed > 0)
+            if (_params.Silent || _params.NoFancy)
+            {
+                DateTime lastProgressUpdate = DateTime.UtcNow;
+                DateTime progressStartTime = DateTime.UtcNow;
+                progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
                 {
-                    double portionFinished = (double)completed / total;
-                    double timeLeft = elapsedMS / portionFinished - elapsedMS;
-                    TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
-                    if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-                    else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
-                }
-                double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
-                string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
-                var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
-                string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
-                Console.Write($"\r{progressLine}                    \r{progressLine}");
-            };
+                    var now = DateTime.UtcNow;
+                    var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+
+                    lastProgressUpdate = now;
+
+                    var elapsedMS = (now - progressStartTime).TotalMilliseconds;
+                    string timeLeftFormatted = "calculating...";
+                    if (total > 0 && completed > 0)
+                    {
+                        double portionFinished = (double)completed / total;
+                        double timeLeft = elapsedMS / portionFinished - elapsedMS;
+                        TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
+                        if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+                        else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                    }
+                    double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
+                    string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+                    var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
+                    string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
+                    Console.Write($"\r{progressLine}                    \r{progressLine}");
+                };
+            }
             
             // Create the appropriate filter
             IMotelySearch search;
@@ -77,14 +81,13 @@ namespace Motely.Executors
             
             Console.WriteLine($"🔍 Running native filter: {_filterName}" +
                 (!string.IsNullOrEmpty(_params.SpecificSeed) ? $" on seed: {_params.SpecificSeed}" : "") +
-                (!string.IsNullOrEmpty(_chainFilters) ? $" with chained filters: {_chainFilters}" : "") +
                 (!string.IsNullOrEmpty(_scoreConfig) ? $" with scoring: {_scoreConfig}" : ""));
             
             // DEBUG: Help identify non-determinism
-            Console.WriteLine($"   DEBUG: Thread count: {_params.Threads}");
-            Console.WriteLine($"   DEBUG: Batch size: {_params.BatchSize}");
-            Console.WriteLine($"   DEBUG: Start batch: {_params.StartBatch}");
-            Console.WriteLine($"   DEBUG: End batch: {_params.EndBatch}");
+            DebugLogger.Log($"Thread count: {_params.Threads}");
+            DebugLogger.Log($"Batch size: {_params.BatchSize}");
+            DebugLogger.Log($"Start batch: {_params.StartBatch}");
+            DebugLogger.Log($"End batch: {_params.EndBatch}");
                 
             // Setup cancellation handler
             Console.CancelKeyPress += (sender, e) =>
@@ -92,11 +95,11 @@ namespace Motely.Executors
                 e.Cancel = true;
                 _cancelled = true;
                 Console.WriteLine("\n🛑 Stopping search...");
-                search.Dispose();
+                // Don't dispose here - let it finish gracefully
             };
-            
+
             var searchStopwatch = Stopwatch.StartNew();
-            
+
             // Add debug output for batch range processing
             if (_params.StartBatch > 0 || _params.EndBatch > 0)
             {
@@ -104,25 +107,31 @@ namespace Motely.Executors
                 Console.WriteLine($"   Seeds per batch: {Math.Pow(35, _params.BatchSize):N0}");
                 Console.WriteLine($"   Total seeds to search: {((_params.EndBatch - _params.StartBatch + 1) * Math.Pow(35, _params.BatchSize)):N0}");
             }
-            
+
             search.Start();
-            
+
             // Wait for completion using polling instead of blocking
             while (search.Status != MotelySearchStatus.Completed && !_cancelled)
             {
                 System.Threading.Thread.Sleep(100);
             }
-            
+
+            // Stop the search gracefully (if cancelled)
+            if (_cancelled)
+            {
+                search.Dispose();
+            }
+
             // Give threads a moment to finish printing any final results
             System.Threading.Thread.Sleep(100);
-            
+
             searchStopwatch.Stop();
             PrintSummary(search, searchStopwatch.Elapsed);
             
             return 0;
         }
         
-        private IMotelySearch CreateFilterSearch(string filterName, Action<long, long, long, double> progressCallback)
+        private IMotelySearch CreateFilterSearch(string filterName, Action<long, long, long, double>? progressCallback)
         {
             var seeds = LoadSeeds();
             var filterDesc = GetFilterDescriptor(filterName);
@@ -138,29 +147,37 @@ namespace Motely.Executors
                 NegativeCopyFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 NegativeTagFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 SoulTestFilterDesc d => BuildSearch(d, progressCallback, seeds),
+                FilledSoulFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 _ => throw new ArgumentException($"Unknown filter type: {filterDesc.GetType()}")
             };
         }
         
         // Single method that builds the search with ALL the common settings
-        private IMotelySearch BuildSearch<TFilter>(IMotelySeedFilterDesc<TFilter> filterDesc, 
-            Action<long, long, long, double> progressCallback, List<string>? seeds) 
+        private IMotelySearch BuildSearch<TFilter>(IMotelySeedFilterDesc<TFilter> filterDesc,
+            Action<long, long, long, double>? progressCallback, List<string>? seeds) 
             where TFilter : struct, IMotelySeedFilter
         {
             var settings = new MotelySearchSettings<TFilter>(filterDesc)
                 .WithThreadCount(_params.Threads)
                 .WithBatchCharacterCount(_params.BatchSize)
-                .WithSilent(_params.Silent)
-                .WithProgressCallback(progressCallback);
-    
-            settings = ApplyChainedFilters(settings);
+                .WithSilent(_params.Silent);
+
+            if (progressCallback != null)
+            {
+                settings = settings.WithProgressCallback(progressCallback);
+            }
+
             settings = ApplyScoring(settings);
-            
+
             // Set batch boundaries
             settings = settings.WithStartBatchIndex((long)_params.StartBatch);
-            // FIX: EndBatchIndex is EXCLUSIVE in the API, but users expect INCLUSIVE
-            // Add 1 to make the command-line parameter inclusive
-            if (_params.EndBatch > 0) settings = settings.WithEndBatchIndex((long)_params.EndBatch + 1);
+
+            // Set end batch boundary (if user specified --endBatch, add 1 to make it inclusive)
+            if (_params.EndBatch > 0)
+            {
+                settings = settings.WithEndBatchIndex((long)_params.EndBatch + 1);
+            }
+            // If endBatch=0, don't set end boundary (infinite search until Ctrl+C)
             
             if (seeds != null && seeds.Count > 0)
                 return settings.WithListSearch(seeds).Start();
@@ -172,7 +189,7 @@ namespace Motely.Executors
         private object GetFilterDescriptor(string filterName)
         {
             var normalizedName = filterName.ToLower(System.Globalization.CultureInfo.CurrentCulture).Trim();
-            Console.WriteLine($"   DEBUG: Loading filter descriptor for: {normalizedName}");
+            DebugLogger.Log($"Loading filter descriptor for: {normalizedName}");
             return normalizedName switch
             {
                 "nanseed" => new NaNSeedFilterDesc(),
@@ -184,85 +201,9 @@ namespace Motely.Executors
                 "negativetags" => new NegativeTagFilterDesc(),
                 "negativetag" => new NegativeTagFilterDesc(),
                 "soultest" => new SoulTestFilterDesc(),
+                "filledsoul" => new FilledSoulFilterDesc(),
                 _ => throw new ArgumentException($"Unknown filter: {filterName}")
             };
-        }
-        
-        private MotelySearchSettings<T> ApplyChainedFilters<T>(MotelySearchSettings<T> settings) where T : struct, IMotelySeedFilter
-        {
-            if (string.IsNullOrEmpty(_chainFilters))
-                return settings;
-                
-            var filters = _chainFilters.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            
-            foreach (var filter in filters)
-            {
-                // Check if it's a JSON filter (contains .json or exists as json file)
-                if (filter.EndsWith(".json") || IsJsonFilter(filter))
-                {
-                    // Load JSON filter
-                    var config = LoadJsonConfig(filter);
-                    
-                    // ONLY use Must clauses for filtering - Should clauses are for scoring only
-                    // MustNot would need special handling (not implemented yet)
-                    if (config.Must != null && config.Must.Count > 0)
-                    {
-                        // Initialize parsed enums for all clauses
-                        foreach (var clause in config.Must)
-                        {
-                            clause.InitializeParsedEnums();
-                        }
-                        
-                        // PROPER SLICING: Group clauses by category for optimal vectorization
-                        var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.Must);
-                        
-                        foreach (var (category, clauses) in clausesByCategory)
-                        {
-                            // Specialized filters now implemented
-                            Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
-                        }
-                        
-                        Console.WriteLine($"   + Total JSON filters chained: {clausesByCategory.Count} categories, {config.Must.Count} total clauses");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"   + Skipping JSON filter: {filter} (no must clauses to chain)");
-                    }
-                    
-                    // AUTO-ADD SCORING: If chained JSON has SHOULD clauses, auto-add scoring 
-                    if (config.Should != null && config.Should.Count > 0)
-                    {
-                        Console.WriteLine($"   + Auto-adding scoring: {filter} ({config.Should.Count} should clauses)");
-                        // Set the auto-score config so ApplyScoring picks it up
-                        if (string.IsNullOrEmpty(_scoreConfig))
-                        {
-                            _autoScoreConfig = filter; // Auto-set score config to same filter
-                        }
-                    }
-                }
-                else
-                {
-                    // Native filter
-                    var descriptor = GetFilterDescriptor(filter);
-                    
-                    settings = descriptor switch
-                    {
-                        NaNSeedFilterDesc d => settings.WithAdditionalFilter(d),
-                        PerkeoObservatoryFilterDesc d => settings.WithAdditionalFilter(d),
-                        ObservatoryDesc d => settings.WithAdditionalFilter(d),
-                        TrickeoglyphFilterDesc d => settings.WithAdditionalFilter(d),
-                        NegativeCopyFilterDesc d => settings.WithAdditionalFilter(d),
-                        NegativeTagFilterDesc d => settings.WithAdditionalFilter(d),
-                        SoulTestFilterDesc d => settings.WithAdditionalFilter(d),
-                        PassthroughFilterDesc d => settings.WithAdditionalFilter(d),
-                        _ => throw new ArgumentException($"Unknown chain filter type: {descriptor.GetType()}")
-                    };
-                    
-                    Console.WriteLine($"   + Chained filter: {filter}");
-                }
-            }
-            
-            return settings;
         }
         
         private bool IsJsonFilter(string filter)
@@ -376,9 +317,10 @@ namespace Motely.Executors
         {
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
-                return new List<string> { _params.SpecificSeed };
+                _searchSeeds = new List<string> { _params.SpecificSeed };
+                return _searchSeeds;
             }
-            
+
             if (!string.IsNullOrEmpty(_params.Wordlist))
             {
                 var wordlistPath = $"WordLists/{_params.Wordlist}.txt";
@@ -386,11 +328,12 @@ namespace Motely.Executors
                 {
                     throw new FileNotFoundException($"Wordlist file not found: {wordlistPath}");
                 }
-                return File.ReadAllLines(wordlistPath)
+                _searchSeeds = File.ReadAllLines(wordlistPath)
                     .Where(line => !string.IsNullOrWhiteSpace(line))
                     .ToList();
+                return _searchSeeds;
             }
-            
+
             return null;
         }
 
@@ -398,25 +341,32 @@ namespace Motely.Executors
         private void PrintSummary(IMotelySearch search, TimeSpan duration)
         {
             Console.WriteLine(_cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed");
-            
-            // FIXED: Calculate actual seeds searched correctly based on completed batches
+
+            // Calculate actual seeds searched
             ulong totalSeedsSearched;
-            ulong seedsPerBatch = (ulong)Math.Pow(35, _params.BatchSize);
-            
-            // Use CompletedBatchCount for actual seeds searched
-            // CompletedBatchCount is the number of batches actually completed
-            totalSeedsSearched = (ulong)search.CompletedBatchCount * seedsPerBatch;
-            
+
+            if (_searchSeeds != null)
+            {
+                // Wordlist or specific seed mode - use actual seed count
+                totalSeedsSearched = (ulong)_searchSeeds.Count;
+            }
+            else
+            {
+                // Sequential batch mode - calculate from batches
+                ulong seedsPerBatch = (ulong)Math.Pow(35, _params.BatchSize);
+                totalSeedsSearched = (ulong)search.CompletedBatchCount * seedsPerBatch;
+            }
+
             // Calculate the actual last batch processed
-            var lastBatch = _params.StartBatch > 0 
-                ? (long)_params.StartBatch + search.CompletedBatchCount - 1 
+            var lastBatch = _params.StartBatch > 0
+                ? (long)_params.StartBatch + search.CompletedBatchCount - 1
                 : search.CompletedBatchCount;
-            
+
             Console.WriteLine($"   Batches completed: {search.CompletedBatchCount}");
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
             Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");
-            
+
             if (duration.TotalMilliseconds >= 1)
             {
                 var speed = (double)totalSeedsSearched / duration.TotalMilliseconds;
