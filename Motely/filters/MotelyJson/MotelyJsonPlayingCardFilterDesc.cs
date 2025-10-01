@@ -56,65 +56,29 @@ public struct MotelyJsonPlayingCardFilterDesc(List<MotelyJsonConfig.MotleyJsonFi
             // Copy struct members to locals to avoid CS1673
             var clauses = _clauses;
             
-            // Fall back to single-seed search since vectorized playing card implementation is not ready
+            // USE THE SHARED FUNCTION - same logic as scoring!
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                // Check all clauses
+                // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)
                 {
                     bool clauseMatched = false;
                     
                     foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
                     {
-                        // DYNAMIC: Set generatedFirstPack based on default pack slots  
-                        var packStream = singleCtx.CreateBoosterPackStream(ante, ante != 1, false);
-                        for (int i = 0; i < 2 + ante; i++)
+                        // Use the SHARED function with earlyExit=true for filtering
+                        if (MotelyJsonScoring.CountPlayingCardOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
                         {
-                            var pack = singleCtx.GetNextBoosterPack(ref packStream);
-                            
-                            if (pack.GetPackType() == MotelyBoosterPackType.Standard)
-                            {
-                                var standardStream = singleCtx.CreateStandardPackCardStream(ante);
-                                var contents = singleCtx.GetNextStandardPackContents(ref standardStream, pack.GetPackSize());
-                                
-                                for (int k = 0; k < contents.Length; k++)
-                                {
-                                    var card = contents[k];
-                                    if (card.TypeCategory != MotelyItemTypeCategory.PlayingCard)
-                                        continue;
-                                    
-                                    var playingCard = (MotelyPlayingCard)card.Type;
-                                    
-                                    // Check suit if specified
-                                    if (clause.SuitEnum.HasValue && playingCard.GetSuit() != clause.SuitEnum.Value)
-                                        continue;
-                                    
-                                    // Check rank if specified  
-                                    if (clause.RankEnum.HasValue && playingCard.GetRank() != clause.RankEnum.Value)
-                                        continue;
-                                    
-                                    bool editionMatches = !clause.EditionEnum.HasValue || card.Edition == clause.EditionEnum.Value;
-                                    bool sealMatches = !clause.SealEnum.HasValue || card.Seal == clause.SealEnum.Value;
-                                    
-                                    if (editionMatches && sealMatches)
-                                    {
-                                        clauseMatched = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            if (clauseMatched) break;
+                            clauseMatched = true;
+                            break;
                         }
-                        
-                        if (clauseMatched) break;
                     }
                     
-                    // If any clause didn't match, the seed doesn't match
-                    if (!clauseMatched) return false;
+                    // All clauses must match
+                    if (!clauseMatched)
+                        return false;
                 }
                 
-                // All clauses matched
                 return true;
             });
         }

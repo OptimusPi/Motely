@@ -1,0 +1,31 @@
+{
+    "Must": [
+        {
+            "type": "PlanetCard",
+            "value": "Saturn",
+            "antes": [2],
+            "sources": {
+                "shopSlots": [0]
+            }
+        }
+    ],
+    "Should": [
+        {
+            "type": "PlanetCard",
+            "value": "Mars",
+            "antes": [2],
+            "sources": {
+                "shopSlots": [13]
+            }
+        },
+        {
+            "type": "PlanetCard",
+            "value": "Mercury",
+            "antes": [2],
+            "sources": {
+                "shopSlots": [40]
+            }
+        }
+    ],
+    "MustNot": []
+}

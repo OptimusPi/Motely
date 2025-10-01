@@ -1,0 +1,38 @@
+{
+    "Must": [
+        {
+            "type": "Joker",
+            "value": "Rocket",
+            "antes": [1],
+            "sources": {
+                "shopSlots": [1]
+            }
+        },
+        {
+            "type": "Joker",
+            "value": "RedCard",
+            "antes": [1],
+            "sources": {
+                "packSlots": [0]
+            }
+        }
+    ],
+    "Should": [
+        {
+            "type": "Joker",
+            "value": "TradingCard",
+            "antes": [1],
+            "sources": {
+                "shopSlots": [0]
+            }
+        },
+        {
+            "type": "Joker",
+            "value": "Blueprint",
+            "antes": [2],
+            "sources": {
+                "shopSlots": [7]
+            }
+        }
+    ]
+}

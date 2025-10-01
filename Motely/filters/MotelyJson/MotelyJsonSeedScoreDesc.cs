@@ -124,88 +124,14 @@ public struct MotelyJsonSeedScoreDesc(
             var cutoff = scoreThreshold > 0 ? scoreThreshold : Cutoff;
             var autoCutoff = AutoCutoff;
             var onResultFound = OnResultFound;
-            var scoreOnlyMode = ScoreOnlyMode;
-            
-            // SIMPLE VECTORIZED PRE-FILTER for vouchers only
-            var preFilterMask = baseFilterMask;
-            var vectorRunState = new MotelyVectorRunState();
-            
-            // DebugLogger.Log($"[Score] Starting vectorized pre-filter, Must clauses: {config.Must?.Count ?? 0}"); // DISABLED FOR PERFORMANCE
-            
-            // Process vouchers in ante order to build up state correctly
-            var voucherClauseMasks = new Dictionary<MotelyJsonConfig.MotleyJsonFilterClause, VectorMask>();
-            
-            // Pre-compute which clauses apply to which antes to avoid LINQ in hot path
-            var clausesByAnte = new List<MotelyJsonConfig.MotleyJsonFilterClause>[config.MaxVoucherAnte + 1];
-            
-            // Initialize masks for voucher clauses and build ante mapping
-            if (config.Must?.Count > 0)
-            {
-                foreach (var clause in config.Must)
-                {
-                    if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher && clause.VoucherEnum.HasValue)
-                    {
-                        voucherClauseMasks[clause] = VectorMask.NoBitsSet;
-                        
-                        // Pre-compute which antes this clause cares about
-                        if (clause.EffectiveAntes != null)
-                        {
-                            foreach (var ante in clause.EffectiveAntes)
-                            {
-                                if (ante <= config.MaxVoucherAnte)
-                                {
-                                    clausesByAnte[ante] ??= new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-                                    clausesByAnte[ante].Add(clause);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Process each ante in order, activating vouchers and checking clauses
-            if (config.MaxVoucherAnte > 0)
-            {
-                for (int ante = 1; ante <= config.MaxVoucherAnte; ante++)
-                {
-                    var vouchers = searchContext.GetAnteFirstVoucher(ante, vectorRunState);
-                    
-                    // Check only the clauses that care about this ante (pre-computed!)
-                    var clausesForThisAnte = clausesByAnte[ante];
-                    if (clausesForThisAnte != null)
-                    {
-                        foreach (var clause in clausesForThisAnte)
-                        {
-                            var matches = VectorEnum256.Equals(vouchers, clause.VoucherEnum!.Value);
-                            voucherClauseMasks[clause] |= matches; // OR - voucher can appear at any ante
-                        }
-                    }
-                    
-                    // THEN activate the voucher for future antes
-                    // Note: ActivateVoucher already respects lanes - it only activates where voucher != None
-                    vectorRunState.ActivateVoucher(vouchers);
-                }
-            }
-            
-            // Now apply all voucher clause masks to the pre-filter
-            foreach (var kvp in voucherClauseMasks)
-            {
-                preFilterMask &= kvp.Value;
-                if (preFilterMask.IsAllFalse()) 
-                    return VectorMask.NoBitsSet; // No seeds pass, exit early
-            }
-            
-            // If we have a base filter mask (from --native filter), combine it with our pre-filter
-            if (!baseFilterMask.Equals(default(VectorMask)))
-            {
-                preFilterMask &= baseFilterMask;
-                if (preFilterMask.IsAllFalse()) 
-                    return VectorMask.NoBitsSet; // No seeds pass, exit early
-            }
-            
-            // Process individual seeds - use preFilterMask for additional filtering if needed
-            // When not in ScoreOnlyMode, this should be AllBitsSet for voucher-filtered seeds
-            return searchContext.SearchIndividualSeeds(preFilterMask, (ref MotelySingleSearchContext singleCtx) =>
+
+            // Base filter already checked MUST clauses - we only score seeds that passed
+            // If no seeds passed the base filter, exit early
+            if (baseFilterMask.IsAllFalse())
+                return VectorMask.NoBitsSet;
+
+            // Score individual seeds that passed the base filter
+            return searchContext.SearchIndividualSeeds(baseFilterMask, (ref MotelySingleSearchContext singleCtx) =>
             {
                 // DebugLogger.Log($"[Score] Processing individual seed"); // DISABLED FOR PERFORMANCE
                 // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
@@ -253,34 +179,20 @@ public struct MotelyJsonSeedScoreDesc(
                     }
                 }
                 
-                // ULTIMATE FIX: Re-verify ALL MUST clauses individually to catch chained filter false positives
-                if (config.Must?.Count > 0)
-                {
-                    foreach (var mustClause in config.Must)
-                    {
-                        // Reset state for each MUST clause verification
-                        var verifyState = new MotelyRunState();
-                        
-                        // Check if this MUST clause actually has any occurrences
-                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, mustClause, ref verifyState);
-                        if (count == 0)
-                        {
-                            // MUST clause not satisfied - REJECT this seed immediately
-                            return false;
-                        }
-                    }
-                }
+                // REMOVED: Don't re-verify MUST clauses! The base filter already checked them!
+                // Re-verifying with a fresh state breaks voucher state tracking.
+                // The score provider should trust the base filter and only score Should clauses.
                 
                 // Generate and cache all bosses if needed
                 MotelyBossBlind[]? cachedBosses = null;
                 if (maxBossAnte > 0)
                 {
-                    cachedBosses = new MotelyBossBlind[maxBossAnte];
+                    cachedBosses = new MotelyBossBlind[maxBossAnte + 1]; // +1 to handle 0-based indexing
                     var bossStream = singleCtx.CreateBossStream();
                     var bossState = new MotelyRunState(); // Separate state for boss generation
-                    for (int ante = 1; ante <= maxBossAnte; ante++)
+                    for (int ante = 0; ante <= maxBossAnte; ante++)
                     {
-                        cachedBosses[ante - 1] = singleCtx.GetBossForAnte(ref bossStream, ante, ref bossState);
+                        cachedBosses[ante] = singleCtx.GetBossForAnte(ref bossStream, ante, ref bossState);
                     }
                     
                     // Store cached bosses in runState for use by scoring functions

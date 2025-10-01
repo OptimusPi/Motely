@@ -10,7 +10,7 @@
 
 // When changing maxAnte, make sure size of array below matches it.
 __constant int maxAnte = 8; 
-__constant long cardsPerAnte[] = {10, 30, 50, 50, 50, 50, 50, 50};
+__constant long cardsPerAnte[] = {0, 10, 30, 50, 50, 50, 50, 50, 50};
 
 // Change this to the deck and stake you want to use with this seed
 __constant item deck = Red_Deck;
@@ -94,7 +94,7 @@ long filter(instance* inst) {
 
         printf("\n");
         printf("Shop Queue: \n");
-        for (int q = 1; q <= cardsPerAnte[ante-1]; q++) {
+        for (int q = 1; q <= cardsPerAnte[ante]; q++) {
             printf("%i) ", q);
             shopitem _item = next_shop_item(inst, ante);
             if (_item.type == ItemType_Joker) {

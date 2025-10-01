@@ -196,27 +196,6 @@ unsafe partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelyItemVector GetNextShopJokerOrNull(ref MotelyVectorJokerStream jokerStream, ref MotelyVectorPrngStream itemTypeStream, Vector512<double> totalRate)
-    {
-        // Check what type this slot is
-        var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
-        var isJokerSlot = Vector512.LessThan(itemTypePoll, Vector512.Create(20.0)); // ShopJokerRate
-        
-        // Only advance joker stream for joker slots
-        var joker = GetNextJoker(ref jokerStream, isJokerSlot);
-        
-        // Return joker or None for non-joker slots
-        var jokerIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isJokerSlot);
-        var noneItem = Vector256<int>.Zero;
-        
-        return new MotelyItemVector(
-            Vector256.ConditionalSelect(jokerIntMask, joker.Value, noneItem)
-        );
-    }
-
-#if !DEBUG
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItemVector GetNextJoker(ref MotelyVectorJokerFixedRarityStream stream)
     {
 
