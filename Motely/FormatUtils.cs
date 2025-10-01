@@ -5,7 +5,7 @@ namespace Motely;
 /// <summary>
 /// Shared formatting utilities
 /// </summary>
-internal static class FormatUtils
+public static class FormatUtils
 {
     public static string FormatItem(MotelyItem item)
     {
