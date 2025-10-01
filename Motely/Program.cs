@@ -24,7 +24,6 @@ namespace Motely
             var jsonOption = app.Option<string>("-j|--json <JSON>", "JSON config file (JsonItemFilters/)", CommandOptionType.SingleValue);
             var analyzeOption = app.Option<string>("--analyze <SEED>", "Analyze a specific seed", CommandOptionType.SingleValue);
             var nativeOption = app.Option<string>("-n|--native <FILTER>", "Run built-in native filter", CommandOptionType.SingleValue);
-            var chainOption = app.Option<string>("--chain <FILTERS>", "Chain additional filters (comma-separated)", CommandOptionType.SingleValue);
             var scoreOption = app.Option<string>("--score <JSON>", "Add JSON scoring to native filter", CommandOptionType.SingleValue);
             var csvScoreOption = app.Option<string>("--csvScore <TYPE>", "Enable CSV scoring output (native for built-in)", CommandOptionType.SingleValue);
             var timeOption = app.Option<int>("--time <SECONDS>", "Progress report interval in seconds (default: 1200)", CommandOptionType.SingleValue);
@@ -116,9 +115,8 @@ namespace Motely
                 if (!string.IsNullOrEmpty(nativeFilter))
                 {
                     // Native filter mode
-                    var chainFilters = chainOption.Value();
                     var scoreConfig = scoreOption.Value();
-                    
+
                     // Parse cutoff for native filters with scoring or CSV scoringI he
                     if (!string.IsNullOrEmpty(scoreConfig))
                     {
@@ -126,8 +124,8 @@ namespace Motely
                         parameters.AutoCutoff = cutoffStr.ToLowerInvariant() == "auto";
                         parameters.Cutoff = parameters.AutoCutoff ? 1 : (int.TryParse(cutoffStr, out var c) ? c : 0);
                     }
-                    
-                    var executor = new NativeFilterExecutor(nativeFilter, parameters, chainFilters, scoreConfig);
+
+                    var executor = new NativeFilterExecutor(nativeFilter, parameters, scoreConfig);
                     return executor.Execute();
                 }
                 else

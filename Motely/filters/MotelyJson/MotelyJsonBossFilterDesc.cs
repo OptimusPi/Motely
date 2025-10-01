@@ -49,20 +49,12 @@ public struct MotelyJsonBossFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCla
             var clauses = _clauses;
             var maxAnte = _maxAnte;
             
-            // Fall back to single-seed search since vectorized boss implementation is not ready
+            // USE THE SHARED FUNCTION - same logic as scoring!
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
-                // Generate bosses for all needed antes
-                var bossStream = singleCtx.CreateBossStream();
-                var bosses = new MotelyBossBlind[Math.Max(maxAnte, 8)];
-                var state = new MotelyRunState(); // Need state for GetBossForAnte
+                var state = new MotelyRunState();
                 
-                for (int ante = 1; ante <= Math.Max(maxAnte, 8); ante++)
-                {
-                    bosses[ante - 1] = singleCtx.GetBossForAnte(ref bossStream, ante, ref state);
-                }
-                
-                // Check all clauses
+                // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)
                 {
                     if (!clause.BossEnum.HasValue) continue;
@@ -70,7 +62,7 @@ public struct MotelyJsonBossFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCla
                     bool matched = false;
                     foreach (var ante in clause.EffectiveAntes)
                     {
-                        if (ante <= maxAnte && bosses[ante - 1] == clause.BossEnum.Value)
+                        if (MotelyJsonScoring.CheckBossSingle(ref singleCtx, clause, ante, ref state))
                         {
                             matched = true;
                             break;

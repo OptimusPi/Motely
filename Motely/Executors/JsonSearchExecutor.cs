@@ -10,6 +10,7 @@ namespace Motely.Executors
     {
         private readonly string _configPath = configPath;
         private readonly JsonSearchParams _params = parameters;
+        private bool _cancelled = false;
 
         public int Execute()
         {
@@ -54,7 +55,28 @@ namespace Motely.Executors
                     PrintResultsHeader(config);
                 }
 
-                search.AwaitCompletion();
+                // Setup cancellation handler
+                Console.CancelKeyPress += (sender, e) =>
+                {
+                    e.Cancel = true;
+                    _cancelled = true;
+                    Console.WriteLine("\n🛑 Stopping search...");
+                    // Don't dispose here - let it finish gracefully
+                };
+
+                search.Start();
+
+                // Wait for completion using polling instead of blocking
+                while (search.Status != MotelySearchStatus.Completed && !_cancelled)
+                {
+                    Thread.Sleep(100);
+                }
+
+                // Stop the search gracefully (if cancelled)
+                if (_cancelled)
+                {
+                    search.Dispose();
+                }
 
                 Console.Out.Flush();
                 Thread.Sleep(100);
@@ -187,16 +209,37 @@ namespace Motely.Executors
 
             Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
 
+            // If no MUST clauses, use passthrough filter (accept all seeds, score via SHOULD)
             if (clausesByCategory.Count == 0)
             {
-                throw new Exception("No valid MUST clauses found for filtering");
+                Console.WriteLine($"[PASSTHROUGH] No MUST clauses - accepting all seeds for scoring");
+                var passthroughFilter = new PassthroughFilterDesc();
+                var passthroughSettings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(passthroughFilter);
+
+                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck passthroughDeck))
+                    passthroughSettings = passthroughSettings.WithDeck(passthroughDeck);
+                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake passthroughStake))
+                    passthroughSettings = passthroughSettings.WithStake(passthroughStake);
+
+                passthroughSettings = passthroughSettings.WithThreadCount(_params.Threads);
+                passthroughSettings = passthroughSettings.WithBatchCharacterCount(_params.BatchSize);
+                passthroughSettings = passthroughSettings.WithStartBatchIndex((long)_params.StartBatch);
+                if (_params.EndBatch > 0)
+                    passthroughSettings = passthroughSettings.WithEndBatchIndex((long)_params.EndBatch + 1); // +1 for inclusive
+
+                passthroughSettings = passthroughSettings.WithSeedScoreProvider(scoreDesc);
+
+                if (seeds != null && seeds.Count > 0)
+                    return passthroughSettings.WithListSearch(seeds).Start();
+                else
+                    return passthroughSettings.WithSequentialSearch().Start();
             }
 
             // Boss filter now works with proper ante-loop structure
 
             // BYPASS BROKEN CHAINING: Use composite filter for multiple categories
             List<FilterCategory> categories = [.. clausesByCategory.Keys];
-            
+
             if (categories.Count > 1)
             {
                 // Multiple categories - use composite filter to avoid broken chaining

@@ -19,37 +19,12 @@ dotnet run -c Release -- --native PerkeoObservatory --threads 16
 dotnet run -c Release -- --analyze ALEEB
 ```
 
-## CSV Scoring & Filter Chaining
-
-### Native Filter with CSV Output
-```bash
-# NegativeCopy filter with built-in CSV scoring
-dotnet run -c Release -- --native negativecopy --csvScore native --cutoff 7
-# Output: Seed,Score,Showman,Blueprint,Brainstorm,Invisible,NegShowman,NegBlueprint,NegBrainstorm,NegInvisible
-```
-
-### Chained Filters with JSON Scoring
-```bash
-# Combine PerkeoObservatory + NegativeCopy filters, score with JSON
-dotnet run -c Release -- --native PerkeoObservatory --chain NegativeCopy --score PerkeoObservatory
-# Uses PerkeoObservatory.json SHOULD clauses for CSV columns
-```
-
-### Reverse Chain for Different Scoring
-```bash
-# Same filters, but score with NegativeCopy's built-in logic
-dotnet run -c Release -- --native negativecopy --chain PerkeoObservatory --csvScore native
-```
-
 ## Command Line Options
 
 ### Core Options
-- `-j, --json <FILE>`: JSON config from JsonItemFilters/
-- `-n, --native <FILTER>`: Built-in native filter
+- `--json <filename without .json extension>`: JSON config from JsonItemFilters/
+- `--native <filter name without .cs extension>`: Built-in native filter
 - `--analyze <SEED>`: Analyze specific seed
-- `--chain <FILTERS>`: Chain additional filters (AND logic)
-- `--score <JSON>`: Add JSON scoring to native filter
-- `--csvScore native`: Enable built-in CSV scoring
 
 ### Performance Options
 - `--threads <N>`: Thread count (default: CPU cores)
