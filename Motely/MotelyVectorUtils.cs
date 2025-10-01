@@ -39,16 +39,17 @@ public unsafe static class MotelyVectorUtils
             return Avx2.ShiftLeftLogicalVariable(value, shiftCount.AsUInt32());
         }
 
+        // AUDIT ISSUE #2: Fixed correctness bug - was using & instead of <<
         int* temp = stackalloc int[Vector256<int>.Count];
 
-        temp[0] = value[0] & shiftCount[0];
-        temp[1] = value[1] & shiftCount[1];
-        temp[2] = value[2] & shiftCount[2];
-        temp[3] = value[3] & shiftCount[3];
-        temp[4] = value[4] & shiftCount[4];
-        temp[5] = value[5] & shiftCount[5];
-        temp[6] = value[6] & shiftCount[6];
-        temp[7] = value[7] & shiftCount[7];
+        temp[0] = value[0] << shiftCount[0];
+        temp[1] = value[1] << shiftCount[1];
+        temp[2] = value[2] << shiftCount[2];
+        temp[3] = value[3] << shiftCount[3];
+        temp[4] = value[4] << shiftCount[4];
+        temp[5] = value[5] << shiftCount[5];
+        temp[6] = value[6] << shiftCount[6];
+        temp[7] = value[7] << shiftCount[7];
 
         return *(Vector256<int>*)temp;
     }
@@ -83,16 +84,17 @@ public unsafe static class MotelyVectorUtils
             );
         }
 
+        // AUDIT ISSUE #2: Fixed correctness bug - was using & instead of <<
         long* temp = stackalloc long[Vector512<long>.Count];
 
-        temp[0] = value[0] & shiftCount[0];
-        temp[1] = value[1] & shiftCount[1];
-        temp[2] = value[2] & shiftCount[2];
-        temp[3] = value[3] & shiftCount[3];
-        temp[4] = value[4] & shiftCount[4];
-        temp[5] = value[5] & shiftCount[5];
-        temp[6] = value[6] & shiftCount[6];
-        temp[7] = value[7] & shiftCount[7];
+        temp[0] = value[0] << (int)shiftCount[0];
+        temp[1] = value[1] << (int)shiftCount[1];
+        temp[2] = value[2] << (int)shiftCount[2];
+        temp[3] = value[3] << (int)shiftCount[3];
+        temp[4] = value[4] << (int)shiftCount[4];
+        temp[5] = value[5] << (int)shiftCount[5];
+        temp[6] = value[6] << (int)shiftCount[6];
+        temp[7] = value[7] << (int)shiftCount[7];
 
         return *(Vector512<long>*)temp;
     }

@@ -39,7 +39,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clauses != null && _clauses.Count > 0, "MotelyJsonSoulJokerFilter called with null or empty clauses");
