@@ -32,7 +32,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.ConvertClauses(clauses)).CreateFilter(ref ctx),
                 FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)).CreateFilter(ref ctx),
                 FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.ConvertClauses(clauses)).CreateFilter(ref ctx),
+                FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.ConvertClauses(clauses)).CreateFilter(ref ctx),
+                FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(clauses).CreateFilter(ref ctx),
                 FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.ConvertClauses(clauses)).CreateFilter(ref ctx),
+                FilterCategory.Boss => new MotelyJsonBossFilterDesc(clauses).CreateFilter(ref ctx),
                 FilterCategory.Tag => new MotelyJsonTagFilterDesc(clauses).CreateFilter(ref ctx),
                 _ => throw new ArgumentException($"Unsupported filter category: {category}")
             };
@@ -51,7 +54,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             _filters = filters;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             // Start with all bits set

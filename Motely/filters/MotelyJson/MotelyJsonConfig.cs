@@ -565,15 +565,10 @@ namespace Motely.Filters;
                         item.Sources.Tags = item.Tags.Value;
                 }
             
-                // ALWAYS ensure Sources is non-null - this is CRITICAL for consistent behavior
                 if (item.Sources == null)
                 {
-                    item.Sources = GetDefaultSources(item.Type, item.Value, Deck);
+                    item.Sources = GetDefaultSources(item.Type, item.Value, Deck ?? "Red");
                 }
-                
-                // ALWAYS ensure PackSlots and ShopSlots are non-null arrays
-                item.Sources.PackSlots ??= [];
-                item.Sources.ShopSlots ??= [];
                 
             }
 
