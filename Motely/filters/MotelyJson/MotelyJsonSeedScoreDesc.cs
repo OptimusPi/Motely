@@ -12,7 +12,7 @@ namespace Motely.Filters;
 
 public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 {
-    public int Score { get; }
+    public int Score { get; set; } // Made mutable for easier scoring logic
     public string Seed { get; }
     
     private fixed int _tallyValues[32];
@@ -61,8 +61,7 @@ public struct MotelyJsonSeedScoreDesc(
     MotelyJsonConfig Config,
     int Cutoff,
     bool AutoCutoff,
-    Action<MotelySeedScoreTally> OnResultFound,
-    bool ScoreOnlyMode = false
+    Action<MotelySeedScoreTally> OnResultFound
 )
     : IMotelySeedScoreDesc<MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider>
 {
@@ -70,13 +69,9 @@ public struct MotelyJsonSeedScoreDesc(
     // Auto cutoff state
     private static int _learnedCutoff = 1;
 
-    // Results tracking for rarity calculation
-    private static long _resultsFound = 0;
-    public static long ResultsFound => _resultsFound;
-    
-    // Debug: Track how many seeds reach scoring
-    private static long _seedsScored = 0;
-    public static long SeedsScored => _seedsScored;
+    // Track seeds that passed filter (before cutoff check)
+    private static long _seedsFiltered = 0;
+    public static long SeedsFiltered => _seedsFiltered;
 
     // Callback to return the score object to (the caller can print, send to a db, I don't care)
     private readonly Action<MotelySeedScoreTally> _onResultFound = OnResultFound;
@@ -84,8 +79,9 @@ public struct MotelyJsonSeedScoreDesc(
     public MotelyJsonSeedScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
     {
         // Reset for new search
-        _learnedCutoff = Cutoff;
-        _resultsFound = 0;
+        // Auto-cutoff starts at 1 (minimum meaningful score), manual cutoff uses specified value
+        _learnedCutoff = AutoCutoff ? 1 : Cutoff;
+        _seedsFiltered = 0;
 
         // Cache voucher streams for vectorizable Must clauses
         if (Config.Must != null)
@@ -102,16 +98,14 @@ public struct MotelyJsonSeedScoreDesc(
             }
         }
 
-        return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound, ScoreOnlyMode);
+        return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound);
     }
 
-    public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<MotelySeedScoreTally> OnResultFound, bool ScoreOnlyMode = false)
-        : IMotelySeedScoreProvider
+    public static long GetFilteredSeeds() => _seedsFiltered;
+
+    public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<MotelySeedScoreTally> OnResultFound) : IMotelySeedScoreProvider
     {
         public static bool IsCancelled;
-        
-        private const int MaxShouldClauses = 32;
-        [ThreadStatic] private static int[]? _threadLocalScoresBuffer;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Score(ref MotelyVectorSearchContext searchContext, MotelySeedScoreTally[] buffer, VectorMask baseFilterMask = default, int scoreThreshold = 0)
@@ -131,21 +125,17 @@ public struct MotelyJsonSeedScoreDesc(
                 return VectorMask.NoBitsSet;
 
             // Score individual seeds that passed the base filter
-            return searchContext.SearchIndividualSeeds(baseFilterMask, (ref MotelySingleSearchContext singleCtx) =>
+            // NOTE: Scoring is intentionally SCALAR - we don't need vectorized performance here
+            // Track filtered count locally to batch Interlocked operation
+            int localFiltered = 0;
+
+            var resultMask = searchContext.SearchIndividualSeeds(baseFilterMask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                // DebugLogger.Log($"[Score] Processing individual seed"); // DISABLED FOR PERFORMANCE
-                // var sw = System.Diagnostics.Stopwatch.StartNew(); // DISABLED FOR PERFORMANCE
                 var runState = new MotelyRunState();
 
-                // Activate all vouchers for scoring (using cached property)
-#if DEBUG
-                DebugLogger.Log($"[Score] MaxVoucherAnte: {config.MaxVoucherAnte}");
-#endif
+                // Activate all vouchers for scoring (vouchers are cached, so this is fast enough)
                 if (config.MaxVoucherAnte > 0)
                 {
-#if DEBUG
-                    DebugLogger.Log($"[Score] Activating all vouchers up to ante {config.MaxVoucherAnte}");
-#endif
                     MotelyJsonScoring.ActivateAllVouchers(ref singleCtx, ref runState, config.MaxVoucherAnte);
                 }
                 
@@ -337,27 +327,7 @@ public struct MotelyJsonSeedScoreDesc(
                 }
 
 
-                int totalScore = 0;
-                
-                _threadLocalScoresBuffer ??= new int[MaxShouldClauses];
-                var scoresBuffer = _threadLocalScoresBuffer;
-                int scoreCount = 0;
-
-                if (config.Should?.Count > 0)
-                {
-                    foreach (var should in config.Should)
-                    {
-                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
-                        int score = count * should.Score;
-                        
-                        if (scoreCount < MaxShouldClauses)
-                        {
-                            scoresBuffer[scoreCount++] = count;
-                        }
-                        totalScore += score;
-                    }
-                }
-
+                // Get seed string first
                 string seedStr;
                 unsafe
                 {
@@ -365,25 +335,43 @@ public struct MotelyJsonSeedScoreDesc(
                     int length = singleCtx.GetSeed(seedPtr);
                     seedStr = new string(seedPtr, 0, length);
                 }
-                
-                var seedScore = new MotelySeedScoreTally(seedStr, totalScore);
-                for (int i = 0; i < scoreCount; i++)
+
+                // Score Should clauses and add tallies
+                int totalScore = 0;
+                var seedScore = new MotelySeedScoreTally(seedStr, 0);
+
+                if (config.Should?.Count > 0)
                 {
-                    seedScore.AddTally(scoresBuffer[i]);
+                    foreach (var should in config.Should)
+                    {
+                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
+                        int score = count * should.Score;
+                        totalScore += score;
+
+                        seedScore.AddTally(count);
+                    }
                 }
-                
+
+                // Set final score
+                seedScore.Score = totalScore;
                 buffer[singleCtx.VectorLane] = seedScore;
-                
-                // Apply cutoff filtering - only pass seeds that meet the threshold
+
+                // Increment local counter (batch Interlocked operation later)
+                localFiltered++;
+
+                // Apply cutoff filtering - return true/false, caller will count results
                 var currentCutoff = GetCurrentCutoff(totalScore, autoCutoff, cutoff);
-                if (totalScore >= currentCutoff)
-                {
-                    Interlocked.Increment(ref _resultsFound);
-                    return true; // Pass this seed
-                }
-                
-                return false; // Filter out this seed
+                return totalScore >= currentCutoff;
             });
+
+            // Batch update filtered counter ONCE per vector (instead of 8 times per seed!)
+            if (localFiltered > 0)
+            {
+                Interlocked.Add(ref _seedsFiltered, localFiltered);
+            }
+
+            // Return the mask - caller will count how many passed and invoke callbacks
+            return resultMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
