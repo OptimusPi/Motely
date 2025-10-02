@@ -533,7 +533,9 @@ namespace Motely.Filters;
                 // Normalize arrays - but DON'T initialize flat pack/shop slots as that breaks Sources merging
                 // item.PackSlots and item.ShopSlots should remain null if not provided
                 item.Stickers ??= [];
-                item.Antes ??= [1, 2, 3, 4, 5, 6, 7, 8]; // Default to all antes
+                // Default to all antes if null OR empty (explicit empty array should also get default)
+                if (item.Antes == null || item.Antes.Length == 0)
+                    item.Antes = [1, 2, 3, 4, 5, 6, 7, 8];
                 if (item.Sources != null) 
                 {
                     item.Sources.PackSlots ??= [];

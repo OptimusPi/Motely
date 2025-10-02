@@ -435,11 +435,16 @@ namespace Motely.Filters
                     var uniqueShopSlots = new HashSet<int>();
                     foreach (var slot in item.Sources.ShopSlots)
                     {
-                        if (slot < 0 || slot >= 64)
+                        if (slot < 0)
                         {
-                            errors.Add($"{prefix}: Invalid shop slot {slot} (must be 0-63)");
+                            errors.Add($"{prefix}: Invalid shop slot {slot} (must be >= 0)");
                         }
-                        else if (!uniqueShopSlots.Add(slot))
+                        else if (slot >= 64)
+                        {
+                            errors.Add($"{prefix}: Invalid shop slot {slot} (max is 63, slots are 0-63)");
+                        }
+
+                        if (!uniqueShopSlots.Add(slot))
                         {
                             warnings.Add($"{prefix}: Duplicate shop slot {slot}");
                         }
@@ -463,23 +468,45 @@ namespace Motely.Filters
                 {
                     // Validate pack slot indices
                     var uniquePackSlots = new HashSet<int>();
+                    bool hasAnte1 = item.EffectiveAntes != null && item.EffectiveAntes.Contains(1);
+                    bool autoFixedSlots = false;
+
                     foreach (var slot in item.Sources.PackSlots)
                     {
                         if (slot < 0)
                         {
                             errors.Add($"{prefix}: Invalid pack slot {slot} (must be >= 0)");
                         }
-                        else if (slot >= 6)
+                        else if (slot > 5)
                         {
-                            warnings.Add($"{prefix}: Pack slot {slot} may not exist (ante 1 has 4 packs, ante 2+ has 6 packs)");
+                            errors.Add($"{prefix}: Invalid pack slot {slot} (max is 5, slots are 0-5 for 6 packs total). Did you mean \"shopSlots\" instead?");
                         }
-                        
+                        else if (slot >= 4 && hasAnte1)
+                        {
+                            // AUTO-FIX: Map pack slots 4-5 to 0-3 for ante 1
+                            int adjustedSlot = slot % 4; // 4->0, 5->1
+                            if (uniquePackSlots.Add(adjustedSlot))
+                            {
+                                if (!autoFixedSlots)
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Cyan;
+                                    Console.WriteLine($"  ✨ AUTO-FIX: Ante 1 only has 4 packs (slots 0-3)");
+                                    Console.ResetColor();
+                                    autoFixedSlots = true;
+                                }
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                Console.WriteLine($"  ✨ {prefix}: Adjusted pack slot {slot} → {adjustedSlot} for ante 1 compatibility");
+                                Console.ResetColor();
+                            }
+                            continue; // Skip adding original slot
+                        }
+
                         if (!uniquePackSlots.Add(slot))
                         {
                             warnings.Add($"{prefix}: Duplicate pack slot {slot}");
                         }
                     }
-                    
+
                     // Sort and deduplicate
                     item.Sources.PackSlots = uniquePackSlots.OrderBy(x => x).ToArray();
                 }

@@ -411,7 +411,8 @@ namespace Motely.Executors
             long lastBatchIndex = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
 
             Console.WriteLine($"   Last batch Index: {lastBatchIndex}");
-            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");
+            Console.WriteLine($"   Seeds passed filter: {search.FilteredSeeds}");
+            Console.WriteLine($"   Seeds passed cutoff: {search.MatchingSeeds}");
 
             TimeSpan elapsed = search.ElapsedTime;
             if (elapsed.TotalMilliseconds > 100)

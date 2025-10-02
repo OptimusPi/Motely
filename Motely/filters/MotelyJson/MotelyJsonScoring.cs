@@ -48,7 +48,7 @@ public static class MotelyJsonScoring
 
         // Default sources if not specified
         var shopSlots = clause.Sources?.ShopSlots ?? Array.Empty<int>();
-        var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3 }; // Default to first 4 pack slots
+        var packSlots = clause.Sources?.PackSlots ?? new[] { 0, 1, 2, 3, 4, 5 }; // Default to all 6 pack slots
 
         // Check shop slots
         if (shopSlots.Length > 0)
@@ -111,6 +111,39 @@ public static class MotelyJsonScoring
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int SmallBlindTagTally(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
+    {
+        Debug.Assert(clause.TagEnum.HasValue, "SmallBlindTagTally requires TagEnum");
+
+        var tagStream = ctx.CreateTagStream(ante);
+        var smallBlindTag = ctx.GetNextTag(ref tagStream); // First tag is SmallBlind
+
+        if (clause.TagEnum.HasValue && smallBlindTag == clause.TagEnum.Value)
+        {
+            return 1; // Found matching SmallBlind tag
+        }
+
+        return 0;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int BigBlindTagTally(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false)
+    {
+        Debug.Assert(clause.TagEnum.HasValue, "BigBlindTagTally requires TagEnum");
+
+        var tagStream = ctx.CreateTagStream(ante);
+        ctx.GetNextTag(ref tagStream); // Skip SmallBlind tag
+        var bigBlindTag = ctx.GetNextTag(ref tagStream); // Second tag is BigBlind
+
+        if (clause.TagEnum.HasValue && bigBlindTag == clause.TagEnum.Value)
+        {
+            return 1; // Found matching BigBlind tag
+        }
+
+        return 0;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountPlanetOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, bool earlyExit = false)
     {
         Debug.Assert(clause.PlanetEnum.HasValue, "CountPlanetOccurrences requires PlanetEnum");
@@ -122,8 +155,8 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            // Convert 1-based JSON slot indices to 0-based for loop bounds
-            int maxSlot = clause.MaxShopSlot.HasValue ? (clause.MaxShopSlot.Value - 1) : (ArrayMax(shopSlots) - 1);
+            // JSON slot indices are 0-based, use directly for loop bounds
+            int maxSlot = clause.MaxShopSlot.HasValue ? clause.MaxShopSlot.Value : ArrayMax(shopSlots);
 
             for (int i = 0; i <= maxSlot; i++)
             {
@@ -187,8 +220,8 @@ public static class MotelyJsonScoring
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             var shopSlots = clause.Sources.ShopSlots;
-            // Convert 1-based JSON slot indices to 0-based for loop bounds
-            int maxSlot = clause.MaxShopSlot.HasValue ? (clause.MaxShopSlot.Value - 1) : (ArrayMax(shopSlots) - 1);
+            // JSON slot indices are 0-based, use directly for loop bounds
+            int maxSlot = clause.MaxShopSlot.HasValue ? clause.MaxShopSlot.Value : ArrayMax(shopSlots);
 
             for (int i = 0; i <= maxSlot; i++)
             {
@@ -710,8 +743,8 @@ public static class MotelyJsonScoring
                 MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
                 MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
-                MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
+                MotelyFilterItemType.SmallBlindTag => SmallBlindTagTally(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.BigBlindTag => BigBlindTagTally(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
                 MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
                 _ => 0
@@ -728,9 +761,9 @@ public static class MotelyJsonScoring
     public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
         int totalCount = 0;
-        
-        // Check each ante specified in the clause
-        foreach (var ante in clause.EffectiveAntes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 })
+
+        // Check each ante specified in the clause (EffectiveAntes should never be null after PostProcess)
+        foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
         {
             // Use the existing soul joker logic but don't early exit - count all occurrences
             var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
@@ -761,7 +794,7 @@ public static class MotelyJsonScoring
         };
         
         // Set only the target ante as wanted
-        if (targetAnte >= 0 && targetAnte < 40)
+        if (targetAnte >= 0 && targetAnte < singleAnteClause.WantedAntes.Length)
             singleAnteClause.WantedAntes[targetAnte] = true;
             
         // Use the existing robust soul joker checking logic
@@ -777,16 +810,36 @@ public static class MotelyJsonScoring
         {
             if (clauses == null || clauses.Count == 0)
                 return true; // No clauses to check means success
-            
-            try 
-            {    
+
+            try
+            {
                 int matchedClauses = 0;
                 bool[] clauseSatisfied = new bool[clauses.Count];
-            
-            // Loop ANTES first - create streams ONCE per ante, check ALL clauses
-            for (int ante = 1; ante <= 8; ante++)
+
+            // Calculate ante range from clauses (don't hard-code!)
+            int minAnte = int.MaxValue, maxAnte = -1;
+            foreach (var clause in clauses)
             {
-                // Skip antes that no clause cares about - use proper array indexing (ante is 1-based)
+                if (clause?.WantedAntes != null)
+                {
+                    for (int i = 0; i < clause.WantedAntes.Length; i++)
+                    {
+                        if (clause.WantedAntes[i])
+                        {
+                            minAnte = Math.Min(minAnte, i);
+                            maxAnte = Math.Max(maxAnte, i);
+                        }
+                    }
+                }
+            }
+
+            // If no antes wanted, no requirements to check
+            if (minAnte > maxAnte) return true;
+
+            // Loop ANTES first - create streams ONCE per ante, check ALL clauses
+            for (int ante = minAnte; ante <= maxAnte; ante++)
+            {
+                // Skip antes that no clause cares about
                 bool anteNeeded = false;
                 foreach (var clause in clauses)
                 {
@@ -803,12 +856,20 @@ public static class MotelyJsonScoring
                 var soulJoker = searchContext.GetNextJoker(ref soulStream);
                 
                 // FIXED: Create pack streams ONCE per ante, OUTSIDE clause loop (like PerkeoObservatory)
-                // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
+                // IMPORTANT: For ante 0 and ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
                 var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante != 1, false);
                 var tarotStream = searchContext.CreateArcanaPackTarotStream(ante, false);
                 var spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, false);
-                
+
+                // Calculate max pack slot - use the highest MaxPackSlot from all clauses, or default
                 int maxPackSlot = ante == 1 ? 4 : 6;
+                foreach (var clause in clauses)
+                {
+                    if (clause?.MaxPackSlot.HasValue == true)
+                    {
+                        maxPackSlot = Math.Max(maxPackSlot, clause.MaxPackSlot.Value + 1);
+                    }
+                }
                 bool tarotStreamInit = false, spectralStreamInit = false;
                 
                 // Walk through each pack slot ONCE, checking ALL clauses against each pack

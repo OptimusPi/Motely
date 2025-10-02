@@ -75,7 +75,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedShopSlots { get; init; } = new bool[64];
     public bool[] WantedPackSlots { get; init; } = new bool[6];
-    
+    public int? MaxPackSlot { get; init; }
+    public int? MaxShopSlot { get; init; }
+
     /// <summary>
     /// Create from generic JSON config clause
     /// </summary>
@@ -118,7 +120,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             StickerEnums = jsonClause.StickerEnums,
             WantedAntes = wantedAntes,
             WantedShopSlots = wantedShopSlots,
-            WantedPackSlots = wantedPackSlots
+            WantedPackSlots = wantedPackSlots,
+            MaxPackSlot = jsonClause.MaxPackSlot,
+            MaxShopSlot = jsonClause.MaxShopSlot
         };
     }
     
@@ -144,6 +148,8 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     public bool IsWildcard { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedPackSlots { get; init; } = new bool[6];  // Track which pack slots to check
+    public int? MaxPackSlot { get; init; }
+    public int? MaxShopSlot { get; init; }
     public bool RequireMega { get; init; }  // Extracted from Sources for optimization
     public bool Satisfied { get; set; }  // Track if this clause has been satisfied
     
@@ -203,6 +209,8 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             EditionEnum = jsonClause.EditionEnum,
             WantedAntes = wantedAntes,
             WantedPackSlots = wantedPackSlots,
+            MaxPackSlot = jsonClause.MaxPackSlot,
+            MaxShopSlot = jsonClause.MaxShopSlot,
             RequireMega = jsonClause.Sources?.RequireMega ?? false,
             Satisfied = false
         };
@@ -231,6 +239,8 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedPackSlots { get; init; } = new bool[6];
     public bool[] WantedShopSlots { get; init; } = new bool[64];
+    public int? MaxPackSlot { get; init; }
+    public int? MaxShopSlot { get; init; }
     
     public static MotelyJsonTarotFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -269,7 +279,9 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
             EditionEnum = jsonClause.EditionEnum,
             WantedAntes = wantedAntes,
             WantedPackSlots = wantedPackSlots,
-            WantedShopSlots = wantedShopSlots
+            WantedShopSlots = wantedShopSlots,
+            MaxPackSlot = jsonClause.MaxPackSlot,
+            MaxShopSlot = jsonClause.MaxShopSlot
         };
     }
     
@@ -330,6 +342,8 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedShopSlots { get; init; } = new bool[64];
     public bool[] WantedPackSlots { get; init; } = new bool[6];
+    public int? MaxPackSlot { get; init; }
+    public int? MaxShopSlot { get; init; }
     
     public static MotelyJsonSpectralFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -368,7 +382,9 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
             EditionEnum = jsonClause.EditionEnum,
             WantedAntes = wantedAntes,
             WantedShopSlots = wantedShopSlots,
-            WantedPackSlots = wantedPackSlots
+            WantedPackSlots = wantedPackSlots,
+            MaxPackSlot = jsonClause.MaxPackSlot,
+            MaxShopSlot = jsonClause.MaxShopSlot
         };
     }
     
@@ -393,6 +409,8 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedShopSlots { get; init; } = new bool[64];
     public bool[] WantedPackSlots { get; init; } = new bool[6];
+    public int? MaxPackSlot { get; init; }
+    public int? MaxShopSlot { get; init; }
     
     public static MotelyJsonPlanetFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -431,7 +449,9 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
             EditionEnum = jsonClause.EditionEnum,
             WantedAntes = wantedAntes,
             WantedShopSlots = wantedShopSlots,
-            WantedPackSlots = wantedPackSlots
+            WantedPackSlots = wantedPackSlots,
+            MaxPackSlot = jsonClause.MaxPackSlot,
+            MaxShopSlot = jsonClause.MaxShopSlot
         };
     }
     

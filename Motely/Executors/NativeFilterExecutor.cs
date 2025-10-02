@@ -271,7 +271,7 @@ namespace Motely.Executors
             int cutoff = _params.Cutoff;
             bool autoCutoff = _params.AutoCutoff;
             
-            var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound, ScoreOnlyMode: true);
+            var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound);
             
             return settings.WithSeedScoreProvider(scoreDesc);
         }
@@ -365,7 +365,8 @@ namespace Motely.Executors
             Console.WriteLine($"   Batches completed: {search.CompletedBatchCount}");
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
-            Console.WriteLine($"   Seeds matched: {search.MatchingSeeds}");
+            Console.WriteLine($"   Seeds passed filter: {search.FilteredSeeds}");
+            Console.WriteLine($"   Seeds passed cutoff: {search.MatchingSeeds}");
 
             if (duration.TotalMilliseconds >= 1)
             {

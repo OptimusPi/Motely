@@ -288,14 +288,16 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
         private static VectorMask CheckPacksVectorized(MotelyJsonSpectralFilterClause clause, MotelyVectorSearchContext ctx, int ante)
         {
             VectorMask foundInPacks = VectorMask.NoBitsSet;
-            
+
             // Create pack streams
             var packStream = ctx.CreateBoosterPackStream(ante);
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-            
-            // Determine max pack slot to check
+
+            // Determine max pack slot to check - use config if provided
             bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
-            int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
+            int maxPackSlot = clause.MaxPackSlot.HasValue
+                ? clause.MaxPackSlot.Value + 1
+                : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {
@@ -500,10 +502,12 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
         {
             var packStream = ctx.CreateBoosterPackStream(ante);
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante);
-            
-            // Determine max pack slot to check - simple logic!
+
+            // Determine max pack slot to check - use config if provided
             bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
-            int maxPackSlot = hasSpecificSlots ? 6 : (ante == 1 ? 4 : 6);
+            int maxPackSlot = clause.MaxPackSlot.HasValue
+                ? clause.MaxPackSlot.Value + 1
+                : (ante == 1 ? 4 : 6);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {

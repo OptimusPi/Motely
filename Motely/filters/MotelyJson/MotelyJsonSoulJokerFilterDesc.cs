@@ -54,7 +54,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
                 clauseMasks[i] = VectorMask.NoBitsSet;
             
             // Loop ANTES first for proper stream synchronization
-            for (int ante = 1; ante <= 8; ante++)
+            for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
                 // Skip antes that no clause cares about
                 bool anteNeeded = false;
