@@ -315,10 +315,11 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             ref MotelyVectorBoosterPackStream packStream, ref MotelyVectorJokerStream buffoonStream, int ante)
         {
             VectorMask foundInPack = VectorMask.NoBitsSet;
-            
-            // FIXED: Properly limit packs based on ante
-            // Ante 1: exactly 4 packs, Ante 2+: exactly 6 packs  
-            int actualPackLimit = ante == 1 ? 4 : 6;
+
+            // Use config if provided, otherwise use default pack limits
+            int actualPackLimit = clause.MaxPackSlot.HasValue
+                ? clause.MaxPackSlot.Value + 1
+                : (ante == 1 ? 4 : 6);
             
             // Check enough packs to cover the slots, but never exceed actual pack limit
             bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
@@ -470,10 +471,16 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         private static bool CheckShopJokersSingleStatic(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelySingleShopItemStream shopStream)
         {
             DebugLogger.Log($"[SHOP CHECK] Looking for {clause.JokerType} in ante {ante}");
-            
-            // Determine how many slots to check
+
+            // Determine how many slots to check - use config if provided
             int maxSlot;
-            if (!HasShopSlots(clause.WantedShopSlots))
+            if (clause.MaxShopSlot.HasValue)
+            {
+                // Use configured max shop slot
+                maxSlot = clause.MaxShopSlot.Value + 1;
+                DebugLogger.Log($"[SHOP CHECK] Using configured MaxShopSlot, checking {maxSlot} slots");
+            }
+            else if (!HasShopSlots(clause.WantedShopSlots))
             {
                 // No specific slots wanted - use defaults
                 maxSlot = (ante == 1 ? 4 : 6);
@@ -551,7 +558,10 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool CheckPackJokersSingleStatic(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelySingleBoosterPackStream packStream)
         {
-            int maxPacks = ante == 1 ? 4 : 6;
+            // Use config if provided, otherwise use default pack limits
+            int maxPacks = clause.MaxPackSlot.HasValue
+                ? clause.MaxPackSlot.Value + 1
+                : (ante == 1 ? 4 : 6);
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
             
             for (int packIndex = 0; packIndex < maxPacks; packIndex++)
