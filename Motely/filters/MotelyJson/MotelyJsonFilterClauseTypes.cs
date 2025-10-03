@@ -96,9 +96,11 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         
         // Create shop slots bool array from explicit sources OR from min/max range
         bool[] wantedShopSlots = new bool[1024];
+        DebugLogger.Log($"[JOKER CONVERT] Value={jsonClause.Value}, Sources={jsonClause.Sources}, MinShop={jsonClause.MinShopSlot}, MaxShop={jsonClause.MaxShopSlot}");
         if (jsonClause.Sources?.ShopSlots != null)
         {
             // Explicit shop slots specified
+            DebugLogger.Log($"[JOKER CONVERT] Using explicit ShopSlots");
             foreach (var slot in jsonClause.Sources.ShopSlots)
             {
                 if (slot >= 0 && slot < 1024) wantedShopSlots[slot] = true;
@@ -109,10 +111,12 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             // Use min/max shop slot range (inclusive)
             int minSlot = jsonClause.MinShopSlot ?? 0;
             int maxSlot = jsonClause.MaxShopSlot ?? 1023;
+            DebugLogger.Log($"[SHOP SLOTS] MinShopSlot={jsonClause.MinShopSlot}, MaxShopSlot={jsonClause.MaxShopSlot}, range={minSlot}-{maxSlot}");
             for (int i = minSlot; i <= maxSlot && i < 1024; i++)
             {
                 wantedShopSlots[i] = true;
             }
+            DebugLogger.Log($"[SHOP SLOTS] Set slots {minSlot}-{maxSlot} to true. Slot[6]={wantedShopSlots[6]}");
         }
 
         bool[] wantedPackSlots = new bool[6];

@@ -469,7 +469,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             DebugLogger.Log($"[SHOP CHECK] Looking for {clause.JokerType} in ante {ante}");
 
             // Determine how many slots to check - use config if provided
-            int maxSlot;
+            int maxSlot = 0;
             if (clause.MaxShopSlot.HasValue)
             {
                 // Use configured max shop slot
@@ -484,14 +484,12 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             }
             else
             {
-                // Find highest wanted slot + 1
-                maxSlot = 0;
+                // Has specific shop slots - find the max
                 for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
                 {
                     if (clause.WantedShopSlots[i])
                     {
                         maxSlot = i + 1;
-                        DebugLogger.Log($"[SHOP CHECK] Found wanted slot {i}, maxSlot = {maxSlot}");
                         break;
                     }
                 }

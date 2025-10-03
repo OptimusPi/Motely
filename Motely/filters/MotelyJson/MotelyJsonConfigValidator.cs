@@ -25,7 +25,7 @@ namespace Motely.Filters
             }
             
             // Validate all filter items
-            ValidateFilterItems(config.Must, "must", errors, warnings, stake);
+            ValidateFilterItems(config.Must, "must", errors, warnings, stake, isMust: true);
             ValidateFilterItems(config.Should, "should", errors, warnings, stake);
             ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake);
 
@@ -62,24 +62,32 @@ namespace Motely.Filters
             }
         }
         
-        private static void ValidateFilterItems(List<MotelyJsonConfig.MotleyJsonFilterClause> items, string section, List<string> errors, List<string> warnings, MotelyStake stake)
+        private static void ValidateFilterItems(List<MotelyJsonConfig.MotleyJsonFilterClause> items, string section, List<string> errors, List<string> warnings, MotelyStake stake, bool isMust = false)
         {
             if (items == null) return;
-            
+
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
                 var prefix = $"{section}[{i}]";
-                
+
                 // Validate type
                 if (string.IsNullOrEmpty(item.Type))
                 {
                     errors.Add($"{prefix}: Missing 'type' field");
                     continue;
                 }
-                
+
                 // CRITICAL: Initialize parsed enums FIRST
                 item.InitializeParsedEnums();
+
+                // And/Or clauses not supported in MUST
+                if (isMust && (item.ItemTypeEnum == MotelyFilterItemType.And || item.ItemTypeEnum == MotelyFilterItemType.Or))
+                {
+                    errors.Add($"{prefix}: And/Or clauses are not supported in 'must'. Move them to 'should' for scoring.");
+                    continue;
+                }
+
                 
                 // CRITICAL: Normalize Sources for ALL item types that support them
                 // This happens ONCE at config load, NOT in the hot path!
@@ -138,6 +146,25 @@ namespace Motely.Filters
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
                             errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary");
+                        }
+                        // Validate values array
+                        if (item.Values != null)
+                        {
+                            for (int j = 0; j < item.Values.Length; j++)
+                            {
+                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j] == "*" ||
+                                                  item.Values[j].Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j].Equals("AnyCommon", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j].Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j].Equals("AnyRare", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j].Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase);
+                                if (!isWildcard && !Enum.TryParse<MotelyJoker>(item.Values[j], true, out _))
+                                {
+                                    var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
+                                    errors.Add($"{prefix}.values[{j}]: Invalid joker '{item.Values[j]}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary");
+                                }
+                            }
                         }
                         break;
                         
@@ -431,7 +458,19 @@ namespace Motely.Filters
             else
             {
                 // Sources exists - normalize the arrays
-                
+
+                // Populate ShopSlots from min/max if not explicitly set
+                if ((item.Sources.ShopSlots == null || item.Sources.ShopSlots.Length == 0) &&
+                    (item.Sources.MinShopSlot.HasValue || item.Sources.MaxShopSlot.HasValue))
+                {
+                    int minSlot = item.Sources.MinShopSlot ?? 0;
+                    int maxSlot = item.Sources.MaxShopSlot ?? 1023;
+                    var shopSlots = new List<int>();
+                    for (int i = minSlot; i <= maxSlot && i < 1024; i++)
+                        shopSlots.Add(i);
+                    item.Sources.ShopSlots = shopSlots.ToArray();
+                }
+
                 // Normalize ShopSlots
                 if (item.Sources.ShopSlots == null)
                 {
@@ -453,9 +492,9 @@ namespace Motely.Filters
                         {
                             errors.Add($"{prefix}: Invalid shop slot {slot} (must be >= 0)");
                         }
-                        else if (slot >= 64)
+                        else if (slot >= 1024)
                         {
-                            errors.Add($"{prefix}: Invalid shop slot {slot} (max is 63, slots are 0-63)");
+                            errors.Add($"{prefix}: Invalid shop slot {slot} (max is 1023, slots are 0-1023)");
                         }
 
                         if (!uniqueShopSlots.Add(slot))
@@ -468,6 +507,18 @@ namespace Motely.Filters
                     item.Sources.ShopSlots = uniqueShopSlots.OrderBy(x => x).ToArray();
                 }
                 
+                // Populate PackSlots from min/max if not explicitly set
+                if ((item.Sources.PackSlots == null || item.Sources.PackSlots.Length == 0) &&
+                    (item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue))
+                {
+                    int minSlot = item.Sources.MinPackSlot ?? 0;
+                    int maxSlot = item.Sources.MaxPackSlot ?? 5;
+                    var packSlots = new List<int>();
+                    for (int i = minSlot; i <= maxSlot && i <= 5; i++)
+                        packSlots.Add(i);
+                    item.Sources.PackSlots = packSlots.ToArray();
+                }
+
                 // Normalize PackSlots
                 if (item.Sources.PackSlots == null)
                 {
