@@ -5,8 +5,8 @@
   "must": [
     {
       "type": "joker",
-      "value": "AnyLegendary",
-      "antes": [1,2,3],
+      "value": "Any",
+      "antes": [1],
       "sources": {
         "shopSlots": [0,1,2,3],
         "packSlots": [0,1,2,3]

@@ -43,7 +43,10 @@ public static class MotelyJsonPerformanceUtils
         ["anycommon"] = MotelyJsonConfigWildcards.AnyCommon,
         ["anyuncommon"] = MotelyJsonConfigWildcards.AnyUncommon,
         ["anyrare"] = MotelyJsonConfigWildcards.AnyRare,
-        ["anylegendary"] = MotelyJsonConfigWildcards.AnyLegendary
+        ["anylegendary"] = MotelyJsonConfigWildcards.AnyLegendary,
+        ["anytarot"] = MotelyJsonConfigWildcards.AnyTarot,
+        ["anyspectral"] = MotelyJsonConfigWildcards.AnySpectral,
+        ["anyplanet"] = MotelyJsonConfigWildcards.AnyPlanet
     };
     
     #endregion
