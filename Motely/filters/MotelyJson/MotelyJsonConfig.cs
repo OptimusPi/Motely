@@ -9,6 +9,18 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Motely.Filters;
 
+/// <summary>
+/// Constants for slot limits in Balatro
+/// </summary>
+internal static class MotelySlotLimits
+{
+    /// <summary>Pack slots: 0-5 (6 total max in ante 2+, 4 in ante 1)</summary>
+    public const int MAX_PACK_SLOT = 5;
+
+    /// <summary>Shop slots: theoretically unlimited (player can reroll), capped at 1024 for array size</summary>
+    public const int MAX_SHOP_SLOT = 1023;
+}
+
     /// <summary>
     /// Wildcard types for joker filtering
     /// </summary>
@@ -113,11 +125,15 @@ namespace Motely.Filters;
             }
         }
 
-        // Pre-computed values (set during initialization)
-        // Min/Max define the range of slots to check (supports unlimited slots like 0-1000)
+        // Pre-computed values (set during ProcessClause from Sources)
+        // Min/Max are calculated from Sources.min/maxShopSlot or Sources.shopSlots array
+        [JsonIgnore]
         public int? MinShopSlot { get; set; }
+        [JsonIgnore]
         public int? MaxShopSlot { get; set; }
+        [JsonIgnore]
         public int? MinPackSlot { get; set; }
+        [JsonIgnore]
         public int? MaxPackSlot { get; set; }
         
         
@@ -439,9 +455,21 @@ namespace Motely.Filters;
         {
             [JsonPropertyName("shopSlots")]
             public int[]? ShopSlots { get; set; }
-        
+
             [JsonPropertyName("packSlots")]
             public int[]? PackSlots { get; set; }
+
+            [JsonPropertyName("minShopSlot")]
+            public int? MinShopSlot { get; set; }
+
+            [JsonPropertyName("maxShopSlot")]
+            public int? MaxShopSlot { get; set; }
+
+            [JsonPropertyName("minPackSlot")]
+            public int? MinPackSlot { get; set; }
+
+            [JsonPropertyName("maxPackSlot")]
+            public int? MaxPackSlot { get; set; }
         
             [JsonPropertyName("tags")]
             public bool? Tags { get; set; }
@@ -541,6 +569,7 @@ namespace Motely.Filters;
         /// </summary>
         private void ProcessClause(MotleyJsonFilterClause item)
         {
+            DebugLogger.Log($"[PROCESS START] Type={item.Type}, Value={item.Value}, Antes={(item.Antes == null ? "null" : $"[{string.Join(",", item.Antes)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}");
             // Normalize type
             item.Type = item.Type.ToLowerInvariant();
 
@@ -556,16 +585,18 @@ namespace Motely.Filters;
                     item.Antes = [1, 2, 3, 4, 5, 6, 7, 8];
             }
 
-            if (item.Sources != null)
-            {
-                item.Sources.PackSlots ??= [];
-                item.Sources.ShopSlots ??= [];
-            }
+            // Don't initialize empty arrays - let min/max populate them later
+            // if (item.Sources != null)
+            // {
+            //     item.Sources.PackSlots ??= [];
+            //     item.Sources.ShopSlots ??= [];
+            // }
 
             // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
             item.InitializeParsedEnums();
 
             // Merge flat properties into Sources for backwards compatibility
+            DebugLogger.Log($"[MERGE] Type={item.Type}, Value={item.Value}, flat ShopSlots={(item.ShopSlots == null ? "null" : $"[{string.Join(",", item.ShopSlots)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}");
             if (item.PackSlots != null || item.ShopSlots != null || item.RequireMega != null || item.Tags != null)
             {
                 if (item.Sources == null)
@@ -579,6 +610,7 @@ namespace Motely.Filters;
                 }
                 if (item.ShopSlots != null)
                 {
+                    DebugLogger.Log($"[MERGE] Copying flat ShopSlots [{string.Join(",", item.ShopSlots)}] to Sources.ShopSlots");
                     item.Sources.ShopSlots = item.ShopSlots;
                 }
                 if (item.RequireMega != null)
@@ -601,18 +633,39 @@ namespace Motely.Filters;
                 }
             }
 
-            // Calculate min/max pack/shop slots from array if provided
-            if (item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0)
+            // Populate Sources.ShopSlots/PackSlots from min/max if needed
+            if (item.Sources?.MinShopSlot.HasValue == true || item.Sources?.MaxShopSlot.HasValue == true)
             {
-                item.MinPackSlot = item.Sources.PackSlots.Min();
-                item.MaxPackSlot = item.Sources.PackSlots.Max();
+                int minSlot = item.Sources.MinShopSlot ?? 0;
+                int maxSlot = item.Sources.MaxShopSlot ?? MotelySlotLimits.MAX_SHOP_SLOT;
+                var shopSlots = new List<int>();
+                for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_SHOP_SLOT; i++)
+                    shopSlots.Add(i);
+                item.Sources.ShopSlots = shopSlots.ToArray();
+                item.MinShopSlot = minSlot;
+                item.MaxShopSlot = maxSlot;
             }
-
-            // Calculate min/max shop slots from array if provided
-            if (item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+            else if (item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
             {
                 item.MinShopSlot = item.Sources.ShopSlots.Min();
                 item.MaxShopSlot = item.Sources.ShopSlots.Max();
+            }
+
+            if (item.Sources?.MinPackSlot.HasValue == true || item.Sources?.MaxPackSlot.HasValue == true)
+            {
+                int minSlot = item.Sources.MinPackSlot ?? 0;
+                int maxSlot = item.Sources.MaxPackSlot ?? MotelySlotLimits.MAX_PACK_SLOT;
+                var packSlots = new List<int>();
+                for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_PACK_SLOT; i++)
+                    packSlots.Add(i);
+                item.Sources.PackSlots = packSlots.ToArray();
+                item.MinPackSlot = minSlot;
+                item.MaxPackSlot = maxSlot;
+            }
+            else if (item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0)
+            {
+                item.MinPackSlot = item.Sources.PackSlots.Min();
+                item.MaxPackSlot = item.Sources.PackSlots.Max();
             }
         }
 
