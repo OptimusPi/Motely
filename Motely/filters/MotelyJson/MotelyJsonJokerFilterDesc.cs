@@ -11,22 +11,24 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on joker criteria from JSON configuration.
 /// </summary>
-public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause> jokerClauses)
+public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>
 {
-    private readonly List<MotelyJsonJokerFilterClause> _jokerClauses = jokerClauses;
+    private readonly MotelyJsonJokerFilterCriteria _criteria = criteria;
 
     public MotelyJsonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_jokerClauses);
-        
+        // Use pre-calculated values from criteria
+        int minAnte = _criteria.MinAnte;
+        int maxAnte = _criteria.MaxAnte;
+
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             ctx.CacheShopStream(ante);
             ctx.CacheBoosterPackStream(ante);
         }
-        
-        return new MotelyJsonJokerFilter(_jokerClauses, minAnte, maxAnte);
+
+        return new MotelyJsonJokerFilter(_criteria.Clauses, minAnte, maxAnte);
     }
 
     public struct MotelyJsonJokerFilter(List<MotelyJsonJokerFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
@@ -34,7 +36,6 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         private readonly List<MotelyJsonJokerFilterClause> Clauses = clauses;
         private readonly int MinAnte = minAnte;
         private readonly int MaxAnte = maxAnte;
-        private readonly int MaxShopSlotsNeeded = CalculateMaxShopSlotsNeeded(clauses);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
@@ -59,7 +60,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             {
                 // Create streams ONCE per ante, outside the clause loop!
                 var shopJokerStream = ctx.CreateShopJokerStreamNew(ante);
-                var packStream = ctx.CreateBoosterPackStream(ante, isCached: true, generatedFirstPack: ante != 1);
+                var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante > 1);
                 var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
                 
                 for (int clauseIndex = 0; clauseIndex < Clauses.Count; clauseIndex++)
@@ -197,7 +198,7 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
                             // Check packs
                             if (HasPackSlots(clause.WantedPackSlots))
                             {
-                                var packStream = singleCtx.CreateBoosterPackStream(ante, generatedFirstPack: ante != 1, isCached: false);
+                                var packStream = singleCtx.CreateBoosterPackStream(ante, generatedFirstPack: ante > 1, isCached: false);
                                 if (CheckPackJokersSingleStatic(ref singleCtx, clause, ante, ref packStream))
                                 {
                                     clauseSatisfied = true;
@@ -225,22 +226,19 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             VectorMask foundInShop = VectorMask.NoBitsSet;
 
 
-            // Calculate the highest slot we need to check
-            // Find the highest wanted shop slot + 1 (for loop bounds)
-            int maxSlot = 0;
-            for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+            // Use min/max shop slot range (supports unlimited slots like 0-1000)
+            int minSlot = clause.MinShopSlot ?? 0;
+            int maxSlot = clause.MaxShopSlot ?? (clause.MaxShopSlotsNeeded > 0 ? clause.MaxShopSlotsNeeded : (ante == 1 ? 4 : 6));
+
+            // Skip to minSlot by consuming unwanted items
+            for (int skip = 0; skip < minSlot; skip++)
             {
-                if (clause.WantedShopSlots[i])
-                {
-                    maxSlot = i + 1;
-                    break;
-                }
+                ctx.GetNextShopItem(ref shopStream);
             }
-            
-            // Read through slots sequentially up to maxSlot, checking only wanted slots
-            for (int slot = 0; slot < maxSlot; slot++)
+
+            // Check slots from minSlot to maxSlot (inclusive)
+            for (int slot = minSlot; slot <= maxSlot; slot++)
             {
-                if (!clause.WantedShopSlots[slot]) continue;
                 
                 // Get the shop item - the stream handles all rate calculations internally
                 var item = ctx.GetNextShopItem(ref shopStream);
@@ -273,15 +271,13 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask CheckShopJokerVectorizedNew(MotelyJsonJokerFilterClause clause, MotelyVectorSearchContext ctx, 
+        private VectorMask CheckShopJokerVectorizedNew(MotelyJsonJokerFilterClause clause, MotelyVectorSearchContext ctx,
             ref MotelyVectorShopJokerStream shopJokerStream)
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
-            
-            // ALWAYS iterate through ALL shop slots to maintain stream sync!
-            // If no bitmask specified (0), check all slots
-            // If bitmask specified, still need to iterate through all slots but only check specified ones
-            int maxSlot = MaxShopSlotsNeeded; // Always use the max slots needed, not just up to highest bit!
+
+            // Use the pre-calculated max slots from the clause (calculated once during deserialization)
+            int maxSlot = clause.MaxShopSlotsNeeded;
             
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
@@ -661,33 +657,6 @@ public partial struct MotelyJsonJokerFilterDesc(List<MotelyJsonJokerFilterClause
             for (int i = 0; i < slots.Length; i++)
                 if (slots[i]) return true;
             return false;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int CalculateMaxShopSlotsNeeded(List<MotelyJsonJokerFilterClause> clauses)
-        {
-            int maxSlotNeeded = 0;
-            foreach (var clause in clauses)
-            {
-                if (HasShopSlots(clause.WantedShopSlots))
-                {
-                    // Find highest wanted slot + 1
-                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
-                    {
-                        if (clause.WantedShopSlots[i])
-                        {
-                            maxSlotNeeded = Math.Max(maxSlotNeeded, i + 1);
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    // If no slot restrictions, check a reasonable number of slots (e.g., 8)
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, 8);
-                }
-            }
-            return maxSlotNeeded;
         }
     }
 }

@@ -66,7 +66,7 @@ namespace Motely.Executors
 
                 search.Start();
 
-                // Wait for completion using polling instead of blocking
+                // Wait for completion - progress shown by MotelySearch.PrintReport() in FancyConsole bottom line
                 while (search.Status != MotelySearchStatus.Completed && !_cancelled)
                 {
                     Thread.Sleep(100);
@@ -180,11 +180,12 @@ namespace Motely.Executors
             scoringConfig.PostProcess();
 
             // Create callback for CSV output - always output when scoring
-            Action<MotelySeedScoreTally> scoreCallback = (MotelySeedScoreTally result) => 
+            Action<MotelySeedScoreTally> scoreCallback = (MotelySeedScoreTally result) =>
             {
                 // Output CSV format: Seed,TotalScore,col1,col2,...
+                // Add padding to clear any stderr progress text that might be on the line
                 var scores = string.Join(",", result.TallyColumns.Select(v => v.ToString()));
-                Console.WriteLine($"{result.Seed},{result.Score},{scores}");
+                Console.WriteLine($"{result.Seed},{result.Score},{scores}                    ");
             };
             
             MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback);
@@ -288,15 +289,24 @@ namespace Motely.Executors
 
             IMotelySeedFilterDesc filterDesc = primaryCategory switch
             {
-                FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.ConvertClauses(primaryClauses)),
-                FilterCategory.Joker => new MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterClause.ConvertClauses(primaryClauses)),
-                FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.ConvertClauses(primaryClauses)),
-                FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.ConvertClauses(primaryClauses)),
-                FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.ConvertClauses(primaryClauses)),
-                FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.ConvertClauses(primaryClauses)),
-                FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(primaryClauses),
-                FilterCategory.Boss => new MotelyJsonBossFilterDesc(primaryClauses), // RE-ENABLED with proper structure
-                FilterCategory.Tag => new MotelyJsonTagFilterDesc(primaryClauses),
+                FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                    MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(primaryClauses))),
+                FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
+                    MotelyJsonJokerFilterClause.CreateCriteria(MotelyJsonJokerFilterClause.ConvertClauses(primaryClauses))),
+                FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
+                    MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(primaryClauses))),
+                FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(
+                    MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(primaryClauses))),
+                FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
+                    MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(primaryClauses))),
+                FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
+                    MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(primaryClauses))),
+                FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
+                    MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(primaryClauses)),
+                FilterCategory.Boss => new MotelyJsonBossFilterDesc(
+                    MotelyJsonFilterClauseExtensions.CreateBossCriteria(primaryClauses)),
+                FilterCategory.Tag => new MotelyJsonTagFilterDesc(
+                    MotelyJsonFilterClauseExtensions.CreateTagCriteria(primaryClauses)),
                 _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
             };
 
@@ -324,15 +334,24 @@ namespace Motely.Executors
                 List<MotelyJsonConfig.MotleyJsonFilterClause> clauses = clausesByCategory[category];
                 IMotelySeedFilterDesc additionalFilter = category switch
                 {
-                    FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)),
-                    FilterCategory.Joker => new MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterClause.ConvertClauses(clauses)),
-                    FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.ConvertClauses(clauses)),
-                    FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.ConvertClauses(clauses)),
-                    FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.ConvertClauses(clauses)),
-                    FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.ConvertClauses(clauses)),
-                    FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(clauses),
-                    FilterCategory.Boss => new MotelyJsonBossFilterDesc(clauses),
-                    FilterCategory.Tag => new MotelyJsonTagFilterDesc(clauses),
+                    FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                        MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))),
+                    FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
+                        MotelyJsonJokerFilterClause.CreateCriteria(MotelyJsonJokerFilterClause.ConvertClauses(clauses))),
+                    FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
+                        MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(clauses))),
+                    FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(
+                        MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(clauses))),
+                    FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
+                        MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(clauses))),
+                    FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
+                        MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(clauses))),
+                    FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
+                        MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)),
+                    FilterCategory.Boss => new MotelyJsonBossFilterDesc(
+                        MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)),
+                    FilterCategory.Tag => new MotelyJsonTagFilterDesc(
+                        MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)),
                     _ => throw new ArgumentException($"Additional filter not implemented: {category}")
                 };
                 searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
@@ -394,11 +413,77 @@ namespace Motely.Executors
             {
                 foreach (MotelyJsonConfig.MotleyJsonFilterClause should in config.Should)
                 {
-                    string name = !string.IsNullOrEmpty(should.Value) ? should.Value : should.Type;
+                    string name = GetClauseHeaderName(should);
                     header += $",{name}";
                 }
             }
             Console.WriteLine(header);
+        }
+
+        /// <summary>
+        /// Generate a meaningful column name for a clause, handling And/Or groupings
+        /// </summary>
+        private static string GetClauseHeaderName(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        {
+            // Handle And/Or clauses with nested clauses
+            if (clause.ItemTypeEnum == MotelyFilterItemType.And || clause.ItemTypeEnum == MotelyFilterItemType.Or)
+            {
+                if (clause.Clauses == null || clause.Clauses.Count == 0)
+                    return clause.ItemTypeEnum == MotelyFilterItemType.And ? "And(empty)" : "Or(empty)";
+
+                // Create a compound name from nested clauses (recursively)
+                var nestedNames = clause.Clauses.Select(c => GetClauseBaseNameInternal(c)).ToArray();
+                string baseName = clause.ItemTypeEnum == MotelyFilterItemType.And
+                    ? $"And({string.Join("+", nestedNames)})"
+                    : $"Or({string.Join("+", nestedNames)})";
+
+                // Extract ante from first nested clause that has it (they should all match for And/Or groups)
+                var anteClause = clause.Clauses.FirstOrDefault(c => c.Antes != null && c.Antes.Length > 0);
+                if (anteClause != null && anteClause.Antes != null)
+                {
+                    if (anteClause.Antes.Length == 1)
+                        baseName += $"@A{anteClause.Antes[0]}";
+                    else if (anteClause.Antes.Length < 8)
+                        baseName += $"@A{string.Join("_", anteClause.Antes)}";
+                }
+
+                return baseName;
+            }
+
+            // Standard clause - get base name and add ante suffix
+            string name = GetClauseBaseNameInternal(clause);
+
+            // Add ante suffix if specific antes are specified (not default all antes)
+            if (clause.Antes != null && clause.Antes.Length > 0)
+            {
+                // If single ante, show as "@A1", if multiple show as "@A1_2_3"
+                if (clause.Antes.Length == 1)
+                    name += $"@A{clause.Antes[0]}";
+                else if (clause.Antes.Length < 8) // Don't show if it's all 8 antes (default)
+                    name += $"@A{string.Join("_", clause.Antes)}";
+            }
+
+            return name;
+        }
+
+        private static string GetClauseBaseNameInternal(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        {
+            // Standard clause - use Value if available, or Values array, otherwise Type
+            if (!string.IsNullOrEmpty(clause.Value))
+                return clause.Value;
+
+            // Handle values array (OR matching within a single clause)
+            if (clause.Values != null && clause.Values.Length > 0)
+            {
+                // If multiple values, show as "Val1+Val2+Val3"
+                if (clause.Values.Length > 1)
+                    return string.Join("+", clause.Values);
+                else
+                    return clause.Values[0];
+            }
+
+            // Fallback to type
+            return clause.Type;
         }
 
         private void PrintResultsSummary(IMotelySearch search)
@@ -410,7 +495,11 @@ namespace Motely.Executors
 
             long lastBatchIndex = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
 
-            Console.WriteLine($"   Last batch Index: {lastBatchIndex}");
+            // Calculate percentage of total search space
+            long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
+            int percentComplete = (int)(lastBatchIndex * 100 / maxBatches);
+
+            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({percentComplete}%)");
             Console.WriteLine($"   Seeds passed filter: {search.FilteredSeeds}");
             Console.WriteLine($"   Seeds passed cutoff: {search.MatchingSeeds}");
 
@@ -418,9 +507,12 @@ namespace Motely.Executors
             if (elapsed.TotalMilliseconds > 100)
             {
                 Console.WriteLine($"   Duration: {elapsed:hh\\:mm\\:ss\\.fff}");
+                Console.WriteLine($"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)");
                 double speed = (double)search.TotalSeedsSearched / elapsed.TotalMilliseconds;
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
+            Console.WriteLine(new string('═', 60));
+            Console.WriteLine($"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {percentComplete}");
             Console.WriteLine(new string('═', 60));
         }
     }
@@ -436,7 +528,6 @@ namespace Motely.Executors
         public bool AutoCutoff { get; set; }
         public bool EnableDebug { get; set; }
         public bool NoFancy { get; set; }
-        public bool Silent { get; set; }
         public string? SpecificSeed { get; set; }
         public string? Wordlist { get; set; }
         public int? RandomSeeds { get; set; }
