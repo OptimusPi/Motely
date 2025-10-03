@@ -74,8 +74,8 @@ public static class MotelyJsonScoring
         // Check pack slots
         if (packSlots.Length > 0)
         {
-            // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
-            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
+            // IMPORTANT: Ante 0-1 get the guaranteed first Buffoon pack, ante 2+ skip it
+            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante > 1);
             var tarotStream = ctx.CreateArcanaPackTarotStream(ante); // Create ONCE before loop
             // When no specific slots specified, check more packs to find arcana/spectral packs
             int maxPackSlot = packSlots.Length > 0 ? ArrayMax(packSlots) : 5; // Check up to 6 packs by default
@@ -175,8 +175,8 @@ public static class MotelyJsonScoring
         // Check pack slots
         if (clause.Sources?.PackSlots?.Length > 0)
         {
-            // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
-            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
+            // IMPORTANT: Ante 0-1 get the guaranteed first Buffoon pack, ante 2+ skip it
+            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante > 1);
             var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
             var packSlots = clause.Sources.PackSlots;
             int maxPackSlot = ArrayMax(packSlots);
@@ -248,8 +248,8 @@ public static class MotelyJsonScoring
         // Check pack slots
         if (clause.Sources?.PackSlots?.Length > 0)
         {
-            // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
-            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
+            // IMPORTANT: Ante 0-1 get the guaranteed first Buffoon pack, ante 2+ skip it
+            var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante > 1);
             var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, soulOnly: false);
             var packSlots = clause.Sources.PackSlots;
             int maxPackSlot = ArrayMax(packSlots);
@@ -497,14 +497,33 @@ public static class MotelyJsonScoring
     {
         if (!clause.VoucherEnum.HasValue) return 0;
 
-        // Simple: just check if the voucher is active (it was activated during ActivateAllVouchers)
-        if (voucherState.IsVoucherActive(clause.VoucherEnum.Value))
+        // Build voucher state progressively - simulate consuming vouchers as we check each ante
+        // This allows Petroglyph to appear in later antes when Hieroglyph was consumed in ante 1
+        var progressiveState = new MotelyRunState();
+        int count = 0;
+
+        foreach (var ante in clause.EffectiveAntes)
         {
-            // DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} is active, giving 1 point"); // DISABLED FOR PERFORMANCE
-            return 1;
+            var voucherAtAnte = ctx.GetAnteFirstVoucher(ante, progressiveState);
+            if (voucherAtAnte == clause.VoucherEnum.Value)
+            {
+                count++;
+                // DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} found at ante {ante}, count={count}"); // DISABLED FOR PERFORMANCE
+            }
+
+            // Consume the voucher to update state for next ante check
+            progressiveState.ActivateVoucher(voucherAtAnte);
+
+            // Handle Hieroglyph bonus voucher
+            if (voucherAtAnte == MotelyVoucher.Hieroglyph)
+            {
+                var voucherStream = ctx.CreateVoucherStream(ante);
+                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, progressiveState);
+                progressiveState.ActivateVoucher(bonusVoucher);
+            }
         }
 
-        return 0;
+        return count;
     }
 
     #endregion
@@ -609,6 +628,40 @@ public static class MotelyJsonScoring
 
     public static bool CheckSingleClause(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
+        // Special case for AND - all nested clauses must match
+        if (clause.ItemTypeEnum == MotelyFilterItemType.And)
+        {
+            if (clause.Clauses == null || clause.Clauses.Count == 0)
+                return false; // Empty And clause fails
+
+            // Check if ALL nested clauses match (early exit if any fails)
+            foreach (var nestedClause in clause.Clauses)
+            {
+                if (!CheckSingleClause(ref ctx, nestedClause, ref runState))
+                    return false; // One clause failed, entire And fails
+            }
+
+            // All clauses passed
+            return true;
+        }
+
+        // Special case for OR - at least one nested clause must match
+        if (clause.ItemTypeEnum == MotelyFilterItemType.Or)
+        {
+            if (clause.Clauses == null || clause.Clauses.Count == 0)
+                return false; // Empty Or clause fails
+
+            // Check if ANY nested clause matches (early exit on first match)
+            foreach (var nestedClause in clause.Clauses)
+            {
+                if (CheckSingleClause(ref ctx, nestedClause, ref runState))
+                    return true; // One clause succeeded, entire Or succeeds
+            }
+
+            // No clauses passed
+            return false;
+        }
+
         // Vouchers are handled by CheckVoucherSingle in the switch statement below
         Debug.Assert(clause.EffectiveAntes != null, "CheckSingleClause requires EffectiveAntes");
         Debug.Assert(clause.EffectiveAntes.Length > 0, "CheckSingleClause requires non-empty EffectiveAntes");
@@ -733,6 +786,119 @@ public static class MotelyJsonScoring
             return CountVoucherOccurrences(ref ctx, clause, ref runState);
         }
 
+        // Special case for AND - gates with nested scoring
+        // Example: Tag (score=0, acts as gate) + Jokers (score=100 each)
+        // Ante 2: Tag ✅ + 3 Jokers → 3 × 100 = 300 points
+        // Ante 5: Tag ✅ + 2 Jokers → 2 × 100 = 200 points
+        // Total: 500 points (Tag just gates, Joker scoring propagates through)
+        if (clause.ItemTypeEnum == MotelyFilterItemType.And)
+        {
+            if (clause.Clauses == null || clause.Clauses.Count == 0)
+                return 0; // Empty And clause scores 0
+
+            // Get the union of all antes from nested clauses
+            var allAntes = new HashSet<int>();
+            foreach (var nestedClause in clause.Clauses)
+            {
+                if (nestedClause.EffectiveAntes != null)
+                {
+                    foreach (var ante in nestedClause.EffectiveAntes)
+                        allAntes.Add(ante);
+                }
+            }
+
+            if (allAntes.Count == 0)
+                return 0; // No antes to check
+
+            // For each ante, check if ALL nested clauses match
+            // If they do, sum their WEIGHTED counts (count × score)
+            int andTotalCount = 0;
+            foreach (var ante in allAntes)
+            {
+                bool allMatch = true;
+                var anteCounts = new List<(int count, int score)>();
+
+                // Check each nested clause for THIS SPECIFIC ante
+                foreach (var nestedClause in clause.Clauses)
+                {
+                    // Skip if this clause doesn't apply to this ante
+                    if (nestedClause.EffectiveAntes == null || !nestedClause.EffectiveAntes.Contains(ante))
+                    {
+                        allMatch = false;
+                        break;
+                    }
+
+                    // Check if this clause matches in this specific ante and get the COUNT
+                    var anteCount = nestedClause.ItemTypeEnum switch
+                    {
+                        MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(nestedClause), ante, ref runState, earlyExit: false, originalClause: nestedClause),
+                        MotelyFilterItemType.SoulJoker => CheckSoulJokerForSpecificAnte(ref ctx, MotelyJsonSoulJokerFilterClause.FromJsonClause(nestedClause), ante, ref runState) ? 1 : 0,
+                        MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
+                        MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
+                        MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
+                        MotelyFilterItemType.SmallBlindTag => SmallBlindTagTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
+                        MotelyFilterItemType.BigBlindTag => BigBlindTagTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
+                        MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
+                        MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
+                        MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
+                        _ => 0
+                    };
+
+                    if (anteCount == 0)
+                    {
+                        allMatch = false;
+                        break; // This nested clause failed for this ante - gate closed
+                    }
+
+                    // Store count and score for this nested clause
+                    anteCounts.Add((anteCount, nestedClause.Score));
+                }
+
+                // If ALL nested clauses matched for this ante, sum tallies from score>0 clauses
+                if (allMatch)
+                {
+                    // Sum tallies from clauses with score > 0 (gates with score=0 are ignored)
+                    int tally = 0;
+                    foreach (var (count, score) in anteCounts)
+                    {
+                        if (score > 0) tally += count;
+                    }
+                    // Multiply tally by the And clause's own score
+                    andTotalCount += tally * clause.Score;
+                }
+            }
+
+            // Apply Min threshold if specified - only count if we meet the minimum
+            if (clause.Min.HasValue && andTotalCount < clause.Min.Value)
+                return 0; // Count doesn't meet minimum threshold
+
+            return andTotalCount;
+        }
+
+        // Special case for OR - at least one nested clause must match
+        // Returns the MAXIMUM count across all nested clauses (best option)
+        if (clause.ItemTypeEnum == MotelyFilterItemType.Or)
+        {
+            if (clause.Clauses == null || clause.Clauses.Count == 0)
+                return 0; // Empty Or clause scores 0
+
+            int maxCount = 0;
+
+            // Check if ANY nested clause matches and find the maximum count
+            foreach (var nestedClause in clause.Clauses)
+            {
+                int nestedCount = CountOccurrences(ref ctx, nestedClause, ref runState);
+                maxCount = Math.Max(maxCount, nestedCount);
+            }
+
+            // Apply Min threshold if specified - only count if we meet the minimum
+            if (clause.Min.HasValue && maxCount < clause.Min.Value)
+                return 0; // Count doesn't meet minimum threshold
+
+            // Return the maximum count (sum of all matching options)
+            return maxCount;
+        }
+
         int totalCount = 0;
         foreach (var ante in clause.EffectiveAntes)
         {
@@ -751,6 +917,11 @@ public static class MotelyJsonScoring
             };
             totalCount += anteCount;
         }
+
+        // Apply Min threshold if specified - only count if we meet the minimum
+        if (clause.Min.HasValue && totalCount < clause.Min.Value)
+            return 0; // Count doesn't meet minimum threshold
+
         return totalCount;
     }
     
@@ -856,8 +1027,8 @@ public static class MotelyJsonScoring
                 var soulJoker = searchContext.GetNextJoker(ref soulStream);
                 
                 // FIXED: Create pack streams ONCE per ante, OUTSIDE clause loop (like PerkeoObservatory)
-                // IMPORTANT: For ante 0 and ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
-                var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante != 1, false);
+                // IMPORTANT: Ante 0-1 get the guaranteed first Buffoon pack, ante 2+ skip it
+                var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante > 1, false);
                 var tarotStream = searchContext.CreateArcanaPackTarotStream(ante, false);
                 var spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, false);
 

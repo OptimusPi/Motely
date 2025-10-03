@@ -30,7 +30,9 @@ public static class MotelyJsonPerformanceUtils
         ["voucher"] = MotelyFilterItemType.Voucher,
         ["playingcard"] = MotelyFilterItemType.PlayingCard,
         ["standardcard"] = MotelyFilterItemType.PlayingCard,
-        ["boss"] = MotelyFilterItemType.Boss
+        ["boss"] = MotelyFilterItemType.Boss,
+        ["and"] = MotelyFilterItemType.And,
+        ["or"] = MotelyFilterItemType.Or
     };
     
     private static readonly Dictionary<string, MotelyJsonConfigWildcards> WildcardMap = new(StringComparer.OrdinalIgnoreCase)

@@ -10,30 +10,32 @@ namespace Motely.Filters;
 /// Filters seeds based on planet card criteria from JSON configuration.
 /// REVERTED: Simple version that compiles - shop detection removed for now
 /// </summary>
-public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> planetClauses)
+public struct MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>
 {
-    private readonly List<MotelyJsonPlanetFilterClause> _planetClauses = planetClauses;
+    private readonly MotelyJsonPlanetFilterCriteria _criteria = criteria;
 
     public MotelyJsonPlanetFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_planetClauses);
-        
+        // Use pre-calculated values from criteria
+        int minAnte = _criteria.MinAnte;
+        int maxAnte = _criteria.MaxAnte;
+
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             ctx.CacheShopStream(ante);
             ctx.CacheBoosterPackStream(ante);
         }
-        
-        return new MotelyJsonPlanetFilter(_planetClauses, minAnte, maxAnte);
+
+        return new MotelyJsonPlanetFilter(_criteria.Clauses, minAnte, maxAnte, _criteria.MaxShopSlotsNeeded);
     }
 
-    public struct MotelyJsonPlanetFilter(List<MotelyJsonPlanetFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
+    public struct MotelyJsonPlanetFilter(List<MotelyJsonPlanetFilterClause> clauses, int minAnte, int maxAnte, int maxShopSlotsNeeded) : IMotelySeedFilter
     {
         private readonly List<MotelyJsonPlanetFilterClause> _clauses = clauses;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
-        private readonly int _maxShopSlotsNeeded = CalculateMaxShopSlotsNeeded(clauses);
+        private readonly int _maxShopSlotsNeeded = maxShopSlotsNeeded;
 
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -228,31 +230,6 @@ public struct MotelyJsonPlanetFilterDesc(List<MotelyJsonPlanetFilterClause> plan
             return false;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int CalculateMaxShopSlotsNeeded(List<MotelyJsonPlanetFilterClause> clauses)
-        {
-            int maxSlotNeeded = 0;
-            foreach (var clause in clauses)
-            {
-                if (HasShopSlots(clause.WantedShopSlots))
-                {
-                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
-                    {
-                        if (clause.WantedShopSlots[i])
-                        {
-                            maxSlotNeeded = Math.Max(maxSlotNeeded, i + 1);
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    // If no slot restrictions, check all available shop slots (16 is generous max)
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, 16);
-                }
-            }
-            return maxSlotNeeded;
-        }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool CheckPlanetTypeMatch(MotelyItem item, MotelyJsonPlanetFilterClause clause)

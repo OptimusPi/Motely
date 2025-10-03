@@ -67,7 +67,7 @@ public struct MotelyJsonSeedScoreDesc(
 {
 
     // Auto cutoff state
-    private static int _learnedCutoff = 1;
+    private static int _learnedCutoff = 0;
 
     // Track seeds that passed filter (before cutoff check)
     private static long _seedsFiltered = 0;
@@ -79,8 +79,8 @@ public struct MotelyJsonSeedScoreDesc(
     public MotelyJsonSeedScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
     {
         // Reset for new search
-        // Auto-cutoff starts at 1 (minimum meaningful score), manual cutoff uses specified value
-        _learnedCutoff = AutoCutoff ? 1 : Cutoff;
+        // Auto-cutoff starts at 0, manual cutoff uses specified value
+        _learnedCutoff = AutoCutoff ? 0 : Cutoff;
         _seedsFiltered = 0;
 
         // Cache voucher streams for vectorizable Must clauses

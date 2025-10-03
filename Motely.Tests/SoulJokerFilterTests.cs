@@ -14,30 +14,30 @@ namespace Motely.Tests
         public void SoulJoker_Must_Filter_Should_Find_No_Matches()
         {
             var output = RunMotelyWithJsonConfig("souljoker-impossible.json");
-            
+
             // Verify the filter was created but found no matches for impossible joker
             // ALEEB doesn't have Chicot as a soul joker in ante 1
             Assert.Contains("+ Base SoulJoker filter:", output);
             Assert.Contains("SEARCH COMPLETED", output);
-            Assert.Contains("Seeds matched: 0", output);
+            Assert.Contains("Seeds passed filter: 0", output);
         }
 
         [Fact]
         public void SoulJoker_Must_Filter_Should_Find_Canio_Match()
         {
             var output = RunMotelyWithJsonConfig("souljoker-must-canio.json");
-            
+
             // Verify the filter finds ALEEB which has Canio as soul joker
             Assert.Contains("+ Base SoulJoker filter:", output);
             Assert.Contains("SEARCH COMPLETED", output);
-            Assert.Contains("Seeds matched: 1", output);
+            Assert.Contains("Seeds passed cutoff: 1", output);
             Assert.Contains("ALEEB", output);
         }
         
         private static string RunMotelyWithJsonConfig(string configFileName, string seed = "ALEEB")
         {
             var motelyProjectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Motely"));
-            
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
@@ -50,6 +50,11 @@ namespace Motely.Tests
             };
 
             using var process = Process.Start(startInfo);
+            if (process == null)
+            {
+                throw new Exception("Failed to start Motely process");
+            }
+
             string? output = process.StandardOutput?.ReadToEnd();
             string? error = process.StandardError?.ReadToEnd();
             process.WaitForExit();
@@ -59,7 +64,7 @@ namespace Motely.Tests
                 throw new Exception($"Motely process failed with exit code {process.ExitCode}. Error: {error}");
             }
 
-            return output;
+            return output ?? string.Empty;
         }
         
         [Fact]
@@ -93,7 +98,8 @@ namespace Motely.Tests
             );
 
             // Create a filter with this clause
-            var filterDesc = new MotelyJsonSoulJokerFilterDesc(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
 
             // Verify the clause was properly created with the correct joker type
             Assert.NotNull(clause.JokerType);
@@ -114,7 +120,8 @@ namespace Motely.Tests
             );
 
             // Create a filter with this clause
-            var filterDesc = new MotelyJsonSoulJokerFilterDesc(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
 
             // Verify the clause was properly created with the correct joker type
             Assert.NotNull(clause.JokerType);
