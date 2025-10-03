@@ -22,7 +22,7 @@ internal static class MotelySlotLimits
 }
 
     /// <summary>
-    /// Wildcard types for joker filtering
+    /// Wildcard types for joker and card filtering
     /// </summary>
     public enum MotelyJsonConfigWildcards
     {
@@ -30,7 +30,10 @@ internal static class MotelySlotLimits
         AnyCommon,
         AnyUncommon,
         AnyRare,
-        AnyLegendary
+        AnyLegendary,
+        AnyTarot,
+        AnySpectral,
+        AnyPlanet
     }
 
     /// <summary>
