@@ -246,31 +246,91 @@ namespace Motely.Filters
                         
                     case "tarot":
                     case "tarotcard":
-                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyTarotCard>(item.Value, true, out _))
+                        // Allow wildcards: "any", "*", "AnyTarot"
+                        bool isTarotWildcard = string.IsNullOrEmpty(item.Value) ||
+                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyTarot", StringComparison.OrdinalIgnoreCase);
+
+                        if (!isTarotWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyTarotCard>(item.Value, true, out _))
                         {
                             var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
-                            errors.Add($"{prefix}: Invalid tarot '{item.Value}'. Valid tarots are: {validTarots}");
+                            errors.Add($"{prefix}: Invalid tarot '{item.Value}'. Valid tarots are: {validTarots}\nWildcards: any, *, AnyTarot");
+                        }
+                        // Validate values array
+                        if (item.Values != null)
+                        {
+                            for (int j = 0; j < item.Values.Length; j++)
+                            {
+                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j] == "*" ||
+                                                  item.Values[j].Equals("AnyTarot", StringComparison.OrdinalIgnoreCase);
+                                if (!isWildcard && !Enum.TryParse<MotelyTarotCard>(item.Values[j], true, out _))
+                                {
+                                    var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
+                                    errors.Add($"{prefix}.values[{j}]: Invalid tarot '{item.Values[j]}'. Valid tarots are: {validTarots}\nWildcards: any, *, AnyTarot");
+                                }
+                            }
                         }
                         break;
                         
                     case "planet":
                     case "planetcard":
-                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyPlanetCard>(item.Value, true, out _))
+                        // Allow wildcards: "any", "*", "AnyPlanet"
+                        bool isPlanetWildcard = string.IsNullOrEmpty(item.Value) ||
+                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnyPlanet", StringComparison.OrdinalIgnoreCase);
+
+                        if (!isPlanetWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyPlanetCard>(item.Value, true, out _))
                         {
                             var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
-                            errors.Add($"{prefix}: Invalid planet '{item.Value}'. Valid planets are: {validPlanets}");
+                            errors.Add($"{prefix}: Invalid planet '{item.Value}'. Valid planets are: {validPlanets}\nWildcards: any, *, AnyPlanet");
+                        }
+                        // Validate values array
+                        if (item.Values != null)
+                        {
+                            for (int j = 0; j < item.Values.Length; j++)
+                            {
+                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j] == "*" ||
+                                                  item.Values[j].Equals("AnyPlanet", StringComparison.OrdinalIgnoreCase);
+                                if (!isWildcard && !Enum.TryParse<MotelyPlanetCard>(item.Values[j], true, out _))
+                                {
+                                    var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
+                                    errors.Add($"{prefix}.values[{j}]: Invalid planet '{item.Values[j]}'. Valid planets are: {validPlanets}\nWildcards: any, *, AnyPlanet");
+                                }
+                            }
                         }
                         break;
                         
                     case "spectral":
                     case "spectralcard":
-                        if (!string.IsNullOrEmpty(item.Value) && 
-                            !item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) && 
-                            !item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) &&
-                            !Enum.TryParse<MotelySpectralCard>(item.Value, true, out _))
+                        // Allow wildcards: "any", "*", "AnySpectral"
+                        bool isSpectralWildcard = string.IsNullOrEmpty(item.Value) ||
+                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
+                                          item.Value.Equals("AnySpectral", StringComparison.OrdinalIgnoreCase);
+
+                        if (!isSpectralWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelySpectralCard>(item.Value, true, out _))
                         {
                             var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
-                            errors.Add($"{prefix}: Invalid spectral '{item.Value}'. Valid spectrals are: {validSpectrals}\nUse 'any', '*', or leave empty to match any spectral.");
+                            errors.Add($"{prefix}: Invalid spectral '{item.Value}'. Valid spectrals are: {validSpectrals}\nWildcards: any, *, AnySpectral");
+                        }
+                        // Validate values array
+                        if (item.Values != null)
+                        {
+                            for (int j = 0; j < item.Values.Length; j++)
+                            {
+                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
+                                                  item.Values[j] == "*" ||
+                                                  item.Values[j].Equals("AnySpectral", StringComparison.OrdinalIgnoreCase);
+                                if (!isWildcard && !Enum.TryParse<MotelySpectralCard>(item.Values[j], true, out _))
+                                {
+                                    var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
+                                    errors.Add($"{prefix}.values[{j}]: Invalid spectral '{item.Values[j]}'. Valid spectrals are: {validSpectrals}\nWildcards: any, *, AnySpectral");
+                                }
+                            }
                         }
                         break;
                         
