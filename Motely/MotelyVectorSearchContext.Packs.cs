@@ -15,7 +15,7 @@ public struct MotelyVectorBoosterPackStream(MotelyVectorPrngStream prngStream, b
 ref partial struct MotelyVectorSearchContext
 {
     public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false)
-        => CreateBoosterPackStream(ante, ante != 1, isCached);
+        => CreateBoosterPackStream(ante, ante > 1, isCached);
 
     public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool generatedFirstPack, bool isCached = false)
     {

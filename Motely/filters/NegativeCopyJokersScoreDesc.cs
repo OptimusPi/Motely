@@ -41,7 +41,7 @@ public struct NegativeCopyJokersScoreDesc(
     Action<NegativeCopyJokersScore> onResultFound)
     : IMotelySeedScoreDesc<NegativeCopyJokersScoreDesc.NegativeCopyJokersScoreProvider>
 {
-    private static int _learnedCutoff = 1;
+    private static int _learnedCutoff = 0;
     
     public NegativeCopyJokersScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
     {

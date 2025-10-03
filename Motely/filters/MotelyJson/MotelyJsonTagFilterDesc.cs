@@ -10,23 +10,23 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on tag criteria from JSON configuration.
 /// </summary>
-public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> tagClauses)
+public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>
 {
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _tagClauses = tagClauses;
+    private readonly MotelyJsonTagFilterCriteria _criteria = criteria;
 
     public MotelyJsonTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        Debug.Assert(_tagClauses != null, "Tag filter clauses should not be null");
-        Debug.Assert(_tagClauses.Count > 0, "Tag filter clauses should not be empty");
+        Debug.Assert(_criteria.Clauses != null, "Tag filter clauses should not be null");
+        Debug.Assert(_criteria.Clauses.Count > 0, "Tag filter clauses should not be empty");
 
         // Tags don't use pack streams themselves, but we need to cache them
         // in case this is the base filter and subsequent filters need them
-        if (_tagClauses != null && _tagClauses.Count > 0)
+        if (_criteria.Clauses != null && _criteria.Clauses.Count > 0)
         {
             // Find all antes used by tag clauses
             var allAntes = new HashSet<int>();
-            foreach (var clause in _tagClauses)
+            foreach (var clause in _criteria.Clauses)
             {
                 if (clause.EffectiveAntes != null)
                 {
@@ -45,8 +45,8 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                 ctx.CacheTagStream(ante);  // Also cache tag stream for efficiency
             }
         }
-        
-        return new MotelyJsonTagFilter(_tagClauses!);
+
+        return new MotelyJsonTagFilter(_criteria.Clauses!, _criteria.MinAnte, _criteria.MaxAnte);
     }
 
     public struct MotelyJsonTagFilter : IMotelySeedFilter
@@ -55,11 +55,11 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
         private readonly int _minAnte;
         private readonly int _maxAnte;
 
-        public MotelyJsonTagFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+        public MotelyJsonTagFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses, int minAnte, int maxAnte)
         {
             _clauses = clauses;
-            // Calculate ante range ONCE during filter creation, not in every Filter() call
-            (_minAnte, _maxAnte) = CalculateAnteRange(_clauses);
+            _minAnte = minAnte;
+            _maxAnte = maxAnte;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -230,33 +230,6 @@ public struct MotelyJsonTagFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClau
                 
                 return true;
             });
-        }
-        
-        private static (int minAnte, int maxAnte) CalculateAnteRange(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
-        {
-            int minAnte = int.MaxValue;
-            int maxAnte = int.MinValue;
-            
-            foreach (var clause in clauses)
-            {
-                if (clause.EffectiveAntes != null)
-                {
-                    foreach (var ante in clause.EffectiveAntes)
-                    {
-                        minAnte = Math.Min(minAnte, ante);
-                        maxAnte = Math.Max(maxAnte, ante);
-                    }
-                }
-            }
-            
-            // Default to reasonable range if no antes specified
-            if (minAnte == int.MaxValue)
-            {
-                minAnte = 1;
-                maxAnte = 8;
-            }
-            
-            return (minAnte, maxAnte);
         }
     }
 }

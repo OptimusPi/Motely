@@ -34,7 +34,7 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
             }
             
 
-            var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante != 1, false);
+            var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante > 1, false);
 
             // Check pack slots 0-5 for ante 8 (Canio), 0-3 for ante 1 (Perkeo)
             int maxPackSlots = ante == 1 ? 4 : 6;

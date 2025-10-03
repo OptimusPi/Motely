@@ -17,18 +17,27 @@ public static class SpecializedFilterFactory
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
-            
+
         return category switch
         {
-            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)),
-            FilterCategory.Joker => new MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterClause.ConvertClauses(clauses)),
-            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.ConvertClauses(clauses)),
-            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.ConvertClauses(clauses)),
-            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.ConvertClauses(clauses)),
-            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.ConvertClauses(clauses)),
-            FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(clauses),
-            FilterCategory.Boss => new MotelyJsonBossFilterDesc(clauses), // RE-ENABLED with proper structure
-            FilterCategory.Tag => new MotelyJsonTagFilterDesc(clauses),
+            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))),
+            FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
+                MotelyJsonJokerFilterClause.CreateCriteria(MotelyJsonJokerFilterClause.ConvertClauses(clauses))),
+            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
+                MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(clauses))),
+            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(
+                MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(clauses))),
+            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
+                MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(clauses))),
+            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
+                MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(clauses))),
+            FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
+                MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)),
+            FilterCategory.Boss => new MotelyJsonBossFilterDesc(
+                MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)),
+            FilterCategory.Tag => new MotelyJsonTagFilterDesc(
+                MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)),
             _ => throw new ArgumentException($"Specialized filter not implemented for: {category}")
         };
     }

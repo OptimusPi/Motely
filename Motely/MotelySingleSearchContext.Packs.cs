@@ -10,7 +10,7 @@ public struct MotelySingleBoosterPackStream(MotelySinglePrngStream prngStream, b
 ref partial struct MotelySingleSearchContext
 {
     public MotelySingleBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false)
-        => CreateBoosterPackStream(ante, ante != 1, isCached);
+        => CreateBoosterPackStream(ante, ante > 1, isCached);
 
     public MotelySingleBoosterPackStream CreateBoosterPackStream(int ante, bool generatedFirstPack, bool isCached = false)
     {

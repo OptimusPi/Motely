@@ -45,7 +45,7 @@ public struct NegativeCopyFilterDesc() : IMotelySeedFilterDesc<NegativeCopyFilte
                 }
                 
                 // Check ALL buffoon packs for Showman
-                var boosterPackStream = searchContext.CreateBoosterPackStream(ante, false, ante != 1);
+                var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante > 1, false);
                 var buffoonStream = searchContext.CreateBuffoonPackJokerStream(ante);
                 
                 int maxPackSlots = ante == 1 ? 4 : 6;

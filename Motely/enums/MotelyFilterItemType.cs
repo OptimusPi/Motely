@@ -14,5 +14,7 @@ public enum MotelyFilterItemType
     BigBlindTag,
     Voucher,
     PlayingCard,
-    Boss
+    Boss,
+    And,  // Logical AND - all nested clauses must match
+    Or    // Logical OR - at least one nested clause must match
 }
