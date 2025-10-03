@@ -9,28 +9,15 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on boss blind criteria from JSON configuration.
 /// </summary>
-public struct MotelyJsonBossFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> bossClauses)
+public struct MotelyJsonBossFilterDesc(MotelyJsonBossFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>
 {
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _bossClauses = bossClauses;
+    private readonly MotelyJsonBossFilterCriteria _criteria = criteria;
 
     public MotelyJsonBossFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Find min/max antes for optimization
-        int minAnte = 39, maxAnte = 1;
-        foreach (var clause in _bossClauses)
-        {
-            if (clause.EffectiveAntes != null)
-            {
-                foreach (var ante in clause.EffectiveAntes)
-                {
-                    if (ante < minAnte) minAnte = ante;
-                    if (ante > maxAnte) maxAnte = ante;
-                }
-            }
-        }
-
-        return new MotelyJsonBossFilter(_bossClauses, minAnte, maxAnte);
+        // Use pre-calculated values from criteria
+        return new MotelyJsonBossFilter(_criteria.Clauses, _criteria.MinAnte, _criteria.MaxAnte);
     }
 
     public struct MotelyJsonBossFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter

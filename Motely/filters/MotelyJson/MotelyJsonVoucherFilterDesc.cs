@@ -9,15 +9,15 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on voucher criteria from JSON configuration.
 /// </summary>
-public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> voucherClauses)
+public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>
 {
-    private readonly List<MotelyJsonVoucherFilterClause> _voucherClauses = voucherClauses;
+    private readonly MotelyJsonVoucherFilterCriteria _criteria = criteria;
 
     public MotelyJsonVoucherFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // Cache only the antes we actually need
-        foreach (var clause in _voucherClauses)
+        foreach (var clause in _criteria.Clauses)
         {
             DebugLogger.Log($"[VOUCHER] Clause: VoucherType={clause.VoucherType}, VoucherTypes={clause.VoucherTypes?.Count ?? 0}");
 
@@ -32,7 +32,7 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             }
         }
 
-        return new MotelyJsonVoucherFilter(_voucherClauses);
+        return new MotelyJsonVoucherFilter(_criteria.Clauses, _criteria.MinAnte, _criteria.MaxAnte);
     }
 
     public struct MotelyJsonVoucherFilter : IMotelySeedFilter
@@ -41,30 +41,13 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
         private readonly int _minAnte;
         private readonly int _maxAnte;
 
-        public MotelyJsonVoucherFilter(List<MotelyJsonVoucherFilterClause> clauses)
+        public MotelyJsonVoucherFilter(List<MotelyJsonVoucherFilterClause> clauses, int minAnte, int maxAnte)
         {
             _clauses = clauses.ToArray();
+            _minAnte = minAnte;
+            _maxAnte = maxAnte;
 
-            // Pre-calculate min and max ante we need to check from bitmasks
-            _minAnte = int.MaxValue;
-            _maxAnte = 0;
-            foreach (var clause in _clauses)
-            {
-                if (HasAntes(clause.WantedAntes))
-                {
-                    // Find lowest and highest set bits
-                    for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
-                    {
-                        if (clause.WantedAntes[ante])
-                        {
-                            _minAnte = Math.Min(_minAnte, ante);
-                            _maxAnte = Math.Max(_maxAnte, ante);
-                        }
-                    }
-                }
-            }
-            if (_minAnte == int.MaxValue) _minAnte = 1; // Default if no antes specified
-            if (_maxAnte == 0) _maxAnte = 8; // Default if no antes specified
+            DebugLogger.Log($"[VOUCHER FILTER] Created filter with minAnte={minAnte}, maxAnte={maxAnte}, {clauses.Count} clauses");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -80,11 +63,11 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
             
             var voucherState = new MotelyVectorRunState();
 
-            // Vouchers start at ante 1 in Balatro (ante 0 only exists with Hieroglyph/Petroglyph)
-            for (int ante = 1; ante <= _maxAnte && ante < _clauses[0].WantedAntes.Length; ante++)
+            // Check vouchers from minAnte to maxAnte (ante 0 exists with Hieroglyph/Petroglyph)
+            for (int ante = _minAnte; ante <= _maxAnte && ante < _clauses[0].WantedAntes.Length; ante++)
             {
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
-                DebugLogger.Log($"[VOUCHER VECTORIZED] Ante {ante}: Checking vouchers");
+                DebugLogger.Log($"[VOUCHER VECTORIZED] Ante {ante}: Checking vouchers, lane 0 has {vouchers[0]}");
 
                 // Check all clauses for this ante
                 for (int i = 0; i < _clauses.Length; i++)
@@ -147,8 +130,8 @@ public struct MotelyJsonVoucherFilterDesc(List<MotelyJsonVoucherFilterClause> vo
                 // Track which clauses are satisfied
                 bool[] clausesSatisfied = new bool[clauses.Length];
 
-                // Build voucher state from ante 1 (Balatro antes are 1-based) and check clauses
-                for (int ante = 1; ante <= maxAnte && ante < clauses[0].WantedAntes.Length; ante++)
+                // Build voucher state from minAnte and check clauses (ante 0 exists with Hieroglyph/Petroglyph)
+                for (int ante = minAnte; ante <= maxAnte && ante < clauses[0].WantedAntes.Length; ante++)
                 {
                     var voucher = singleCtx.GetAnteFirstVoucher(ante, singleVoucherState);
                     DebugLogger.Log($"[VOUCHER VERIFY] Ante {ante}: Got voucher {voucher}");

@@ -33,6 +33,8 @@ namespace Motely
             var batchSizeOption = app.Option<int>("--batchSize <CHARS>", "Batch size", CommandOptionType.SingleValue);
             var startBatchOption = app.Option<long>("--startBatch <INDEX>", "Starting batch", CommandOptionType.SingleValue);
             var endBatchOption = app.Option<long>("--endBatch <INDEX>", "Ending batch", CommandOptionType.SingleValue);
+            var startPercentOption = app.Option<int>("--startPercent <PCT>", "Starting percent (0-100)", CommandOptionType.SingleValue);
+            var endPercentOption = app.Option<int>("--endPercent <PCT>", "Ending percent (0-100)", CommandOptionType.SingleValue);
             
             // Input options
             var seedOption = app.Option<string>("--seed <SEED>", "Specific seed", CommandOptionType.SingleValue);
@@ -46,18 +48,19 @@ namespace Motely
             
             // JSON specific
             var cutoffOption = app.Option<string>("--cutoff <SCORE>", "Min score threshold", CommandOptionType.SingleValue);
-            
+
             // Output options
             var debugOption = app.Option("--debug", "Enable debug output", CommandOptionType.NoValue);
             var noFancyOption = app.Option("--nofancy", "Suppress fancy output", CommandOptionType.NoValue);
-            var silentOption = app.Option("--silent", "Skip console output for matching seeds", CommandOptionType.NoValue);
 
             // Set defaults
             jsonOption.DefaultValue = "standard";
             threadsOption.DefaultValue = Environment.ProcessorCount;
-            batchSizeOption.DefaultValue = 1;
+            batchSizeOption.DefaultValue = 2;
             startBatchOption.DefaultValue = 0;
             endBatchOption.DefaultValue = 0;
+            startPercentOption.DefaultValue = 0;
+            endPercentOption.DefaultValue = 0;
             cutoffOption.DefaultValue = "0";
             deckOption.DefaultValue = "Red";
             stakeOption.DefaultValue = "White";
@@ -81,24 +84,58 @@ namespace Motely
                     EndBatch = (ulong)endBatchOption.ParsedValue,
                     EnableDebug = debugOption.HasValue(),
                     NoFancy = noFancyOption.HasValue(),
-                    Silent = silentOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
                     Wordlist = wordlistOption.Value(),
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null
                 };
 
                 // Validate batch size
-                if (parameters.BatchSize < 1 || parameters.BatchSize > 8)
+                if (parameters.BatchSize < 1 || parameters.BatchSize >= 8)
                 {
-                    Console.WriteLine($"❌ Error: batchSize must be between 1 and 8 (got {parameters.BatchSize})");
+                    Console.WriteLine($"❌ Error: batchSize must be between 1 and 7 (got {parameters.BatchSize})");
                     Console.WriteLine($"   batchSize represents the number of seed digits to process in parallel.");
-                    Console.WriteLine($"   Valid range: 1-8 (Balatro seeds are 1-8 characters)");
+                    Console.WriteLine($"   Valid range: 1-7 (batchSize=8 creates a single 2.25 trillion seed batch)");
                     Console.WriteLine($"   Recommended: 2-4 for optimal performance");
                     return 1;
                 }
 
-                // Validate batch ranges
+                // Calculate max batches for this batch size
                 long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
+
+                // Convert percent to batch if specified
+                if (startPercentOption.HasValue())
+                {
+                    int startPct = startPercentOption.ParsedValue;
+                    if (startPct < 0 || startPct > 100)
+                    {
+                        Console.WriteLine($"❌ Error: startPercent must be 0-100 (got {startPct})");
+                        return 1;
+                    }
+                    parameters.StartBatch = (ulong)(maxBatches * startPct / 100);
+                    Console.WriteLine($"📍 Starting at {startPct}% = batch {parameters.StartBatch:N0}");
+                }
+
+                if (endPercentOption.HasValue())
+                {
+                    int endPct = endPercentOption.ParsedValue;
+                    if (endPct < 0 || endPct > 100)
+                    {
+                        Console.WriteLine($"❌ Error: endPercent must be 0-100 (got {endPct})");
+                        return 1;
+                    }
+                    parameters.EndBatch = (ulong)(maxBatches * endPct / 100);
+                    if (endPct == 0)
+                        Console.WriteLine($"📍 Ending at ∞ (no limit)");
+                    else
+                        Console.WriteLine($"📍 Ending at {endPct}% = batch {parameters.EndBatch:N0}");
+                }
+                else if (parameters.EndBatch == 0 && startPercentOption.HasValue())
+                {
+                    // User specified startPercent but no end - show infinity
+                    Console.WriteLine($"📍 Ending at ∞ (no limit)");
+                }
+
+                // Validate batch ranges
                 if ((long)parameters.EndBatch > maxBatches)
                 {
                     Console.WriteLine($"❌ endBatch too large: {parameters.EndBatch} (max for batchSize {parameters.BatchSize}: {maxBatches:N0})");
@@ -135,7 +172,7 @@ namespace Motely
                     bool autoCutoff = cutoffStr.ToLowerInvariant() == "auto";
                     parameters.Cutoff = autoCutoff ? 0 : (int.TryParse(cutoffStr, out var c) ? c : 0);
                     parameters.AutoCutoff = autoCutoff;
-                    
+
                     var executor = new JsonSearchExecutor(jsonOption.Value()!, parameters);
                     return executor.Execute();
                 }

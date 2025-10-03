@@ -309,7 +309,21 @@ namespace Motely.Filters
                             errors.Add($"{prefix}: Invalid boss blind '{item.Value}'. Valid boss blinds are: {validBosses}");
                         }
                         break;
-                        
+
+                    case "and":
+                    case "or":
+                        // Validate that nested clauses exist
+                        if (item.Clauses == null || item.Clauses.Count == 0)
+                        {
+                            errors.Add($"{prefix}: '{item.Type}' clause requires 'clauses' array with at least one nested clause");
+                        }
+                        else
+                        {
+                            // Recursively validate nested clauses
+                            ValidateFilterItems(item.Clauses, $"{prefix}.clauses", errors, warnings, stake);
+                        }
+                        break;
+
                     default:
                         errors.Add($"{prefix}: Unknown type '{item.Type}'");
                         break;

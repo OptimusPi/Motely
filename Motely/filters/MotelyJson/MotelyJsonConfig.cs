@@ -59,7 +59,11 @@ namespace Motely.Filters;
         public string? Label { get; set; }
         [JsonPropertyName("antes")]
         public int[]? Antes { get; set; }
-        
+
+        // Nested clauses for And/Or grouping
+        [JsonPropertyName("clauses")]
+        public List<MotleyJsonFilterClause>? Clauses { get; set; }
+
         [JsonPropertyName("score")]
         public int Score { get; set; } = 1;
         [JsonPropertyName("min")]
@@ -110,8 +114,10 @@ namespace Motely.Filters;
         }
 
         // Pre-computed values (set during initialization)
-
+        // Min/Max define the range of slots to check (supports unlimited slots like 0-1000)
+        public int? MinShopSlot { get; set; }
         public int? MaxShopSlot { get; set; }
+        public int? MinPackSlot { get; set; }
         public int? MaxPackSlot { get; set; }
         
         
@@ -272,7 +278,12 @@ namespace Motely.Filters;
             // Parse Edition
             if (!string.IsNullOrEmpty(Edition))
             {
-                if (Enum.TryParse<MotelyItemEdition>(Edition, true, out var edition))
+                // Handle "NoEdition" alias for "None"
+                var editionStr = Edition.Equals("NoEdition", StringComparison.OrdinalIgnoreCase)
+                    ? "None"
+                    : Edition;
+
+                if (Enum.TryParse<MotelyItemEdition>(editionStr, true, out var edition))
                     EditionEnum = edition;
             }
             
@@ -469,7 +480,8 @@ namespace Motely.Filters;
                 {
                     PropertyNameCaseInsensitive = true,
                     ReadCommentHandling = JsonCommentHandling.Skip,
-                    AllowTrailingCommas = true
+                    AllowTrailingCommas = true,
+                    UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow // Reject typos like "Valuie:" instead of "value"
                 };
 
                 var deserializedConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(json, options);
@@ -491,10 +503,16 @@ namespace Motely.Filters;
             {
                 // Get the line and position info for JSON errors
                 var baseError = $"JSON syntax error at line {jex.LineNumber}, position {jex.BytePositionInLine}: {jex.Message}";
-                
+
                 // Provide helpful hints for common errors
-                if (jex.Message.Contains("System.String[]", StringComparison.OrdinalIgnoreCase) || 
-                    (jex.Message.Contains("values", StringComparison.OrdinalIgnoreCase) && 
+                if (jex.Message.Contains("System.Nullable`1[System.Boolean]", StringComparison.OrdinalIgnoreCase) ||
+                    (jex.Message.Contains("System.Boolean", StringComparison.OrdinalIgnoreCase) &&
+                     jex.Message.Contains("could not be converted", StringComparison.OrdinalIgnoreCase)))
+                {
+                    error = $"{baseError}\n💡 Hint: Booleans use true or false without quotes. Change \"true\" to true and \"false\" to false.\n   Example: \"requireMega\": true (correct) vs \"requireMega\": \"true\" (wrong)";
+                }
+                else if (jex.Message.Contains("System.String[]", StringComparison.OrdinalIgnoreCase) ||
+                    (jex.Message.Contains("values", StringComparison.OrdinalIgnoreCase) &&
                      jex.Message.Contains("could not be converted", StringComparison.OrdinalIgnoreCase)))
                 {
                     error = $"{baseError}\n💡 Hint: 'values' expects an array. Did you mean to use 'value' (single string) instead of 'values' (array)?\n   Example: \"value\": \"TheMagician\" or \"values\": [\"TheMagician\", \"TheHierophant\"]";
@@ -518,71 +536,95 @@ namespace Motely.Filters;
                 return false;
             }
         }
-    
+        /// <summary>
+        /// Recursively process a single clause and all its nested clauses
+        /// </summary>
+        private void ProcessClause(MotleyJsonFilterClause item)
+        {
+            // Normalize type
+            item.Type = item.Type.ToLowerInvariant();
+
+            // Normalize arrays - but DON'T initialize flat pack/shop slots as that breaks Sources merging
+            // item.PackSlots and item.ShopSlots should remain null if not provided
+            item.Stickers ??= [];
+
+            // And/Or clauses don't need antes - they inherit from nested clauses
+            if (item.ItemTypeEnum != MotelyFilterItemType.And && item.ItemTypeEnum != MotelyFilterItemType.Or)
+            {
+                // Default to all antes if null OR empty (explicit empty array should also get default)
+                if (item.Antes == null || item.Antes.Length == 0)
+                    item.Antes = [1, 2, 3, 4, 5, 6, 7, 8];
+            }
+
+            if (item.Sources != null)
+            {
+                item.Sources.PackSlots ??= [];
+                item.Sources.ShopSlots ??= [];
+            }
+
+            // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
+            item.InitializeParsedEnums();
+
+            // Merge flat properties into Sources for backwards compatibility
+            if (item.PackSlots != null || item.ShopSlots != null || item.RequireMega != null || item.Tags != null)
+            {
+                if (item.Sources == null)
+                {
+                    item.Sources = new SourcesConfig();
+                }
+
+                if (item.PackSlots != null)
+                {
+                    item.Sources.PackSlots = item.PackSlots;
+                }
+                if (item.ShopSlots != null)
+                {
+                    item.Sources.ShopSlots = item.ShopSlots;
+                }
+                if (item.RequireMega != null)
+                    item.Sources.RequireMega = item.RequireMega.Value;
+                if (item.Tags != null)
+                    item.Sources.Tags = item.Tags.Value;
+            }
+
+            if (item.Sources == null && item.ItemTypeEnum != MotelyFilterItemType.And && item.ItemTypeEnum != MotelyFilterItemType.Or)
+            {
+                item.Sources = GetDefaultSources(item.Type, item.Value, Deck ?? "Red");
+            }
+
+            // RECURSIVELY process nested clauses for And/Or
+            if (item.Clauses != null && item.Clauses.Count > 0)
+            {
+                foreach (var nestedClause in item.Clauses)
+                {
+                    ProcessClause(nestedClause);
+                }
+            }
+
+            // Calculate min/max pack/shop slots from array if provided
+            if (item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0)
+            {
+                item.MinPackSlot = item.Sources.PackSlots.Min();
+                item.MaxPackSlot = item.Sources.PackSlots.Max();
+            }
+
+            // Calculate min/max shop slots from array if provided
+            if (item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+            {
+                item.MinShopSlot = item.Sources.ShopSlots.Min();
+                item.MaxShopSlot = item.Sources.ShopSlots.Max();
+            }
+        }
+
         /// <summary>
         /// Post-process after deserialization
         /// </summary>
         public void PostProcess()
         {
-            // Process all filter items
+            // Process all filter items recursively (handles nested And/Or clauses)
             foreach (var item in Must.Concat(Should).Concat(MustNot))
             {
-                // Normalize type
-                item.Type = item.Type.ToLowerInvariant();
-                
-                // Normalize arrays - but DON'T initialize flat pack/shop slots as that breaks Sources merging
-                // item.PackSlots and item.ShopSlots should remain null if not provided
-                item.Stickers ??= [];
-                // Default to all antes if null OR empty (explicit empty array should also get default)
-                if (item.Antes == null || item.Antes.Length == 0)
-                    item.Antes = [1, 2, 3, 4, 5, 6, 7, 8];
-                if (item.Sources != null) 
-                {
-                    item.Sources.PackSlots ??= [];
-                    item.Sources.ShopSlots ??= [];
-                }
-                
-                // CRITICAL: Parse all enums ONCE to avoid string operations in hot path
-                item.InitializeParsedEnums();
-            
-                // Merge flat properties into Sources for backwards compatibility
-                if (item.PackSlots != null || item.ShopSlots != null || item.RequireMega != null || item.Tags != null)
-                {
-                    if (item.Sources == null)
-                    {
-                        item.Sources = new SourcesConfig();
-                    }
-                    
-                    if (item.PackSlots != null)
-                    {
-                        item.Sources.PackSlots = item.PackSlots;
-                    }
-                    if (item.ShopSlots != null)
-                    {
-                        item.Sources.ShopSlots = item.ShopSlots;
-                    }
-                    if (item.RequireMega != null)
-                        item.Sources.RequireMega = item.RequireMega.Value;
-                    if (item.Tags != null)
-                        item.Sources.Tags = item.Tags.Value;
-                }
-            
-                if (item.Sources == null)
-                {
-                    item.Sources = GetDefaultSources(item.Type, item.Value, Deck ?? "Red");
-                }
-                
-            }
-
-            // Second pass: compute per-item metadata (after overrides & masks) 
-            foreach (var item in Must.Concat(Should).Concat(MustNot))
-            {
-                if (item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0)
-                    item.MaxPackSlot = item.Sources.PackSlots.Max();
-                if (item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
-                    item.MaxShopSlot = item.Sources.ShopSlots.Max();
-
-                // IsWildcard already set in InitializeParsedEnums
+                ProcessClause(item);
             }
             
             // Compute MaxVoucherAnte once during PostProcess

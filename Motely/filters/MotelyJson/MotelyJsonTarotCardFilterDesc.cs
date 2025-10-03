@@ -10,30 +10,32 @@ namespace Motely.Filters;
 /// Filters seeds based on tarot card criteria from JSON configuration.
 /// REVERTED: Simple version that compiles - shop detection removed for now
 /// </summary>
-public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterClause> tarotClauses)
+public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>
 {
-    private readonly List<MotelyJsonTarotFilterClause> _tarotClauses = tarotClauses;
+    private readonly MotelyJsonTarotFilterCriteria _criteria = criteria;
 
     public MotelyJsonTarotCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_tarotClauses);
-        
+        // Use pre-calculated values from criteria
+        int minAnte = _criteria.MinAnte;
+        int maxAnte = _criteria.MaxAnte;
+
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             ctx.CacheShopStream(ante);
             ctx.CacheBoosterPackStream(ante);
         }
-        
-        return new MotelyJsonTarotCardFilter(_tarotClauses, minAnte, maxAnte);
+
+        return new MotelyJsonTarotCardFilter(_criteria.Clauses, minAnte, maxAnte, _criteria.MaxShopSlotsNeeded);
     }
 
-    public struct MotelyJsonTarotCardFilter(List<MotelyJsonTarotFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
+    public struct MotelyJsonTarotCardFilter(List<MotelyJsonTarotFilterClause> clauses, int minAnte, int maxAnte, int maxShopSlotsNeeded) : IMotelySeedFilter
     {
         private readonly List<MotelyJsonTarotFilterClause> _clauses = clauses;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
-        private readonly int _maxShopSlotsNeeded = CalculateMaxShopSlotsNeeded(clauses);
+        private readonly int _maxShopSlotsNeeded = maxShopSlotsNeeded;
 
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
@@ -379,33 +381,6 @@ public partial struct MotelyJsonTarotCardFilterDesc(List<MotelyJsonTarotFilterCl
             return false;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int CalculateMaxShopSlotsNeeded(List<MotelyJsonTarotFilterClause> clauses)
-        {
-            int maxSlotNeeded = 0;
-            foreach (var clause in clauses)
-            {
-                if (HasShopSlots(clause.WantedShopSlots))
-                {
-                    int clauseMaxSlot = 0;
-                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
-                    {
-                        if (clause.WantedShopSlots[i])
-                        {
-                            clauseMaxSlot = i + 1;
-                            break;
-                        }
-                    }
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, clauseMaxSlot);
-                }
-                else
-                {
-                    // If no slot restrictions, check all available shop slots (16 is generous max)
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, 16);
-                }
-            }
-            return maxSlotNeeded;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask CheckShopTarotVectorizedNew(MotelyJsonTarotFilterClause clause, MotelyVectorSearchContext ctx, 
