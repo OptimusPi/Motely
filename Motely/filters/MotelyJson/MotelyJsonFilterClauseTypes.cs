@@ -127,6 +127,15 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
         }
+        else if (jsonClause.Sources?.ShopSlots == null && !jsonClause.MinShopSlot.HasValue && !jsonClause.MaxShopSlot.HasValue)
+        {
+            // NO slots specified at all - default to checking ALL pack slots
+            DebugLogger.Log($"[JOKER CONVERT] No slots specified, defaulting to all pack slots");
+            for (int i = 0; i < 6; i++)
+            {
+                wantedPackSlots[i] = true;
+            }
+        }
 
         // Pre-calculate MaxShopSlotsNeeded for hot path
         int maxShopSlotsNeeded = 0;
