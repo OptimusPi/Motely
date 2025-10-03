@@ -11,15 +11,16 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on spectral card criteria from JSON configuration.
 /// </summary>
-public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClause> spectralClauses)
+public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>
 {
-    private readonly List<MotelyJsonSpectralFilterClause> _spectralClauses = spectralClauses;
+    private readonly MotelyJsonSpectralFilterCriteria _criteria = criteria;
 
     public MotelyJsonSpectralCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Calculate ante range from bitmasks
-        var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_spectralClauses);
+        // Use pre-calculated values from criteria
+        int minAnte = _criteria.MinAnte;
+        int maxAnte = _criteria.MaxAnte;
 
         // Cache streams for all antes we'll check
         for (int ante = minAnte; ante <= maxAnte; ante++)
@@ -28,15 +29,15 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             ctx.CacheShopStream(ante);
         }
 
-        return new MotelyJsonSpectralCardFilter(_spectralClauses, minAnte, maxAnte);
+        return new MotelyJsonSpectralCardFilter(_criteria.Clauses, minAnte, maxAnte, _criteria.MaxShopSlotsNeeded);
     }
 
-    public struct MotelyJsonSpectralCardFilter(List<MotelyJsonSpectralFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
+    public struct MotelyJsonSpectralCardFilter(List<MotelyJsonSpectralFilterClause> clauses, int minAnte, int maxAnte, int maxShopSlotsNeeded) : IMotelySeedFilter
     {
         private readonly List<MotelyJsonSpectralFilterClause> _clauses = clauses;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
-        private readonly int _maxShopSlotsNeeded = CalculateMaxShopSlotsNeeded(clauses);
+        private readonly int _maxShopSlotsNeeded = maxShopSlotsNeeded;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
@@ -192,32 +193,6 @@ public struct MotelyJsonSpectralCardFilterDesc(List<MotelyJsonSpectralFilterClau
             return false;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int CalculateMaxShopSlotsNeeded(List<MotelyJsonSpectralFilterClause> clauses)
-        {
-            int maxSlotNeeded = 0;
-            foreach (var clause in clauses)
-            {
-                if (HasShopSlots(clause.WantedShopSlots))
-                {
-                    int clauseMaxSlot = 0;
-                    for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
-                    {
-                        if (clause.WantedShopSlots[i])
-                        {
-                            clauseMaxSlot = i + 1;
-                            break;
-                        }
-                    }
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, clauseMaxSlot);
-                }
-                else
-                {
-                    maxSlotNeeded = Math.Max(maxSlotNeeded, 6);
-                }
-            }
-            return maxSlotNeeded;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask CheckShopSpectralVectorizedNew(MotelyJsonSpectralFilterClause clause, MotelyVectorSearchContext ctx, 

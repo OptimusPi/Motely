@@ -13,15 +13,16 @@ namespace Motely.Filters;
 /// 1. Pre-filter: Fast vectorized joker matching
 /// 2. Verify: Vectorized Soul card verification in packs
 /// </summary>
-public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFilterClause> soulJokerClauses)
+public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>
 {
-    private readonly List<MotelyJsonSoulJokerFilterClause> _soulJokerClauses = soulJokerClauses;
+    private readonly MotelyJsonSoulJokerFilterCriteria _criteria = criteria;
 
     public MotelyJsonSoulJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Calculate ante range from bitmasks
-        var (minAnte, maxAnte) = MotelyJsonFilterClause.CalculateAnteRange(_soulJokerClauses);
+        // Use pre-calculated values from criteria
+        int minAnte = _criteria.MinAnte;
+        int maxAnte = _criteria.MaxAnte;
 
         // Cache all streams we'll need for BOTH vectorized and individual checks
         for (int ante = minAnte; ante <= maxAnte; ante++)
@@ -29,8 +30,8 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(List<MotelyJsonSoulJokerFil
             // For vectorized pre-filter
             ctx.CacheSoulJokerStream(ante);
         }
-        
-        return new MotelyJsonSoulJokerFilter(_soulJokerClauses, minAnte, maxAnte);
+
+        return new MotelyJsonSoulJokerFilter(_criteria.Clauses, minAnte, maxAnte);
     }
 
     public struct MotelyJsonSoulJokerFilter(List<MotelyJsonSoulJokerFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter

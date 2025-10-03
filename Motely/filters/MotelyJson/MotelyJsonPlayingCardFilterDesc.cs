@@ -9,14 +9,14 @@ namespace Motely.Filters;
 /// <summary>
 /// Filters seeds based on playing card criteria from JSON configuration.
 /// </summary>
-public struct MotelyJsonPlayingCardFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> playingCardClauses)
+public struct MotelyJsonPlayingCardFilterDesc(MotelyJsonPlayingCardFilterCriteria criteria)
     : IMotelySeedFilterDesc<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>
 {
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _playingCardClauses = playingCardClauses;
+    private readonly MotelyJsonPlayingCardFilterCriteria _criteria = criteria;
 
     public MotelyJsonPlayingCardFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        foreach (var clause in _playingCardClauses)
+        foreach (var clause in _criteria.Clauses)
         {
             if (clause.EffectiveAntes != null)
             {
@@ -26,19 +26,8 @@ public struct MotelyJsonPlayingCardFilterDesc(List<MotelyJsonConfig.MotleyJsonFi
                 }
             }
         }
-        
-        // PRE-CALCULATE ANTE RANGE
-        int minAnte = int.MaxValue, maxAnte = int.MinValue;
-        foreach (var clause in _playingCardClauses)
-        {
-            foreach (var ante in clause.EffectiveAntes)
-            {
-                if (ante < minAnte) minAnte = ante;
-                if (ante > maxAnte) maxAnte = ante;
-            }
-        }
-        
-        return new MotelyJsonPlayingCardFilter(_playingCardClauses, minAnte, maxAnte);
+
+        return new MotelyJsonPlayingCardFilter(_criteria.Clauses, _criteria.MinAnte, _criteria.MaxAnte);
     }
 
     public struct MotelyJsonPlayingCardFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter

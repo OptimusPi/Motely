@@ -96,7 +96,8 @@ public sealed class JsonFilterSlicedChainTests
     private static MotelyJsonJokerFilterDesc CreateJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
     {
         var typedClauses = MotelyJsonJokerFilterClause.ConvertClauses(clauses);
-        return new MotelyJsonJokerFilterDesc(typedClauses);
+        var criteria = MotelyJsonJokerFilterClause.CreateCriteria(typedClauses);
+        return new MotelyJsonJokerFilterDesc(criteria);
     }
     
     // Helper method for creating filters for additional categories
@@ -104,15 +105,15 @@ public sealed class JsonFilterSlicedChainTests
     {
         return category switch
         {
-            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)),
+            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))),
             FilterCategory.Joker => CreateJokerFilterDesc(clauses),
-            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.ConvertClauses(clauses)),
-            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.ConvertClauses(clauses)),
-            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.ConvertClauses(clauses)),
-            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.ConvertClauses(clauses)),
-            FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(clauses),
-            FilterCategory.Boss => new MotelyJsonBossFilterDesc(clauses),
-            FilterCategory.Tag => new MotelyJsonTagFilterDesc(clauses),
+            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(clauses))),
+            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(clauses))),
+            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(clauses))),
+            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(clauses))),
+            FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)),
+            FilterCategory.Boss => new MotelyJsonBossFilterDesc(MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)),
+            FilterCategory.Tag => new MotelyJsonTagFilterDesc(MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)),
             _ => throw new ArgumentException($"Additional filter not implemented: {category}")
         };
     }
@@ -180,14 +181,17 @@ public sealed class JsonFilterSlicedChainTests
         Assert.Single(clausesByCategory[FilterCategory.TarotCard]);
         
         // Create specialized filters for each category
-        var jokerFilterDesc = new MotelyJsonJokerFilterDesc(
-            MotelyJsonJokerFilterClause.ConvertClauses(clausesByCategory[FilterCategory.Joker]));
-        
-        var voucherFilterDesc = new MotelyJsonVoucherFilterDesc(
-            MotelyJsonVoucherFilterClause.ConvertClauses(clausesByCategory[FilterCategory.Voucher]));
-        
-        var tarotFilterDesc = new MotelyJsonTarotCardFilterDesc(
-            MotelyJsonTarotFilterClause.ConvertClauses(clausesByCategory[FilterCategory.TarotCard]));
+        var jokerClauses = MotelyJsonJokerFilterClause.ConvertClauses(clausesByCategory[FilterCategory.Joker]);
+        var jokerCriteria = MotelyJsonJokerFilterClause.CreateCriteria(jokerClauses);
+        var jokerFilterDesc = new MotelyJsonJokerFilterDesc(jokerCriteria);
+
+        var voucherClauses = MotelyJsonVoucherFilterClause.ConvertClauses(clausesByCategory[FilterCategory.Voucher]);
+        var voucherCriteria = MotelyJsonVoucherFilterClause.CreateCriteria(voucherClauses);
+        var voucherFilterDesc = new MotelyJsonVoucherFilterDesc(voucherCriteria);
+
+        var tarotClauses = MotelyJsonTarotFilterClause.ConvertClauses(clausesByCategory[FilterCategory.TarotCard]);
+        var tarotCriteria = MotelyJsonTarotFilterClause.CreateCriteria(tarotClauses);
+        var tarotFilterDesc = new MotelyJsonTarotCardFilterDesc(tarotCriteria);
         
         // Create filter contexts
         var searchParams = new MotelySearchParameters { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
@@ -289,14 +293,15 @@ public sealed class JsonFilterSlicedChainTests
         
         var soulJokerClauses = clausesByCategory[FilterCategory.SoulJoker];
         var convertedClauses = MotelyJsonSoulJokerFilterClause.ConvertClauses(soulJokerClauses);
-        
+
         Assert.Single(convertedClauses);
         var clause = convertedClauses[0];
         Assert.Equal(MotelyJoker.Perkeo, clause.JokerType);
         Assert.True(clause.WantedAntes[3]); // Ante 3 should be set
-        
+
         // Create the filter
-        var filterDesc = new MotelyJsonSoulJokerFilterDesc(convertedClauses);
+        var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(convertedClauses);
+        var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
         var searchParams = new MotelySearchParameters { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
         var ctx = new MotelyFilterCreationContext(in searchParams);
         var filter = filterDesc.CreateFilter(ref ctx);

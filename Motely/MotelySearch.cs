@@ -135,8 +135,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
 
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
-    
-    public bool Silent { get; set; } = false;
+
     public bool CsvOutput { get; set; } = false;
     
     /// <summary>
@@ -219,13 +218,6 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
         Stake = stake;
         return this;
     }
-
-    public MotelySearchSettings<TBaseFilter> WithSilent(bool silent)
-    {
-        Silent = silent;
-        return this;
-    }
-
 
     public MotelySearchSettings<TBaseFilter> WithProgressCallback(Action<long, long, long, double> callback)
     {
@@ -324,12 +316,16 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly long _endBatchIndex;
     private long _batchIndex;
     private long _matchingSeeds;
+    private long _actualBatchesCompleted; // Aggregated from thread-local counters
 
     public long BatchIndex => _batchIndex;
-    // PERFORMANCE: Calculate from _batchIndex instead of maintaining duplicate Interlocked state
-    // Completed count = current batch - start batch (clamped to 0 for safety)
-    public long CompletedBatchCount => Math.Max(0, _batchIndex - _startBatchIndex + 1);
-    public long TotalSeedsSearched => 0; // Stub for now
+    // Batches actually completed (aggregated from thread-local counters)
+    public long CompletedBatchCount => _actualBatchesCompleted;
+    // Calculate total seeds searched from completed batches
+    // Each batch processes SeedsPerBatch seeds
+    // Sequential mode: 35^batchSize (e.g., 1225 for batchSize=2)
+    // Provider mode: 8 (Vector512 width)
+    public long TotalSeedsSearched => CompletedBatchCount * (_threads.Length > 0 ? _threads[0].SeedsPerBatch : 0);
     public long MatchingSeeds => _matchingSeeds;
     public long FilteredSeeds => Filters.MotelyJsonSeedScoreDesc.GetFilteredSeeds();
     
@@ -337,11 +333,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
 
     private double _lastReportMS;
-    private readonly double reportInterval = 5000; // Report every 5 seconds
+    private readonly double reportInterval = 2000; // Report every 2 seconds
     
     private readonly Action<long, long, long, double>? _progressCallback;
     private readonly int _batchCharacterCount;
-    private readonly bool _silent;
     private readonly bool _csvOutput;
 
     private readonly Stopwatch _elapsedTime = new();
@@ -355,7 +350,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         };
         _progressCallback = settings.ProgressCallback;
         _batchCharacterCount = settings.SequentialBatchCharacterCount;
-        _silent = settings.Silent;
         _csvOutput = settings.CsvOutput;
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
@@ -436,6 +430,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         if (_csvOutput)
         {
             FancyConsole.SetBottomLine(null);
+            // Notify that progress goes to stderr in CSV mode
+            Console.Error.WriteLine("# Progress updates will appear here every 2 seconds...");
         }
 
         _elapsedTime.Start();
@@ -465,8 +461,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private void PrintReport()
     {
-        if (_silent) return; // Don't print progress reports in silent mode
-
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
 
         if (elapsedMS - _lastReportMS < reportInterval) return;
@@ -504,8 +498,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Different progress display for CSV mode vs normal mode
         if (_csvOutput)
         {
-            // In CSV mode, write progress to stderr so it doesn't mix with CSV results on stdout
-            Console.Error.WriteLine($"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)");
+            // In CSV mode, write progress to stderr with carriage return (erase and redraw)
+            // Clear the line first, then write new progress
+            var progressMsg = $"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)";
+            Console.Error.Write($"\r{progressMsg}{new string(' ', Math.Max(0, 100 - progressMsg.Length))}");
         }
         else
         {
@@ -567,10 +563,12 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // PATTERN: Thread-local accumulate → Batch-boundary pull/clear → Global aggregate
         // This eliminates hot-path Interlocked operations and I/O bottlenecks
 
-        // Thread-local seed counter - NO Interlocked in hot path!
+        // Thread-local counters - NO Interlocked in hot path!
         // Each thread accumulates locally, flushes to global at batch boundaries
         private long _localMatchingSeeds = 0;
+        private long _localBatchesCompleted = 0;
         private const int SEED_COUNT_FLUSH_THRESHOLD = 128; // Flush every N seeds
+        private const int BATCH_COUNT_FLUSH_THRESHOLD = 10; // Flush every N batches
 
         // Thread-local output buffer - NO I/O in hot path!
         // Seeds buffered locally, written in batches to reduce syscall overhead
@@ -701,6 +699,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
 
                 SearchBatch(batchIdx);
+                _localBatchesCompleted++; // Thread-local increment (no Interlocked!)
 
                 // PERFORMANCE: ALL batch-end processing happens HERE in sequence
                 // 1. Check for timed-out filter batches
@@ -724,11 +723,19 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
 
-                // 2. Flush thread-local seed counters (reduces Interlocked ops)
-                if (_localMatchingSeeds >= SEED_COUNT_FLUSH_THRESHOLD)
+                // 2. Flush thread-local counters periodically (reduces Interlocked ops)
+                if (_localMatchingSeeds >= SEED_COUNT_FLUSH_THRESHOLD || _localBatchesCompleted >= BATCH_COUNT_FLUSH_THRESHOLD)
                 {
-                    Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
-                    _localMatchingSeeds = 0;
+                    if (_localMatchingSeeds > 0)
+                    {
+                        Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
+                        _localMatchingSeeds = 0;
+                    }
+                    if (_localBatchesCompleted > 0)
+                    {
+                        Interlocked.Add(ref Search._actualBatchesCompleted, _localBatchesCompleted);
+                        _localBatchesCompleted = 0;
+                    }
                 }
 
                 // 3. Flush buffered seed output (reduces I/O ops)
@@ -750,11 +757,16 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FlushLocalCounters()
         {
-            // Flush any remaining local seed count to global counter
+            // Flush any remaining local counters to global
             if (_localMatchingSeeds > 0)
             {
                 Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
                 _localMatchingSeeds = 0;
+            }
+            if (_localBatchesCompleted > 0)
+            {
+                Interlocked.Add(ref Search._actualBatchesCompleted, _localBatchesCompleted);
+                _localBatchesCompleted = 0;
             }
 
             // Flush any remaining buffered seeds to console
@@ -878,30 +890,26 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 if (resultMask[lane] && searchParams.IsLaneValid(lane))
                 {
-                    
-                    if (!Search._silent)
+                    Console.Write("\r");
+
+                    var bufferedResult = _resultBuffer[lane];
+                    DebugLogger.Log($"🔍 Lane {lane}: Seed='{bufferedResult.Seed}', Score={bufferedResult.Score}");
+
+                    if (!string.IsNullOrEmpty(bufferedResult.Seed))
                     {
-                        Console.Write("\r");
-                        
-                        var bufferedResult = _resultBuffer[lane];
-                        DebugLogger.Log($"🔍 Lane {lane}: Seed='{bufferedResult.Seed}', Score={bufferedResult.Score}");
-                        
-                        if (!string.IsNullOrEmpty(bufferedResult.Seed))
-                        {
-                            var tallies = bufferedResult.TallyColumns != null ? string.Join(",", bufferedResult.TallyColumns) : "";
-                            DebugLogger.Log($"🎉 OUTPUT: {bufferedResult.Seed},{bufferedResult.Score},{tallies}");
-                            // PERFORMANCE: Use thread-local counter instead of Interlocked
-                            _localMatchingSeeds++;
-                            Console.WriteLine($"{bufferedResult.Seed},{bufferedResult.Score},{tallies}");
-                        }
-                        else
-                        {
-                            DebugLogger.Log($"⚠️ Empty buffer at lane {lane} - using basic seed");
-                            int length = searchParams.GetSeed(lane, seed);
-                            // PERFORMANCE: Use thread-local counter instead of Interlocked
-                            _localMatchingSeeds++;
-                            Console.WriteLine(new Span<char>(seed, length).ToString());
-                        }
+                        var tallies = bufferedResult.TallyColumns != null ? string.Join(",", bufferedResult.TallyColumns) : "";
+                        DebugLogger.Log($"🎉 OUTPUT: {bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+                        // PERFORMANCE: Use thread-local counter instead of Interlocked
+                        _localMatchingSeeds++;
+                        Console.WriteLine($"{bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+                    }
+                    else
+                    {
+                        DebugLogger.Log($"⚠️ Empty buffer at lane {lane} - using basic seed");
+                        int length = searchParams.GetSeed(lane, seed);
+                        // PERFORMANCE: Use thread-local counter instead of Interlocked
+                        _localMatchingSeeds++;
+                        Console.WriteLine(new Span<char>(seed, length).ToString());
                     }
                 }
             }

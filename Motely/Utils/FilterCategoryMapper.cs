@@ -37,19 +37,25 @@ namespace Motely.Utils
             List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
         {
             var grouped = new Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>>();
-            
+
             foreach (var clause in clauses)
             {
+                // Skip And/Or clauses - they're handled separately
+                if (clause.ItemTypeEnum == MotelyFilterItemType.And || clause.ItemTypeEnum == MotelyFilterItemType.Or)
+                {
+                    continue; // Skip, will be handled by composite filter
+                }
+
                 var category = GetCategory(clause.ItemTypeEnum);
-                
+
                 if (!grouped.ContainsKey(category))
                 {
                     grouped[category] = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
                 }
-                
+
                 grouped[category].Add(clause);
             }
-            
+
             return grouped;
         }
     }

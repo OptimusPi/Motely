@@ -38,34 +38,33 @@ namespace Motely.Executors
             // Otherwise FancyConsole handles progress display at the bottom line
             Action<long, long, long, double>? progressCallback = null;
 
-            if (_params.Silent || _params.NoFancy)
+
+            DateTime lastProgressUpdate = DateTime.UtcNow;
+            DateTime progressStartTime = DateTime.UtcNow;
+            progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
             {
-                DateTime lastProgressUpdate = DateTime.UtcNow;
-                DateTime progressStartTime = DateTime.UtcNow;
-                progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
+                var now = DateTime.UtcNow;
+                var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+
+                lastProgressUpdate = now;
+
+                var elapsedMS = (now - progressStartTime).TotalMilliseconds;
+                string timeLeftFormatted = "calculating...";
+                if (total > 0 && completed > 0)
                 {
-                    var now = DateTime.UtcNow;
-                    var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
-
-                    lastProgressUpdate = now;
-
-                    var elapsedMS = (now - progressStartTime).TotalMilliseconds;
-                    string timeLeftFormatted = "calculating...";
-                    if (total > 0 && completed > 0)
-                    {
-                        double portionFinished = (double)completed / total;
-                        double timeLeft = elapsedMS / portionFinished - elapsedMS;
-                        TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
-                        if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-                        else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
-                    }
-                    double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
-                    string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
-                    var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
-                    string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
-                    Console.Write($"\r{progressLine}                    \r{progressLine}");
-                };
-            }
+                    double portionFinished = (double)completed / total;
+                    double timeLeft = elapsedMS / portionFinished - elapsedMS;
+                    TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds));
+                    if (timeLeftSpan.Days == 0) timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+                    else timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                }
+                double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
+                string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+                var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
+                string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
+                Console.Write($"\r{progressLine}                    \r{progressLine}");
+            };
+            
             
             // Create the appropriate filter
             IMotelySearch search;
@@ -113,7 +112,7 @@ namespace Motely.Executors
             // Wait for completion using polling instead of blocking
             while (search.Status != MotelySearchStatus.Completed && !_cancelled)
             {
-                System.Threading.Thread.Sleep(100);
+                System.Threading.Thread.Sleep(314);
             }
 
             // Stop the search gracefully (if cancelled)
@@ -123,7 +122,7 @@ namespace Motely.Executors
             }
 
             // Give threads a moment to finish printing any final results
-            System.Threading.Thread.Sleep(100);
+            System.Threading.Thread.Sleep(314);
 
             searchStopwatch.Stop();
             PrintSummary(search, searchStopwatch.Elapsed);
@@ -159,8 +158,7 @@ namespace Motely.Executors
         {
             var settings = new MotelySearchSettings<TFilter>(filterDesc)
                 .WithThreadCount(_params.Threads)
-                .WithBatchCharacterCount(_params.BatchSize)
-                .WithSilent(_params.Silent);
+                .WithBatchCharacterCount(_params.BatchSize);
 
             if (progressCallback != null)
             {
@@ -213,27 +211,7 @@ namespace Motely.Executors
             string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
             return File.Exists(jsonItemFiltersPath) || (Path.IsPathRooted(filter) && File.Exists(filter));
         }
-        
-        private MotelyJsonConfig LoadJsonConfig(string configPath)
-        {
-            if (Path.IsPathRooted(configPath) && File.Exists(configPath))
-            {
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
-                    throw new InvalidOperationException($"Config loading failed for: {configPath}");
-                return config;
-            }
-            
-            string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
-            string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
-            if (File.Exists(jsonItemFiltersPath))
-            {
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
-                    throw new InvalidOperationException($"Config loading failed for: {jsonItemFiltersPath}");
-                return config;
-            }
-            
-            throw new FileNotFoundException($"Could not find JSON config file: {configPath}");
-        }
+    
         
         private MotelySearchSettings<T> ApplyScoring<T>(MotelySearchSettings<T> settings) where T : struct, IMotelySeedFilter
         {
@@ -250,10 +228,7 @@ namespace Motely.Executors
             string lastProgressLine = "";
             Action<MotelySeedScoreTally> onResultFound = (score) =>
             {
-                if (_params.Silent)
-                    return;
-                    
-                try 
+                try
                 {
                     Console.Write($"\r{new string(' ', Math.Max(80, Console.WindowWidth - 1))}\r");
                 }
@@ -270,7 +245,7 @@ namespace Motely.Executors
             // Use cutoff from params if provided
             int cutoff = _params.Cutoff;
             bool autoCutoff = _params.AutoCutoff;
-            
+
             var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound);
             
             return settings.WithSeedScoreProvider(scoreDesc);
