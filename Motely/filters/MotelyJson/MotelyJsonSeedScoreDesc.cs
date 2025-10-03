@@ -15,19 +15,19 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     public int Score { get; set; } // Made mutable for easier scoring logic
     public string Seed { get; }
     
-    private fixed int _tallyValues[32];
+    private fixed int _tallyValues[128];
     private int _tallyCount;
-    
+
     public MotelySeedScoreTally(string seed, int score)
     {
         Seed = seed;
         Score = score;
         _tallyCount = 0;
     }
-    
+
     public void AddTally(int value)
     {
-        if (_tallyCount < 32)
+        if (_tallyCount < 128)
         {
             _tallyValues[_tallyCount++] = value;
         }
@@ -35,7 +35,8 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     
     public int GetTally(int index)
     {
-        return index < _tallyCount ? _tallyValues[index] : 0;
+        Debug.Assert(index >= 0 && index < _tallyCount, $"Tally index {index} out of range (count: {_tallyCount})");
+        return _tallyValues[index];
     }
     
     public int TallyCount => _tallyCount;

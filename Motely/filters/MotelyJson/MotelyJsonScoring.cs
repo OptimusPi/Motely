@@ -941,8 +941,88 @@ public static class MotelyJsonScoring
                 totalCount++;
             }
         }
-        
+
         return totalCount;
+    }
+
+    /// <summary>
+    /// Count soul joker occurrences for a single ante - returns the COUNT of matching Soul cards in packs
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CountSoulJokerOccurrencesForAnte(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    {
+        var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
+
+        // Get the soul joker result for this ante (determined by RNG seed)
+        var soulStream = ctx.CreateSoulJokerStream(ante);
+        var soulJoker = ctx.GetNextJoker(ref soulStream);
+
+        // Create pack streams
+        var boosterPackStream = ctx.CreateBoosterPackStream(ante, ante > 1, false);
+        var tarotStream = ctx.CreateArcanaPackTarotStream(ante, false);
+        var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, false);
+
+        bool tarotStreamInit = false, spectralStreamInit = false;
+        int matchCount = 0;
+
+        // Calculate max pack slot
+        int maxPackSlot = soulClause.MaxPackSlot.HasValue ? (soulClause.MaxPackSlot.Value + 1) : (ante == 1 ? 4 : 6);
+
+        // Walk through each pack slot and count Soul cards that match
+        for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
+        {
+            var pack = ctx.GetNextBoosterPack(ref boosterPackStream);
+
+            // Check if The Soul card exists in this pack
+            bool hasSoul = false;
+            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+            {
+                if (!tarotStreamInit)
+                {
+                    tarotStreamInit = true;
+                    tarotStream = ctx.CreateArcanaPackTarotStream(ante, true);
+                }
+                hasSoul = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+            }
+            else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+            {
+                if (!spectralStreamInit)
+                {
+                    spectralStreamInit = true;
+                    spectralStream = ctx.CreateSpectralPackSpectralStream(ante, true);
+                }
+                hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+            }
+
+            // If this pack has The Soul, check if it matches the criteria
+            if (hasSoul)
+            {
+                // Check if clause wants this pack slot
+                if (soulClause.WantedPackSlots != null && soulClause.WantedPackSlots.Any(x => x) && (packIndex >= soulClause.WantedPackSlots.Length || !soulClause.WantedPackSlots[packIndex]))
+                    continue;
+
+                // Check mega requirement
+                if (soulClause.RequireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
+                    continue;
+
+                // Check joker type
+                if (soulClause.JokerType.HasValue && !soulClause.IsWildcard)
+                {
+                    var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)soulClause.JokerType.Value);
+                    if (soulJoker.Type != expectedType)
+                        continue;
+                }
+
+                // Check edition
+                if (soulClause.EditionEnum.HasValue && soulJoker.Edition != soulClause.EditionEnum.Value)
+                    continue;
+
+                // All requirements met - count this Soul card!
+                matchCount++;
+            }
+        }
+
+        return matchCount;
     }
     
     /// <summary>
