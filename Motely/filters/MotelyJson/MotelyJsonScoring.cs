@@ -854,17 +854,16 @@ public static class MotelyJsonScoring
                     anteCounts.Add((anteCount, nestedClause.Score));
                 }
 
-                // If ALL nested clauses matched for this ante, sum tallies from score>0 clauses
+                // If ALL nested clauses matched for this ante, get max tally
                 if (allMatch)
                 {
-                    // Sum tallies from clauses with score > 0 (gates with score=0 are ignored)
-                    int tally = 0;
+                    // Get max tally from non-gate clauses (score > 0)
+                    int maxTally = 0;
                     foreach (var (count, score) in anteCounts)
                     {
-                        if (score > 0) tally += count;
+                        if (score > 0 && count > maxTally) maxTally = count;
                     }
-                    // Multiply tally by the And clause's own score
-                    andTotalCount += tally * clause.Score;
+                    andTotalCount += maxTally;
                 }
             }
 
@@ -895,7 +894,6 @@ public static class MotelyJsonScoring
             if (clause.Min.HasValue && maxCount < clause.Min.Value)
                 return 0; // Count doesn't meet minimum threshold
 
-            // Return the maximum count (sum of all matching options)
             return maxCount;
         }
 
