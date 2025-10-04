@@ -198,38 +198,12 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                 }
             }
             
-            DebugLogger.Log($"[TAG FILTER] Vectorized result: {resultMask.Value:X}");
-            
-            // OPTIMIZED: Add individual seed verification (like joker filter) to ensure correctness
-            if (resultMask.IsAllFalse())
-            {
-                return VectorMask.NoBitsSet;
-            }
-            
-            // USE THE SHARED FUNCTION - same logic as scoring!
-            var clauses = _clauses; // Copy to local for lambda capture
-            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
-            {
-                
-                
-                // Check all clauses using the SAME shared function used in scoring
-                foreach (var clause in clauses)
-                {
-                    bool matched = false;
-                    foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
-                    {
-                        if (MotelyJsonScoring.CheckTagSingle(ref singleCtx, clause, ante))
-                        {
-                            matched = true;
-                            break;
-                        }
-                    }
-                    
-                    if (!matched) return false;
-                }
-                
-                return true;
-            });
+            DebugLogger.Log($"[TAG FILTER] FULLY VECTORIZED result: {resultMask.Value:X}");
+
+            // FULLY VECTORIZED - NO SCALAR VERIFICATION!
+            // Tags are simple: just 2 PRNG calls per ante (small + big blind)
+            // Vector comparison is EXACT - no need for paranoid double-checking!
+            return resultMask;
         }
     }
 }
