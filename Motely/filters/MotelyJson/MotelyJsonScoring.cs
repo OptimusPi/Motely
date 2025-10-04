@@ -832,7 +832,7 @@ public static class MotelyJsonScoring
                     var anteCount = nestedClause.ItemTypeEnum switch
                     {
                         MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(nestedClause), ante, ref runState, earlyExit: false, originalClause: nestedClause),
-                        MotelyFilterItemType.SoulJoker => CheckSoulJokerForSpecificAnte(ref ctx, MotelyJsonSoulJokerFilterClause.FromJsonClause(nestedClause), ante, ref runState) ? 1 : 0,
+                        MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrencesForAnte(ref ctx, nestedClause, ante, ref runState),
                         MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
                         MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
                         MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
