@@ -685,6 +685,8 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         return;
 
                     case MotelySearchStatus.Disposed:
+                        // CRITICAL FIX: Flush counters before exiting to ensure stats are accurate
+                        FlushLocalCounters();
                         return;
                 }
 
