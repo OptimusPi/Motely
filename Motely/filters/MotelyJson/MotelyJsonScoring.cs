@@ -676,8 +676,8 @@ public static class MotelyJsonScoring
                 MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
                 MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.SmallBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
-                MotelyFilterItemType.BigBlindTag => CheckTagSingle(ref ctx, clause, ante) ? 1 : 0,
+                MotelyFilterItemType.SmallBlindTag => CountTagOccurrences(ref ctx, clause, ante),
+                MotelyFilterItemType.BigBlindTag => CountTagOccurrences(ref ctx, clause, ante),
                 MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
                 MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
                 MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
@@ -730,6 +730,57 @@ public static class MotelyJsonScoring
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// COUNTS how many times a tag appears (0, 1, or 2 for generic "tag" type)
+    /// CRITICAL FIX: Generic "tag" type should tally BOTH small and big blind!
+    /// </summary>
+    public static int CountTagOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante)
+    {
+        Debug.Assert(clause.TagEnum.HasValue || (clause.TagEnums != null && clause.TagEnums.Count > 0), "CountTagOccurrences requires TagEnum or TagEnums");
+        var tagStream = ctx.CreateTagStream(ante);
+        var smallTag = ctx.GetNextTag(ref tagStream);
+        var bigTag = ctx.GetNextTag(ref tagStream);
+
+        int count = 0;
+
+        // Handle multi-value OR logic - still returns 0 or 1 for multi-value
+        if (clause.TagEnums != null && clause.TagEnums.Count > 0)
+        {
+            foreach (var tagEnum in clause.TagEnums)
+            {
+                bool matches = clause.TagTypeEnum switch
+                {
+                    MotelyTagType.SmallBlind => smallTag == tagEnum,
+                    MotelyTagType.BigBlind => bigTag == tagEnum,
+                    _ => smallTag == tagEnum || bigTag == tagEnum
+                };
+                if (matches) return 1; // Found at least one match
+            }
+            return 0;
+        }
+        // Handle single value - COUNT occurrences!
+        else if (clause.TagEnum.HasValue)
+        {
+            // For specific SmallBlind or BigBlind type, only check that slot
+            if (clause.TagTypeEnum == MotelyTagType.SmallBlind)
+            {
+                return smallTag == clause.TagEnum.Value ? 1 : 0;
+            }
+            else if (clause.TagTypeEnum == MotelyTagType.BigBlind)
+            {
+                return bigTag == clause.TagEnum.Value ? 1 : 0;
+            }
+            else // TagTypeEnum.Any - CHECK BOTH!
+            {
+                if (smallTag == clause.TagEnum.Value) count++;
+                if (bigTag == clause.TagEnum.Value) count++;
+                return count; // Can be 0, 1, or 2!
+            }
+        }
+
+        return 0;
     }
 
     public static bool CheckBossSingle(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
@@ -836,8 +887,8 @@ public static class MotelyJsonScoring
                         MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
                         MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
                         MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
-                        MotelyFilterItemType.SmallBlindTag => SmallBlindTagTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
-                        MotelyFilterItemType.BigBlindTag => BigBlindTagTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
+                        MotelyFilterItemType.SmallBlindTag => CountTagOccurrences(ref ctx, nestedClause, ante),
+                        MotelyFilterItemType.BigBlindTag => CountTagOccurrences(ref ctx, nestedClause, ante),
                         MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
                         MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
                         MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
@@ -907,8 +958,8 @@ public static class MotelyJsonScoring
                 MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
                 MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
                 MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.SmallBlindTag => SmallBlindTagTally(ref ctx, clause, ante, ref runState, earlyExit: false),
-                MotelyFilterItemType.BigBlindTag => BigBlindTagTally(ref ctx, clause, ante, ref runState, earlyExit: false),
+                MotelyFilterItemType.SmallBlindTag => CountTagOccurrences(ref ctx, clause, ante),
+                MotelyFilterItemType.BigBlindTag => CountTagOccurrences(ref ctx, clause, ante),
                 MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
                 MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
                 _ => 0

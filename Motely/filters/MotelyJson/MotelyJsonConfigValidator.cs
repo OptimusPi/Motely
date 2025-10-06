@@ -412,7 +412,16 @@ namespace Motely.Filters
                         break;
 
                     default:
-                        errors.Add($"{prefix}: Unknown type '{item.Type}'");
+                        // Try to suggest what the user meant
+                        var suggestion = GetTypeSuggestion(item.Type);
+                        if (suggestion != null)
+                        {
+                            errors.Add($"{prefix}: Unknown type '{item.Type}'. Did you mean '{suggestion}'?");
+                        }
+                        else
+                        {
+                            errors.Add($"{prefix}: Unknown type '{item.Type}'. Valid types: joker, souljoker, tarot, planet, spectral, playingcard, tag, smallblindtag, bigblindtag, voucher, boss, and, or");
+                        }
                         break;
                 }
                 
@@ -673,6 +682,68 @@ namespace Motely.Filters
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Suggest correct type based on fuzzy matching (Levenshtein distance)
+        /// </summary>
+        private static string? GetTypeSuggestion(string? input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return null;
+
+            var validTypes = new[]
+            {
+                "joker", "souljoker", "tarot", "tarotcard", "planet", "planetcard",
+                "spectral", "spectralcard", "playingcard", "standardcard",
+                "tag", "smallblindtag", "bigblindtag", "voucher", "boss", "bossblind",
+                "and", "or"
+            };
+
+            string? bestMatch = null;
+            int bestDistance = int.MaxValue;
+
+            foreach (var validType in validTypes)
+            {
+                int distance = LevenshteinDistance(input.ToLower(System.Globalization.CultureInfo.CurrentCulture), validType);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestMatch = validType;
+                }
+            }
+
+            // Only suggest if distance is small enough (within 3 edits)
+            return bestDistance <= 3 ? bestMatch : null;
+        }
+
+        /// <summary>
+        /// Calculate Levenshtein distance between two strings
+        /// </summary>
+        private static int LevenshteinDistance(string s, string t)
+        {
+            if (string.IsNullOrEmpty(s))
+                return string.IsNullOrEmpty(t) ? 0 : t.Length;
+            if (string.IsNullOrEmpty(t))
+                return s.Length;
+
+            int[,] d = new int[s.Length + 1, t.Length + 1];
+
+            for (int i = 0; i <= s.Length; i++)
+                d[i, 0] = i;
+            for (int j = 0; j <= t.Length; j++)
+                d[0, j] = j;
+
+            for (int j = 1; j <= t.Length; j++)
+            {
+                for (int i = 1; i <= s.Length; i++)
+                {
+                    int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
+                    d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+                }
+            }
+
+            return d[s.Length, t.Length];
         }
     }
 }
