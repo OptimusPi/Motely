@@ -76,6 +76,12 @@ namespace Motely.Executors
                 if (_cancelled)
                 {
                     search.Dispose();
+
+                    // CRITICAL: Wait for final batch to flush before showing stats
+                    // The search may have queued results that need to be written
+                    Console.Out.Flush();
+                    Thread.Sleep(500); // Give time for final batch flush
+                    Console.Out.Flush();
                 }
 
                 Console.Out.Flush();
