@@ -55,6 +55,7 @@ public readonly struct MotelyJsonSoulJokerFilterCriteria
     public List<MotelyJsonSoulJokerFilterClause> Clauses { get; init; }
     public int MinAnte { get; init; }
     public int MaxAnte { get; init; }
+    public Dictionary<int, int> MaxPackSlotsPerAnte { get; init; }  // Pre-calculated max pack slots for each ante
 }
 
 /// <summary>

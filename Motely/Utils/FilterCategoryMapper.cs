@@ -26,6 +26,8 @@ namespace Motely.Utils
                 MotelyFilterItemType.PlayingCard => FilterCategory.PlayingCard,
                 MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => FilterCategory.Tag,
                 MotelyFilterItemType.Boss => FilterCategory.Boss,
+                MotelyFilterItemType.And => FilterCategory.And,
+                MotelyFilterItemType.Or => FilterCategory.Or,
                 _ => throw new Exception($"Unknown item type: {itemType}")
             };
         }
@@ -40,12 +42,6 @@ namespace Motely.Utils
 
             foreach (var clause in clauses)
             {
-                // Skip And/Or clauses - they're handled separately
-                if (clause.ItemTypeEnum == MotelyFilterItemType.And || clause.ItemTypeEnum == MotelyFilterItemType.Or)
-                {
-                    continue; // Skip, will be handled by composite filter
-                }
-
                 var category = GetCategory(clause.ItemTypeEnum);
 
                 if (!grouped.ContainsKey(category))
