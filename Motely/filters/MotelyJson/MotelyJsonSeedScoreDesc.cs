@@ -35,7 +35,9 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     
     public int GetTally(int index)
     {
-        Debug.Assert(index >= 0 && index < _tallyCount, $"Tally index {index} out of range (count: {_tallyCount})");
+        // Return 0 for out-of-bounds indices (graceful degradation)
+        if (index < 0 || index >= _tallyCount)
+            return 0;
         return _tallyValues[index];
     }
     

@@ -313,6 +313,7 @@ namespace Motely.Executors
                     MotelyJsonFilterClauseExtensions.CreateBossCriteria(primaryClauses)),
                 FilterCategory.Tag => new MotelyJsonTagFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateTagCriteria(primaryClauses)),
+                FilterCategory.And or FilterCategory.Or => new MotelyCompositeFilterDesc(primaryClauses),
                 _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
             };
 
@@ -328,6 +329,7 @@ namespace Motely.Executors
                 FilterCategory.PlayingCard => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>((MotelyJsonPlayingCardFilterDesc)filterDesc),
                 FilterCategory.Boss => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>((MotelyJsonBossFilterDesc)filterDesc),
                 FilterCategory.Tag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>((MotelyJsonTagFilterDesc)filterDesc),
+                FilterCategory.And or FilterCategory.Or => new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>((MotelyCompositeFilterDesc)filterDesc),
                 _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
             };
 
@@ -358,6 +360,7 @@ namespace Motely.Executors
                         MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)),
                     FilterCategory.Tag => new MotelyJsonTagFilterDesc(
                         MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)),
+                    FilterCategory.And or FilterCategory.Or => new MotelyCompositeFilterDesc(clauses),
                     _ => throw new ArgumentException($"Additional filter not implemented: {category}")
                 };
                 searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
