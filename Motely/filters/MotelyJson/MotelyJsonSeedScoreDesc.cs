@@ -15,7 +15,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     public int Score { get; set; } // Made mutable for easier scoring logic
     public string Seed { get; }
     
-    private fixed int _tallyValues[128];
+    private fixed int _tallyValues[256];
     private int _tallyCount;
 
     public MotelySeedScoreTally(string seed, int score)
@@ -27,7 +27,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 
     public void AddTally(int value)
     {
-        if (_tallyCount < 128)
+        if (_tallyCount < 256)
         {
             _tallyValues[_tallyCount++] = value;
         }
