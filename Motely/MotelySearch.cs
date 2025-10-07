@@ -903,7 +903,18 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         DebugLogger.Log($"🎉 OUTPUT: {bufferedResult.Seed},{bufferedResult.Score},{tallies}");
                         // PERFORMANCE: Use thread-local counter instead of Interlocked
                         _localMatchingSeeds++;
-                        Console.WriteLine($"{bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+
+                        // Use colorized output if tallies are present
+                        if (bufferedResult.TallyColumns != null && bufferedResult.TallyColumns.Count > 0)
+                        {
+                            // DIRECT CONSOLE OUTPUT - DO NOT USE FANCYCONSOLE WITH TALLIES
+                            Console.WriteLine(TallyColorizer.FormatResultLine(bufferedResult.Seed, bufferedResult.Score, bufferedResult.TallyColumns));
+                        }
+                        else
+                        {
+                            // Regular output can still use FancyConsole
+                            FancyConsole.WriteLine($"{bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+                        }
                     }
                     else
                     {
