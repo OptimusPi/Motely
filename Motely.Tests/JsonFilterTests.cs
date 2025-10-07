@@ -60,15 +60,15 @@ public sealed class JsonFilterTests
     public void MotelySeedScoreTally_MaxCapacity()
     {
         var tally = new MotelySeedScoreTally("TEST", 0);
-        
+
         for (int i = 0; i < 40; i++)
         {
             tally.AddTally(i);
         }
-        
-        Assert.Equal(32, tally.TallyCount);
+
+        Assert.Equal(40, tally.TallyCount);
         Assert.Equal(0, tally.GetTally(0));
-        Assert.Equal(31, tally.GetTally(31));
-        Assert.Equal(0, tally.GetTally(32));
+        Assert.Equal(39, tally.GetTally(39));
+        Assert.Equal(0, tally.GetTally(40));
     }
 }

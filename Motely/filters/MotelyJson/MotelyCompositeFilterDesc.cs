@@ -46,12 +46,50 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                     MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)).CreateFilter(ref ctx),
                 FilterCategory.Tag => new MotelyJsonTagFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)).CreateFilter(ref ctx),
+                FilterCategory.And => CreateAndFilter(clauses, ref ctx),
+                FilterCategory.Or => CreateOrFilter(clauses, ref ctx),
                 _ => throw new ArgumentException($"Unsupported filter category: {category}")
             };
             individualFilters.Add(filter);
         }
 
         return new MotelyCompositeFilter(individualFilters);
+    }
+
+    private static IMotelySeedFilter CreateAndFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> andClauses, ref MotelyFilterCreationContext ctx)
+    {
+        // AND filter: ALL nested clauses must pass
+        var nestedFilters = new List<IMotelySeedFilter>();
+
+        foreach (var andClause in andClauses)
+        {
+            if (andClause.Clauses == null || andClause.Clauses.Count == 0)
+                continue; // Skip empty And clause
+
+            // Recursively create a composite filter for the nested clauses
+            var nestedComposite = new MotelyCompositeFilterDesc(andClause.Clauses);
+            nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+        }
+
+        return new AndFilter(nestedFilters);
+    }
+
+    private static IMotelySeedFilter CreateOrFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> orClauses, ref MotelyFilterCreationContext ctx)
+    {
+        // OR filter: at least ONE nested clause must pass
+        var nestedFilters = new List<IMotelySeedFilter>();
+
+        foreach (var orClause in orClauses)
+        {
+            if (orClause.Clauses == null || orClause.Clauses.Count == 0)
+                continue; // Skip empty Or clause
+
+            // Recursively create a composite filter for the nested clauses
+            var nestedComposite = new MotelyCompositeFilterDesc(orClause.Clauses);
+            nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+        }
+
+        return new OrFilter(nestedFilters);
     }
 
     public struct MotelyCompositeFilter : IMotelySeedFilter
@@ -78,6 +116,69 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 // Early exit if no seeds pass
                 if (result.IsAllFalse())
                     return VectorMask.NoBitsSet;
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// AND Filter - ALL nested filters must pass
+    /// </summary>
+    public struct AndFilter : IMotelySeedFilter
+    {
+        private readonly List<IMotelySeedFilter> _nestedFilters;
+
+        public AndFilter(List<IMotelySeedFilter> nestedFilters)
+        {
+            _nestedFilters = nestedFilters;
+        }
+
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            if (_nestedFilters == null || _nestedFilters.Count == 0)
+                return VectorMask.NoBitsSet; // Empty AND fails all
+
+            // Start with all bits set, AND together all nested results
+            VectorMask result = VectorMask.AllBitsSet;
+
+            foreach (var filter in _nestedFilters)
+            {
+                var nested = filter.Filter(ref ctx);
+                result &= nested; // Bitwise AND
+
+                if (result.IsAllFalse())
+                    return VectorMask.NoBitsSet; // Early exit
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// OR Filter - at least ONE nested filter must pass
+    /// </summary>
+    public struct OrFilter : IMotelySeedFilter
+    {
+        private readonly List<IMotelySeedFilter> _nestedFilters;
+
+        public OrFilter(List<IMotelySeedFilter> nestedFilters)
+        {
+            _nestedFilters = nestedFilters;
+        }
+
+        public VectorMask Filter(ref MotelyVectorSearchContext ctx)
+        {
+            if (_nestedFilters == null || _nestedFilters.Count == 0)
+                return VectorMask.NoBitsSet; // Empty OR fails all
+
+            // Start with no bits set, OR together all nested results
+            VectorMask result = VectorMask.NoBitsSet;
+
+            foreach (var filter in _nestedFilters)
+            {
+                var nested = filter.Filter(ref ctx);
+                result |= nested; // Bitwise OR
             }
 
             return result;

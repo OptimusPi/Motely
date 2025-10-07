@@ -311,6 +311,12 @@ public static class MotelyJsonScoring
             "CountPlayingCardOccurrences requires at least one filter criteria");
         Debug.Assert(clause.Sources?.PackSlots != null, "CountPlayingCardOccurrences requires PackSlots");
 
+        // Safety check: StandardCard clauses must have Sources.PackSlots defined
+        if (clause.Sources?.PackSlots == null || clause.Sources.PackSlots.Length == 0)
+        {
+            return 0; // Invalid clause configuration - no pack slots to check
+        }
+
         int tally = 0;
         // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
@@ -353,6 +359,27 @@ public static class MotelyJsonScoring
         return tally;
     }
 
+    /// <summary>
+    /// Get default shop slots to check for an ante when user doesn't specify sources
+    /// </summary>
+    public static int GetDefaultShopSlotsForAnte(int ante)
+    {
+        // pifreak's rules: ante-based shop slot limits (as players progress they can afford more rerolls)
+        if (ante == 0) return 4; // Ante 0: 4 shop slots
+        if (ante == 1) return 4; // Ante 1: 4 shop slots
+        // Ante 2+: 6 + ante (scaling with player's economic growth)
+        return 6 + ante;
+    }
+
+    /// <summary>
+    /// Get default pack slots to check for an ante when user doesn't specify sources
+    /// </summary>
+    public static int GetDefaultPackSlotsForAnte(int ante)
+    {
+        // Standard ante-based pack slot limits (matches ante == 1 ? 4 : 6 pattern used throughout codebase)
+        return (ante == 0 || ante == 1) ? 4 : 6; // Antes 0-1: 4 slots [0,1,2,3], Ante 2+: 6 slots [0,1,2,3,4,5]
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante, ref MotelyRunState runState, bool earlyExit = false, MotelyJsonConfig.MotleyJsonFilterClause? originalClause = null)
     {
@@ -361,17 +388,32 @@ public static class MotelyJsonScoring
         // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
 
-        // Check shop slots if any are wanted
-        if (clause.WantedShopSlots.Any(s => s))
+        // Determine if user specified slots or if we should use ante-based defaults
+        bool hasShopSlots = clause.WantedShopSlots.Any(s => s);
+        bool hasPackSlots = clause.WantedPackSlots != null && clause.WantedPackSlots.Any(x => x);
+        bool useDefaults = !hasShopSlots && !hasPackSlots;
+
+        // Check shop slots if any are wanted OR if using defaults
+        if (hasShopSlots || useDefaults)
         {
-            // Find the highest slot we need to check
-            int maxSlot = 0;
-            for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+            // Determine max slot to check
+            int maxSlot;
+            if (useDefaults)
             {
-                if (clause.WantedShopSlots[i])
+                // Use ante-based default
+                maxSlot = GetDefaultShopSlotsForAnte(ante);
+            }
+            else
+            {
+                // Find the highest slot user specified
+                maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
                 {
-                    maxSlot = i + 1;
-                    break;
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        break;
+                    }
                 }
             }
 
@@ -379,8 +421,9 @@ public static class MotelyJsonScoring
             for (int i = 0; i < maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                // Check if this slot is wanted
-                if (clause.WantedShopSlots[i] && item.TypeCategory == MotelyItemTypeCategory.Joker)
+                // Check if this slot should be checked (either explicitly wanted OR using defaults)
+                bool checkThisSlot = useDefaults || clause.WantedShopSlots[i];
+                if (checkThisSlot && item.TypeCategory == MotelyItemTypeCategory.Joker)
                 {
                     // FIXED: Handle both single joker AND multi-value joker arrays
                     bool matches = false;
@@ -426,16 +469,22 @@ public static class MotelyJsonScoring
             }
         }
 
-        // Use array for pack slot checking
-        if (clause.WantedPackSlots != null && clause.WantedPackSlots.Any(x => x))
+        // Use array for pack slot checking (check if explicitly wanted OR using defaults)
+        if ((clause.WantedPackSlots != null && clause.WantedPackSlots.Any(x => x)) || useDefaults)
         {
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
             Debug.Assert(!buffoonStream.RarityPrngStream.IsInvalid, $"BuffoonStream RarityPrng should be valid for ante {ante}");
+
+            // Determine max pack slots to check
+            int maxPackSlots = useDefaults ? GetDefaultPackSlotsForAnte(ante) : 6;
+
             // Process pack slots using simple array lookup
-            for (int i = 0; i < 6; i++) // Only 6 pack slots max
+            for (int i = 0; i < maxPackSlots; i++)
             {
                 var pack = ctx.GetNextBoosterPack(ref packStream);
-                if (clause.WantedPackSlots != null && clause.WantedPackSlots[i] && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                // Check if this pack slot should be checked
+                bool checkThisPack = useDefaults || (clause.WantedPackSlots != null && clause.WantedPackSlots[i]);
+                if (checkThisPack && pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
                     if (clause.Sources?.RequireMega == true && pack.GetPackSize() != MotelyBoosterPackSize.Mega) continue;
 
@@ -869,6 +918,10 @@ public static class MotelyJsonScoring
                 bool allMatch = true;
                 var anteCounts = new List<(int count, int score)>();
 
+                // CRITICAL: Create ONE soul stream for this ante to share across all soul joker clauses
+                MotelySingleJokerFixedRarityStream? sharedSoulStream = null;
+                bool soulStreamCreated = false;
+
                 // Check each nested clause for THIS SPECIFIC ante
                 foreach (var nestedClause in clause.Clauses)
                 {
@@ -880,20 +933,37 @@ public static class MotelyJsonScoring
                     }
 
                     // Check if this clause matches in this specific ante and get the COUNT
-                    var anteCount = nestedClause.ItemTypeEnum switch
+                    int anteCount;
+
+                    if (nestedClause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
                     {
-                        MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(nestedClause), ante, ref runState, earlyExit: false, originalClause: nestedClause),
-                        MotelyFilterItemType.SoulJoker => CountSoulJokerOccurrencesForAnte(ref ctx, nestedClause, ante, ref runState),
-                        MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
-                        MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
-                        MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
-                        MotelyFilterItemType.SmallBlindTag => CountTagOccurrences(ref ctx, nestedClause, ante),
-                        MotelyFilterItemType.BigBlindTag => CountTagOccurrences(ref ctx, nestedClause, ante),
-                        MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
-                        MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
-                        MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
-                        _ => 0
-                    };
+                        // For soul jokers in AND clauses, use shared stream
+                        if (!soulStreamCreated)
+                        {
+                            sharedSoulStream = ctx.CreateSoulJokerStream(ante);
+                            soulStreamCreated = true;
+                        }
+                        var stream = sharedSoulStream!.Value;
+                        anteCount = CountSoulJokerOccurrencesForAnteWithStream(ref ctx, ref stream, nestedClause, ante, ref runState);
+                        sharedSoulStream = stream; // Update the nullable with modified stream
+                    }
+                    else
+                    {
+                        anteCount = nestedClause.ItemTypeEnum switch
+                        {
+                            MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(nestedClause), ante, ref runState, earlyExit: false, originalClause: nestedClause),
+                            MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, nestedClause, ante, ref runState, earlyExit: false),
+                            MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
+                            MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
+                            MotelyFilterItemType.SmallBlindTag => CountTagOccurrences(ref ctx, nestedClause, ante),
+                            MotelyFilterItemType.BigBlindTag => CountTagOccurrences(ref ctx, nestedClause, ante),
+                            MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, nestedClause, ante, earlyExit: false),
+                            MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
+                            MotelyFilterItemType.Voucher => CheckVoucherSingle(ref ctx, nestedClause, ante, ref runState) ? 1 : 0,
+                            MotelyFilterItemType.And or MotelyFilterItemType.Or => CountOccurrences(ref ctx, nestedClause, ref runState), // Recursive for nested And/Or
+                            _ => 0
+                        };
+                    }
 
                     if (anteCount == 0)
                     {
@@ -948,23 +1018,44 @@ public static class MotelyJsonScoring
             return maxCount;
         }
 
-        int totalCount = 0;
-        foreach (var ante in clause.EffectiveAntes)
+        // And/Or should have already been handled above - this should never happen
+        if (clause.ItemTypeEnum == MotelyFilterItemType.And || clause.ItemTypeEnum == MotelyFilterItemType.Or)
         {
-            var anteCount = clause.ItemTypeEnum switch
+            throw new InvalidOperationException("And/Or clauses should be handled earlier in CountOccurrences");
+        }
+
+        // EffectiveAntes can be null for some clause types (e.g., StandardCard in should[])
+        if (clause.EffectiveAntes == null || clause.EffectiveAntes.Length == 0)
+        {
+            return 0; // No antes to check
+        }
+
+        int totalCount = 0;
+
+        // Soul jokers are special - they need to be counted across ALL antes with ONE stream
+        if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+        {
+            totalCount = CountSoulJokerOccurrencesForAllAntes(ref ctx, clause, ref runState);
+        }
+        else
+        {
+            // For all other items, count per ante
+            foreach (var ante in clause.EffectiveAntes)
             {
-                MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(clause), ante, ref runState, earlyExit: false, originalClause: clause),
-                MotelyFilterItemType.SoulJoker => CheckSoulJokerForSpecificAnte(ref ctx, MotelyJsonSoulJokerFilterClause.FromJsonClause(clause), ante, ref runState) ? 1 : 0,
-                MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
-                MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.SmallBlindTag => CountTagOccurrences(ref ctx, clause, ante),
-                MotelyFilterItemType.BigBlindTag => CountTagOccurrences(ref ctx, clause, ante),
-                MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
-                MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
-                _ => 0
-            };
-            totalCount += anteCount;
+                var anteCount = clause.ItemTypeEnum switch
+                {
+                    MotelyFilterItemType.Joker => CountJokerOccurrences(ref ctx, MotelyJsonJokerFilterClause.FromJsonClause(clause), ante, ref runState, earlyExit: false, originalClause: clause),
+                    MotelyFilterItemType.TarotCard => TarotCardsTally(ref ctx, clause, ante, ref runState, earlyExit: false),
+                    MotelyFilterItemType.PlanetCard => CountPlanetOccurrences(ref ctx, clause, ante, earlyExit: false),
+                    MotelyFilterItemType.SpectralCard => CountSpectralOccurrences(ref ctx, clause, ante, earlyExit: false),
+                    MotelyFilterItemType.SmallBlindTag => CountTagOccurrences(ref ctx, clause, ante),
+                    MotelyFilterItemType.BigBlindTag => CountTagOccurrences(ref ctx, clause, ante),
+                    MotelyFilterItemType.PlayingCard => CountPlayingCardOccurrences(ref ctx, clause, ante, earlyExit: false),
+                    MotelyFilterItemType.Boss => CheckBossSingle(ref ctx, clause, ante, ref runState) ? 1 : 0,
+                    _ => 0
+                };
+                totalCount += anteCount;
+            }
         }
 
         // Apply Min threshold if specified - only count if we meet the minimum
@@ -980,34 +1071,33 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
+        var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
         int totalCount = 0;
 
-        // Check each ante specified in the clause (EffectiveAntes should never be null after PostProcess)
-        foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+        // CRITICAL: Soul joker stream is GLOBAL - create it ONCE and walk through ALL antes!
+        // The stream is NOT tied to a specific ante
+        // As you find Soul cards across all antes, you advance the stream sequentially
+
+        // Sort antes to walk them in order
+        var antes = (clause.EffectiveAntes ?? Array.Empty<int>()).OrderBy(a => a).ToArray();
+        int minAnte = antes.Length > 0 ? antes[0] : 1;
+        var soulStream = ctx.CreateSoulJokerStream(minAnte);
+
+        foreach (var ante in antes)
         {
-            // Use the existing soul joker logic but don't early exit - count all occurrences
-            var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
-            if (CheckSoulJokerForSpecificAnte(ref ctx, soulClause, ante, ref runState))
-            {
-                totalCount++;
-            }
+            totalCount += CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulStream, ante, ref runState);
         }
 
         return totalCount;
     }
 
     /// <summary>
-    /// Count soul joker occurrences for a single ante - returns the COUNT of matching Soul cards in packs
+    /// Count how many soul jokers match the criteria in packs for a specific ante
+    /// CRITICAL: Advances the soul joker stream for EACH Soul card found (sequence!)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountSoulJokerOccurrencesForAnte(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    private static int CountSoulJokerInPacksForAnteWithStream(ref MotelySingleSearchContext ctx, MotelyJsonSoulJokerFilterClause soulClause, ref MotelySingleJokerFixedRarityStream soulStream, int ante, ref MotelyRunState runState)
     {
-        var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
-
-        // Get the soul joker result for this ante (determined by RNG seed)
-        var soulStream = ctx.CreateSoulJokerStream(ante);
-        var soulJoker = ctx.GetNextJoker(ref soulStream);
-
         // Create pack streams
         var boosterPackStream = ctx.CreateBoosterPackStream(ante, ante > 1, false);
         var tarotStream = ctx.CreateArcanaPackTarotStream(ante, false);
@@ -1017,7 +1107,7 @@ public static class MotelyJsonScoring
         int matchCount = 0;
 
         // Calculate max pack slot
-        int maxPackSlot = soulClause.MaxPackSlot.HasValue ? (soulClause.MaxPackSlot.Value + 1) : (ante == 1 ? 4 : 6);
+        int maxPackSlot = soulClause.MaxPackSlot.HasValue ? (soulClause.MaxPackSlot.Value + 1) : (ante == 0 || ante == 1) ? 4 : 6;
 
         // Walk through each pack slot and count Soul cards that match
         for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
@@ -1045,9 +1135,20 @@ public static class MotelyJsonScoring
                 hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
             }
 
-            // If this pack has The Soul, check if it matches the criteria
+            // If this pack has The Soul, get the NEXT soul joker from the stream
             if (hasSoul)
             {
+                // CRITICAL FIX: Get the soul joker for THIS specific Soul card (advances stream)
+                var soulJoker = ctx.GetNextJoker(ref soulStream);
+
+                // DEBUG: Print soul joker info for seed UI7CK111
+                #if DEBUG
+                if (ctx.GetSeedString() == "UI7CK111")
+                {
+                    Console.WriteLine($"  Ante {ante} Pack {packIndex}: Soul Joker = {soulJoker.Type}, Edition = {soulJoker.Edition}");
+                }
+                #endif
+
                 // Check if clause wants this pack slot
                 if (soulClause.WantedPackSlots != null && soulClause.WantedPackSlots.Any(x => x) && (packIndex >= soulClause.WantedPackSlots.Length || !soulClause.WantedPackSlots[packIndex]))
                     continue;
@@ -1056,13 +1157,35 @@ public static class MotelyJsonScoring
                 if (soulClause.RequireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                     continue;
 
-                // Check joker type
-                if (soulClause.JokerType.HasValue && !soulClause.IsWildcard)
+                // Check joker type - handle both single value and values array
+                if (!soulClause.IsWildcard)
                 {
-                    var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)soulClause.JokerType.Value);
-                    if (soulJoker.Type != expectedType)
+                    bool jokerMatches = false;
+
+                    // Check single value
+                    if (soulClause.JokerType.HasValue)
+                    {
+                        var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)soulClause.JokerType.Value);
+                        jokerMatches = soulJoker.Type == expectedType;
+                    }
+                    // Check values array (for "values": ["Perkeo", "Triboulet"])
+                    else if (soulClause.JokerTypes != null && soulClause.JokerTypes.Count > 0)
+                    {
+                        foreach (var jokerEnum in soulClause.JokerTypes)
+                        {
+                            var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerEnum);
+                            if (soulJoker.Type == expectedType)
+                            {
+                                jokerMatches = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!jokerMatches)
                         continue;
                 }
+                // If IsWildcard is true (e.g., "Any"), accept any soul joker
 
                 // Check edition
                 if (soulClause.EditionEnum.HasValue && soulJoker.Edition != soulClause.EditionEnum.Value)
@@ -1074,6 +1197,54 @@ public static class MotelyJsonScoring
         }
 
         return matchCount;
+    }
+
+    /// <summary>
+    /// Count soul joker occurrences across ALL antes with proper stream walking
+    /// </summary>
+    private static int CountSoulJokerOccurrencesForAllAntes(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
+    {
+        var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
+
+        // Get all antes this clause cares about
+        var effectiveAntes = clause.EffectiveAntes ?? Array.Empty<int>();
+        if (effectiveAntes.Length == 0) return 0;
+
+        int totalCount = 0;
+
+        // Process each ante independently (edition is ante-dependent!)
+        foreach (int ante in effectiveAntes)
+        {
+            // Create soul stream for THIS SPECIFIC ANTE
+            var soulStream = ctx.CreateSoulJokerStream(ante);
+
+            totalCount += CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulStream, ante, ref runState);
+        }
+
+        return totalCount;
+    }
+
+    /// <summary>
+    /// Count soul joker occurrences - delegates to proper implementation
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CountSoulJokerOccurrencesForAnte(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    {
+        // Soul jokers are special - the stream is GLOBAL across all antes
+        // We can't count them per-ante, we need to count across ALL antes
+        return CountSoulJokerOccurrencesForAllAntes(ref ctx, clause, ref runState);
+    }
+
+    /// <summary>
+    /// Count soul joker occurrences using an existing soul joker stream - for AND clauses
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CountSoulJokerOccurrencesForAnteWithStream(ref MotelySingleSearchContext ctx, ref MotelySingleJokerFixedRarityStream soulStream, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    {
+        var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
+
+        // Use the PROVIDED stream instead of creating a new one
+        return CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulStream, ante, ref runState);
     }
     
     /// <summary>
@@ -1220,14 +1391,36 @@ public static class MotelyJsonScoring
                             if (clause.RequireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                                 continue;
                             
-                            // Check joker type - use direct comparison like PerkeoObservatoryDesc
-                            if (clause.JokerType.HasValue && !clause.IsWildcard)
+                            // Check joker type - handle both single value and values array
+                            if (!clause.IsWildcard)
                             {
-                                var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
-                                if (soulJoker.Type != expectedType)
+                                bool jokerMatches = false;
+
+                                // Check single value
+                                if (clause.JokerType.HasValue)
+                                {
+                                    var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                                    jokerMatches = soulJoker.Type == expectedType;
+                                }
+                                // Check values array (for "values": ["Perkeo", "Triboulet"])
+                                else if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
+                                {
+                                    foreach (var jokerEnum in clause.JokerTypes)
+                                    {
+                                        var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerEnum);
+                                        if (soulJoker.Type == expectedType)
+                                        {
+                                            jokerMatches = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (!jokerMatches)
                                     continue;
                             }
-                            
+                            // If IsWildcard is true (e.g., "Any"), accept any soul joker
+
                             // Check edition
                             if (clause.EditionEnum.HasValue && soulJoker.Edition != clause.EditionEnum.Value)
                                 continue;
@@ -1235,7 +1428,7 @@ public static class MotelyJsonScoring
                             // All requirements met! This clause is satisfied!
                             clauseSatisfied[clauseIdx] = true;
                             matchedClauses++;
-                            
+
                             if (earlyExit && matchedClauses == clauses.Count)
                                 return true; // All clauses satisfied - early exit for filter
                         }

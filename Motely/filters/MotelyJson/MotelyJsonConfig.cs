@@ -622,9 +622,46 @@ internal static class MotelySlotLimits
                     item.Sources.Tags = item.Tags.Value;
             }
 
+            // IMPORTANT: Don't apply GetDefaultSources anymore - we use ante-based defaults dynamically!
+            // Only apply defaults for special cases that REQUIRE specific sources (like soul jokers pack-only)
             if (item.Sources == null && item.ItemTypeEnum != MotelyFilterItemType.And && item.ItemTypeEnum != MotelyFilterItemType.Or)
             {
-                item.Sources = GetDefaultSources(item.Type, item.Value, Deck ?? "Red");
+                if (item.Type == "souljoker")
+                {
+                    // Soul jokers ONLY appear in packs, never shops
+                    item.Sources = new SourcesConfig
+                    {
+                        ShopSlots = Array.Empty<int>(),
+                        PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                        Tags = true
+                    };
+                }
+                else if (item.Type == "spectralcard")
+                {
+                    // Spectral cards have deck-specific defaults
+                    item.Sources = GetSpectralCardDefaultSources(item.Value, Deck ?? "Red");
+                }
+                else if (item.Type is "tag" or "smallblindtag" or "bigblindtag")
+                {
+                    // Tags don't appear in slots
+                    item.Sources = new SourcesConfig
+                    {
+                        ShopSlots = Array.Empty<int>(),
+                        PackSlots = Array.Empty<int>(),
+                        Tags = true
+                    };
+                }
+                else if (item.Type is "standardcard" or "playingcard")
+                {
+                    // Playing cards appear in packs (shop not supported yet)
+                    item.Sources = new SourcesConfig
+                    {
+                        ShopSlots = Array.Empty<int>(),
+                        PackSlots = new[] { 0, 1, 2, 3, 4, 5 },
+                        Tags = false
+                    };
+                }
+                // ELSE: Leave Sources as null so ante-based defaults apply!
             }
 
             // RECURSIVELY process nested clauses for And/Or

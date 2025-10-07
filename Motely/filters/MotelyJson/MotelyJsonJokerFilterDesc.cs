@@ -55,39 +55,116 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             // Initialize run state for voucher calculations
             var runState = ctx.Deck.GetDefaultRunState();
             
-            // Loop antes first, then clauses - ensures one stream per ante!
+            // Walk each ante and score all clauses as we go
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                // Create streams ONCE per ante, outside the clause loop!
-                var shopJokerStream = ctx.CreateShopJokerStreamNew(ante);
-                var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante > 1);
-                var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
-                
-                for (int clauseIndex = 0; clauseIndex < Clauses.Count; clauseIndex++)
+                // Determine max slots needed for THIS ante across ALL clauses
+                int maxShopSlots = 0;
+                int maxPackSlots = 0;
+                for (int i = 0; i < Clauses.Count; i++)
                 {
-                    var clause = Clauses[clauseIndex];
-                    
-                    // Skip ante if not wanted
-                    if (ante < clause.WantedAntes.Length && !clause.WantedAntes[ante])
+                    var clause = Clauses[i];
+                    if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
                         continue;
 
-                    VectorMask clauseResult = VectorMask.NoBitsSet;
+                    bool hasShop = HasShopSlots(clause.WantedShopSlots);
+                    bool hasPack = HasPackSlots(clause.WantedPackSlots);
+                    bool useDefaults = !hasShop && !hasPack;
 
-                    // Check shops only if any shop slots are wanted
-                    if (HasShopSlots(clause.WantedShopSlots))
+                    if (hasShop || useDefaults)
                     {
-                        // Use the already-created stream for this ante
-                        clauseResult |= CheckShopJokerVectorizedNew(clause, ctx, ref shopJokerStream);
+                        int clauseShopMax = hasShop ? clause.MaxShopSlotsNeeded : MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+                        maxShopSlots = Math.Max(maxShopSlots, clauseShopMax);
                     }
-
-                    if (HasPackSlots(clause.WantedPackSlots))
+                    if (hasPack || useDefaults)
                     {
-                        // Use the already-created streams for this ante
-                        clauseResult |= CheckPackJokersVectorized(clause, ctx, ref packStream, ref buffoonStream, ante);
+                        // Packs don't have pre-calculated max (only 6 slots max), so calculate it
+                        int clausePackMax = hasPack ? (clause.MaxPackSlot ?? 5) + 1 : MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
+                        maxPackSlots = Math.Max(maxPackSlots, clausePackMax);
                     }
+                }
 
-                    // Accumulate results for this clause across all antes (OR logic)
-                    clauseMasks[clauseIndex] |= clauseResult;
+                // Create streams ONCE for this ante
+                var shopJokerStream = maxShopSlots > 0 ? ctx.CreateShopJokerStreamNew(ante) : default;
+                var packStream = maxPackSlots > 0 ? ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante > 1) : default;
+                var buffoonStream = maxPackSlots > 0 ? ctx.CreateBuffoonPackJokerStream(ante) : default;
+
+                // Walk shops once, check all clauses
+                for (int slot = 0; slot < maxShopSlots; slot++)
+                {
+                    var jokerItem = shopJokerStream.GetNext(ref ctx);
+
+                    // Check if it's an actual joker
+                    var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+                    var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
+                    VectorMask isActualJoker = isNotExcluded;
+
+                    if (!isActualJoker.IsAllFalse())
+                    {
+                        // Check this joker against ALL clauses
+                        for (int clauseIndex = 0; clauseIndex < Clauses.Count; clauseIndex++)
+                        {
+                            var clause = Clauses[clauseIndex];
+                            if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                                continue;
+
+                            bool hasShop = HasShopSlots(clause.WantedShopSlots);
+                            bool useDefaults = !hasShop && !HasPackSlots(clause.WantedPackSlots);
+
+                            // Does this clause want this shop slot?
+                            if (hasShop || useDefaults)
+                            {
+                                bool wantsSlot = !hasShop || clause.WantedShopSlots[slot];
+                                if (wantsSlot)
+                                {
+                                    VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                                    clauseMasks[clauseIndex] |= (isActualJoker & matches);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Walk packs once, check all clauses
+                if (maxPackSlots > 0)
+                {
+                    for (int packSlot = 0; packSlot < maxPackSlots; packSlot++)
+                    {
+                        var pack = ctx.GetNextBoosterPack(ref packStream);
+                        VectorMask isBuffoonPack = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Buffoon);
+
+                        if (!isBuffoonPack.IsAllFalse())
+                        {
+                            int maxPackSize = 5;
+                            var packContents = ctx.GetNextBuffoonPackContents(ref buffoonStream, maxPackSize);
+
+                            // Check each joker in pack against ALL clauses
+                            for (int packJokerIndex = 0; packJokerIndex < maxPackSize; packJokerIndex++)
+                            {
+                                var joker = packContents[packJokerIndex];
+
+                                for (int clauseIndex = 0; clauseIndex < Clauses.Count; clauseIndex++)
+                                {
+                                    var clause = Clauses[clauseIndex];
+                                    if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                                        continue;
+
+                                    bool hasPack = HasPackSlots(clause.WantedPackSlots);
+                                    bool useDefaults = !HasShopSlots(clause.WantedShopSlots) && !hasPack;
+
+                                    if (hasPack || useDefaults)
+                                    {
+                                        bool wantsSlot = !hasPack || clause.WantedPackSlots[packSlot];
+                                        if (wantsSlot)
+                                        {
+                                            VectorMask matches = CheckJokerMatchesClause(joker, clause);
+                                            clauseMasks[clauseIndex] |= (isBuffoonPack & matches);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 
                 // Early exit check: After each ante, check if we can already determine failure
@@ -163,60 +240,30 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    DebugLogger.Log($"[JOKER INDIVIDUAL] Starting verification for seed, {clauses.Count} clauses");
-                    // Re-check all clauses for this individual seed
+                    // Use SHARED scoring functions to check Min threshold
+                    var runState = new MotelyRunState();
+
                     foreach (var clause in clauses)
                     {
-                        string clauseJokerName = clause.JokerTypes?.Count > 0 ? string.Join("|", clause.JokerTypes) : clause.JokerType?.ToString() ?? "Unknown";
-                        DebugLogger.Log($"[JOKER INDIVIDUAL] Checking clause for {clauseJokerName}");
-                        bool clauseSatisfied = false;
-
-                        // Check all antes for this clause - use local variables!
+                        // Count total occurrences across ALL wanted antes
+                        int totalCount = 0;
                         for (int ante = minAnte; ante <= maxAnte; ante++)
                         {
                             if (!clause.WantedAntes[ante])
                                 continue;
 
-                            // Check shops only if any shop slots are wanted
-                            if (HasShopSlots(clause.WantedShopSlots))
-                            {
-                                string jokerName = clause.JokerTypes?.Count > 0 ? string.Join("|", clause.JokerTypes) : clause.JokerType?.ToString() ?? "Unknown";
-                                DebugLogger.Log($"[JOKER INDIVIDUAL] Checking shop for {jokerName} in ante {ante}");
-                                var shopStream = singleCtx.CreateShopItemStream(ante, isCached: false);
-                                if (CheckShopJokersSingleStatic(ref singleCtx, clause, ante, ref shopStream))
-                                {
-                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Found {jokerName} in shop ante {ante}!");
-                                    clauseSatisfied = true;
-                                    break;
-                                }
-                                else
-                                {
-                                    DebugLogger.Log($"[JOKER INDIVIDUAL] Did NOT find {jokerName} in shop ante {ante}");
-                                }
-                            }
-
-                            // Check packs
-                            if (HasPackSlots(clause.WantedPackSlots))
-                            {
-                                var packStream = singleCtx.CreateBoosterPackStream(ante, generatedFirstPack: ante > 1, isCached: false);
-                                if (CheckPackJokersSingleStatic(ref singleCtx, clause, ante, ref packStream))
-                                {
-                                    clauseSatisfied = true;
-                                    break;
-                                }
-                            }
+                            // Use the EXACT same scoring function used in MotelyJsonScoring
+                            int anteCount = MotelyJsonScoring.CountJokerOccurrences(ref singleCtx, clause, ante, ref runState, earlyExit: false);
+                            totalCount += anteCount;
                         }
 
-                        if (!clauseSatisfied)
-                        {
-                            DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clauseJokerName} NOT satisfied - seed fails");
-                            return false; // This seed doesn't satisfy this clause
-                        }
-                        DebugLogger.Log($"[JOKER INDIVIDUAL] Clause for {clauseJokerName} satisfied!");
+                        // Check Min threshold (if specified)
+                        int minThreshold = clause.Min ?? 1; // Default to 1 if not specified
+                        if (totalCount < minThreshold)
+                            return false; // Doesn't meet minimum count
                     }
 
-                    DebugLogger.Log($"[JOKER INDIVIDUAL] All clauses satisfied - seed passes!");
-                    return true; // All clauses satisfied
+                    return true; // All clauses satisfied with Min thresholds
                 });
         }
         
@@ -272,19 +319,35 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private VectorMask CheckShopJokerVectorizedNew(MotelyJsonJokerFilterClause clause, MotelyVectorSearchContext ctx,
-            ref MotelyVectorShopJokerStream shopJokerStream)
+            ref MotelyVectorShopJokerStream shopJokerStream, int ante)
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
 
-            // Use the pre-calculated max slots from the clause (calculated once during deserialization)
-            int maxSlot = clause.MaxShopSlotsNeeded;
-            
+            // Calculate max slots based on ante (dynamic per-ante calculation)
+            int maxSlot;
+            if (HasShopSlots(clause.WantedShopSlots))
+            {
+                // User specified slots - find the highest wanted slot
+                maxSlot = 0;
+                for (int i = 0; i < clause.WantedShopSlots.Length; i++)
+                    if (clause.WantedShopSlots[i]) maxSlot = i;
+                maxSlot++; // Convert index to count
+            }
+            else
+            {
+                // No slots specified - use ante-based defaults
+                maxSlot = MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+            }
+
+            string jokerDbg = clause.JokerTypes?.Count > 0 ? string.Join("|", clause.JokerTypes) : clause.JokerType?.ToString() ?? "?";
+            DebugLogger.Log($"[SHOP CHECK] Ante {ante}, {jokerDbg}: checking {maxSlot} shop slots");
+
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
             {
                 // ALWAYS get the next item to maintain stream synchronization
                 var jokerItem = shopJokerStream.GetNext(ref ctx);
-                
+
                 // Only check/score if this slot is wanted (or if no specific slots wanted, check all)
                 if (!HasShopSlots(clause.WantedShopSlots) || clause.WantedShopSlots[slot])
                 {
@@ -315,7 +378,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             // Use config if provided, otherwise use default pack limits
             int actualPackLimit = clause.MaxPackSlot.HasValue
                 ? clause.MaxPackSlot.Value + 1
-                : (ante == 1 ? 4 : 6);
+                : MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
             
             // Check enough packs to cover the slots, but never exceed actual pack limit
             bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
@@ -478,9 +541,9 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             }
             else if (!HasShopSlots(clause.WantedShopSlots))
             {
-                // No specific slots wanted - use defaults
-                maxSlot = (ante == 1 ? 4 : 6);
-                DebugLogger.Log($"[SHOP CHECK] No specific slots wanted, checking all {maxSlot} slots");
+                // No specific slots wanted - use ante-based defaults (pifreak's rules)
+                maxSlot = MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+                DebugLogger.Log($"[SHOP CHECK] No specific slots wanted, checking default {maxSlot} slots for ante {ante}");
             }
             else
             {
@@ -648,7 +711,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                 if (slots[i]) return true;
             return false;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool HasPackSlots(bool[] slots)
         {

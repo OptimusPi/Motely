@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using Motely.Filters;
 
 namespace Motely.Filters;
@@ -63,16 +64,21 @@ public struct MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterCriteria criteria
 
                     VectorMask clauseResult = VectorMask.NoBitsSet;
 
-                    // Check shops if any shop slots wanted
-                    if (HasShopSlots(clause.WantedShopSlots))
+                    // Determine if we should use ante-based defaults
+                    bool hasShopSlots = HasShopSlots(clause.WantedShopSlots);
+                    bool hasPackSlots = HasPackSlots(clause.WantedPackSlots);
+                    bool useDefaults = !hasShopSlots && !hasPackSlots;
+
+                    // Check shops if explicitly wanted OR if using defaults
+                    if (hasShopSlots || useDefaults)
                     {
                         // Use the self-contained shop planet stream - NO SYNCHRONIZATION ISSUES!
                         var shopPlanetStream = ctx.CreateShopPlanetStream(ante);
-                        clauseResult |= CheckShopPlanetVectorized(clause, ctx, ref shopPlanetStream);
+                        clauseResult |= CheckShopPlanetVectorized(clause, ctx, ref shopPlanetStream, ante);
                     }
 
-                    // Check packs if specified  
-                    if (HasPackSlots(clause.WantedPackSlots))
+                    // Check packs if explicitly wanted OR if using defaults
+                    if (hasPackSlots || useDefaults)
                     {
                         clauseResult |= CheckPacksVectorized(clause, ctx, ante);
                     }
@@ -101,38 +107,58 @@ public struct MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterCriteria criteria
             var clauses = _clauses;
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                
-                
                 // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)
                 {
-                    bool matched = false;
+                    // Count total occurrences across ALL wanted antes
+                    int totalCount = 0;
                     for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
                     {
                         if (!clause.WantedAntes[ante]) continue;
-                        
+
                         var genericClause = ConvertToGeneric(clause);
-                        if (MotelyJsonScoring.CountPlanetOccurrences(ref singleCtx, genericClause, ante, earlyExit: true) > 0)
-                        {
-                            matched = true;
-                            break;
-                        }
+                        int anteCount = MotelyJsonScoring.CountPlanetOccurrences(ref singleCtx, genericClause, ante, earlyExit: false);
+                        totalCount += anteCount;
                     }
-                    
-                    if (!matched) return false;
+
+                    // Check Min threshold (default to 1 if not specified)
+                    int minThreshold = clause.Min ?? 1;
+                    if (totalCount < minThreshold)
+                        return false;
                 }
-                
+
                 return true;
             });
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static VectorMask CheckShopPlanetVectorized(MotelyJsonPlanetFilterClause clause, MotelyVectorSearchContext ctx, 
-            ref MotelyVectorPlanetStream shopPlanetStream)
+        private static VectorMask CheckShopPlanetVectorized(MotelyJsonPlanetFilterClause clause, MotelyVectorSearchContext ctx,
+            ref MotelyVectorPlanetStream shopPlanetStream, int ante)
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
-            
-            // TODO: Implement shop planet checking when stream is available
+
+            // Calculate max slot we need to check based on ante
+            int maxSlot;
+            if (!HasShopSlots(clause.WantedShopSlots))
+            {
+                // No slots specified - use ante-based defaults
+                maxSlot = MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+            }
+            else
+            {
+                // User specified slots - find the highest wanted slot
+                maxSlot = 0;
+                for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
+                {
+                    if (clause.WantedShopSlots[i])
+                    {
+                        maxSlot = i + 1;
+                        break;
+                    }
+                }
+            }
+
+            // TODO: Implement shop planet checking when stream is fully available
             // For now just return no matches
             return foundInShop;
         }
@@ -146,11 +172,11 @@ public struct MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterCriteria criteria
             var packStream = ctx.CreateBoosterPackStream(ante);
             var celestialStream = ctx.CreateCelestialPackPlanetStream(ante);
 
-            // Determine max pack slot to check - use config if provided
+            // Determine max pack slot to check - use config if provided or ante-based defaults
             bool hasSpecificSlots = HasPackSlots(clause.WantedPackSlots);
             int maxPackSlot = clause.MaxPackSlot.HasValue
                 ? clause.MaxPackSlot.Value + 1
-                : (ante == 1 ? 4 : 6);
+                : MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
             
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {

@@ -9,9 +9,11 @@ public enum FilterCategory
     Boss,
     Tag,
     TarotCard,
-    PlanetCard, 
+    PlanetCard,
     SpectralCard,
     PlayingCard,
     Joker,
-    SoulJoker
+    SoulJoker,
+    And,
+    Or
 }

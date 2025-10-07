@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using Motely.Filters;
 
 namespace Motely.Filters;
@@ -51,35 +52,88 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
             var runState = ctx.Deck.GetDefaultRunState();
             
             // Loop antes first, then clauses - ensures one stream per ante!
+            // Walk each ante and check all clauses as we go
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                
-                for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+                // Determine max slots needed across all clauses for this ante
+                int maxShopSlots = 0;
+                int maxPackSlots = 0;
+                for (int i = 0; i < _clauses.Count; i++)
                 {
-                    var clause = _clauses[clauseIndex];
-                    
-                    // Skip ante if not wanted
+                    var clause = _clauses[i];
                     if (!clause.WantedAntes[ante])
                         continue;
 
-                    VectorMask clauseResult = VectorMask.NoBitsSet;
+                    bool hasShop = HasShopSlots(clause.WantedShopSlots);
+                    bool hasPack = HasPackSlots(clause.WantedPackSlots);
+                    bool useDefaults = !hasShop && !hasPack;
 
-                    // Check shops if specified
-                    if (HasShopSlots(clause.WantedShopSlots))
+                    if (hasShop || useDefaults)
                     {
-                        // Use the self-contained shop tarot stream - NO SYNCHRONIZATION ISSUES!
-                        var shopTarotStream = ctx.CreateShopTarotStreamNew(ante);
-                        clauseResult |= CheckShopTarotVectorizedNew(clause, ctx, ref shopTarotStream);
+                        int clauseMax = hasShop ? FindMaxSlotIndex(clause.WantedShopSlots) + 1 : MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+                        maxShopSlots = Math.Max(maxShopSlots, clauseMax);
                     }
-
-                    // Check packs if specified  
-                    if (HasPackSlots(clause.WantedPackSlots))
+                    if (hasPack || useDefaults)
                     {
-                        clauseResult |= CheckPacksVectorized(clause, ctx, ante);
+                        int clauseMax = hasPack ? FindMaxSlotIndex(clause.WantedPackSlots) + 1 : MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
+                        maxPackSlots = Math.Max(maxPackSlots, clauseMax);
                     }
+                }
 
-                    // Accumulate results for this clause across all antes (OR logic)
-                    clauseMasks[clauseIndex] |= clauseResult;
+                // Create streams ONCE for this ante
+                var shopTarotStream = maxShopSlots > 0 ? ctx.CreateShopTarotStreamNew(ante) : default;
+
+                // Walk shop slots once, check all clauses
+                for (int slot = 0; slot < maxShopSlots; slot++)
+                {
+                    var tarotItem = shopTarotStream.GetNext(ref ctx);
+
+                    // Check if it's an actual tarot (not excluded) - PURE SIMD!
+                    var excludedValue = Vector256.Create((int)MotelyItemType.TarotExcludedByStream);
+                    VectorMask isActualTarot = ~Vector256.Equals(tarotItem.Value, excludedValue);
+
+                    if (!isActualTarot.IsAllFalse())
+                    {
+                        // Check against ALL clauses
+                        for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+                        {
+                            var clause = _clauses[clauseIndex];
+                            if (!clause.WantedAntes[ante])
+                                continue;
+
+                            bool hasShop = HasShopSlots(clause.WantedShopSlots);
+                            bool useDefaults = !hasShop && !HasPackSlots(clause.WantedPackSlots);
+
+                            if (hasShop || useDefaults)
+                            {
+                                bool wantsSlot = !hasShop || clause.WantedShopSlots[slot];
+                                if (wantsSlot)
+                                {
+                                    VectorMask matches = CheckTarotMatchesClause(tarotItem, clause, ref ctx);
+                                    clauseMasks[clauseIndex] |= (isActualTarot & matches);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Walk packs once, check all clauses
+                if (maxPackSlots > 0)
+                {
+                    for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+                    {
+                        var clause = _clauses[clauseIndex];
+                        if (!clause.WantedAntes[ante])
+                            continue;
+
+                        bool hasPack = HasPackSlots(clause.WantedPackSlots);
+                        bool useDefaults = !HasShopSlots(clause.WantedShopSlots) && !hasPack;
+
+                        if (hasPack || useDefaults)
+                        {
+                            clauseMasks[clauseIndex] |= CheckPacksVectorized(clause, ctx, ante);
+                        }
+                    }
                 }
             }
 
@@ -102,26 +156,28 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
             var clauses = _clauses;
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
             {
+                var state = new MotelyRunState();
+
                 // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)
                 {
-                    bool matched = false;
+                    // Count total occurrences across ALL wanted antes
+                    int totalCount = 0;
                     for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
                     {
                         if (!clause.WantedAntes[ante]) continue;
-                        
-                        var state = new MotelyRunState();
+
                         var genericClause = ConvertToGeneric(clause);
-                        if (MotelyJsonScoring.TarotCardsTally(ref singleCtx, genericClause, ante, ref state, earlyExit: true) > 0)
-                        {
-                            matched = true;
-                            break;
-                        }
+                        int anteCount = MotelyJsonScoring.TarotCardsTally(ref singleCtx, genericClause, ante, ref state, earlyExit: false);
+                        totalCount += anteCount;
                     }
-                    
-                    if (!matched) return false;
+
+                    // Check Min threshold (default to 1 if not specified)
+                    int minThreshold = clause.Min ?? 1;
+                    if (totalCount < minThreshold)
+                        return false;
                 }
-                
+
                 return true;
             });
         }
@@ -372,6 +428,14 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                 if (slots[i]) return true;
             return false;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int FindMaxSlotIndex(bool[] slots)
+        {
+            for (int i = slots.Length - 1; i >= 0; i--)
+                if (slots[i]) return i;
+            return -1;
+        }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool HasPackSlots(bool[] slots)
@@ -383,19 +447,21 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private VectorMask CheckShopTarotVectorizedNew(MotelyJsonTarotFilterClause clause, MotelyVectorSearchContext ctx, 
-            ref MotelyVectorShopTarotStream shopTarotStream)
+        private VectorMask CheckShopTarotVectorizedNew(MotelyJsonTarotFilterClause clause, MotelyVectorSearchContext ctx,
+            ref MotelyVectorShopTarotStream shopTarotStream, int ante)
         {
             VectorMask foundInShop = VectorMask.NoBitsSet;
-            
-            // Calculate max slot we need to check
+
+            // Calculate max slot we need to check based on ante
             int maxSlot;
             if (!HasShopSlots(clause.WantedShopSlots))
             {
-                maxSlot = _maxShopSlotsNeeded;
+                // No slots specified - use ante-based defaults
+                maxSlot = MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
             }
             else
             {
+                // User specified slots - find the highest wanted slot
                 maxSlot = 0;
                 for (int i = clause.WantedShopSlots.Length - 1; i >= 0; i--)
                 {
@@ -406,27 +472,23 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                     }
                 }
             }
-            
+
             // Check each shop slot using the self-contained stream
             for (int slot = 0; slot < maxSlot; slot++)
             {
-                
+
                 // Get tarot for this slot using self-contained stream - handles slot types internally!
                 var tarotItem = shopTarotStream.GetNext(ref ctx);
-                
+
                 // Skip if this slot isn't wanted (no slots = check all slots)
                 if (HasShopSlots(clause.WantedShopSlots) && !clause.WantedShopSlots[slot])
                     continue;
-                
-                // Check if item is TarotExcludedByStream (not a tarot slot)
-                VectorMask isActualTarot = VectorMask.AllBitsSet;
-                for (int lane = 0; lane < 8; lane++)
-                {
-                    if (tarotItem.Value[lane] == (int)MotelyItemType.TarotExcludedByStream)
-                        isActualTarot[lane] = false;
-                }
-                
-                if (isActualTarot.IsPartiallyTrue())
+
+                // Check if item is TarotExcludedByStream (not a tarot slot) - PURE SIMD!
+                var excludedValue = Vector256.Create((int)MotelyItemType.TarotExcludedByStream);
+                VectorMask isActualTarot = ~Vector256.Equals(tarotItem.Value, excludedValue);
+
+                if (!isActualTarot.IsAllFalse())
                 {
                     // Check if the tarot matches our clause criteria
                     VectorMask matches = CheckTarotMatchesClause(tarotItem, clause, ref ctx);

@@ -10,8 +10,8 @@ namespace Motely.Filters;
 public abstract class MotelyJsonFilterClause
 {
     public MotelyItemEdition? EditionEnum { get; init; }
-    
-    
+    public int? Min { get; init; }  // Minimum count threshold - if total count < Min, clause fails
+
     /// <summary>
     /// Calculate min and max antes from a collection of clauses using their arrays
     /// </summary>
@@ -79,7 +79,8 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     public int? MaxPackSlot { get; init; }
     public int? MinShopSlot { get; init; }
     public int? MaxShopSlot { get; init; }
-    public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max slot index to check
+    public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
+    public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
     /// <summary>
     /// Create from generic JSON config clause
@@ -108,20 +109,21 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         }
         else if (jsonClause.MinShopSlot.HasValue || jsonClause.MaxShopSlot.HasValue)
         {
-            // Use min/max shop slot range (inclusive)
+            // Use min/max shop slot range (min inclusive, max exclusive)
             int minSlot = jsonClause.MinShopSlot ?? 0;
             int maxSlot = jsonClause.MaxShopSlot ?? 1023;
             DebugLogger.Log($"[SHOP SLOTS] MinShopSlot={jsonClause.MinShopSlot}, MaxShopSlot={jsonClause.MaxShopSlot}, range={minSlot}-{maxSlot}");
-            for (int i = minSlot; i <= maxSlot && i < 1024; i++)
+            for (int i = minSlot; i < maxSlot && i < 1024; i++)
             {
                 wantedShopSlots[i] = true;
             }
-            DebugLogger.Log($"[SHOP SLOTS] Set slots {minSlot}-{maxSlot} to true. Slot[6]={wantedShopSlots[6]}");
+            DebugLogger.Log($"[SHOP SLOTS] Set slots {minSlot} to {maxSlot-1} (exclusive max). Slot[6]={wantedShopSlots[6]}");
         }
 
         bool[] wantedPackSlots = new bool[6];
         if (jsonClause.Sources?.PackSlots != null)
         {
+            DebugLogger.Log($"[JOKER CONVERT] Explicit PackSlots: {string.Join(",", jsonClause.Sources.PackSlots)}");
             foreach (var slot in jsonClause.Sources.PackSlots)
             {
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
@@ -129,13 +131,21 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         }
         else if (jsonClause.Sources?.ShopSlots == null && !jsonClause.MinShopSlot.HasValue && !jsonClause.MaxShopSlot.HasValue)
         {
-            // NO slots specified at all - default to checking ALL pack slots
-            DebugLogger.Log($"[JOKER CONVERT] No slots specified, defaulting to all pack slots");
-            for (int i = 0; i < 6; i++)
-            {
-                wantedPackSlots[i] = true;
-            }
+            // NO slots specified - leave arrays EMPTY so CountJokerOccurrences can apply ante-based defaults
+            // This allows dynamic slot ranges per ante (e.g., ante 0 = 3 shops, ante 3+ = 6 + ante shops)
+            // IMPORTANT: If user specifies ANY source (packSlots, shopSlots, etc), we respect it and DON'T add defaults!
+            DebugLogger.Log($"[JOKER CONVERT] No slots specified, will use ante-based defaults in scoring");
+            // Both wantedShopSlots and wantedPackSlots remain all-false (empty)
         }
+        else
+        {
+            DebugLogger.Log($"[JOKER CONVERT] ShopSlots specified, NOT setting pack slots");
+        }
+
+        // DEBUG: Log final state
+        int shopCount = wantedShopSlots.Count(s => s);
+        int packCount = wantedPackSlots.Count(s => s);
+        DebugLogger.Log($"[JOKER CONVERT FINAL] {jsonClause.Value}: shopSlots={shopCount}, packSlots={packCount}");
 
         // Pre-calculate MaxShopSlotsNeeded for hot path
         int maxShopSlotsNeeded = 0;
@@ -151,6 +161,12 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         // If no specific slots wanted, use default of 8
         if (!hasShopSlots)
             maxShopSlotsNeeded = 8;
+
+        // Pre-calculate MaxPackSlotsNeeded
+        int maxPackSlotsNeeded = 0;
+        for (int i = 0; i < wantedPackSlots.Length; i++)
+            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default if no specific slots
 
         return new MotelyJsonJokerFilterClause
         {
@@ -168,7 +184,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             MaxPackSlot = jsonClause.MaxPackSlot,
             MinShopSlot = jsonClause.MinShopSlot,
             MaxShopSlot = jsonClause.MaxShopSlot,
-            MaxShopSlotsNeeded = maxShopSlotsNeeded
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
+            MaxPackSlotsNeeded = maxPackSlotsNeeded,
+            Min = jsonClause.Min
         };
     }
     
@@ -217,12 +235,14 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker? JokerType { get; init; }
+    public List<MotelyJoker>? JokerTypes { get; init; }  // Support for values array
     public MotelyItemType? JokerItemType { get; init; }  // Precomputed MotelyItemType for comparison
     public bool IsWildcard { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedPackSlots { get; init; } = new bool[6];  // Track which pack slots to check
     public int? MaxPackSlot { get; init; }
     public int? MaxShopSlot { get; init; }
+    public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
     public bool RequireMega { get; init; }  // Extracted from Sources for optimization
     public bool Satisfied { get; set; }  // Track if this clause has been satisfied
     
@@ -273,10 +293,17 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
         }
-        
+
+        // Pre-calculate MaxPackSlotsNeeded
+        int maxPackSlotsNeeded = 0;
+        for (int i = 0; i < wantedPackSlots.Length; i++)
+            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default
+
         var clause = new MotelyJsonSoulJokerFilterClause
         {
             JokerType = jsonClause.JokerEnum,
+            JokerTypes = jsonClause.JokerEnums?.Count > 0 ? jsonClause.JokerEnums : null,
             JokerItemType = jsonClause.JokerEnum.HasValue ? (MotelyItemType)jsonClause.JokerEnum.Value : null,
             IsWildcard = jsonClause.IsWildcard,
             EditionEnum = jsonClause.EditionEnum,
@@ -284,8 +311,10 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             WantedPackSlots = wantedPackSlots,
             MaxPackSlot = jsonClause.MaxPackSlot,
             MaxShopSlot = jsonClause.MaxShopSlot,
+            MaxPackSlotsNeeded = maxPackSlotsNeeded,
             RequireMega = jsonClause.Sources?.RequireMega ?? false,
-            Satisfied = false
+            Satisfied = false,
+            Min = jsonClause.Min
         };
         
         return clause;
@@ -310,11 +339,33 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
         // Calculate ante range
         var (minAnte, maxAnte) = CalculateAnteRange(clauses);
 
+        // Pre-calculate max pack slots per ante
+        var maxPackSlotsPerAnte = new Dictionary<int, int>();
+        for (int ante = minAnte; ante <= maxAnte; ante++)
+        {
+            int maxSlots = 0;
+            foreach (var clause in clauses)
+            {
+                if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
+                {
+                    // Use the pre-calculated MaxPackSlotsNeeded from the clause
+                    maxSlots = Math.Max(maxSlots, clause.MaxPackSlotsNeeded);
+                }
+            }
+            // If no clause wants this ante, use default based on ante number
+            if (maxSlots == 0)
+            {
+                maxSlots = (ante == 0 || ante == 1) ? 2 : 3;
+            }
+            maxPackSlotsPerAnte[ante] = maxSlots;
+        }
+
         return new MotelyJsonSoulJokerFilterCriteria
         {
             Clauses = clauses,
             MinAnte = minAnte,
-            MaxAnte = maxAnte
+            MaxAnte = maxAnte,
+            MaxPackSlotsPerAnte = maxPackSlotsPerAnte
         };
     }
 }
@@ -333,6 +384,8 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     public bool[] WantedShopSlots { get; init; } = new bool[1024];
     public int? MaxPackSlot { get; init; }
     public int? MaxShopSlot { get; init; }
+    public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
+    public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
     public static MotelyJsonTarotFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -361,7 +414,19 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
         }
-        
+
+        // Pre-calculate MaxShopSlotsNeeded
+        int maxShopSlotsNeeded = 0;
+        for (int i = 0; i < wantedShopSlots.Length; i++)
+            if (wantedShopSlots[i]) maxShopSlotsNeeded = i + 1;
+        if (maxShopSlotsNeeded == 0) maxShopSlotsNeeded = 8; // Default if no specific slots
+
+        // Pre-calculate MaxPackSlotsNeeded
+        int maxPackSlotsNeeded = 0;
+        for (int i = 0; i < wantedPackSlots.Length; i++)
+            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default if no specific slots
+
         return new MotelyJsonTarotFilterClause
         {
             TarotType = jsonClause.TarotEnum,
@@ -373,10 +438,13 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
             WantedPackSlots = wantedPackSlots,
             WantedShopSlots = wantedShopSlots,
             MaxPackSlot = jsonClause.MaxPackSlot,
-            MaxShopSlot = jsonClause.MaxShopSlot
+            MaxShopSlot = jsonClause.MaxShopSlot,
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
+            MaxPackSlotsNeeded = maxPackSlotsNeeded,
+            Min = jsonClause.Min
         };
     }
-    
+
     public static List<MotelyJsonTarotFilterClause> ConvertClauses(List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses)
     {
         return genericClauses
@@ -459,7 +527,8 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
         {
             VoucherType = jsonClause.VoucherEnum ?? MotelyVoucher.Overstock,
             VoucherTypes = jsonClause.VoucherEnums?.Count > 0 ? jsonClause.VoucherEnums : null,
-            WantedAntes = wantedAntes
+            WantedAntes = wantedAntes,
+            Min = jsonClause.Min
         };
     }
     
@@ -530,6 +599,8 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     public bool[] WantedPackSlots { get; init; } = new bool[6];
     public int? MaxPackSlot { get; init; }
     public int? MaxShopSlot { get; init; }
+    public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
+    public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
     public static MotelyJsonSpectralFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -558,7 +629,19 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
         }
-        
+
+        // Pre-calculate MaxShopSlotsNeeded
+        int maxShopSlotsNeeded = 0;
+        for (int i = 0; i < wantedShopSlots.Length; i++)
+            if (wantedShopSlots[i]) maxShopSlotsNeeded = i + 1;
+        if (maxShopSlotsNeeded == 0) maxShopSlotsNeeded = 8; // Default
+
+        // Pre-calculate MaxPackSlotsNeeded
+        int maxPackSlotsNeeded = 0;
+        for (int i = 0; i < wantedPackSlots.Length; i++)
+            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default
+
         return new MotelyJsonSpectralFilterClause
         {
             SpectralType = jsonClause.SpectralEnum,
@@ -570,7 +653,10 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
             WantedShopSlots = wantedShopSlots,
             WantedPackSlots = wantedPackSlots,
             MaxPackSlot = jsonClause.MaxPackSlot,
-            MaxShopSlot = jsonClause.MaxShopSlot
+            MaxShopSlot = jsonClause.MaxShopSlot,
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
+            MaxPackSlotsNeeded = maxPackSlotsNeeded,
+            Min = jsonClause.Min
         };
     }
     
@@ -650,6 +736,8 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     public bool[] WantedPackSlots { get; init; } = new bool[6];
     public int? MaxPackSlot { get; init; }
     public int? MaxShopSlot { get; init; }
+    public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
+    public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
     public static MotelyJsonPlanetFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
@@ -678,7 +766,19 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
                 if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
             }
         }
-        
+
+        // Pre-calculate MaxShopSlotsNeeded
+        int maxShopSlotsNeeded = 0;
+        for (int i = 0; i < wantedShopSlots.Length; i++)
+            if (wantedShopSlots[i]) maxShopSlotsNeeded = i + 1;
+        if (maxShopSlotsNeeded == 0) maxShopSlotsNeeded = 8; // Default
+
+        // Pre-calculate MaxPackSlotsNeeded
+        int maxPackSlotsNeeded = 0;
+        for (int i = 0; i < wantedPackSlots.Length; i++)
+            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default
+
         return new MotelyJsonPlanetFilterClause
         {
             PlanetType = jsonClause.PlanetEnum,
@@ -690,7 +790,10 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
             WantedShopSlots = wantedShopSlots,
             WantedPackSlots = wantedPackSlots,
             MaxPackSlot = jsonClause.MaxPackSlot,
-            MaxShopSlot = jsonClause.MaxShopSlot
+            MaxShopSlot = jsonClause.MaxShopSlot,
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
+            MaxPackSlotsNeeded = maxPackSlotsNeeded,
+            Min = jsonClause.Min
         };
     }
     

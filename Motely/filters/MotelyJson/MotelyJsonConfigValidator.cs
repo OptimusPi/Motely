@@ -81,14 +81,6 @@ namespace Motely.Filters
                 // CRITICAL: Initialize parsed enums FIRST
                 item.InitializeParsedEnums();
 
-                // And/Or clauses not supported in MUST
-                if (isMust && (item.ItemTypeEnum == MotelyFilterItemType.And || item.ItemTypeEnum == MotelyFilterItemType.Or))
-                {
-                    errors.Add($"{prefix}: And/Or clauses are not supported in 'must'. Move them to 'should' for scoring.");
-                    continue;
-                }
-
-                
                 // CRITICAL: Normalize Sources for ALL item types that support them
                 // This happens ONCE at config load, NOT in the hot path!
                 NormalizeSourcesForItem(item, prefix, errors, warnings);
@@ -511,17 +503,7 @@ namespace Motely.Filters
                 // DON'T create a Sources object - leave it null!
                 // The hot path will check the bitmasks which will be 0
                 
-                // Warn for ALL types that typically need sources
-                if (item.ItemTypeEnum == MotelyFilterItemType.Joker || 
-                    item.ItemTypeEnum == MotelyFilterItemType.SoulJoker ||
-                    item.ItemTypeEnum == MotelyFilterItemType.TarotCard ||
-                    item.ItemTypeEnum == MotelyFilterItemType.PlanetCard ||
-                    item.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
-                {
-                    warnings.Add($"{prefix}: No 'sources' specified for {item.Type}. Will NOT check shops or packs. Add 'sources' with 'shopSlots' and/or 'packSlots' to specify where to look.");
-                }
-                
-                // Set bitmasks to 0 (no sources)
+                // No warning - ante-based defaults will apply automatically
                 return; // Early return - no Sources object to process
             }
             else
