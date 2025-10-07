@@ -51,23 +51,20 @@ public struct MotelyJsonPlayingCardFilterDesc(MotelyJsonPlayingCardFilterCriteri
                 // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)
                 {
-                    bool clauseMatched = false;
-                    
+                    // Count total occurrences across ALL wanted antes
+                    int totalCount = 0;
                     foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
                     {
-                        // Use the SHARED function with earlyExit=true for filtering
-                        if (MotelyJsonScoring.CountPlayingCardOccurrences(ref singleCtx, clause, ante, earlyExit: true) > 0)
-                        {
-                            clauseMatched = true;
-                            break;
-                        }
+                        int anteCount = MotelyJsonScoring.CountPlayingCardOccurrences(ref singleCtx, clause, ante, earlyExit: false);
+                        totalCount += anteCount;
                     }
-                    
-                    // All clauses must match
-                    if (!clauseMatched)
+
+                    // Check Min threshold (default to 1 if not specified)
+                    int minThreshold = clause.Min ?? 1;
+                    if (totalCount < minThreshold)
                         return false;
                 }
-                
+
                 return true;
             });
         }

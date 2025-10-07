@@ -119,75 +119,25 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
             if (resultMask.IsAllFalse())
                 return VectorMask.NoBitsSet;
             
-            // Verify each passing seed individually to avoid SIMD bugs
-            var clauses = _clauses; // Copy to local for lambda capture
-            var minAnte = _minAnte; // Copy to local for lambda capture
-            var maxAnte = _maxAnte; // Copy to local for lambda capture
+            // USE THE SHARED FUNCTION - same logic as scoring!
+            var clauses = _clauses;
             return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
             {
-                var singleVoucherState = new MotelyRunState();
+                var voucherState = new MotelyRunState();
 
-                // Track which clauses are satisfied
-                bool[] clausesSatisfied = new bool[clauses.Length];
-
-                // Build voucher state from minAnte and check clauses (ante 0 exists with Hieroglyph/Petroglyph)
-                for (int ante = minAnte; ante <= maxAnte && ante < clauses[0].WantedAntes.Length; ante++)
+                // Check all clauses using the SAME shared function used in scoring
+                foreach (var clause in clauses)
                 {
-                    var voucher = singleCtx.GetAnteFirstVoucher(ante, singleVoucherState);
-                    DebugLogger.Log($"[VOUCHER VERIFY] Ante {ante}: Got voucher {voucher}");
-                    singleVoucherState.ActivateVoucher(voucher);
+                    var genericClause = ConvertToGeneric(clause);
+                    int totalCount = MotelyJsonScoring.CountVoucherOccurrences(ref singleCtx, genericClause, ref voucherState);
 
-                    // Check each clause for this ante
-                    for (int i = 0; i < clauses.Length; i++)
-                    {
-                        if (clausesSatisfied[i]) continue; // Already satisfied
-
-                        var clause = clauses[i];
-
-                        if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
-                        {
-                            DebugLogger.Log($"[VOUCHER VERIFY] Checking ante {ante} for clause {i} (want {clause.VoucherType})");
-                            bool voucherMatches = false;
-                            if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 1)
-                            {
-                                // Multi-value check
-                                foreach (var voucherType in clause.VoucherTypes)
-                                {
-                                    if (voucher == voucherType)
-                                    {
-                                        voucherMatches = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // Single value check
-                                voucherMatches = voucher == clause.VoucherType;
-                            }
-
-                            DebugLogger.Log($"[VOUCHER VERIFY] Match result: {voucherMatches}");
-                            if (voucherMatches)
-                            {
-                                clausesSatisfied[i] = true;
-                            }
-                        }
-                    }
-                }
-
-                // Check if all clauses satisfied
-                for (int i = 0; i < clauses.Length; i++)
-                {
-                    DebugLogger.Log($"[VOUCHER VERIFY] Final check: Clause {i} satisfied = {clausesSatisfied[i]}");
-                    if (!clausesSatisfied[i])
-                    {
-                        DebugLogger.Log($"[VOUCHER VERIFY] REJECTED - Clause {i} not satisfied");
+                    // Check Min threshold (default to 1 if not specified)
+                    int minThreshold = clause.Min ?? 1;
+                    if (totalCount < minThreshold)
                         return false;
-                    }
                 }
 
-                DebugLogger.Log($"[VOUCHER VERIFY] ACCEPTED - All clauses satisfied!");
-                return true; // All clauses satisfied
+                return true;
             });
         }
         
@@ -197,6 +147,23 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
             for (int i = 0; i < antes.Length; i++)
                 if (antes[i]) return true;
             return false;
+        }
+
+        private static MotelyJsonConfig.MotleyJsonFilterClause ConvertToGeneric(MotelyJsonVoucherFilterClause clause)
+        {
+            var effectiveAntes = new List<int>();
+            for (int i = 0; i < clause.WantedAntes.Length; i++)
+            {
+                if (clause.WantedAntes[i])
+                    effectiveAntes.Add(i);
+            }
+
+            return new MotelyJsonConfig.MotleyJsonFilterClause
+            {
+                VoucherEnum = clause.VoucherType,
+                VoucherEnums = clause.VoucherTypes,
+                EffectiveAntes = effectiveAntes.ToArray()
+            };
         }
     }
 }
