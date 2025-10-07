@@ -84,9 +84,18 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             if (orClause.Clauses == null || orClause.Clauses.Count == 0)
                 continue; // Skip empty Or clause
 
-            // Recursively create a composite filter for the nested clauses
-            var nestedComposite = new MotelyCompositeFilterDesc(orClause.Clauses);
-            nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+            // CRITICAL FIX: Each clause in the OR should be its own branch
+            // If we have ["King", "Queen", "Jack"], we want "King OR Queen OR Jack"
+            // NOT "(King AND Queen AND Jack) as one group"
+            // So we create a separate filter for EACH individual clause
+            foreach (var individualClause in orClause.Clauses)
+            {
+                // Create a composite filter with just this one clause
+                // This prevents same-type items from being grouped together
+                var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { individualClause };
+                var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
+                nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+            }
         }
 
         return new OrFilter(nestedFilters);
