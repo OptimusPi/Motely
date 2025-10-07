@@ -31,129 +31,272 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
             ctx.CacheSoulJokerStream(ante);
         }
 
-        return new MotelyJsonSoulJokerFilter(_criteria.Clauses, minAnte, maxAnte);
+        return new MotelyJsonSoulJokerFilter(_criteria.Clauses, minAnte, maxAnte, _criteria.MaxPackSlotsPerAnte);
     }
 
-    public struct MotelyJsonSoulJokerFilter(List<MotelyJsonSoulJokerFilterClause> clauses, int minAnte, int maxAnte) : IMotelySeedFilter
+    public struct MotelyJsonSoulJokerFilter : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonSoulJokerFilterClause> _clauses = clauses;
-        private readonly int _minAnte = minAnte;
-        private readonly int _maxAnte = maxAnte;
+        private readonly List<MotelyJsonSoulJokerFilterClause> _clauses;
+        private readonly int _minAnte;
+        private readonly int _maxAnte;
+        private readonly Dictionary<int, int> _maxPackSlotsPerAnte;
+        private readonly int[] _lastAnteForClause;
+
+        public MotelyJsonSoulJokerFilter(List<MotelyJsonSoulJokerFilterClause> clauses, int minAnte, int maxAnte, Dictionary<int, int> maxPackSlotsPerAnte)
+        {
+            _clauses = clauses;
+            _minAnte = minAnte;
+            _maxAnte = maxAnte;
+            _maxPackSlotsPerAnte = maxPackSlotsPerAnte;
+
+            // Pre-compute the last ante for each clause ONCE
+            _lastAnteForClause = new int[clauses.Count];
+            for (int i = 0; i < clauses.Count; i++)
+            {
+                _lastAnteForClause[i] = -1;
+                for (int a = maxAnte; a >= minAnte; a--)
+                {
+                    if (a < clauses[i].WantedAntes.Length && clauses[i].WantedAntes[a])
+                    {
+                        _lastAnteForClause[i] = a;
+                        break;
+                    }
+                }
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clauses != null && _clauses.Count > 0, "MotelyJsonSoulJokerFilter called with null or empty clauses");
-            
-            // STAGE 1: Vectorized pre-filter - check if the soul joker matches what we're looking for
-            // CRITICAL: Loop ANTES first, then clauses - to match individual validation order
-            VectorMask matchingMask = VectorMask.AllBitsSet;
-            
-            // Create a mask for each clause
-            VectorMask[] clauseMasks = new VectorMask[_clauses.Count];
-            for (int i = 0; i < clauseMasks.Length; i++)
-                clauseMasks[i] = VectorMask.NoBitsSet;
-            
-            // Loop ANTES first for proper stream synchronization
+
+            // STAGE 1: Vectorized pre-filter - just detect Soul cards
+            // We can't properly track soul joker sequences in vectorized mode
+            // because different seeds have different Soul patterns
+            VectorMask anySoulFound = VectorMask.NoBitsSet;
+
+            // Walk through ALL antes looking for Soul cards
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                // Skip antes that no clause cares about
-                bool anteNeeded = false;
+
+                // Check if any of the clauses want this ante
+                bool anteWanted = false;
                 for (int i = 0; i < _clauses.Count; i++)
                 {
                     if (ante < _clauses[i].WantedAntes.Length && _clauses[i].WantedAntes[ante])
                     {
-                        anteNeeded = true;
+                        anteWanted = true;
                         break;
                     }
                 }
-                if (!anteNeeded) continue;
-                
-                // Get the soul joker for this ante ONCE (vectorized)
-                var soulStream = ctx.CreateSoulJokerStream(ante);
-                var soulJoker = ctx.GetNextJoker(ref soulStream);
-                
-                // Check each clause against this same soul joker
-                for (int clauseIdx = 0; clauseIdx < _clauses.Count; clauseIdx++)
+
+                if (!anteWanted)
+                    continue;
+
+                // Create pack streams for this ante
+                var boosterPackStream = ctx.CreateBoosterPackStream(ante, ante > 1, false);
+                var tarotStream = ctx.CreateArcanaPackTarotStream(ante, false);
+                var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, false);
+                bool tarotStreamInit = false, spectralStreamInit = false;
+
+                int maxPackSlot = _maxPackSlotsPerAnte.ContainsKey(ante) ? _maxPackSlotsPerAnte[ante] : 3;
+
+                // Walk through each pack slot
+                for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
                 {
-                    var clause = _clauses[clauseIdx];
-                    
-                    // Fix array indexing - ante is 1-based but arrays are 0-based
-                    if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante]) continue;
-                    
-                    // Check if it matches what we're looking for - match the individual validation logic
-                    VectorMask anteMatches = VectorMask.AllBitsSet;
-                    
-                    if (clause.JokerType.HasValue && !clause.IsWildcard)
+                    var pack = ctx.GetNextBoosterPack(ref boosterPackStream);
+
+                    // Check if pack is Arcana type
+                    VectorMask isArcana = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Arcana);
+                    if (!isArcana.IsAllFalse())
                     {
-                        // FIXED: Soul joker vector contains raw joker values, not full ItemType values  
-                        var targetSoulJoker = (MotelyItemType)clause.JokerType.Value;
-                        anteMatches = VectorEnum256.Equals(soulJoker.Type, targetSoulJoker);
-                    }
-                    
-                    // Check edition if specified
-                    if (clause.EditionEnum.HasValue)
-                    {
-                        VectorMask editionMatches = VectorEnum256.Equals(soulJoker.Edition, clause.EditionEnum.Value);
-                        anteMatches &= editionMatches; // AND with edition requirement
-                    }
-                    
-                    clauseMasks[clauseIdx] |= anteMatches; // OR - clause can match at any ante
-                }
-            }
-            
-            // Check if any clause has no matches across all antes
-            for (int i = 0; i < clauseMasks.Length; i++)
-            {
-                if (clauseMasks[i].IsAllFalse())
-                    return VectorMask.NoBitsSet; // Early exit if any clause can't be satisfied
-            }
-            
-            // AND all clause masks together
-            for (int i = 0; i < clauseMasks.Length; i++)
-            {
-                matchingMask &= clauseMasks[i];
-                if (matchingMask.IsAllFalse())
-                    return VectorMask.NoBitsSet; // Early exit if no seeds match
-            }
-            
-            // STAGE 2: Individual seed validation using the corrected shared function
-            var clauses = _clauses; // Copy for lambda
-            return ctx.SearchIndividualSeeds(matchingMask, (ref MotelySingleSearchContext singleCtx) =>
-            {
-                // Defensive check for null clauses
-                if (clauses == null || clauses.Count == 0)
-                    return true; // No clauses means pass through
-                
-                // Filter out any null clauses that might have been created
-                var validClauses = new List<MotelyJsonSoulJokerFilterClause>();
-                foreach (var clause in clauses)
-                {
-                    if (clause != null && clause.WantedAntes != null)
-                        validClauses.Add(clause);
-                }
-                if (validClauses.Count == 0)
-                    return true; // No valid clauses means pass through
-                    
-                try 
-                {
-                    return MotelyJsonScoring.CheckSoulJokerForSeed(validClauses, ref singleCtx, true); // earlyExit=true for filter
-                }
-                catch (NullReferenceException ex)
-                {
-                    Console.WriteLine($"[DEBUG] NullRef in CheckSoulJokerForSeed - ValidClauses: {validClauses?.Count}, Exception: {ex.Message}");
-                    Console.WriteLine($"[DEBUG] Stack: {ex.StackTrace}");
-                    if (validClauses != null)
-                    {
-                        for (int i = 0; i < validClauses.Count; i++)
+                        if (!tarotStreamInit)
                         {
-                            var clause = validClauses[i];
-                            Console.WriteLine($"[DEBUG] Clause {i}: WantedAntes={clause?.WantedAntes?.Length}, WantedPackSlots={clause?.WantedPackSlots?.Length}");
+                            tarotStreamInit = true;
+                            tarotStream = ctx.CreateArcanaPackTarotStream(ante, true);
+                        }
+                        var soulInArcana = ctx.GetNextArcanaPackHasTheSoul(ref tarotStream, MotelyBoosterPackSize.Mega);
+                        anySoulFound |= (isArcana & soulInArcana);
+                    }
+
+                    // Check if pack is Spectral type
+                    VectorMask isSpectral = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Spectral);
+                    if (!isSpectral.IsAllFalse())
+                    {
+                        if (!spectralStreamInit)
+                        {
+                            spectralStreamInit = true;
+                            spectralStream = ctx.CreateSpectralPackSpectralStream(ante, true);
+                        }
+                        var soulInSpectral = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, MotelyBoosterPackSize.Mega);
+                        anySoulFound |= (isSpectral & soulInSpectral);
+                    }
+                }
+            }
+
+            // Pass seeds with Soul cards to individual validation
+            // The individual validation will check the specific joker requirements
+            var clauses = _clauses;
+            int minAnte = _minAnte;
+            int maxAnte = _maxAnte;
+            var maxPackSlotsPerAnte = _maxPackSlotsPerAnte;
+            var lastAnteForClause = _lastAnteForClause; // Use pre-computed values
+            return ctx.SearchIndividualSeeds(anySoulFound, (ref MotelySingleSearchContext singleCtx) =>
+            {
+
+                // Track counts for each clause
+                int[] clauseCounts = new int[clauses.Count];
+
+                // Walk through ALL antes sequentially
+                for (int ante = minAnte; ante <= maxAnte; ante++)
+                {
+                    // Create soul stream for THIS SPECIFIC ANTE (edition is ante-dependent!)
+                    var soulStream = singleCtx.CreateSoulJokerStream(ante);
+
+                    var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, ante > 1, false);
+                    var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, false);
+                    var spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, false);
+                    bool tarotStreamInit = false, spectralStreamInit = false;
+
+                    int maxPackSlot = maxPackSlotsPerAnte[ante];
+                    for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
+                    {
+                        var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
+
+                        bool hasSoul = false;
+                        if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                        {
+                            if (!tarotStreamInit)
+                            {
+                                tarotStreamInit = true;
+                                tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
+                            }
+                            hasSoul = singleCtx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize());
+                        }
+                        else if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                        {
+                            if (!spectralStreamInit)
+                            {
+                                spectralStreamInit = true;
+                                spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
+                            }
+                            hasSoul = singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
+                        }
+
+                        // If Soul found, get next joker and check against ALL clauses
+                        if (hasSoul)
+                        {
+                            var soulJoker = singleCtx.GetNextJoker(ref soulStream);
+
+                            // Check this joker against ALL clauses
+                            for (int clauseIdx = 0; clauseIdx < clauses.Count; clauseIdx++)
+                            {
+                                var clause = clauses[clauseIdx];
+
+                                // Check if this ante is wanted
+                                if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                                    continue;
+
+                                // Check if this pack slot is wanted
+                                if (clause.WantedPackSlots != null && clause.WantedPackSlots.Any(x => x))
+                                {
+                                    if (packIndex >= clause.WantedPackSlots.Length || !clause.WantedPackSlots[packIndex])
+                                        continue;
+                                }
+
+                                // Check mega requirement
+                                if (clause.RequireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
+                                    continue;
+
+                                // Check joker type
+                                bool typeMatches = true;
+                                if (!clause.IsWildcard)
+                                {
+                                    if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
+                                    {
+                                        // Multiple types specified - match ANY of them (OR logic)
+                                        typeMatches = false;
+                                        foreach (var jokerType in clause.JokerTypes)
+                                        {
+                                            var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                                            if (soulJoker.Type == expectedType)
+                                            {
+                                                typeMatches = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else if (clause.JokerType.HasValue)
+                                    {
+                                        // Single type specified
+                                        var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                                        typeMatches = (soulJoker.Type == expectedType);
+                                    }
+                                }
+                                // If IsWildcard is true (e.g., "Any"), typeMatches stays true
+
+                                if (!typeMatches)
+                                    continue;
+
+                                // Check edition
+                                if (clause.EditionEnum.HasValue && soulJoker.Edition != clause.EditionEnum.Value)
+                                    continue;
+
+                                // This joker matches this clause!
+                                clauseCounts[clauseIdx]++;
+                            }
                         }
                     }
-                    throw; // Re-throw after logging
+
+                    // EARLY EXIT: Check if any clause is past its last ante and failed
+                    for (int i = 0; i < clauses.Count; i++)
+                    {
+                        // If we're past this clause's last ante and it hasn't met minimum, fail
+                        if (ante >= lastAnteForClause[i])
+                        {
+                            int minThreshold = clauses[i].Min ?? 1;
+                            if (clauseCounts[i] < minThreshold)
+                            {
+                                return false; // EARLY EXIT - this clause failed!
+                            }
+                        }
+                    }
                 }
+
+                // Check if all clauses met their Min threshold
+                for (int i = 0; i < clauses.Count; i++)
+                {
+                    int minThreshold = clauses[i].Min ?? 1;
+                    if (clauseCounts[i] < minThreshold)
+                        return false;
+                }
+
+                return true;
             });
+        }
+
+        private static MotelyJsonConfig.MotleyJsonFilterClause ConvertToGeneric(MotelyJsonSoulJokerFilterClause clause)
+        {
+            var effectiveAntes = new List<int>();
+            for (int i = 0; i < clause.WantedAntes.Length; i++)
+            {
+                if (clause.WantedAntes[i])
+                    effectiveAntes.Add(i);
+            }
+
+            var sources = new MotelyJsonConfig.SourcesConfig
+            {
+                PackSlots = clause.WantedPackSlots?.Select((wanted, idx) => wanted ? idx : -1).Where(x => x >= 0).ToArray() ?? Array.Empty<int>(),
+                RequireMega = clause.RequireMega
+            };
+
+            return new MotelyJsonConfig.MotleyJsonFilterClause
+            {
+                JokerEnum = clause.JokerType,
+                EffectiveAntes = effectiveAntes.ToArray(),
+                EditionEnum = clause.EditionEnum,
+                Sources = sources
+            };
         }
     }
 }

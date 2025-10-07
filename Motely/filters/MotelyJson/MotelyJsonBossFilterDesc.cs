@@ -40,25 +40,24 @@ public struct MotelyJsonBossFilterDesc(MotelyJsonBossFilterCriteria criteria)
             return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
             {
                 var state = new MotelyRunState();
-                
+
                 // Check all clauses using the SAME shared function used in scoring
                 foreach (var clause in clauses)
                 {
-                    if (!clause.BossEnum.HasValue) continue;
-                    
-                    bool matched = false;
+                    // Count total occurrences across ALL wanted antes
+                    int totalCount = 0;
                     foreach (var ante in clause.EffectiveAntes)
                     {
                         if (MotelyJsonScoring.CheckBossSingle(ref singleCtx, clause, ante, ref state))
-                        {
-                            matched = true;
-                            break;
-                        }
+                            totalCount++;
                     }
-                    
-                    if (!matched) return false;
+
+                    // Check Min threshold (default to 1 if not specified)
+                    int minThreshold = clause.Min ?? 1;
+                    if (totalCount < minThreshold)
+                        return false;
                 }
-                
+
                 return true;
             });
         }
