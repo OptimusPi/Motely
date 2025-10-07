@@ -190,8 +190,10 @@ namespace Motely.Executors
             {
                 // Output CSV format: Seed,TotalScore,col1,col2,...
                 // Add padding to clear any stderr progress text that might be on the line
-                var scores = string.Join(",", result.TallyColumns.Select(v => v.ToString()));
-                Console.WriteLine($"{result.Seed},{result.Score},{scores}                    ");
+
+                // Use colorized output for tallies
+                string outputLine = TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns);
+                Console.WriteLine($"{outputLine}                    ");
             };
             
             MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback);
