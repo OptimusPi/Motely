@@ -78,6 +78,13 @@ namespace Motely.Filters
                     continue;
                 }
 
+                // CHECK FOR UNKNOWN PROPERTIES - CRITICAL!
+                if (item.ExtensionData != null && item.ExtensionData.Count > 0)
+                {
+                    var unknownProps = string.Join(", ", item.ExtensionData.Keys);
+                    errors.Add($"{prefix}: Unknown/invalid properties detected: [{unknownProps}]. Common mistakes: 'minShopSlot'/'maxShopSlot' must be inside 'sources': {{...}} object, not at clause level.");
+                }
+
                 // CRITICAL: Initialize parsed enums FIRST
                 item.InitializeParsedEnums();
 
