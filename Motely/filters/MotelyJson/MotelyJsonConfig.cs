@@ -169,6 +169,10 @@ internal static class MotelySlotLimits
         [JsonIgnore] public MotelyItemEnhancement? EnhancementEnum { get; set; }
         [JsonIgnore] public MotelyJsonConfigWildcards? WildcardEnum { get; set; }
         [JsonIgnore] public bool IsWildcard { get; set; }
+
+        // Catch unknown properties so we can validate them
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? ExtensionData { get; set; }
         
         public void InitializeParsedEnums()
         {
