@@ -1141,13 +1141,6 @@ public static class MotelyJsonScoring
                 // CRITICAL FIX: Get the soul joker for THIS specific Soul card (advances stream)
                 var soulJoker = ctx.GetNextJoker(ref soulStream);
 
-                // DEBUG: Print soul joker info for seed UI7CK111
-                #if DEBUG
-                if (ctx.GetSeedString() == "UI7CK111")
-                {
-                    Console.WriteLine($"  Ante {ante} Pack {packIndex}: Soul Joker = {soulJoker.Type}, Edition = {soulJoker.Edition}");
-                }
-                #endif
 
                 // Check if clause wants this pack slot
                 if (soulClause.WantedPackSlots != null && soulClause.WantedPackSlots.Any(x => x) && (packIndex >= soulClause.WantedPackSlots.Length || !soulClause.WantedPackSlots[packIndex]))
