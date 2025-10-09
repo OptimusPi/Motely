@@ -69,6 +69,9 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     public string GetSeed() => _contextParams.GetSeed(VectorLane);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public string GetSeedString() => _contextParams.GetSeed(VectorLane);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int GetSeed(char* output) => _contextParams.GetSeed(VectorLane, output);
 
 #if !DEBUG
