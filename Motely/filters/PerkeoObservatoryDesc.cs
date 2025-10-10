@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
 namespace Motely;
@@ -8,115 +7,107 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
     public PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Cache vouchers for all antes we'll check
-        for (int ante = 1; ante <= 5; ante++)
-        {
-            ctx.CacheAnteFirstVoucher(ante);
-            ctx.CacheBoosterPackStream(ante);
-        }
+        ctx.CacheAnteFirstVoucher(1);
+        ctx.CacheAnteFirstVoucher(2);
+
         return new PerkeoObservatoryFilter();
     }
 
     public struct PerkeoObservatoryFilter() : IMotelySeedFilter
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static bool CheckAnteForPerkeo(int ante, ref MotelySingleSearchContext searchContext)
+
+        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            MotelySingleTarotStream tarotStream = default;
-            MotelySingleSpectralStream spectralStream = default;
-            MotelySingleJokerFixedRarityStream soulStream = default;
-            MotelySingleBoosterPackStream boosterPackStream = default;
+            VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(1);
 
-   
-            bool boosterPackStreamInit = false;
+            VectorMask matching = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
 
+            if (matching.IsAllFalse())
+                return Vector512<double>.Zero;
 
-            bool tarotStreamInit = false, spectralStreamInit = false;
+            MotelyVectorRunState voucherState = new();
+            voucherState.ActivateVoucher(MotelyVoucher.Telescope);
 
-            soulStream = searchContext.CreateSoulJokerStream(ante);
-            var wouldBe = searchContext.GetNextJoker(ref soulStream);
-            if (wouldBe.Type != MotelyItemType.Perkeo || wouldBe.Edition != MotelyItemEdition.Negative) return false;
+            vouchers = searchContext.GetAnteFirstVoucher(2, voucherState);
 
-            for (int i = 0; i < 4; i++)
+            matching &= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
+
+            return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
             {
-                if (!boosterPackStreamInit)
-                {
-                    boosterPackStream = searchContext.CreateBoosterPackStream(ante, true, false);
-                    boosterPackStreamInit = true;
-                }
+                MotelySingleTarotStream tarotStream = default;
+                MotelySingleSpectralStream spectralStream = default;
+                MotelySingleJokerFixedRarityStream soulStream = default;
 
-                var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+                bool soulStreamInit = false;
+
+                MotelySingleBoosterPackStream boosterPackStream = searchContext.CreateBoosterPackStream(1, true, false);
+
+                MotelyBoosterPack pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+
                 if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                 {
-                    if (!tarotStreamInit)
-                    {
-                        tarotStreamInit = true;
-                        tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);
-                    }
+                    tarotStream = searchContext.CreateArcanaPackTarotStream(1, true);
 
                     if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
                     {
-                        return true;
+                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(1);
+                        return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
                     }
                 }
 
                 if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                 {
-                    if (!spectralStreamInit)
-                    {
-                        spectralStreamInit = true;
-                        spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
-                    }
+                    spectralStream = searchContext.CreateSpectralPackSpectralStream(1, false);
 
                     if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
                     {
-                        return true;
+                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(1);
+                        return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+                    }
+
+                }
+
+                boosterPackStream = searchContext.CreateBoosterPackStream(2);
+                bool tarotStreamInit = false, spectralStreamInit = false;
+                soulStreamInit = false;
+
+                for (int i = 0; i < 3; i++)
+                {
+                    pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+
+                    if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                    {
+                        if (!tarotStreamInit)
+                        {
+                            tarotStreamInit = true;
+                            tarotStream = searchContext.CreateArcanaPackTarotStream(2, true);
+                        }
+
+                        if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                        {
+                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(2);
+                            return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+                        }
+                    }
+
+                    if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                    {
+                        if (!spectralStreamInit)
+                        {
+                            spectralStreamInit = true;
+                            spectralStream = searchContext.CreateSpectralPackSpectralStream(2, true);
+                        }
+
+                        if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                        {
+                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(2);
+                            return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+                        }
                     }
                 }
-            }
 
-            return false;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
-        {
-            // Check for Telescope and Observatory vouchers appearing in any of the first 3 antes
-            VectorMask hasTelescope = VectorMask.NoBitsSet;
-            VectorMask hasObservatory = VectorMask.NoBitsSet;
-            MotelyVectorRunState voucherState = new();
-
-            // Process antes in order to properly handle voucher activation chain
-            for (int ante = 1; ante <= 3; ante++)
-            {
-                VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(ante, voucherState);
-                
-                // Check if Telescope appears at this ante
-                VectorMask isTelescope = VectorEnum256.Equals(vouchers, MotelyVoucher.Telescope);
-                hasTelescope |= isTelescope;
-                
-                voucherState.ActivateVoucherForMask(MotelyVoucher.Telescope, isTelescope);
-                
-                // Observatory can ONLY appear if Telescope is already active
-                VectorMask isObservatory = VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
-                hasObservatory |= isObservatory;
-            }
-            
-            VectorMask matching = hasTelescope & hasObservatory;
-            
-            if (matching.IsAllFalse())
-                return VectorMask.NoBitsSet;
-
-            return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
-            {
-                // We already know this seed has both vouchers from the vectorized check!
-                // Just check for Perkeo in antes 1 through 3
-                for (int ante = 1; ante <= 3; ante++)
-                {
-                    if (CheckAnteForPerkeo(ante, ref searchContext))
-                        return true;
-                }
                 return false;
+
             });
         }
     }
