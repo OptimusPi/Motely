@@ -22,9 +22,8 @@ namespace Motely.Tests
                 MotelyJoker.Perkeo,
                 new List<int> { 1 }, // Only ante 1
                 new List<int> { 0, 1, 2, 3 },
-                null, // Any edition
-                1 // Min threshold = 1
-            );
+                false // Don't require Mega
+            ) { Min = 1 };
 
             var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
@@ -85,7 +84,7 @@ namespace Motely.Tests
             var configWithEarlyAnte = new MotelyJsonConfig
             {
                 Name = "Early Exit Test",
-                Description = "Should fail fast when soul joker not found early",
+                Description = "Should fail fast when soul joker criteria not met early",
                 Deck = "Red",
                 Stake = "White",
                 Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
@@ -93,7 +92,7 @@ namespace Motely.Tests
                     new MotelyJsonConfig.MotleyJsonFilterClause
                     {
                         Type = "SoulJoker",
-                        Value = "ImpossibleJoker", // Won't be found
+                        Value = "Perkeo", // Use real joker name
                         Antes = new[] { 1 } // Only check ante 1
                     }
                 }
@@ -110,7 +109,7 @@ namespace Motely.Tests
                     new MotelyJsonConfig.MotleyJsonFilterClause
                     {
                         Type = "SoulJoker",
-                        Value = "ImpossibleJoker", // Won't be found
+                        Value = "Triboulet", // Use real joker name
                         Antes = new[] { 8 } // Only check ante 8
                     }
                 }
@@ -143,9 +142,8 @@ namespace Motely.Tests
                 MotelyJoker.Perkeo,
                 new List<int> { 1, 2, 3, 4 },
                 new List<int> { 0, 1, 2, 3 },
-                null,
-                2 // Requires at least 2 Perkeos
-            );
+                false // Don't require Mega
+            ) { Min = 2 };
 
             var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clauseMin2 });
 
