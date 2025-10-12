@@ -21,18 +21,25 @@ namespace Motely.Tests
             // The bug was: created soul stream with minAnte instead of specific ante
 
             // Create test filter requiring Negative edition soul joker
-            var clause = new MotelyJsonSoulJokerFilterClause(
-                MotelyJoker.Perkeo,
-                new List<int> { 5 }, // Ante 5
-                new List<int> { 0, 1, 2, 3 },
-                MotelyCardEdition.Negative // Require Negative edition
-            );
+            var clause = new MotelyJsonSoulJokerFilterClause
+            {
+                JokerType = MotelyJoker.Perkeo,
+                WantedAntes = new bool[40],
+                WantedPackSlots = new bool[6],
+                EditionEnum = MotelyItemEdition.Negative, // Require Negative edition
+                RequireMega = false
+            };
+            // Set ante 5
+            clause.WantedAntes[5] = true;
+            // Set pack slots 0-3
+            for (int i = 0; i <= 3; i++)
+                clause.WantedPackSlots[i] = true;
 
             var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
 
             // The edition should be properly set
-            Assert.Equal(MotelyCardEdition.Negative, clause.Edition);
+            Assert.Equal(MotelyItemEdition.Negative, clause.EditionEnum);
 
             // The filter should check ante 5
             Assert.True(clause.WantedAntes[5]);
@@ -71,7 +78,7 @@ namespace Motely.Tests
             // Verify the clause is properly configured with edition
             var clause = config.Must[0];
             Assert.True(clause.EditionEnum.HasValue);
-            Assert.Equal(MotelyCardEdition.Negative, clause.EditionEnum.Value);
+            Assert.Equal(MotelyItemEdition.Negative, clause.EditionEnum.Value);
         }
 
         [Fact]
@@ -117,7 +124,7 @@ namespace Motely.Tests
             // First clause should check antes 1-3 for Negative Perkeo
             var perkeoClause = soulClauses[0];
             Assert.Equal(MotelyJoker.Perkeo, perkeoClause.JokerType);
-            Assert.Equal(MotelyCardEdition.Negative, perkeoClause.Edition);
+            Assert.Equal(MotelyItemEdition.Negative, perkeoClause.EditionEnum);
             Assert.True(perkeoClause.WantedAntes[1]);
             Assert.True(perkeoClause.WantedAntes[2]);
             Assert.True(perkeoClause.WantedAntes[3]);
@@ -125,7 +132,7 @@ namespace Motely.Tests
             // Second clause should check antes 4-6 for any Triboulet
             var tribouletClause = soulClauses[1];
             Assert.Equal(MotelyJoker.Triboulet, tribouletClause.JokerType);
-            Assert.Null(tribouletClause.Edition); // No edition requirement
+            Assert.Null(tribouletClause.EditionEnum); // No edition requirement
             Assert.True(tribouletClause.WantedAntes[4]);
             Assert.True(tribouletClause.WantedAntes[5]);
             Assert.True(tribouletClause.WantedAntes[6]);
@@ -165,7 +172,7 @@ namespace Motely.Tests
 
             // Verify SHOULD clause has edition properly set
             var clause = config.Should[0];
-            Assert.Equal(MotelyCardEdition.Negative, clause.EditionEnum);
+            Assert.Equal(MotelyItemEdition.Negative, clause.EditionEnum);
             Assert.Equal(100, clause.Score);
         }
 
@@ -210,7 +217,7 @@ namespace Motely.Tests
                 // The clause should be looking for Negative Triboulet in ante 5
                 var mustClause = config.Must[0];
                 Assert.Equal(MotelyJoker.Triboulet, mustClause.JokerEnum);
-                Assert.Equal(MotelyCardEdition.Negative, mustClause.EditionEnum);
+                Assert.Equal(MotelyItemEdition.Negative, mustClause.EditionEnum);
                 Assert.Contains(5, mustClause.Antes);
 
                 // Convert to filter clause
@@ -218,7 +225,7 @@ namespace Motely.Tests
                 var filterClause = soulClauses[0];
 
                 // The critical fix: edition must be checked with ante-specific soul stream
-                Assert.Equal(MotelyCardEdition.Negative, filterClause.Edition);
+                Assert.Equal(MotelyItemEdition.Negative, filterClause.EditionEnum);
                 Assert.True(filterClause.WantedAntes[5]);
             }
             finally

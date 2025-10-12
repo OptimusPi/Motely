@@ -35,6 +35,15 @@ public static class MotelyJsonScoring
         return false;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool BoolArrayHasTrue(bool[] array)
+    {
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (array[i]) return true;
+        }
+        return false;
+    }
 
     #endregion
 
@@ -388,9 +397,9 @@ public static class MotelyJsonScoring
         // IMPORTANT: For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
         var packStream = ctx.CreateBoosterPackStream(ante, isCached: false, generatedFirstPack: ante != 1);
 
-        // Determine if user specified slots or if we should use ante-based defaults
-        bool hasShopSlots = clause.WantedShopSlots.Any(s => s);
-        bool hasPackSlots = clause.WantedPackSlots != null && clause.WantedPackSlots.Any(x => x);
+        // USE PRE-COMPUTED FLAGS - NO LINQ!
+        bool hasShopSlots = clause.HasShopSlots;
+        bool hasPackSlots = clause.HasPackSlots;
         bool useDefaults = !hasShopSlots && !hasPackSlots;
 
         // Check shop slots if any are wanted OR if using defaults
@@ -470,7 +479,7 @@ public static class MotelyJsonScoring
         }
 
         // Use array for pack slot checking (check if explicitly wanted OR using defaults)
-        if ((clause.WantedPackSlots != null && clause.WantedPackSlots.Any(x => x)) || useDefaults)
+        if (clause.HasPackSlots || useDefaults)
         {
             var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
             Debug.Assert(!buffoonStream.RarityPrngStream.IsInvalid, $"BuffoonStream RarityPrng should be valid for ante {ante}");
@@ -542,33 +551,104 @@ public static class MotelyJsonScoring
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState voucherState)
+    public static int CountVoucherOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonVoucherFilterClause clause, ref MotelyRunState voucherState)
     {
-        if (!clause.VoucherEnum.HasValue) return 0;
-
-        // Build voucher state progressively - simulate consuming vouchers as we check each ante
-        // This allows Petroglyph to appear in later antes when Hieroglyph was consumed in ante 1
-        var progressiveState = new MotelyRunState();
+        // CRITICAL: Make a COPY of the voucherState to avoid corrupting the shared state!
+        // Each clause should evaluate independently without affecting other clauses
+        var localVoucherState = voucherState; // Struct copy - preserves original state
         int count = 0;
 
-        foreach (var ante in clause.EffectiveAntes)
+        // IMPORTANT: Walk through ALL antes from 1 to maxAnte to build voucher state correctly
+        // We need to activate vouchers in earlier antes even if this clause doesn't care about them!
+        int minAnte = clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes[0] : 1;
+        int maxAnte = clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes[clause.EffectiveAntes.Length - 1] : 1;
+
+        // Use pre-computed EffectiveAntes array - no LINQ, no allocations!
+        for (int ante = minAnte; ante <= maxAnte; ante++)
         {
-            var voucherAtAnte = ctx.GetAnteFirstVoucher(ante, progressiveState);
-            if (voucherAtAnte == clause.VoucherEnum.Value)
+            var voucherAtAnte = ctx.GetAnteFirstVoucher(ante, localVoucherState);
+
+            // Check if THIS CLAUSE cares about this ante
+            bool anteWanted = false;
+            foreach (var wantedAnte in clause.EffectiveAntes)
             {
-                count++;
-                // DebugLogger.Log($"[VoucherScoring] {clause.VoucherEnum.Value} found at ante {ante}, count={count}"); // DISABLED FOR PERFORMANCE
+                if (wantedAnte == ante)
+                {
+                    anteWanted = true;
+                    break;
+                }
             }
 
-            // Consume the voucher to update state for next ante check
-            progressiveState.ActivateVoucher(voucherAtAnte);
+            if (anteWanted)
+            {
+                // Check single voucher OR multi-voucher array
+                bool matches = false;
+                if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 0)
+                {
+                    // Multi-value: Check if voucher matches ANY in the list
+                    foreach (var voucherType in clause.VoucherTypes)
+                    {
+                        if (voucherAtAnte == voucherType)
+                        {
+                            matches = true;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    // Single value
+                    matches = voucherAtAnte == clause.VoucherType;
+                }
 
-            // Handle Hieroglyph bonus voucher
+                if (matches)
+                {
+                    count++;
+                    // DebugLogger.Log($"[VoucherScoring] {clause.VoucherType} found at ante {ante}, count={count}"); // DISABLED FOR PERFORMANCE
+                }
+            }
+
+            // ALWAYS consume the voucher to update state for next ante check (even if this clause doesn't care about it)
+            localVoucherState.ActivateVoucher(voucherAtAnte);
+
+            // CRITICAL FIX: Handle Hieroglyph bonus voucher - CHECK IT against THIS CLAUSE for the SAME ante!
+            // This allows "Hieroglyph at ante 1 AND Petroglyph at ante 1" to work when Hieroglyph gives Petroglyph
             if (voucherAtAnte == MotelyVoucher.Hieroglyph)
             {
                 var voucherStream = ctx.CreateVoucherStream(ante);
-                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, progressiveState);
-                progressiveState.ActivateVoucher(bonusVoucher);
+                var bonusVoucher = ctx.GetNextVoucher(ref voucherStream, localVoucherState);
+
+                // Check if THIS CLAUSE wants this ante (bonus is in SAME ante as Hieroglyph)
+                if (anteWanted)
+                {
+                    // Check single voucher OR multi-voucher array
+                    bool bonusMatches = false;
+                    if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 0)
+                    {
+                        // Multi-value: Check if bonus voucher matches ANY in the list
+                        foreach (var voucherType in clause.VoucherTypes)
+                        {
+                            if (bonusVoucher == voucherType)
+                            {
+                                bonusMatches = true;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Single value
+                        bonusMatches = bonusVoucher == clause.VoucherType;
+                    }
+
+                    if (bonusMatches)
+                    {
+                        count++;
+                        // DebugLogger.Log($"[VoucherScoring] {clause.VoucherType} found as Hieroglyph bonus at ante {ante}, count={count}"); // DISABLED FOR PERFORMANCE
+                    }
+                }
+
+                localVoucherState.ActivateVoucher(bonusVoucher);
             }
         }
 
@@ -883,7 +963,9 @@ public static class MotelyJsonScoring
         // Special case for vouchers - they're not ante-specific, just check once
         if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
         {
-            return CountVoucherOccurrences(ref ctx, clause, ref runState);
+            // Convert to typed clause - PRE-OPTIMIZED!
+            var voucherClause = MotelyJsonVoucherFilterClause.FromJsonClause(clause);
+            return CountVoucherOccurrences(ref ctx, voucherClause, ref runState);
         }
 
         // Special case for AND - gates with nested scoring
@@ -925,8 +1007,8 @@ public static class MotelyJsonScoring
                 // Check each nested clause for THIS SPECIFIC ante
                 foreach (var nestedClause in clause.Clauses)
                 {
-                    // Skip if this clause doesn't apply to this ante
-                    if (nestedClause.EffectiveAntes == null || !nestedClause.EffectiveAntes.Contains(ante))
+                    // Skip if this clause doesn't apply to this ante - USE ARRAY SEARCH, NO LINQ!
+                    if (nestedClause.EffectiveAntes == null || !ArrayContains(nestedClause.EffectiveAntes, ante))
                     {
                         allMatch = false;
                         break;
@@ -1078,8 +1160,8 @@ public static class MotelyJsonScoring
         // The stream is NOT tied to a specific ante
         // As you find Soul cards across all antes, you advance the stream sequentially
 
-        // Sort antes to walk them in order
-        var antes = (clause.EffectiveAntes ?? Array.Empty<int>()).OrderBy(a => a).ToArray();
+        // EffectiveAntes are already in order - NO NEED TO SORT! Zero allocations!
+        var antes = clause.EffectiveAntes ?? Array.Empty<int>();
         int minAnte = antes.Length > 0 ? antes[0] : 1;
         var soulStream = ctx.CreateSoulJokerStream(minAnte);
 
@@ -1142,8 +1224,8 @@ public static class MotelyJsonScoring
                 var soulJoker = ctx.GetNextJoker(ref soulStream);
 
 
-                // Check if clause wants this pack slot
-                if (soulClause.WantedPackSlots != null && soulClause.WantedPackSlots.Any(x => x) && (packIndex >= soulClause.WantedPackSlots.Length || !soulClause.WantedPackSlots[packIndex]))
+                // Check if clause wants this pack slot - NO LINQ!
+                if (soulClause.WantedPackSlots != null && BoolArrayHasTrue(soulClause.WantedPackSlots) && (packIndex >= soulClause.WantedPackSlots.Length || !soulClause.WantedPackSlots[packIndex]))
                     continue;
 
                 // Check mega requirement
@@ -1375,9 +1457,9 @@ public static class MotelyJsonScoring
                             // Skip if already satisfied
                             if (clauseSatisfied[clauseIdx]) continue;
                             
-                            // Check if this clause wants this pack slot
+                            // Check if this clause wants this pack slot - NO LINQ!
                             // DEFENSIVE: WantedPackSlots should never be null per FromJsonClause, but add check anyway
-                            if (clause.WantedPackSlots != null && clause.WantedPackSlots.Any(x => x) && (packIndex >= clause.WantedPackSlots.Length || !clause.WantedPackSlots[packIndex]))
+                            if (clause.WantedPackSlots != null && BoolArrayHasTrue(clause.WantedPackSlots) && (packIndex >= clause.WantedPackSlots.Length || !clause.WantedPackSlots[packIndex]))
                                 continue;
                             
                             // Check mega requirement  

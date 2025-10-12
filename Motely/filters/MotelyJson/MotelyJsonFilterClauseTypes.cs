@@ -81,6 +81,8 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     public int? MaxShopSlot { get; init; }
     public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
+    public bool HasShopSlots { get; init; } // PRE-COMPUTED FLAG - NO LINQ IN HOTPATH!
+    public bool HasPackSlots { get; init; } // PRE-COMPUTED FLAG - NO LINQ IN HOTPATH!
 
     /// <summary>
     /// Create from generic JSON config clause
@@ -162,10 +164,17 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         if (!hasShopSlots)
             maxShopSlotsNeeded = 8;
 
-        // Pre-calculate MaxPackSlotsNeeded
+        // Pre-calculate MaxPackSlotsNeeded AND HasPackSlots flag
         int maxPackSlotsNeeded = 0;
+        bool hasPackSlots = false;
         for (int i = 0; i < wantedPackSlots.Length; i++)
-            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
+        {
+            if (wantedPackSlots[i])
+            {
+                hasPackSlots = true;
+                maxPackSlotsNeeded = i + 1;
+            }
+        }
         if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default if no specific slots
 
         return new MotelyJsonJokerFilterClause
@@ -186,6 +195,8 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             MaxShopSlot = jsonClause.MaxShopSlot,
             MaxShopSlotsNeeded = maxShopSlotsNeeded,
             MaxPackSlotsNeeded = maxPackSlotsNeeded,
+            HasShopSlots = hasShopSlots,  // PRE-COMPUTED!
+            HasPackSlots = hasPackSlots,  // PRE-COMPUTED!
             Min = jsonClause.Min
         };
     }
@@ -512,22 +523,28 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
     public MotelyVoucher VoucherType { get; init; }
     public List<MotelyVoucher>? VoucherTypes { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
-    
+    public int[] EffectiveAntes { get; init; } = Array.Empty<int>(); // Pre-computed for SIMD hotpath!
+
     public static MotelyJsonVoucherFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
     {
         bool[] wantedAntes = new bool[40];
+        var effectiveAntesList = new List<int>(); // Build once during pre-optimization
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
         foreach (var ante in effectiveAntes)
         {
             if (ante >= 0 && ante < 40)
+            {
                 wantedAntes[ante] = true;
+                effectiveAntesList.Add(ante); // Store in array for hotpath
+            }
         }
-        
+
         return new MotelyJsonVoucherFilterClause
         {
             VoucherType = jsonClause.VoucherEnum ?? MotelyVoucher.Overstock,
             VoucherTypes = jsonClause.VoucherEnums?.Count > 0 ? jsonClause.VoucherEnums : null,
             WantedAntes = wantedAntes,
+            EffectiveAntes = effectiveAntesList.ToArray(), // Pre-computed once!
             Min = jsonClause.Min
         };
     }
