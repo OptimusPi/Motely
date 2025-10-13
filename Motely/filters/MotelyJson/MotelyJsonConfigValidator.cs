@@ -465,10 +465,10 @@ namespace Motely.Filters
                     }
                 }
                 
-                // Validate score for should items
-                if (section == "should" && item.Score <= 0)
+                // Validate score for should items (score=0 is valid - tallies but doesn't add to total)
+                if (section == "should" && item.Score < 0)
                 {
-                    errors.Add($"{prefix}: Score must be positive for 'should' items (got {item.Score})");
+                    errors.Add($"{prefix}: Score cannot be negative for 'should' items (got {item.Score})");
                 }
             }
         }
