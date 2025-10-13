@@ -7,12 +7,26 @@ public ref struct MotelyFilterCreationContext
     public readonly IReadOnlyCollection<int> CachedPseudohashKeyLengths => _cachedPseudohashKeyLengths;
     public bool IsAdditionalFilter;
 
+    // Default parameters for unit tests
+    private static readonly MotelySearchParameters _defaultSearchParameters = new MotelySearchParameters
+    {
+        Deck = MotelyDeck.Red,
+        Stake = MotelyStake.White
+    };
+
     public readonly MotelyStake Stake => _searchParameters.Stake;
     public readonly MotelyDeck Deck => _searchParameters.Deck;
 
     public MotelyFilterCreationContext(ref readonly MotelySearchParameters searchParameters)
     {
         _searchParameters = ref searchParameters;
+        _cachedPseudohashKeyLengths = [0];
+    }
+
+    // Parameterless constructor for unit tests (uses default search parameters)
+    public MotelyFilterCreationContext()
+    {
+        _searchParameters = ref _defaultSearchParameters;
         _cachedPseudohashKeyLengths = [0];
     }
 
