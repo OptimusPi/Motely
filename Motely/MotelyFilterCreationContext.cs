@@ -227,7 +227,7 @@ public ref struct MotelyFilterCreationContext
         bool force = false
     )
     {
-        CachePseudoHash(MotelyPrngKeys.ShopItemType + ante);
+        CachePseudoHash(MotelyPrngKeys.ShopItemType + ante, force);
 
         if (!shopFlags.HasFlag(MotelyShopStreamFlags.ExcludeJokers))
         {
