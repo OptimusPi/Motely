@@ -100,6 +100,8 @@ internal static class MotelySlotLimits
 
         [JsonPropertyName("score")]
         public int Score { get; set; } = 1;
+        [JsonPropertyName("mode")]
+        public string? Mode { get; set; }  // Per-clause scoring mode (for Or/And clauses)
         [JsonPropertyName("min")]
         public int? Min { get; set; }
         [JsonPropertyName("filterOrder")]
