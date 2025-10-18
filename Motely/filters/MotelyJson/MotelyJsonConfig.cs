@@ -37,6 +37,21 @@ internal static class MotelySlotLimits
     }
 
     /// <summary>
+    /// Top-level score aggregation mode for SHOULD clauses
+    /// </summary>
+    public enum MotelyScoreAggregationMode
+    {
+        /// <summary>
+        /// Sum of (count * score) across all SHOULD clauses (default)
+        /// </summary>
+        Sum,
+        /// <summary>
+        /// Use max raw occurrence count across SHOULD clauses (ignores per-clause score)
+        /// </summary>
+        MaxCount
+    }
+
+    /// <summary>
     /// MongoDB compound Operator-style JSON configuration
     /// </summary>
     public class MotelyJsonConfig
@@ -54,6 +69,10 @@ internal static class MotelySlotLimits
         public string? Deck { get; set; } = "Red";
         [JsonPropertyName("stake")]
         public string? Stake { get; set; } = "White";
+        [JsonPropertyName("mode")]
+        public string? Mode { get; set; }
+        [JsonIgnore]
+        public MotelyScoreAggregationMode ScoreAggregationMode { get; private set; } = MotelyScoreAggregationMode.Sum;
     
         [JsonPropertyName("must")]
         public List<MotleyJsonFilterClause> Must { get; set; } = new();
@@ -718,6 +737,27 @@ internal static class MotelySlotLimits
         /// </summary>
         public void PostProcess()
         {
+            // Parse top-level mode (score aggregation)
+            if (!string.IsNullOrWhiteSpace(Mode))
+            {
+                var m = Mode.Trim();
+                if (m.Equals("sum", StringComparison.OrdinalIgnoreCase))
+                {
+                    ScoreAggregationMode = MotelyScoreAggregationMode.Sum;
+                }
+                else if (m.Equals("max", StringComparison.OrdinalIgnoreCase) ||
+                         m.Equals("max_count", StringComparison.OrdinalIgnoreCase) ||
+                         m.Equals("maxcount", StringComparison.OrdinalIgnoreCase))
+                {
+                    ScoreAggregationMode = MotelyScoreAggregationMode.MaxCount;
+                }
+                else
+                {
+                    // Unknown values will be handled by validator; default to Sum
+                    ScoreAggregationMode = MotelyScoreAggregationMode.Sum;
+                }
+            }
+
             // Process all filter items recursively (handles nested And/Or clauses)
             foreach (var item in Must.Concat(Should).Concat(MustNot))
             {
