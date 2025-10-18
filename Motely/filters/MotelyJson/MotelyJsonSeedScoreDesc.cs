@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Linq;
 using System.Numerics;
+using Motely;
 
 namespace Motely.Filters;
 
@@ -15,7 +16,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     public int Score { get; set; } // Made mutable for easier scoring logic
     public string Seed { get; }
     
-    private fixed int _tallyValues[256];
+    private fixed int _tallyValues[1024];
     private int _tallyCount;
 
     public MotelySeedScoreTally(string seed, int score)
@@ -27,7 +28,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 
     public void AddTally(int value)
     {
-        if (_tallyCount < 256)
+        if (_tallyCount < 1024)
         {
             _tallyValues[_tallyCount++] = value;
         }
@@ -339,19 +340,46 @@ public struct MotelyJsonSeedScoreDesc(
                     seedStr = new string(seedPtr, 0, length);
                 }
 
-                // Score Should clauses and add tallies
+                // Score Should clauses and add tallies (aggregation controlled by top-level mode)
                 int totalScore = 0;
                 var seedScore = new MotelySeedScoreTally(seedStr, 0);
 
                 if (config.Should?.Count > 0)
                 {
-                    foreach (var should in config.Should)
+                    switch (config.ScoreAggregationMode)
                     {
-                        int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
-                        int score = count * should.Score;
-                        totalScore += score;
-
-                        seedScore.AddTally(count);
+                        case MotelyScoreAggregationMode.Sum:
+                            foreach (var should in config.Should)
+                            {
+                                int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
+                                int score = count * should.Score;
+                                totalScore += score;
+                                seedScore.AddTally(count);
+                            }
+                            break;
+                        case MotelyScoreAggregationMode.MaxCount:
+                            {
+                                int maxCount = 0;
+                                foreach (var should in config.Should)
+                                {
+                                    int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
+                                    if (count > maxCount) maxCount = count;
+                                    seedScore.AddTally(count);
+                                }
+                                totalScore = maxCount;
+                                break;
+                            }
+                        default:
+                            // Future-proofing: default to Sum behavior for unknown modes
+                            DebugLogger.Log($"[Score] Unknown ScoreAggregationMode: {config.ScoreAggregationMode}; defaulting to Sum");
+                            foreach (var should in config.Should)
+                            {
+                                int count = MotelyJsonScoring.CountOccurrences(ref singleCtx, should, ref runState);
+                                int score = count * should.Score;
+                                totalScore += score;
+                                seedScore.AddTally(count);
+                            }
+                            break;
                     }
                 }
 

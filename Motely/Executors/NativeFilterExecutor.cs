@@ -31,6 +31,8 @@ namespace Motely.Executors
         {
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
+            // Ensure tally colors respect --nofancy
+            TallyColorizer.ColorEnabled = !_params.NoFancy;
             
             string normalizedFilterName = _filterName.ToLower(System.Globalization.CultureInfo.CurrentCulture).Trim();
             
@@ -225,21 +227,9 @@ namespace Motely.Executors
             PrintResultsHeader(config);
             
             // Create scoring provider with callbacks
-            string lastProgressLine = "";
             Action<MotelySeedScoreTally> onResultFound = (score) =>
             {
-                try
-                {
-                    Console.Write($"\r{new string(' ', Math.Max(80, Console.WindowWidth - 1))}\r");
-                }
-                catch
-                {
-                    // Fallback if Console.WindowWidth fails
-                    Console.Write("\r" + new string(' ', 120) + "\r");
-                }
-                Console.WriteLine($"{score.Seed},{score.Score},{string.Join(",", score.TallyColumns)}");
-                if (!string.IsNullOrEmpty(lastProgressLine))
-                    Console.Write(lastProgressLine);
+                Console.WriteLine(TallyColorizer.FormatResultLine(score.Seed, score.Score, score.TallyColumns));
             };
             
             // Use cutoff from params if provided

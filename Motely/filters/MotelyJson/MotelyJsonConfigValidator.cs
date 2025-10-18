@@ -42,6 +42,17 @@ namespace Motely.Filters
                 var validStakes = string.Join(", ", Enum.GetNames(typeof(MotelyStake)));
                 errors.Add($"Invalid stake: '{config.Stake}'. Valid stakes are: {validStakes}");
             }
+
+            // Validate top-level score aggregation mode
+            if (!string.IsNullOrWhiteSpace(config.Mode))
+            {
+                var m = config.Mode.Trim().ToLower(System.Globalization.CultureInfo.CurrentCulture);
+                bool isValid = m == "sum" || m == "max" || m == "max_count" || m == "maxcount";
+                if (!isValid)
+                {
+                    errors.Add($"Invalid mode: '{config.Mode}'. Valid modes are: sum, max (alias: max_count, maxcount)");
+                }
+            }
             
             // If there are warnings, print them
             if (warnings.Count > 0)
@@ -465,11 +476,9 @@ namespace Motely.Filters
                     }
                 }
                 
-                // Validate score for should items (score=0 is valid - tallies but doesn't add to total)
-                if (section == "should" && item.Score < 0)
-                {
-                    errors.Add($"{prefix}: Score cannot be negative for 'should' items (got {item.Score})");
-                }
+                // Validate score for should items
+                // Negative scores are now allowed to enable penalties (e.g., undesirable items)
+                // score=0 is also valid — tallies but doesn't add to total
             }
         }
         
