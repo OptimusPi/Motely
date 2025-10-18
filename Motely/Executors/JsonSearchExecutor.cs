@@ -16,6 +16,8 @@ namespace Motely.Executors
         {
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
+            // Gate colored output based on --nofancy
+            TallyColorizer.ColorEnabled = !_params.NoFancy;
 
             List<string>? seeds = LoadSeeds();
 
@@ -161,23 +163,45 @@ namespace Motely.Executors
                 MustNot = [] // Empty - filters handle this
             };
             
-            // Initialize parsed enums for scoring config clauses  
+            // Initialize parsed enums for scoring config clauses with helpful errors
             // NOTE: Don't re-initialize SHOULD clauses if they're the same objects as MUST clauses!
-            foreach (var clause in voucherMustClauses)
+            for (int i = 0; i < voucherMustClauses.Count; i++)
             {
-                clause.InitializeParsedEnums();
+                var clause = voucherMustClauses[i];
+                try
+                {
+                    clause.InitializeParsedEnums();
+                }
+                catch (Exception ex)
+                {
+                    var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
+                    var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value :
+                                    (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
+                    throw new ArgumentException($"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: Each clause needs a non-empty 'type' (e.g., 'Joker', 'TarotCard', 'PlayingCard'). If using multiple values, use 'values': [ ... ] not 'value'.");
+                }
             }
             
             // Only initialize SHOULD clauses if they haven't been initialized already
             if (config.Should != null)
             {
-                foreach (var shouldClause in config.Should)
+                for (int i = 0; i < config.Should.Count; i++)
                 {
+                    var shouldClause = config.Should[i];
                     // Check if this clause was already initialized as part of MUST clauses
                     bool alreadyInitialized = config.Must?.Contains(shouldClause) == true;
                     if (!alreadyInitialized)
                     {
-                        shouldClause.InitializeParsedEnums();
+                        try
+                        {
+                            shouldClause.InitializeParsedEnums();
+                        }
+                        catch (Exception ex)
+                        {
+                            var typeText = string.IsNullOrEmpty(shouldClause.Type) ? "<missing>" : shouldClause.Type;
+                            var valueText = !string.IsNullOrEmpty(shouldClause.Value) ? shouldClause.Value :
+                                            (shouldClause.Values != null && shouldClause.Values.Length > 0 ? string.Join(", ", shouldClause.Values) : "<none>");
+                            throw new ArgumentException($"Config error in SHOULD[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: 'type' must be one of supported types (e.g., 'Joker', 'Voucher', 'TarotCard').");
+                        }
                     }
                 }
             }
@@ -188,12 +212,8 @@ namespace Motely.Executors
             // Create callback for CSV output - always output when scoring
             Action<MotelySeedScoreTally> scoreCallback = (MotelySeedScoreTally result) =>
             {
-                // Output CSV format: Seed,TotalScore,col1,col2,...
-                // Add padding to clear any stderr progress text that might be on the line
-
-                // Use colorized output for tallies
-                string outputLine = TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns);
-                Console.WriteLine($"{outputLine}                    ");
+                // Output CSV with colorized tallies when enabled
+                Console.WriteLine(TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns));
             };
             
             MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback);
@@ -210,10 +230,21 @@ namespace Motely.Executors
             // Use specialized filter system
             List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses = config.Must?.ToList() ?? [];
 
-            // Initialize parsed enums for all clauses
-            foreach (MotelyJsonConfig.MotleyJsonFilterClause? clause in mustClauses)
+            // Initialize parsed enums for all MUST clauses with helpful errors
+            for (int i = 0; i < mustClauses.Count; i++)
             {
-                clause.InitializeParsedEnums();
+                var clause = mustClauses[i];
+                try
+                {
+                    clause.InitializeParsedEnums();
+                }
+                catch (Exception ex)
+                {
+                    var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
+                    var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value :
+                                    (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
+                    throw new ArgumentException($"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nSuggestion: Add 'type' and 'value' (or 'values'): {{ \"type\": \"Joker\", \"value\": \"Perkeo\" }}");
+                }
             }
 
             Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
@@ -452,10 +483,9 @@ namespace Motely.Executors
                 var anteClause = clause.Clauses.FirstOrDefault(c => c.Antes != null && c.Antes.Length > 0);
                 if (anteClause != null && anteClause.Antes != null)
                 {
-                    if (anteClause.Antes.Length == 1)
-                        baseName += $"@A{anteClause.Antes[0]}";
-                    else if (anteClause.Antes.Length < 8)
-                        baseName += $"@A{string.Join("_", anteClause.Antes)}";
+                    var suffix = FormatAnteSuffix(anteClause.Antes);
+                    if (!string.IsNullOrEmpty(suffix))
+                        baseName += suffix;
                 }
 
                 return baseName;
@@ -467,14 +497,36 @@ namespace Motely.Executors
             // Add ante suffix if specific antes are specified (not default all antes)
             if (clause.Antes != null && clause.Antes.Length > 0)
             {
-                // If single ante, show as "@A1", if multiple show as "@A1_2_3"
-                if (clause.Antes.Length == 1)
-                    name += $"@A{clause.Antes[0]}";
-                else if (clause.Antes.Length < 8) // Don't show if it's all 8 antes (default)
-                    name += $"@A{string.Join("_", clause.Antes)}";
+                var suffix = FormatAnteSuffix(clause.Antes);
+                if (!string.IsNullOrEmpty(suffix))
+                    name += suffix;
             }
 
             return name;
+        }
+
+        // Format ante suffix as @A<min>-<max> when contiguous, otherwise @A<list>
+        private static string FormatAnteSuffix(int[] antes)
+        {
+            if (antes == null || antes.Length == 0)
+                return string.Empty;
+            // Hide suffix if it's all 8 antes (default behavior)
+            if (antes.Length >= 8)
+                return string.Empty;
+
+            if (antes.Length == 1)
+                return $"@A{antes[0]}";
+
+            // Sort and check contiguity
+            var sorted = (int[])antes.Clone();
+            Array.Sort(sorted);
+            int min = sorted[0];
+            int max = sorted[sorted.Length - 1];
+            bool contiguous = (max - min + 1) == sorted.Length;
+            if (contiguous)
+                return $"@A{min}-{max}";
+
+            return $"@A{string.Join("_", sorted)}";
         }
 
         private static string GetClauseBaseNameInternal(MotelyJsonConfig.MotleyJsonFilterClause clause)
