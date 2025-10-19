@@ -71,9 +71,6 @@ public sealed class OrClauseTests
         var compositeFilter = new MotelyCompositeFilterDesc(config.Must);
         var filter = compositeFilter.CreateFilter(ref filterCreationContext);
 
-        // Verify filter was created successfully
-        Assert.NotNull(filter);
-
         // The filter should accept seeds with ANY ONE of the three cards
         // (We can't easily test actual seed filtering without a full seed context,
         // but we've verified the filter structure is created correctly)
@@ -128,9 +125,6 @@ public sealed class OrClauseTests
         var filterCreationContext = new MotelyFilterCreationContext();
         var compositeFilter = new MotelyCompositeFilterDesc(config.Must);
         var filter = compositeFilter.CreateFilter(ref filterCreationContext);
-
-        // Verify filter was created successfully
-        Assert.NotNull(filter);
     }
 
     [Fact]
@@ -218,9 +212,6 @@ public sealed class OrClauseTests
         var filterCreationContext = new MotelyFilterCreationContext();
         var compositeFilter = new MotelyCompositeFilterDesc(config.Must);
         var filter = compositeFilter.CreateFilter(ref filterCreationContext);
-
-        // Verify filter was created successfully
-        Assert.NotNull(filter);
     }
 
     [Fact]
@@ -277,8 +268,5 @@ public sealed class OrClauseTests
         var filterCreationContext = new MotelyFilterCreationContext();
         var compositeFilter = new MotelyCompositeFilterDesc(config.Must);
         var filter = compositeFilter.CreateFilter(ref filterCreationContext);
-
-        // Verify filter was created successfully
-        Assert.NotNull(filter);
     }
 }

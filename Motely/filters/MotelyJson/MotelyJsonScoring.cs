@@ -559,7 +559,6 @@ public static class MotelyJsonScoring
         int count = 0;
 
         // IMPORTANT: Walk through ALL antes from 1 to maxAnte to build voucher state correctly
-        // We need to activate vouchers in earlier antes even if this clause doesn't care about them!
         int minAnte = clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes[0] : 1;
         int maxAnte = clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes[clause.EffectiveAntes.Length - 1] : 1;
 

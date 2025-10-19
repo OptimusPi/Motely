@@ -384,7 +384,6 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _endBatchIndex = settings.EndBatchIndex;
         
         // Initialize to one BEFORE start since ThreadMain increments BEFORE searching
-        // This ensures the first Interlocked.Increment gives us _startBatchIndex
         // StartBatchIndex is always >= 0 now (defaults to 0)
         _batchIndex = _startBatchIndex - 1;
 
@@ -667,7 +666,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                     case MotelySearchStatus.Completed:
 
-                        // We need to search any batches which have yet to be fully searched
+                        // Search any batches which have yet to be fully searched
                         for (int i = 0; i < Search._additionalFilters.Length; i++)
                         {
                             FilterSeedBatch* batch = &_filterSeedBatches[i];

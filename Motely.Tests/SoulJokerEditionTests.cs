@@ -218,7 +218,7 @@ namespace Motely.Tests
                 var mustClause = config.Must[0];
                 Assert.Equal(MotelyJoker.Triboulet, mustClause.JokerEnum);
                 Assert.Equal(MotelyItemEdition.Negative, mustClause.EditionEnum);
-                Assert.Contains(5, mustClause.Antes);
+                Assert.Contains(5, mustClause.Antes!);
 
                 // Convert to filter clause
                 var soulClauses = MotelyJsonSoulJokerFilterClause.ConvertClauses(config.Must);

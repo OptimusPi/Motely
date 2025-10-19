@@ -136,8 +136,7 @@ namespace Motely.Executors
         {
             var seeds = LoadSeeds();
             var filterDesc = GetFilterDescriptor(filterName);
-            
-            // We need to handle each type explicitly since BuildSearch is generic
+
             return filterDesc switch
             {
                 NaNSeedFilterDesc d => BuildSearch(d, progressCallback, seeds),

@@ -198,8 +198,7 @@ public struct MotelyJsonSeedScoreDesc(
                 if (config.Must?.Count > 0)
                 {
                     // SMART: Process vouchers FIRST in order, then other requirements
-                    // This ensures Telescope is activated before checking Observatory
-                    
+
                     // Step 1: Check all voucher requirements (they depend on each other)
                     // PERFORMANCE: Avoid LINQ in hot path - iterate directly
                     foreach (var clause in config.Must)
