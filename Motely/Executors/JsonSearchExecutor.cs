@@ -90,7 +90,7 @@ namespace Motely.Executors
                 Thread.Sleep(100);
                 Console.Out.Flush();
 
-                PrintResultsSummary(search);
+                PrintResultsSummary(search, _cancelled);
                 Console.Out.Flush();
                 return 0;
             }
@@ -549,11 +549,11 @@ namespace Motely.Executors
             return clause.Type;
         }
 
-        private void PrintResultsSummary(IMotelySearch search)
+        private void PrintResultsSummary(IMotelySearch search, bool wasCancelled)
         {
             Console.Out.Flush();
             Console.WriteLine("\n" + new string('═', 60));
-            Console.WriteLine("✅ SEARCH COMPLETED");
+            Console.WriteLine(wasCancelled ? "🛑 SEARCH STOPPED" : "✅ SEARCH COMPLETED");
             Console.WriteLine(new string('═', 60));
 
             long lastBatchIndex = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
@@ -575,8 +575,13 @@ namespace Motely.Executors
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
             Console.WriteLine(new string('═', 60));
-            Console.WriteLine($"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {percentComplete}");
-            Console.WriteLine(new string('═', 60));
+
+            // Only show "To continue" message if search was cancelled (interrupted)
+            if (wasCancelled)
+            {
+                Console.WriteLine($"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {percentComplete}");
+                Console.WriteLine(new string('═', 60));
+            }
         }
     }
 
