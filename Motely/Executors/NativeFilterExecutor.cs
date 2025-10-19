@@ -265,12 +265,19 @@ namespace Motely.Executors
         {
             Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
             var header = "Seed,TotalScore";
-            
+
             if (config.Should != null)
             {
                 foreach (var should in config.Should)
                 {
                     var col = should.Label ?? should.Value ?? should.Type;
+                    // Escape column names that Excel might interpret as formulas
+                    // Prefix with ' if it starts with =, +, -, @, or contains (
+                    if (col.StartsWith('=') || col.StartsWith('+') || col.StartsWith('-') ||
+                        col.StartsWith('@') || col.Contains('('))
+                    {
+                        col = "'" + col;
+                    }
                     header += $",{col}";
                 }
             }
