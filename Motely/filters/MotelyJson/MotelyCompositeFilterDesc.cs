@@ -66,9 +66,46 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             if (andClause.Clauses == null || andClause.Clauses.Count == 0)
                 continue; // Skip empty And clause
 
-            // Recursively create a composite filter for the nested clauses
-            var nestedComposite = new MotelyCompositeFilterDesc(andClause.Clauses);
-            nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+            // CHECK: Does this And clause have an antes array?
+            if (andClause.Antes != null && andClause.Antes.Length > 0)
+            {
+                // YES! Create separate AND groups for EACH ante, then OR them together
+                // So: (child1[ante4] AND child2[ante4]) OR (child1[ante5] AND child2[ante5]) OR ...
+                var anteSpecificAndFilters = new List<IMotelySeedFilter>();
+
+                foreach (var ante in andClause.Antes)
+                {
+                    // Clone each child clause with this specific ante
+                    var clonedChildren = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                    foreach (var child in andClause.Clauses)
+                    {
+                        var clonedChild = new MotelyJsonConfig.MotleyJsonFilterClause
+                        {
+                            Type = child.Type,
+                            Value = child.Value,
+                            Antes = new[] { ante }, // SINGLE ante!
+                            ShopSlots = child.ShopSlots,
+                            Edition = child.Edition,
+                            Clauses = child.Clauses,
+                            Mode = child.Mode
+                        };
+                        clonedChildren.Add(clonedChild);
+                    }
+
+                    // Create AND filter for this specific ante
+                    var anteComposite = new MotelyCompositeFilterDesc(clonedChildren);
+                    anteSpecificAndFilters.Add(anteComposite.CreateFilter(ref ctx));
+                }
+
+                // Wrap all ante-specific ANDs in an OR
+                nestedFilters.Add(new OrFilter(anteSpecificAndFilters));
+            }
+            else
+            {
+                // No antes array on parent - just process normally
+                var nestedComposite = new MotelyCompositeFilterDesc(andClause.Clauses);
+                nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+            }
         }
 
         return new AndFilter(nestedFilters);
