@@ -280,7 +280,6 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                     }
 
                     // CRITICAL EARLY EXIT: Check all clauses AFTER processing both main voucher AND Hieroglyph bonus
-                    // This ensures we don't exit early before checking if Hieroglyph gives the voucher we need
                     for (int i = 0; i < clauses.Length; i++)
                     {
                         var clause = clauses[i];
