@@ -53,7 +53,6 @@ ref partial struct MotelySingleSearchContext
 
         int cardCount = MotelyBoosterPackType.Spectral.GetCardCount(size);
 
-        // We need to track this so we can keep the prng stream in the right state
         bool hasBlackHole = false;
 
         for (int i = 0; i < cardCount; i++)
