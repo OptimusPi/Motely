@@ -456,14 +456,8 @@ namespace Motely.Executors
                 foreach (MotelyJsonConfig.MotleyJsonFilterClause should in config.Should)
                 {
                     string name = GetClauseHeaderName(should);
-                    // Escape column names that Excel might interpret as formulas
-                    // Prefix with ' if it starts with =, +, -, @, or contains (
-                    if (name.StartsWith('=') || name.StartsWith('+') || name.StartsWith('-') ||
-                        name.StartsWith('@') || name.Contains('('))
-                    {
-                        name = "'" + name;
-                    }
-                    header += $",{name}";
+                    // Quote all column names for Excel compatibility
+                    header += $",\"{name}\"";
                 }
             }
             Console.WriteLine(header);
