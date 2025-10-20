@@ -605,13 +605,10 @@ internal static class MotelySlotLimits
             // item.PackSlots and item.ShopSlots should remain null if not provided
             item.Stickers ??= [];
 
-            // And/Or clauses don't need antes - they inherit from nested clauses
-            if (item.ItemTypeEnum != MotelyFilterItemType.And && item.ItemTypeEnum != MotelyFilterItemType.Or)
-            {
-                // Default to all antes if null OR empty (explicit empty array should also get default)
-                if (item.Antes == null || item.Antes.Length == 0)
-                    item.Antes = [1, 2, 3, 4, 5, 6, 7, 8];
-            }
+            // Default to all antes if null OR empty (explicit empty array should also get default)
+            // Or/And clauses CAN have their own antes that restrict when the entire clause is evaluated!
+            if (item.Antes == null || item.Antes.Length == 0)
+                item.Antes = [1, 2, 3, 4, 5, 6, 7, 8];
 
             // Don't initialize empty arrays - let min/max populate them later
             // if (item.Sources != null)
