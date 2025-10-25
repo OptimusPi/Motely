@@ -532,21 +532,20 @@ namespace Motely.Executors
 
         private static string GetClauseBaseNameInternal(MotelyJsonConfig.MotleyJsonFilterClause clause)
         {
-            // Standard clause - use Value if available, or Values array, otherwise Type
+            if (!string.IsNullOrEmpty(clause.Label))
+                return clause.Label;
+
             if (!string.IsNullOrEmpty(clause.Value))
                 return clause.Value;
 
-            // Handle values array (OR matching within a single clause)
             if (clause.Values != null && clause.Values.Length > 0)
             {
-                // If multiple values, show as "Val1+Val2+Val3"
                 if (clause.Values.Length > 1)
                     return string.Join("+", clause.Values);
                 else
                     return clause.Values[0];
             }
 
-            // Fallback to type
             return clause.Type;
         }
 

@@ -82,13 +82,6 @@ namespace Motely.Filters
                 var item = items[i];
                 var prefix = $"{section}[{i}]";
 
-                // Validate type
-                if (string.IsNullOrEmpty(item.Type))
-                {
-                    errors.Add($"{prefix}: Missing 'type' field");
-                    continue;
-                }
-
                 // CHECK FOR UNKNOWN PROPERTIES - CRITICAL!
                 if (item.ExtensionData != null && item.ExtensionData.Count > 0)
                 {
@@ -96,8 +89,36 @@ namespace Motely.Filters
                     errors.Add($"{prefix}: Unknown/invalid properties detected: [{unknownProps}]. Common mistakes: 'minShopSlot'/'maxShopSlot' must be inside 'sources': {{...}} object, not at clause level.");
                 }
 
+                // Validate type BEFORE calling InitializeParsedEnums
+                if (string.IsNullOrEmpty(item.Type))
+                {
+                    // Check if they used a shorthand property name instead of type+value
+                    var hint = "";
+                    if (item.ExtensionData != null && item.ExtensionData.Count > 0)
+                    {
+                        var suspiciousProps = item.ExtensionData.Keys
+                            .Where(k => k.Contains("Tag") || k.Contains("Joker") || k.Contains("Card") || k.Contains("Voucher"))
+                            .ToList();
+
+                        if (suspiciousProps.Any())
+                        {
+                            hint = $"\n  → Found property '{suspiciousProps.First()}' - did you mean to use \"type\": \"{suspiciousProps.First()}\" instead?";
+                        }
+                    }
+                    errors.Add($"{prefix}: Missing 'type' field{hint}");
+                    continue;
+                }
+
                 // CRITICAL: Initialize parsed enums FIRST
-                item.InitializeParsedEnums();
+                try
+                {
+                    item.InitializeParsedEnums();
+                }
+                catch (ArgumentException ex)
+                {
+                    errors.Add($"{prefix}: {ex.Message}");
+                    continue;
+                }
 
                 // CRITICAL: Normalize Sources for ALL item types that support them
                 // This happens ONCE at config load, NOT in the hot path!
