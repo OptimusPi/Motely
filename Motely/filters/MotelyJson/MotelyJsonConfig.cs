@@ -758,9 +758,20 @@ internal static class MotelySlotLimits
             }
 
             // Process all filter items recursively (handles nested And/Or clauses)
-            foreach (var item in Must.Concat(Should).Concat(MustNot))
+            var sections = new[] { ("must", Must), ("should", Should), ("mustNot", MustNot) };
+            foreach (var (sectionName, items) in sections)
             {
-                ProcessClause(item);
+                for (int i = 0; i < items.Count; i++)
+                {
+                    try
+                    {
+                        ProcessClause(items[i]);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException($"Error in {sectionName}[{i}]: {ex.Message}", ex);
+                    }
+                }
             }
             
             // Compute MaxVoucherAnte once during PostProcess
