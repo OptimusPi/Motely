@@ -1032,8 +1032,10 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             MotelySearchContextParams searchParams = new(
                 &filterBatch->SeedHashCache,
                 filterBatch->SeedLength,
-                0, null,
-                (Vector512<double>*)&filterBatch->SeedCharacters
+                0,
+                null,
+                (Vector512<double>*)&filterBatch->SeedCharacters,
+                isAdditionalFilter: true
             );
 
             MotelyVectorSearchContext searchContext = new(in Search._searchParameters, in searchParams);
