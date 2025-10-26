@@ -15,5 +15,5 @@ public enum FilterCategory
     Joker,
     SoulJoker,
     And,
-    Or
+    Or,
 }

@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Xunit;
 using Motely.Filters;
+using Xunit;
 
 namespace Motely.Tests
 {
     public class SoulJokerFilterTests
     {
-        [Fact(Skip = "Integration test - requires Motely.exe (file locked by background instances)")]
+        [Fact]
         public void SoulJoker_Must_Filter_Should_Find_No_Matches()
         {
             var output = RunMotelyWithJsonConfig("souljoker-impossible.json");
@@ -22,7 +22,7 @@ namespace Motely.Tests
             Assert.Contains("Seeds passed filter: 0", output);
         }
 
-        [Fact(Skip = "Integration test - requires Motely.exe (file locked by background instances)")]
+        [Fact]
         public void SoulJoker_Must_Filter_Should_Find_Canio_Match()
         {
             var output = RunMotelyWithJsonConfig("souljoker-must-canio.json");
@@ -33,20 +33,43 @@ namespace Motely.Tests
             Assert.Contains("Seeds passed cutoff: 1", output);
             Assert.Contains("ALEEB", output);
         }
-        
+
+        [Fact]
+        public void MustNot_Fail_Config_Should_Exclude_Aleeb()
+        {
+            // Fail config: packSlots [1] matches ALEEB's Canio soul joker location
+            var output = RunMotelyWithJsonConfig("mustnot-aleeb-fail.json", seed: "ALEEB");
+            Assert.Contains("SEARCH COMPLETED", output);
+            Assert.Contains("Seeds passed filter: 0", output);
+            Assert.DoesNotContain("ALEEB,", output);
+        }
+
+        [Fact]
+        public void MustNot_Pass_Config_Should_Include_Aleeb()
+        {
+            // Pass config: packSlots [2] does NOT match ALEEB's soul joker location, so ALEEB should pass
+            var output = RunMotelyWithJsonConfig("mustnot-aleeb-pass.json", seed: "ALEEB");
+            Assert.Contains("SEARCH COMPLETED", output);
+            Assert.DoesNotContain("Seeds passed filter: 0", output); // Should not be zero
+            Assert.Contains("ALEEB,", output); // ALEEB should be present
+        }
+
         private static string RunMotelyWithJsonConfig(string configFileName, string seed = "ALEEB")
         {
-            var motelyProjectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Motely"));
+            var motelyProjectDir = Path.GetFullPath(
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Motely")
+            );
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run -c Release -- --seed {seed} --json {Path.GetFileNameWithoutExtension(configFileName)}",
+                Arguments =
+                    $"run -c Release -- --seed {seed} --json {Path.GetFileNameWithoutExtension(configFileName)} --nofancy",
                 WorkingDirectory = motelyProjectDir,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             using var process = Process.Start(startInfo);
@@ -61,12 +84,20 @@ namespace Motely.Tests
 
             if (process.ExitCode != 0)
             {
-                throw new Exception($"Motely process failed with exit code {process.ExitCode}. Error: {error}");
+                throw new Exception(
+                    $"Motely process failed with exit code {process.ExitCode}. Error: {error}"
+                );
             }
 
-            return output ?? string.Empty;
+            var outStr = output ?? string.Empty;
+            var errStr = error ?? string.Empty;
+
+            // Always return both stdout and stderr concatenated (may contain empty
+            // strings). This simplifies assertions that may match logs written to
+            // either stream.
+            return outStr + "\r\n" + errStr;
         }
-        
+
         [Fact]
         public void SoulJoker_Enum_Should_Be_Properly_Set()
         {
@@ -75,12 +106,12 @@ namespace Motely.Tests
             {
                 Type = "SoulJoker",
                 Value = "Perkeo",
-                Antes = new[] { 1 }
+                Antes = new[] { 1 },
             };
-            
+
             // Act
             clause.InitializeParsedEnums();
-            
+
             // Assert
             Assert.Equal(MotelyFilterItemType.SoulJoker, clause.ItemTypeEnum);
             Assert.True(clause.JokerEnum.HasValue, "JokerEnum should be set for SoulJoker");
@@ -98,7 +129,9 @@ namespace Motely.Tests
             );
 
             // Create a filter with this clause
-            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                new List<MotelyJsonSoulJokerFilterClause> { clause }
+            );
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
 
             // Verify the clause was properly created with the correct joker type
@@ -120,7 +153,9 @@ namespace Motely.Tests
             );
 
             // Create a filter with this clause
-            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                new List<MotelyJsonSoulJokerFilterClause> { clause }
+            );
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
 
             // Verify the clause was properly created with the correct joker type
@@ -130,7 +165,7 @@ namespace Motely.Tests
             Assert.False(clause.WantedAntes[1]); // Ante 1 should be false
             Assert.False(clause.WantedAntes[2]); // Ante 2 should be false
         }
-        
+
         [Fact]
         public void SoulJoker_Different_From_Regular_Joker()
         {
@@ -139,28 +174,28 @@ namespace Motely.Tests
             {
                 Type = "SoulJoker",
                 Value = "Perkeo",
-                Antes = new[] { 1 }
+                Antes = new[] { 1 },
             };
-            
+
             var regularJokerClause = new MotelyJsonConfig.MotleyJsonFilterClause
             {
                 Type = "Joker",
                 Value = "Joker", // Use regular Joker instead of Perkeo
-                Antes = new[] { 1 }
+                Antes = new[] { 1 },
             };
-            
+
             soulJokerClause.InitializeParsedEnums();
             regularJokerClause.InitializeParsedEnums();
-            
+
             // Different jokers but same structure
             Assert.Equal(MotelyJoker.Perkeo, soulJokerClause.JokerEnum);
             Assert.Equal(MotelyJoker.Joker, regularJokerClause.JokerEnum);
-            
+
             // But they should have different ItemTypeEnum
             Assert.Equal(MotelyFilterItemType.SoulJoker, soulJokerClause.ItemTypeEnum);
             Assert.Equal(MotelyFilterItemType.Joker, regularJokerClause.ItemTypeEnum);
         }
-        
+
         [Fact]
         public void Love2_Config_Should_Work()
         {
@@ -177,28 +212,28 @@ namespace Motely.Tests
                     {
                         Type = "SoulJoker",
                         Value = "Perkeo",
-                        Antes = new[] { 1 }
-                    }
+                        Antes = new[] { 1 },
+                    },
                 },
-                Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>()
+                Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>(),
             };
-            
+
             // Initialize parsed enums
             foreach (var clause in config.Must)
             {
                 clause.InitializeParsedEnums();
             }
-            
+
             // Verify the clause is properly configured
             var mustClause = config.Must[0];
             Assert.Equal(MotelyFilterItemType.SoulJoker, mustClause.ItemTypeEnum);
             Assert.True(mustClause.JokerEnum.HasValue);
             Assert.Equal(MotelyJoker.Perkeo, mustClause.JokerEnum.Value);
-            
+
             // Create the filter to ensure no exceptions
             var soulJokerClauses = MotelyJsonSoulJokerFilterClause.ConvertClauses(config.Must);
             Assert.Single(soulJokerClauses);
-            
+
             var convertedClause = soulJokerClauses[0];
             Assert.Equal(MotelyJoker.Perkeo, convertedClause.JokerType);
             Assert.True(convertedClause.WantedAntes[1]);
