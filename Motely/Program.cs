@@ -52,6 +52,7 @@ namespace Motely
             // Output options
             var debugOption = app.Option("--debug", "Enable debug output", CommandOptionType.NoValue);
             var noFancyOption = app.Option("--nofancy", "Suppress fancy output", CommandOptionType.NoValue);
+            var quietOption = app.Option("--quiet", "Suppress all progress output (CSV only)", CommandOptionType.NoValue);
 
             // Set defaults
             jsonOption.DefaultValue = "standard";
@@ -84,6 +85,7 @@ namespace Motely
                     EndBatch = (ulong)endBatchOption.ParsedValue,
                     EnableDebug = debugOption.HasValue(),
                     NoFancy = noFancyOption.HasValue(),
+                    Quiet = quietOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
                     Wordlist = wordlistOption.Value(),
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null
@@ -112,7 +114,10 @@ namespace Motely
                         return 1;
                     }
                     parameters.StartBatch = (ulong)(maxBatches * startPct / 100);
-                    Console.WriteLine($"📍 Starting at {startPct}% = batch {parameters.StartBatch:N0}");
+                    if (!parameters.Quiet)
+                    {
+                        Console.WriteLine($"📍 Starting at {startPct}% = batch {parameters.StartBatch:N0}");
+                    }
                 }
 
                 if (endPercentOption.HasValue())
@@ -124,15 +129,21 @@ namespace Motely
                         return 1;
                     }
                     parameters.EndBatch = (ulong)(maxBatches * endPct / 100);
-                    if (endPct == 0)
-                        Console.WriteLine($"📍 Ending at ∞ (no limit)");
-                    else
-                        Console.WriteLine($"📍 Ending at {endPct}% = batch {parameters.EndBatch:N0}");
+                    if (!parameters.Quiet)
+                    {
+                        if (endPct == 0)
+                            Console.WriteLine($"📍 Ending at ∞ (no limit)");
+                        else
+                            Console.WriteLine($"📍 Ending at {endPct}% = batch {parameters.EndBatch:N0}");
+                    }
                 }
                 else if (parameters.EndBatch == 0 && startPercentOption.HasValue())
                 {
                     // User specified startPercent but no end - show infinity
-                    Console.WriteLine($"📍 Ending at ∞ (no limit)");
+                    if (!parameters.Quiet)
+                    {
+                        Console.WriteLine($"📍 Ending at ∞ (no limit)");
+                    }
                 }
 
                 // Validate batch ranges
