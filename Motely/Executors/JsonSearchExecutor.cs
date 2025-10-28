@@ -21,26 +21,30 @@ namespace Motely.Executors
 
             List<string>? seeds = LoadSeeds();
 
-            Console.WriteLine($"🔍 Motely Ouija Search Starting");
-            Console.WriteLine($"   Config: {_configPath}");
-            Console.WriteLine($"   Threads: {_params.Threads}");
-            
-            if (_params.RandomSeeds.HasValue)
+            // Suppress startup messages in quiet mode
+            if (!_params.Quiet)
             {
-                Console.WriteLine($"   Mode: Random ({_params.RandomSeeds} seeds)");
-            }
-            else
-            {
-                Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
-                string endDisplay = _params.EndBatch == 0 ? "∞" : _params.EndBatch.ToString();
-                Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
-            }
-            if (_params.EnableDebug)
-            {
-                Console.WriteLine($"   Debug: Enabled");
-            }
+                Console.WriteLine($"🔍 Motely Ouija Search Starting");
+                Console.WriteLine($"   Config: {_configPath}");
+                Console.WriteLine($"   Threads: {_params.Threads}");
 
-            Console.WriteLine();
+                if (_params.RandomSeeds.HasValue)
+                {
+                    Console.WriteLine($"   Mode: Random ({_params.RandomSeeds} seeds)");
+                }
+                else
+                {
+                    Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
+                    string endDisplay = _params.EndBatch == 0 ? "∞" : _params.EndBatch.ToString();
+                    Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
+                }
+                if (_params.EnableDebug)
+                {
+                    Console.WriteLine($"   Debug: Enabled");
+                }
+
+                Console.WriteLine();
+            }
 
             try
             {
@@ -62,7 +66,10 @@ namespace Motely.Executors
                 {
                     e.Cancel = true;
                     _cancelled = true;
-                    Console.WriteLine("\n🛑 Stopping search...");
+                    if (!_params.Quiet)
+                    {
+                        Console.WriteLine("\n🛑 Stopping search...");
+                    }
                     // Don't dispose here - let it finish gracefully
                 };
 
@@ -90,7 +97,11 @@ namespace Motely.Executors
                 Thread.Sleep(100);
                 Console.Out.Flush();
 
-                PrintResultsSummary(search, _cancelled);
+                // Suppress summary in quiet mode
+                if (!_params.Quiet)
+                {
+                    PrintResultsSummary(search, _cancelled);
+                }
                 Console.Out.Flush();
                 return 0;
             }
@@ -109,7 +120,10 @@ namespace Motely.Executors
         {
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
-                Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
+                }
                 // Return just the specific seed - let the system handle partial batches
                 var seeds = new List<string>()
                 {
@@ -127,7 +141,10 @@ namespace Motely.Executors
                 }
 
                 List<string> seeds = [.. File.ReadAllLines(wordlistPath).Where(static s => !string.IsNullOrWhiteSpace(s))];
-                Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
+                }
                 return seeds;
             }
 
@@ -164,8 +181,11 @@ namespace Motely.Executors
 
         private IMotelySearch CreateSearch(MotelyJsonConfig config, List<string>? seeds)
         {
-            Console.WriteLine("CreateSearch...");
-            
+            if (!_params.Quiet)
+            {
+                Console.WriteLine("CreateSearch...");
+            }
+
             // CRITICAL: Validate and normalize config ONCE at load time!
             // This removes ALL ambiguity from the hot path!
             MotelyJsonConfigValidator.ValidateConfig(config);
@@ -235,13 +255,16 @@ namespace Motely.Executors
             
             MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback);
 
-            if (_params.AutoCutoff)
+            if (!_params.Quiet)
             {
-                Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})");
-            }
-            else
-            {
-                Console.WriteLine($"✅ Loaded config with cutoff: {_params.Cutoff}");
+                if (_params.AutoCutoff)
+                {
+                    Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})");
+                }
+                else
+                {
+                    Console.WriteLine($"✅ Loaded config with cutoff: {_params.Cutoff}");
+                }
             }
 
             // Use specialized filter system
@@ -269,7 +292,10 @@ namespace Motely.Executors
             // If no MUST clauses, use passthrough filter (accept all seeds, score via SHOULD)
             if (clausesByCategory.Count == 0)
             {
-                Console.WriteLine($"[PASSTHROUGH] No MUST clauses - accepting all seeds for scoring");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"[PASSTHROUGH] No MUST clauses - accepting all seeds for scoring");
+                }
                 var passthroughFilter = new PassthroughFilterDesc();
                 var passthroughSettings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(passthroughFilter);
 
@@ -285,6 +311,12 @@ namespace Motely.Executors
                     passthroughSettings = passthroughSettings.WithEndBatchIndex((long)_params.EndBatch + 1); // +1 for inclusive
 
                 passthroughSettings = passthroughSettings.WithSeedScoreProvider(scoreDesc);
+
+                // Apply quiet mode
+                if (_params.Quiet)
+                {
+                    passthroughSettings = passthroughSettings.WithQuietMode(true);
+                }
 
                 // If we have MustNot clauses and no MUST clauses, apply them as additional
                 // inverted filters on the passthrough settings so they can veto seeds.
@@ -306,7 +338,10 @@ namespace Motely.Executors
                         }
                     }
 
-                    Console.WriteLine($"   + Applying MustNot: {config.MustNot.Count} clauses (exclusion)");
+                    if (!_params.Quiet)
+                    {
+                        Console.WriteLine($"   + Applying MustNot: {config.MustNot.Count} clauses (exclusion)");
+                    }
 
                     var notClausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.MustNot);
                     foreach (var kv in notClausesByCategory)
@@ -335,7 +370,10 @@ namespace Motely.Executors
             if (categories.Count > 1)
             {
                 // Multiple categories - use composite filter to avoid broken chaining
-                Console.WriteLine($"[COMPOSITE] Creating composite filter with {categories.Count} filter types");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"[COMPOSITE] Creating composite filter with {categories.Count} filter types");
+                }
                 var compositeFilter = new MotelyCompositeFilterDesc(mustClauses);
                 var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
                 
@@ -357,7 +395,13 @@ namespace Motely.Executors
                     compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
                     compositeSettings = compositeSettings.WithCsvOutput(true);
                 }
-                
+
+                // Apply quiet mode
+                if (_params.Quiet)
+                {
+                    compositeSettings = compositeSettings.WithQuietMode(true);
+                }
+
                 // Start search with composite filter (no chaining needed!)
                 if (_params.RandomSeeds.HasValue)
                     return (IMotelySearch)compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
@@ -370,12 +414,15 @@ namespace Motely.Executors
             // Single category - use normal single filter (no chaining issues)
             FilterCategory primaryCategory = categories[0];
             List<MotelyJsonConfig.MotleyJsonFilterClause> primaryClauses = clausesByCategory[primaryCategory];
-            
+
             // Debug logging for filter setup
-            Console.WriteLine($"[FILTER SETUP] Base filter: {primaryCategory} with {primaryClauses.Count} clauses");
-            for (int i = 1; i < categories.Count; i++)
+            if (!_params.Quiet)
             {
-                Console.WriteLine($"[FILTER SETUP] Additional filter {i-1}: {categories[i]} with {clausesByCategory[categories[i]].Count} clauses");
+                Console.WriteLine($"[FILTER SETUP] Base filter: {primaryCategory} with {primaryClauses.Count} clauses");
+                for (int i = 1; i < categories.Count; i++)
+                {
+                    Console.WriteLine($"[FILTER SETUP] Additional filter {i-1}: {categories[i]} with {clausesByCategory[categories[i]].Count} clauses");
+                }
             }
 
             IMotelySeedFilterDesc filterDesc = primaryCategory switch
@@ -417,7 +464,10 @@ namespace Motely.Executors
                 var invertSoul = new MotelyJsonInvertFilterDesc(soulDesc);
                 var preAndBaseDesc = new MotelyJsonPreAndBaseFilterDesc(new List<IMotelySeedFilterDesc> { invertSoul }, filterDesc);
                 searchSettings = new MotelySearchSettings<MotelyJsonPreAndBaseFilterDesc.MotelyJsonPreAndBaseFilter>(preAndBaseDesc);
-                Console.WriteLine("[PRE-FILTER] Running SoulJoker MustNot before base filter");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine("[PRE-FILTER] Running SoulJoker MustNot before base filter");
+                }
                 // Remove those MustNot SoulJoker clauses from later additional processing (avoid duplication)
             }
             else
@@ -457,7 +507,10 @@ namespace Motely.Executors
                     }
                 }
 
-                Console.WriteLine($"   + Applying MustNot: {config.MustNot.Count} clauses (exclusion)");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"   + Applying MustNot: {config.MustNot.Count} clauses (exclusion)");
+                }
 
                 // Group MustNot clauses by optimized category and add an inverted specialized filter
                 var notClausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.MustNot);
@@ -476,7 +529,10 @@ namespace Motely.Executors
                 }
             }
 
-            Console.WriteLine($"   + Base {primaryCategory} filter: {primaryClauses.Count} clauses");
+            if (!_params.Quiet)
+            {
+                Console.WriteLine($"   + Base {primaryCategory} filter: {primaryClauses.Count} clauses");
+            }
 
             // Chain additional filters  
             for (int i = 1; i < categories.Count; i++)
@@ -507,7 +563,10 @@ namespace Motely.Executors
                     _ => throw new ArgumentException($"Additional filter not implemented: {category}")
                 };
                 searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
-                Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"   + Chained {category} filter: {clauses.Count} clauses");
+                }
             }
 
             // Add scoring when SHOULD clauses exist
@@ -517,6 +576,12 @@ namespace Motely.Executors
                 searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
                 // Always enable CSV output when scoring
                 searchSettings = searchSettings.WithCsvOutput(true);
+            }
+
+            // Apply quiet mode
+            if (_params.Quiet)
+            {
+                searchSettings = searchSettings.WithQuietMode(true);
             }
 
             // Apply deck and stake
@@ -557,9 +622,12 @@ namespace Motely.Executors
             }
         }
 
-        private static void PrintResultsHeader(MotelyJsonConfig config)
+        private void PrintResultsHeader(MotelyJsonConfig config)
         {
-            Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
+            if (!_params.Quiet)
+            {
+                Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
+            }
             string header = "Seed,TotalScore";
             if (config.Should != null)
             {
@@ -706,6 +774,7 @@ namespace Motely.Executors
         public bool AutoCutoff { get; set; }
         public bool EnableDebug { get; set; }
         public bool NoFancy { get; set; }
+        public bool Quiet { get; set; }
         public string? SpecificSeed { get; set; }
         public string? Wordlist { get; set; }
         public int? RandomSeeds { get; set; }
