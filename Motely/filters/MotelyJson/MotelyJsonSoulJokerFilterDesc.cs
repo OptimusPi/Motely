@@ -147,11 +147,15 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                 // Track counts for each clause
                 int[] clauseCounts = new int[clauses.Count];
 
+                // BUG FIX: Create soul stream ONCE for entire seed!
+                // Soul joker TYPE sequence is NOT ante-dependent (only edition is ante-dependent)
+                // Creating a new stream per ante causes false positives when multiple clauses check different antes
+                var soulStream = singleCtx.CreateSoulJokerStream(0);
+
                 // Walk through ALL antes sequentially
                 for (int ante = minAnte; ante <= maxAnte; ante++)
                 {
-                    // Create soul stream for THIS SPECIFIC ANTE (edition is ante-dependent!)
-                    var soulStream = singleCtx.CreateSoulJokerStream(ante);
+                    // DON'T create new soul stream here - reuse the shared stream!
 
                     var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, ante > 1, false);
                     var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, false);

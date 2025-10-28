@@ -391,7 +391,15 @@ public struct MotelyJsonSeedScoreDesc(
 
                 // Apply cutoff filtering - return true/false, caller will count results
                 var currentCutoff = GetCurrentCutoff(totalScore, autoCutoff, cutoff);
-                return totalScore >= currentCutoff;
+                bool passedCutoff = totalScore >= currentCutoff;
+
+                // Invoke callback for seeds that passed cutoff
+                if (passedCutoff && onResultFound != null)
+                {
+                    onResultFound(seedScore);
+                }
+
+                return passedCutoff;
             });
 
             // Batch update filtered counter ONCE per vector (instead of 8 times per seed!)

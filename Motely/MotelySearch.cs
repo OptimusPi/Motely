@@ -137,6 +137,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     public MotelyStake Stake { get; set; } = MotelyStake.White;
 
     public bool CsvOutput { get; set; } = false;
+    public bool QuietMode { get; set; } = false;
     
     /// <summary>
     /// Callback for progress updates - useful for UI progress bars
@@ -228,6 +229,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(IMotelySeedFilterDesc<TBas
     public MotelySearchSettings<TBaseFilter> WithCsvOutput(bool csvOutput)
     {
         CsvOutput = csvOutput;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithQuietMode(bool quietMode)
+    {
+        QuietMode = quietMode;
         return this;
     }
 
@@ -338,6 +345,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly Action<long, long, long, double>? _progressCallback;
     private readonly int _batchCharacterCount;
     private readonly bool _csvOutput;
+    private readonly bool _quietMode;
 
     private readonly Stopwatch _elapsedTime = new();
 
@@ -351,6 +359,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _progressCallback = settings.ProgressCallback;
         _batchCharacterCount = settings.SequentialBatchCharacterCount;
         _csvOutput = settings.CsvOutput;
+        _quietMode = settings.QuietMode;
 
         MotelyFilterCreationContext filterCreationContext = new(in _searchParameters)
         {
@@ -426,7 +435,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return;
 
         // Clear bottom line if in CSV mode to prevent interference
-        if (_csvOutput)
+        if (_csvOutput && !_quietMode)
         {
             FancyConsole.SetBottomLine(null);
             // Notify that progress goes to stderr in CSV mode
@@ -460,6 +469,9 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private void PrintReport()
     {
+        // Suppress all progress output in quiet mode
+        if (_quietMode) return;
+
         double elapsedMS = _elapsedTime.ElapsedMilliseconds;
 
         if (elapsedMS - _lastReportMS < reportInterval) return;
@@ -885,43 +897,36 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         
         private void ReportScoredResults(VectorMask resultMask, in MotelySearchContextParams searchParams)
         {
-            char* seed = stackalloc char[Motely.MaxSeedLength];
-            
+            // CRITICAL FIX: Do NOT write to console here - the callback already handled output!
+            // The score provider (MotelyJsonSeedScoreDesc) invokes the callback which writes to Console.
+            // Writing here causes DUPLICATE output (every seed printed twice).
+            //
+            // This method now ONLY updates counters for statistics tracking.
+            // The callback flow is:
+            //   1. scoreProvider.Score() -> invokes callback -> Console.WriteLine (FIRST OUTPUT)
+            //   2. ReportScoredResults() -> ONLY increment counter (NO OUTPUT)
+
             for (int lane = 0; lane < Motely.MaxVectorWidth; lane++)
             {
                 if (resultMask[lane] && searchParams.IsLaneValid(lane))
                 {
-                    Console.Write("\r");
-
                     var bufferedResult = _resultBuffer[lane];
                     DebugLogger.Log($"🔍 Lane {lane}: Seed='{bufferedResult.Seed}', Score={bufferedResult.Score}");
 
                     if (!string.IsNullOrEmpty(bufferedResult.Seed))
                     {
                         var tallies = bufferedResult.TallyColumns != null ? string.Join(",", bufferedResult.TallyColumns) : "";
-                        DebugLogger.Log($"🎉 OUTPUT: {bufferedResult.Seed},{bufferedResult.Score},{tallies}");
+                        DebugLogger.Log($"🎉 COUNTED: {bufferedResult.Seed},{bufferedResult.Score},{tallies}");
                         // PERFORMANCE: Use thread-local counter instead of Interlocked
                         _localMatchingSeeds++;
-
-                        // Use colorized output if tallies are present
-                        if (bufferedResult.TallyColumns != null && bufferedResult.TallyColumns.Count > 0)
-                        {
-                            // DIRECT CONSOLE OUTPUT - DO NOT USE FANCYCONSOLE WITH TALLIES
-                            Console.WriteLine(TallyColorizer.FormatResultLine(bufferedResult.Seed, bufferedResult.Score, bufferedResult.TallyColumns));
-                        }
-                        else
-                        {
-                            // Regular output can still use FancyConsole
-                            FancyConsole.WriteLine($"{bufferedResult.Seed},{bufferedResult.Score},{tallies}");
-                        }
+                        // NOTE: NO Console.WriteLine here - callback already handled output!
                     }
                     else
                     {
-                        DebugLogger.Log($"⚠️ Empty buffer at lane {lane} - using basic seed");
-                        int length = searchParams.GetSeed(lane, seed);
+                        DebugLogger.Log($"⚠️ Empty buffer at lane {lane} - counting anyway");
                         // PERFORMANCE: Use thread-local counter instead of Interlocked
                         _localMatchingSeeds++;
-                        Console.WriteLine(new Span<char>(seed, length).ToString());
+                        // NOTE: NO Console.WriteLine here - callback already handled output!
                     }
                 }
             }
