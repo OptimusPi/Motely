@@ -1275,6 +1275,7 @@ public static class MotelyJsonScoring
 
     /// <summary>
     /// Count soul joker occurrences across ALL antes with proper stream walking
+    /// BUG FIX: Create soul stream ONCE for entire seed (not per-ante!)
     /// </summary>
     private static int CountSoulJokerOccurrencesForAllAntes(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
@@ -1286,12 +1287,14 @@ public static class MotelyJsonScoring
 
         int totalCount = 0;
 
-        // Process each ante independently (edition is ante-dependent!)
+        // BUG FIX: Soul joker TYPE stream is GLOBAL - create it ONCE!
+        // Creating a new stream per ante causes false positives when clauses check different antes
+        int minAnte = effectiveAntes.Length > 0 ? effectiveAntes[0] : 1;
+        var soulStream = ctx.CreateSoulJokerStream(minAnte);
+
+        // Walk through antes sequentially with the SAME stream
         foreach (int ante in effectiveAntes)
         {
-            // Create soul stream for THIS SPECIFIC ANTE
-            var soulStream = ctx.CreateSoulJokerStream(ante);
-
             totalCount += CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulStream, ante, ref runState);
         }
 
