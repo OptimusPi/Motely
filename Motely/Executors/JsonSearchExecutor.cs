@@ -289,12 +289,72 @@ namespace Motely.Executors
 
             Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
 
-            // If no MUST clauses, use passthrough filter (accept all seeds, score via SHOULD)
+            // If no MUST clauses, check if we have mustNot clauses to use as a composite filter
             if (clausesByCategory.Count == 0)
             {
+                if (config.MustNot != null && config.MustNot.Count > 0)
+                {
+                    // We have ONLY mustNot clauses - create a composite filter with inverted clauses
+                    if (!_params.Quiet)
+                    {
+                        Console.WriteLine($"[COMPOSITE] Creating composite filter with {config.MustNot.Count} inverted mustNot clauses");
+                    }
+
+                    // Initialize parsed enums for MustNot clauses
+                    for (int i = 0; i < config.MustNot.Count; i++)
+                    {
+                        var clause = config.MustNot[i];
+                        try
+                        {
+                            clause.InitializeParsedEnums();
+                        }
+                        catch (Exception ex)
+                        {
+                            var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
+                            var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value : (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
+                            throw new ArgumentException($"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}");
+                        }
+                    }
+
+                    // Mark all mustNot clauses as inverted
+                    var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                    foreach (var clause in config.MustNot)
+                    {
+                        clause.IsInverted = true;
+                        allRequiredClauses.Add(clause);
+                    }
+
+                    // Create composite filter with inverted clauses
+                    var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
+                    var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
+
+                    if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck))
+                        compositeSettings = compositeSettings.WithDeck(compositeDeck);
+                    if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake))
+                        compositeSettings = compositeSettings.WithStake(compositeStake);
+
+                    compositeSettings = compositeSettings.WithThreadCount(_params.Threads);
+                    compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
+                    compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
+                    if (_params.EndBatch > 0)
+                        compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
+
+                    compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
+                    compositeSettings = compositeSettings.WithCsvOutput(true);
+
+                    if (_params.Quiet)
+                        compositeSettings = compositeSettings.WithQuietMode(true);
+
+                    if (seeds != null && seeds.Count > 0)
+                        return (IMotelySearch)compositeSettings.WithListSearch(seeds).Start();
+                    else
+                        return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
+                }
+
+                // No MUST or MUSTNOT clauses - use passthrough filter (accept all seeds, score via SHOULD)
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"[PASSTHROUGH] No MUST clauses - accepting all seeds for scoring");
+                    Console.WriteLine($"[PASSTHROUGH] No MUST/MUSTNOT clauses - accepting all seeds for scoring");
                 }
                 var passthroughFilter = new PassthroughFilterDesc();
                 var passthroughSettings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(passthroughFilter);
@@ -308,18 +368,37 @@ namespace Motely.Executors
                 passthroughSettings = passthroughSettings.WithBatchCharacterCount(_params.BatchSize);
                 passthroughSettings = passthroughSettings.WithStartBatchIndex((long)_params.StartBatch);
                 if (_params.EndBatch > 0)
-                    passthroughSettings = passthroughSettings.WithEndBatchIndex((long)_params.EndBatch + 1); // +1 for inclusive
+                    passthroughSettings = passthroughSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
 
                 passthroughSettings = passthroughSettings.WithSeedScoreProvider(scoreDesc);
+                passthroughSettings = passthroughSettings.WithCsvOutput(true);
 
-                // Apply quiet mode
                 if (_params.Quiet)
-                {
                     passthroughSettings = passthroughSettings.WithQuietMode(true);
+
+                if (seeds != null && seeds.Count > 0)
+                    return passthroughSettings.WithListSearch(seeds).Start();
+                else
+                    return passthroughSettings.WithSequentialSearch().Start();
+            }
+
+            // Boss filter now works with proper ante-loop structure
+
+            // BYPASS BROKEN CHAINING: Use composite filter for multiple categories
+            List<FilterCategory> categories = [.. clausesByCategory.Keys];
+
+            if (categories.Count > 1)
+            {
+                // Multiple categories - use composite filter to avoid broken chaining
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"[COMPOSITE] Creating composite filter with {categories.Count} filter types");
                 }
 
-                // If we have MustNot clauses and no MUST clauses, apply them as additional
-                // inverted filters on the passthrough settings so they can veto seeds.
+                // CRITICAL REFACTOR: Merge mustNot clauses into must clauses BEFORE creating composite
+                // Mark mustNot clauses with IsInverted=true so they're handled in one pass
+                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(mustClauses);
+
                 if (config.MustNot != null && config.MustNot.Count > 0)
                 {
                     // Initialize parsed enums for MustNot clauses
@@ -340,55 +419,33 @@ namespace Motely.Executors
 
                     if (!_params.Quiet)
                     {
-                        Console.WriteLine($"   + Applying MustNot: {config.MustNot.Count} clauses (exclusion)");
+                        Console.WriteLine($"   + Including MustNot: {config.MustNot.Count} inverted clauses (exclusion)");
                     }
 
-                    var notClausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.MustNot);
-                    foreach (var kv in notClausesByCategory)
+                    // Mark mustNot clauses as inverted and add to the composite
+                    foreach (var clause in config.MustNot)
                     {
-                        var category = kv.Key;
-                        var clauses = kv.Value;
-                        DebugLogger.Log($"[MUSTNOT SETUP] Creating inverted specialized filter for category={category} with {clauses.Count} clauses");
-
-                        IMotelySeedFilterDesc specialized = SpecializedFilterFactory.CreateSpecializedFilter(category, clauses);
-                        var invertDesc = new MotelyJsonInvertFilterDesc(specialized);
-                        passthroughSettings = passthroughSettings.WithAdditionalFilter(invertDesc);
+                        clause.IsInverted = true;
+                        allRequiredClauses.Add(clause);
                     }
                 }
 
-                if (seeds != null && seeds.Count > 0)
-                    return passthroughSettings.WithListSearch(seeds).Start();
-                else
-                    return passthroughSettings.WithSequentialSearch().Start();
-            }
-
-            // Boss filter now works with proper ante-loop structure
-
-            // BYPASS BROKEN CHAINING: Use composite filter for multiple categories
-            List<FilterCategory> categories = [.. clausesByCategory.Keys];
-
-            if (categories.Count > 1)
-            {
-                // Multiple categories - use composite filter to avoid broken chaining
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine($"[COMPOSITE] Creating composite filter with {categories.Count} filter types");
-                }
-                var compositeFilter = new MotelyCompositeFilterDesc(mustClauses);
+                // Create ONE composite filter with both must and mustNot clauses
+                var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
                 var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
-                
+
                 // Apply all the same settings
                 if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck))
                     compositeSettings = compositeSettings.WithDeck(compositeDeck);
                 if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake))
                     compositeSettings = compositeSettings.WithStake(compositeStake);
-                    
+
                 compositeSettings = compositeSettings.WithThreadCount(_params.Threads);
                 compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
                 compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
                 if (_params.EndBatch > 0)
                     compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch);
-                    
+
                 bool compositeNeedsScoring = (config.Should?.Count > 0);
                 if (compositeNeedsScoring)
                 {
@@ -411,18 +468,89 @@ namespace Motely.Executors
                     return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
             }
             
-            // Single category - use normal single filter (no chaining issues)
+            // Single category - but check if we have mustNot clauses to merge
             FilterCategory primaryCategory = categories[0];
             List<MotelyJsonConfig.MotleyJsonFilterClause> primaryClauses = clausesByCategory[primaryCategory];
 
-            // Debug logging for filter setup
+            // If we have mustNot clauses, use composite filter to handle both must and mustNot in one pass
+            bool hasMustNot = config.MustNot != null && config.MustNot.Count > 0;
+            if (hasMustNot)
+            {
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"[COMPOSITE] Single category with mustNot - using composite filter");
+                    Console.WriteLine($"   Must: {primaryClauses.Count} clauses ({primaryCategory})");
+                }
+
+                // Initialize and mark mustNot clauses as inverted
+                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(primaryClauses);
+
+                for (int i = 0; i < config.MustNot!.Count; i++)
+                {
+                    var clause = config.MustNot[i];
+                    try
+                    {
+                        clause.InitializeParsedEnums();
+                    }
+                    catch (Exception ex)
+                    {
+                        var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
+                        var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value : (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
+                        throw new ArgumentException($"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}");
+                    }
+                }
+
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"   MustNot: {config.MustNot.Count} inverted clauses (exclusion)");
+                }
+
+                // Mark mustNot clauses as inverted and add to composite
+                foreach (var clause in config.MustNot)
+                {
+                    clause.IsInverted = true;
+                    allRequiredClauses.Add(clause);
+                }
+
+                // Use composite filter for both must and mustNot
+                var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
+                var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
+
+                // Apply all settings
+                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck))
+                    compositeSettings = compositeSettings.WithDeck(compositeDeck);
+                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake))
+                    compositeSettings = compositeSettings.WithStake(compositeStake);
+
+                compositeSettings = compositeSettings.WithThreadCount(_params.Threads);
+                compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
+                compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
+                if (_params.EndBatch > 0)
+                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch);
+
+                bool singleCategoryNeedsScoring = (config.Should?.Count > 0);
+                if (singleCategoryNeedsScoring)
+                {
+                    compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
+                    compositeSettings = compositeSettings.WithCsvOutput(true);
+                }
+
+                if (_params.Quiet)
+                    compositeSettings = compositeSettings.WithQuietMode(true);
+
+                // Start search with composite filter
+                if (_params.RandomSeeds.HasValue)
+                    return (IMotelySearch)compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                else if (seeds != null && seeds.Count > 0)
+                    return (IMotelySearch)compositeSettings.WithListSearch(seeds).Start();
+                else
+                    return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
+            }
+
+            // Single category with no mustNot - use specialized filter directly
             if (!_params.Quiet)
             {
                 Console.WriteLine($"[FILTER SETUP] Base filter: {primaryCategory} with {primaryClauses.Count} clauses");
-                for (int i = 1; i < categories.Count; i++)
-                {
-                    Console.WriteLine($"[FILTER SETUP] Additional filter {i-1}: {categories[i]} with {clausesByCategory[categories[i]].Count} clauses");
-                }
             }
 
             IMotelySeedFilterDesc filterDesc = primaryCategory switch
@@ -449,85 +577,21 @@ namespace Motely.Executors
                 _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
             };
 
-            // Check for MustNot pre-filter opportunity (e.g. SoulJoker MustNot + different MUST base category)
-            bool hasMustNot = config.MustNot != null && config.MustNot.Count > 0;
-            bool mustNotHasSoul = hasMustNot && (config.MustNot?.Any(c => c.ItemTypeEnum == MotelyFilterItemType.SoulJoker) == true);
-            bool mustHasSoul = primaryCategory == FilterCategory.SoulJoker;
-
-            dynamic searchSettings;
-            if (mustNotHasSoul && !mustHasSoul)
+            // Single category with no mustNot - create specialized filter settings
+            dynamic searchSettings = primaryCategory switch
             {
-                // Build inverted SoulJoker specialized filter(s) as PRE filters, then base MUST filter
-                var soulClauses = (config.MustNot ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>())
-                    .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SoulJoker).ToList();
-                IMotelySeedFilterDesc soulDesc = SpecializedFilterFactory.CreateSpecializedFilter(FilterCategory.SoulJoker, soulClauses);
-                var invertSoul = new MotelyJsonInvertFilterDesc(soulDesc);
-                var preAndBaseDesc = new MotelyJsonPreAndBaseFilterDesc(new List<IMotelySeedFilterDesc> { invertSoul }, filterDesc);
-                searchSettings = new MotelySearchSettings<MotelyJsonPreAndBaseFilterDesc.MotelyJsonPreAndBaseFilter>(preAndBaseDesc);
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine("[PRE-FILTER] Running SoulJoker MustNot before base filter");
-                }
-                // Remove those MustNot SoulJoker clauses from later additional processing (avoid duplication)
-            }
-            else
-            {
-                searchSettings = primaryCategory switch
-                {
-                    FilterCategory.SoulJoker => new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>((MotelyJsonSoulJokerFilterDesc)filterDesc),
-                    FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
-                    FilterCategory.Voucher => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>((MotelyJsonVoucherFilterDesc)filterDesc),
-                    FilterCategory.PlanetCard => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>((MotelyJsonPlanetFilterDesc)filterDesc),
-                    FilterCategory.TarotCard => new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>((MotelyJsonTarotCardFilterDesc)filterDesc),
-                    FilterCategory.SpectralCard => new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>((MotelyJsonSpectralCardFilterDesc)filterDesc),
-                    FilterCategory.PlayingCard => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>((MotelyJsonPlayingCardFilterDesc)filterDesc),
-                    FilterCategory.Boss => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>((MotelyJsonBossFilterDesc)filterDesc),
-                    FilterCategory.Tag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>((MotelyJsonTagFilterDesc)filterDesc),
-                    FilterCategory.And or FilterCategory.Or => new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>((MotelyCompositeFilterDesc)filterDesc),
-                    _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
-                };
-            }
-
-            // If we have mustNot clauses, add them as the FIRST additional filter so they exclude seeds early.
-            if (config.MustNot != null && config.MustNot.Count > 0 && !(mustNotHasSoul && !mustHasSoul))
-            {
-                // Initialize parsed enums for MustNot clauses and group them by category
-                for (int i = 0; i < config.MustNot.Count; i++)
-                {
-                    var clause = config.MustNot[i];
-                    try
-                    {
-                        clause.InitializeParsedEnums();
-                    }
-                    catch (Exception ex)
-                    {
-                        var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                        var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value : (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
-                        throw new ArgumentException($"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}");
-                    }
-                }
-
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine($"   + Applying MustNot: {config.MustNot.Count} clauses (exclusion)");
-                }
-
-                // Group MustNot clauses by optimized category and add an inverted specialized filter
-                var notClausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.MustNot);
-                foreach (var kv in notClausesByCategory)
-                {
-                    var category = kv.Key;
-                    var clauses = kv.Value;
-
-                    // Create the same specialized descriptor we use for MUST clauses
-                    IMotelySeedFilterDesc specialized = SpecializedFilterFactory.CreateSpecializedFilter(category, clauses);
-                    DebugLogger.Log($"[MUSTNOT SETUP] Creating inverted specialized filter for category={category} with {clauses.Count} clauses");
-
-                    // Wrap it in an invert descriptor so the additional filter excludes seeds matching the specialized filter
-                    var invertDesc = new MotelyJsonInvertFilterDesc(specialized);
-                    searchSettings = searchSettings.WithAdditionalFilter(invertDesc);
-                }
-            }
+                FilterCategory.SoulJoker => new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>((MotelyJsonSoulJokerFilterDesc)filterDesc),
+                FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
+                FilterCategory.Voucher => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>((MotelyJsonVoucherFilterDesc)filterDesc),
+                FilterCategory.PlanetCard => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>((MotelyJsonPlanetFilterDesc)filterDesc),
+                FilterCategory.TarotCard => new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>((MotelyJsonTarotCardFilterDesc)filterDesc),
+                FilterCategory.SpectralCard => new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>((MotelyJsonSpectralCardFilterDesc)filterDesc),
+                FilterCategory.PlayingCard => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>((MotelyJsonPlayingCardFilterDesc)filterDesc),
+                FilterCategory.Boss => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>((MotelyJsonBossFilterDesc)filterDesc),
+                FilterCategory.Tag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>((MotelyJsonTagFilterDesc)filterDesc),
+                FilterCategory.And or FilterCategory.Or => new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>((MotelyCompositeFilterDesc)filterDesc),
+                _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
+            };
 
             if (!_params.Quiet)
             {

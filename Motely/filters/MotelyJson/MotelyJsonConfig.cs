@@ -98,6 +98,10 @@ internal static class MotelySlotLimits
         [JsonPropertyName("clauses")]
         public List<MotleyJsonFilterClause>? Clauses { get; set; }
 
+        // Inversion flag for mustNot clauses (set internally, not from JSON)
+        [JsonIgnore]
+        public bool IsInverted { get; set; } = false;
+
         [JsonPropertyName("score")]
         public int Score { get; set; } = 1;
         [JsonPropertyName("mode")]
