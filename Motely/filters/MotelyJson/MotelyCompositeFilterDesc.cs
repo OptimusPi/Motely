@@ -19,13 +19,17 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     {
         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(_mustClauses);
 
-        // Create individual filters for each category
-        var individualFilters = new List<IMotelySeedFilter>();
+        // Create individual filters for each category, tracking which are inverted
+        var filterEntries = new List<(IMotelySeedFilter filter, bool isInverted)>();
 
         foreach (var kvp in clausesByCategory)
         {
             var category = kvp.Key;
             var clauses = kvp.Value;
+
+            // Check if ALL clauses in this category are inverted (mustNot)
+            bool isInverted = clauses.All(c => c.IsInverted);
+
             IMotelySeedFilter filter = category switch
             {
                 FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
@@ -50,10 +54,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 FilterCategory.Or => CreateOrFilter(clauses, ref ctx),
                 _ => throw new ArgumentException($"Unsupported filter category: {category}")
             };
-            individualFilters.Add(filter);
+            filterEntries.Add((filter, isInverted));
         }
 
-        return new MotelyCompositeFilter(individualFilters);
+        return new MotelyCompositeFilter(filterEntries);
     }
 
     private static IMotelySeedFilter CreateAndFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> andClauses, ref MotelyFilterCreationContext ctx)
@@ -140,11 +144,11 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
     public struct MotelyCompositeFilter : IMotelySeedFilter
     {
-        private readonly List<IMotelySeedFilter> _filters;
+        private readonly List<(IMotelySeedFilter filter, bool isInverted)> _filterEntries;
 
-        public MotelyCompositeFilter(List<IMotelySeedFilter> filters)
+        public MotelyCompositeFilter(List<(IMotelySeedFilter filter, bool isInverted)> filterEntries)
         {
-            _filters = filters;
+            _filterEntries = filterEntries;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -154,9 +158,26 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             VectorMask result = VectorMask.AllBitsSet;
 
             // Call each filter directly and AND the results (Must logic)
-            foreach (var filter in _filters)
+            foreach (var (filter, isInverted) in _filterEntries)
             {
                 var filterMask = filter.Filter(ref ctx);
+
+                // If this is a mustNot filter (inverted), negate the mask
+                // Only invert VALID lanes - invalid lanes must stay rejected
+                if (isInverted)
+                {
+                    uint validLaneMask = 0;
+                    for (int lane = 0; lane < 8; lane++)
+                    {
+                        if (ctx.IsLaneValid(lane))
+                        {
+                            validLaneMask |= (1u << lane);
+                        }
+                    }
+                    // Invert only valid lanes: valid lanes with 0 become 1, valid lanes with 1 become 0
+                    filterMask = new VectorMask((~filterMask.Value) & validLaneMask);
+                }
+
                 result &= filterMask;
 
                 // Early exit if no seeds pass

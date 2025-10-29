@@ -38,8 +38,24 @@ namespace Motely.Filters
             {
                 var m = _innerFilter.Filter(ref ctx);
                 DebugLogger.Log($"[INVERT FILTER] inner mask=0x{m.Value:X2}");
-                uint inverted = ~m.Value & 0xFFu;
-                DebugLogger.Log($"[INVERT FILTER] inverted mask=0x{inverted:X2}");
+
+                // CRITICAL FIX: Only invert bits for VALID lanes!
+                // Invalid lanes must remain 0 (rejected) regardless of inner filter result.
+                // Build valid lane mask by checking each lane
+                uint validLaneMask = 0;
+                for (int lane = 0; lane < 8; lane++)
+                {
+                    if (ctx.IsLaneValid(lane))
+                    {
+                        validLaneMask |= (1u << lane);
+                    }
+                }
+
+                // Invert only the valid lanes: valid lanes with 0 become 1, valid lanes with 1 become 0
+                // Invalid lanes stay 0 (validLaneMask will mask them out)
+                uint inverted = (~m.Value) & validLaneMask;
+
+                DebugLogger.Log($"[INVERT FILTER] valid lanes=0x{validLaneMask:X2}, inverted mask=0x{inverted:X2}");
                 return new VectorMask(inverted);
             }
         }
