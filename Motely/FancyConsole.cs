@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 
 namespace Motely;
@@ -14,17 +13,21 @@ public static class FancyConsole
         try
         {
             (int oldLeft, int oldTop) = Console.GetCursorPosition();
-            
+
             // Don't try to write to bottom if window is too small
-            if (Console.WindowHeight < 1) return;
-            
-            int bottomRow = Console.CursorTop >= Console.WindowHeight - 1 
-                ? Console.WindowHeight - 1 
-                : Console.WindowHeight - 1;
-                
+            if (Console.WindowHeight < 1)
+                return;
+
+            int bottomRow =
+                Console.CursorTop >= Console.WindowHeight - 1
+                    ? Console.WindowHeight - 1
+                    : Console.WindowHeight - 1;
+
             Console.SetCursorPosition(0, bottomRow);
             // Clear the line first
-            Console.Write(new string(' ', Math.Min(bottomLine.Length + 20, Console.WindowWidth - 1)));
+            Console.Write(
+                new string(' ', Math.Min(bottomLine.Length + 20, Console.WindowWidth - 1))
+            );
             Console.SetCursorPosition(0, bottomRow);
             Console.Write(bottomLine);
             Console.SetCursorPosition(oldLeft, oldTop);
@@ -42,6 +45,7 @@ public static class FancyConsole
             (int oldLeft, int oldTop) = Console.GetCursorPosition();
             Console.SetCursorPosition(0, Console.BufferHeight - 1);
             Console.Write(new string(' ', Console.BufferWidth));
+            Console.WriteLine(); // Add newline after clearing
             Console.SetCursorPosition(oldLeft, oldTop);
         }
         catch
@@ -49,7 +53,6 @@ public static class FancyConsole
             // In test environments, console operations may fail - ignore
         }
     }
-
 
     public static void SetBottomLine(string? bottomLine)
     {
@@ -70,13 +73,12 @@ public static class FancyConsole
         WriteLine(message?.ToString() ?? null);
     }
 
-
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void WriteLine(string? message)
     {
         if (!IsEnabled)
         {
-            Console.WriteLine($"\r{message ?? "null"}");
+            Console.WriteLine(message ?? "null");
             return;
         }
 
@@ -89,7 +91,7 @@ public static class FancyConsole
             {
                 // Clear the bottom line
                 ClearBottomLine();
-                
+
                 // Move cursor up one line if we're on the bottom line
                 if (oldTop == Console.BufferHeight - 1)
                 {
