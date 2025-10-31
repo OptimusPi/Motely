@@ -1056,16 +1056,31 @@ public static class MotelyJsonScoring
                     anteCounts.Add((anteCount, nestedClause.Score));
                 }
 
-                // If ALL nested clauses matched for this ante, get max tally
+                // If ALL nested clauses matched for this ante, aggregate counts based on mode
                 if (allMatch)
                 {
-                    // Get max tally from non-gate clauses (score > 0)
-                    int maxTally = 0;
-                    foreach (var (count, score) in anteCounts)
+                    // Determine aggregation mode: "Sum" or "Max" (default)
+                    bool useSum = !string.IsNullOrEmpty(clause.Mode) &&
+                                  clause.Mode.Equals("Sum", StringComparison.OrdinalIgnoreCase);
+
+                    int anteTally = 0;
+                    if (useSum)
                     {
-                        if (score > 0 && count > maxTally) maxTally = count;
+                        // Sum mode: add all non-gate clause counts
+                        foreach (var (count, score) in anteCounts)
+                        {
+                            if (score > 0) anteTally += count;
+                        }
                     }
-                    andTotalCount += maxTally;
+                    else
+                    {
+                        // Max mode (default): take highest count from non-gate clauses
+                        foreach (var (count, score) in anteCounts)
+                        {
+                            if (score > 0 && count > anteTally) anteTally = count;
+                        }
+                    }
+                    andTotalCount += anteTally;
                 }
             }
 
@@ -1077,26 +1092,36 @@ public static class MotelyJsonScoring
         }
 
         // Special case for OR - at least one nested clause must match
-        // Returns the MAXIMUM count across all nested clauses (best option)
         if (clause.ItemTypeEnum == MotelyFilterItemType.Or)
         {
             if (clause.Clauses == null || clause.Clauses.Count == 0)
                 return 0; // Empty Or clause scores 0
 
-            int maxCount = 0;
+            // Determine aggregation mode: "Sum" or "Max" (default)
+            bool useSum = !string.IsNullOrEmpty(clause.Mode) &&
+                          clause.Mode.Equals("Sum", StringComparison.OrdinalIgnoreCase);
 
-            // Check if ANY nested clause matches and find the maximum count
+            int resultCount = 0;
+
+            // Aggregate nested clause counts based on mode
             foreach (var nestedClause in clause.Clauses)
             {
                 int nestedCount = CountOccurrences(ref ctx, nestedClause, ref runState);
-                maxCount = Math.Max(maxCount, nestedCount);
+                if (useSum)
+                {
+                    resultCount += nestedCount; // Sum mode: add all counts
+                }
+                else
+                {
+                    resultCount = Math.Max(resultCount, nestedCount); // Max mode: take highest
+                }
             }
 
             // Apply Min threshold if specified - only count if we meet the minimum
-            if (clause.Min.HasValue && maxCount < clause.Min.Value)
+            if (clause.Min.HasValue && resultCount < clause.Min.Value)
                 return 0; // Count doesn't meet minimum threshold
 
-            return maxCount;
+            return resultCount;
         }
 
         // And/Or should have already been handled above - this should never happen
