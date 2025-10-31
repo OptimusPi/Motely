@@ -125,10 +125,7 @@ namespace Motely.Executors
                     Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
                 }
                 // Return just the specific seed - let the system handle partial batches
-                var seeds = new List<string>()
-                {
-                    _params.SpecificSeed
-                };
+                var seeds = new List<string>() { _params.SpecificSeed };
                 return seeds;
             }
 
@@ -140,10 +137,16 @@ namespace Motely.Executors
                     throw new FileNotFoundException($"Wordlist not found: {wordlistPath}");
                 }
 
-                List<string> seeds = [.. File.ReadAllLines(wordlistPath).Where(static s => !string.IsNullOrWhiteSpace(s))];
+                List<string> seeds =
+                [
+                    .. File.ReadAllLines(wordlistPath)
+                        .Where(static s => !string.IsNullOrWhiteSpace(s)),
+                ];
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}");
+                    Console.WriteLine(
+                        $"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}"
+                    );
                 }
                 return seeds;
             }
@@ -173,7 +176,13 @@ namespace Motely.Executors
             if (!File.Exists(configPath))
                 throw new FileNotFoundException($"Could not find JSON config file: {configPath}");
 
-            if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out MotelyJsonConfig? config, out string? error))
+            if (
+                !MotelyJsonConfig.TryLoadFromJsonFile(
+                    configPath,
+                    out MotelyJsonConfig? config,
+                    out string? error
+                )
+            )
                 throw new Exception($"Failed to load config from {configPath}: {error}");
 
             return config;
@@ -191,15 +200,17 @@ namespace Motely.Executors
             MotelyJsonConfigValidator.ValidateConfig(config);
 
             // Create scoring config (SHOULD clauses + voucher Must clauses for activation)
-            var voucherMustClauses = config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList() ?? [];
+            var voucherMustClauses =
+                config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList()
+                ?? [];
             MotelyJsonConfig scoringConfig = new()
             {
                 Name = config.Name,
                 Must = voucherMustClauses, // Include voucher Must clauses for MaxVoucherAnte calculation
                 Should = config.Should, // ONLY the SHOULD clauses for scoring
-                MustNot = [] // Empty - filters handle this
+                MustNot = [], // Empty - filters handle this
             };
-            
+
             // Initialize parsed enums for scoring config clauses with helpful errors
             // NOTE: Don't re-initialize SHOULD clauses if they're the same objects as MUST clauses!
             for (int i = 0; i < voucherMustClauses.Count; i++)
@@ -212,12 +223,19 @@ namespace Motely.Executors
                 catch (Exception ex)
                 {
                     var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                    var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value :
-                                    (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
-                    throw new ArgumentException($"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: Each clause needs a non-empty 'type' (e.g., 'Joker', 'TarotCard', 'PlayingCard'). If using multiple values, use 'values': [ ... ] not 'value'.");
+                    var valueText = !string.IsNullOrEmpty(clause.Value)
+                        ? clause.Value
+                        : (
+                            clause.Values != null && clause.Values.Length > 0
+                                ? string.Join(", ", clause.Values)
+                                : "<none>"
+                        );
+                    throw new ArgumentException(
+                        $"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: Each clause needs a non-empty 'type' (e.g., 'Joker', 'TarotCard', 'PlayingCard'). If using multiple values, use 'values': [ ... ] not 'value'."
+                    );
                 }
             }
-            
+
             // Only initialize SHOULD clauses if they haven't been initialized already
             if (config.Should != null)
             {
@@ -234,32 +252,50 @@ namespace Motely.Executors
                         }
                         catch (Exception ex)
                         {
-                            var typeText = string.IsNullOrEmpty(shouldClause.Type) ? "<missing>" : shouldClause.Type;
-                            var valueText = !string.IsNullOrEmpty(shouldClause.Value) ? shouldClause.Value :
-                                            (shouldClause.Values != null && shouldClause.Values.Length > 0 ? string.Join(", ", shouldClause.Values) : "<none>");
-                            throw new ArgumentException($"Config error in SHOULD[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: 'type' must be one of supported types (e.g., 'Joker', 'Voucher', 'TarotCard').");
+                            var typeText = string.IsNullOrEmpty(shouldClause.Type)
+                                ? "<missing>"
+                                : shouldClause.Type;
+                            var valueText = !string.IsNullOrEmpty(shouldClause.Value)
+                                ? shouldClause.Value
+                                : (
+                                    shouldClause.Values != null && shouldClause.Values.Length > 0
+                                        ? string.Join(", ", shouldClause.Values)
+                                        : "<none>"
+                                );
+                            throw new ArgumentException(
+                                $"Config error in SHOULD[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: 'type' must be one of supported types (e.g., 'Joker', 'Voucher', 'TarotCard')."
+                            );
                         }
                     }
                 }
             }
-            
+
             // Process the scoring config to calculate MaxVoucherAnte
             scoringConfig.PostProcess();
 
             // Create callback for CSV output - always output when scoring
             Action<MotelySeedScoreTally> scoreCallback = (MotelySeedScoreTally result) =>
             {
-                // Output CSV with colorized tallies when enabled
-                Console.WriteLine(TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns));
+                // Just print the seed - it will naturally push the progress line down
+                FancyConsole.WriteLine(
+                    TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns)
+                );
             };
-            
-            MotelyJsonSeedScoreDesc scoreDesc = new(scoringConfig, _params.Cutoff, _params.AutoCutoff, scoreCallback);
+
+            MotelyJsonSeedScoreDesc scoreDesc = new(
+                scoringConfig,
+                _params.Cutoff,
+                _params.AutoCutoff,
+                scoreCallback
+            );
 
             if (!_params.Quiet)
             {
                 if (_params.AutoCutoff)
                 {
-                    Console.WriteLine($"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})");
+                    Console.WriteLine(
+                        $"✅ Loaded config with auto-cutoff (starting at {_params.Cutoff})"
+                    );
                 }
                 else
                 {
@@ -281,13 +317,23 @@ namespace Motely.Executors
                 catch (Exception ex)
                 {
                     var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                    var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value :
-                                    (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
-                    throw new ArgumentException($"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nSuggestion: Add 'type' and 'value' (or 'values'): {{ \"type\": \"Joker\", \"value\": \"Perkeo\" }}");
+                    var valueText = !string.IsNullOrEmpty(clause.Value)
+                        ? clause.Value
+                        : (
+                            clause.Values != null && clause.Values.Length > 0
+                                ? string.Join(", ", clause.Values)
+                                : "<none>"
+                        );
+                    throw new ArgumentException(
+                        $"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nSuggestion: Add 'type' and 'value' (or 'values'): {{ \"type\": \"Joker\", \"value\": \"Perkeo\" }}"
+                    );
                 }
             }
 
-            Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
+            Dictionary<
+                FilterCategory,
+                List<MotelyJsonConfig.MotleyJsonFilterClause>
+            > clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
 
             // If no MUST clauses, check if we have mustNot clauses to use as a composite filter
             if (clausesByCategory.Count == 0)
@@ -297,7 +343,9 @@ namespace Motely.Executors
                     // We have ONLY mustNot clauses - create a composite filter with inverted clauses
                     if (!_params.Quiet)
                     {
-                        Console.WriteLine($"[COMPOSITE] Creating composite filter with {config.MustNot.Count} inverted mustNot clauses");
+                        Console.WriteLine(
+                            $"[COMPOSITE] Creating composite filter with {config.MustNot.Count} inverted mustNot clauses"
+                        );
                     }
 
                     // Initialize parsed enums for MustNot clauses
@@ -310,9 +358,19 @@ namespace Motely.Executors
                         }
                         catch (Exception ex)
                         {
-                            var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                            var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value : (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
-                            throw new ArgumentException($"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}");
+                            var typeText = string.IsNullOrEmpty(clause.Type)
+                                ? "<missing>"
+                                : clause.Type;
+                            var valueText = !string.IsNullOrEmpty(clause.Value)
+                                ? clause.Value
+                                : (
+                                    clause.Values != null && clause.Values.Length > 0
+                                        ? string.Join(", ", clause.Values)
+                                        : "<none>"
+                                );
+                            throw new ArgumentException(
+                                $"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}"
+                            );
                         }
                     }
 
@@ -326,18 +384,33 @@ namespace Motely.Executors
 
                     // Create composite filter with inverted clauses
                     var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
-                    var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
+                    var compositeSettings =
+                        new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
+                            compositeFilter
+                        );
 
-                    if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck))
+                    if (
+                        !string.IsNullOrEmpty(config.Deck)
+                        && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck)
+                    )
                         compositeSettings = compositeSettings.WithDeck(compositeDeck);
-                    if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake))
+                    if (
+                        !string.IsNullOrEmpty(config.Stake)
+                        && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake)
+                    )
                         compositeSettings = compositeSettings.WithStake(compositeStake);
 
                     compositeSettings = compositeSettings.WithThreadCount(_params.Threads);
-                    compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
-                    compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
+                    compositeSettings = compositeSettings.WithBatchCharacterCount(
+                        _params.BatchSize
+                    );
+                    compositeSettings = compositeSettings.WithStartBatchIndex(
+                        (long)_params.StartBatch
+                    );
                     if (_params.EndBatch > 0)
-                        compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
+                        compositeSettings = compositeSettings.WithEndBatchIndex(
+                            (long)_params.EndBatch + 1
+                        );
 
                     compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
                     compositeSettings = compositeSettings.WithCsvOutput(true);
@@ -354,21 +427,38 @@ namespace Motely.Executors
                 // No MUST or MUSTNOT clauses - use passthrough filter (accept all seeds, score via SHOULD)
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"[PASSTHROUGH] No MUST/MUSTNOT clauses - accepting all seeds for scoring");
+                    Console.WriteLine(
+                        $"[PASSTHROUGH] No MUST/MUSTNOT clauses - accepting all seeds for scoring"
+                    );
                 }
                 var passthroughFilter = new PassthroughFilterDesc();
-                var passthroughSettings = new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(passthroughFilter);
+                var passthroughSettings =
+                    new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(
+                        passthroughFilter
+                    );
 
-                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck passthroughDeck))
+                if (
+                    !string.IsNullOrEmpty(config.Deck)
+                    && Enum.TryParse(config.Deck, true, out MotelyDeck passthroughDeck)
+                )
                     passthroughSettings = passthroughSettings.WithDeck(passthroughDeck);
-                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake passthroughStake))
+                if (
+                    !string.IsNullOrEmpty(config.Stake)
+                    && Enum.TryParse(config.Stake, true, out MotelyStake passthroughStake)
+                )
                     passthroughSettings = passthroughSettings.WithStake(passthroughStake);
 
                 passthroughSettings = passthroughSettings.WithThreadCount(_params.Threads);
-                passthroughSettings = passthroughSettings.WithBatchCharacterCount(_params.BatchSize);
-                passthroughSettings = passthroughSettings.WithStartBatchIndex((long)_params.StartBatch);
+                passthroughSettings = passthroughSettings.WithBatchCharacterCount(
+                    _params.BatchSize
+                );
+                passthroughSettings = passthroughSettings.WithStartBatchIndex(
+                    (long)_params.StartBatch
+                );
                 if (_params.EndBatch > 0)
-                    passthroughSettings = passthroughSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
+                    passthroughSettings = passthroughSettings.WithEndBatchIndex(
+                        (long)_params.EndBatch + 1
+                    );
 
                 passthroughSettings = passthroughSettings.WithSeedScoreProvider(scoreDesc);
                 passthroughSettings = passthroughSettings.WithCsvOutput(true);
@@ -392,12 +482,16 @@ namespace Motely.Executors
                 // Multiple categories - use composite filter to avoid broken chaining
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"[COMPOSITE] Creating composite filter with {categories.Count} filter types");
+                    Console.WriteLine(
+                        $"[COMPOSITE] Creating composite filter with {categories.Count} filter types"
+                    );
                 }
 
                 // CRITICAL REFACTOR: Merge mustNot clauses into must clauses BEFORE creating composite
                 // Mark mustNot clauses with IsInverted=true so they're handled in one pass
-                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(mustClauses);
+                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(
+                    mustClauses
+                );
 
                 if (config.MustNot != null && config.MustNot.Count > 0)
                 {
@@ -411,15 +505,27 @@ namespace Motely.Executors
                         }
                         catch (Exception ex)
                         {
-                            var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                            var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value : (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
-                            throw new ArgumentException($"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}");
+                            var typeText = string.IsNullOrEmpty(clause.Type)
+                                ? "<missing>"
+                                : clause.Type;
+                            var valueText = !string.IsNullOrEmpty(clause.Value)
+                                ? clause.Value
+                                : (
+                                    clause.Values != null && clause.Values.Length > 0
+                                        ? string.Join(", ", clause.Values)
+                                        : "<none>"
+                                );
+                            throw new ArgumentException(
+                                $"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}"
+                            );
                         }
                     }
 
                     if (!_params.Quiet)
                     {
-                        Console.WriteLine($"   + Including MustNot: {config.MustNot.Count} inverted clauses (exclusion)");
+                        Console.WriteLine(
+                            $"   + Including MustNot: {config.MustNot.Count} inverted clauses (exclusion)"
+                        );
                     }
 
                     // Mark mustNot clauses as inverted and add to the composite
@@ -432,12 +538,21 @@ namespace Motely.Executors
 
                 // Create ONE composite filter with both must and mustNot clauses
                 var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
-                var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
+                var compositeSettings =
+                    new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
+                        compositeFilter
+                    );
 
                 // Apply all the same settings
-                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck))
+                if (
+                    !string.IsNullOrEmpty(config.Deck)
+                    && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck)
+                )
                     compositeSettings = compositeSettings.WithDeck(compositeDeck);
-                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake))
+                if (
+                    !string.IsNullOrEmpty(config.Stake)
+                    && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake)
+                )
                     compositeSettings = compositeSettings.WithStake(compositeStake);
 
                 compositeSettings = compositeSettings.WithThreadCount(_params.Threads);
@@ -461,16 +576,19 @@ namespace Motely.Executors
 
                 // Start search with composite filter (no chaining needed!)
                 if (_params.RandomSeeds.HasValue)
-                    return (IMotelySearch)compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                    return (IMotelySearch)
+                        compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
                 else if (seeds != null && seeds.Count > 0)
                     return (IMotelySearch)compositeSettings.WithListSearch(seeds).Start();
                 else
                     return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
             }
-            
+
             // Single category - but check if we have mustNot clauses to merge
             FilterCategory primaryCategory = categories[0];
-            List<MotelyJsonConfig.MotleyJsonFilterClause> primaryClauses = clausesByCategory[primaryCategory];
+            List<MotelyJsonConfig.MotleyJsonFilterClause> primaryClauses = clausesByCategory[
+                primaryCategory
+            ];
 
             // If we have mustNot clauses, use composite filter to handle both must and mustNot in one pass
             bool hasMustNot = config.MustNot != null && config.MustNot.Count > 0;
@@ -478,12 +596,18 @@ namespace Motely.Executors
             {
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"[COMPOSITE] Single category with mustNot - using composite filter");
-                    Console.WriteLine($"   Must: {primaryClauses.Count} clauses ({primaryCategory})");
+                    Console.WriteLine(
+                        $"[COMPOSITE] Single category with mustNot - using composite filter"
+                    );
+                    Console.WriteLine(
+                        $"   Must: {primaryClauses.Count} clauses ({primaryCategory})"
+                    );
                 }
 
                 // Initialize and mark mustNot clauses as inverted
-                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(primaryClauses);
+                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(
+                    primaryClauses
+                );
 
                 for (int i = 0; i < config.MustNot!.Count; i++)
                 {
@@ -494,15 +618,27 @@ namespace Motely.Executors
                     }
                     catch (Exception ex)
                     {
-                        var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                        var valueText = !string.IsNullOrEmpty(clause.Value) ? clause.Value : (clause.Values != null && clause.Values.Length > 0 ? string.Join(", ", clause.Values) : "<none>");
-                        throw new ArgumentException($"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}");
+                        var typeText = string.IsNullOrEmpty(clause.Type)
+                            ? "<missing>"
+                            : clause.Type;
+                        var valueText = !string.IsNullOrEmpty(clause.Value)
+                            ? clause.Value
+                            : (
+                                clause.Values != null && clause.Values.Length > 0
+                                    ? string.Join(", ", clause.Values)
+                                    : "<none>"
+                            );
+                        throw new ArgumentException(
+                            $"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}"
+                        );
                     }
                 }
 
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"   MustNot: {config.MustNot.Count} inverted clauses (exclusion)");
+                    Console.WriteLine(
+                        $"   MustNot: {config.MustNot.Count} inverted clauses (exclusion)"
+                    );
                 }
 
                 // Mark mustNot clauses as inverted and add to composite
@@ -514,12 +650,21 @@ namespace Motely.Executors
 
                 // Use composite filter for both must and mustNot
                 var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
-                var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
+                var compositeSettings =
+                    new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
+                        compositeFilter
+                    );
 
                 // Apply all settings
-                if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck))
+                if (
+                    !string.IsNullOrEmpty(config.Deck)
+                    && Enum.TryParse(config.Deck, true, out MotelyDeck compositeDeck)
+                )
                     compositeSettings = compositeSettings.WithDeck(compositeDeck);
-                if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake))
+                if (
+                    !string.IsNullOrEmpty(config.Stake)
+                    && Enum.TryParse(config.Stake, true, out MotelyStake compositeStake)
+                )
                     compositeSettings = compositeSettings.WithStake(compositeStake);
 
                 compositeSettings = compositeSettings.WithThreadCount(_params.Threads);
@@ -540,7 +685,8 @@ namespace Motely.Executors
 
                 // Start search with composite filter
                 if (_params.RandomSeeds.HasValue)
-                    return (IMotelySearch)compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                    return (IMotelySearch)
+                        compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
                 else if (seeds != null && seeds.Count > 0)
                     return (IMotelySearch)compositeSettings.WithListSearch(seeds).Start();
                 else
@@ -550,55 +696,116 @@ namespace Motely.Executors
             // Single category with no mustNot - use specialized filter directly
             if (!_params.Quiet)
             {
-                Console.WriteLine($"[FILTER SETUP] Base filter: {primaryCategory} with {primaryClauses.Count} clauses");
+                Console.WriteLine(
+                    $"[FILTER SETUP] Base filter: {primaryCategory} with {primaryClauses.Count} clauses"
+                );
             }
 
             IMotelySeedFilterDesc filterDesc = primaryCategory switch
             {
                 FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
-                    MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(primaryClauses))),
+                    MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                        MotelyJsonSoulJokerFilterClause.ConvertClauses(primaryClauses)
+                    )
+                ),
                 FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
-                    MotelyJsonJokerFilterClause.CreateCriteria(MotelyJsonJokerFilterClause.ConvertClauses(primaryClauses))),
+                    MotelyJsonJokerFilterClause.CreateCriteria(
+                        MotelyJsonJokerFilterClause.ConvertClauses(primaryClauses)
+                    )
+                ),
                 FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
-                    MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(primaryClauses))),
+                    MotelyJsonVoucherFilterClause.CreateCriteria(
+                        MotelyJsonVoucherFilterClause.ConvertClauses(primaryClauses)
+                    )
+                ),
                 FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(
-                    MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(primaryClauses))),
+                    MotelyJsonPlanetFilterClause.CreateCriteria(
+                        MotelyJsonPlanetFilterClause.ConvertClauses(primaryClauses)
+                    )
+                ),
                 FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
-                    MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(primaryClauses))),
+                    MotelyJsonTarotFilterClause.CreateCriteria(
+                        MotelyJsonTarotFilterClause.ConvertClauses(primaryClauses)
+                    )
+                ),
                 FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
-                    MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(primaryClauses))),
+                    MotelyJsonSpectralFilterClause.CreateCriteria(
+                        MotelyJsonSpectralFilterClause.ConvertClauses(primaryClauses)
+                    )
+                ),
                 FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(primaryClauses)),
+                    MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(primaryClauses)
+                ),
                 FilterCategory.Boss => new MotelyJsonBossFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateBossCriteria(primaryClauses)),
+                    MotelyJsonFilterClauseExtensions.CreateBossCriteria(primaryClauses)
+                ),
                 FilterCategory.Tag => new MotelyJsonTagFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateTagCriteria(primaryClauses)),
-                FilterCategory.And or FilterCategory.Or => new MotelyCompositeFilterDesc(primaryClauses),
-                _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
+                    MotelyJsonFilterClauseExtensions.CreateTagCriteria(primaryClauses)
+                ),
+                FilterCategory.And or FilterCategory.Or => new MotelyCompositeFilterDesc(
+                    primaryClauses
+                ),
+                _ => throw new ArgumentException(
+                    $"Specialized filter not implemented: {primaryCategory}"
+                ),
             };
 
             // Single category with no mustNot - create specialized filter settings
             dynamic searchSettings = primaryCategory switch
             {
-                FilterCategory.SoulJoker => new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>((MotelyJsonSoulJokerFilterDesc)filterDesc),
-                FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
-                FilterCategory.Voucher => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>((MotelyJsonVoucherFilterDesc)filterDesc),
-                FilterCategory.PlanetCard => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>((MotelyJsonPlanetFilterDesc)filterDesc),
-                FilterCategory.TarotCard => new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>((MotelyJsonTarotCardFilterDesc)filterDesc),
-                FilterCategory.SpectralCard => new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>((MotelyJsonSpectralCardFilterDesc)filterDesc),
-                FilterCategory.PlayingCard => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>((MotelyJsonPlayingCardFilterDesc)filterDesc),
-                FilterCategory.Boss => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>((MotelyJsonBossFilterDesc)filterDesc),
-                FilterCategory.Tag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>((MotelyJsonTagFilterDesc)filterDesc),
-                FilterCategory.And or FilterCategory.Or => new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>((MotelyCompositeFilterDesc)filterDesc),
-                _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
+                FilterCategory.SoulJoker =>
+                    new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(
+                        (MotelyJsonSoulJokerFilterDesc)filterDesc
+                    ),
+                FilterCategory.Joker =>
+                    new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
+                        (MotelyJsonJokerFilterDesc)filterDesc
+                    ),
+                FilterCategory.Voucher =>
+                    new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>(
+                        (MotelyJsonVoucherFilterDesc)filterDesc
+                    ),
+                FilterCategory.PlanetCard =>
+                    new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>(
+                        (MotelyJsonPlanetFilterDesc)filterDesc
+                    ),
+                FilterCategory.TarotCard =>
+                    new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>(
+                        (MotelyJsonTarotCardFilterDesc)filterDesc
+                    ),
+                FilterCategory.SpectralCard =>
+                    new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>(
+                        (MotelyJsonSpectralCardFilterDesc)filterDesc
+                    ),
+                FilterCategory.PlayingCard =>
+                    new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>(
+                        (MotelyJsonPlayingCardFilterDesc)filterDesc
+                    ),
+                FilterCategory.Boss =>
+                    new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>(
+                        (MotelyJsonBossFilterDesc)filterDesc
+                    ),
+                FilterCategory.Tag =>
+                    new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>(
+                        (MotelyJsonTagFilterDesc)filterDesc
+                    ),
+                FilterCategory.And or FilterCategory.Or =>
+                    new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
+                        (MotelyCompositeFilterDesc)filterDesc
+                    ),
+                _ => throw new ArgumentException(
+                    $"Search settings not implemented: {primaryCategory}"
+                ),
             };
 
             if (!_params.Quiet)
             {
-                Console.WriteLine($"   + Base {primaryCategory} filter: {primaryClauses.Count} clauses");
+                Console.WriteLine(
+                    $"   + Base {primaryCategory} filter: {primaryClauses.Count} clauses"
+                );
             }
 
-            // Chain additional filters  
+            // Chain additional filters
             for (int i = 1; i < categories.Count; i++)
             {
                 FilterCategory category = categories[i];
@@ -606,25 +813,50 @@ namespace Motely.Executors
                 IMotelySeedFilterDesc additionalFilter = category switch
                 {
                     FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
-                        MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))),
+                        MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                            MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
+                        )
+                    ),
                     FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
-                        MotelyJsonJokerFilterClause.CreateCriteria(MotelyJsonJokerFilterClause.ConvertClauses(clauses))),
+                        MotelyJsonJokerFilterClause.CreateCriteria(
+                            MotelyJsonJokerFilterClause.ConvertClauses(clauses)
+                        )
+                    ),
                     FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
-                        MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(clauses))),
+                        MotelyJsonVoucherFilterClause.CreateCriteria(
+                            MotelyJsonVoucherFilterClause.ConvertClauses(clauses)
+                        )
+                    ),
                     FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(
-                        MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(clauses))),
+                        MotelyJsonPlanetFilterClause.CreateCriteria(
+                            MotelyJsonPlanetFilterClause.ConvertClauses(clauses)
+                        )
+                    ),
                     FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
-                        MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(clauses))),
+                        MotelyJsonTarotFilterClause.CreateCriteria(
+                            MotelyJsonTarotFilterClause.ConvertClauses(clauses)
+                        )
+                    ),
                     FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
-                        MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(clauses))),
+                        MotelyJsonSpectralFilterClause.CreateCriteria(
+                            MotelyJsonSpectralFilterClause.ConvertClauses(clauses)
+                        )
+                    ),
                     FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
-                        MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)),
+                        MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)
+                    ),
                     FilterCategory.Boss => new MotelyJsonBossFilterDesc(
-                        MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)),
+                        MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)
+                    ),
                     FilterCategory.Tag => new MotelyJsonTagFilterDesc(
-                        MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)),
-                    FilterCategory.And or FilterCategory.Or => new MotelyCompositeFilterDesc(clauses),
-                    _ => throw new ArgumentException($"Additional filter not implemented: {category}")
+                        MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)
+                    ),
+                    FilterCategory.And or FilterCategory.Or => new MotelyCompositeFilterDesc(
+                        clauses
+                    ),
+                    _ => throw new ArgumentException(
+                        $"Additional filter not implemented: {category}"
+                    ),
                 };
                 searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
                 if (!_params.Quiet)
@@ -649,12 +881,18 @@ namespace Motely.Executors
             }
 
             // Apply deck and stake
-            if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck deck))
+            if (
+                !string.IsNullOrEmpty(config.Deck)
+                && Enum.TryParse(config.Deck, true, out MotelyDeck deck)
+            )
             {
                 searchSettings = searchSettings.WithDeck(deck);
             }
 
-            if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake stake))
+            if (
+                !string.IsNullOrEmpty(config.Stake)
+                && Enum.TryParse(config.Stake, true, out MotelyStake stake)
+            )
             {
                 searchSettings = searchSettings.WithStake(stake);
             }
@@ -672,7 +910,8 @@ namespace Motely.Executors
             if (_params.RandomSeeds.HasValue)
             {
                 // Use random seed provider for testing
-                return (IMotelySearch)searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                return (IMotelySearch)
+                    searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
             }
             else if (seeds != null && seeds.Count > 0)
             {
@@ -711,19 +950,29 @@ namespace Motely.Executors
         private static string GetClauseHeaderName(MotelyJsonConfig.MotleyJsonFilterClause clause)
         {
             // Handle And/Or clauses with nested clauses
-            if (clause.ItemTypeEnum == MotelyFilterItemType.And || clause.ItemTypeEnum == MotelyFilterItemType.Or)
+            if (
+                clause.ItemTypeEnum == MotelyFilterItemType.And
+                || clause.ItemTypeEnum == MotelyFilterItemType.Or
+            )
             {
                 if (clause.Clauses == null || clause.Clauses.Count == 0)
-                    return clause.ItemTypeEnum == MotelyFilterItemType.And ? "And(empty)" : "Or(empty)";
+                    return clause.ItemTypeEnum == MotelyFilterItemType.And
+                        ? "And(empty)"
+                        : "Or(empty)";
 
                 // Create a compound name from nested clauses (recursively)
-                var nestedNames = clause.Clauses.Select(c => GetClauseBaseNameInternal(c)).ToArray();
-                string baseName = clause.ItemTypeEnum == MotelyFilterItemType.And
-                    ? $"And({string.Join("+", nestedNames)})"
-                    : $"Or({string.Join("+", nestedNames)})";
+                var nestedNames = clause
+                    .Clauses.Select(c => GetClauseBaseNameInternal(c))
+                    .ToArray();
+                string baseName =
+                    clause.ItemTypeEnum == MotelyFilterItemType.And
+                        ? $"And({string.Join("+", nestedNames)})"
+                        : $"Or({string.Join("+", nestedNames)})";
 
                 // Extract ante from first nested clause that has it (they should all match for And/Or groups)
-                var anteClause = clause.Clauses.FirstOrDefault(c => c.Antes != null && c.Antes.Length > 0);
+                var anteClause = clause.Clauses.FirstOrDefault(c =>
+                    c.Antes != null && c.Antes.Length > 0
+                );
                 if (anteClause != null && anteClause.Antes != null)
                 {
                     var suffix = FormatAnteSuffix(anteClause.Antes);
@@ -772,7 +1021,9 @@ namespace Motely.Executors
             return $"@A{string.Join("_", sorted)}";
         }
 
-        private static string GetClauseBaseNameInternal(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        private static string GetClauseBaseNameInternal(
+            MotelyJsonConfig.MotleyJsonFilterClause clause
+        )
         {
             if (!string.IsNullOrEmpty(clause.Label))
                 return clause.Label;
@@ -798,7 +1049,10 @@ namespace Motely.Executors
             Console.WriteLine(wasCancelled ? "🛑 SEARCH STOPPED" : "✅ SEARCH COMPLETED");
             Console.WriteLine(new string('═', 60));
 
-            long lastBatchIndex = search.CompletedBatchCount > 0 ? (long)_params.StartBatch + search.CompletedBatchCount : 0;
+            long lastBatchIndex =
+                search.CompletedBatchCount > 0
+                    ? (long)_params.StartBatch + search.CompletedBatchCount
+                    : 0;
 
             // Calculate percentage of total search space
             long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
@@ -812,7 +1066,9 @@ namespace Motely.Executors
             if (elapsed.TotalMilliseconds > 100)
             {
                 Console.WriteLine($"   Duration: {elapsed:hh\\:mm\\:ss\\.fff}");
-                Console.WriteLine($"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)");
+                Console.WriteLine(
+                    $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
+                );
                 double speed = (double)search.TotalSeedsSearched / elapsed.TotalMilliseconds;
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
             }
@@ -821,7 +1077,9 @@ namespace Motely.Executors
             // Only show "To continue" message if search was cancelled (interrupted)
             if (wasCancelled)
             {
-                Console.WriteLine($"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {percentComplete}");
+                Console.WriteLine(
+                    $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {percentComplete}"
+                );
                 Console.WriteLine(new string('═', 60));
             }
         }
