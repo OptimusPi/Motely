@@ -579,7 +579,7 @@ public unsafe sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         private long _localMatchingSeeds = 0;
         private long _localBatchesCompleted = 0;
         private const int SEED_COUNT_FLUSH_THRESHOLD = 128; // Flush every N seeds
-        private const int BATCH_COUNT_FLUSH_THRESHOLD = 10; // Flush every N batches
+        private const int BATCH_COUNT_FLUSH_THRESHOLD = 1; // Flush every batch for responsive UI (was 10)
 
         // Thread-local output buffer - NO I/O in hot path!
         // Seeds buffered locally, written in batches to reduce syscall overhead

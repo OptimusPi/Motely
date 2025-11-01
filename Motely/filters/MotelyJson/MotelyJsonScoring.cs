@@ -991,6 +991,21 @@ public static class MotelyJsonScoring
             if (allAntes.Count == 0)
                 return 0; // No antes to check
 
+            // CRITICAL: Create GLOBAL soul FACE stream ONCE for ALL antes (face/type is NOT ante-dependent)
+            // This stream is shared across all soul joker clauses in all antes
+            int minAnte = allAntes.Min();
+            MotelySingleJokerFixedRarityStream? sharedGlobalFaceStream = null;
+
+            // Check if ANY nested clause is a soul joker - if so, create the global face stream
+            foreach (var nestedClause in clause.Clauses)
+            {
+                if (nestedClause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+                {
+                    sharedGlobalFaceStream = ctx.CreateSoulJokerStream(minAnte);
+                    break;
+                }
+            }
+
             // For each ante, check if ALL nested clauses match
             // If they do, sum their WEIGHTED counts (count × score)
             int andTotalCount = 0;
@@ -999,9 +1014,9 @@ public static class MotelyJsonScoring
                 bool allMatch = true;
                 var anteCounts = new List<(int count, int score)>();
 
-                // CRITICAL: Create ONE soul stream for this ante to share across all soul joker clauses
-                MotelySingleJokerFixedRarityStream? sharedSoulStream = null;
-                bool soulStreamCreated = false;
+                // CRITICAL: Create per-ante soul EDITION stream (edition IS ante-dependent)
+                MotelySingleJokerFixedRarityStream? sharedEditionStream = null;
+                bool editionStreamCreated = false;
 
                 // Check each nested clause for THIS SPECIFIC ante
                 foreach (var nestedClause in clause.Clauses)
@@ -1018,15 +1033,17 @@ public static class MotelyJsonScoring
 
                     if (nestedClause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
                     {
-                        // For soul jokers in AND clauses, use shared stream
-                        if (!soulStreamCreated)
+                        // For soul jokers in AND clauses, use shared streams (face and edition)
+                        if (!editionStreamCreated)
                         {
-                            sharedSoulStream = ctx.CreateSoulJokerStream(ante);
-                            soulStreamCreated = true;
+                            sharedEditionStream = ctx.CreateSoulJokerStream(ante);
+                            editionStreamCreated = true;
                         }
-                        var stream = sharedSoulStream!.Value;
-                        anteCount = CountSoulJokerOccurrencesForAnteWithStream(ref ctx, ref stream, nestedClause, ante, ref runState);
-                        sharedSoulStream = stream; // Update the nullable with modified stream
+                        var faceStream = sharedGlobalFaceStream!.Value;
+                        var editionStream = sharedEditionStream!.Value;
+                        anteCount = CountSoulJokerOccurrencesForAnteWithStream(ref ctx, ref faceStream, ref editionStream, nestedClause, ante, ref runState);
+                        sharedGlobalFaceStream = faceStream; // Update the nullable with modified streams
+                        sharedEditionStream = editionStream;
                     }
                     else
                     {
@@ -1173,6 +1190,7 @@ public static class MotelyJsonScoring
     
     /// <summary>
     /// Count soul joker occurrences - can find multiple soul jokers in a single seed
+    /// Uses dual-stream approach: face stream (global) and edition stream (per-ante)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountSoulJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
@@ -1180,18 +1198,22 @@ public static class MotelyJsonScoring
         var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
         int totalCount = 0;
 
-        // CRITICAL: Soul joker stream is GLOBAL - create it ONCE and walk through ALL antes!
-        // The stream is NOT tied to a specific ante
-        // As you find Soul cards across all antes, you advance the stream sequentially
+        // CRITICAL: Soul joker has TWO components with different ante-dependency:
+        // 1. Face/Type - NOT ante-dependent (global stream, created once)
+        // 2. Edition - IS ante-dependent (per-ante stream, created each ante)
 
         // EffectiveAntes are already in order - NO NEED TO SORT! Zero allocations!
         var antes = clause.EffectiveAntes ?? Array.Empty<int>();
         int minAnte = antes.Length > 0 ? antes[0] : 1;
-        var soulStream = ctx.CreateSoulJokerStream(minAnte);
+
+        // Create global face stream ONCE for all antes
+        var globalFaceStream = ctx.CreateSoulJokerStream(minAnte);
 
         foreach (var ante in antes)
         {
-            totalCount += CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulStream, ante, ref runState);
+            // Create per-ante edition stream
+            var editionStream = ctx.CreateSoulJokerStream(ante);
+            totalCount += CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref globalFaceStream, ref editionStream, ante, ref runState);
         }
 
         return totalCount;
@@ -1199,10 +1221,12 @@ public static class MotelyJsonScoring
 
     /// <summary>
     /// Count how many soul jokers match the criteria in packs for a specific ante
-    /// CRITICAL: Advances the soul joker stream for EACH Soul card found (sequence!)
+    /// CRITICAL: Advances BOTH soul joker streams for EACH Soul card found (sequence!)
+    /// - soulFaceStream: Used for face/type checks (NOT ante-dependent)
+    /// - soulEditionStream: Used for edition checks (IS ante-dependent)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CountSoulJokerInPacksForAnteWithStream(ref MotelySingleSearchContext ctx, MotelyJsonSoulJokerFilterClause soulClause, ref MotelySingleJokerFixedRarityStream soulStream, int ante, ref MotelyRunState runState)
+    private static int CountSoulJokerInPacksForAnteWithStream(ref MotelySingleSearchContext ctx, MotelyJsonSoulJokerFilterClause soulClause, ref MotelySingleJokerFixedRarityStream soulFaceStream, ref MotelySingleJokerFixedRarityStream soulEditionStream, int ante, ref MotelyRunState runState)
     {
         // Create pack streams
         var boosterPackStream = ctx.CreateBoosterPackStream(ante, ante > 1, false);
@@ -1241,12 +1265,14 @@ public static class MotelyJsonScoring
                 hasSoul = ctx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
             }
 
-            // If this pack has The Soul, get the NEXT soul joker from the stream
+            // If this pack has The Soul, get the NEXT soul joker from BOTH streams
             if (hasSoul)
             {
-                // CRITICAL FIX: Get the soul joker for THIS specific Soul card (advances stream)
-                var soulJoker = ctx.GetNextJoker(ref soulStream);
-
+                // CRITICAL FIX: Consume from BOTH streams to keep them in sync
+                // - Face stream for type matching (NOT ante-dependent)
+                // - Edition stream for edition matching (IS ante-dependent)
+                var soulJokerFace = ctx.GetNextJoker(ref soulFaceStream);
+                var soulJokerEdition = ctx.GetNextJoker(ref soulEditionStream);
 
                 // Check if clause wants this pack slot - NO LINQ!
                 if (soulClause.WantedPackSlots != null && BoolArrayHasTrue(soulClause.WantedPackSlots) && (packIndex >= soulClause.WantedPackSlots.Length || !soulClause.WantedPackSlots[packIndex]))
@@ -1256,7 +1282,7 @@ public static class MotelyJsonScoring
                 if (soulClause.RequireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                     continue;
 
-                // Check joker type - handle both single value and values array
+                // Check joker type using FACE stream (not ante-dependent)
                 if (!soulClause.IsWildcard)
                 {
                     bool jokerMatches = false;
@@ -1265,7 +1291,7 @@ public static class MotelyJsonScoring
                     if (soulClause.JokerType.HasValue)
                     {
                         var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)soulClause.JokerType.Value);
-                        jokerMatches = soulJoker.Type == expectedType;
+                        jokerMatches = soulJokerFace.Type == expectedType;
                     }
                     // Check values array (for "values": ["Perkeo", "Triboulet"])
                     else if (soulClause.JokerTypes != null && soulClause.JokerTypes.Count > 0)
@@ -1273,7 +1299,7 @@ public static class MotelyJsonScoring
                         foreach (var jokerEnum in soulClause.JokerTypes)
                         {
                             var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerEnum);
-                            if (soulJoker.Type == expectedType)
+                            if (soulJokerFace.Type == expectedType)
                             {
                                 jokerMatches = true;
                                 break;
@@ -1286,8 +1312,8 @@ public static class MotelyJsonScoring
                 }
                 // If IsWildcard is true (e.g., "Any"), accept any soul joker
 
-                // Check edition
-                if (soulClause.EditionEnum.HasValue && soulJoker.Edition != soulClause.EditionEnum.Value)
+                // Check edition using EDITION stream (ante-dependent)
+                if (soulClause.EditionEnum.HasValue && soulJokerEdition.Edition != soulClause.EditionEnum.Value)
                     continue;
 
                 // All requirements met - count this Soul card!
@@ -1300,7 +1326,7 @@ public static class MotelyJsonScoring
 
     /// <summary>
     /// Count soul joker occurrences across ALL antes with proper stream walking
-    /// BUG FIX: Create soul stream ONCE for entire seed (not per-ante!)
+    /// BUG FIX: Use dual-stream approach - face stream (global) and edition stream (per-ante)
     /// </summary>
     private static int CountSoulJokerOccurrencesForAllAntes(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotleyJsonFilterClause clause, ref MotelyRunState runState)
     {
@@ -1312,15 +1338,17 @@ public static class MotelyJsonScoring
 
         int totalCount = 0;
 
-        // BUG FIX: Soul joker TYPE stream is GLOBAL - create it ONCE!
-        // Creating a new stream per ante causes false positives when clauses check different antes
+        // BUG FIX: Soul joker has TWO components with different ante-dependency:
+        // 1. Face/Type - NOT ante-dependent (global stream, created once)
+        // 2. Edition - IS ante-dependent (per-ante stream, created each ante)
         int minAnte = effectiveAntes.Length > 0 ? effectiveAntes[0] : 1;
-        var soulStream = ctx.CreateSoulJokerStream(minAnte);
+        var globalFaceStream = ctx.CreateSoulJokerStream(minAnte);
 
-        // Walk through antes sequentially with the SAME stream
+        // Walk through antes sequentially with the SAME face stream but NEW edition streams
         foreach (int ante in effectiveAntes)
         {
-            totalCount += CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulStream, ante, ref runState);
+            var editionStream = ctx.CreateSoulJokerStream(ante);
+            totalCount += CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref globalFaceStream, ref editionStream, ante, ref runState);
         }
 
         return totalCount;
@@ -1338,15 +1366,16 @@ public static class MotelyJsonScoring
     }
 
     /// <summary>
-    /// Count soul joker occurrences using an existing soul joker stream - for AND clauses
+    /// Count soul joker occurrences using existing soul joker streams - for AND clauses
+    /// Takes both face stream (global) and edition stream (per-ante)
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CountSoulJokerOccurrencesForAnteWithStream(ref MotelySingleSearchContext ctx, ref MotelySingleJokerFixedRarityStream soulStream, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
+    public static int CountSoulJokerOccurrencesForAnteWithStream(ref MotelySingleSearchContext ctx, ref MotelySingleJokerFixedRarityStream soulFaceStream, ref MotelySingleJokerFixedRarityStream soulEditionStream, MotelyJsonConfig.MotleyJsonFilterClause clause, int ante, ref MotelyRunState runState)
     {
         var soulClause = MotelyJsonSoulJokerFilterClause.FromJsonClause(clause);
 
-        // Use the PROVIDED stream instead of creating a new one
-        return CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulStream, ante, ref runState);
+        // Use the PROVIDED streams instead of creating new ones
+        return CountSoulJokerInPacksForAnteWithStream(ref ctx, soulClause, ref soulFaceStream, ref soulEditionStream, ante, ref runState);
     }
     
     /// <summary>
@@ -1409,6 +1438,15 @@ public static class MotelyJsonScoring
             // If no antes wanted, no requirements to check
             if (minAnte > maxAnte) return true;
 
+            // CRITICAL: Soul joker has TWO components with different ante-dependency behavior:
+            // 1. Face/Type (Perkeo, Canio, etc.) - NOT ante-dependent (same PRNG sequence for entire seed)
+            // 2. Edition (Negative, Polychrome, etc.) - IS ante-dependent (different per ante)
+            //
+            // Solution: Use TWO separate streams:
+            // - globalSoulFaceStream: Created once, reused across ALL antes, checks ONLY face/type
+            // - soulEditionStream: Created fresh per ante, checks ONLY edition
+            var globalSoulFaceStream = searchContext.CreateSoulJokerStream(minAnte);
+
             // Loop ANTES first - create streams ONCE per ante, check ALL clauses
             for (int ante = minAnte; ante <= maxAnte; ante++)
             {
@@ -1423,11 +1461,10 @@ public static class MotelyJsonScoring
                     }
                 }
                 if (!anteNeeded) continue;
-                
-                // CORRECT ORDER: Check Soul Joker result FIRST (like PerkeoObservatory does)
-                var soulStream = searchContext.CreateSoulJokerStream(ante);
-                var soulJoker = searchContext.GetNextJoker(ref soulStream);
-                
+
+                // Create per-ante edition stream for edition checks (ante-dependent)
+                var soulEditionStream = searchContext.CreateSoulJokerStream(ante);
+
                 // FIXED: Create pack streams ONCE per ante, OUTSIDE clause loop (like PerkeoObservatory)
                 // IMPORTANT: Ante 0-1 get the guaranteed first Buffoon pack, ante 2+ skip it
                 var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante > 1, false);
@@ -1474,26 +1511,32 @@ public static class MotelyJsonScoring
                     // If this pack has The Soul, check ALL clauses that want this pack slot
                     if (hasSoul)
                     {
+                        // Consume from BOTH streams:
+                        // - Face stream for type matching (NOT ante-dependent)
+                        // - Edition stream for edition matching (IS ante-dependent)
+                        var soulJokerFace = searchContext.GetNextJoker(ref globalSoulFaceStream);
+                        var soulJokerEdition = searchContext.GetNextJoker(ref soulEditionStream);
+
                         for (int clauseIdx = 0; clauseIdx < clauses.Count; clauseIdx++)
                         {
                             var clause = clauses[clauseIdx];
-                            
+
                             // Skip if clause doesn't care about this ante
                             if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante]) continue;
-                            
+
                             // Skip if already satisfied
                             if (clauseSatisfied[clauseIdx]) continue;
-                            
+
                             // Check if this clause wants this pack slot - NO LINQ!
                             // DEFENSIVE: WantedPackSlots should never be null per FromJsonClause, but add check anyway
                             if (clause.WantedPackSlots != null && BoolArrayHasTrue(clause.WantedPackSlots) && (packIndex >= clause.WantedPackSlots.Length || !clause.WantedPackSlots[packIndex]))
                                 continue;
-                            
-                            // Check mega requirement  
+
+                            // Check mega requirement
                             if (clause.RequireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                                 continue;
-                            
-                            // Check joker type - handle both single value and values array
+
+                            // Check joker type using FACE stream (not ante-dependent)
                             if (!clause.IsWildcard)
                             {
                                 bool jokerMatches = false;
@@ -1502,7 +1545,7 @@ public static class MotelyJsonScoring
                                 if (clause.JokerType.HasValue)
                                 {
                                     var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
-                                    jokerMatches = soulJoker.Type == expectedType;
+                                    jokerMatches = soulJokerFace.Type == expectedType;
                                 }
                                 // Check values array (for "values": ["Perkeo", "Triboulet"])
                                 else if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
@@ -1510,7 +1553,7 @@ public static class MotelyJsonScoring
                                     foreach (var jokerEnum in clause.JokerTypes)
                                     {
                                         var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerEnum);
-                                        if (soulJoker.Type == expectedType)
+                                        if (soulJokerFace.Type == expectedType)
                                         {
                                             jokerMatches = true;
                                             break;
@@ -1523,8 +1566,8 @@ public static class MotelyJsonScoring
                             }
                             // If IsWildcard is true (e.g., "Any"), accept any soul joker
 
-                            // Check edition
-                            if (clause.EditionEnum.HasValue && soulJoker.Edition != clause.EditionEnum.Value)
+                            // Check edition using EDITION stream (ante-dependent)
+                            if (clause.EditionEnum.HasValue && soulJokerEdition.Edition != clause.EditionEnum.Value)
                                 continue;
                             
                             // All requirements met! This clause is satisfied!
