@@ -147,15 +147,20 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                 // Track counts for each clause
                 int[] clauseCounts = new int[clauses.Count];
 
-                // BUG FIX: Create soul stream ONCE for entire seed!
-                // Soul joker TYPE sequence is NOT ante-dependent (only edition is ante-dependent)
-                // Creating a new stream per ante causes false positives when multiple clauses check different antes
-                var soulStream = singleCtx.CreateSoulJokerStream(0);
+                // CRITICAL: Soul joker has TWO components with different ante-dependency behavior:
+                // 1. Face/Type (Perkeo, Canio, etc.) - NOT ante-dependent (same PRNG sequence for entire seed)
+                // 2. Edition (Negative, Polychrome, etc.) - IS ante-dependent (different per ante)
+                //
+                // Solution: Use TWO separate streams:
+                // - globalSoulFaceStream: Created once, reused across ALL antes, checks ONLY face/type
+                // - soulEditionStream: Created fresh per ante, checks ONLY edition
+                var globalSoulFaceStream = singleCtx.CreateSoulJokerStream(1);
 
                 // Walk through ALL antes sequentially
                 for (int ante = minAnte; ante <= maxAnte; ante++)
                 {
-                    // DON'T create new soul stream here - reuse the shared stream!
+                    // Create per-ante edition stream for edition checks (ante-dependent)
+                    var soulEditionStream = singleCtx.CreateSoulJokerStream(ante);
 
                     var boosterPackStream = singleCtx.CreateBoosterPackStream(ante, ante > 1, false);
                     var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, false);
@@ -187,10 +192,14 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                             hasSoul = singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize());
                         }
 
-                        // If Soul found, get next joker and check against ALL clauses
+                        // If Soul found, get next joker from BOTH streams
                         if (hasSoul)
                         {
-                            var soulJoker = singleCtx.GetNextJoker(ref soulStream);
+                            // Consume from BOTH streams:
+                            // - Face stream for type matching (NOT ante-dependent)
+                            // - Edition stream for edition matching (IS ante-dependent)
+                            var soulJokerFace = singleCtx.GetNextJoker(ref globalSoulFaceStream);
+                            var soulJokerEdition = singleCtx.GetNextJoker(ref soulEditionStream);
 
                             // Check this joker against ALL clauses
                             for (int clauseIdx = 0; clauseIdx < clauses.Count; clauseIdx++)
@@ -212,7 +221,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                                 if (clause.RequireMega && pack.GetPackSize() != MotelyBoosterPackSize.Mega)
                                     continue;
 
-                                // Check joker type
+                                // Check joker type using FACE stream (not ante-dependent)
                                 bool typeMatches = true;
                                 if (!clause.IsWildcard)
                                 {
@@ -223,7 +232,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                                         foreach (var jokerType in clause.JokerTypes)
                                         {
                                             var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
-                                            if (soulJoker.Type == expectedType)
+                                            if (soulJokerFace.Type == expectedType)
                                             {
                                                 typeMatches = true;
                                                 break;
@@ -234,7 +243,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                                     {
                                         // Single type specified
                                         var expectedType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
-                                        typeMatches = (soulJoker.Type == expectedType);
+                                        typeMatches = (soulJokerFace.Type == expectedType);
                                     }
                                 }
                                 // If IsWildcard is true (e.g., "Any"), typeMatches stays true
@@ -242,8 +251,8 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                                 if (!typeMatches)
                                     continue;
 
-                                // Check edition
-                                if (clause.EditionEnum.HasValue && soulJoker.Edition != clause.EditionEnum.Value)
+                                // Check edition using EDITION stream (ante-dependent)
+                                if (clause.EditionEnum.HasValue && soulJokerEdition.Edition != clause.EditionEnum.Value)
                                     continue;
 
                                 // This joker matches this clause!
