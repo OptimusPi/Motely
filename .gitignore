@@ -12,3 +12,4 @@ Motely/filters/NegativeScore=2.ini
 *.swp
 .claude/settings.local.json
 /.vscode
+Motely/JsonItemFilters/perkeo-test.json
