@@ -200,10 +200,37 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
             
             DebugLogger.Log($"[TAG FILTER] FULLY VECTORIZED result: {resultMask.Value:X}");
 
-            // FULLY VECTORIZED - NO SCALAR VERIFICATION!
-            // Tags are simple: just 2 PRNG calls per ante (small + big blind)
-            // Vector comparison is EXACT - no need for paranoid double-checking!
-            return resultMask;
+            // PHASE 2: Scalar verification with min checking (like Joker filter)
+            // Ensures min thresholds are respected in MUST clauses
+            if (resultMask.IsAllFalse())
+            {
+                return VectorMask.NoBitsSet;
+            }
+
+            // Copy struct fields to local variables for lambda (required for struct members)
+            var clauses = _clauses;
+
+            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
+            {
+                // Use SHARED scoring functions to check Min threshold
+                foreach (var clause in clauses)
+                {
+                    // Count total occurrences across ALL wanted antes
+                    int totalCount = 0;
+                    foreach (var ante in clause.EffectiveAntes)
+                    {
+                        int anteCount = MotelyJsonScoring.CountTagOccurrences(ref singleCtx, clause, ante);
+                        totalCount += anteCount;
+                    }
+
+                    // Check Min threshold (if specified)
+                    int minThreshold = clause.Min ?? 1; // Default to 1 if not specified
+                    if (totalCount < minThreshold)
+                        return false; // Doesn't meet minimum count
+                }
+
+                return true; // All clauses satisfied with Min thresholds
+            });
         }
     }
 }
