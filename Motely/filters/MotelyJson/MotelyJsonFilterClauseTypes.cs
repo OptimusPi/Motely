@@ -354,25 +354,35 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
         var maxPackSlotsPerAnte = new Dictionary<int, int>();
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
+            // Determine how many pack slots exist in the shop for this ante
+            // Ante 0 and Ante 1: Shop shows 4 pack slots (0-3)
+            // Ante 2+: Shop shows 6 pack slots (0-5)
+            int shopPackSlots = (ante == 0 || ante == 1) ? 4 : 6;
+
             int maxSlots = 0;
             foreach (var clause in clauses)
             {
                 if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
                 {
-                    // Use the pre-calculated MaxPackSlotsNeeded from the clause
-                    maxSlots = Math.Max(maxSlots, clause.MaxPackSlotsNeeded);
+                    // Find the highest pack slot this clause wants that ALSO exists in this ante's shop
+                    // Example: Clause wants slots [4,5], but ante 1 only has slots 0-3
+                    // Result: No overlap, so this clause contributes 0 to maxSlots for ante 1
+                    int clauseMaxSlot = 0;
+                    for (int slot = Math.Min(shopPackSlots - 1, clause.WantedPackSlots.Length - 1); slot >= 0; slot--)
+                    {
+                        if (clause.WantedPackSlots[slot])
+                        {
+                            clauseMaxSlot = slot + 1; // +1 because we need count, not index
+                            break;
+                        }
+                    }
+                    maxSlots = Math.Max(maxSlots, clauseMaxSlot);
                 }
             }
 
             // Skip this ante entirely if no clause wants it (don't waste computation)
             if (maxSlots == 0)
                 continue;
-
-            // Cap maxSlots to actual shop pack slot count
-            // Ante 0 and Ante 1: Shop shows 4 pack slots
-            // Ante 2+: Shop shows 6 pack slots
-            int shopPackSlots = (ante == 0 || ante == 1) ? 4 : 6;
-            maxSlots = Math.Min(maxSlots, shopPackSlots);
 
             maxPackSlotsPerAnte[ante] = maxSlots;
         }
