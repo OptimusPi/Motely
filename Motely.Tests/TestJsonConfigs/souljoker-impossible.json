@@ -1,0 +1,20 @@
+{
+  "name": "Impossible Soul Joker Test",
+  "description": "Test for soul joker that ALEEB doesn't have",
+  "author": "test",
+  "dateCreated": "2025-09-17T00:00:00Z",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "SoulJoker",
+      "value": "Chicot",
+      "antes": [1],
+      "sources": {
+        "packSlots": [0]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}
