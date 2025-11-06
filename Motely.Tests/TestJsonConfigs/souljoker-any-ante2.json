@@ -1,0 +1,18 @@
+{
+  "name": "SoulJoker Any Test - Ante 2",
+  "description": "Test for any soul joker in ante 2, pack slot 0",
+  "author": "test",
+  "dateCreated": "2025-09-14T00:00:00Z",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "SoulJoker",
+      "value": "Any",
+      "antes": [2],
+      "packSlots": [0]
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}

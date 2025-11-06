@@ -1,0 +1,20 @@
+{
+  "name": "Chicot PackSlot Regression Test - P1793QII",
+  "description": "Regression test for critical bug where pack slots were capped at 2/3 instead of 4/6, causing false positive for seed P1793QII. This seed should FAIL because Chicot appears outside pack slots [0,1,2].",
+  "author": "regression-test",
+  "dateCreated": "2025-11-05T00:00:00Z",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "SoulJoker",
+      "value": "Chicot",
+      "antes": [1, 2, 3],
+      "sources": {
+        "packSlots": [0, 1, 2]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}
