@@ -238,5 +238,50 @@ namespace Motely.Tests
             Assert.Equal(MotelyJoker.Perkeo, convertedClause.JokerType);
             Assert.True(convertedClause.WantedAntes[1]);
         }
+
+        [Fact]
+        public void Chicot_PackSlot_Regression_P1793QII_Should_Fail()
+        {
+            // REGRESSION TEST FOR CRITICAL BUG
+            //
+            // BUG DESCRIPTION:
+            // Prior to the fix, the SoulJoker filter was incorrectly capping pack slot checks:
+            // - Arcana packs: Checked only slots 0-2 (should be 0-3, total 4 slots)
+            // - Celestial packs: Checked only slots 0-2 (should be 0-5, total 6 slots)
+            //
+            // This caused FALSE POSITIVES where seeds would pass the filter even when the
+            // specified soul joker appeared OUTSIDE the requested pack slots.
+            //
+            // AFFECTED USER:
+            // User searched for Chicot soul joker in pack slots [0,1,2] for antes [1,2,3].
+            // Seed P1793QII was incorrectly marked as passing, but Chicot actually appeared
+            // in pack slot 3 (outside the specified range). This went undetected for 3 weeks
+            // of seed searching.
+            //
+            // THE FIX:
+            // Updated FilterCandidates_SoulJoker_PackSlots to correctly check:
+            // - Arcana packs: All 4 slots (0-3)
+            // - Celestial packs: All 6 slots (0-5)
+            //
+            // THIS TEST:
+            // Verifies that seed P1793QII correctly FAILS the filter config that specifies
+            // Chicot in pack slots [0,1,2] for antes [1,2,3]. If this test fails, it means
+            // the bug has regressed and the filter is not checking all pack slots correctly.
+            //
+            // Expected: Seeds passed filter: 0 (seed should be rejected)
+
+            var output = RunMotelyWithJsonConfig("chicot-packslot-regression.json", seed: "P1793QII");
+
+            // Verify the filter was created and executed
+            Assert.Contains("+ Base SoulJoker filter:", output);
+            Assert.Contains("SEARCH COMPLETED", output);
+
+            // CRITICAL: This seed must FAIL the filter (0 seeds should pass)
+            // If this assertion fails, the pack slot capping bug has regressed
+            Assert.Contains("Seeds passed filter: 0", output);
+
+            // Ensure the seed was NOT included in the results
+            Assert.DoesNotContain("P1793QII,", output);
+        }
     }
 }
