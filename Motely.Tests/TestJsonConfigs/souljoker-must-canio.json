@@ -1,0 +1,20 @@
+{
+  "name": "SoulJoker Perkeo Test",
+  "description": "Test for Perkeo soul joker",
+  "author": "test",
+  "dateCreated": "2025-09-14T00:00:00Z",
+  "deck": "Red",
+  "stake": "White",
+  "must": [
+    {
+      "type": "SoulJoker",
+      "value": "Canio",
+      "antes": [1],
+      "sources": {
+        "packSlots": [1]
+      }
+    }
+  ],
+  "should": [],
+  "mustNot": []
+}
