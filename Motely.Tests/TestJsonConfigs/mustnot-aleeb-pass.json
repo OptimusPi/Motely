@@ -1,0 +1,16 @@
+{
+  "name": "mustnot aleeb",
+  "description": "MustNot config that vetoes ALEEB by excluding its soul joker Canio",
+  "must": [{"type": "Joker", "Value": "TradingCard", "Antes": [1], "shopSlots": [0,1]}  ],
+  "mustNot": [
+    {
+      "type": "SoulJoker",
+      "value": "Canio",
+      "antes": [1],
+      "Sources": { "packSlots": [2] }
+    }
+  ],
+  "should": [
+    {"type": "Joker", "Value": "TradingCard", "Antes": [1], "shopSlots": [0,1]}
+  ]
+}
