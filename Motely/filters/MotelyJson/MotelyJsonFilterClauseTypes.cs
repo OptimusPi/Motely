@@ -363,13 +363,12 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
                     maxSlots = Math.Max(maxSlots, clause.MaxPackSlotsNeeded);
                 }
             }
-            // If no clause wants this ante, use default based on ante number
-            if (maxSlots == 0)
-            {
-                maxSlots = (ante == 0 || ante == 1) ? 4 : 6;
-            }
 
-            // CRITICAL FIX: Cap maxSlots to actual shop pack slot count
+            // Skip this ante entirely if no clause wants it (don't waste computation)
+            if (maxSlots == 0)
+                continue;
+
+            // Cap maxSlots to actual shop pack slot count
             // Ante 0 and Ante 1: Shop shows 4 pack slots
             // Ante 2+: Shop shows 6 pack slots
             int shopPackSlots = (ante == 0 || ante == 1) ? 4 : 6;
