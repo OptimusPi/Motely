@@ -73,7 +73,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
 
                     if (hasShop || useDefaults)
                     {
-                        int clauseShopMax = hasShop ? clause.MaxShopSlotsNeeded : MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+                        int clauseShopMax = hasShop ? FindMaxSlotIndex(clause.WantedShopSlots) + 1 : MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
                         maxShopSlots = Math.Max(maxShopSlots, clauseShopMax);
                     }
                     if (hasPack || useDefaults)
@@ -718,6 +718,14 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             for (int i = 0; i < slots.Length; i++)
                 if (slots[i]) return true;
             return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int FindMaxSlotIndex(bool[] slots)
+        {
+            for (int i = slots.Length - 1; i >= 0; i--)
+                if (slots[i]) return i;
+            return -1;
         }
     }
 }
