@@ -474,8 +474,40 @@ internal static class MotelySlotLimits
                     EnhancementEnum = enhancement;
             }
         }
+
+        /// <summary>
+        /// Copy all parsed enum fields from another clause.
+        /// Used when cloning clauses for ante-specific filtering.
+        /// </summary>
+        public void CopyParsedEnumsFrom(MotleyJsonFilterClause source)
+        {
+            this.ItemTypeEnum = source.ItemTypeEnum;
+            this.VoucherEnum = source.VoucherEnum;
+            this.TarotEnum = source.TarotEnum;
+            this.PlanetEnum = source.PlanetEnum;
+            this.SpectralEnum = source.SpectralEnum;
+            this.JokerEnum = source.JokerEnum;
+            this.TagEnum = source.TagEnum;
+            this.TagTypeEnum = source.TagTypeEnum;
+            this.BossEnum = source.BossEnum;
+            this.JokerEnums = source.JokerEnums;
+            this.VoucherEnums = source.VoucherEnums;
+            this.TarotEnums = source.TarotEnums;
+            this.PlanetEnums = source.PlanetEnums;
+            this.SpectralEnums = source.SpectralEnums;
+            this.TagEnums = source.TagEnums;
+            this.BossEnums = source.BossEnums;
+            this.EditionEnum = source.EditionEnum;
+            this.StickerEnums = source.StickerEnums;
+            this.SuitEnum = source.SuitEnum;
+            this.RankEnum = source.RankEnum;
+            this.SealEnum = source.SealEnum;
+            this.EnhancementEnum = source.EnhancementEnum;
+            this.WildcardEnum = source.WildcardEnum;
+            this.IsWildcard = source.IsWildcard;
+        }
     }
-    
+
         // Pre-computed expensive calculations (set during PostProcess, immutable after)
         [JsonIgnore]
         public int MaxVoucherAnte { get; private set; }

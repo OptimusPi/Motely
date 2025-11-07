@@ -87,12 +87,31 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                         {
                             Type = child.Type,
                             Value = child.Value,
-                            Antes = new[] { ante }, // SINGLE ante!
-                            ShopSlots = child.ShopSlots,
-                            Edition = child.Edition,
+                            Values = child.Values,
+                            Label = child.Label,
+                            Antes = new[] { ante }, // SINGLE ante! Override parent's antes
                             Clauses = child.Clauses,
-                            Mode = child.Mode
+                            IsInverted = child.IsInverted,
+                            Score = child.Score,
+                            Mode = child.Mode,
+                            Min = child.Min,
+                            FilterOrder = child.FilterOrder,
+                            Edition = child.Edition,
+                            Stickers = child.Stickers,
+                            Suit = child.Suit,
+                            Rank = child.Rank,
+                            Seal = child.Seal,
+                            Enhancement = child.Enhancement,
+                            Sources = child.Sources,
+                            PackSlots = child.PackSlots,
+                            ShopSlots = child.ShopSlots,
+                            MinShopSlot = child.MinShopSlot,
+                            MaxShopSlot = child.MaxShopSlot,
+                            MinPackSlot = child.MinPackSlot,
+                            MaxPackSlot = child.MaxPackSlot,
                         };
+                        // Copy parsed enums (already initialized by parent)
+                        clonedChild.CopyParsedEnumsFrom(child);
                         clonedChildren.Add(clonedChild);
                     }
 
@@ -125,17 +144,67 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             if (orClause.Clauses == null || orClause.Clauses.Count == 0)
                 continue; // Skip empty Or clause
 
-            // CRITICAL FIX: Each clause in the OR should be its own branch
-            // If we have ["King", "Queen", "Jack"], we want "King OR Queen OR Jack"
-            // NOT "(King AND Queen AND Jack) as one group"
-            // So we create a separate filter for EACH individual clause
-            foreach (var individualClause in orClause.Clauses)
+            // Check if parent OR clause has Antes array
+            if (orClause.Antes != null && orClause.Antes.Length > 0)
             {
-                // Create a composite filter with just this one clause
-                // This prevents same-type items from being grouped together
-                var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { individualClause };
-                var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
-                nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                // YES! Clone each child clause for each ante, then OR them all together
+                // So: (child1[ante4]) OR (child2[ante4]) OR (child1[ante5]) OR (child2[ante5]) OR ...
+                foreach (var ante in orClause.Antes)
+                {
+                    foreach (var child in orClause.Clauses)
+                    {
+                        var clonedChild = new MotelyJsonConfig.MotleyJsonFilterClause
+                        {
+                            Type = child.Type,
+                            Value = child.Value,
+                            Values = child.Values,
+                            Label = child.Label,
+                            Antes = new[] { ante }, // SINGLE ante! Override parent's antes
+                            Clauses = child.Clauses,
+                            IsInverted = child.IsInverted,
+                            Score = child.Score,
+                            Mode = child.Mode,
+                            Min = child.Min,
+                            FilterOrder = child.FilterOrder,
+                            Edition = child.Edition,
+                            Stickers = child.Stickers,
+                            Suit = child.Suit,
+                            Rank = child.Rank,
+                            Seal = child.Seal,
+                            Enhancement = child.Enhancement,
+                            Sources = child.Sources,
+                            PackSlots = child.PackSlots,
+                            ShopSlots = child.ShopSlots,
+                            MinShopSlot = child.MinShopSlot,
+                            MaxShopSlot = child.MaxShopSlot,
+                            MinPackSlot = child.MinPackSlot,
+                            MaxPackSlot = child.MaxPackSlot,
+                        };
+                        // Copy parsed enums (already initialized by parent)
+                        clonedChild.CopyParsedEnumsFrom(child);
+
+                        // Create a composite filter with just this one cloned clause
+                        var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clonedChild };
+                        var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
+                        nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                    }
+                }
+            }
+            else
+            {
+                // No antes array on parent - process normally
+                // CRITICAL FIX: Each clause in the OR should be its own branch
+                // If we have ["King", "Queen", "Jack"], we want "King OR Queen OR Jack"
+                // NOT "(King AND Queen AND Jack) as one group"
+                // So we create a separate filter for EACH individual clause
+                foreach (var individualClause in orClause.Clauses)
+                {
+                    // Create a composite filter with just this one clause
+                    // This prevents same-type items from being grouped together
+                    var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { individualClause };
+                    var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
+                    nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                }
             }
         }
 
