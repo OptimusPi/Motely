@@ -60,6 +60,52 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
         return new MotelyCompositeFilter(filterEntries);
     }
 
+    // Helper method to recursively clone a clause with a specific ante, propagating to ALL descendants
+    private static MotelyJsonConfig.MotleyJsonFilterClause CloneClauseWithAnte(MotelyJsonConfig.MotleyJsonFilterClause source, int ante)
+    {
+        var cloned = new MotelyJsonConfig.MotleyJsonFilterClause
+        {
+            Type = source.Type,
+            Value = source.Value,
+            Values = source.Values,
+            Label = source.Label,
+            Antes = new[] { ante }, // SINGLE ante! Override with the propagated ante
+            IsInverted = source.IsInverted,
+            Score = source.Score,
+            Mode = source.Mode,
+            Min = source.Min,
+            FilterOrder = source.FilterOrder,
+            Edition = source.Edition,
+            Stickers = source.Stickers,
+            Suit = source.Suit,
+            Rank = source.Rank,
+            Seal = source.Seal,
+            Enhancement = source.Enhancement,
+            Sources = source.Sources,
+            PackSlots = source.PackSlots,
+            ShopSlots = source.ShopSlots,
+            MinShopSlot = source.MinShopSlot,
+            MaxShopSlot = source.MaxShopSlot,
+            MinPackSlot = source.MinPackSlot,
+            MaxPackSlot = source.MaxPackSlot,
+        };
+
+        // Copy parsed enums (already initialized by parent)
+        cloned.CopyParsedEnumsFrom(source);
+
+        // CRITICAL: Recursively clone nested clauses with the same ante!
+        if (source.Clauses != null && source.Clauses.Count > 0)
+        {
+            cloned.Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+            foreach (var nestedClause in source.Clauses)
+            {
+                cloned.Clauses.Add(CloneClauseWithAnte(nestedClause, ante));
+            }
+        }
+
+        return cloned;
+    }
+
     private static IMotelySeedFilter CreateAndFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> andClauses, ref MotelyFilterCreationContext ctx)
     {
         // AND filter: ALL nested clauses must pass
@@ -79,39 +125,12 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
                 foreach (var ante in andClause.Antes)
                 {
-                    // Clone each child clause with this specific ante
+                    // Clone each child clause with this specific ante (RECURSIVELY!)
                     var clonedChildren = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
                     foreach (var child in andClause.Clauses)
                     {
-                        var clonedChild = new MotelyJsonConfig.MotleyJsonFilterClause
-                        {
-                            Type = child.Type,
-                            Value = child.Value,
-                            Values = child.Values,
-                            Label = child.Label,
-                            Antes = new[] { ante }, // SINGLE ante! Override parent's antes
-                            Clauses = child.Clauses,
-                            IsInverted = child.IsInverted,
-                            Score = child.Score,
-                            Mode = child.Mode,
-                            Min = child.Min,
-                            FilterOrder = child.FilterOrder,
-                            Edition = child.Edition,
-                            Stickers = child.Stickers,
-                            Suit = child.Suit,
-                            Rank = child.Rank,
-                            Seal = child.Seal,
-                            Enhancement = child.Enhancement,
-                            Sources = child.Sources,
-                            PackSlots = child.PackSlots,
-                            ShopSlots = child.ShopSlots,
-                            MinShopSlot = child.MinShopSlot,
-                            MaxShopSlot = child.MaxShopSlot,
-                            MinPackSlot = child.MinPackSlot,
-                            MaxPackSlot = child.MaxPackSlot,
-                        };
-                        // Copy parsed enums (already initialized by parent)
-                        clonedChild.CopyParsedEnumsFrom(child);
+                        // Use the recursive helper to propagate ante to ALL descendants
+                        var clonedChild = CloneClauseWithAnte(child, ante);
                         clonedChildren.Add(clonedChild);
                     }
 
@@ -153,35 +172,8 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 {
                     foreach (var child in orClause.Clauses)
                     {
-                        var clonedChild = new MotelyJsonConfig.MotleyJsonFilterClause
-                        {
-                            Type = child.Type,
-                            Value = child.Value,
-                            Values = child.Values,
-                            Label = child.Label,
-                            Antes = new[] { ante }, // SINGLE ante! Override parent's antes
-                            Clauses = child.Clauses,
-                            IsInverted = child.IsInverted,
-                            Score = child.Score,
-                            Mode = child.Mode,
-                            Min = child.Min,
-                            FilterOrder = child.FilterOrder,
-                            Edition = child.Edition,
-                            Stickers = child.Stickers,
-                            Suit = child.Suit,
-                            Rank = child.Rank,
-                            Seal = child.Seal,
-                            Enhancement = child.Enhancement,
-                            Sources = child.Sources,
-                            PackSlots = child.PackSlots,
-                            ShopSlots = child.ShopSlots,
-                            MinShopSlot = child.MinShopSlot,
-                            MaxShopSlot = child.MaxShopSlot,
-                            MinPackSlot = child.MinPackSlot,
-                            MaxPackSlot = child.MaxPackSlot,
-                        };
-                        // Copy parsed enums (already initialized by parent)
-                        clonedChild.CopyParsedEnumsFrom(child);
+                        // Use the recursive helper to propagate ante to ALL descendants
+                        var clonedChild = CloneClauseWithAnte(child, ante);
 
                         // Create a composite filter with just this one cloned clause
                         var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clonedChild };
