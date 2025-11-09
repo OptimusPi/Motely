@@ -703,7 +703,12 @@ namespace Motely.Executors
 
             IMotelySeedFilterDesc filterDesc = primaryCategory switch
             {
-                FilterCategory.SoulJoker or FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerFilterDesc(
+                FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                    MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                        MotelyJsonSoulJokerFilterClause.ConvertClauses(primaryClauses)
+                    )
+                ),
+                FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerEditionOnlyFilterDesc(
                     MotelyJsonSoulJokerFilterClause.CreateCriteria(
                         MotelyJsonSoulJokerFilterClause.ConvertClauses(primaryClauses)
                     )
@@ -753,9 +758,13 @@ namespace Motely.Executors
             // Single category with no mustNot - create specialized filter settings
             dynamic searchSettings = primaryCategory switch
             {
-                FilterCategory.SoulJoker or FilterCategory.SoulJokerEditionOnly =>
+                FilterCategory.SoulJoker =>
                     new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(
                         (MotelyJsonSoulJokerFilterDesc)filterDesc
+                    ),
+                FilterCategory.SoulJokerEditionOnly =>
+                    new MotelySearchSettings<MotelyJsonSoulJokerEditionOnlyFilterDesc.MotelyJsonSoulJokerEditionOnlyFilter>(
+                        (MotelyJsonSoulJokerEditionOnlyFilterDesc)filterDesc
                     ),
                 FilterCategory.Joker =>
                     new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
@@ -812,7 +821,12 @@ namespace Motely.Executors
                 List<MotelyJsonConfig.MotleyJsonFilterClause> clauses = clausesByCategory[category];
                 IMotelySeedFilterDesc additionalFilter = category switch
                 {
-                    FilterCategory.SoulJoker or FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerFilterDesc(
+                    FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                        MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                            MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
+                        )
+                    ),
+                    FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerEditionOnlyFilterDesc(
                         MotelyJsonSoulJokerFilterClause.CreateCriteria(
                             MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
                         )

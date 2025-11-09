@@ -38,7 +38,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                     MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
                 FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
                     MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
-                FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerFilterDesc(
+                FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerEditionOnlyFilterDesc(
                     MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
                 FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
                     MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
