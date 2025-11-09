@@ -1965,6 +1965,7 @@ public static class MotelyJsonScoring
         {
             int matchedClauses = 0;
             bool[] clauseSatisfied = new bool[clauses.Count];
+            int[] clauseCounts = new int[clauses.Count]; // BUG FIX: Track count per clause for Min parameter
 
             // Calculate ante range from clauses (don't hard-code!)
             int minAnte = int.MaxValue,
@@ -2094,8 +2095,9 @@ public static class MotelyJsonScoring
                             if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
                                 continue;
 
-                            // Skip if already satisfied
-                            if (clauseSatisfied[clauseIdx])
+                            // BUG FIX: Don't skip if already satisfied when clause has Min > 1
+                            // We need to keep counting to verify minimum threshold
+                            if (earlyExit && clauseSatisfied[clauseIdx])
                                 continue;
 
                             // Check if this clause wants this pack slot - NO LINQ!
@@ -2159,9 +2161,16 @@ public static class MotelyJsonScoring
                             )
                                 continue;
 
-                            // All requirements met! This clause is satisfied!
-                            clauseSatisfied[clauseIdx] = true;
-                            matchedClauses++;
+                            // All requirements met! Increment count for this clause
+                            clauseCounts[clauseIdx]++;
+
+                            // Mark as satisfied if we've met the minimum threshold
+                            int minRequired = clause.Min ?? 1;
+                            if (!clauseSatisfied[clauseIdx] && clauseCounts[clauseIdx] >= minRequired)
+                            {
+                                clauseSatisfied[clauseIdx] = true;
+                                matchedClauses++;
+                            }
 
                             if (earlyExit && matchedClauses == clauses.Count)
                                 return true; // All clauses satisfied - early exit for filter
