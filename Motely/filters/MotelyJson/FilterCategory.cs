@@ -14,6 +14,8 @@ public enum FilterCategory
     PlayingCard,
     Joker,
     SoulJoker,
+    SoulJokerEditionOnly,  // Edition-only soul joker checks (Value="Any" + edition) for instant early-exit
+    SoulJokerTypeOnly,     // Type-specific soul joker checks (Value="Perkeo") for fast verification
     And,
     Or,
 }
