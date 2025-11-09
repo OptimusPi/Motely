@@ -44,6 +44,21 @@ namespace Motely.Utils
             {
                 var category = GetCategory(clause.ItemTypeEnum);
 
+                // CRITICAL OPTIMIZATION: Split SoulJoker into edition-only vs type-specific
+                // Edition-only clauses (Value="Any" + edition specified + no min) create separate filter for instant early-exit!
+                if (category == FilterCategory.SoulJoker)
+                {
+                    bool isEditionOnly = (clause.Value?.Equals("Any", StringComparison.OrdinalIgnoreCase) == true ||
+                                          clause.Values == null || clause.Values.Length == 0) &&
+                                         !string.IsNullOrEmpty(clause.Edition);
+                    // Note: Min is OK! Edition checks are fast even with min count requirements
+
+                    if (isEditionOnly)
+                    {
+                        category = FilterCategory.SoulJokerEditionOnly;
+                    }
+                }
+
                 if (!grouped.ContainsKey(category))
                 {
                     grouped[category] = new List<MotelyJsonConfig.MotleyJsonFilterClause>();

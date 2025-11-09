@@ -703,7 +703,7 @@ namespace Motely.Executors
 
             IMotelySeedFilterDesc filterDesc = primaryCategory switch
             {
-                FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                FilterCategory.SoulJoker or FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerFilterDesc(
                     MotelyJsonSoulJokerFilterClause.CreateCriteria(
                         MotelyJsonSoulJokerFilterClause.ConvertClauses(primaryClauses)
                     )
@@ -753,7 +753,7 @@ namespace Motely.Executors
             // Single category with no mustNot - create specialized filter settings
             dynamic searchSettings = primaryCategory switch
             {
-                FilterCategory.SoulJoker =>
+                FilterCategory.SoulJoker or FilterCategory.SoulJokerEditionOnly =>
                     new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(
                         (MotelyJsonSoulJokerFilterDesc)filterDesc
                     ),
@@ -812,7 +812,7 @@ namespace Motely.Executors
                 List<MotelyJsonConfig.MotleyJsonFilterClause> clauses = clausesByCategory[category];
                 IMotelySeedFilterDesc additionalFilter = category switch
                 {
-                    FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                    FilterCategory.SoulJoker or FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerFilterDesc(
                         MotelyJsonSoulJokerFilterClause.CreateCriteria(
                             MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
                         )
