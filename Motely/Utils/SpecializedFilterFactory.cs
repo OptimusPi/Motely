@@ -22,7 +22,7 @@ public static class SpecializedFilterFactory
         {
             FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
                 MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))),
-            FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerFilterDesc(
+            FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerEditionOnlyFilterDesc(
                 MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))),
             FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
                 MotelyJsonJokerFilterClause.CreateCriteria(MotelyJsonJokerFilterClause.ConvertClauses(clauses))),
