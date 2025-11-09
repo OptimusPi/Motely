@@ -167,7 +167,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                     var spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, false);
                     bool tarotStreamInit = false, spectralStreamInit = false;
 
-                    int maxPackSlot = maxPackSlotsPerAnte[ante];
+                    int maxPackSlot = maxPackSlotsPerAnte.ContainsKey(ante) ? maxPackSlotsPerAnte[ante] : 3;
                     for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
                     {
                         var pack = singleCtx.GetNextBoosterPack(ref boosterPackStream);
