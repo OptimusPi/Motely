@@ -72,6 +72,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             Values = source.Values,
             Label = source.Label,
             Antes = new[] { ante }, // SINGLE ante! Override with the propagated ante
+            AntesWasExplicitlySet = true, // Mark as explicitly set since we're propagating from parent
             IsInverted = source.IsInverted,
             Score = source.Score,
             Mode = source.Mode,
@@ -118,8 +119,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             if (andClause.Clauses == null || andClause.Clauses.Count == 0)
                 continue; // Skip empty And clause
 
-            // CHECK: Does this And clause have an antes array?
-            if (andClause.Antes != null && andClause.Antes.Length > 0)
+            // CRITICAL FIX: Check if Antes was EXPLICITLY SET (not just defaulted)
+            // If explicitly set, use helper behavior (propagate to children)
+            // If defaulted, respect individual child Antes
+            if (andClause.AntesWasExplicitlySet && andClause.Antes != null && andClause.Antes.Length > 0)
             {
                 // YES! Create separate AND groups for EACH ante, then OR them together
                 // So: (child1[ante4] AND child2[ante4]) OR (child1[ante5] AND child2[ante5]) OR ...
@@ -165,8 +168,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             if (orClause.Clauses == null || orClause.Clauses.Count == 0)
                 continue; // Skip empty Or clause
 
-            // Check if parent OR clause has Antes array
-            if (orClause.Antes != null && orClause.Antes.Length > 0)
+            // CRITICAL FIX: Check if parent OR clause has Antes EXPLICITLY SET (not just defaulted)
+            // If Antes was explicitly set, use helper behavior (propagate to children)
+            // If Antes was defaulted (not explicitly set), respect individual child Antes
+            if (orClause.AntesWasExplicitlySet && orClause.Antes != null && orClause.Antes.Length > 0)
             {
                 // YES! Clone each child clause for each ante, then OR them all together
                 // So: (child1[ante4]) OR (child2[ante4]) OR (child1[ante5]) OR (child2[ante5]) OR ...
