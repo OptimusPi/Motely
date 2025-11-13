@@ -102,6 +102,11 @@ internal static class MotelySlotLimits
         [JsonIgnore]
         public bool IsInverted { get; set; } = false;
 
+        // Track whether Antes was explicitly set by user vs defaulted by ProcessClause
+        // This is critical for OR/AND clause helper behavior
+        [JsonIgnore]
+        public bool AntesWasExplicitlySet { get; set; } = false;
+
         [JsonPropertyName("score")]
         public int Score { get; set; } = 1;
         [JsonPropertyName("mode")]
@@ -478,6 +483,8 @@ internal static class MotelySlotLimits
         /// <summary>
         /// Copy all parsed enum fields from another clause.
         /// Used when cloning clauses for ante-specific filtering.
+        /// NOTE: This does NOT copy AntesWasExplicitlySet - that should be set explicitly by the caller
+        /// based on whether the cloning operation is intentionally setting Antes.
         /// </summary>
         public void CopyParsedEnumsFrom(MotleyJsonFilterClause source)
         {
@@ -640,6 +647,13 @@ internal static class MotelySlotLimits
             // Normalize arrays - but DON'T initialize flat pack/shop slots as that breaks Sources merging
             // item.PackSlots and item.ShopSlots should remain null if not provided
             item.Stickers ??= [];
+
+            // Track whether Antes was explicitly set (before we default it)
+            // This is CRITICAL for OR/AND helper behavior - we need to distinguish:
+            // 1. User explicitly set Antes=[1,2] -> use helper behavior (propagate to children)
+            // 2. User didn't set Antes (null/empty) -> defaulted to all antes, DON'T propagate
+            bool antesWasExplicitlySet = item.Antes != null && item.Antes.Length > 0;
+            item.AntesWasExplicitlySet = antesWasExplicitlySet;
 
             // Default to all antes if null OR empty (explicit empty array should also get default)
             // Or/And clauses CAN have their own antes that restrict when the entire clause is evaluated!
