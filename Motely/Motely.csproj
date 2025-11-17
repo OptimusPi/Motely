@@ -31,7 +31,7 @@
     <!-- Additional performance settings -->
     <DebugSymbols>false</DebugSymbols>
     <PublishSingleFile>false</PublishSingleFile>
-    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRun>false</PublishReadyToRun>
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
     <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
     <EnableDynamicPGO>true</EnableDynamicPGO>
