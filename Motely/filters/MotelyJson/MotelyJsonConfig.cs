@@ -65,6 +65,8 @@ internal static class MotelySlotLimits
         public string? Description { get; set; }
         [JsonPropertyName("dateCreated")]
         public DateTime? DateCreated { get; set; }
+        [JsonPropertyName("verifiedSeed")]
+        public string? VerifiedSeed { get; set; }
         [JsonPropertyName("deck")]
         public string? Deck { get; set; } = "Red";
         [JsonPropertyName("stake")]
