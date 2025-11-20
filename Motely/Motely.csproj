@@ -2,12 +2,23 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
 
+  <!-- Build as Library by default (for BalatroSeedOracle) -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <!-- Build as Exe when building standalone CLI -->
+  <PropertyGroup Condition="'$(Configuration)' == 'CLI'">
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!-- Performance optimizations -->
     <Optimize>true</Optimize>
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -39,6 +50,10 @@
     <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
     <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
     <EnableDynamicPGO>true</EnableDynamicPGO>
+
+    <!-- .NET 10 performance features -->
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
