@@ -75,7 +75,6 @@ public struct MotelyJsonSeedScoreDesc(
 
     // Track seeds that passed filter (before cutoff check)
     private static long _seedsFiltered = 0;
-    public static long SeedsFiltered => _seedsFiltered;
 
     // Callback to return the score object to (the caller can print, send to a db, I don't care)
     private readonly Action<MotelySeedScoreTally> _onResultFound = OnResultFound;
@@ -105,7 +104,7 @@ public struct MotelyJsonSeedScoreDesc(
         return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound);
     }
 
-    public static long GetFilteredSeeds() => _seedsFiltered;
+    public static long FilteredSeedCount => _seedsFiltered;
 
     public struct MotelyJsonSeedScoreProvider(MotelyJsonConfig Config, int Cutoff, bool AutoCutoff, Action<MotelySeedScoreTally> OnResultFound) : IMotelySeedScoreProvider
     {
