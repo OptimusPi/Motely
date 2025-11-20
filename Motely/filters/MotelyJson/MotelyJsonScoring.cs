@@ -62,7 +62,6 @@ public static class MotelyJsonScoring
         bool earlyExit = false
     )
     {
-        Debug.Assert(clause.TarotEnum.HasValue, "TarotCardsTally requires TarotEnum");
         int tally = 0;
 
         // Default sources if not specified
@@ -86,9 +85,15 @@ public static class MotelyJsonScoring
                     && item.TypeCategory == MotelyItemTypeCategory.TarotCard
                 )
                 {
-                    if (
-                        clause.TarotEnum.HasValue
-                        && item.Type
+                    // If no specific tarot specified, match ANY tarot card
+                    if (!clause.TarotEnum.HasValue)
+                    {
+                        tally++;
+                        if (earlyExit)
+                            return tally;
+                    }
+                    else if (
+                        item.Type
                             == (MotelyItemType)(
                                 (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotEnum.Value
                             )
@@ -139,9 +144,15 @@ public static class MotelyJsonScoring
                     {
                         for (int j = 0; j < contents.Length; j++)
                         {
-                            if (
-                                clause.TarotEnum.HasValue
-                                && contents[j].Type
+                            // If no specific tarot specified, count ALL tarot cards in Arcana pack
+                            if (!clause.TarotEnum.HasValue)
+                            {
+                                tally++;
+                                if (earlyExit)
+                                    return tally;
+                            }
+                            else if (
+                                contents[j].Type
                                     == (MotelyItemType)(
                                         (int)MotelyItemTypeCategory.TarotCard
                                         | (int)clause.TarotEnum.Value
@@ -796,8 +807,9 @@ public static class MotelyJsonScoring
         var localVoucherState = voucherState; // Struct copy - preserves original state
         int count = 0;
 
-        // IMPORTANT: Walk through ALL antes from 1 to maxAnte to build voucher state correctly
-        int minAnte = clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes[0] : 1;
+        // IMPORTANT: ALWAYS walk from ante 1 to build voucher state correctly (vouchers persist across antes!)
+        // SCORE only in user-specified antes, but BUILD STATE from ante 1
+        int minAnte = 1; // ALWAYS start at ante 1 to build voucher state correctly
         int maxAnte =
             clause.EffectiveAntes.Length > 0
                 ? clause.EffectiveAntes[clause.EffectiveAntes.Length - 1]
