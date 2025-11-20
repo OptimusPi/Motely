@@ -1,10 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
-    <!-- Conditional OutputType: Exe for desktop CLI, Library for browser -->
-    <OutputType Condition="'$(TargetFramework)' == 'net10.0'">Exe</OutputType>
-    <OutputType Condition="'$(TargetFramework)' == 'net10.0-browser'">Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -15,8 +13,8 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
-  <!-- Desktop-only performance settings (SIMD not available in WASM) -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <!-- Desktop performance settings -->
+  <PropertyGroup>
     <TieredCompilation>true</TieredCompilation>
     <TieredPGO>true</TieredPGO>
     <ServerGarbageCollection>true</ServerGarbageCollection>
