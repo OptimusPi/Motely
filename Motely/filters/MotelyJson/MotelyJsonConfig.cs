@@ -1099,4 +1099,89 @@ public class MotelyJsonConfig
         };
         return JsonSerializer.Serialize(this, options);
     }
+
+    /// <summary>
+    /// Get column names for DuckDB/CSV output
+    /// Returns: ["seed", "score", "column1", "column2", ...]
+    /// SHARED between DuckDB schema creation and CSV export!
+    /// </summary>
+    public List<string> GetColumnNames()
+    {
+        var columns = new List<string> { "seed", "score" };
+
+        if (Should != null)
+        {
+            foreach (var clause in Should)
+            {
+                var columnName = GetClauseColumnName(clause);
+                columns.Add(columnName);
+            }
+        }
+
+        return columns;
+    }
+
+    /// <summary>
+    /// Generate a safe column name for a filter clause (for DuckDB/CSV)
+    /// </summary>
+    private static string GetClauseColumnName(MotleyJsonFilterClause clause)
+    {
+        // Use label if provided
+        if (!string.IsNullOrEmpty(clause.Label))
+            return MakeSafeColumnName(clause.Label);
+
+        // Build name from value/type
+        string name;
+        if (!string.IsNullOrEmpty(clause.Value))
+        {
+            name = clause.Value;
+        }
+        else if (clause.Values != null && clause.Values.Length > 0)
+        {
+            // Multi-value case: Use first value + count indicator
+            if (clause.Values.Length == 1)
+            {
+                name = clause.Values[0];
+            }
+            else
+            {
+                // Multiple values: create descriptive name
+                name = $"{clause.Values[0]}_Plus{clause.Values.Length - 1}More";
+            }
+        }
+        else
+        {
+            // Fallback to type
+            name = clause.Type;
+        }
+
+        // Add edition prefix if specified
+        if (!string.IsNullOrEmpty(clause.Edition))
+            name = clause.Edition + "_" + name;
+
+        // Add ante suffix if specified
+        if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
+            name += "_ante" + clause.Antes[0];
+
+        return MakeSafeColumnName(name);
+    }
+
+    /// <summary>
+    /// Convert any string to a safe SQL column name (lowercase, alphanumeric + underscore only)
+    /// </summary>
+    private static string MakeSafeColumnName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "column";
+
+        var safeName = System
+            .Text.RegularExpressions.Regex.Replace(name, @"[^a-zA-Z0-9_]", "_")
+            .ToLower();
+
+        // SQL columns can't start with a digit
+        if (char.IsDigit(safeName[0]))
+            safeName = "col_" + safeName;
+
+        return safeName;
+    }
 }
