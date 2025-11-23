@@ -117,7 +117,7 @@ namespace Motely.Tests
             {
                 FileName = "dotnet",
                 Arguments =
-                    $"run -c Release -- --seed {seed} --json {Path.GetFileNameWithoutExtension(configFileName)} --nofancy",
+                    $"run -c CLI -- --seed {seed} --json {Path.GetFileNameWithoutExtension(configFileName)} --nofancy",
                 WorkingDirectory = motelyProjectDir,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
