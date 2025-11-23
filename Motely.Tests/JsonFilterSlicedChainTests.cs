@@ -15,11 +15,10 @@ public sealed class JsonFilterSlicedChainTests
     [Fact]
     public void SlicedFilterChain_RealJsonFile_VerifiesALEEBBlueprint()
     {
-        // Load the real JSON configuration file - EXACTLY like JsonSearchExecutor.LoadConfig()
-        var configFileName = "test-aleeb-unit";
-        var configPath = Path.Combine("JsonItemFilters", configFileName + ".json");
-        var fullConfigPath = Path.Combine("..", "..", "..", "..", "Motely", configPath);
-        
+        // Load the test JSON configuration file from TestJsonConfigs
+        var configFileName = "test-aleeb-unit.json";
+        var fullConfigPath = Path.Combine(AppContext.BaseDirectory, "TestJsonConfigs", configFileName);
+
         Assert.True(File.Exists(fullConfigPath), $"JSON config file not found at: {fullConfigPath}");
         
         var loadSuccess = MotelyJsonConfig.TryLoadFromJsonFile(fullConfigPath, out var config, out var error);
