@@ -1,10 +1,8 @@
-# Motely
+# MotelyJSON
 
-Motely is a fast Balatro seed searching library. It utilizes your CPU's 512-bit registers along with SIMD to search 8 seeds at once per thread.
-It performs very well compared to current GPU-based balatro seed searches (better in a lot of systems), and is the fastest general purpose CPU based searcher to my knowledge. 
+The fastest Balatro seed searcher, now with JSON filter support.
 
-Thank you so much to [@OptimusPi](https://github.com/OptimusPi/) for commissioning the development of this library. It started out as a personal project, but
-would not have the capabilities it has today without his support.
+Based on [@tacodiva](https://github.com/tacodiva)'s incredible [Motely](https://github.com/tacodiva/Motely) - a blazing-fast SIMD-powered seed searcher. This fork extends it with JSON configuration support for easy filter creation.
 
 ## Quick Start
 
