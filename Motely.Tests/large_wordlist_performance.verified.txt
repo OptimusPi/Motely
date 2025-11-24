@@ -1,5 +1,5 @@
 ﻿Γ£à Loaded 50 seeds from wordlist: wordlists\large-wordlist-test.txt
-≡ƒöì Motely Ouija Search Starting
+≡ƒöì MotelyJSON Search Starting
    Config: aleeb-simple-working-test
    Threads: 16
    Batch Size: 1 chars

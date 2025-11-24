@@ -1,5 +1,5 @@
 ﻿Γ£à Loaded 6 seeds from wordlist: wordlists\bullyourself-test.txt
-≡ƒöì Motely Ouija Search Starting
+≡ƒöì MotelyJSON Search Starting
    Config: BullYourself
    Threads: 16
    Batch Size: 1 chars
