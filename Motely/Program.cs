@@ -4,6 +4,7 @@ using Motely.Analysis;
 using Motely.Executors;
 using Motely.Filters;
 using Motely.Utils;
+using Motely.TUI;
 
 namespace Motely
 {
@@ -11,6 +12,12 @@ namespace Motely
     {
         static int Main(string[] args)
         {
+            // If no args provided, launch TUI
+            if (args.Length == 0)
+            {
+                return MotelyTUI.Run();
+            }
+
             var app = new CommandLineApplication
             {
                 Name = "Motely",
@@ -21,6 +28,7 @@ namespace Motely
             app.HelpOption("-?|-h|--help");
 
             // Core options
+            var tuiOption = app.Option("--tui", "Launch Terminal User Interface", CommandOptionType.NoValue);
             var jsonOption = app.Option<string>("-j|--json <JSON>", "JSON config file (JsonItemFilters/)", CommandOptionType.SingleValue);
             var tomlOption = app.Option<string>("--toml <TOML>", "TOML config file (TomlItemFilters/)", CommandOptionType.SingleValue);
             var yamlOption = app.Option<string>("--yaml <YAML>", "YAML config file (YamlItemFilters/)", CommandOptionType.SingleValue);
@@ -56,8 +64,7 @@ namespace Motely
             var noFancyOption = app.Option("--nofancy", "Suppress fancy output", CommandOptionType.NoValue);
             var quietOption = app.Option("--quiet", "Suppress all progress output (CSV only)", CommandOptionType.NoValue);
 
-            // Set defaults
-            jsonOption.DefaultValue = "standard";
+            // Set defaults (NOTE: Don't set defaults for jsonOption/tomlOption/yamlOption - they're checked with HasValue())
             threadsOption.DefaultValue = Environment.ProcessorCount;
             batchSizeOption.DefaultValue = 2;
             startBatchOption.DefaultValue = 0;
@@ -71,6 +78,31 @@ namespace Motely
 
             app.OnExecute(() =>
             {
+                // TUI mode takes priority (can load filter)
+                if (tuiOption.HasValue())
+                {
+                    string? configName = null;
+                    string? configFormat = null;
+
+                    if (tomlOption.HasValue())
+                    {
+                        configName = tomlOption.Value();
+                        configFormat = "toml";
+                    }
+                    else if (yamlOption.HasValue())
+                    {
+                        configName = yamlOption.Value();
+                        configFormat = "yaml";
+                    }
+                    else if (jsonOption.HasValue())
+                    {
+                        configName = jsonOption.Value();
+                        configFormat = "json";
+                    }
+
+                    return MotelyTUI.Run(configName, configFormat);
+                }
+
                 // Analyze mode takes priority
                 var analyzeSeed = analyzeOption.Value();
                 if (!string.IsNullOrEmpty(analyzeSeed))
@@ -202,7 +234,7 @@ namespace Motely
                     }
                     else
                     {
-                        configName = jsonOption.Value();
+                        configName = jsonOption.Value() ?? "standard";
                         configFormat = "json";
                     }
 
