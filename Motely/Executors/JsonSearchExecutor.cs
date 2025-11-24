@@ -13,6 +13,14 @@ namespace Motely.Executors
         private readonly string _format = format;
         private bool _cancelled = false;
 
+        /// <summary>
+        /// Cancel the currently running search
+        /// </summary>
+        public void Cancel()
+        {
+            _cancelled = true;
+        }
+
         public int Execute()
         {
             DebugLogger.IsEnabled = _params.EnableDebug;
@@ -25,7 +33,7 @@ namespace Motely.Executors
             // Suppress startup messages in quiet mode
             if (!_params.Quiet)
             {
-                Console.WriteLine($"🔍 Motely Ouija Search Starting");
+                Console.WriteLine($"🔍 MotelyJSON Search Starting");
                 Console.WriteLine($"   Config: {_configPath}");
                 Console.WriteLine($"   Threads: {_params.Threads}");
 
