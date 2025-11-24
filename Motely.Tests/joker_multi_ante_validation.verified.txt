@@ -6,7 +6,7 @@
 {SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonScoring.cs(258,70): warning CS8629: Nullable value type may be null. [{SolutionDirectory}Motely\Motely.csproj]
 {SolutionDirectory}Motely\filters\MotelyJson\MotelyJsonConfigValidator.cs(320,48): warning CS8602: Dereference of a possibly null reference. [{SolutionDirectory}Motely\Motely.csproj]
 Γ£à Loaded 4 seeds from wordlist: wordlists\joker-multi-ante-test.txt
-≡ƒöì Motely Ouija Search Starting
+≡ƒöì MotelyJSON Search Starting
    Config: aleeb-joker-test
    Threads: 16
    Batch Size: 1 chars

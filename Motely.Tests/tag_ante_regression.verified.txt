@@ -1,5 +1,5 @@
 ﻿Γ£à Loaded 4 seeds from wordlist: wordlists\tag-ante-regression-test.txt
-≡ƒöì Motely Ouija Search Starting
+≡ƒöì MotelyJSON Search Starting
    Config: aleeb-tag-test
    Threads: 16
    Batch Size: 1 chars
