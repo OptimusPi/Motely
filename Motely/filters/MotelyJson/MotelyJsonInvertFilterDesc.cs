@@ -21,7 +21,9 @@ namespace Motely.Filters
             var innerFilter = _inner.CreateFilter(ref ctx);
             ctx.IsAdditionalFilter = prevFlag;
 
-            DebugLogger.Log($"[INVERT DESC] Created inner filter of type={innerFilter.GetType().Name}");
+            DebugLogger.Log(
+                $"[INVERT DESC] Created inner filter of type={innerFilter.GetType().Name}"
+            );
             return new MotelyJsonInvertFilter(innerFilter);
         }
 
@@ -55,7 +57,9 @@ namespace Motely.Filters
                 // Invalid lanes stay 0 (validLaneMask will mask them out)
                 uint inverted = (~m.Value) & validLaneMask;
 
-                DebugLogger.Log($"[INVERT FILTER] valid lanes=0x{validLaneMask:X2}, inverted mask=0x{inverted:X2}");
+                DebugLogger.Log(
+                    $"[INVERT FILTER] valid lanes=0x{validLaneMask:X2}, inverted mask=0x{inverted:X2}"
+                );
                 return new VectorMask(inverted);
             }
         }

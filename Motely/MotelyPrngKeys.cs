@@ -44,7 +44,7 @@ public static class MotelyPrngKeys
 
     public const string Tags = "Tag";
     public const string Boss = "boss";
-    
+
     public const string ShopItemType = "cdt";
     public const string ShopItemSource = "sho";
     public const string ShopJokerEternalPerishableSource = "etperpoll";
@@ -61,7 +61,7 @@ public static class MotelyPrngKeys
             MotelyJokerRarity.Uncommon => JokerUncommon + source + ante,
             MotelyJokerRarity.Rare => JokerRare + source + ante,
             MotelyJokerRarity.Legendary => JokerLegendary,
-            _ => throw new InvalidEnumArgumentException()
+            _ => throw new InvalidEnumArgumentException(),
         };
     }
 }

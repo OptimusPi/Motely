@@ -3,9 +3,9 @@ using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterDesc.NegativeTagFilter>
+public struct NegativeTagFilterDesc()
+    : IMotelySeedFilterDesc<NegativeTagFilterDesc.NegativeTagFilter>
 {
-
     public NegativeTagFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         for (int ante = 2; ante <= 4; ante++)
@@ -29,14 +29,22 @@ public struct NegativeTagFilterDesc() : IMotelySeedFilterDesc<NegativeTagFilterD
                 tagStream = searchContext.CreateTagStream(ante, true);
 
                 // Small blind
-                mask &= VectorEnum256.Equals(searchContext.GetNextTag(ref tagStream), MotelyTag.NegativeTag);
+                mask &= VectorEnum256.Equals(
+                    searchContext.GetNextTag(ref tagStream),
+                    MotelyTag.NegativeTag
+                );
 
-                if (mask.IsAllFalse()) break;
+                if (mask.IsAllFalse())
+                    break;
 
                 // Big blind
-                mask &= VectorEnum256.Equals(searchContext.GetNextTag(ref tagStream), MotelyTag.NegativeTag);
+                mask &= VectorEnum256.Equals(
+                    searchContext.GetNextTag(ref tagStream),
+                    MotelyTag.NegativeTag
+                );
 
-                if (mask.IsAllFalse()) break;
+                if (mask.IsAllFalse())
+                    break;
             }
 
             return mask;

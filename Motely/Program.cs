@@ -3,8 +3,8 @@ using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.Executors;
 using Motely.Filters;
-using Motely.Utils;
 using Motely.TUI;
+using Motely.Utils;
 
 namespace Motely
 {
@@ -22,47 +22,147 @@ namespace Motely
             {
                 Name = "Motely",
                 Description = "Motely - Balatro Seed Searcher",
-                OptionsComparison = StringComparison.OrdinalIgnoreCase
+                OptionsComparison = StringComparison.OrdinalIgnoreCase,
             };
 
             app.HelpOption("-?|-h|--help");
 
             // Core options
-            var tuiOption = app.Option("--tui", "Launch Terminal User Interface", CommandOptionType.NoValue);
-            var jsonOption = app.Option<string>("-j|--json <JSON>", "JSON config file (JsonItemFilters/)", CommandOptionType.SingleValue);
-            var tomlOption = app.Option<string>("--toml <TOML>", "TOML config file (TomlItemFilters/)", CommandOptionType.SingleValue);
-            var yamlOption = app.Option<string>("--yaml <YAML>", "YAML config file (YamlItemFilters/)", CommandOptionType.SingleValue);
-            var analyzeOption = app.Option<string>("--analyze <SEED>", "Analyze a specific seed", CommandOptionType.SingleValue);
-            var nativeOption = app.Option<string>("-n|--native <FILTER>", "Run built-in native filter", CommandOptionType.SingleValue);
-            var scoreOption = app.Option<string>("--score <JSON>", "Add JSON scoring to native filter", CommandOptionType.SingleValue);
-            var csvScoreOption = app.Option<string>("--csvScore <TYPE>", "Enable CSV scoring output (native for built-in)", CommandOptionType.SingleValue);
-            var timeOption = app.Option<int>("--time <SECONDS>", "Progress report interval in seconds (default: 1200)", CommandOptionType.SingleValue);
-            
+            var tuiOption = app.Option(
+                "--tui",
+                "Launch Terminal User Interface",
+                CommandOptionType.NoValue
+            );
+            var jsonOption = app.Option<string>(
+                "-j|--json <JSON>",
+                "JSON config file (JsonItemFilters/)",
+                CommandOptionType.SingleValue
+            );
+            var tomlOption = app.Option<string>(
+                "--toml <TOML>",
+                "TOML config file (TomlItemFilters/)",
+                CommandOptionType.SingleValue
+            );
+            var yamlOption = app.Option<string>(
+                "--yaml <YAML>",
+                "YAML config file (YamlItemFilters/)",
+                CommandOptionType.SingleValue
+            );
+            var analyzeOption = app.Option<string>(
+                "--analyze <SEED>",
+                "Analyze a specific seed",
+                CommandOptionType.SingleValue
+            );
+            var nativeOption = app.Option<string>(
+                "-n|--native <FILTER>",
+                "Run built-in native filter",
+                CommandOptionType.SingleValue
+            );
+            var scoreOption = app.Option<string>(
+                "--score <JSON>",
+                "Add JSON scoring to native filter",
+                CommandOptionType.SingleValue
+            );
+            var csvScoreOption = app.Option<string>(
+                "--csvScore <TYPE>",
+                "Enable CSV scoring output (native for built-in)",
+                CommandOptionType.SingleValue
+            );
+            var timeOption = app.Option<int>(
+                "--time <SECONDS>",
+                "Progress report interval in seconds (default: 1200)",
+                CommandOptionType.SingleValue
+            );
+
             // Search parameters
-            var threadsOption = app.Option<int>("--threads <COUNT>", "Number of threads", CommandOptionType.SingleValue);
-            var batchSizeOption = app.Option<int>("--batchSize <CHARS>", "Batch size", CommandOptionType.SingleValue);
-            var startBatchOption = app.Option<long>("--startBatch <INDEX>", "Starting batch", CommandOptionType.SingleValue);
-            var endBatchOption = app.Option<long>("--endBatch <INDEX>", "Ending batch", CommandOptionType.SingleValue);
-            var startPercentOption = app.Option<int>("--startPercent <PCT>", "Starting percent (0-100)", CommandOptionType.SingleValue);
-            var endPercentOption = app.Option<int>("--endPercent <PCT>", "Ending percent (0-100)", CommandOptionType.SingleValue);
-            
+            var threadsOption = app.Option<int>(
+                "--threads <COUNT>",
+                "Number of threads",
+                CommandOptionType.SingleValue
+            );
+            var batchSizeOption = app.Option<int>(
+                "--batchSize <CHARS>",
+                "Batch size",
+                CommandOptionType.SingleValue
+            );
+            var startBatchOption = app.Option<long>(
+                "--startBatch <INDEX>",
+                "Starting batch",
+                CommandOptionType.SingleValue
+            );
+            var endBatchOption = app.Option<long>(
+                "--endBatch <INDEX>",
+                "Ending batch",
+                CommandOptionType.SingleValue
+            );
+            var startPercentOption = app.Option<int>(
+                "--startPercent <PCT>",
+                "Starting percent (0-100)",
+                CommandOptionType.SingleValue
+            );
+            var endPercentOption = app.Option<int>(
+                "--endPercent <PCT>",
+                "Ending percent (0-100)",
+                CommandOptionType.SingleValue
+            );
+
             // Input options
-            var seedOption = app.Option<string>("--seed <SEED>", "Specific seed", CommandOptionType.SingleValue);
-            var wordlistOption = app.Option<string>("--wordlist <WL>", "Wordlist file", CommandOptionType.SingleValue);
-            var keywordOption = app.Option<string>("--keyword <KEYWORD>", "Generate from keyword", CommandOptionType.SingleValue);
-            var randomOption = app.Option<int>("--random <COUNT>", "Test with random seeds", CommandOptionType.SingleValue);
-            
+            var seedOption = app.Option<string>(
+                "--seed <SEED>",
+                "Specific seed",
+                CommandOptionType.SingleValue
+            );
+            var wordlistOption = app.Option<string>(
+                "--wordlist <WL>",
+                "Wordlist file",
+                CommandOptionType.SingleValue
+            );
+            var keywordOption = app.Option<string>(
+                "--keyword <KEYWORD>",
+                "Generate from keyword",
+                CommandOptionType.SingleValue
+            );
+            var randomOption = app.Option<int>(
+                "--random <COUNT>",
+                "Test with random seeds",
+                CommandOptionType.SingleValue
+            );
+
             // Game options
-            var deckOption = app.Option<string>("--deck <DECK>", "Deck to use", CommandOptionType.SingleValue);
-            var stakeOption = app.Option<string>("--stake <STAKE>", "Stake to use", CommandOptionType.SingleValue);
-            
+            var deckOption = app.Option<string>(
+                "--deck <DECK>",
+                "Deck to use",
+                CommandOptionType.SingleValue
+            );
+            var stakeOption = app.Option<string>(
+                "--stake <STAKE>",
+                "Stake to use",
+                CommandOptionType.SingleValue
+            );
+
             // JSON specific
-            var cutoffOption = app.Option<string>("--cutoff <SCORE>", "Min score threshold", CommandOptionType.SingleValue);
+            var cutoffOption = app.Option<string>(
+                "--cutoff <SCORE>",
+                "Min score threshold",
+                CommandOptionType.SingleValue
+            );
 
             // Output options
-            var debugOption = app.Option("--debug", "Enable debug output", CommandOptionType.NoValue);
-            var noFancyOption = app.Option("--nofancy", "Suppress fancy output", CommandOptionType.NoValue);
-            var quietOption = app.Option("--quiet", "Suppress all progress output (CSV only)", CommandOptionType.NoValue);
+            var debugOption = app.Option(
+                "--debug",
+                "Enable debug output",
+                CommandOptionType.NoValue
+            );
+            var noFancyOption = app.Option(
+                "--nofancy",
+                "Suppress fancy output",
+                CommandOptionType.NoValue
+            );
+            var quietOption = app.Option(
+                "--quiet",
+                "Suppress all progress output (CSV only)",
+                CommandOptionType.NoValue
+            );
 
             // Set defaults (NOTE: Don't set defaults for jsonOption/tomlOption/yamlOption - they're checked with HasValue())
             threadsOption.DefaultValue = Environment.ProcessorCount;
@@ -122,15 +222,21 @@ namespace Motely
                     Quiet = quietOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
                     Wordlist = wordlistOption.Value(),
-                    RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null
+                    RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
                 };
 
                 // Validate batch size
                 if (parameters.BatchSize < 1 || parameters.BatchSize >= 8)
                 {
-                    Console.WriteLine($"❌ Error: batchSize must be between 1 and 7 (got {parameters.BatchSize})");
-                    Console.WriteLine($"   batchSize represents the number of seed digits to process in parallel.");
-                    Console.WriteLine($"   Valid range: 1-7 (batchSize=8 creates a single 2.25 trillion seed batch)");
+                    Console.WriteLine(
+                        $"❌ Error: batchSize must be between 1 and 7 (got {parameters.BatchSize})"
+                    );
+                    Console.WriteLine(
+                        $"   batchSize represents the number of seed digits to process in parallel."
+                    );
+                    Console.WriteLine(
+                        $"   Valid range: 1-7 (batchSize=8 creates a single 2.25 trillion seed batch)"
+                    );
                     Console.WriteLine($"   Recommended: 2-4 for optimal performance");
                     return 1;
                 }
@@ -150,7 +256,9 @@ namespace Motely
                     parameters.StartBatch = (ulong)(maxBatches * startPct / 100);
                     if (!parameters.Quiet)
                     {
-                        Console.WriteLine($"📍 Starting at {startPct}% = batch {parameters.StartBatch:N0}");
+                        Console.WriteLine(
+                            $"📍 Starting at {startPct}% = batch {parameters.StartBatch:N0}"
+                        );
                     }
                 }
 
@@ -168,7 +276,9 @@ namespace Motely
                         if (endPct == 0)
                             Console.WriteLine($"📍 Ending at ∞ (no limit)");
                         else
-                            Console.WriteLine($"📍 Ending at {endPct}% = batch {parameters.EndBatch:N0}");
+                            Console.WriteLine(
+                                $"📍 Ending at {endPct}% = batch {parameters.EndBatch:N0}"
+                            );
                     }
                 }
                 else if (parameters.EndBatch == 0 && startPercentOption.HasValue())
@@ -183,12 +293,16 @@ namespace Motely
                 // Validate batch ranges
                 if ((long)parameters.EndBatch > maxBatches)
                 {
-                    Console.WriteLine($"❌ endBatch too large: {parameters.EndBatch} (max for batchSize {parameters.BatchSize}: {maxBatches:N0})");
+                    Console.WriteLine(
+                        $"❌ endBatch too large: {parameters.EndBatch} (max for batchSize {parameters.BatchSize}: {maxBatches:N0})"
+                    );
                     return 1;
                 }
                 if (parameters.StartBatch >= parameters.EndBatch && parameters.EndBatch != 0)
                 {
-                    Console.WriteLine($"❌ startBatch ({parameters.StartBatch}) must be less than endBatch ({parameters.EndBatch})");
+                    Console.WriteLine(
+                        $"❌ startBatch ({parameters.StartBatch}) must be less than endBatch ({parameters.EndBatch})"
+                    );
                     return 1;
                 }
 
@@ -204,7 +318,9 @@ namespace Motely
                     {
                         var cutoffStr = cutoffOption.Value() ?? "0";
                         parameters.AutoCutoff = cutoffStr.ToLowerInvariant() == "auto";
-                        parameters.Cutoff = parameters.AutoCutoff ? 1 : (int.TryParse(cutoffStr, out var c) ? c : 0);
+                        parameters.Cutoff = parameters.AutoCutoff
+                            ? 1
+                            : (int.TryParse(cutoffStr, out var c) ? c : 0);
                     }
 
                     var executor = new NativeFilterExecutor(nativeFilter, parameters, scoreConfig);
@@ -215,7 +331,9 @@ namespace Motely
                     // Config file mode (JSON/TOML/YAML)
                     var cutoffStr = cutoffOption.Value() ?? "0";
                     bool autoCutoff = cutoffStr.ToLowerInvariant() == "auto";
-                    parameters.Cutoff = autoCutoff ? 0 : (int.TryParse(cutoffStr, out var c) ? c : 0);
+                    parameters.Cutoff = autoCutoff
+                        ? 0
+                        : (int.TryParse(cutoffStr, out var c) ? c : 0);
                     parameters.AutoCutoff = autoCutoff;
 
                     // Determine which config format
@@ -261,7 +379,9 @@ namespace Motely
             }
 
             Console.WriteLine($"🔍 Analyzing seed: '{seed}' with deck: {deck}, stake: {stake}");
-            var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, deck, stake)
+            );
             Console.Write(analysis);
             return 0;
         }

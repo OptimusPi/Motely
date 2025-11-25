@@ -5,7 +5,6 @@ namespace Motely;
 
 public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDesc.SoulFilter>
 {
-
     public const int MinAnte = 0;
     public const int MaxAnte = 0;
     public const int SoulsInARow = 2;
@@ -25,18 +24,30 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
 
     public struct SoulFilter() : IMotelySeedFilter
     {
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static int CheckAnteForSoulJoker(int ante, ref MotelySingleSearchContext searchContext)
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
+        public static int CheckAnteForSoulJoker(
+            int ante,
+            ref MotelySingleSearchContext searchContext
+        )
         {
-            MotelySingleTarotStream tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);;
+            MotelySingleTarotStream tarotStream = searchContext.CreateArcanaPackTarotStream(
+                ante,
+                true
+            );
+            ;
             MotelySingleSpectralStream spectralStream = default;
-            MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateSoulJokerStream(ante);
+            MotelySingleJokerFixedRarityStream soulStream = searchContext.CreateSoulJokerStream(
+                ante
+            );
             MotelySingleBoosterPackStream boosterPackStream = default;
-            bool boosterPackStreamInit = false, tarotStreamInit = false, spectralStreamInit = false;
+            bool boosterPackStreamInit = false,
+                tarotStreamInit = false,
+                spectralStreamInit = false;
             MotelySingleTagStream tagStream = searchContext.CreateTagStream(ante);
             var buffoonStream = searchContext.CreateBuffoonPackJokerStream(ante);
-            
+
             int perkeo = 0;
             int negSouls = 0;
             int souls = 0;
@@ -54,7 +65,10 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
 
                 if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                 {
-                    var contents = searchContext.GetNextBuffoonPackContents(ref buffoonStream, pack.GetPackSize());
+                    var contents = searchContext.GetNextBuffoonPackContents(
+                        ref buffoonStream,
+                        pack.GetPackSize()
+                    );
 
                     for (int j = 0; j < contents.Length; j++)
                     {
@@ -77,7 +91,12 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                         spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
                     }
 
-                    if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    if (
+                        searchContext.GetNextSpectralPackHasTheSoul(
+                            ref spectralStream,
+                            pack.GetPackSize()
+                        )
+                    )
                     {
                         souls++;
                         var jok = searchContext.GetNextJoker(ref soulStream);
@@ -95,7 +114,12 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                         tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);
                     }
 
-                    if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                    if (
+                        searchContext.GetNextArcanaPackHasTheSoul(
+                            ref tarotStream,
+                            pack.GetPackSize()
+                        )
+                    )
                     {
                         souls++;
                         var jok = searchContext.GetNextJoker(ref soulStream);
@@ -105,7 +129,11 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                             negSouls++;
                     }
                 }
-                else if (i == 1 && ante == 0 && searchContext.GetNextTag(ref tagStream) == MotelyTag.CharmTag)
+                else if (
+                    i == 1
+                    && ante == 0
+                    && searchContext.GetNextTag(ref tagStream) == MotelyTag.CharmTag
+                )
                 {
                     if (!tarotStreamInit)
                     {
@@ -113,7 +141,12 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                         tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);
                     }
 
-                    if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                    if (
+                        searchContext.GetNextArcanaPackHasTheSoul(
+                            ref tarotStream,
+                            pack.GetPackSize()
+                        )
+                    )
                     {
                         souls++;
                         var jok = searchContext.GetNextJoker(ref soulStream);
@@ -131,28 +164,36 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             MotelyVectorRunState voucherState = new();
-            
 
-            VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(1, voucherState);
+            VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(
+                1,
+                voucherState
+            );
             VectorMask hiero = VectorEnum256.Equals(vouchers, MotelyVoucher.Hieroglyph);
 
             if (hiero.IsAllFalse())
                 return VectorMask.NoBitsSet;
 
-            MotelyVectorPrngStream vectorSoulStream0 = searchContext.CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + (hAnte - 1));
-            MotelyVectorPrngStream vectorSoulStream1 = searchContext.CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + hAnte);
+            MotelyVectorPrngStream vectorSoulStream0 = searchContext.CreatePrngStream(
+                MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + (hAnte - 1)
+            );
+            MotelyVectorPrngStream vectorSoulStream1 = searchContext.CreatePrngStream(
+                MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + hAnte
+            );
 
             Vector512<double> soulPoll = searchContext.GetNextRandom(ref vectorSoulStream0);
             VectorMask preMask = Vector512.GreaterThan(soulPoll, Vector512.Create(0.997));
 
             if (preMask.IsAllFalse())
                 return VectorMask.NoBitsSet;
-            
+
             preMask = Vector512.GreaterThan(soulPoll, Vector512.Create(0.997));
             if (preMask.IsAllFalse())
                 return VectorMask.NoBitsSet;
 
-            return searchContext.SearchIndividualSeeds(hiero, (ref MotelySingleSearchContext searchContext) =>
+            return searchContext.SearchIndividualSeeds(
+                hiero,
+                (ref MotelySingleSearchContext searchContext) =>
                 {
                     // Real verify step
                     int score1 = CheckAnteForSoulJoker(hAnte - 1, ref searchContext);
@@ -167,9 +208,8 @@ public struct FilledSoulFilterDesc() : IMotelySeedFilterDesc<FilledSoulFilterDes
                     }
 
                     return false;
-                    
-                });
+                }
+            );
         }
     }
 }
-

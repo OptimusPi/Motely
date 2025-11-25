@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -86,7 +85,8 @@ public ref struct MotelySingleItemSet
 
         for (int i = 0; i < Length; i++)
         {
-            if (i != 0) sb.Append(", ");
+            if (i != 0)
+                sb.Append(", ");
             sb.Append(GetItemRef(ref this, i).ToString());
         }
 

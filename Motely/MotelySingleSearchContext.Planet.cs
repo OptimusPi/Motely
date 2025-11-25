@@ -1,12 +1,14 @@
-
-
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public ref struct MotelySinglePlanetStream(string resampleKey, MotelySingleResampleStream resampleStream, MotelySinglePrngStream blackHoleStream)
+public ref struct MotelySinglePlanetStream(
+    string resampleKey,
+    MotelySingleResampleStream resampleStream,
+    MotelySinglePrngStream blackHoleStream
+)
 {
     public readonly bool IsNull => ResampleKey == null;
     public readonly string ResampleKey = resampleKey;
@@ -20,22 +22,32 @@ ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private MotelySinglePlanetStream CreatePlanetStream(string source, int ante, bool blackHoleable, bool isCached)
+    private MotelySinglePlanetStream CreatePlanetStream(
+        string source,
+        int ante,
+        bool blackHoleable,
+        bool isCached
+    )
     {
         return new(
             MotelyPrngKeys.Planet + source + ante,
             CreateResampleStream(MotelyPrngKeys.Planet + source + ante, isCached),
-            blackHoleable ?
-                CreatePrngStream(MotelyPrngKeys.PlanetBlackHole + MotelyPrngKeys.Planet + ante, isCached) :
-                MotelySinglePrngStream.Invalid
+            blackHoleable
+                ? CreatePrngStream(
+                    MotelyPrngKeys.PlanetBlackHole + MotelyPrngKeys.Planet + ante,
+                    isCached
+                )
+                : MotelySinglePrngStream.Invalid
         );
     }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelySinglePlanetStream CreateCelestialPackPlanetStream(int ante, bool isCached = false) =>
-        CreatePlanetStream(MotelyPrngKeys.CelestialPackItemSource, ante, true, isCached);
+    public MotelySinglePlanetStream CreateCelestialPackPlanetStream(
+        int ante,
+        bool isCached = false
+    ) => CreatePlanetStream(MotelyPrngKeys.CelestialPackItemSource, ante, true, isCached);
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -43,8 +55,10 @@ ref partial struct MotelySingleSearchContext
     public MotelySinglePlanetStream CreateShopPlanetStream(int ante, bool isCached = false) =>
         CreatePlanetStream(MotelyPrngKeys.ShopItemSource, ante, false, isCached);
 
-
-    public MotelySingleItemSet GetNextCelestialPackContents(ref MotelySinglePlanetStream planetStream, MotelyBoosterPackSize size)
+    public MotelySingleItemSet GetNextCelestialPackContents(
+        ref MotelySinglePlanetStream planetStream,
+        MotelyBoosterPackSize size
+    )
     {
         MotelySingleItemSet pack = new();
         int cardCount = MotelyBoosterPackType.Celestial.GetCardCount(size);
@@ -66,11 +80,18 @@ ref partial struct MotelySingleSearchContext
             }
         }
 
-        return (MotelyItemType)MotelyItemTypeCategory.PlanetCard |
-            (MotelyItemType)GetNextRandomInt(ref planetStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyPlanetCard>.ValueCount);
+        return (MotelyItemType)MotelyItemTypeCategory.PlanetCard
+            | (MotelyItemType)GetNextRandomInt(
+                ref planetStream.ResampleStream.InitialPrngStream,
+                0,
+                MotelyEnum<MotelyPlanetCard>.ValueCount
+            );
     }
-    
-    public MotelyItem GetNextPlanet(ref MotelySinglePlanetStream planetStream, in MotelySingleItemSet itemSet)
+
+    public MotelyItem GetNextPlanet(
+        ref MotelySinglePlanetStream planetStream,
+        in MotelySingleItemSet itemSet
+    )
     {
         if (planetStream.IsBlackHoleable && !itemSet.Contains(MotelyItemType.BlackHole))
         {
@@ -80,8 +101,13 @@ ref partial struct MotelySingleSearchContext
             }
         }
 
-        MotelyItemType planet = (MotelyItemType)MotelyItemTypeCategory.PlanetCard |
-            (MotelyItemType)GetNextRandomInt(ref planetStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyPlanetCard>.ValueCount);
+        MotelyItemType planet =
+            (MotelyItemType)MotelyItemTypeCategory.PlanetCard
+            | (MotelyItemType)GetNextRandomInt(
+                ref planetStream.ResampleStream.InitialPrngStream,
+                0,
+                MotelyEnum<MotelyPlanetCard>.ValueCount
+            );
 
         int resampleCount = 0;
 
@@ -92,10 +118,17 @@ ref partial struct MotelySingleSearchContext
                 return planet;
             }
 
-            planet = (MotelyItemType)MotelyItemTypeCategory.PlanetCard | (MotelyItemType)GetNextRandomInt(
-                ref GetResamplePrngStream(ref planetStream.ResampleStream, planetStream.ResampleKey, resampleCount),
-                0, MotelyEnum<MotelyPlanetCard>.ValueCount
-            );
+            planet =
+                (MotelyItemType)MotelyItemTypeCategory.PlanetCard
+                | (MotelyItemType)GetNextRandomInt(
+                    ref GetResamplePrngStream(
+                        ref planetStream.ResampleStream,
+                        planetStream.ResampleKey,
+                        resampleCount
+                    ),
+                    0,
+                    MotelyEnum<MotelyPlanetCard>.ValueCount
+                );
 
             ++resampleCount;
         }

@@ -4,9 +4,9 @@ using System.Diagnostics;
 
 namespace Motely;
 
-public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFilterDesc.ShuffleFinderFilter>
+public struct ShuffleFinderFilterDesc()
+    : IMotelySeedFilterDesc<ShuffleFinderFilterDesc.ShuffleFinderFilter>
 {
-
     public ShuffleFinderFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         return new ShuffleFinderFilter();
@@ -14,8 +14,8 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
 
     public struct ShuffleFinderFilter() : IMotelySeedFilter
     {
-
-        private static readonly MotelyPlayingCardRank[] straightRankOrder = [
+        private static readonly MotelyPlayingCardRank[] straightRankOrder =
+        [
             MotelyPlayingCardRank.Ace,
             MotelyPlayingCardRank.Two,
             MotelyPlayingCardRank.Three,
@@ -48,7 +48,8 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
         public struct HandInfo(HandType type, int chips, int mult)
         {
             public HandType Type = type;
-            public int Chips = chips, Mult = mult;
+            public int Chips = chips,
+                Mult = mult;
 
             public readonly double Score => Chips * Mult;
 
@@ -64,7 +65,6 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
 
         public static HandInfo BestScore(Span<MotelyItem> hand)
         {
-
             hand.Sort((a, b) => ((int)a.PlayingCardRank) - ((int)b.PlayingCardRank));
 
             int clubSuitCount = 0;
@@ -73,7 +73,8 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
             int spadeSuitCount = 0;
 
             int bestScore = 0;
-            int bestScoreChips = 0, bestScoreMult = 0;
+            int bestScoreChips = 0,
+                bestScoreMult = 0;
             HandType bestHand = HandType.HighCard;
 
             int[] cardCounts = new int[MotelyEnum<MotelyPlayingCardRank>.ValueCount];
@@ -100,43 +101,44 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
 
                 int rankCount = ++cardCounts[(int)rank];
 
-                int chips = 0, mult = 0;
+                int chips = 0,
+                    mult = 0;
                 HandType handType = HandType.HighCard;
 
                 switch (rankCount)
                 {
                     case 1:
-                        {
-                            // High card
-                            chips = 5 + GetCardChips(rank);
-                            mult = 1;
-                            handType = HandType.HighCard;
-                            break;
-                        }
+                    {
+                        // High card
+                        chips = 5 + GetCardChips(rank);
+                        mult = 1;
+                        handType = HandType.HighCard;
+                        break;
+                    }
                     case 2:
-                        {
-                            // Pair
-                            chips = 10 + 2 * GetCardChips(rank);
-                            mult = 2;
-                            handType = HandType.Pair;
-                            break;
-                        }
+                    {
+                        // Pair
+                        chips = 10 + 2 * GetCardChips(rank);
+                        mult = 2;
+                        handType = HandType.Pair;
+                        break;
+                    }
                     case 3:
-                        {
-                            // Three of a kind
-                            chips = 30 + 3 * GetCardChips(rank);
-                            mult = 3;
-                            handType = HandType.ThreeOfAKind;
-                            break;
-                        }
+                    {
+                        // Three of a kind
+                        chips = 30 + 3 * GetCardChips(rank);
+                        mult = 3;
+                        handType = HandType.ThreeOfAKind;
+                        break;
+                    }
                     case 4:
-                        {
-                            // Four of a kind
-                            chips = 60 + 4 * GetCardChips(rank);
-                            mult = 7;
-                            handType = HandType.FourOfAKind;
-                            break;
-                        }
+                    {
+                        // Four of a kind
+                        chips = 60 + 4 * GetCardChips(rank);
+                        mult = 7;
+                        handType = HandType.FourOfAKind;
+                        break;
+                    }
                 }
 
                 if (mult * chips > bestScore)
@@ -222,10 +224,14 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
                 }
             }
 
-            if (clubSuitCount >= 5) ScoreFlush(hand, MotelyPlayingCardSuit.Club);
-            if (diamondSuitCount >= 5) ScoreFlush(hand, MotelyPlayingCardSuit.Diamond);
-            if (heartSuitCount >= 5) ScoreFlush(hand, MotelyPlayingCardSuit.Heart);
-            if (spadeSuitCount >= 5) ScoreFlush(hand, MotelyPlayingCardSuit.Spade);
+            if (clubSuitCount >= 5)
+                ScoreFlush(hand, MotelyPlayingCardSuit.Club);
+            if (diamondSuitCount >= 5)
+                ScoreFlush(hand, MotelyPlayingCardSuit.Diamond);
+            if (heartSuitCount >= 5)
+                ScoreFlush(hand, MotelyPlayingCardSuit.Heart);
+            if (spadeSuitCount >= 5)
+                ScoreFlush(hand, MotelyPlayingCardSuit.Spade);
 
             void SearchForStraightFlush(Span<MotelyItem> hand, MotelyPlayingCardSuit suit)
             {
@@ -235,7 +241,14 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
 
                     for (int j = 0; j < 5; j++)
                     {
-                        if (!CardMatches(hand, card => card.PlayingCardRank == straightRankOrder[i + j] && card.PlayingCardSuit == suit))
+                        if (
+                            !CardMatches(
+                                hand,
+                                card =>
+                                    card.PlayingCardRank == straightRankOrder[i + j]
+                                    && card.PlayingCardSuit == suit
+                            )
+                        )
                         {
                             matches = false;
                             break;
@@ -261,16 +274,19 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
                             bestHand = HandType.StriaghtFlush;
                         }
                     }
-
                 }
             }
 
             if (hasStraight)
             {
-                if (clubSuitCount >= 5) SearchForStraightFlush(hand, MotelyPlayingCardSuit.Club);
-                if (diamondSuitCount >= 5) SearchForStraightFlush(hand, MotelyPlayingCardSuit.Diamond);
-                if (heartSuitCount >= 5) SearchForStraightFlush(hand, MotelyPlayingCardSuit.Heart);
-                if (spadeSuitCount >= 5) SearchForStraightFlush(hand, MotelyPlayingCardSuit.Spade);
+                if (clubSuitCount >= 5)
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Club);
+                if (diamondSuitCount >= 5)
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Diamond);
+                if (heartSuitCount >= 5)
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Heart);
+                if (spadeSuitCount >= 5)
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Spade);
             }
 
             {
@@ -284,12 +300,15 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
 
                     if (cardCount >= 2)
                     {
-                        if (twoRankA == -1) twoRankA = i;
-                        else if (twoRankB == -1) twoRankB = i;
+                        if (twoRankA == -1)
+                            twoRankA = i;
+                        else if (twoRankB == -1)
+                            twoRankB = i;
 
                         if (cardCount == 3)
                         {
-                            if (threeRank == -1) threeRank = i;
+                            if (threeRank == -1)
+                                threeRank = i;
                         }
                     }
                 }
@@ -297,7 +316,10 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
                 if (threeRank != -1 && twoRankA != -1)
                 {
                     // Full House
-                    int chips = 40 + 3 * GetCardChips((MotelyPlayingCardRank)threeRank) + 2 * GetCardChips((MotelyPlayingCardRank)twoRankA);
+                    int chips =
+                        40
+                        + 3 * GetCardChips((MotelyPlayingCardRank)threeRank)
+                        + 2 * GetCardChips((MotelyPlayingCardRank)twoRankA);
                     if (chips * 4 > bestScore)
                     {
                         bestScoreChips = chips;
@@ -310,7 +332,10 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
                 if (twoRankA != -1 && twoRankB != -1)
                 {
                     // Two Pair
-                    int chips = 20 + 2 * GetCardChips((MotelyPlayingCardRank)twoRankA) + 2 * GetCardChips((MotelyPlayingCardRank)twoRankB);
+                    int chips =
+                        20
+                        + 2 * GetCardChips((MotelyPlayingCardRank)twoRankA)
+                        + 2 * GetCardChips((MotelyPlayingCardRank)twoRankB);
                     if (chips * 2 > bestScore)
                     {
                         bestScoreChips = chips;
@@ -349,7 +374,8 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
         {
             foreach (MotelyItem item in hand)
             {
-                if (predicate(item)) return true;
+                if (predicate(item))
+                    return true;
             }
             return false;
         }
@@ -364,62 +390,65 @@ public struct ShuffleFinderFilterDesc() : IMotelySeedFilterDesc<ShuffleFinderFil
 
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            return searchContext.SearchIndividualSeeds((ref MotelySingleSearchContext searchContext) =>
-            {
-
-                MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyPlayingCard>.ValueCount];
-
-                for (int i = 0; i < deck.Length; i++)
+            return searchContext.SearchIndividualSeeds(
+                (ref MotelySingleSearchContext searchContext) =>
                 {
-                    deck[i] = new(MotelyEnum<MotelyPlayingCard>.Values[i]);
-                }
+                    MotelyItem[] deck = new MotelyItem[MotelyEnum<MotelyPlayingCard>.ValueCount];
 
-                searchContext.Shuffle("nr1", deck);
-
-                // Span<MotelyItem> hand = deck.AsSpan().Slice(deck.Length - 8, 8);
-                // double handScore = BestScore(hand).Score;
-
-                // if (handScore < 285 || handScore > 294)
-                //     return false;
-
-                // hand = deck.AsSpan().Slice(deck.Length - 16, 8);
-
-                // handScore = BestScore(hand).Score;
-
-                // return handScore == 1208;
-
-                Span<MotelyItem> hand = deck.AsSpan().Slice(deck.Length - 13, 13);
-
-                // int sixCount = 0, fiveCount = 0, sevenCount = 0, threeCount = 0;
-                int fiveCount = 0, sevenCount = 0, threeCount = 0;
-
-                foreach (MotelyItem item in hand)
-                {
-                    switch (item.PlayingCardRank)
+                    for (int i = 0; i < deck.Length; i++)
                     {
-                        case MotelyPlayingCardRank.Seven:
-                            ++sevenCount;
-                            break;
-                        case MotelyPlayingCardRank.Five:
-                            ++fiveCount;
-                            break;
-                        // case MotelyPlayingCardRank.Six:
-                        //     ++sixCount;
-                        //     break;
-                        case MotelyPlayingCardRank.Three:
-                            ++threeCount;
-                            break;
+                        deck[i] = new(MotelyEnum<MotelyPlayingCard>.Values[i]);
                     }
+
+                    searchContext.Shuffle("nr1", deck);
+
+                    // Span<MotelyItem> hand = deck.AsSpan().Slice(deck.Length - 8, 8);
+                    // double handScore = BestScore(hand).Score;
+
+                    // if (handScore < 285 || handScore > 294)
+                    //     return false;
+
+                    // hand = deck.AsSpan().Slice(deck.Length - 16, 8);
+
+                    // handScore = BestScore(hand).Score;
+
+                    // return handScore == 1208;
+
+                    Span<MotelyItem> hand = deck.AsSpan().Slice(deck.Length - 13, 13);
+
+                    // int sixCount = 0, fiveCount = 0, sevenCount = 0, threeCount = 0;
+                    int fiveCount = 0,
+                        sevenCount = 0,
+                        threeCount = 0;
+
+                    foreach (MotelyItem item in hand)
+                    {
+                        switch (item.PlayingCardRank)
+                        {
+                            case MotelyPlayingCardRank.Seven:
+                                ++sevenCount;
+                                break;
+                            case MotelyPlayingCardRank.Five:
+                                ++fiveCount;
+                                break;
+                            // case MotelyPlayingCardRank.Six:
+                            //     ++sixCount;
+                            //     break;
+                            case MotelyPlayingCardRank.Three:
+                                ++threeCount;
+                                break;
+                        }
+                    }
+                    // double handScore = BestScore(hand).Score;
+
+                    if (fiveCount < 2 || sevenCount < 2 || threeCount < 2)
+                        return false;
+
+                    hand = deck.AsSpan().Slice(deck.Length - 21, 8);
+
+                    return BestScore(hand).Score == 1208; // Royal flush
                 }
-                // double handScore = BestScore(hand).Score;
-
-                if (fiveCount < 2 || sevenCount < 2 || threeCount < 2)
-                    return false;
-
-                hand = deck.AsSpan().Slice(deck.Length - 21, 8);
-
-                return BestScore(hand).Score == 1208; // Royal flush
-            });
+            );
         }
     }
 }

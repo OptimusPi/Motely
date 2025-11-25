@@ -1,5 +1,5 @@
-using System.Collections.ObjectModel;
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using Terminal.Gui;
@@ -24,26 +24,13 @@ public class MainMenuWindow : Window
         Add(_background);
         _background.Start();
 
-        // HORIZONTAL LAYOUT: Jimbo on left, title/subtitle on right
-
-        // Add detailed Jimbo face on the LEFT
-        var jimboLabel = new Label()
-        {
-            X = 2,
-            Y = 1,
-            Text = JimboArt.JimboFace,
-            TextAlignment = Alignment.Start,
-            CanFocus = false,
-        };
-        Add(jimboLabel);
-
-        // Title on the RIGHT of Jimbo
+        // Title centered at top
         var titleLabel = new Label()
         {
-            X = Pos.Right(jimboLabel) + 3,
-            Y = 2,
+            X = Pos.Center(),
+            Y = 0,
             Text = "BALATRO SEED SEARCHER",
-            TextAlignment = Alignment.Start,
+            TextAlignment = Alignment.Center,
             CanFocus = false,
             ColorScheme = new ColorScheme()
             {
@@ -52,13 +39,13 @@ public class MainMenuWindow : Window
         };
         Add(titleLabel);
 
-        // Subtitle below title
+        // Subtitle centered below title
         var subtitleLabel = new Label()
         {
-            X = Pos.Right(jimboLabel) + 3,
-            Y = Pos.Bottom(titleLabel),
+            X = Pos.Center(),
+            Y = 1,
             Text = "\"Jimbo says: Choose your adventure!\"",
-            TextAlignment = Alignment.Start,
+            TextAlignment = Alignment.Center,
             CanFocus = false,
             ColorScheme = new ColorScheme()
             {
@@ -67,20 +54,31 @@ public class MainMenuWindow : Window
         };
         Add(subtitleLabel);
 
+        // Add detailed Jimbo face below subtitle
+        var jimboLabel = new Label()
+        {
+            X = 2,
+            Y = 3,
+            Text = JimboArt.JimboFace,
+            TextAlignment = Alignment.Start,
+            CanFocus = false,
+        };
+        Add(jimboLabel);
+
         // Menu buttons with proper Terminal.Gui hotkeys using underscores
         var btnLoadConfig = new Button()
         {
             X = 2,
             Y = Pos.Bottom(jimboLabel) + 1,
-            Text = "_Load Config File (JSON/YAML/TOML)",
+            Text = "_Load Config File (JSON/YAML)",
             Width = 45,
             ColorScheme = new ColorScheme()
             {
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
         btnLoadConfig.Accept += (s, e) => ShowLoadConfig();
         Add(btnLoadConfig);
@@ -96,8 +94,8 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
         btnBuildFilter.Accept += (s, e) =>
         {
@@ -117,12 +115,15 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
         btnApiServer.Accept += (s, e) =>
         {
-            var apiWindow = new ApiServerWindow(TuiSettings.ApiServerHost, TuiSettings.ApiServerPort);
+            var apiWindow = new ApiServerWindow(
+                TuiSettings.ApiServerHost,
+                TuiSettings.ApiServerPort
+            );
             Application.Run(apiWindow);
         };
         Add(btnApiServer);
@@ -138,8 +139,8 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
         btnSettings.Accept += (s, e) =>
         {
@@ -159,8 +160,8 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
         btnExit.Accept += (s, e) =>
         {
@@ -249,24 +250,11 @@ public class MainMenuWindow : Window
             }
         }
 
-        if (Directory.Exists(Path.Combine(currentDir, "TomlItemFilters")))
-        {
-            var tomlFiles = Directory.GetFiles(
-                Path.Combine(currentDir, "TomlItemFilters"),
-                "*.toml"
-            );
-            foreach (var file in tomlFiles)
-            {
-                var name = Path.GetFileNameWithoutExtension(file);
-                filters.Add((name, "toml"));
-            }
-        }
-
         if (filters.Count == 0)
         {
             ShowErrorDialog(
                 "No Filters Found",
-                "No filter files found in JsonItemFilters/, YamlItemFilters/, or TomlItemFilters/"
+                "No filter files found in JsonItemFilters/ or YamlItemFilters/"
             );
             return;
         }
@@ -281,16 +269,19 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
 
-        var instructionLabel = new Label() { X = 1, Y = 1, Text = "Select a filter to run:" };
+        var instructionLabel = new Label()
+        {
+            X = 1,
+            Y = 1,
+            Text = "Select a filter to run:",
+        };
         dialog.Add(instructionLabel);
 
-        var filterStrings = filters
-            .Select((f, i) => $"{f.name} ({f.format.ToUpper()})")
-            .ToArray();
+        var filterStrings = filters.Select(f => $"{f.name}.{f.format.ToLower()}").ToArray();
         var filterList = new ListView()
         {
             X = 1,
@@ -312,7 +303,22 @@ public class MainMenuWindow : Window
                     var selected = filters[filterList.SelectedItem];
                     Application.RequestStop(dialog);
 
-                    var searchWindow = new SearchWindow(selected.name, selected.format);
+                    // Construct full path to filter file
+                    var directory = selected.format.ToLower() switch
+                    {
+                        "json" => "JsonItemFilters",
+                        "yaml" => "YamlItemFilters",
+                        _ => "JsonItemFilters",
+                    };
+                    var extension = selected.format.ToLower() switch
+                    {
+                        "json" => ".json",
+                        "yaml" => ".yaml",
+                        _ => ".json",
+                    };
+                    var fullPath = Path.Combine(directory, selected.name + extension);
+
+                    var searchWindow = new SearchWindow(fullPath, selected.format);
                     Application.Run(searchWindow);
                 }
                 e.Handled = true;
@@ -342,8 +348,8 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
 
         var label = new Label()
@@ -351,16 +357,24 @@ public class MainMenuWindow : Window
             X = Pos.Center(),
             Y = 2,
             Text = message,
-            TextAlignment = Alignment.Center
+            TextAlignment = Alignment.Center,
         };
         dialog.Add(label);
 
         bool result = false;
         var yesBtn = new Button() { Text = "Yes" };
-        yesBtn.Accept += (s, e) => { result = true; Application.RequestStop(dialog); };
+        yesBtn.Accept += (s, e) =>
+        {
+            result = true;
+            Application.RequestStop(dialog);
+        };
 
         var noBtn = new Button() { Text = "No" };
-        noBtn.Accept += (s, e) => { result = false; Application.RequestStop(dialog); };
+        noBtn.Accept += (s, e) =>
+        {
+            result = false;
+            Application.RequestStop(dialog);
+        };
 
         dialog.AddButton(yesBtn);
         dialog.AddButton(noBtn);
@@ -382,8 +396,8 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightBlue),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightBlue)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightBlue),
+            },
         };
 
         var label = new Label()
@@ -391,7 +405,7 @@ public class MainMenuWindow : Window
             X = Pos.Center(),
             Y = 2,
             Text = message,
-            TextAlignment = Alignment.Center
+            TextAlignment = Alignment.Center,
         };
         dialog.Add(label);
 
@@ -415,8 +429,8 @@ public class MainMenuWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
 
         var label = new Label()
@@ -424,7 +438,7 @@ public class MainMenuWindow : Window
             X = Pos.Center(),
             Y = 2,
             Text = message,
-            TextAlignment = Alignment.Center
+            TextAlignment = Alignment.Center,
         };
         dialog.Add(label);
 
@@ -434,5 +448,4 @@ public class MainMenuWindow : Window
 
         Application.Run(dialog);
     }
-
 }

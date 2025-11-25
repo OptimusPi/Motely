@@ -1,11 +1,14 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public struct MotelyVectorTarotStream(string resampleKey, MotelyVectorResampleStream resampleStream, MotelyVectorPrngStream soulStream)
+public struct MotelyVectorTarotStream(
+    string resampleKey,
+    MotelyVectorResampleStream resampleStream,
+    MotelyVectorPrngStream soulStream
+)
 {
     public readonly bool IsNull => ResampleKey == null;
     public readonly string ResampleKey = resampleKey;
@@ -16,7 +19,9 @@ public struct MotelyVectorTarotStream(string resampleKey, MotelyVectorResampleSt
     public readonly MotelySingleTarotStream CreateSingleStream(int lane)
     {
         return new(
-            ResampleKey, ResampleStream.CreateSingleStream(lane), SoulPrngStream.CreateSingleStream(lane)
+            ResampleKey,
+            ResampleStream.CreateSingleStream(lane),
+            SoulPrngStream.CreateSingleStream(lane)
         );
     }
 }
@@ -26,24 +31,33 @@ ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private MotelyVectorTarotStream CreateTarotStream(string source, int ante, bool searchTarot, bool soulable, bool isCached)
+    private MotelyVectorTarotStream CreateTarotStream(
+        string source,
+        int ante,
+        bool searchTarot,
+        bool soulable,
+        bool isCached
+    )
     {
         return new(
             MotelyPrngKeys.Tarot + source + ante,
-            searchTarot ?
-                CreateResampleStream(MotelyPrngKeys.Tarot + source + ante, isCached) :
-                MotelyVectorResampleStream.Invalid,
-            soulable ?
-                CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, isCached) :
-                MotelyVectorPrngStream.Invalid
+            searchTarot
+                ? CreateResampleStream(MotelyPrngKeys.Tarot + source + ante, isCached)
+                : MotelyVectorResampleStream.Invalid,
+            soulable
+                ? CreatePrngStream(MotelyPrngKeys.TarotSoul + MotelyPrngKeys.Tarot + ante, isCached)
+                : MotelyVectorPrngStream.Invalid
         );
     }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelyVectorTarotStream CreateArcanaPackTarotStream(int ante, bool soulOnly = false, bool isCached = false) =>
-        CreateTarotStream(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true, isCached);
+    public MotelyVectorTarotStream CreateArcanaPackTarotStream(
+        int ante,
+        bool soulOnly = false,
+        bool isCached = false
+    ) => CreateTarotStream(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true, isCached);
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -54,10 +68,16 @@ ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public VectorMask GetNextArcanaPackHasTheSoul(ref MotelyVectorTarotStream tarotStream, MotelyBoosterPackSize size)
+    public VectorMask GetNextArcanaPackHasTheSoul(
+        ref MotelyVectorTarotStream tarotStream,
+        MotelyBoosterPackSize size
+    )
     {
         Debug.Assert(tarotStream.IsSoulable, "Tarot pack does not have the soul.");
-        Debug.Assert(tarotStream.ResampleStream.IsInvalid, "This method is only valid for tarot streams created with soul only.");
+        Debug.Assert(
+            tarotStream.ResampleStream.IsInvalid,
+            "This method is only valid for tarot streams created with soul only."
+        );
 
         int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
 
@@ -65,13 +85,19 @@ ref partial struct MotelyVectorSearchContext
 
         for (int i = 0; i < cardCount; i++)
         {
-            hasSoulMask |= Vector512.GreaterThan(GetNextRandom(ref tarotStream.SoulPrngStream, ~hasSoulMask), Vector512.Create(0.997));
+            hasSoulMask |= Vector512.GreaterThan(
+                GetNextRandom(ref tarotStream.SoulPrngStream, ~hasSoulMask),
+                Vector512.Create(0.997)
+            );
         }
 
         return hasSoulMask;
     }
 
-    public MotelyVectorItemSet GetNextArcanaPackContents(ref MotelyVectorTarotStream tarotStream, MotelyBoosterPackSize size)
+    public MotelyVectorItemSet GetNextArcanaPackContents(
+        ref MotelyVectorTarotStream tarotStream,
+        MotelyBoosterPackSize size
+    )
     {
         int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
         MotelyVectorItemSet pack = new();
@@ -89,34 +115,46 @@ ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItemVector GetNextShopTarotOrNull(ref MotelyVectorTarotStream tarotStream, ref MotelyVectorPrngStream itemTypeStream, 
-        Vector512<double> totalRate, Vector512<double> tarotRate)
+    public MotelyItemVector GetNextShopTarotOrNull(
+        ref MotelyVectorTarotStream tarotStream,
+        ref MotelyVectorPrngStream itemTypeStream,
+        Vector512<double> totalRate,
+        Vector512<double> tarotRate
+    )
     {
         // Check what type this slot is
         var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
         itemTypePoll -= Vector512.Create(20.0); // Skip joker range
         var isTarotSlot = Vector512.LessThan(itemTypePoll, tarotRate);
-        
+
         // Only advance tarot stream for tarot slots
         var tarot = GetNextTarot(ref tarotStream, isTarotSlot);
-        
+
         // Return tarot or None for non-tarot slots
         var tarotIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isTarotSlot);
         var noneItem = Vector256<int>.Zero;
-        
+
         return new MotelyItemVector(
             Vector256.ConditionalSelect(tarotIntMask, tarot.Value, noneItem)
         );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItemVector GetNextTarot(ref MotelyVectorTarotStream tarotStream, in Vector512<double> mask)
+    public MotelyItemVector GetNextTarot(
+        ref MotelyVectorTarotStream tarotStream,
+        in Vector512<double> mask
+    )
     {
         Vector512<double> soulMask;
 
         if (tarotStream.IsSoulable)
         {
-            soulMask = mask & Vector512.GreaterThan(GetNextRandom(ref tarotStream.SoulPrngStream, mask), Vector512.Create(0.997));
+            soulMask =
+                mask
+                & Vector512.GreaterThan(
+                    GetNextRandom(ref tarotStream.SoulPrngStream, mask),
+                    Vector512.Create(0.997)
+                );
         }
         else
         {
@@ -135,7 +173,9 @@ ref partial struct MotelyVectorSearchContext
             var tarotMask = mask & ~soulMask;
             tarots = GetNextRandomInt(
                 ref tarotStream.ResampleStream.InitialPrngStream,
-                0, MotelyEnum<MotelyTarotCard>.ValueCount, tarotMask
+                0,
+                MotelyEnum<MotelyTarotCard>.ValueCount,
+                tarotMask
             );
 
             tarots = Vector256.Create((int)MotelyItemTypeCategory.TarotCard) | tarots;
@@ -146,23 +186,34 @@ ref partial struct MotelyVectorSearchContext
             return new(tarots);
         }
 
-        return new(Vector256.ConditionalSelect(
-            MotelyVectorUtils.ShrinkDoubleMaskToInt(soulMask),
-            Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
-            tarots
-        ));
+        return new(
+            Vector256.ConditionalSelect(
+                MotelyVectorUtils.ShrinkDoubleMaskToInt(soulMask),
+                Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
+                tarots
+            )
+        );
     }
 
-    public MotelyItemVector GetNextTarot(ref MotelyVectorTarotStream tarotStream, in MotelyVectorItemSet itemSet)
+    public MotelyItemVector GetNextTarot(
+        ref MotelyVectorTarotStream tarotStream,
+        in MotelyVectorItemSet itemSet
+    )
     {
-
         Vector512<double> soulMaskDbl;
         Vector256<int> soulMaskInt;
 
         if (tarotStream.IsSoulable)
         {
-            Vector512<double> soulValidMask = MotelyVectorUtils.ExtendIntMaskToDouble(~itemSet.Contains(MotelyItemType.Soul));
-            soulMaskDbl = soulValidMask & Vector512.GreaterThan(GetNextRandom(ref tarotStream.SoulPrngStream, soulValidMask), Vector512.Create(0.997));
+            Vector512<double> soulValidMask = MotelyVectorUtils.ExtendIntMaskToDouble(
+                ~itemSet.Contains(MotelyItemType.Soul)
+            );
+            soulMaskDbl =
+                soulValidMask
+                & Vector512.GreaterThan(
+                    GetNextRandom(ref tarotStream.SoulPrngStream, soulValidMask),
+                    Vector512.Create(0.997)
+                );
             soulMaskInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(soulMaskDbl);
         }
         else
@@ -170,7 +221,6 @@ ref partial struct MotelyVectorSearchContext
             soulMaskDbl = Vector512<double>.Zero;
             soulMaskInt = Vector256<int>.Zero;
         }
-
 
         Vector256<int> tarots;
 
@@ -182,7 +232,9 @@ ref partial struct MotelyVectorSearchContext
         {
             tarots = GetNextRandomInt(
                 ref tarotStream.ResampleStream.InitialPrngStream,
-                0, MotelyEnum<MotelyTarotCard>.ValueCount, ~soulMaskDbl
+                0,
+                MotelyEnum<MotelyTarotCard>.ValueCount,
+                ~soulMaskDbl
             );
 
             tarots = Vector256.Create((int)MotelyItemTypeCategory.TarotCard) | tarots;
@@ -200,73 +252,96 @@ ref partial struct MotelyVectorSearchContext
                     break;
 
                 Vector256<int> nextTarots = GetNextRandomInt(
-                    ref GetResamplePrngStream(ref tarotStream.ResampleStream, tarotStream.ResampleKey, resampleCount),
-                    0, MotelyEnum<MotelyTarotCard>.ValueCount, MotelyVectorUtils.ExtendIntMaskToDouble(resampleMaskInt)
+                    ref GetResamplePrngStream(
+                        ref tarotStream.ResampleStream,
+                        tarotStream.ResampleKey,
+                        resampleCount
+                    ),
+                    0,
+                    MotelyEnum<MotelyTarotCard>.ValueCount,
+                    MotelyVectorUtils.ExtendIntMaskToDouble(resampleMaskInt)
                 );
 
                 nextTarots = Vector256.Create((int)MotelyItemTypeCategory.TarotCard) | nextTarots;
 
-                tarots = Vector256.ConditionalSelect(
-                    resampleMaskInt,
-                    nextTarots, tarots
-                );
+                tarots = Vector256.ConditionalSelect(resampleMaskInt, nextTarots, tarots);
 
                 ++resampleCount;
             }
         }
 
-        return new(Vector256.ConditionalSelect(
-            soulMaskInt,
-            Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
-            tarots
-        ));
+        return new(
+            Vector256.ConditionalSelect(
+                soulMaskInt,
+                Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
+                tarots
+            )
+        );
     }
 
-    public VectorMask GetNextArcanaPackHasThe(ref MotelyVectorTarotStream tarotStream, MotelyTarotCard targetTarot, MotelyBoosterPackSize size)
+    public VectorMask GetNextArcanaPackHasThe(
+        ref MotelyVectorTarotStream tarotStream,
+        MotelyTarotCard targetTarot,
+        MotelyBoosterPackSize size
+    )
     {
         int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
         VectorMask hasTarget = VectorMask.NoBitsSet;
-        
+
         for (int i = 0; i < cardCount; i++)
         {
             var tarot = GetNextTarot(ref tarotStream);
             // Extract tarot card type using bit masking (similar to PlayingCardSuit pattern)
-            var tarotType = new VectorEnum256<MotelyTarotCard>(Vector256.BitwiseAnd(tarot.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
+            var tarotType = new VectorEnum256<MotelyTarotCard>(
+                Vector256.BitwiseAnd(
+                    tarot.Value,
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                )
+            );
             VectorMask isTarget = VectorEnum256.Equals(tarotType, targetTarot);
             hasTarget |= isTarget;
-            
+
             // Early exit optimization - if all lanes have found the target, no need to continue
             if (hasTarget.IsAllTrue())
                 break;
         }
-        
+
         return hasTarget;
     }
 
-    public VectorMask GetNextArcanaPackHasThe(ref MotelyVectorTarotStream tarotStream, MotelyTarotCard[] targetTarots, MotelyBoosterPackSize size)
+    public VectorMask GetNextArcanaPackHasThe(
+        ref MotelyVectorTarotStream tarotStream,
+        MotelyTarotCard[] targetTarots,
+        MotelyBoosterPackSize size
+    )
     {
         int cardCount = MotelyBoosterPackType.Arcana.GetCardCount(size);
         VectorMask hasAnyTarget = VectorMask.NoBitsSet;
-        
+
         for (int i = 0; i < cardCount; i++)
         {
             var tarot = GetNextTarot(ref tarotStream);
             // Extract tarot card type using bit masking (similar to PlayingCardSuit pattern)
-            var tarotType = new VectorEnum256<MotelyTarotCard>(Vector256.BitwiseAnd(tarot.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
-            
+            var tarotType = new VectorEnum256<MotelyTarotCard>(
+                Vector256.BitwiseAnd(
+                    tarot.Value,
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                )
+            );
+
             VectorMask isAnyTarget = VectorMask.NoBitsSet;
             foreach (var target in targetTarots)
             {
                 isAnyTarget |= VectorEnum256.Equals(tarotType, target);
             }
-            
+
             hasAnyTarget |= isAnyTarget;
-            
+
             // Early exit optimization - if all lanes have found any target, no need to continue
             if (hasAnyTarget.IsAllTrue())
                 break;
         }
-        
+
         return hasAnyTarget;
     }
 }

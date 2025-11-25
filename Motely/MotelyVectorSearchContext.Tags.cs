@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -10,10 +9,8 @@ public ref struct MotelyVectorTagStream(MotelyVectorResampleStream resampleStrea
     public MotelyVectorResampleStream ResampleStream = resampleStream;
 }
 
-
 ref partial struct MotelyVectorSearchContext
 {
-
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
@@ -29,11 +26,21 @@ ref partial struct MotelyVectorSearchContext
     {
         if (tagStream.Ante > 1)
         {
-            return new(GetNextRandomInt(ref tagStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyTag>.ValueCount));
+            return new(
+                GetNextRandomInt(
+                    ref tagStream.ResampleStream.InitialPrngStream,
+                    0,
+                    MotelyEnum<MotelyTag>.ValueCount
+                )
+            );
         }
 
         VectorEnum256<MotelyTag> tags = new(
-            GetNextRandomInt(ref tagStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyTag>.ValueCount)
+            GetNextRandomInt(
+                ref tagStream.ResampleStream.InitialPrngStream,
+                0,
+                MotelyEnum<MotelyTag>.ValueCount
+            )
         );
 
         int resampleCount = 0;
@@ -56,8 +63,13 @@ ref partial struct MotelyVectorSearchContext
                 break;
 
             Vector256<int> newTags = GetNextRandomInt(
-                ref GetResamplePrngStream(ref tagStream.ResampleStream, MotelyPrngKeys.Tags + tagStream.Ante, resampleCount),
-                0, MotelyEnum<MotelyTag>.ValueCount,
+                ref GetResamplePrngStream(
+                    ref tagStream.ResampleStream,
+                    MotelyPrngKeys.Tags + tagStream.Ante,
+                    resampleCount
+                ),
+                0,
+                MotelyEnum<MotelyTag>.ValueCount,
                 MotelyVectorUtils.ExtendIntMaskToDouble(resampleMask)
             );
 

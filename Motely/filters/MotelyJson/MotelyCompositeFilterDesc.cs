@@ -33,28 +33,52 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             IMotelySeedFilter filter = category switch
             {
                 FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
-                    MotelyJsonJokerFilterClause.CreateCriteria(MotelyJsonJokerFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
+                    MotelyJsonJokerFilterClause.CreateCriteria(
+                        MotelyJsonJokerFilterClause.ConvertClauses(clauses)
+                    )
+                ).CreateFilter(ref ctx),
                 FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
-                    MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
+                    MotelyJsonSpectralFilterClause.CreateCriteria(
+                        MotelyJsonSpectralFilterClause.ConvertClauses(clauses)
+                    )
+                ).CreateFilter(ref ctx),
                 FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
-                    MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
+                    MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                        MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
+                    )
+                ).CreateFilter(ref ctx),
                 FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerEditionOnlyFilterDesc(
-                    MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
+                    MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                        MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
+                    )
+                ).CreateFilter(ref ctx),
                 FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
-                    MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
+                    MotelyJsonTarotFilterClause.CreateCriteria(
+                        MotelyJsonTarotFilterClause.ConvertClauses(clauses)
+                    )
+                ).CreateFilter(ref ctx),
                 FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(
-                    MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
+                    MotelyJsonPlanetFilterClause.CreateCriteria(
+                        MotelyJsonPlanetFilterClause.ConvertClauses(clauses)
+                    )
+                ).CreateFilter(ref ctx),
                 FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)).CreateFilter(ref ctx),
+                    MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)
+                ).CreateFilter(ref ctx),
                 FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
-                    MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(clauses))).CreateFilter(ref ctx),
+                    MotelyJsonVoucherFilterClause.CreateCriteria(
+                        MotelyJsonVoucherFilterClause.ConvertClauses(clauses)
+                    )
+                ).CreateFilter(ref ctx),
                 FilterCategory.Boss => new MotelyJsonBossFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)).CreateFilter(ref ctx),
+                    MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)
+                ).CreateFilter(ref ctx),
                 FilterCategory.Tag => new MotelyJsonTagFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)).CreateFilter(ref ctx),
+                    MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)
+                ).CreateFilter(ref ctx),
                 FilterCategory.And => CreateAndFilter(clauses, ref ctx),
                 FilterCategory.Or => CreateOrFilter(clauses, ref ctx),
-                _ => throw new ArgumentException($"Unsupported filter category: {category}")
+                _ => throw new ArgumentException($"Unsupported filter category: {category}"),
             };
             filterEntries.Add((filter, isInverted));
         }
@@ -63,7 +87,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     }
 
     // Helper method to recursively clone a clause with a specific ante, propagating to ALL descendants
-    private static MotelyJsonConfig.MotleyJsonFilterClause CloneClauseWithAnte(MotelyJsonConfig.MotleyJsonFilterClause source, int ante)
+    private static MotelyJsonConfig.MotleyJsonFilterClause CloneClauseWithAnte(
+        MotelyJsonConfig.MotleyJsonFilterClause source,
+        int ante
+    )
     {
         var cloned = new MotelyJsonConfig.MotleyJsonFilterClause
         {
@@ -109,7 +136,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
         return cloned;
     }
 
-    private static IMotelySeedFilter CreateAndFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> andClauses, ref MotelyFilterCreationContext ctx)
+    private static IMotelySeedFilter CreateAndFilter(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> andClauses,
+        ref MotelyFilterCreationContext ctx
+    )
     {
         // AND filter: ALL nested clauses must pass
         var nestedFilters = new List<IMotelySeedFilter>();
@@ -122,7 +152,11 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             // CRITICAL FIX: Check if Antes was EXPLICITLY SET (not just defaulted)
             // If explicitly set, use helper behavior (propagate to children)
             // If defaulted, respect individual child Antes
-            if (andClause.AntesWasExplicitlySet && andClause.Antes != null && andClause.Antes.Length > 0)
+            if (
+                andClause.AntesWasExplicitlySet
+                && andClause.Antes != null
+                && andClause.Antes.Length > 0
+            )
             {
                 // YES! Create separate AND groups for EACH ante, then OR them together
                 // So: (child1[ante4] AND child2[ante4]) OR (child1[ante5] AND child2[ante5]) OR ...
@@ -158,7 +192,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
         return new AndFilter(nestedFilters);
     }
 
-    private static IMotelySeedFilter CreateOrFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> orClauses, ref MotelyFilterCreationContext ctx)
+    private static IMotelySeedFilter CreateOrFilter(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> orClauses,
+        ref MotelyFilterCreationContext ctx
+    )
     {
         // OR filter: at least ONE nested clause must pass
         var nestedFilters = new List<IMotelySeedFilter>();
@@ -171,7 +208,11 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             // CRITICAL FIX: Check if parent OR clause has Antes EXPLICITLY SET (not just defaulted)
             // If Antes was explicitly set, use helper behavior (propagate to children)
             // If Antes was defaulted (not explicitly set), respect individual child Antes
-            if (orClause.AntesWasExplicitlySet && orClause.Antes != null && orClause.Antes.Length > 0)
+            if (
+                orClause.AntesWasExplicitlySet
+                && orClause.Antes != null
+                && orClause.Antes.Length > 0
+            )
             {
                 // YES! Clone each child clause for each ante, then OR them all together
                 // So: (child1[ante4]) OR (child2[ante4]) OR (child1[ante5]) OR (child2[ante5]) OR ...
@@ -183,7 +224,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                         var clonedChild = CloneClauseWithAnte(child, ante);
 
                         // Create a composite filter with just this one cloned clause
-                        var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clonedChild };
+                        var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                        {
+                            clonedChild,
+                        };
                         var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                         nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
                     }
@@ -200,7 +244,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 {
                     // Create a composite filter with just this one clause
                     // This prevents same-type items from being grouped together
-                    var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { individualClause };
+                    var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    {
+                        individualClause,
+                    };
                     var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                     nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
                 }
@@ -214,12 +261,16 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     {
         private readonly List<(IMotelySeedFilter filter, bool isInverted)> _filterEntries;
 
-        public MotelyCompositeFilter(List<(IMotelySeedFilter filter, bool isInverted)> filterEntries)
+        public MotelyCompositeFilter(
+            List<(IMotelySeedFilter filter, bool isInverted)> filterEntries
+        )
         {
             _filterEntries = filterEntries;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             // Start with all bits set
@@ -279,8 +330,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
             foreach (var filter in _nestedFilters)
             {
-                var nested = filter.Filter(ref ctx);
-                result &= nested; // Bitwise AND
+                result &= filter.Filter(ref ctx);
 
                 if (result.IsAllFalse())
                     return VectorMask.NoBitsSet; // Early exit
@@ -312,8 +362,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
             foreach (var filter in _nestedFilters)
             {
-                var nested = filter.Filter(ref ctx);
-                result |= nested; // Bitwise OR
+                result |= filter.Filter(ref ctx);
             }
 
             return result;

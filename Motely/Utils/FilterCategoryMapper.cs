@@ -24,21 +24,25 @@ namespace Motely.Utils
                 MotelyFilterItemType.PlanetCard => FilterCategory.PlanetCard,
                 MotelyFilterItemType.SpectralCard => FilterCategory.SpectralCard,
                 MotelyFilterItemType.PlayingCard => FilterCategory.PlayingCard,
-                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => FilterCategory.Tag,
+                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag =>
+                    FilterCategory.Tag,
                 MotelyFilterItemType.Boss => FilterCategory.Boss,
                 MotelyFilterItemType.And => FilterCategory.And,
                 MotelyFilterItemType.Or => FilterCategory.Or,
-                _ => throw new Exception($"Unknown item type: {itemType}")
+                _ => throw new Exception($"Unknown item type: {itemType}"),
             };
         }
 
         /// <summary>
         /// PROPER SLICING: Groups clauses by FilterCategory for optimal vectorization
         /// </summary>
-        public static Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> GroupClausesByCategory(
-            List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+        public static Dictionary<
+            FilterCategory,
+            List<MotelyJsonConfig.MotleyJsonFilterClause>
+        > GroupClausesByCategory(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
         {
-            var grouped = new Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>>();
+            var grouped =
+                new Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>>();
 
             foreach (var clause in clauses)
             {
@@ -48,10 +52,14 @@ namespace Motely.Utils
                 // Edition-only clauses (Value="Any" + edition specified) create separate filter for instant early-exit!
                 if (category == FilterCategory.SoulJoker)
                 {
-                    bool isEditionOnly = (clause.Value?.Equals("Any", StringComparison.OrdinalIgnoreCase) == true ||
-                                          clause.Values == null || clause.Values.Length == 0) &&
-                                         !string.IsNullOrEmpty(clause.Edition) &&
-                                         !clause.Edition.Equals("None", StringComparison.OrdinalIgnoreCase);
+                    bool isEditionOnly =
+                        (
+                            clause.Value?.Equals("Any", StringComparison.OrdinalIgnoreCase) == true
+                            || clause.Values == null
+                            || clause.Values.Length == 0
+                        )
+                        && !string.IsNullOrEmpty(clause.Edition)
+                        && !clause.Edition.Equals("None", StringComparison.OrdinalIgnoreCase);
 
                     if (isEditionOnly)
                     {

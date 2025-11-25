@@ -13,31 +13,37 @@ namespace Motely.Filters
         {
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
-                
+
             var errors = new List<string>();
             var warnings = new List<string>();
-            
+
             // Parse stake for sticker validation
             MotelyStake stake = MotelyStake.White;
             if (!string.IsNullOrEmpty(config.Stake))
             {
                 Enum.TryParse<MotelyStake>(config.Stake, true, out stake);
             }
-            
+
             // Validate all filter items
             ValidateFilterItems(config.Must, "must", errors, warnings, stake, isMust: true);
             ValidateFilterItems(config.Should, "should", errors, warnings, stake);
             ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake);
 
             // Validate deck
-            if (!string.IsNullOrEmpty(config.Deck) && !Enum.TryParse<MotelyDeck>(config.Deck, true, out _))
+            if (
+                !string.IsNullOrEmpty(config.Deck)
+                && !Enum.TryParse<MotelyDeck>(config.Deck, true, out _)
+            )
             {
                 var validDecks = string.Join(", ", Enum.GetNames(typeof(MotelyDeck)));
                 errors.Add($"Invalid deck: '{config.Deck}'. Valid decks are: {validDecks}");
             }
-            
+
             // Validate stake
-            if (!string.IsNullOrEmpty(config.Stake) && !Enum.TryParse<MotelyStake>(config.Stake, true, out _))
+            if (
+                !string.IsNullOrEmpty(config.Stake)
+                && !Enum.TryParse<MotelyStake>(config.Stake, true, out _)
+            )
             {
                 var validStakes = string.Join(", ", Enum.GetNames(typeof(MotelyStake)));
                 errors.Add($"Invalid stake: '{config.Stake}'. Valid stakes are: {validStakes}");
@@ -50,10 +56,12 @@ namespace Motely.Filters
                 bool isValid = m == "sum" || m == "max" || m == "max_count" || m == "maxcount";
                 if (!isValid)
                 {
-                    errors.Add($"Invalid mode: '{config.Mode}'. Valid modes are: sum, max (alias: max_count, maxcount)");
+                    errors.Add(
+                        $"Invalid mode: '{config.Mode}'. Valid modes are: sum, max (alias: max_count, maxcount)"
+                    );
                 }
             }
-            
+
             // If there are warnings, print them
             if (warnings.Count > 0)
             {
@@ -65,17 +73,25 @@ namespace Motely.Filters
                 }
                 Console.ResetColor();
             }
-            
+
             // If there are errors, throw exception with all of them
             if (errors.Count > 0)
             {
                 throw new ArgumentException($"INVALID CONFIGURATION:\n{string.Join("\n", errors)}");
             }
         }
-        
-        private static void ValidateFilterItems(List<MotelyJsonConfig.MotleyJsonFilterClause> items, string section, List<string> errors, List<string> warnings, MotelyStake stake, bool isMust = false)
+
+        private static void ValidateFilterItems(
+            List<MotelyJsonConfig.MotleyJsonFilterClause> items,
+            string section,
+            List<string> errors,
+            List<string> warnings,
+            MotelyStake stake,
+            bool isMust = false
+        )
         {
-            if (items == null) return;
+            if (items == null)
+                return;
 
             for (int i = 0; i < items.Count; i++)
             {
@@ -86,7 +102,9 @@ namespace Motely.Filters
                 if (item.ExtensionData != null && item.ExtensionData.Count > 0)
                 {
                     var unknownProps = string.Join(", ", item.ExtensionData.Keys);
-                    errors.Add($"{prefix}: Unknown/invalid properties detected: [{unknownProps}]. Common mistakes: 'minShopSlot'/'maxShopSlot' must be inside 'sources': {{...}} object, not at clause level.");
+                    errors.Add(
+                        $"{prefix}: Unknown/invalid properties detected: [{unknownProps}]. Common mistakes: 'minShopSlot'/'maxShopSlot' must be inside 'sources': {{...}} object, not at clause level."
+                    );
                 }
 
                 // Validate type BEFORE calling InitializeParsedEnums
@@ -96,13 +114,19 @@ namespace Motely.Filters
                     var hint = "";
                     if (item.ExtensionData != null && item.ExtensionData.Count > 0)
                     {
-                        var suspiciousProps = item.ExtensionData.Keys
-                            .Where(k => k.Contains("Tag") || k.Contains("Joker") || k.Contains("Card") || k.Contains("Voucher"))
+                        var suspiciousProps = item
+                            .ExtensionData.Keys.Where(k =>
+                                k.Contains("Tag")
+                                || k.Contains("Joker")
+                                || k.Contains("Card")
+                                || k.Contains("Voucher")
+                            )
                             .ToList();
 
                         if (suspiciousProps.Any())
                         {
-                            hint = $"\n  → Found property '{suspiciousProps.First()}' - did you mean to use \"type\": \"{suspiciousProps.First()}\" instead?";
+                            hint =
+                                $"\n  → Found property '{suspiciousProps.First()}' - did you mean to use \"type\": \"{suspiciousProps.First()}\" instead?";
                         }
                     }
                     errors.Add($"{prefix}: Missing 'type' field{hint}");
@@ -123,104 +147,160 @@ namespace Motely.Filters
                 // CRITICAL: Normalize Sources for ALL item types that support them
                 // This happens ONCE at config load, NOT in the hot path!
                 NormalizeSourcesForItem(item, prefix, errors, warnings);
-                
+
                 // Case insensitive parsing handles all casing - no validation needed
-                
+
                 // Check for common Value vs Values confusion
                 // Both are valid, but mixing them or using wrong type is an error
-                if (!string.IsNullOrEmpty(item.Value) && item.Values != null && item.Values.Length > 0)
+                if (
+                    !string.IsNullOrEmpty(item.Value)
+                    && item.Values != null
+                    && item.Values.Length > 0
+                )
                 {
                     // This is already caught in InitializeParsedEnums, but provide helpful message here
-                    errors.Add($"{prefix}: Cannot specify both 'value' and 'values'. Use 'value' for a single item or 'values' for multiple items (OR matching)");
+                    errors.Add(
+                        $"{prefix}: Cannot specify both 'value' and 'values'. Use 'value' for a single item or 'values' for multiple items (OR matching)"
+                    );
                 }
-                
+
                 // Special validation for Values array with single item - likely user meant Value
-                if (item.Values != null && item.Values.Length == 1 && string.IsNullOrEmpty(item.Value))
+                if (
+                    item.Values != null
+                    && item.Values.Length == 1
+                    && string.IsNullOrEmpty(item.Value)
+                )
                 {
                     // Warn that they might have meant to use 'value' instead
-                    warnings.Add($"{prefix}: Found 'values' array with single item: \"{item.Values[0]}\". Did you mean to use 'value' (single string) instead? Note: 'values' is still valid for OR matching.");
+                    warnings.Add(
+                        $"{prefix}: Found 'values' array with single item: \"{item.Values[0]}\". Did you mean to use 'value' (single string) instead? Note: 'values' is still valid for OR matching."
+                    );
                 }
-                
+
                 // Playing cards don't use Value or Values - they use Suit and Rank
-                if (item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture) == "playingcard" ||
-                    item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture) == "standardcard")
+                if (
+                    item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture)
+                        == "playingcard"
+                    || item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture)
+                        == "standardcard"
+                )
                 {
                     if (!string.IsNullOrEmpty(item.Value))
                     {
                         // Special case: allow "X of Y" format for backwards compatibility
                         if (!item.Value.Contains(" of "))
                         {
-                            errors.Add($"{prefix}: Playing cards should use 'suit' and 'rank' properties, not 'value'. Example: \"suit\": \"Hearts\", \"rank\": \"7\"");
+                            errors.Add(
+                                $"{prefix}: Playing cards should use 'suit' and 'rank' properties, not 'value'. Example: \"suit\": \"Hearts\", \"rank\": \"7\""
+                            );
                         }
                     }
                     if (item.Values != null && item.Values.Length > 0)
                     {
-                        errors.Add($"{prefix}: Playing cards don't support 'values' array. Use 'suit' and 'rank' properties instead");
+                        errors.Add(
+                            $"{prefix}: Playing cards don't support 'values' array. Use 'suit' and 'rank' properties instead"
+                        );
                     }
                 }
-                
+
                 // Validate value based on type
                 switch (item.Type?.ToLower(System.Globalization.CultureInfo.CurrentCulture))
                 {
                     case "joker":
                         // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare", "AnyLegendary"
-                        bool isJokerWildcard = string.IsNullOrEmpty(item.Value) || 
-                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyCommon", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase);
-                        
-                        if (!isJokerWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
+                        bool isJokerWildcard =
+                            string.IsNullOrEmpty(item.Value)
+                            || item.Value.Equals("any", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("*", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyCommon", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals(
+                                "AnyLegendary",
+                                StringComparison.OrdinalIgnoreCase
+                            );
+
+                        if (
+                            !isJokerWildcard
+                            && !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelyJoker>(item.Value, true, out _)
+                        )
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
-                            errors.Add($"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary");
+                            errors.Add(
+                                $"{prefix}: Invalid joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary"
+                            );
                         }
                         // Validate values array
                         if (item.Values != null)
                         {
                             for (int j = 0; j < item.Values.Length; j++)
                             {
-                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j] == "*" ||
-                                                  item.Values[j].Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j].Equals("AnyCommon", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j].Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j].Equals("AnyRare", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j].Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase);
-                                if (!isWildcard && !Enum.TryParse<MotelyJoker>(item.Values[j], true, out _))
+                                bool isWildcard =
+                                    item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j] == "*"
+                                    || item.Values[j]
+                                        .Equals("AnyJoker", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j]
+                                        .Equals("AnyCommon", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j]
+                                        .Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j]
+                                        .Equals("AnyRare", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j]
+                                        .Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase);
+                                if (
+                                    !isWildcard
+                                    && !Enum.TryParse<MotelyJoker>(item.Values[j], true, out _)
+                                )
                                 {
-                                    var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
-                                    errors.Add($"{prefix}.values[{j}]: Invalid joker '{item.Values[j]}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary");
+                                    var validJokers = string.Join(
+                                        ", ",
+                                        Enum.GetNames(typeof(MotelyJoker))
+                                    );
+                                    errors.Add(
+                                        $"{prefix}.values[{j}]: Invalid joker '{item.Values[j]}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare, AnyLegendary"
+                                    );
                                 }
                             }
                         }
                         break;
-                        
+
                     case "souljoker":
                         // Allow wildcards: "any", "*", "AnyJoker", "AnyCommon", "AnyUncommon", "AnyRare"
                         // Note: "AnyLegendary" is not allowed for soul jokers since all soul jokers are legendary by definition
-                        bool isSoulJokerWildcard = string.IsNullOrEmpty(item.Value) || 
-                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyCommon", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase);
-                        
+                        bool isSoulJokerWildcard =
+                            string.IsNullOrEmpty(item.Value)
+                            || item.Value.Equals("any", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("*", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyJoker", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyCommon", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyUncommon", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyRare", StringComparison.OrdinalIgnoreCase);
+
                         // Special case: provide helpful error for "AnyLegendary" on soul jokers
-                        if (item.Value != null && item.Value.Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase))
+                        if (
+                            item.Value != null
+                            && item.Value.Equals("AnyLegendary", StringComparison.OrdinalIgnoreCase)
+                        )
                         {
-                            errors.Add($"{prefix}: 'AnyLegendary' is not valid for soul jokers because all soul jokers are legendary by definition. Use 'any' instead.");
+                            errors.Add(
+                                $"{prefix}: 'AnyLegendary' is not valid for soul jokers because all soul jokers are legendary by definition. Use 'any' instead."
+                            );
                         }
-                        else if (!isSoulJokerWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyJoker>(item.Value, true, out _))
+                        else if (
+                            !isSoulJokerWildcard
+                            && !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelyJoker>(item.Value, true, out _)
+                        )
                         {
                             var validJokers = string.Join(", ", Enum.GetNames(typeof(MotelyJoker)));
-                            errors.Add($"{prefix}: Invalid soul joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare");
+                            errors.Add(
+                                $"{prefix}: Invalid soul joker '{item.Value}'. Valid jokers are: {validJokers}\nWildcards: any, *, AnyJoker, AnyCommon, AnyUncommon, AnyRare"
+                            );
                         }
-                        
+
                         // Validate stickers using enum-based logic for performance
                         if (item.Stickers != null && item.Stickers.Count > 0)
                         {
@@ -229,7 +309,13 @@ namespace Motely.Filters
                                 if (sticker != null)
                                 {
                                     // Parse sticker to enum for efficient validation
-                                    if (Enum.TryParse<MotelyJokerSticker>(sticker, true, out var stickerEnum))
+                                    if (
+                                        Enum.TryParse<MotelyJokerSticker>(
+                                            sticker,
+                                            true,
+                                            out var stickerEnum
+                                        )
+                                    )
                                     {
                                         switch (stickerEnum)
                                         {
@@ -237,13 +323,17 @@ namespace Motely.Filters
                                             case MotelyJokerSticker.Perishable:
                                                 if (stake < MotelyStake.Black)
                                                 {
-                                                    warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Eternal/Perishable stickers only appear on Black Stake or higher.");
+                                                    warnings.Add(
+                                                        $"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Eternal/Perishable stickers only appear on Black Stake or higher."
+                                                    );
                                                 }
                                                 break;
                                             case MotelyJokerSticker.Rental:
                                                 if (stake < MotelyStake.Gold)
                                                 {
-                                                    warnings.Add($"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Rental stickers only appear on Gold Stake.");
+                                                    warnings.Add(
+                                                        $"{prefix}: Searching for '{sticker}' sticker will find NO RESULTS on {stake} Stake! Rental stickers only appear on Gold Stake."
+                                                    );
                                                 }
                                                 break;
                                             case MotelyJokerSticker.None:
@@ -253,178 +343,301 @@ namespace Motely.Filters
                                     }
                                     else
                                     {
-                                        var validStickers = string.Join(", ", Enum.GetNames(typeof(MotelyJokerSticker)).Where(s => s != "None").Select(s => s.ToLower(System.Globalization.CultureInfo.CurrentCulture)));
-                                        errors.Add($"{prefix}: Invalid sticker '{sticker}'. Valid stickers are: {validStickers}");
+                                        var validStickers = string.Join(
+                                            ", ",
+                                            Enum.GetNames(typeof(MotelyJokerSticker))
+                                                .Where(s => s != "None")
+                                                .Select(s =>
+                                                    s.ToLower(
+                                                        System
+                                                            .Globalization
+                                                            .CultureInfo
+                                                            .CurrentCulture
+                                                    )
+                                                )
+                                        );
+                                        errors.Add(
+                                            $"{prefix}: Invalid sticker '{sticker}'. Valid stickers are: {validStickers}"
+                                        );
                                     }
                                 }
                             }
                         }
                         // Note: Legendary joker validation is no longer needed here as the auto-conversion
                         // in MotelyJsonConfig.cs automatically converts legendary jokers to souljoker type
-                        
+
                         // Soul (legendary) jokers only produced via The Soul card in Arcana/Spectral packs – never shops.
                         if (item.Type.Equals("souljoker", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (item.Sources != null && item.Sources.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+                            if (
+                                item.Sources != null
+                                && item.Sources.ShopSlots != null
+                                && item.Sources.ShopSlots.Length > 0
+                            )
                             {
-                                errors.Add($"{prefix}: souljoker '{item.Value ?? "(any)"}' cannot specify shopSlots; legendary jokers never appear in shops. Remove 'shopSlots'.");
+                                errors.Add(
+                                    $"{prefix}: souljoker '{item.Value ?? "(any)"}' cannot specify shopSlots; legendary jokers never appear in shops. Remove 'shopSlots'."
+                                );
                             }
                         }
 
                         // NOTE: Source validation removed - PostProcess() automatically defaults sources when missing.
                         // The config loader now handles this transparently, so users don't need to specify sources explicitly.
                         break;
-                        
+
                     case "tarot":
                     case "tarotcard":
                         // Allow wildcards: "any", "*", "AnyTarot"
-                        bool isTarotWildcard = string.IsNullOrEmpty(item.Value) ||
-                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyTarot", StringComparison.OrdinalIgnoreCase);
+                        bool isTarotWildcard =
+                            string.IsNullOrEmpty(item.Value)
+                            || item.Value.Equals("any", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("*", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyTarot", StringComparison.OrdinalIgnoreCase);
 
-                        if (!isTarotWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyTarotCard>(item.Value, true, out _))
+                        if (
+                            !isTarotWildcard
+                            && !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelyTarotCard>(item.Value, true, out _)
+                        )
                         {
-                            var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
-                            errors.Add($"{prefix}: Invalid tarot '{item.Value}'. Valid tarots are: {validTarots}\nWildcards: any, *, AnyTarot");
+                            var validTarots = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelyTarotCard))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid tarot '{item.Value}'. Valid tarots are: {validTarots}\nWildcards: any, *, AnyTarot"
+                            );
                         }
                         // Validate values array
                         if (item.Values != null)
                         {
                             for (int j = 0; j < item.Values.Length; j++)
                             {
-                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j] == "*" ||
-                                                  item.Values[j].Equals("AnyTarot", StringComparison.OrdinalIgnoreCase);
-                                if (!isWildcard && !Enum.TryParse<MotelyTarotCard>(item.Values[j], true, out _))
+                                bool isWildcard =
+                                    item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j] == "*"
+                                    || item.Values[j]
+                                        .Equals("AnyTarot", StringComparison.OrdinalIgnoreCase);
+                                if (
+                                    !isWildcard
+                                    && !Enum.TryParse<MotelyTarotCard>(item.Values[j], true, out _)
+                                )
                                 {
-                                    var validTarots = string.Join(", ", Enum.GetNames(typeof(MotelyTarotCard)));
-                                    errors.Add($"{prefix}.values[{j}]: Invalid tarot '{item.Values[j]}'. Valid tarots are: {validTarots}\nWildcards: any, *, AnyTarot");
+                                    var validTarots = string.Join(
+                                        ", ",
+                                        Enum.GetNames(typeof(MotelyTarotCard))
+                                    );
+                                    errors.Add(
+                                        $"{prefix}.values[{j}]: Invalid tarot '{item.Values[j]}'. Valid tarots are: {validTarots}\nWildcards: any, *, AnyTarot"
+                                    );
                                 }
                             }
                         }
                         break;
-                        
+
                     case "planet":
                     case "planetcard":
                         // Allow wildcards: "any", "*", "AnyPlanet"
-                        bool isPlanetWildcard = string.IsNullOrEmpty(item.Value) ||
-                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnyPlanet", StringComparison.OrdinalIgnoreCase);
+                        bool isPlanetWildcard =
+                            string.IsNullOrEmpty(item.Value)
+                            || item.Value.Equals("any", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("*", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnyPlanet", StringComparison.OrdinalIgnoreCase);
 
-                        if (!isPlanetWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyPlanetCard>(item.Value, true, out _))
+                        if (
+                            !isPlanetWildcard
+                            && !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelyPlanetCard>(item.Value, true, out _)
+                        )
                         {
-                            var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
-                            errors.Add($"{prefix}: Invalid planet '{item.Value}'. Valid planets are: {validPlanets}\nWildcards: any, *, AnyPlanet");
+                            var validPlanets = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelyPlanetCard))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid planet '{item.Value}'. Valid planets are: {validPlanets}\nWildcards: any, *, AnyPlanet"
+                            );
                         }
                         // Validate values array
                         if (item.Values != null)
                         {
                             for (int j = 0; j < item.Values.Length; j++)
                             {
-                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j] == "*" ||
-                                                  item.Values[j].Equals("AnyPlanet", StringComparison.OrdinalIgnoreCase);
-                                if (!isWildcard && !Enum.TryParse<MotelyPlanetCard>(item.Values[j], true, out _))
+                                bool isWildcard =
+                                    item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j] == "*"
+                                    || item.Values[j]
+                                        .Equals("AnyPlanet", StringComparison.OrdinalIgnoreCase);
+                                if (
+                                    !isWildcard
+                                    && !Enum.TryParse<MotelyPlanetCard>(item.Values[j], true, out _)
+                                )
                                 {
-                                    var validPlanets = string.Join(", ", Enum.GetNames(typeof(MotelyPlanetCard)));
-                                    errors.Add($"{prefix}.values[{j}]: Invalid planet '{item.Values[j]}'. Valid planets are: {validPlanets}\nWildcards: any, *, AnyPlanet");
+                                    var validPlanets = string.Join(
+                                        ", ",
+                                        Enum.GetNames(typeof(MotelyPlanetCard))
+                                    );
+                                    errors.Add(
+                                        $"{prefix}.values[{j}]: Invalid planet '{item.Values[j]}'. Valid planets are: {validPlanets}\nWildcards: any, *, AnyPlanet"
+                                    );
                                 }
                             }
                         }
                         break;
-                        
+
                     case "spectral":
                     case "spectralcard":
                         // Allow wildcards: "any", "*", "AnySpectral"
-                        bool isSpectralWildcard = string.IsNullOrEmpty(item.Value) ||
-                                          item.Value.Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("*", StringComparison.OrdinalIgnoreCase) ||
-                                          item.Value.Equals("AnySpectral", StringComparison.OrdinalIgnoreCase);
+                        bool isSpectralWildcard =
+                            string.IsNullOrEmpty(item.Value)
+                            || item.Value.Equals("any", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("*", StringComparison.OrdinalIgnoreCase)
+                            || item.Value.Equals("AnySpectral", StringComparison.OrdinalIgnoreCase);
 
-                        if (!isSpectralWildcard && !string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelySpectralCard>(item.Value, true, out _))
+                        if (
+                            !isSpectralWildcard
+                            && !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelySpectralCard>(item.Value, true, out _)
+                        )
                         {
-                            var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
-                            errors.Add($"{prefix}: Invalid spectral '{item.Value}'. Valid spectrals are: {validSpectrals}\nWildcards: any, *, AnySpectral");
+                            var validSpectrals = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelySpectralCard))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid spectral '{item.Value}'. Valid spectrals are: {validSpectrals}\nWildcards: any, *, AnySpectral"
+                            );
                         }
                         // Validate values array
                         if (item.Values != null)
                         {
                             for (int j = 0; j < item.Values.Length; j++)
                             {
-                                bool isWildcard = item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase) ||
-                                                  item.Values[j] == "*" ||
-                                                  item.Values[j].Equals("AnySpectral", StringComparison.OrdinalIgnoreCase);
-                                if (!isWildcard && !Enum.TryParse<MotelySpectralCard>(item.Values[j], true, out _))
+                                bool isWildcard =
+                                    item.Values[j].Equals("any", StringComparison.OrdinalIgnoreCase)
+                                    || item.Values[j] == "*"
+                                    || item.Values[j]
+                                        .Equals("AnySpectral", StringComparison.OrdinalIgnoreCase);
+                                if (
+                                    !isWildcard
+                                    && !Enum.TryParse<MotelySpectralCard>(
+                                        item.Values[j],
+                                        true,
+                                        out _
+                                    )
+                                )
                                 {
-                                    var validSpectrals = string.Join(", ", Enum.GetNames(typeof(MotelySpectralCard)));
-                                    errors.Add($"{prefix}.values[{j}]: Invalid spectral '{item.Values[j]}'. Valid spectrals are: {validSpectrals}\nWildcards: any, *, AnySpectral");
+                                    var validSpectrals = string.Join(
+                                        ", ",
+                                        Enum.GetNames(typeof(MotelySpectralCard))
+                                    );
+                                    errors.Add(
+                                        $"{prefix}.values[{j}]: Invalid spectral '{item.Values[j]}'. Valid spectrals are: {validSpectrals}\nWildcards: any, *, AnySpectral"
+                                    );
                                 }
                             }
                         }
                         break;
-                        
+
                     case "tag":
                     case "smallblindtag":
                     case "bigblindtag":
-                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyTag>(item.Value, true, out _))
+                        if (
+                            !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelyTag>(item.Value, true, out _)
+                        )
                         {
                             var validTags = string.Join(", ", Enum.GetNames(typeof(MotelyTag)));
-                            errors.Add($"{prefix}: Invalid tag '{item.Value}'. Valid tags are: {validTags}");
+                            errors.Add(
+                                $"{prefix}: Invalid tag '{item.Value}'. Valid tags are: {validTags}"
+                            );
                         }
-                        
+
                         // Validate that shopSlots and packSlots are not specified for tag filters
                         if (item.Sources != null)
                         {
                             if (item.Sources.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
                             {
-                                warnings.Add($"{prefix}: 'shopSlots' specified for {item.Type} filter but tags don't use shop slots. This property will be ignored.");
+                                warnings.Add(
+                                    $"{prefix}: 'shopSlots' specified for {item.Type} filter but tags don't use shop slots. This property will be ignored."
+                                );
                             }
                             if (item.Sources.PackSlots != null && item.Sources.PackSlots.Length > 0)
                             {
-                                warnings.Add($"{prefix}: 'packSlots' specified for {item.Type} filter but tags don't use pack slots. This property will be ignored.");
+                                warnings.Add(
+                                    $"{prefix}: 'packSlots' specified for {item.Type} filter but tags don't use pack slots. This property will be ignored."
+                                );
                             }
                         }
                         break;
-                        
+
                     case "voucher":
-                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyVoucher>(item.Value, true, out _))
+                        if (
+                            !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelyVoucher>(item.Value, true, out _)
+                        )
                         {
-                            var validVouchers = string.Join(", ", Enum.GetNames(typeof(MotelyVoucher)));
-                            errors.Add($"{prefix}: Invalid voucher '{item.Value}'. Valid vouchers are: {validVouchers}");
+                            var validVouchers = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelyVoucher))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid voucher '{item.Value}'. Valid vouchers are: {validVouchers}"
+                            );
                         }
                         break;
-                        
+
                     case "playingcard":
                     case "standardcard":
                         // Validate suit if specified (allow "Any" as wildcard)
-                        if (!string.IsNullOrEmpty(item.Suit) &&
-                            !item.Suit.Equals("Any", StringComparison.OrdinalIgnoreCase) &&
-                            !item.Suit.Equals("*", StringComparison.OrdinalIgnoreCase) &&
-                            !Enum.TryParse<MotelyPlayingCardSuit>(item.Suit, true, out _))
+                        if (
+                            !string.IsNullOrEmpty(item.Suit)
+                            && !item.Suit.Equals("Any", StringComparison.OrdinalIgnoreCase)
+                            && !item.Suit.Equals("*", StringComparison.OrdinalIgnoreCase)
+                            && !Enum.TryParse<MotelyPlayingCardSuit>(item.Suit, true, out _)
+                        )
                         {
-                            var validSuits = string.Join(", ", Enum.GetNames(typeof(MotelyPlayingCardSuit)));
-                            errors.Add($"{prefix}: Invalid suit '{item.Suit}'. Valid suits are: {validSuits}, Any, *");
+                            var validSuits = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelyPlayingCardSuit))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid suit '{item.Suit}'. Valid suits are: {validSuits}, Any, *"
+                            );
                         }
-                        
+
                         // Validate rank if specified (allow "Any" as wildcard)
-                        if (!string.IsNullOrEmpty(item.Rank) && 
-                            !item.Rank.Equals("Any", StringComparison.OrdinalIgnoreCase) &&
-                            !item.Rank.Equals("*", StringComparison.OrdinalIgnoreCase) &&
-                            !Enum.TryParse<MotelyPlayingCardRank>(item.Rank, true, out _))
+                        if (
+                            !string.IsNullOrEmpty(item.Rank)
+                            && !item.Rank.Equals("Any", StringComparison.OrdinalIgnoreCase)
+                            && !item.Rank.Equals("*", StringComparison.OrdinalIgnoreCase)
+                            && !Enum.TryParse<MotelyPlayingCardRank>(item.Rank, true, out _)
+                        )
                         {
-                            var validRanks = string.Join(", ", Enum.GetNames(typeof(MotelyPlayingCardRank)));
-                            errors.Add($"{prefix}: Invalid rank '{item.Rank}'. Valid ranks are: {validRanks}, Any, *");
+                            var validRanks = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelyPlayingCardRank))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid rank '{item.Rank}'. Valid ranks are: {validRanks}, Any, *"
+                            );
                         }
                         break;
-                        
+
                     case "boss":
                     case "bossblind":
-                        if (!string.IsNullOrEmpty(item.Value) && !Enum.TryParse<MotelyBossBlind>(item.Value, true, out _))
+                        if (
+                            !string.IsNullOrEmpty(item.Value)
+                            && !Enum.TryParse<MotelyBossBlind>(item.Value, true, out _)
+                        )
                         {
-                            var validBosses = string.Join(", ", Enum.GetNames(typeof(MotelyBossBlind)));
-                            errors.Add($"{prefix}: Invalid boss blind '{item.Value}'. Valid boss blinds are: {validBosses}");
+                            var validBosses = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelyBossBlind))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid boss blind '{item.Value}'. Valid boss blinds are: {validBosses}"
+                            );
                         }
                         break;
 
@@ -433,12 +646,20 @@ namespace Motely.Filters
                         // Validate that nested clauses exist
                         if (item.Clauses == null || item.Clauses.Count == 0)
                         {
-                            errors.Add($"{prefix}: '{item.Type}' clause requires 'clauses' array with at least one nested clause");
+                            errors.Add(
+                                $"{prefix}: '{item.Type}' clause requires 'clauses' array with at least one nested clause"
+                            );
                         }
                         else
                         {
                             // Recursively validate nested clauses
-                            ValidateFilterItems(item.Clauses, $"{prefix}.clauses", errors, warnings, stake);
+                            ValidateFilterItems(
+                                item.Clauses,
+                                $"{prefix}.clauses",
+                                errors,
+                                warnings,
+                                stake
+                            );
                         }
                         break;
 
@@ -447,43 +668,63 @@ namespace Motely.Filters
                         var suggestion = GetTypeSuggestion(item.Type);
                         if (suggestion != null)
                         {
-                            errors.Add($"{prefix}: Unknown type '{item.Type}'. Did you mean '{suggestion}'?");
+                            errors.Add(
+                                $"{prefix}: Unknown type '{item.Type}'. Did you mean '{suggestion}'?"
+                            );
                         }
                         else
                         {
-                            errors.Add($"{prefix}: Unknown type '{item.Type}'. Valid types: joker, souljoker, tarot, planet, spectral, playingcard, tag, smallblindtag, bigblindtag, voucher, boss, and, or");
+                            errors.Add(
+                                $"{prefix}: Unknown type '{item.Type}'. Valid types: joker, souljoker, tarot, planet, spectral, playingcard, tag, smallblindtag, bigblindtag, voucher, boss, and, or"
+                            );
                         }
                         break;
                 }
-                
+
                 // Validate edition if specified
                 if (!string.IsNullOrEmpty(item.Edition))
                 {
-                    bool typeSupportsEdition = item.Type?.Equals("joker", StringComparison.OrdinalIgnoreCase) == true ||
-                                               item.Type?.Equals("souljoker", StringComparison.OrdinalIgnoreCase) == true ||
-                                               item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase) == true ||
-                                               item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase) == true ||
-                                               item.Type?.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) == true ||
-                                               item.Type?.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) == true ||
-                                               item.Type?.Equals("planetcard", StringComparison.OrdinalIgnoreCase) == true;
+                    bool typeSupportsEdition =
+                        item.Type?.Equals("joker", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("souljoker", StringComparison.OrdinalIgnoreCase)
+                            == true
+                        || item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase)
+                            == true
+                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase)
+                            == true
+                        || item.Type?.Equals("tarotcard", StringComparison.OrdinalIgnoreCase)
+                            == true
+                        || item.Type?.Equals("spectralcard", StringComparison.OrdinalIgnoreCase)
+                            == true
+                        || item.Type?.Equals("planetcard", StringComparison.OrdinalIgnoreCase)
+                            == true;
                     if (!typeSupportsEdition)
                     {
-                        errors.Add($"{prefix}: Edition specified ('{item.Edition}') but type '{item.Type}' does not support editions (remove 'edition').");
+                        errors.Add(
+                            $"{prefix}: Edition specified ('{item.Edition}') but type '{item.Type}' does not support editions (remove 'edition')."
+                        );
                     }
                     else if (!Enum.TryParse<MotelyItemEdition>(item.Edition, true, out _))
                     {
-                        var validEditions = string.Join(", ", Enum.GetNames(typeof(MotelyItemEdition)));
-                        errors.Add($"{prefix}: Invalid edition '{item.Edition}'. Valid editions are: {validEditions}");
+                        var validEditions = string.Join(
+                            ", ",
+                            Enum.GetNames(typeof(MotelyItemEdition))
+                        );
+                        errors.Add(
+                            $"{prefix}: Invalid edition '{item.Edition}'. Valid editions are: {validEditions}"
+                        );
                     }
                 }
-                
+
                 // Validate antes
                 // Semantics: null/missing = all antes (handled by EffectiveAntes); explicit empty array is invalid.
                 if (item.Antes != null)
                 {
                     if (item.Antes.Length == 0)
                     {
-                        errors.Add($"{prefix}: Empty 'Antes' array (remove it to mean all antes, or specify values)");
+                        errors.Add(
+                            $"{prefix}: Empty 'Antes' array (remove it to mean all antes, or specify values)"
+                        );
                     }
                     else
                     {
@@ -491,55 +732,66 @@ namespace Motely.Filters
                         {
                             if (ante < 0 || ante > 39)
                             {
-                                errors.Add($"{prefix}: Invalid ante {ante}. Must be between 0 and 39.");
+                                errors.Add(
+                                    $"{prefix}: Invalid ante {ante}. Must be between 0 and 39."
+                                );
                             }
                         }
                     }
                 }
-                
+
                 // Validate score for should items
                 // Negative scores are now allowed to enable penalties (e.g., undesirable items)
                 // score=0 is also valid — tallies but doesn't add to total
             }
         }
-        
+
         /// <summary>
         /// CRITICAL: Normalizes Sources at CONFIG LOAD TIME.
         /// NO AMBIGUITY IN THE HOT PATH!
         /// </summary>
-        private static void NormalizeSourcesForItem(MotelyJsonConfig.MotleyJsonFilterClause item, string prefix, List<string> errors, List<string> warnings)
+        private static void NormalizeSourcesForItem(
+            MotelyJsonConfig.MotleyJsonFilterClause item,
+            string prefix,
+            List<string> errors,
+            List<string> warnings
+        )
         {
             // Only normalize for types that support sources
             // Tags, bosses, and vouchers don't have sources - they appear at fixed positions
-            if (item.ItemTypeEnum != MotelyFilterItemType.Joker && 
-                item.ItemTypeEnum != MotelyFilterItemType.SoulJoker &&
-                item.ItemTypeEnum != MotelyFilterItemType.PlayingCard &&
-                item.ItemTypeEnum != MotelyFilterItemType.TarotCard &&
-                item.ItemTypeEnum != MotelyFilterItemType.PlanetCard &&
-                item.ItemTypeEnum != MotelyFilterItemType.SpectralCard)
+            if (
+                item.ItemTypeEnum != MotelyFilterItemType.Joker
+                && item.ItemTypeEnum != MotelyFilterItemType.SoulJoker
+                && item.ItemTypeEnum != MotelyFilterItemType.PlayingCard
+                && item.ItemTypeEnum != MotelyFilterItemType.TarotCard
+                && item.ItemTypeEnum != MotelyFilterItemType.PlanetCard
+                && item.ItemTypeEnum != MotelyFilterItemType.SpectralCard
+            )
             {
                 // This type doesn't use sources - but don't warn for common cases
                 // Tags, bosses, and vouchers are expected to not have sources
-                bool isExpectedNoSource = 
-                    item.ItemTypeEnum == MotelyFilterItemType.Voucher ||
-                    item.ItemTypeEnum == MotelyFilterItemType.Boss ||
-                    item.ItemTypeEnum == MotelyFilterItemType.BigBlindTag ||
-                    item.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag;
-                
+                bool isExpectedNoSource =
+                    item.ItemTypeEnum == MotelyFilterItemType.Voucher
+                    || item.ItemTypeEnum == MotelyFilterItemType.Boss
+                    || item.ItemTypeEnum == MotelyFilterItemType.BigBlindTag
+                    || item.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag;
+
                 if (item.Sources != null && !isExpectedNoSource)
                 {
-                    warnings.Add($"{prefix}: 'sources' specified but type '{item.Type}' doesn't use sources (will be ignored)");
+                    warnings.Add(
+                        $"{prefix}: 'sources' specified but type '{item.Type}' doesn't use sources (will be ignored)"
+                    );
                 }
                 return;
             }
-            
+
             // NORMALIZE SOURCES - Be EXPLICIT!
             if (item.Sources == null)
             {
                 // No sources specified AT ALL
                 // DON'T create a Sources object - leave it null!
                 // The hot path will check the bitmasks which will be 0
-                
+
                 // No warning - ante-based defaults will apply automatically
                 return; // Early return - no Sources object to process
             }
@@ -548,8 +800,10 @@ namespace Motely.Filters
                 // Sources exists - normalize the arrays
 
                 // Populate ShopSlots from min/max if not explicitly set
-                if ((item.Sources.ShopSlots == null || item.Sources.ShopSlots.Length == 0) &&
-                    (item.Sources.MinShopSlot.HasValue || item.Sources.MaxShopSlot.HasValue))
+                if (
+                    (item.Sources.ShopSlots == null || item.Sources.ShopSlots.Length == 0)
+                    && (item.Sources.MinShopSlot.HasValue || item.Sources.MaxShopSlot.HasValue)
+                )
                 {
                     int minSlot = item.Sources.MinShopSlot ?? 0;
                     int maxSlot = item.Sources.MaxShopSlot ?? 1023;
@@ -582,7 +836,9 @@ namespace Motely.Filters
                         }
                         else if (slot >= 1024)
                         {
-                            errors.Add($"{prefix}: Invalid shop slot {slot} (max is 1023, slots are 0-1023)");
+                            errors.Add(
+                                $"{prefix}: Invalid shop slot {slot} (max is 1023, slots are 0-1023)"
+                            );
                         }
 
                         if (!uniqueShopSlots.Add(slot))
@@ -590,14 +846,16 @@ namespace Motely.Filters
                             warnings.Add($"{prefix}: Duplicate shop slot {slot}");
                         }
                     }
-                    
+
                     // Sort and deduplicate
                     item.Sources.ShopSlots = uniqueShopSlots.OrderBy(x => x).ToArray();
                 }
-                
+
                 // Populate PackSlots from min/max if not explicitly set
-                if ((item.Sources.PackSlots == null || item.Sources.PackSlots.Length == 0) &&
-                    (item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue))
+                if (
+                    (item.Sources.PackSlots == null || item.Sources.PackSlots.Length == 0)
+                    && (item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue)
+                )
                 {
                     int minSlot = item.Sources.MinPackSlot ?? 0;
                     int maxSlot = item.Sources.MaxPackSlot ?? 5;
@@ -632,7 +890,9 @@ namespace Motely.Filters
                         }
                         else if (slot > 5)
                         {
-                            errors.Add($"{prefix}: Invalid pack slot {slot} (max is 5, slots are 0-5 for 6 packs total). Did you mean \"shopSlots\" instead?");
+                            errors.Add(
+                                $"{prefix}: Invalid pack slot {slot} (max is 5, slots are 0-5 for 6 packs total). Did you mean \"shopSlots\" instead?"
+                            );
                         }
                         else if (slot >= 4 && hasAnte1)
                         {
@@ -643,12 +903,16 @@ namespace Motely.Filters
                                 if (!autoFixedSlots)
                                 {
                                     Console.ForegroundColor = ConsoleColor.Cyan;
-                                    Console.WriteLine($"  ✨ AUTO-FIX: Ante 1 only has 4 packs (slots 0-3)");
+                                    Console.WriteLine(
+                                        $"  ✨ AUTO-FIX: Ante 1 only has 4 packs (slots 0-3)"
+                                    );
                                     Console.ResetColor();
                                     autoFixedSlots = true;
                                 }
                                 Console.ForegroundColor = ConsoleColor.Cyan;
-                                Console.WriteLine($"  ✨ {prefix}: Adjusted pack slot {slot} → {adjustedSlot} for ante 1 compatibility");
+                                Console.WriteLine(
+                                    $"  ✨ {prefix}: Adjusted pack slot {slot} → {adjustedSlot} for ante 1 compatibility"
+                                );
                                 Console.ResetColor();
                             }
                             continue; // Skip adding original slot
@@ -663,7 +927,7 @@ namespace Motely.Filters
                     // Sort and deduplicate
                     item.Sources.PackSlots = uniquePackSlots.OrderBy(x => x).ToArray();
                 }
-                
+
                 // Validate RequireMega
                 if (item.Sources.RequireMega == true)
                 {
@@ -673,10 +937,10 @@ namespace Motely.Filters
                     }
                 }
             }
-            
+
             // Now compute the bitmasks ONCE at config load time!
             // The hot path will just check these pre-computed values
-            
+
             if (item.Sources != null)
             {
                 // Compute shop bitmask
@@ -684,20 +948,16 @@ namespace Motely.Filters
                 {
                     foreach (var slot in item.Sources.ShopSlots)
                     {
-                        if (slot >= 0 && slot < 64)
-                        {
-                        }
+                        if (slot >= 0 && slot < 64) { }
                     }
                 }
-                
+
                 // Compute pack bitmask
                 if (item.Sources.PackSlots != null)
                 {
                     foreach (var slot in item.Sources.PackSlots)
                     {
-                        if (slot >= 0 && slot < 64)
-                        {
-                        }
+                        if (slot >= 0 && slot < 64) { }
                     }
                 }
             }
@@ -713,10 +973,24 @@ namespace Motely.Filters
 
             var validTypes = new[]
             {
-                "joker", "souljoker", "tarot", "tarotcard", "planet", "planetcard",
-                "spectral", "spectralcard", "playingcard", "standardcard",
-                "tag", "smallblindtag", "bigblindtag", "voucher", "boss", "bossblind",
-                "and", "or"
+                "joker",
+                "souljoker",
+                "tarot",
+                "tarotcard",
+                "planet",
+                "planetcard",
+                "spectral",
+                "spectralcard",
+                "playingcard",
+                "standardcard",
+                "tag",
+                "smallblindtag",
+                "bigblindtag",
+                "voucher",
+                "boss",
+                "bossblind",
+                "and",
+                "or",
             };
 
             string? bestMatch = null;
@@ -724,7 +998,10 @@ namespace Motely.Filters
 
             foreach (var validType in validTypes)
             {
-                int distance = LevenshteinDistance(input.ToLower(System.Globalization.CultureInfo.CurrentCulture), validType);
+                int distance = LevenshteinDistance(
+                    input.ToLower(System.Globalization.CultureInfo.CurrentCulture),
+                    validType
+                );
                 if (distance < bestDistance)
                 {
                     bestDistance = distance;
@@ -758,7 +1035,10 @@ namespace Motely.Filters
                 for (int i = 1; i <= s.Length; i++)
                 {
                     int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
-                    d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+                    d[i, j] = Math.Min(
+                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                        d[i - 1, j - 1] + cost
+                    );
                 }
             }
 
