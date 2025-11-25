@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
-using Terminal.Gui;
 using Motely.Filters;
+using Terminal.Gui;
 
 namespace Motely.TUI;
 
@@ -20,7 +20,7 @@ public class ItemSelectorDialog : Dialog
             Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
             Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightBlue),
             HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightBlue)
+            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightBlue),
         };
 
         var instructionLabel = new Label()
@@ -28,7 +28,7 @@ public class ItemSelectorDialog : Dialog
             X = 1,
             Y = 1,
             Width = Dim.Fill() - 2,
-            Text = "Use arrows + Enter to select:"
+            Text = "Use arrows + Enter to select:",
         };
         Add(instructionLabel);
 
@@ -43,7 +43,7 @@ public class ItemSelectorDialog : Dialog
             Width = Dim.Fill() - 2,
             Height = Dim.Fill() - 5,
             AllowsMarking = false,
-            CanFocus = true
+            CanFocus = true,
         };
         listView.SetSource(new ObservableCollection<string>(itemStrings));
 
@@ -87,7 +87,7 @@ public class ItemSelectorDialog : Dialog
             "Voucher" => GetVouchers(),
             "Boss" => GetBosses(),
             "Tags" => GetTags(),
-            _ => GetJokers()
+            _ => GetJokers(),
         };
     }
 
@@ -101,7 +101,9 @@ public class ItemSelectorDialog : Dialog
     {
         // Soul jokers are legendary jokers (the 5 legendary souls in Balatro)
         return Enum.GetNames(typeof(MotelyJoker))
-            .Where(j => j == "Perkeo" || j == "Triboulet" || j == "Yorick" || j == "Chicot" || j == "Canio")
+            .Where(j =>
+                j == "Perkeo" || j == "Triboulet" || j == "Yorick" || j == "Chicot" || j == "Canio"
+            )
             .OrderBy(x => x)
             .ToArray();
     }
@@ -109,7 +111,22 @@ public class ItemSelectorDialog : Dialog
     private string[] GetPlayingCards()
     {
         // Generate all playing cards (Ace through King, all suits)
-        var ranks = new[] { "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King" };
+        var ranks = new[]
+        {
+            "Ace",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "Jack",
+            "Queen",
+            "King",
+        };
         var suits = new[] { "Spades", "Hearts", "Diamonds", "Clubs" };
         return (from suit in suits from rank in ranks select $"{rank} of {suit}").ToArray();
     }

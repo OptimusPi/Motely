@@ -10,10 +10,11 @@ public struct LuaRandom
     {
         ulong value;
     }
+
     private LuaRandomState _state;
 
 #if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public LuaRandom(double seed)
     {
@@ -30,7 +31,8 @@ public struct LuaRandom
 
             state = Unsafe.As<double, ulong>(ref d);
 
-            if (state < m) state += m;
+            if (state < m)
+                state += m;
         }
 
         ulong z = _state[0];
@@ -67,7 +69,7 @@ public struct LuaRandom
     }
 
 #if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public ulong RandInt()
     {
@@ -93,7 +95,7 @@ public struct LuaRandom
     }
 
 #if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public ulong RandDblMem()
     {
@@ -101,7 +103,7 @@ public struct LuaRandom
     }
 
 #if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public double Random()
     {
@@ -110,7 +112,7 @@ public struct LuaRandom
     }
 
 #if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public int RandInt(int min, int max)
     {
@@ -118,7 +120,7 @@ public struct LuaRandom
     }
 
 #if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public static ulong RandInt(double seed)
     {
@@ -138,7 +140,8 @@ public struct LuaRandom
 
         state = Unsafe.As<double, ulong>(ref d);
 
-        if (state < m) state += m;
+        if (state < m)
+            state += m;
 
         for (int i = 0; i < 5; i++)
         {
@@ -157,7 +160,8 @@ public struct LuaRandom
 
         state = Unsafe.As<double, ulong>(ref d);
 
-        if (state < m) state += m;
+        if (state < m)
+            state += m;
 
         for (int i = 0; i < 5; i++)
         {
@@ -176,7 +180,8 @@ public struct LuaRandom
 
         state = Unsafe.As<double, ulong>(ref d);
 
-        if (state < m) state += m;
+        if (state < m)
+            state += m;
 
         for (int i = 0; i < 5; i++)
         {
@@ -194,7 +199,8 @@ public struct LuaRandom
 
         state = Unsafe.As<double, ulong>(ref d);
 
-        if (state < m) state += m;
+        if (state < m)
+            state += m;
 
         for (int i = 0; i < 5; i++)
         {

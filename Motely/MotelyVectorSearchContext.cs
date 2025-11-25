@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -37,6 +36,7 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
     public MotelyVectorPrngStream InitialPrngStream = initialPrngStream;
     public MotelyResampleStreams ResamplePrngStreams;
     public int ResamplePrngStreamInitCount;
+
     // AUDIT ISSUE #1: Use StrongBox instead of boxing to object to avoid GC allocations
     public List<StrongBox<MotelyVectorPrngStream>>? HighResamplePrngStreams;
     public bool IsCached = isCached;
@@ -51,7 +51,7 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
         {
             InitialPrngStream = InitialPrngStream.CreateSingleStream(lane),
             ResamplePrngStreamInitCount = ResamplePrngStreamInitCount,
-            IsCached = IsCached
+            IsCached = IsCached,
         };
 
         for (int i = 0; i < ResamplePrngStreamInitCount; i++)
@@ -78,14 +78,23 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
 
 public delegate bool MotelyIndividualSeedSearcher(ref MotelySingleSearchContext searchContext);
 
-internal unsafe readonly struct MotelySearchContextParams(PartialSeedHashCache* seedHashCache, int seedLength, int firstCharactersLength, char* seedFirstCharacters, Vector512<double>* seedLastCharacters, bool isAdditionalFilter = false)
+internal readonly unsafe struct MotelySearchContextParams(
+    PartialSeedHashCache* seedHashCache,
+    int seedLength,
+    int firstCharactersLength,
+    char* seedFirstCharacters,
+    Vector512<double>* seedLastCharacters,
+    bool isAdditionalFilter = false
+)
 {
     public readonly PartialSeedHashCache* SeedHashCache = seedHashCache;
     public readonly int SeedLength = seedLength;
     public readonly int SeedFirstCharactersLength = firstCharactersLength;
     public readonly int SeedLastCharactersLength => SeedLength - SeedFirstCharactersLength;
+
     // The first characters which are the same between all vector lanes
     public readonly char* SeedFirstCharacters = seedFirstCharacters;
+
     // The last characters which are different between vector lanes
     public readonly Vector512<double>* SeedLastCharacters = seedLastCharacters;
     public readonly bool IsAdditionalFilter = isAdditionalFilter;
@@ -142,7 +151,9 @@ internal static class MotelyVectorConstants
     // PRNG iteration constants
     public static readonly Vector512<double> PrngMultiplier = Vector512.Create(1.72431234);
     public static readonly Vector512<double> PrngAddend = Vector512.Create(2.134453429141);
-    public static readonly Vector512<double> PrngRoundingFactor = Vector512.Create(10000000000000.0);
+    public static readonly Vector512<double> PrngRoundingFactor = Vector512.Create(
+        10000000000000.0
+    );
 
     // Pseudo-hash constants
     public static readonly Vector512<double> HashConstant = Vector512.Create(1.1239285023);
@@ -157,7 +168,8 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     private readonly ref readonly MotelySearchParameters _searchParameters;
     private readonly ref readonly MotelySearchContextParams _contextParams;
 
-    public MotelyStake Stake => _searchParameters.Stake != 0 ? _searchParameters.Stake : MotelyStake.White;
+    public MotelyStake Stake =>
+        _searchParameters.Stake != 0 ? _searchParameters.Stake : MotelyStake.White;
     public MotelyDeck Deck => _searchParameters.Deck != 0 ? _searchParameters.Deck : MotelyDeck.Red;
 
     private PartialSeedHashCache* SeedHashCache => _contextParams.SeedHashCache;
@@ -171,7 +183,10 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    internal MotelyVectorSearchContext(ref readonly MotelySearchParameters searchParameters, ref readonly MotelySearchContextParams contextParams)
+    internal MotelyVectorSearchContext(
+        ref readonly MotelySearchParameters searchParameters,
+        ref readonly MotelySearchContextParams contextParams
+    )
     {
         _contextParams = ref contextParams;
         _searchParameters = ref searchParameters;
@@ -195,7 +210,11 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         {
             if (IsLaneValid(lane))
             {
-                MotelySingleSearchContext singleSearchContext = new(in _searchParameters, in _contextParams, lane);
+                MotelySingleSearchContext singleSearchContext = new(
+                    in _searchParameters,
+                    in _contextParams,
+                    lane
+                );
 
                 bool success = searcher(ref singleSearchContext);
 
@@ -212,7 +231,8 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public VectorMask SearchIndividualSeeds(VectorMask mask, MotelyIndividualSeedSearcher searcher)
     {
-        if (mask.IsAllFalse()) return mask;
+        if (mask.IsAllFalse())
+            return mask;
 
         uint results = 0;
 
@@ -222,7 +242,11 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         {
             if ((maskShift & 1) != 0 && IsLaneValid(lane))
             {
-                MotelySingleSearchContext singleSearchContext = new(in _searchParameters, in _contextParams, lane);
+                MotelySingleSearchContext singleSearchContext = new(
+                    in _searchParameters,
+                    in _contextParams,
+                    lane
+                );
 
                 bool success = searcher(ref singleSearchContext);
 
@@ -271,7 +295,11 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         // First we do the first characters of the seed which are the same between all vector lanes
         for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
         {
-            num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + keyLength + seedLastCharacterLength + 1)) % 1;
+            num =
+                (
+                    1.1239285023 / num * SeedFirstCharacters[i] * Math.PI
+                    + Math.PI * (i + keyLength + seedLastCharacterLength + 1)
+                ) % 1;
         }
 
         // Then we vectorize and do the last characters of the seed
@@ -312,63 +340,60 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return partialHash;
     }
 
-// #if !DEBUG
-//     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-// #endif
-//     private static void Fract(in Vector512<double> x)
-//     {
-//         Vector512<ulong> xInt = x.AsUInt64();
+    // #if !DEBUG
+    //     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // #endif
+    //     private static void Fract(in Vector512<double> x)
+    //     {
+    //         Vector512<ulong> xInt = x.AsUInt64();
 
+    //         const ulong DblExpo = 0x7FF0000000000000;
+    //         const ulong DblMant = 0x000FFFFFFFFFFFFF;
 
-//         const ulong DblExpo = 0x7FF0000000000000;
-//         const ulong DblMant = 0x000FFFFFFFFFFFFF;
+    //         const int DblMantSZ = 52;
 
-//         const int DblMantSZ = 52;
+    //         const int DblExpoBias = 1023;
 
-//         const int DblExpoBias = 1023;
+    //         Vector512<ulong> expo = (xInt & Vector512.Create(DblExpo)) >> DblMantSZ;
 
-//         Vector512<ulong> expo = (xInt & Vector512.Create(DblExpo)) >> DblMantSZ;
+    //         Vector512<ulong> edgecaseXMask = Vector512.LessThan(expo, Vector512.Create((ulong)DblExpoBias));
 
-//         Vector512<ulong> edgecaseXMask = Vector512.LessThan(expo, Vector512.Create((ulong)DblExpoBias));
+    //         Vector512<ulong> expoBiased = expo - Vector512.Create((ulong)DblExpoBias);
 
-//         Vector512<ulong> expoBiased = expo - Vector512.Create((ulong)DblExpoBias);
+    //         Vector512<ulong> edgecase0Mask = Vector512.GreaterThan(expoBiased, Vector512.Create((ulong)DblMantSZ));
 
-//         Vector512<ulong> edgecase0Mask = Vector512.GreaterThan(expoBiased, Vector512.Create((ulong)DblMantSZ));
+    //         Vector512<ulong> mant = xInt & Vector512.Create(DblMant);
+    //         Vector512<ulong> fractMant = mant & (
+    //             MotelyVectorUtils.ShiftLeft(
+    //                 Vector512.Create(1L),
+    //                 Vector512.Create(Vector512.Create((ulong)DblMantSZ) - expoBiased).AsInt64()
+    //             ).AsUInt64() - Vector512<ulong>.One
+    //         );
 
-//         Vector512<ulong> mant = xInt & Vector512.Create(DblMant);
-//         Vector512<ulong> fractMant = mant & (
-//             MotelyVectorUtils.ShiftLeft(
-//                 Vector512.Create(1L),
-//                 Vector512.Create(Vector512.Create((ulong)DblMantSZ) - expoBiased).AsInt64()
-//             ).AsUInt64() - Vector512<ulong>.One
-//         );
+    //         edgecase0Mask |= Vector512.Equals(fractMant, Vector512.Create(0UL));
 
-//         edgecase0Mask |= Vector512.Equals(fractMant, Vector512.Create(0UL));
-        
+    //         if (expo < DblExpoBias) return x;
 
+    //         // const int DblExpoSZ = 11;
+    //         // if (expo == ((1 << DblExpoSZ) - 1)) return double.NaN;
 
-//         if (expo < DblExpoBias) return x;
+    //         ulong expoBiased = expo - DblExpoBias;
 
-//         // const int DblExpoSZ = 11;
-//         // if (expo == ((1 << DblExpoSZ) - 1)) return double.NaN;
+    //         if (expoBiased > DblMantSZ) return 0;
 
-//         ulong expoBiased = expo - DblExpoBias;
+    //         ulong mant = xInt & DblMant;
+    //         ulong fractMant = mant & ((1ul << (int)(DblMantSZ - expoBiased)) - 1);
 
-//         if (expoBiased > DblMantSZ) return 0;
+    //         if (fractMant == 0) return 0;
 
-//         ulong mant = xInt & DblMant;
-//         ulong fractMant = mant & ((1ul << (int)(DblMantSZ - expoBiased)) - 1);
+    //         int fractLzcnt = BitOperations.LeadingZeroCount(fractMant) - (64 - DblMantSZ);
+    //         ulong resExpo = (expo - (ulong)fractLzcnt - 1) << DblMantSZ;
+    //         ulong resMant = (fractMant << (fractLzcnt + 1)) & DblMant;
 
-//         if (fractMant == 0) return 0;
+    //         ulong res = resExpo | resMant;
 
-//         int fractLzcnt = BitOperations.LeadingZeroCount(fractMant) - (64 - DblMantSZ);
-//         ulong resExpo = (expo - (ulong)fractLzcnt - 1) << DblMantSZ;
-//         ulong resMant = (fractMant << (fractLzcnt + 1)) & DblMant;
-
-//         ulong res = resExpo | resMant;
-
-//         return Unsafe.As<ulong, double>(ref res);
-//     }
+    //         return Unsafe.As<ulong, double>(ref res);
+    //     }
 
     private static readonly double InvPrec = Math.Pow(10.0, 13);
     private static readonly double TwoInvPrec = Math.Pow(2.0, 13);
@@ -425,27 +450,43 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public Vector512<double> GetNextPrngState(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
+    public Vector512<double> GetNextPrngState(
+        ref MotelyVectorPrngStream stream,
+        in Vector512<double> mask
+    )
     {
-        return stream.State = Vector512.ConditionalSelect(mask, IteratePRNG(stream.State), stream.State);
+        return stream.State = Vector512.ConditionalSelect(
+            mask,
+            IteratePRNG(stream.State),
+            stream.State
+        );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Vector512<double> IteratePseudoSeed(ref MotelyVectorPrngStream stream)
     {
-        return (GetNextPrngState(ref stream) + SeedHashCache->GetSeedHashVector()) / MotelyVectorConstants.Two;
+        return (GetNextPrngState(ref stream) + SeedHashCache->GetSeedHashVector())
+            / MotelyVectorConstants.Two;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public Vector512<double> IteratePseudoSeed(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
+    public Vector512<double> IteratePseudoSeed(
+        ref MotelyVectorPrngStream stream,
+        in Vector512<double> mask
+    )
     {
-        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector()) / MotelyVectorConstants.Two;
+        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector())
+            / MotelyVectorConstants.Two;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public Vector512<double> GetNextPseudoSeed(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
+    public Vector512<double> GetNextPseudoSeed(
+        ref MotelyVectorPrngStream stream,
+        in Vector512<double> mask
+    )
     {
-        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector()) / MotelyVectorConstants.Two;
+        return (GetNextPrngState(ref stream, mask) + SeedHashCache->GetSeedHashVector())
+            / MotelyVectorConstants.Two;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -455,7 +496,10 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public Vector512<double> GetNextRandom(ref MotelyVectorPrngStream stream, in Vector512<double> mask)
+    public Vector512<double> GetNextRandom(
+        ref MotelyVectorPrngStream stream,
+        in Vector512<double> mask
+    )
     {
         return VectorLuaRandom.Random(GetNextPseudoSeed(ref stream, mask));
     }
@@ -467,7 +511,12 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public Vector256<int> GetNextRandomInt(ref MotelyVectorPrngStream stream, int min, int max, in Vector512<double> mask)
+    public Vector256<int> GetNextRandomInt(
+        ref MotelyVectorPrngStream stream,
+        int min,
+        int max,
+        in Vector512<double> mask
+    )
     {
         return VectorLuaRandom.RandInt(IteratePseudoSeed(ref stream, mask), min, max);
     }
@@ -475,7 +524,8 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public VectorEnum256<T> GetNextRandomElement<T>(ref MotelyVectorPrngStream stream, T[] choices) where T : unmanaged, Enum
+    public VectorEnum256<T> GetNextRandomElement<T>(ref MotelyVectorPrngStream stream, T[] choices)
+        where T : unmanaged, Enum
     {
         return VectorEnum256.Create(GetNextRandomInt(ref stream, 0, choices.Length), choices);
     }
@@ -483,7 +533,12 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public VectorEnum256<T> GetNextRandomElement<T>(ref MotelyVectorPrngStream stream, T[] choices, in Vector512<double> mask) where T : unmanaged, Enum
+    public VectorEnum256<T> GetNextRandomElement<T>(
+        ref MotelyVectorPrngStream stream,
+        T[] choices,
+        in Vector512<double> mask
+    )
+        where T : unmanaged, Enum
     {
         return VectorEnum256.Create(GetNextRandomInt(ref stream, 0, choices.Length, mask), choices);
     }
@@ -502,18 +557,25 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     private MotelyVectorPrngStream CreateResamplePrngStream(string key, int resample, bool isCached)
     {
         // We don't cache resamples >= 8 because they'd use an extra digit
-        if (isCached && resample >= 8) isCached = false;
+        if (isCached && resample >= 8)
+            isCached = false;
         return CreatePrngStream(key + MotelyPrngKeys.Resample + (resample + 2), isCached);
     }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private ref MotelyVectorPrngStream GetResamplePrngStream(ref MotelyVectorResampleStream resampleStream, string key, int resample)
+    private ref MotelyVectorPrngStream GetResamplePrngStream(
+        ref MotelyVectorResampleStream resampleStream,
+        string key,
+        int resample
+    )
     {
         if (resample < MotelyVectorResampleStream.StackResampleCount)
         {
-            ref MotelyVectorPrngStream prngStream = ref resampleStream.ResamplePrngStreams[resample];
+            ref MotelyVectorPrngStream prngStream = ref resampleStream.ResamplePrngStreams[
+                resample
+            ];
 
             if (resample == resampleStream.ResamplePrngStreamInitCount)
             {

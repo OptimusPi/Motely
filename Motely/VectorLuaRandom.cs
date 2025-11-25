@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -15,13 +14,16 @@ public struct VectorLuaRandom
     private static readonly Vector512<ulong> _mask9 = Vector512.Create(ulong.MaxValue << 9);
     private static readonly Vector512<ulong> _mask17 = Vector512.Create(ulong.MaxValue << 17);
     private static readonly Vector512<ulong> _randDblMemMask = Vector512.Create(4503599627370495ul);
-    private static readonly Vector512<ulong> _randDblMemOr = Vector512.Create(4607182418800017408ul);
+    private static readonly Vector512<ulong> _randDblMemOr = Vector512.Create(
+        4607182418800017408ul
+    );
 
     [InlineArray(4)]
     private struct VectorLuaRandomState
     {
         Vector512<ulong> value;
     }
+
     private VectorLuaRandomState _state;
 
 #if !DEBUG
@@ -130,11 +132,12 @@ public struct VectorLuaRandom
 #endif
     public Vector256<int> RandInt(int min, int max)
     {
-        return MotelyVectorUtils.ConvertToVector256Int32(Random() * (max - min)) + Vector256.Create<int>(min);
+        return MotelyVectorUtils.ConvertToVector256Int32(Random() * (max - min))
+            + Vector256.Create<int>(min);
     }
 
 #if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     public static Vector512<ulong> RandInt(Vector512<double> seed)
     {
@@ -250,6 +253,7 @@ public struct VectorLuaRandom
 #endif
     public static Vector256<int> RandInt(Vector512<double> seed, int min, int max)
     {
-        return MotelyVectorUtils.ConvertToVector256Int32(Random(seed) * (max - min)) + Vector256.Create<int>(min);
+        return MotelyVectorUtils.ConvertToVector256Int32(Random(seed) * (max - min))
+            + Vector256.Create<int>(min);
     }
 }

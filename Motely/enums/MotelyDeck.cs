@@ -1,4 +1,3 @@
-
 namespace Motely;
 
 public enum MotelyDeck
@@ -17,7 +16,7 @@ public enum MotelyDeck
     Painted,
     Anaglyph,
     Plasma,
-    Erratic
+    Erratic,
 }
 
 public static class MotelyDeckExt

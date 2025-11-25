@@ -15,12 +15,14 @@ public struct FunnySeedFilterDesc : IMotelySeedFilterDesc<FunnySeedFilterDesc.Fu
     public static System.Collections.Concurrent.ConcurrentBag<string> FoundSeeds = new();
     public static List<string>? CustomKeywords { get; set; }
     public static bool CollectOnly { get; set; } = false; // When true, collect seeds but don't report them
-    
+
     public FunnySeedFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         // No caching needed - we're just checking the seed hash itself
-        DebugLogger.Log("[FunnySeedFilter] CreateFilter called! CustomKeywords = " + 
-            (CustomKeywords == null ? "null" : string.Join(", ", CustomKeywords)));
+        DebugLogger.Log(
+            "[FunnySeedFilter] CreateFilter called! CustomKeywords = "
+                + (CustomKeywords == null ? "null" : string.Join(", ", CustomKeywords))
+        );
         return new FunnySeedFilter();
     }
 
@@ -30,33 +32,33 @@ public struct FunnySeedFilterDesc : IMotelySeedFilterDesc<FunnySeedFilterDesc.Fu
         {
             DebugLogger.Log("[FunnySeedFilter] Filter called!");
             // Use SearchIndividualSeeds which returns a VectorMask directly
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-            {
-                // Check if the seed is funny
-                var seed = singleCtx.GetSeed();
-                bool isFunny = CheckSeedStatic(seed);
-                
-                if (isFunny)
+            return ctx.SearchIndividualSeeds(
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    DebugLogger.Log($"[FunnySeedFilter] Found funny seed: {seed}");
+                    // Check if the seed is funny
+                    var seed = singleCtx.GetSeed();
+                    bool isFunny = CheckSeedStatic(seed);
+
+                    if (isFunny)
+                    {
+                        DebugLogger.Log($"[FunnySeedFilter] Found funny seed: {seed}");
+                    }
+
+                    // In CollectOnly mode, collect but don't report
+                    if (CollectOnly && isFunny)
+                    {
+                        return false; // Don't report to search infrastructure
+                    }
+
+                    return isFunny;
                 }
-                
-                // In CollectOnly mode, collect but don't report
-                if (CollectOnly && isFunny)
-                {
-                    return false; // Don't report to search infrastructure
-                }
-                
-                return isFunny;
-            });
+            );
         }
-        
+
         static bool CheckSeedStatic(string seed)
         {
             // Use custom keywords if provided, otherwise use default funny words
-            var funnyWords = CustomKeywords ?? new List<string> { 
-                "TACO", "PIES"
-            };
+            var funnyWords = CustomKeywords ?? new List<string> { "TACO", "PIES" };
 
             // Check for funny words! (case insensitive)
             foreach (var funnyWord in funnyWords)
@@ -72,7 +74,7 @@ public struct FunnySeedFilterDesc : IMotelySeedFilterDesc<FunnySeedFilterDesc.Fu
 
             return false;
         }
-        
+
         public bool CheckSeed(ref MotelySingleSearchContext ctx)
         {
             var seed = ctx.GetSeed();

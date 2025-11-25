@@ -1,8 +1,8 @@
-using Terminal.Gui;
-using Motely.API;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Motely.API;
+using Terminal.Gui;
 
 namespace Motely.TUI;
 
@@ -35,8 +35,8 @@ public class ApiServerWindow : Window
             TextAlignment = Alignment.Center,
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
+            },
         };
         Add(titleLabel);
 
@@ -48,8 +48,8 @@ public class ApiServerWindow : Window
             Text = "Status: Starting...",
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
+            },
         };
         Add(_statusLabel);
 
@@ -61,8 +61,8 @@ public class ApiServerWindow : Window
             Text = $"URL: http://{host}:{port}/",
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
+            },
         };
         Add(_urlLabel);
 
@@ -74,8 +74,8 @@ public class ApiServerWindow : Window
             Text = "Active Searches: 0",
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
+            },
         };
         Add(_activeSearchesLabel);
 
@@ -87,8 +87,8 @@ public class ApiServerWindow : Window
             Text = "[REQUEST LOG]",
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
+            },
         };
         Add(logLabel);
 
@@ -101,7 +101,7 @@ public class ApiServerWindow : Window
             Height = Dim.Fill() - 6,
             ReadOnly = true,
             WordWrap = false,
-            CanFocus = true
+            CanFocus = true,
         };
         Add(_logView);
 
@@ -114,8 +114,8 @@ public class ApiServerWindow : Window
             ColorScheme = new ColorScheme()
             {
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed)
-            }
+                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
+            },
         };
         _stopButton.Accept += (s, e) => StopServer();
         Add(_stopButton);
@@ -148,7 +148,7 @@ public class ApiServerWindow : Window
                 _statusLabel.Text = "Status: Running";
                 _statusLabel.ColorScheme = new ColorScheme()
                 {
-                    Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black)
+                    Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
                 };
             });
 
@@ -168,7 +168,7 @@ public class ApiServerWindow : Window
                 _statusLabel.Text = "Status: Failed";
                 _statusLabel.ColorScheme = new ColorScheme()
                 {
-                    Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black)
+                    Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
                 };
             });
         }
@@ -180,7 +180,7 @@ public class ApiServerWindow : Window
                 _statusLabel.Text = "Status: Stopped";
                 _statusLabel.ColorScheme = new ColorScheme()
                 {
-                    Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black)
+                    Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black),
                 };
                 _stopButton.Text = "Close";
             });

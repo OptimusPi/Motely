@@ -42,6 +42,4 @@ public class Motely
     public const int BossTypeMask = 0b1 << BossTypeOffset;
     public const int BossRequiredAnteOffset = 28;
     public const int BossRequiredAnteMask = 0b111 << BossRequiredAnteOffset;
-
-
 }

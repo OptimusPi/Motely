@@ -6,11 +6,17 @@ namespace Motely.Executors
     /// <summary>
     /// Executes JSON-based filter searches with specialized vectorized filters
     /// </summary>
-    public sealed class JsonSearchExecutor(string configPath, JsonSearchParams parameters, string format = "json")
+    public sealed class JsonSearchExecutor(
+        string configPath,
+        JsonSearchParams parameters,
+        string format = "json",
+        Action<MotelySeedScoreTally>? customCallback = null
+    )
     {
         private readonly string _configPath = configPath;
         private readonly JsonSearchParams _params = parameters;
         private readonly string _format = format;
+        private readonly Action<MotelySeedScoreTally>? _customCallback = customCallback;
         private bool _cancelled = false;
 
         /// <summary>
@@ -19,6 +25,32 @@ namespace Motely.Executors
         public void Cancel()
         {
             _cancelled = true;
+        }
+
+        /// <summary>
+        /// Initialize parsed enums for a clause with helpful error messages
+        /// </summary>
+        private static void InitializeClauseWithContext(
+            MotelyJsonConfig.MotleyJsonFilterClause clause,
+            string sectionName,  // "MUST", "MUSTNOT", "SHOULD"
+            int index)
+        {
+            try
+            {
+                clause.InitializeParsedEnums();
+            }
+            catch (Exception ex)
+            {
+                var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
+                var valueText = !string.IsNullOrEmpty(clause.Value)
+                    ? clause.Value
+                    : (clause.Values != null && clause.Values.Length > 0
+                        ? string.Join(", ", clause.Values)
+                        : "<none>");
+                throw new ArgumentException(
+                    $"Config error in {sectionName}[{index}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: Each clause needs a non-empty 'type' (e.g., 'Joker', 'TarotCard', 'PlayingCard'). If using multiple values, use 'values': [ ... ] not 'value'."
+                );
+            }
         }
 
         public int Execute()
@@ -64,11 +96,8 @@ namespace Motely.Executors
                     return 1;
                 }
 
-                // Print CSV header if we have SHOULD clauses for scoring
-                if (config.Should?.Count > 0)
-                {
-                    PrintResultsHeader(config);
-                }
+                // Print CSV header (even for filters with no SHOULD clauses, output seed with score 0)
+                PrintResultsHeader(config);
 
                 // Setup cancellation handler
                 Console.CancelKeyPress += (sender, e) =>
@@ -166,8 +195,14 @@ namespace Motely.Executors
         private MotelyJsonConfig LoadConfig()
         {
             string configPath;
-            string extension = _format == "toml" ? ".toml" : _format == "yaml" ? ".yaml" : ".json";
-            string filterDir = _format == "toml" ? "TomlItemFilters" : _format == "yaml" ? "YamlItemFilters" : "JsonItemFilters";
+            string extension =
+                _format == "toml" ? ".toml"
+                : _format == "yaml" ? ".yaml"
+                : ".json";
+            string filterDir =
+                _format == "toml" ? "TomlItemFilters"
+                : _format == "yaml" ? "YamlItemFilters"
+                : "JsonItemFilters";
 
             // If the caller passed a rooted or path-containing config, use it directly
             // (but append extension only when no extension is present). Otherwise treat
@@ -185,18 +220,16 @@ namespace Motely.Executors
             }
 
             if (!File.Exists(configPath))
-                throw new FileNotFoundException($"Could not find {_format.ToUpper()} config file: {configPath}");
+                throw new FileNotFoundException(
+                    $"Could not find {_format.ToUpper()} config file: {configPath}"
+                );
 
             // Load based on format
             MotelyJsonConfig? config;
             string? error;
             bool success;
 
-            if (_format == "toml")
-            {
-                success = TomlConfigLoader.TryLoadFromToml(configPath, out config, out error);
-            }
-            else if (_format == "yaml")
+            if (_format == "yaml")
             {
                 success = YamlConfigLoader.TryLoadFromYaml(configPath, out config, out error);
             }
@@ -238,25 +271,7 @@ namespace Motely.Executors
             // NOTE: Don't re-initialize SHOULD clauses if they're the same objects as MUST clauses!
             for (int i = 0; i < voucherMustClauses.Count; i++)
             {
-                var clause = voucherMustClauses[i];
-                try
-                {
-                    clause.InitializeParsedEnums();
-                }
-                catch (Exception ex)
-                {
-                    var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                    var valueText = !string.IsNullOrEmpty(clause.Value)
-                        ? clause.Value
-                        : (
-                            clause.Values != null && clause.Values.Length > 0
-                                ? string.Join(", ", clause.Values)
-                                : "<none>"
-                        );
-                    throw new ArgumentException(
-                        $"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: Each clause needs a non-empty 'type' (e.g., 'Joker', 'TarotCard', 'PlayingCard'). If using multiple values, use 'values': [ ... ] not 'value'."
-                    );
-                }
+                InitializeClauseWithContext(voucherMustClauses[i], "MUST", i);
             }
 
             // Only initialize SHOULD clauses if they haven't been initialized already
@@ -269,26 +284,7 @@ namespace Motely.Executors
                     bool alreadyInitialized = config.Must?.Contains(shouldClause) == true;
                     if (!alreadyInitialized)
                     {
-                        try
-                        {
-                            shouldClause.InitializeParsedEnums();
-                        }
-                        catch (Exception ex)
-                        {
-                            var typeText = string.IsNullOrEmpty(shouldClause.Type)
-                                ? "<missing>"
-                                : shouldClause.Type;
-                            var valueText = !string.IsNullOrEmpty(shouldClause.Value)
-                                ? shouldClause.Value
-                                : (
-                                    shouldClause.Values != null && shouldClause.Values.Length > 0
-                                        ? string.Join(", ", shouldClause.Values)
-                                        : "<none>"
-                                );
-                            throw new ArgumentException(
-                                $"Config error in SHOULD[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: 'type' must be one of supported types (e.g., 'Joker', 'Voucher', 'TarotCard')."
-                            );
-                        }
+                        InitializeClauseWithContext(shouldClause, "SHOULD", i);
                     }
                 }
             }
@@ -296,14 +292,14 @@ namespace Motely.Executors
             // Process the scoring config to calculate MaxVoucherAnte
             scoringConfig.PostProcess();
 
-            // Create callback for CSV output - always output when scoring
-            Action<MotelySeedScoreTally> scoreCallback = (MotelySeedScoreTally result) =>
+            // Create callback for CSV output - use custom callback if provided, otherwise console output
+            Action<MotelySeedScoreTally> scoreCallback = _customCallback ?? ((MotelySeedScoreTally result) =>
             {
                 // Just print the seed - it will naturally push the progress line down
                 FancyConsole.WriteLine(
                     TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns)
                 );
-            };
+            });
 
             MotelyJsonSeedScoreDesc scoreDesc = new(
                 scoringConfig,
@@ -332,25 +328,7 @@ namespace Motely.Executors
             // Initialize parsed enums for all MUST clauses with helpful errors
             for (int i = 0; i < mustClauses.Count; i++)
             {
-                var clause = mustClauses[i];
-                try
-                {
-                    clause.InitializeParsedEnums();
-                }
-                catch (Exception ex)
-                {
-                    var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
-                    var valueText = !string.IsNullOrEmpty(clause.Value)
-                        ? clause.Value
-                        : (
-                            clause.Values != null && clause.Values.Length > 0
-                                ? string.Join(", ", clause.Values)
-                                : "<none>"
-                        );
-                    throw new ArgumentException(
-                        $"Config error in MUST[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nSuggestion: Add 'type' and 'value' (or 'values'): {{ \"type\": \"Joker\", \"value\": \"Perkeo\" }}"
-                    );
-                }
+                InitializeClauseWithContext(mustClauses[i], "MUST", i);
             }
 
             Dictionary<
@@ -374,27 +352,7 @@ namespace Motely.Executors
                     // Initialize parsed enums for MustNot clauses
                     for (int i = 0; i < config.MustNot.Count; i++)
                     {
-                        var clause = config.MustNot[i];
-                        try
-                        {
-                            clause.InitializeParsedEnums();
-                        }
-                        catch (Exception ex)
-                        {
-                            var typeText = string.IsNullOrEmpty(clause.Type)
-                                ? "<missing>"
-                                : clause.Type;
-                            var valueText = !string.IsNullOrEmpty(clause.Value)
-                                ? clause.Value
-                                : (
-                                    clause.Values != null && clause.Values.Length > 0
-                                        ? string.Join(", ", clause.Values)
-                                        : "<none>"
-                                );
-                            throw new ArgumentException(
-                                $"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}"
-                            );
-                        }
+                        InitializeClauseWithContext(config.MustNot[i], "MUSTNOT", i);
                     }
 
                     // Mark all mustNot clauses as inverted
@@ -521,27 +479,7 @@ namespace Motely.Executors
                     // Initialize parsed enums for MustNot clauses
                     for (int i = 0; i < config.MustNot.Count; i++)
                     {
-                        var clause = config.MustNot[i];
-                        try
-                        {
-                            clause.InitializeParsedEnums();
-                        }
-                        catch (Exception ex)
-                        {
-                            var typeText = string.IsNullOrEmpty(clause.Type)
-                                ? "<missing>"
-                                : clause.Type;
-                            var valueText = !string.IsNullOrEmpty(clause.Value)
-                                ? clause.Value
-                                : (
-                                    clause.Values != null && clause.Values.Length > 0
-                                        ? string.Join(", ", clause.Values)
-                                        : "<none>"
-                                );
-                            throw new ArgumentException(
-                                $"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}"
-                            );
-                        }
+                        InitializeClauseWithContext(config.MustNot[i], "MUSTNOT", i);
                     }
 
                     if (!_params.Quiet)
@@ -584,12 +522,9 @@ namespace Motely.Executors
                 if (_params.EndBatch > 0)
                     compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch);
 
-                bool compositeNeedsScoring = (config.Should?.Count > 0);
-                if (compositeNeedsScoring)
-                {
-                    compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
-                    compositeSettings = compositeSettings.WithCsvOutput(true);
-                }
+                // Always enable CSV output and scoring (score will be 0 if no SHOULD clauses)
+                compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
+                compositeSettings = compositeSettings.WithCsvOutput(true);
 
                 // Apply quiet mode
                 if (_params.Quiet)
@@ -634,27 +569,7 @@ namespace Motely.Executors
 
                 for (int i = 0; i < config.MustNot!.Count; i++)
                 {
-                    var clause = config.MustNot[i];
-                    try
-                    {
-                        clause.InitializeParsedEnums();
-                    }
-                    catch (Exception ex)
-                    {
-                        var typeText = string.IsNullOrEmpty(clause.Type)
-                            ? "<missing>"
-                            : clause.Type;
-                        var valueText = !string.IsNullOrEmpty(clause.Value)
-                            ? clause.Value
-                            : (
-                                clause.Values != null && clause.Values.Length > 0
-                                    ? string.Join(", ", clause.Values)
-                                    : "<none>"
-                            );
-                        throw new ArgumentException(
-                            $"Config error in MUSTNOT[{i}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}"
-                        );
-                    }
+                    InitializeClauseWithContext(config.MustNot[i], "MUSTNOT", i);
                 }
 
                 if (!_params.Quiet)
@@ -696,12 +611,9 @@ namespace Motely.Executors
                 if (_params.EndBatch > 0)
                     compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch);
 
-                bool singleCategoryNeedsScoring = (config.Should?.Count > 0);
-                if (singleCategoryNeedsScoring)
-                {
-                    compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
-                    compositeSettings = compositeSettings.WithCsvOutput(true);
-                }
+                // Always enable CSV output and scoring (score will be 0 if no SHOULD clauses)
+                compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
+                compositeSettings = compositeSettings.WithCsvOutput(true);
 
                 if (_params.Quiet)
                     compositeSettings = compositeSettings.WithQuietMode(true);
@@ -849,11 +761,12 @@ namespace Motely.Executors
                             MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
                         )
                     ),
-                    FilterCategory.SoulJokerEditionOnly => new MotelyJsonSoulJokerEditionOnlyFilterDesc(
-                        MotelyJsonSoulJokerFilterClause.CreateCriteria(
-                            MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
-                        )
-                    ),
+                    FilterCategory.SoulJokerEditionOnly =>
+                        new MotelyJsonSoulJokerEditionOnlyFilterDesc(
+                            MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                                MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
+                            )
+                        ),
                     FilterCategory.Joker => new MotelyJsonJokerFilterDesc(
                         MotelyJsonJokerFilterClause.CreateCriteria(
                             MotelyJsonJokerFilterClause.ConvertClauses(clauses)
@@ -902,14 +815,9 @@ namespace Motely.Executors
                 }
             }
 
-            // Add scoring when SHOULD clauses exist
-            bool needsScoring = (config.Should?.Count > 0);
-            if (needsScoring)
-            {
-                searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
-                // Always enable CSV output when scoring
-                searchSettings = searchSettings.WithCsvOutput(true);
-            }
+            // Always enable CSV output and scoring (score will be 0 if no SHOULD clauses)
+            searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
+            searchSettings = searchSettings.WithCsvOutput(true);
 
             // Apply quiet mode
             if (_params.Quiet)

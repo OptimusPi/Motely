@@ -10,17 +10,17 @@ namespace Motely.Filters;
 public abstract class MotelyJsonFilterClause
 {
     public MotelyItemEdition? EditionEnum { get; init; }
-    public int? Min { get; init; }  // Minimum count threshold - if total count < Min, clause fails
+    public int? Min { get; init; } // Minimum count threshold - if total count < Min, clause fails
 
     /// <summary>
     /// Calculate min and max antes from a collection of clauses using their arrays
     /// </summary>
-    public static (int minAnte, int maxAnte) CalculateAnteRange<T>(IEnumerable<T> clauses) 
+    public static (int minAnte, int maxAnte) CalculateAnteRange<T>(IEnumerable<T> clauses)
         where T : MotelyJsonFilterClause
     {
         int minAnte = int.MaxValue;
         int maxAnte = int.MinValue;
-        
+
         foreach (var clause in clauses)
         {
             // Get ante array from derived class
@@ -32,9 +32,9 @@ public abstract class MotelyJsonFilterClause
                 MotelyJsonTarotFilterClause t => t.WantedAntes,
                 MotelyJsonSpectralFilterClause sp => sp.WantedAntes,
                 MotelyJsonPlanetFilterClause p => p.WantedAntes,
-                _ => null
+                _ => null,
             };
-            
+
             if (wantedAntes != null)
             {
                 // Find min and max wanted antes - simple and clear
@@ -42,20 +42,22 @@ public abstract class MotelyJsonFilterClause
                 {
                     if (wantedAntes[ante])
                     {
-                        if (ante < minAnte) minAnte = ante;
-                        if (ante > maxAnte) maxAnte = ante;
+                        if (ante < minAnte)
+                            minAnte = ante;
+                        if (ante > maxAnte)
+                            maxAnte = ante;
                     }
                 }
             }
         }
-        
+
         // Handle empty case
         if (minAnte == int.MaxValue)
         {
             minAnte = 1;
             maxAnte = 1;
         }
-        
+
         return (minAnte, maxAnte);
     }
 }
@@ -67,13 +69,13 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker? JokerType { get; init; }
     public List<MotelyJoker>? JokerTypes { get; init; }
-    public new MotelyItemEdition? EditionEnum { get; init; }  // ADDED: Preserve edition requirements (new keyword to hide base class member)
-    public List<MotelyJokerSticker>? StickerEnums { get; init; }  // ADDED: Preserve sticker requirements
+    public new MotelyItemEdition? EditionEnum { get; init; } // ADDED: Preserve edition requirements (new keyword to hide base class member)
+    public List<MotelyJokerSticker>? StickerEnums { get; init; } // ADDED: Preserve sticker requirements
     public bool IsWildcard { get; init; }
     public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
     public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
-    public bool[] WantedShopSlots { get; init; } = new bool[1024];  // Support large maxShopSlot values (600+)
+    public bool[] WantedShopSlots { get; init; } = new bool[1024]; // Support large maxShopSlot values (600+)
     public bool[] WantedPackSlots { get; init; } = new bool[6];
     public int? MinPackSlot { get; init; }
     public int? MaxPackSlot { get; init; }
@@ -87,7 +89,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     /// <summary>
     /// Create from generic JSON config clause
     /// </summary>
-    public static MotelyJsonJokerFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
+    public static MotelyJsonJokerFilterClause FromJsonClause(
+        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+    )
     {
         bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes;
@@ -96,17 +100,20 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
         }
-        
+
         // Create shop slots bool array from explicit sources OR from min/max range
         bool[] wantedShopSlots = new bool[1024];
-        DebugLogger.Log($"[JOKER CONVERT] Value={jsonClause.Value}, Sources={jsonClause.Sources}, MinShop={jsonClause.MinShopSlot}, MaxShop={jsonClause.MaxShopSlot}");
+        DebugLogger.Log(
+            $"[JOKER CONVERT] Value={jsonClause.Value}, Sources={jsonClause.Sources}, MinShop={jsonClause.MinShopSlot}, MaxShop={jsonClause.MaxShopSlot}"
+        );
         if (jsonClause.Sources?.ShopSlots != null)
         {
             // Explicit shop slots specified
             DebugLogger.Log($"[JOKER CONVERT] Using explicit ShopSlots");
             foreach (var slot in jsonClause.Sources.ShopSlots)
             {
-                if (slot >= 0 && slot < 1024) wantedShopSlots[slot] = true;
+                if (slot >= 0 && slot < 1024)
+                    wantedShopSlots[slot] = true;
             }
         }
         else if (jsonClause.MinShopSlot.HasValue || jsonClause.MaxShopSlot.HasValue)
@@ -114,29 +121,42 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             // Use min/max shop slot range (min inclusive, max exclusive)
             int minSlot = jsonClause.MinShopSlot ?? 0;
             int maxSlot = jsonClause.MaxShopSlot ?? 1023;
-            DebugLogger.Log($"[SHOP SLOTS] MinShopSlot={jsonClause.MinShopSlot}, MaxShopSlot={jsonClause.MaxShopSlot}, range={minSlot}-{maxSlot}");
+            DebugLogger.Log(
+                $"[SHOP SLOTS] MinShopSlot={jsonClause.MinShopSlot}, MaxShopSlot={jsonClause.MaxShopSlot}, range={minSlot}-{maxSlot}"
+            );
             for (int i = minSlot; i < maxSlot && i < 1024; i++)
             {
                 wantedShopSlots[i] = true;
             }
-            DebugLogger.Log($"[SHOP SLOTS] Set slots {minSlot} to {maxSlot-1} (exclusive max). Slot[6]={wantedShopSlots[6]}");
+            DebugLogger.Log(
+                $"[SHOP SLOTS] Set slots {minSlot} to {maxSlot - 1} (exclusive max). Slot[6]={wantedShopSlots[6]}"
+            );
         }
 
         bool[] wantedPackSlots = new bool[6];
         if (jsonClause.Sources?.PackSlots != null)
         {
-            DebugLogger.Log($"[JOKER CONVERT] Explicit PackSlots: {string.Join(",", jsonClause.Sources.PackSlots)}");
+            DebugLogger.Log(
+                $"[JOKER CONVERT] Explicit PackSlots: {string.Join(",", jsonClause.Sources.PackSlots)}"
+            );
             foreach (var slot in jsonClause.Sources.PackSlots)
             {
-                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+                if (slot >= 0 && slot < 6)
+                    wantedPackSlots[slot] = true;
             }
         }
-        else if (jsonClause.Sources?.ShopSlots == null && !jsonClause.MinShopSlot.HasValue && !jsonClause.MaxShopSlot.HasValue)
+        else if (
+            jsonClause.Sources?.ShopSlots == null
+            && !jsonClause.MinShopSlot.HasValue
+            && !jsonClause.MaxShopSlot.HasValue
+        )
         {
             // NO slots specified - leave arrays EMPTY so CountJokerOccurrences can apply ante-based defaults
             // This allows dynamic slot ranges per ante (e.g., ante 0 = 3 shops, ante 3+ = 6 + ante shops)
             // IMPORTANT: If user specifies ANY source (packSlots, shopSlots, etc), we respect it and DON'T add defaults!
-            DebugLogger.Log($"[JOKER CONVERT] No slots specified, will use ante-based defaults in scoring");
+            DebugLogger.Log(
+                $"[JOKER CONVERT] No slots specified, will use ante-based defaults in scoring"
+            );
             // Both wantedShopSlots and wantedPackSlots remain all-false (empty)
         }
         else
@@ -147,7 +167,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         // DEBUG: Log final state
         int shopCount = wantedShopSlots.Count(s => s);
         int packCount = wantedPackSlots.Count(s => s);
-        DebugLogger.Log($"[JOKER CONVERT FINAL] {jsonClause.Value}: shopSlots={shopCount}, packSlots={packCount}");
+        DebugLogger.Log(
+            $"[JOKER CONVERT FINAL] {jsonClause.Value}: shopSlots={shopCount}, packSlots={packCount}"
+        );
 
         // Pre-calculate MaxShopSlotsNeeded for hot path
         int maxShopSlotsNeeded = 0;
@@ -175,7 +197,8 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
                 maxPackSlotsNeeded = i + 1;
             }
         }
-        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default if no specific slots
+        if (maxPackSlotsNeeded == 0)
+            maxPackSlotsNeeded = 6; // Default if no specific slots
 
         return new MotelyJsonJokerFilterClause
         {
@@ -195,16 +218,18 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             MaxShopSlot = jsonClause.MaxShopSlot,
             MaxShopSlotsNeeded = maxShopSlotsNeeded,
             MaxPackSlotsNeeded = maxPackSlotsNeeded,
-            HasShopSlots = hasShopSlots,  // PRE-COMPUTED!
-            HasPackSlots = hasPackSlots,  // PRE-COMPUTED!
-            Min = jsonClause.Min
+            HasShopSlots = hasShopSlots, // PRE-COMPUTED!
+            HasPackSlots = hasPackSlots, // PRE-COMPUTED!
+            Min = jsonClause.Min,
         };
     }
-    
+
     /// <summary>
     /// Convert a list of generic clauses to joker-specific clauses
     /// </summary>
-    public static List<MotelyJsonJokerFilterClause> ConvertClauses(List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses)
+    public static List<MotelyJsonJokerFilterClause> ConvertClauses(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+    )
     {
         return genericClauses
             .Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker)
@@ -215,7 +240,9 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     /// <summary>
     /// Create criteria DTO from typed clauses - pre-aggregates all cross-clause calculations
     /// </summary>
-    public static MotelyJsonJokerFilterCriteria CreateCriteria(List<MotelyJsonJokerFilterClause> clauses)
+    public static MotelyJsonJokerFilterCriteria CreateCriteria(
+        List<MotelyJsonJokerFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -235,7 +262,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             Clauses = clauses,
             MinAnte = minAnte,
             MaxAnte = maxAnte,
-            MaxShopSlotsNeeded = maxShopSlotsNeeded
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
         };
     }
 }
@@ -246,28 +273,33 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker? JokerType { get; init; }
-    public List<MotelyJoker>? JokerTypes { get; init; }  // Support for values array
-    public MotelyItemType? JokerItemType { get; init; }  // Precomputed MotelyItemType for comparison
+    public List<MotelyJoker>? JokerTypes { get; init; } // Support for values array
+    public MotelyItemType? JokerItemType { get; init; } // Precomputed MotelyItemType for comparison
     public bool IsWildcard { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
-    public bool[] WantedPackSlots { get; init; } = new bool[6];  // Track which pack slots to check
+    public bool[] WantedPackSlots { get; init; } = new bool[6]; // Track which pack slots to check
     public int? MaxPackSlot { get; init; }
     public int? MaxShopSlot { get; init; }
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
-    public bool RequireMega { get; init; }  // Extracted from Sources for optimization
-    public bool Satisfied { get; set; }  // Track if this clause has been satisfied
-    
+    public bool RequireMega { get; init; } // Extracted from Sources for optimization
+    public bool Satisfied { get; set; } // Track if this clause has been satisfied
+
     // Parameterless constructor for init syntax
     public MotelyJsonSoulJokerFilterClause() { }
-    
+
     // Helper constructor for tests - takes List<int> for antes and pack slots
-    public MotelyJsonSoulJokerFilterClause(MotelyJoker? jokerType, List<int> antes, List<int> packSlots, bool requireMega = false)
+    public MotelyJsonSoulJokerFilterClause(
+        MotelyJoker? jokerType,
+        List<int> antes,
+        List<int> packSlots,
+        bool requireMega = false
+    )
     {
         JokerType = jokerType;
         JokerItemType = jokerType.HasValue ? (MotelyItemType)jokerType.Value : null;
         IsWildcard = !jokerType.HasValue;
         RequireMega = requireMega;
-        
+
         // Convert antes list to bool array
         WantedAntes = new bool[40];
         foreach (var ante in antes)
@@ -275,7 +307,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             if (ante >= 0 && ante < 40)
                 WantedAntes[ante] = true;
         }
-        
+
         // Convert pack slots list to bool array
         WantedPackSlots = new bool[6];
         foreach (var slot in packSlots)
@@ -284,8 +316,10 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
                 WantedPackSlots[slot] = true;
         }
     }
-    
-    public static MotelyJsonSoulJokerFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
+
+    public static MotelyJsonSoulJokerFilterClause FromJsonClause(
+        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+    )
     {
         bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
@@ -294,28 +328,33 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
         }
-        
+
         // Build pack slot array
         bool[] wantedPackSlots = new bool[6];
         if (jsonClause.Sources?.PackSlots != null)
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
             {
-                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+                if (slot >= 0 && slot < 6)
+                    wantedPackSlots[slot] = true;
             }
         }
 
         // Pre-calculate MaxPackSlotsNeeded
         int maxPackSlotsNeeded = 0;
         for (int i = 0; i < wantedPackSlots.Length; i++)
-            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
-        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default
+            if (wantedPackSlots[i])
+                maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0)
+            maxPackSlotsNeeded = 6; // Default
 
         var clause = new MotelyJsonSoulJokerFilterClause
         {
             JokerType = jsonClause.JokerEnum,
             JokerTypes = jsonClause.JokerEnums?.Count > 0 ? jsonClause.JokerEnums : null,
-            JokerItemType = jsonClause.JokerEnum.HasValue ? (MotelyItemType)jsonClause.JokerEnum.Value : null,
+            JokerItemType = jsonClause.JokerEnum.HasValue
+                ? (MotelyItemType)jsonClause.JokerEnum.Value
+                : null,
             IsWildcard = jsonClause.IsWildcard,
             EditionEnum = jsonClause.EditionEnum,
             WantedAntes = wantedAntes,
@@ -325,13 +364,15 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             MaxPackSlotsNeeded = maxPackSlotsNeeded,
             RequireMega = jsonClause.Sources?.RequireMega ?? false,
             Satisfied = false,
-            Min = jsonClause.Min
+            Min = jsonClause.Min,
         };
-        
+
         return clause;
     }
-    
-    public static List<MotelyJsonSoulJokerFilterClause> ConvertClauses(List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses)
+
+    public static List<MotelyJsonSoulJokerFilterClause> ConvertClauses(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+    )
     {
         return genericClauses
             .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
@@ -342,7 +383,9 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     /// <summary>
     /// Create criteria DTO from typed clauses - pre-aggregates all cross-clause calculations
     /// </summary>
-    public static MotelyJsonSoulJokerFilterCriteria CreateCriteria(List<MotelyJsonSoulJokerFilterClause> clauses)
+    public static MotelyJsonSoulJokerFilterCriteria CreateCriteria(
+        List<MotelyJsonSoulJokerFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -385,7 +428,11 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
                     // Example: Clause wants slots [4,5], but ante 1 only has slots 0-3
                     // Result: No overlap, so this clause contributes 0 to maxSlots for ante 1
                     int clauseMaxSlot = 0;
-                    for (int slot = Math.Min(shopPackSlots - 1, clause.WantedPackSlots.Length - 1); slot >= 0; slot--)
+                    for (
+                        int slot = Math.Min(shopPackSlots - 1, clause.WantedPackSlots.Length - 1);
+                        slot >= 0;
+                        slot--
+                    )
                     {
                         if (clause.WantedPackSlots[slot])
                         {
@@ -409,7 +456,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             Clauses = sortedClauses,
             MinAnte = minAnte,
             MaxAnte = maxAnte,
-            MaxPackSlotsPerAnte = maxPackSlotsPerAnte
+            MaxPackSlotsPerAnte = maxPackSlotsPerAnte,
         };
     }
 }
@@ -431,7 +478,9 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
-    public static MotelyJsonTarotFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
+    public static MotelyJsonTarotFilterClause FromJsonClause(
+        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+    )
     {
         bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
@@ -447,7 +496,8 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
         {
             foreach (var slot in jsonClause.Sources.ShopSlots)
             {
-                if (slot >= 0 && slot < 1024) wantedShopSlots[slot] = true;
+                if (slot >= 0 && slot < 1024)
+                    wantedShopSlots[slot] = true;
             }
         }
         bool[] wantedPackSlots = new bool[6];
@@ -455,21 +505,26 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
             {
-                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+                if (slot >= 0 && slot < 6)
+                    wantedPackSlots[slot] = true;
             }
         }
 
         // Pre-calculate MaxShopSlotsNeeded
         int maxShopSlotsNeeded = 0;
         for (int i = 0; i < wantedShopSlots.Length; i++)
-            if (wantedShopSlots[i]) maxShopSlotsNeeded = i + 1;
-        if (maxShopSlotsNeeded == 0) maxShopSlotsNeeded = 8; // Default if no specific slots
+            if (wantedShopSlots[i])
+                maxShopSlotsNeeded = i + 1;
+        if (maxShopSlotsNeeded == 0)
+            maxShopSlotsNeeded = 8; // Default if no specific slots
 
         // Pre-calculate MaxPackSlotsNeeded
         int maxPackSlotsNeeded = 0;
         for (int i = 0; i < wantedPackSlots.Length; i++)
-            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
-        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default if no specific slots
+            if (wantedPackSlots[i])
+                maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0)
+            maxPackSlotsNeeded = 6; // Default if no specific slots
 
         return new MotelyJsonTarotFilterClause
         {
@@ -485,11 +540,13 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
             MaxShopSlot = jsonClause.MaxShopSlot,
             MaxShopSlotsNeeded = maxShopSlotsNeeded,
             MaxPackSlotsNeeded = maxPackSlotsNeeded,
-            Min = jsonClause.Min
+            Min = jsonClause.Min,
         };
     }
 
-    public static List<MotelyJsonTarotFilterClause> ConvertClauses(List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses)
+    public static List<MotelyJsonTarotFilterClause> ConvertClauses(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+    )
     {
         return genericClauses
             .Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard)
@@ -500,7 +557,9 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     /// <summary>
     /// Create criteria DTO from typed clauses - pre-aggregates all cross-clause calculations
     /// </summary>
-    public static MotelyJsonTarotFilterCriteria CreateCriteria(List<MotelyJsonTarotFilterClause> clauses)
+    public static MotelyJsonTarotFilterCriteria CreateCriteria(
+        List<MotelyJsonTarotFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -536,14 +595,15 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
             Clauses = clauses,
             MinAnte = minAnte,
             MaxAnte = maxAnte,
-            MaxShopSlotsNeeded = maxShopSlotsNeeded
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
         };
     }
 
     private static bool HasShopSlots(bool[] slots)
     {
         for (int i = 0; i < slots.Length; i++)
-            if (slots[i]) return true;
+            if (slots[i])
+                return true;
         return false;
     }
 }
@@ -558,7 +618,9 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
     public bool[] WantedAntes { get; init; } = new bool[40];
     public int[] EffectiveAntes { get; init; } = Array.Empty<int>(); // Pre-computed for SIMD hotpath!
 
-    public static MotelyJsonVoucherFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
+    public static MotelyJsonVoucherFilterClause FromJsonClause(
+        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+    )
     {
         bool[] wantedAntes = new bool[40];
         var effectiveAntesList = new List<int>(); // Build once during pre-optimization
@@ -578,21 +640,28 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
             VoucherTypes = jsonClause.VoucherEnums?.Count > 0 ? jsonClause.VoucherEnums : null,
             WantedAntes = wantedAntes,
             EffectiveAntes = effectiveAntesList.ToArray(), // Pre-computed once!
-            Min = jsonClause.Min
+            Min = jsonClause.Min,
         };
     }
-    
-    public static List<MotelyJsonVoucherFilterClause> ConvertClauses(List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses)
+
+    public static List<MotelyJsonVoucherFilterClause> ConvertClauses(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+    )
     {
         var converted = genericClauses
             .Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher)
             .Select(FromJsonClause)
             .ToList();
 
-        DebugLogger.Log($"[VOUCHER CONVERT] Converted {converted.Count} voucher clauses from {genericClauses.Count} total clauses");
+        DebugLogger.Log(
+            $"[VOUCHER CONVERT] Converted {converted.Count} voucher clauses from {genericClauses.Count} total clauses"
+        );
         foreach (var clause in converted)
         {
-            var antesStr = string.Join(",", Enumerable.Range(0, clause.WantedAntes.Length).Where(i => clause.WantedAntes[i]));
+            var antesStr = string.Join(
+                ",",
+                Enumerable.Range(0, clause.WantedAntes.Length).Where(i => clause.WantedAntes[i])
+            );
             DebugLogger.Log($"[VOUCHER CONVERT] Clause: {clause.VoucherType}, Antes=[{antesStr}]");
         }
 
@@ -602,7 +671,9 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
     /// <summary>
     /// Create criteria DTO from typed clauses - pre-aggregates all cross-clause calculations
     /// </summary>
-    public static MotelyJsonVoucherFilterCriteria CreateCriteria(List<MotelyJsonVoucherFilterClause> clauses)
+    public static MotelyJsonVoucherFilterCriteria CreateCriteria(
+        List<MotelyJsonVoucherFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -621,16 +692,20 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
                 }
             }
         }
-        if (minAnte == int.MaxValue) minAnte = 1;
-        if (maxAnte == 0) maxAnte = 8;
+        if (minAnte == int.MaxValue)
+            minAnte = 1;
+        if (maxAnte == 0)
+            maxAnte = 8;
 
-        DebugLogger.Log($"[VOUCHER CRITERIA] Calculated MinAnte={minAnte}, MaxAnte={maxAnte} from {clauses.Count} clauses");
+        DebugLogger.Log(
+            $"[VOUCHER CRITERIA] Calculated MinAnte={minAnte}, MaxAnte={maxAnte} from {clauses.Count} clauses"
+        );
 
         return new MotelyJsonVoucherFilterCriteria
         {
             Clauses = clauses,
             MinAnte = minAnte,
-            MaxAnte = maxAnte
+            MaxAnte = maxAnte,
         };
     }
 }
@@ -652,7 +727,9 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
-    public static MotelyJsonSpectralFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
+    public static MotelyJsonSpectralFilterClause FromJsonClause(
+        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+    )
     {
         bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
@@ -668,7 +745,8 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
         {
             foreach (var slot in jsonClause.Sources.ShopSlots)
             {
-                if (slot >= 0 && slot < 1024) wantedShopSlots[slot] = true;
+                if (slot >= 0 && slot < 1024)
+                    wantedShopSlots[slot] = true;
             }
         }
         bool[] wantedPackSlots = new bool[6];
@@ -676,21 +754,26 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
             {
-                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+                if (slot >= 0 && slot < 6)
+                    wantedPackSlots[slot] = true;
             }
         }
 
         // Pre-calculate MaxShopSlotsNeeded
         int maxShopSlotsNeeded = 0;
         for (int i = 0; i < wantedShopSlots.Length; i++)
-            if (wantedShopSlots[i]) maxShopSlotsNeeded = i + 1;
-        if (maxShopSlotsNeeded == 0) maxShopSlotsNeeded = 8; // Default
+            if (wantedShopSlots[i])
+                maxShopSlotsNeeded = i + 1;
+        if (maxShopSlotsNeeded == 0)
+            maxShopSlotsNeeded = 8; // Default
 
         // Pre-calculate MaxPackSlotsNeeded
         int maxPackSlotsNeeded = 0;
         for (int i = 0; i < wantedPackSlots.Length; i++)
-            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
-        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default
+            if (wantedPackSlots[i])
+                maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0)
+            maxPackSlotsNeeded = 6; // Default
 
         return new MotelyJsonSpectralFilterClause
         {
@@ -706,11 +789,13 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
             MaxShopSlot = jsonClause.MaxShopSlot,
             MaxShopSlotsNeeded = maxShopSlotsNeeded,
             MaxPackSlotsNeeded = maxPackSlotsNeeded,
-            Min = jsonClause.Min
+            Min = jsonClause.Min,
         };
     }
-    
-    public static List<MotelyJsonSpectralFilterClause> ConvertClauses(List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses)
+
+    public static List<MotelyJsonSpectralFilterClause> ConvertClauses(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+    )
     {
         return genericClauses
             .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
@@ -721,7 +806,9 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     /// <summary>
     /// Create criteria DTO from typed clauses - pre-aggregates all cross-clause calculations
     /// </summary>
-    public static MotelyJsonSpectralFilterCriteria CreateCriteria(List<MotelyJsonSpectralFilterClause> clauses)
+    public static MotelyJsonSpectralFilterCriteria CreateCriteria(
+        List<MotelyJsonSpectralFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -767,7 +854,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
             Clauses = clauses,
             MinAnte = minAnte,
             MaxAnte = maxAnte,
-            MaxShopSlotsNeeded = maxShopSlotsNeeded
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
         };
     }
 }
@@ -789,7 +876,9 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
-    public static MotelyJsonPlanetFilterClause FromJsonClause(MotelyJsonConfig.MotleyJsonFilterClause jsonClause)
+    public static MotelyJsonPlanetFilterClause FromJsonClause(
+        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+    )
     {
         bool[] wantedAntes = new bool[40];
         var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
@@ -805,7 +894,8 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
         {
             foreach (var slot in jsonClause.Sources.ShopSlots)
             {
-                if (slot >= 0 && slot < 1024) wantedShopSlots[slot] = true;
+                if (slot >= 0 && slot < 1024)
+                    wantedShopSlots[slot] = true;
             }
         }
         bool[] wantedPackSlots = new bool[6];
@@ -813,21 +903,26 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
         {
             foreach (var slot in jsonClause.Sources.PackSlots)
             {
-                if (slot >= 0 && slot < 6) wantedPackSlots[slot] = true;
+                if (slot >= 0 && slot < 6)
+                    wantedPackSlots[slot] = true;
             }
         }
 
         // Pre-calculate MaxShopSlotsNeeded
         int maxShopSlotsNeeded = 0;
         for (int i = 0; i < wantedShopSlots.Length; i++)
-            if (wantedShopSlots[i]) maxShopSlotsNeeded = i + 1;
-        if (maxShopSlotsNeeded == 0) maxShopSlotsNeeded = 8; // Default
+            if (wantedShopSlots[i])
+                maxShopSlotsNeeded = i + 1;
+        if (maxShopSlotsNeeded == 0)
+            maxShopSlotsNeeded = 8; // Default
 
         // Pre-calculate MaxPackSlotsNeeded
         int maxPackSlotsNeeded = 0;
         for (int i = 0; i < wantedPackSlots.Length; i++)
-            if (wantedPackSlots[i]) maxPackSlotsNeeded = i + 1;
-        if (maxPackSlotsNeeded == 0) maxPackSlotsNeeded = 6; // Default
+            if (wantedPackSlots[i])
+                maxPackSlotsNeeded = i + 1;
+        if (maxPackSlotsNeeded == 0)
+            maxPackSlotsNeeded = 6; // Default
 
         return new MotelyJsonPlanetFilterClause
         {
@@ -843,11 +938,13 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
             MaxShopSlot = jsonClause.MaxShopSlot,
             MaxShopSlotsNeeded = maxShopSlotsNeeded,
             MaxPackSlotsNeeded = maxPackSlotsNeeded,
-            Min = jsonClause.Min
+            Min = jsonClause.Min,
         };
     }
-    
-    public static List<MotelyJsonPlanetFilterClause> ConvertClauses(List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses)
+
+    public static List<MotelyJsonPlanetFilterClause> ConvertClauses(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+    )
     {
         return genericClauses
             .Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard)
@@ -858,7 +955,9 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     /// <summary>
     /// Create criteria DTO from typed clauses - pre-aggregates all cross-clause calculations
     /// </summary>
-    public static MotelyJsonPlanetFilterCriteria CreateCriteria(List<MotelyJsonPlanetFilterClause> clauses)
+    public static MotelyJsonPlanetFilterCriteria CreateCriteria(
+        List<MotelyJsonPlanetFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -902,7 +1001,7 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
             Clauses = clauses,
             MinAnte = minAnte,
             MaxAnte = maxAnte,
-            MaxShopSlotsNeeded = maxShopSlotsNeeded
+            MaxShopSlotsNeeded = maxShopSlotsNeeded,
         };
     }
 }
@@ -915,7 +1014,9 @@ public static class MotelyJsonFilterClauseExtensions
     /// <summary>
     /// Create Boss filter criteria from generic clauses
     /// </summary>
-    public static MotelyJsonBossFilterCriteria CreateBossCriteria(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+    public static MotelyJsonBossFilterCriteria CreateBossCriteria(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -928,26 +1029,32 @@ public static class MotelyJsonFilterClauseExtensions
             {
                 foreach (var ante in clause.EffectiveAntes)
                 {
-                    if (ante < minAnte) minAnte = ante;
-                    if (ante > maxAnte) maxAnte = ante;
+                    if (ante < minAnte)
+                        minAnte = ante;
+                    if (ante > maxAnte)
+                        maxAnte = ante;
                 }
             }
         }
-        if (minAnte == int.MaxValue) minAnte = 1;
-        if (maxAnte == int.MinValue) maxAnte = 8;
+        if (minAnte == int.MaxValue)
+            minAnte = 1;
+        if (maxAnte == int.MinValue)
+            maxAnte = 8;
 
         return new MotelyJsonBossFilterCriteria
         {
             Clauses = clauses,
             MinAnte = minAnte,
-            MaxAnte = maxAnte
+            MaxAnte = maxAnte,
         };
     }
 
     /// <summary>
     /// Create Tag filter criteria from generic clauses
     /// </summary>
-    public static MotelyJsonTagFilterCriteria CreateTagCriteria(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+    public static MotelyJsonTagFilterCriteria CreateTagCriteria(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -965,21 +1072,25 @@ public static class MotelyJsonFilterClauseExtensions
                 }
             }
         }
-        if (minAnte == int.MaxValue) minAnte = 1;
-        if (maxAnte == int.MinValue) maxAnte = 8;
+        if (minAnte == int.MaxValue)
+            minAnte = 1;
+        if (maxAnte == int.MinValue)
+            maxAnte = 8;
 
         return new MotelyJsonTagFilterCriteria
         {
             Clauses = clauses,
             MinAnte = minAnte,
-            MaxAnte = maxAnte
+            MaxAnte = maxAnte,
         };
     }
 
     /// <summary>
     /// Create PlayingCard filter criteria from generic clauses
     /// </summary>
-    public static MotelyJsonPlayingCardFilterCriteria CreatePlayingCardCriteria(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+    public static MotelyJsonPlayingCardFilterCriteria CreatePlayingCardCriteria(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+    )
     {
         if (clauses == null || clauses.Count == 0)
             throw new ArgumentException("Clauses cannot be null or empty");
@@ -992,19 +1103,23 @@ public static class MotelyJsonFilterClauseExtensions
             {
                 foreach (var ante in clause.EffectiveAntes)
                 {
-                    if (ante < minAnte) minAnte = ante;
-                    if (ante > maxAnte) maxAnte = ante;
+                    if (ante < minAnte)
+                        minAnte = ante;
+                    if (ante > maxAnte)
+                        maxAnte = ante;
                 }
             }
         }
-        if (minAnte == int.MaxValue) minAnte = 1;
-        if (maxAnte == int.MinValue) maxAnte = 8;
+        if (minAnte == int.MaxValue)
+            minAnte = 1;
+        if (maxAnte == int.MinValue)
+            maxAnte = 8;
 
         return new MotelyJsonPlayingCardFilterCriteria
         {
             Clauses = clauses,
             MinAnte = minAnte,
-            MaxAnte = maxAnte
+            MaxAnte = maxAnte,
         };
     }
 }

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Motely.Analysis;
 using Motely.Executors;
+using Motely.Filters;
 
 namespace Motely.API;
 
@@ -27,7 +28,11 @@ public class MotelyApiServer
     public bool IsRunning => _listener?.IsListening ?? false;
     public string Url => $"http://{_host}:{_port}/";
 
-    public MotelyApiServer(string host = "localhost", int port = 3141, Action<string>? logCallback = null)
+    public MotelyApiServer(
+        string host = "localhost",
+        int port = 3141,
+        Action<string>? logCallback = null
+    )
     {
         _host = host;
         _port = port;
@@ -134,7 +139,8 @@ public class MotelyApiServer
         response.ContentType = "text/html";
         response.StatusCode = 200;
 
-        var html = @"<!DOCTYPE html>
+        var html =
+            @"<!DOCTYPE html>
 <html>
 <head>
     <meta charset=""UTF-8"">
@@ -580,7 +586,10 @@ stake = ""White""</textarea>
         try
         {
             // Write filter JSON to temp file
-            tempFilterFile = Path.Combine(Path.GetTempPath(), $"motely_filter_{Guid.NewGuid()}.json");
+            tempFilterFile = Path.Combine(
+                Path.GetTempPath(),
+                $"motely_filter_{Guid.NewGuid()}.json"
+            );
             await File.WriteAllTextAsync(tempFilterFile, filterJson);
 
             var parameters = new JsonSearchParams
@@ -596,32 +605,26 @@ stake = ""White""</textarea>
                 Wordlist = null,
                 RandomSeeds = 1000000, // 1 million random seeds
                 Cutoff = 0,
-                AutoCutoff = false
+                AutoCutoff = true,
             };
 
-            var executor = new JsonSearchExecutor(tempFilterFile, parameters, "json");
             var results = new List<SearchResult>();
 
-            // Capture results synchronously
-            var originalOut = Console.Out;
-            try
+            // Create callback to capture results directly
+            Action<MotelySeedScoreTally> resultCallback = (tally) =>
             {
-                var writer = new SearchResultCapture(results);
-                Console.SetOut(writer);
+                results.Add(new SearchResult { Seed = tally.Seed, Score = tally.Score });
+            };
 
-                executor.Execute();
-            }
-            finally
-            {
-                Console.SetOut(originalOut);
-            }
+            var executor = new JsonSearchExecutor(tempFilterFile, parameters, "json", resultCallback);
+            executor.Execute();
 
             // Return results immediately
             response.StatusCode = 200;
-            await WriteJsonAsync(response, new
-            {
-                results = results.OrderByDescending(r => r.Score).Take(10)
-            });
+            await WriteJsonAsync(
+                response,
+                new { results = results.OrderByDescending(r => r.Score).Take(10) }
+            );
 
             _logCallback($"[{DateTime.Now:HH:mm:ss}] Search completed - {results.Count} results");
         }
@@ -636,20 +639,27 @@ stake = ""White""</textarea>
             // Clean up temp file
             if (tempFilterFile != null && File.Exists(tempFilterFile))
             {
-                try { File.Delete(tempFilterFile); } catch { }
+                try
+                {
+                    File.Delete(tempFilterFile);
+                }
+                catch { }
             }
         }
     }
 
-    private async Task HandleAnalyzeAsync(HttpListenerRequest request, HttpListenerResponse response)
+    private async Task HandleAnalyzeAsync(
+        HttpListenerRequest request,
+        HttpListenerResponse response
+    )
     {
         using var reader = new StreamReader(request.InputStream);
         var body = await reader.ReadToEndAsync();
 
-        var analyzeRequest = JsonSerializer.Deserialize<AnalyzeRequest>(body, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
+        var analyzeRequest = JsonSerializer.Deserialize<AnalyzeRequest>(
+            body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
 
         if (analyzeRequest == null || string.IsNullOrWhiteSpace(analyzeRequest.Seed))
         {
@@ -660,25 +670,32 @@ stake = ""White""</textarea>
 
         try
         {
-            var deck = string.IsNullOrEmpty(analyzeRequest.Deck) || !Enum.TryParse<MotelyDeck>(analyzeRequest.Deck, true, out var d)
-                ? MotelyDeck.Red
-                : d;
+            var deck =
+                string.IsNullOrEmpty(analyzeRequest.Deck)
+                || !Enum.TryParse<MotelyDeck>(analyzeRequest.Deck, true, out var d)
+                    ? MotelyDeck.Red
+                    : d;
 
-            var stake = string.IsNullOrEmpty(analyzeRequest.Stake) || !Enum.TryParse<MotelyStake>(analyzeRequest.Stake, true, out var s)
-                ? MotelyStake.White
-                : s;
+            var stake =
+                string.IsNullOrEmpty(analyzeRequest.Stake)
+                || !Enum.TryParse<MotelyStake>(analyzeRequest.Stake, true, out var s)
+                    ? MotelyStake.White
+                    : s;
 
             var config = new MotelySeedAnalysisConfig(analyzeRequest.Seed, deck, stake);
             var analysis = MotelySeedAnalyzer.Analyze(config);
 
             response.StatusCode = 200;
-            await WriteJsonAsync(response, new
-            {
-                seed = analyzeRequest.Seed,
-                deck = deck.ToString(),
-                stake = stake.ToString(),
-                analysis = analysis.ToString()
-            });
+            await WriteJsonAsync(
+                response,
+                new
+                {
+                    seed = analyzeRequest.Seed,
+                    deck = deck.ToString(),
+                    stake = stake.ToString(),
+                    analysis = analysis.ToString(),
+                }
+            );
 
             _logCallback($"[{DateTime.Now:HH:mm:ss}] Analyzed seed {analyzeRequest.Seed}");
         }
@@ -692,11 +709,14 @@ stake = ""White""</textarea>
 
     private static async Task WriteJsonAsync(HttpListenerResponse response, object data)
     {
-        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        });
+        var json = JsonSerializer.Serialize(
+            data,
+            new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true,
+            }
+        );
 
         var buffer = System.Text.Encoding.UTF8.GetBytes(json);
         response.ContentLength64 = buffer.Length;
@@ -704,42 +724,6 @@ stake = ""White""</textarea>
         response.Close();
     }
 
-    private class SearchResultCapture : TextWriter
-    {
-        private readonly List<SearchResult> _results;
-
-        public SearchResultCapture(List<SearchResult> results) => _results = results;
-
-        public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
-
-        public override void WriteLine(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value)) return;
-
-            // Strip ANSI escape codes (colors, formatting, etc)
-            value = System.Text.RegularExpressions.Regex.Replace(value, @"\x1B\[[^@-~]*[@-~]", "");
-
-            // Parse CSV results (format: Seed,Score)
-            if (value.Contains(',') && !value.StartsWith("#") && !value.StartsWith("Seed,"))
-            {
-                var parts = value.Split(',');
-                if (parts.Length >= 2)
-                {
-                    var seed = parts[0].Trim();
-                    var scoreStr = parts[1].Trim();
-
-                    if (!string.IsNullOrEmpty(seed) && int.TryParse(scoreStr, out int score))
-                    {
-                        _results.Add(new SearchResult
-                        {
-                            Seed = seed,
-                            Score = score
-                        });
-                    }
-                }
-            }
-        }
-    }
 }
 
 public class SearchResult

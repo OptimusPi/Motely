@@ -1,4 +1,3 @@
-
 namespace Motely;
 
 public enum MotelyItemEnhancement

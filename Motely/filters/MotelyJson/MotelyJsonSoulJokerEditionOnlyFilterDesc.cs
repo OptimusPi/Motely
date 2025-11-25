@@ -11,7 +11,9 @@ namespace Motely.Filters;
 /// CRITICAL OPTIMIZATION: Skips ALL soul card detection in vectorized mode!
 /// Only peeks edition stream (1-2 PRNG calls per ante) for instant early-exit
 /// </summary>
-public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(MotelyJsonSoulJokerFilterCriteria criteria)
+public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(
+    MotelyJsonSoulJokerFilterCriteria criteria
+)
     : IMotelySeedFilterDesc<MotelyJsonSoulJokerEditionOnlyFilterDesc.MotelyJsonSoulJokerEditionOnlyFilter>
 {
     private readonly MotelyJsonSoulJokerFilterCriteria _criteria = criteria;
@@ -24,7 +26,11 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(MotelyJsonSoulJo
             ctx.CacheSoulJokerStream(ante);
         }
 
-        return new MotelyJsonSoulJokerEditionOnlyFilter(_criteria.Clauses, _criteria.MinAnte, _criteria.MaxAnte);
+        return new MotelyJsonSoulJokerEditionOnlyFilter(
+            _criteria.Clauses,
+            _criteria.MinAnte,
+            _criteria.MaxAnte
+        );
     }
 
     public struct MotelyJsonSoulJokerEditionOnlyFilter : IMotelySeedFilter
@@ -33,17 +39,26 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(MotelyJsonSoulJo
         private readonly int _minAnte;
         private readonly int _maxAnte;
 
-        public MotelyJsonSoulJokerEditionOnlyFilter(List<MotelyJsonSoulJokerFilterClause> clauses, int minAnte, int maxAnte)
+        public MotelyJsonSoulJokerEditionOnlyFilter(
+            List<MotelyJsonSoulJokerFilterClause> clauses,
+            int minAnte,
+            int maxAnte
+        )
         {
             _clauses = clauses;
             _minAnte = minAnte;
             _maxAnte = maxAnte;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clauses != null && _clauses.Count > 0, "Edition-only filter called with empty clauses");
+            Debug.Assert(
+                _clauses != null && _clauses.Count > 0,
+                "Edition-only filter called with empty clauses"
+            );
 
             // CRITICAL: For edition-only checks, we DON'T need to detect soul cards!
             // We just check the edition stream for the specific ante(s) required
@@ -66,7 +81,10 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(MotelyJsonSoulJo
                     var editionStream = ctx.CreateSoulJokerStream(ante);
 
                     // Check first soul joker edition
-                    clauseMatched |= VectorEnum256.Equals(ctx.GetNextJoker(ref editionStream).Edition, clause.EditionEnum!.Value);
+                    clauseMatched |= VectorEnum256.Equals(
+                        ctx.GetNextJoker(ref editionStream).Edition,
+                        clause.EditionEnum!.Value
+                    );
 
                     // Check second soul joker edition (in case ante has 2 soul jokers)
                     //clauseMatched |= VectorEnum256.Equals(ctx.GetNextJoker(ref editionStream).Edition, clause.EditionEnum!.Value);
@@ -83,23 +101,30 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(MotelyJsonSoulJo
 
             // ALWAYS call individual checking to verify soul cards exist in packs!
             var clauses = _clauses;
-            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
-            {
-                // BUG FIX: Check if any clause has Min parameter - if so, we CANNOT early exit!
-                // We need to count ALL occurrences to verify minimum threshold
-                bool hasMinRequirement = false;
-                foreach (var clause in clauses)
+            return ctx.SearchIndividualSeeds(
+                resultMask,
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    if (clause.Min.HasValue && clause.Min.Value > 1)
+                    // BUG FIX: Check if any clause has Min parameter - if so, we CANNOT early exit!
+                    // We need to count ALL occurrences to verify minimum threshold
+                    bool hasMinRequirement = false;
+                    foreach (var clause in clauses)
                     {
-                        hasMinRequirement = true;
-                        break;
+                        if (clause.Min.HasValue && clause.Min.Value > 1)
+                        {
+                            hasMinRequirement = true;
+                            break;
+                        }
                     }
-                }
 
-                // Use earlyExit only if NO clause has a Min requirement
-                return MotelyJsonScoring.CheckSoulJokerForSeed(clauses, ref singleCtx, earlyExit: !hasMinRequirement);
-            });
+                    // Use earlyExit only if NO clause has a Min requirement
+                    return MotelyJsonScoring.CheckSoulJokerForSeed(
+                        clauses,
+                        ref singleCtx,
+                        earlyExit: !hasMinRequirement
+                    );
+                }
+            );
         }
     }
 }

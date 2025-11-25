@@ -1,12 +1,16 @@
+using Motely.Filters;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Motely.Filters;
 
 namespace Motely;
 
 public static class YamlConfigLoader
 {
-    public static bool TryLoadFromYaml(string yamlPath, out MotelyJsonConfig? config, out string? error)
+    public static bool TryLoadFromYaml(
+        string yamlPath,
+        out MotelyJsonConfig? config,
+        out string? error
+    )
     {
         config = null;
         error = null;

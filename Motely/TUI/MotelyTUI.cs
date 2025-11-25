@@ -72,36 +72,138 @@ public static class MotelyTUI
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill()
+            Height = Dim.Fill(),
         };
 
-        // Add animated Balatro shader background - FUCK YEAH!
+        // Add animated Balatro shader background
         var background = new BalatroShaderBackground();
         welcomeTop.Add(background);
         background.Start();
 
         // Welcome box - fixed size, centered
-        // The box is 66 chars wide, 48 lines tall (with your detailed Jimbo!)
+        // The box is 98 chars wide, 30 lines tall (with border and Jimbo!)
+        // Calculate initial Y position - start below screen, slide up
+        int boxHeight = 30;
+        int boxWidth = 98;
+        int targetY = (Application.Driver.Rows - boxHeight) / 2;
+        int startY = Application.Driver.Rows; // Start below screen
+
+        // Convert Welcome text to 2D array for dissolve effect
+        var welcomeLines = JimboArt.Welcome.Split('\n');
+        var charArray = new char[welcomeLines.Length][];
+        var revealedArray = new char[welcomeLines.Length][];
+        var revealPositions = new List<(int row, int col)>();
+
+        for (int i = 0; i < welcomeLines.Length; i++)
+        {
+            charArray[i] = welcomeLines[i].ToCharArray();
+            revealedArray[i] = new string(' ', charArray[i].Length).ToCharArray();
+
+            // Track all non-space positions to reveal
+            for (int j = 0; j < charArray[i].Length; j++)
+            {
+                if (charArray[i][j] != ' ')
+                {
+                    revealPositions.Add((i, j));
+                }
+            }
+        }
+
+        // Shuffle positions for random reveal
+        var random = new Random();
+        for (int i = revealPositions.Count - 1; i > 0; i--)
+        {
+            int j = random.Next(i + 1);
+            (revealPositions[i], revealPositions[j]) = (revealPositions[j], revealPositions[i]);
+        }
+
         var welcomeLabel = new Label()
         {
-            X = Pos.Center() - 33,  // Center horizontally (66/2 = 33)
-            Y = Pos.Center() - 24,  // Center vertically (48/2 = 24)
-            Width = 66,
-            Height = 48,
-            Text = JimboArt.Welcome,
-            TextAlignment = Alignment.Start
+            X = Pos.Center() - 49, // Center horizontally (98/2 = 49)
+            Y = startY,
+            Width = boxWidth,
+            Height = boxHeight,
+            Text = string.Join('\n', revealedArray.Select(arr => new string(arr))),
+            TextAlignment = Alignment.Start,
         };
 
         welcomeTop.Add(welcomeLabel);
 
+        // Animate slide-up AND dissolve reveal simultaneously over 1100ms
+        var animationSteps = 55; // 1100ms / 20ms per frame = 55 frames
+        var stepDelay = 20; // 20ms per frame
+        var currentStep = 0;
+        var animationToken = new System.Threading.CancellationTokenSource();
+        var revealIndex = 0;
+        var charsPerFrame = Math.Max(1, revealPositions.Count / animationSteps);
+
+        var timer = new System.Timers.Timer(stepDelay);
+        timer.Elapsed += (s, e) =>
+        {
+            if (currentStep >= animationSteps || animationToken.IsCancellationRequested)
+            {
+                // Ensure all characters are revealed at the end
+                for (int i = 0; i < revealedArray.Length; i++)
+                {
+                    revealedArray[i] = (char[])charArray[i].Clone();
+                }
+
+                Application.Invoke(() =>
+                {
+                    welcomeLabel.Text = string.Join('\n', revealedArray.Select(arr => new string(arr)));
+                    Application.Refresh();
+                });
+
+                timer.Stop();
+                timer.Dispose();
+                return;
+            }
+
+            currentStep++;
+            var progress = (double)currentStep / animationSteps;
+
+            // Smooth easing function (ease-out)
+            var easedProgress = 1 - Math.Pow(1 - progress, 3);
+
+            var currentY = (int)(startY - (startY - targetY) * easedProgress);
+
+            // Reveal more characters
+            for (int i = 0; i < charsPerFrame && revealIndex < revealPositions.Count; i++)
+            {
+                var (row, col) = revealPositions[revealIndex];
+                revealedArray[row][col] = charArray[row][col];
+                revealIndex++;
+            }
+
+            Application.Invoke(() =>
+            {
+                welcomeLabel.Y = currentY;
+                welcomeLabel.Text = string.Join('\n', revealedArray.Select(arr => new string(arr)));
+                Application.Refresh();
+            });
+        };
+        timer.Start();
+
         // Wait for any key press
+        var keyPressed = false;
         welcomeTop.KeyDown += (sender, e) =>
         {
-            background.Stop(); // Stop animation before closing
-            Application.RequestStop();
-            e.Handled = true;
+            if (!keyPressed)
+            {
+                keyPressed = true;
+                animationToken.Cancel();
+                timer?.Stop();
+                timer?.Dispose();
+                background.Stop(); // Stop animation before closing
+                Application.RequestStop();
+                e.Handled = true;
+            }
         };
 
         Application.Run(welcomeTop);
+
+        // Cleanup
+        animationToken?.Dispose();
+        timer?.Dispose();
     }
 }

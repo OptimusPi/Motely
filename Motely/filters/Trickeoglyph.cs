@@ -1,11 +1,10 @@
-
 using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilterDesc.TrickeoglyphFilter>
+public struct TrickeoglyphFilterDesc()
+    : IMotelySeedFilterDesc<TrickeoglyphFilterDesc.TrickeoglyphFilter>
 {
-
     public TrickeoglyphFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheAnteFirstVoucher(1);
@@ -17,13 +16,18 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
 
     public struct TrickeoglyphFilter() : IMotelySeedFilter
     {
-        public static bool CheckSoulJokerInAnte(int ante, MotelyItemType targetJoker, ref MotelySingleSearchContext searchContext, MotelyItemEdition? requiredEdition = null)
+        public static bool CheckSoulJokerInAnte(
+            int ante,
+            MotelyItemType targetJoker,
+            ref MotelySingleSearchContext searchContext,
+            MotelyItemEdition? requiredEdition = null
+        )
         {
             var soulStream = searchContext.CreateSoulJokerStream(ante);
             var soulJoker = searchContext.GetNextJoker(ref soulStream);
             if (soulJoker.Type != targetJoker)
                 return false;
-                
+
             // check required edition too
             if (requiredEdition.HasValue)
             {
@@ -32,7 +36,6 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
                     return false;
                 }
             }
-            
 
             var boosterPackStream = searchContext.CreateBoosterPackStream(ante, ante > 1, false);
 
@@ -46,7 +49,12 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
                 if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                 {
                     var tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);
-                    if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                    if (
+                        searchContext.GetNextArcanaPackHasTheSoul(
+                            ref tarotStream,
+                            pack.GetPackSize()
+                        )
+                    )
                     {
                         return true;
                     }
@@ -55,7 +63,12 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
                 if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                 {
                     var spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
-                    if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    if (
+                        searchContext.GetNextSpectralPackHasTheSoul(
+                            ref spectralStream,
+                            pack.GetPackSize()
+                        )
+                    )
                     {
                         return true;
                     }
@@ -75,7 +88,10 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
             for (int ante = 2; ante <= 4; ante++)
             {
                 // Get vector of all the seeds' voucher for the given ante
-                VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(ante, state);
+                VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(
+                    ante,
+                    state
+                );
                 // Activate vouchers found in this ante
                 matchingMagic |= VectorEnum256.Equals(vouchers, MotelyVoucher.MagicTrick);
                 matchingHiero |= VectorEnum256.Equals(vouchers, MotelyVoucher.Hieroglyph);
@@ -86,23 +102,30 @@ public struct TrickeoglyphFilterDesc() : IMotelySeedFilterDesc<TrickeoglyphFilte
             // All three vouchers must be found by the SAME seed (AND logic)
             var finalMask = VectorMask.AllBitsSet;
 
-            
-
-
             // STEP 2: Individual processing for SHOULD clauses (soul jokers)
-            return searchContext.SearchIndividualSeeds(finalMask, (ref MotelySingleSearchContext searchContext) =>
-            {
-                // Passed MUST requirements, now check SHOULD for bonus scoring
+            return searchContext.SearchIndividualSeeds(
+                finalMask,
+                (ref MotelySingleSearchContext searchContext) =>
+                {
+                    // Passed MUST requirements, now check SHOULD for bonus scoring
 
-                // SHOULD: Soul Perkeo Negative in ante 1
-                bool hasPerkeoNegative = CheckSoulJokerInAnte(1, MotelyItemType.Perkeo, ref searchContext);
+                    // SHOULD: Soul Perkeo Negative in ante 1
+                    bool hasPerkeoNegative = CheckSoulJokerInAnte(
+                        1,
+                        MotelyItemType.Perkeo,
+                        ref searchContext
+                    );
 
-                // SHOULD: Soul Canio in ante 8
-                bool hasCanio = CheckSoulJokerInAnte(8, MotelyItemType.Canio, ref searchContext);
+                    // SHOULD: Soul Canio in ante 8
+                    bool hasCanio = CheckSoulJokerInAnte(
+                        8,
+                        MotelyItemType.Canio,
+                        ref searchContext
+                    );
 
-
-                return hasCanio && hasPerkeoNegative;
-            });
+                    return hasCanio && hasPerkeoNegative;
+                }
+            );
         }
     }
 }

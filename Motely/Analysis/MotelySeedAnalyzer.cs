@@ -4,8 +4,7 @@ using System.Text;
 
 namespace Motely.Analysis;
 
-public sealed record class MotelySeedAnalysisConfig
-(
+public sealed record class MotelySeedAnalysisConfig(
     string Seed,
     MotelyDeck Deck,
     MotelyStake Stake
@@ -14,8 +13,7 @@ public sealed record class MotelySeedAnalysisConfig
 /// <summary>
 /// Contains all analysis data for a seed
 /// </summary>
-public sealed record class MotelySeedAnalysis
-(
+public sealed record class MotelySeedAnalysis(
     string? Error,
     IReadOnlyList<MotelyAnteAnalysis> Antes
 )
@@ -37,7 +35,9 @@ public sealed record class MotelySeedAnalysis
             sb.AppendLine($"Voucher: {FormatUtils.FormatVoucher(ante.Voucher)}");
 
             // Tags
-            sb.AppendLine($"Tags: {FormatUtils.FormatTag(ante.SmallBlindTag)}, {FormatUtils.FormatTag(ante.BigBlindTag)}");
+            sb.AppendLine(
+                $"Tags: {FormatUtils.FormatTag(ante.SmallBlindTag)}, {FormatUtils.FormatTag(ante.BigBlindTag)}"
+            );
 
             // Shop Queue - match TheSoul format exactly: "Shop Queue: " on its own line, then numbered items
             sb.AppendLine("Shop Queue: ");
@@ -52,9 +52,14 @@ public sealed record class MotelySeedAnalysis
             foreach (var pack in ante.Packs)
             {
                 // Format: "Pack Name - Card1, Card2, Card3"
-                var contents = pack.Items.Count > 0
-                    ? " - " + string.Join(", ", pack.Items.Select(item => FormatUtils.FormatItem(item)))
-                    : "";
+                var contents =
+                    pack.Items.Count > 0
+                        ? " - "
+                            + string.Join(
+                                ", ",
+                                pack.Items.Select(item => FormatUtils.FormatItem(item))
+                            )
+                        : "";
                 sb.AppendLine($"{FormatUtils.FormatPackName(pack.Type)}{contents}");
             }
             sb.AppendLine();
@@ -64,8 +69,7 @@ public sealed record class MotelySeedAnalysis
     }
 }
 
-public sealed record class MotelyAnteAnalysis
-(
+public sealed record class MotelyAnteAnalysis(
     int Ante,
     MotelyBossBlind Boss,
     MotelyVoucher Voucher,
@@ -75,8 +79,7 @@ public sealed record class MotelyAnteAnalysis
     IReadOnlyList<MotelyBoosterPackAnalysis> Packs
 );
 
-public sealed record class MotelyBoosterPackAnalysis
-(
+public sealed record class MotelyBoosterPackAnalysis(
     MotelyBoosterPack Type,
     IReadOnlyList<MotelyItem> Items
 );
@@ -95,7 +98,9 @@ public static partial class MotelySeedAnalyzer
         {
             MotelyAnalyzerFilterDesc filterDesc = new();
 
-            var searchSettings = new MotelySearchSettings<MotelyAnalyzerFilterDesc.AnalyzerFilter>(filterDesc)
+            var searchSettings = new MotelySearchSettings<MotelyAnalyzerFilterDesc.AnalyzerFilter>(
+                filterDesc
+            )
                 .WithDeck(cfg.Deck)
                 .WithStake(cfg.Stake)
                 .WithListSearch([cfg.Seed]) // Single seed analysis
@@ -106,7 +111,7 @@ public static partial class MotelySeedAnalyzer
             search.AwaitCompletion();
 
             Debug.Assert(filterDesc.LastAnalysis != null);
-        
+
             // Don't write to Console here - the caller should handle output
             // Console.Write(filterDesc.LastAnalysis);
 
@@ -116,6 +121,5 @@ public static partial class MotelySeedAnalyzer
         {
             return new MotelySeedAnalysis(ex.ToString(), []);
         }
-        
     }
 }

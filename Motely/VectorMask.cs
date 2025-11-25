@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Text;
@@ -19,7 +18,6 @@ public struct VectorMask(uint mask)
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         readonly get => (Value & (1 << i)) != 0;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set
         {
@@ -34,10 +32,11 @@ public struct VectorMask(uint mask)
         }
     }
 
-    public readonly override string ToString()
+    public override readonly string ToString()
     {
         StringBuilder sb = new(8);
-        for (int i = 0; i < 8; i++) sb.Append(this[i] ? '1' : '0');
+        for (int i = 0; i < 8; i++)
+            sb.Append(this[i] ? '1' : '0');
         return sb.ToString();
     }
 
@@ -52,22 +51,34 @@ public struct VectorMask(uint mask)
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static VectorMask operator &(VectorMask a, VectorMask b) => new(a.Value & b.Value);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static VectorMask operator |(VectorMask a, VectorMask b) => new(a.Value | b.Value);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static VectorMask operator ^(VectorMask a, VectorMask b) => new(a.Value ^ b.Value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator VectorMask(Vector256<int> vec) => new(MotelyVectorUtils.VectorMaskToIntMask(vec));
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator VectorMask(Vector256<uint> vec) => new(MotelyVectorUtils.VectorMaskToIntMask(vec));
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator VectorMask(Vector256<float> vec) => new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+    public static implicit operator VectorMask(Vector256<int> vec) =>
+        new(MotelyVectorUtils.VectorMaskToIntMask(vec));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator VectorMask(Vector512<long> vec) => new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+    public static implicit operator VectorMask(Vector256<uint> vec) =>
+        new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator VectorMask(Vector512<ulong> vec) => new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+    public static implicit operator VectorMask(Vector256<float> vec) =>
+        new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator VectorMask(Vector512<double> vec) => new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+    public static implicit operator VectorMask(Vector512<long> vec) =>
+        new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator VectorMask(Vector512<ulong> vec) =>
+        new(MotelyVectorUtils.VectorMaskToIntMask(vec));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator VectorMask(Vector512<double> vec) =>
+        new(MotelyVectorUtils.VectorMaskToIntMask(vec));
 }

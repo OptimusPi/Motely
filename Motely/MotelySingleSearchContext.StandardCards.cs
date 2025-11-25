@@ -1,14 +1,10 @@
-
 namespace Motely;
 
 public ref struct MotelySingleStandardCardStream
 {
+    public static MotelySingleStandardCardStream Invalid =>
+        new() { CardPrngStream = MotelySinglePrngStream.Invalid };
 
-    public static MotelySingleStandardCardStream Invalid => new()
-    {
-        CardPrngStream = MotelySinglePrngStream.Invalid
-    };
-    
     public readonly bool IsInvalid => CardPrngStream.IsInvalid;
 
     public MotelySinglePrngStream CardPrngStream;
@@ -26,39 +22,53 @@ public enum MotelyStandardCardStreamFlags
     ExcludeEdition = 1 << 2,
     ExcludeSeal = 1 << 3,
 
-    Default = 0
+    Default = 0,
 }
 
 ref partial struct MotelySingleSearchContext
 {
-
-    public MotelySingleStandardCardStream CreateStandardPackCardStream(int ante, MotelyStandardCardStreamFlags flags = 0, bool isCached = false)
+    public MotelySingleStandardCardStream CreateStandardPackCardStream(
+        int ante,
+        MotelyStandardCardStreamFlags flags = 0,
+        bool isCached = false
+    )
     {
         return new()
         {
-            CardPrngStream = CreatePrngStream(MotelyPrngKeys.StandardCardBase + MotelyPrngKeys.StandardPackItemSource + ante),
+            CardPrngStream = CreatePrngStream(
+                MotelyPrngKeys.StandardCardBase + MotelyPrngKeys.StandardPackItemSource + ante
+            ),
 
-            HasEnhancementPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEnhancement) ?
-                MotelySinglePrngStream.Invalid :
-                CreatePrngStream(MotelyPrngKeys.StandardCardHasEnhancement + ante),
-            EnhancementPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEnhancement) ?
-                MotelySinglePrngStream.Invalid :
-                CreatePrngStream(MotelyPrngKeys.StandardCardEnhancement + MotelyPrngKeys.StandardPackItemSource + ante),
+            HasEnhancementPrngStream = flags.HasFlag(
+                MotelyStandardCardStreamFlags.ExcludeEnhancement
+            )
+                ? MotelySinglePrngStream.Invalid
+                : CreatePrngStream(MotelyPrngKeys.StandardCardHasEnhancement + ante),
+            EnhancementPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEnhancement)
+                ? MotelySinglePrngStream.Invalid
+                : CreatePrngStream(
+                    MotelyPrngKeys.StandardCardEnhancement
+                        + MotelyPrngKeys.StandardPackItemSource
+                        + ante
+                ),
 
-            EditionPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEdition) ?
-                MotelySinglePrngStream.Invalid :
-                CreatePrngStream(MotelyPrngKeys.StandardCardEdition + ante),
+            EditionPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEdition)
+                ? MotelySinglePrngStream.Invalid
+                : CreatePrngStream(MotelyPrngKeys.StandardCardEdition + ante),
 
-            HasSealPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeSeal) ?
-                MotelySinglePrngStream.Invalid :
-                CreatePrngStream(MotelyPrngKeys.StandardCardHasSeal + ante),
-            SealPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeSeal) ?
-                MotelySinglePrngStream.Invalid :
-                CreatePrngStream(MotelyPrngKeys.StandardCardSeal + ante),
+            HasSealPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeSeal)
+                ? MotelySinglePrngStream.Invalid
+                : CreatePrngStream(MotelyPrngKeys.StandardCardHasSeal + ante),
+            SealPrngStream = flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeSeal)
+                ? MotelySinglePrngStream.Invalid
+                : CreatePrngStream(MotelyPrngKeys.StandardCardSeal + ante),
         };
     }
 
-    public MotelySingleItemSet GetNextStandardPackContents(ref MotelySingleStandardCardStream stream, MotelyBoosterPackSize size)
+    public MotelySingleItemSet GetNextStandardPackContents(
+        ref MotelySingleStandardCardStream stream,
+        MotelyBoosterPackSize size
+    )
     {
         MotelySingleItemSet pack = new();
         int cardCount = MotelyBoosterPackType.Standard.GetCardCount(size);
@@ -67,18 +77,34 @@ ref partial struct MotelySingleSearchContext
             pack.Append(GetNextStandardCard(ref stream));
 
         return pack;
-
     }
 
     public MotelyItem GetNextStandardCard(ref MotelySingleStandardCardStream stream)
     {
-        MotelyItem item = new(MotelyEnum<MotelyPlayingCard>.Values[GetNextRandomInt(ref stream.CardPrngStream, 0, MotelyEnum<MotelyPlayingCard>.ValueCount)]);
+        MotelyItem item = new(
+            MotelyEnum<MotelyPlayingCard>.Values[
+                GetNextRandomInt(
+                    ref stream.CardPrngStream,
+                    0,
+                    MotelyEnum<MotelyPlayingCard>.ValueCount
+                )
+            ]
+        );
 
         // Enhancement
-        if (!stream.HasEnhancementPrngStream.IsInvalid && GetNextRandom(ref stream.HasEnhancementPrngStream) > 0.6)
+        if (
+            !stream.HasEnhancementPrngStream.IsInvalid
+            && GetNextRandom(ref stream.HasEnhancementPrngStream) > 0.6
+        )
         {
             item = item.WithEnhancement(
-                (MotelyItemEnhancement)(GetNextRandomInt(ref stream.EnhancementPrngStream, 1, MotelyEnum<MotelyItemEnhancement>.ValueCount) << Motely.ItemEnhancementOffset)
+                (MotelyItemEnhancement)(
+                    GetNextRandomInt(
+                        ref stream.EnhancementPrngStream,
+                        1,
+                        MotelyEnum<MotelyItemEnhancement>.ValueCount
+                    ) << Motely.ItemEnhancementOffset
+                )
             );
         }
 
@@ -95,7 +121,10 @@ ref partial struct MotelySingleSearchContext
         }
 
         // Seal
-        if (!stream.HasSealPrngStream.IsInvalid && GetNextRandom(ref stream.HasSealPrngStream) > 0.8)
+        if (
+            !stream.HasSealPrngStream.IsInvalid
+            && GetNextRandom(ref stream.HasSealPrngStream) > 0.8
+        )
         {
             double sealPoll = GetNextRandom(ref stream.SealPrngStream);
 

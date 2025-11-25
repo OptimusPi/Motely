@@ -46,18 +46,19 @@ public static class TallyColorizer
             // Ignore failures - colors just won't work
         }
     }
+
     // ANSI color codes for different tally values
     private static readonly Dictionary<int, string> TallyColors = new()
     {
-        { 0, "\u001b[38;5;17m" },   // Dark blue for 0
-        { 1, "\u001b[38;5;54m" },   // Purple for 1
-        { 2, "\u001b[38;5;196m" },  // Red for 2
-        { 3, "\u001b[38;5;208m" },  // Orange for 3
-        { 4, "\u001b[38;5;226m" },  // Yellow for 4
-        { 5, "\u001b[38;5;46m" },   // Green for 5
-        { 6, "\u001b[38;5;51m" },   // Cyan for 6
-        { 7, "\u001b[38;5;201m" },  // Magenta for 7
-        { 8, "\u001b[38;5;231m" },  // White for 8+
+        { 0, "\u001b[38;5;17m" }, // Dark blue for 0
+        { 1, "\u001b[38;5;54m" }, // Purple for 1
+        { 2, "\u001b[38;5;196m" }, // Red for 2
+        { 3, "\u001b[38;5;208m" }, // Orange for 3
+        { 4, "\u001b[38;5;226m" }, // Yellow for 4
+        { 5, "\u001b[38;5;46m" }, // Green for 5
+        { 6, "\u001b[38;5;51m" }, // Cyan for 6
+        { 7, "\u001b[38;5;201m" }, // Magenta for 7
+        { 8, "\u001b[38;5;231m" }, // White for 8+
     };
 
     private const string ResetColor = "\u001b[0m";
@@ -102,8 +103,10 @@ public static class TallyColorizer
         }
 
         // Unix-like systems usually support colors
-        if (Environment.OSVersion.Platform == PlatformID.Unix ||
-            Environment.OSVersion.Platform == PlatformID.MacOSX)
+        if (
+            Environment.OSVersion.Platform == PlatformID.Unix
+            || Environment.OSVersion.Platform == PlatformID.MacOSX
+        )
             return true;
 
         return false;

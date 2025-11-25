@@ -20,20 +20,20 @@ public struct ObservatoryDesc : IMotelySeedFilterDesc<ObservatoryDesc.Observator
         {
             var resultMask = VectorMask.NoBitsSet;
             var runState = new MotelyVectorRunState();
-            
+
             for (int ante = 1; ante <= 4; ante++)
             {
                 var voucher = ctx.GetAnteFirstVoucher(ante, runState);
-                
+
                 var isObservatory = VectorEnum256.Equals(voucher, MotelyVoucher.Observatory);
                 resultMask |= isObservatory;
-                
+
                 runState.ActivateVoucher(voucher);
-                
+
                 if (resultMask.IsAllTrue())
                     return resultMask;
             }
-            
+
             return resultMask;
         }
     }

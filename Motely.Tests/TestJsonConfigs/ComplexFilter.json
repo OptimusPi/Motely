@@ -1,0 +1,82 @@
+{
+  "name": "ComplexRoundTripTest",
+  "author": "TestAuthor",
+  "description": "A complex filter to test all conversion scenarios",
+  "dateCreated": "2024-01-15T10:30:00Z",
+  "verifiedSeed": "TEST123",
+  "deck": "Red",
+  "stake": "Gold",
+  "mode": "Normal",
+  "scoreAggregationMode": "Sum",
+  "must": [
+    {
+      "type": "Joker",
+      "values": ["Blueprint", "Brainstorm"],
+      "label": "Test Joker",
+      "antes": [1, 2, 3],
+      "score": 100,
+      "mode": "Any",
+      "min": 1,
+      "filterOrder": 1,
+      "edition": "Foil",
+      "stickers": ["Eternal", "Perishable"],
+      "sources": {
+        "shopSlots": [0, 1, 2],
+        "packSlots": [],
+        "minShopSlot": 0,
+        "maxShopSlot": 2
+      }
+    },
+    {
+      "type": "Tag",
+      "values": ["NegativeTag", "DoubleTag"],
+      "antes": [2, 3, 4, 5]
+    },
+    {
+      "type": "And",
+      "antes": [4, 5],
+      "clauses": [
+        {
+          "type": "Voucher",
+          "value": "Overstock",
+          "antes": []
+        },
+        {
+          "type": "TarotCard",
+          "value": "The Fool",
+          "sources": {
+            "packSlots": [0, 1]
+          }
+        }
+      ]
+    }
+  ],
+  "mustNot": [
+    {
+      "type": "Joker",
+      "value": "Jimbo",
+      "antes": [1]
+    },
+    {
+      "type": "Boss",
+      "value": "The Plant",
+      "antes": [3]
+    }
+  ],
+  "should": [
+    {
+      "type": "SpectralCard",
+      "value": "Immolate",
+      "score": 50,
+      "mode": "Count"
+    },
+    {
+      "type": "PlanetCard",
+      "value": "Jupiter",
+      "score": 25,
+      "min": 2
+    }
+  ],
+  "maxVoucherAnte": 8,
+  "maxBossAnte": 8
+}
