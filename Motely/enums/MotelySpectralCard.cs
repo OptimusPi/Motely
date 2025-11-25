@@ -19,5 +19,5 @@ public enum MotelySpectralCard
     Medium,
     Cryptid,
     Soul,
-    BlackHole
+    BlackHole,
 }

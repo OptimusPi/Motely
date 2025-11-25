@@ -19,7 +19,7 @@ public class CategorySelectorDialog : Dialog
             Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
             Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
             HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
+            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
         };
 
         var instructionLabel = new Label()
@@ -27,7 +27,7 @@ public class CategorySelectorDialog : Dialog
             X = 1,
             Y = 1,
             Width = Dim.Fill() - 2,
-            Text = "Choose a category (hotkey or arrow keys + Enter):"
+            Text = "Choose a category (hotkey or arrow keys + Enter):",
         };
         Add(instructionLabel);
 
@@ -41,7 +41,7 @@ public class CategorySelectorDialog : Dialog
             "(P) Planet Card",
             "(V) Voucher",
             "(B) Boss Blind",
-            "(R) Reward Tags"
+            "(R) Reward Tags",
         };
 
         var listView = new ListView()
@@ -51,7 +51,7 @@ public class CategorySelectorDialog : Dialog
             Width = Dim.Fill() - 2,
             Height = Dim.Fill() - 5,
             AllowsMarking = false,
-            CanFocus = true
+            CanFocus = true,
         };
         listView.SetSource(new ObservableCollection<string>(categories));
 
@@ -64,6 +64,13 @@ public class CategorySelectorDialog : Dialog
                 Application.RequestStop(this);
                 e.Handled = true;
             }
+        };
+
+        // Handle mouse click for selection
+        listView.OpenSelectedItem += (s, e) =>
+        {
+            SelectedCategory = GetCategoryFromIndex(listView.SelectedItem);
+            Application.RequestStop(this);
         };
 
         Add(listView);
@@ -91,7 +98,7 @@ public class CategorySelectorDialog : Dialog
                 'V' => "Voucher",
                 'B' => "Boss",
                 'R' => "Tags",
-                _ => null
+                _ => null,
             };
 
             if (category != null)
@@ -118,7 +125,7 @@ public class CategorySelectorDialog : Dialog
             6 => "Voucher",
             7 => "Boss",
             8 => "Tags",
-            _ => "Joker"
+            _ => "Joker",
         };
     }
 }

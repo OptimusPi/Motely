@@ -1,13 +1,10 @@
-
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Motely;
 
-
 public ref struct MotelyRunState
 {
-
     private static readonly int FinisherBossBlindMask;
     private static readonly int NormalBossBlindMask;
 
@@ -20,7 +17,6 @@ public ref struct MotelyRunState
         // Check that we can fit all the bosses state in an int
         if (MotelyEnum<MotelyBossBlind>.ValueCount > sizeof(int) * 8)
             throw new UnreachableException();
-
 
         FinisherBossBlindMask = 0;
         NormalBossBlindMask = 0;
@@ -35,20 +31,18 @@ public ref struct MotelyRunState
                 NormalBossBlindMask |= 1 << bossBlind.GetBossIndex();
             }
         }
-
-
     }
 
     public int VoucherBitfield;
     public int BossBitfield;
-    
+
     // Joker tracking for showman and other mechanics
     private List<MotelyJoker> _ownedJokers;
     private bool _showmanActive;
-    
+
     // Boss caching for scoring - generated once per seed to maintain state
     public MotelyBossBlind[]? CachedBosses;
-    
+
     public List<MotelyJoker> OwnedJokers => _ownedJokers ??= new List<MotelyJoker>();
     public bool ShowmanActive => _showmanActive;
 
@@ -83,12 +77,12 @@ public ref struct MotelyRunState
         // Only allow finisher boss bits to be set
         BossBitfield &= FinisherBossBlindMask;
     }
-    
+
     public void AddOwnedJoker(MotelyJoker joker)
     {
         OwnedJokers.Add(joker);
     }
-    
+
     public void ActivateShowman()
     {
         _showmanActive = true;

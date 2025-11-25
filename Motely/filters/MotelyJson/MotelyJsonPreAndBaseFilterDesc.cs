@@ -38,7 +38,10 @@ namespace Motely.Filters
             private readonly IReadOnlyList<IMotelySeedFilter> _preFilters;
             private readonly IMotelySeedFilter _baseFilter;
 
-            public MotelyJsonPreAndBaseFilter(IReadOnlyList<IMotelySeedFilter> preFilters, IMotelySeedFilter baseFilter)
+            public MotelyJsonPreAndBaseFilter(
+                IReadOnlyList<IMotelySeedFilter> preFilters,
+                IMotelySeedFilter baseFilter
+            )
             {
                 _preFilters = preFilters;
                 _baseFilter = baseFilter;

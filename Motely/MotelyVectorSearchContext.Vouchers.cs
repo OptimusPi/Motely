@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
@@ -16,10 +15,8 @@ public struct MotelyVectorVoucherStream(int ante, MotelyVectorResampleStream res
     }
 }
 
-
 ref partial struct MotelyVectorSearchContext
 {
-
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
@@ -33,15 +30,23 @@ ref partial struct MotelyVectorSearchContext
 #endif
     public VectorEnum256<MotelyVoucher> GetAnteFirstVoucher(int ante, bool isCached = false)
     {
-        MotelyVectorPrngStream prngStream = CreatePrngStream(MotelyPrngKeys.Voucher + ante, isCached);
+        MotelyVectorPrngStream prngStream = CreatePrngStream(
+            MotelyPrngKeys.Voucher + ante,
+            isCached
+        );
 
-        VectorEnum256<MotelyVoucher> vouchers = new(GetNextRandomInt(ref prngStream, 0, MotelyEnum<MotelyVoucher>.ValueCount));
+        VectorEnum256<MotelyVoucher> vouchers = new(
+            GetNextRandomInt(ref prngStream, 0, MotelyEnum<MotelyVoucher>.ValueCount)
+        );
         int resampleCount = 0;
 
         while (true)
         {
             // All of the odd vouchers require a prerequisite
-            Vector256<int> prerequisiteRequiredMask = Vector256.Equals(vouchers.HardwareVector & Vector256<int>.One, Vector256<int>.One);
+            Vector256<int> prerequisiteRequiredMask = Vector256.Equals(
+                vouchers.HardwareVector & Vector256<int>.One,
+                Vector256<int>.One
+            );
 
             // Mask of vouchers we need to resample
             Vector256<int> resampleMask = prerequisiteRequiredMask;
@@ -49,15 +54,22 @@ ref partial struct MotelyVectorSearchContext
             if (Vector256.EqualsAll(resampleMask, Vector256<int>.Zero))
                 break;
 
-            prngStream = CreateResamplePrngStream(MotelyPrngKeys.Voucher + ante, resampleCount, isCached);
+            prngStream = CreateResamplePrngStream(
+                MotelyPrngKeys.Voucher + ante,
+                resampleCount,
+                isCached
+            );
 
             Vector256<int> newVouchers = GetNextRandomInt(
                 ref prngStream,
-                0, MotelyEnum<MotelyVoucher>.ValueCount,
+                0,
+                MotelyEnum<MotelyVoucher>.ValueCount,
                 MotelyVectorUtils.ExtendIntMaskToDouble(resampleMask)
             );
 
-            vouchers = new(Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector));
+            vouchers = new(
+                Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector)
+            );
 
             ++resampleCount;
         }
@@ -67,11 +79,20 @@ ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public VectorEnum256<MotelyVoucher> GetAnteFirstVoucher(int ante, in MotelyVectorRunState voucherState, bool isCached = false)
+    public VectorEnum256<MotelyVoucher> GetAnteFirstVoucher(
+        int ante,
+        in MotelyVectorRunState voucherState,
+        bool isCached = false
+    )
     {
-        MotelyVectorPrngStream prngStream = CreatePrngStream(MotelyPrngKeys.Voucher + ante, isCached);
+        MotelyVectorPrngStream prngStream = CreatePrngStream(
+            MotelyPrngKeys.Voucher + ante,
+            isCached
+        );
 
-        VectorEnum256<MotelyVoucher> vouchers = new(GetNextRandomInt(ref prngStream, 0, MotelyEnum<MotelyVoucher>.ValueCount));
+        VectorEnum256<MotelyVoucher> vouchers = new(
+            GetNextRandomInt(ref prngStream, 0, MotelyEnum<MotelyVoucher>.ValueCount)
+        );
         int resampleCount = 0;
 
         while (true)
@@ -79,28 +100,47 @@ ref partial struct MotelyVectorSearchContext
             Vector256<int> alreadyUnlockedMask = voucherState.IsVoucherActive(vouchers);
 
             // All of the odd vouchers require a prerequisite
-            Vector256<int> prerequisiteRequiredMask = Vector256.Equals(vouchers.HardwareVector & Vector256<int>.One, Vector256<int>.One);
-            VectorEnum256<MotelyVoucher> prerequisiteVouchers = new(vouchers.HardwareVector - Vector256<int>.One);
+            Vector256<int> prerequisiteRequiredMask = Vector256.Equals(
+                vouchers.HardwareVector & Vector256<int>.One,
+                Vector256<int>.One
+            );
+            VectorEnum256<MotelyVoucher> prerequisiteVouchers = new(
+                vouchers.HardwareVector - Vector256<int>.One
+            );
 
-            Vector256<int> unlockedPrerequisiteMask = voucherState.IsVoucherActive(prerequisiteVouchers);
+            Vector256<int> unlockedPrerequisiteMask = voucherState.IsVoucherActive(
+                prerequisiteVouchers
+            );
 
-            Vector256<int> prerequisiteSatisfiedMask = Vector256.ConditionalSelect(prerequisiteRequiredMask, unlockedPrerequisiteMask, Vector256<int>.AllBitsSet);
+            Vector256<int> prerequisiteSatisfiedMask = Vector256.ConditionalSelect(
+                prerequisiteRequiredMask,
+                unlockedPrerequisiteMask,
+                Vector256<int>.AllBitsSet
+            );
 
             // Mask of vouchers we need to resample
-            Vector256<int> resampleMask = alreadyUnlockedMask | Vector256.OnesComplement(prerequisiteSatisfiedMask);
+            Vector256<int> resampleMask =
+                alreadyUnlockedMask | Vector256.OnesComplement(prerequisiteSatisfiedMask);
 
             if (Vector256.EqualsAll(resampleMask, Vector256<int>.Zero))
                 break;
 
-            prngStream = CreateResamplePrngStream(MotelyPrngKeys.Voucher + ante, resampleCount, isCached);
+            prngStream = CreateResamplePrngStream(
+                MotelyPrngKeys.Voucher + ante,
+                resampleCount,
+                isCached
+            );
 
             Vector256<int> newVouchers = GetNextRandomInt(
                 ref prngStream,
-                0, MotelyEnum<MotelyVoucher>.ValueCount,
+                0,
+                MotelyEnum<MotelyVoucher>.ValueCount,
                 MotelyVectorUtils.ExtendIntMaskToDouble(resampleMask)
             );
 
-            vouchers = new(Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector));
+            vouchers = new(
+                Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector)
+            );
 
             ++resampleCount;
         }
@@ -108,9 +148,18 @@ ref partial struct MotelyVectorSearchContext
         return vouchers;
     }
 
-    public VectorEnum256<MotelyVoucher> GetNextVoucher(ref MotelyVectorVoucherStream voucherStream, in MotelyVectorRunState voucherState)
+    public VectorEnum256<MotelyVoucher> GetNextVoucher(
+        ref MotelyVectorVoucherStream voucherStream,
+        in MotelyVectorRunState voucherState
+    )
     {
-        VectorEnum256<MotelyVoucher> vouchers = new(GetNextRandomInt(ref voucherStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyVoucher>.ValueCount));
+        VectorEnum256<MotelyVoucher> vouchers = new(
+            GetNextRandomInt(
+                ref voucherStream.ResampleStream.InitialPrngStream,
+                0,
+                MotelyEnum<MotelyVoucher>.ValueCount
+            )
+        );
         int resampleCount = 0;
 
         while (true)
@@ -118,26 +167,45 @@ ref partial struct MotelyVectorSearchContext
             Vector256<int> alreadyUnlockedMask = voucherState.IsVoucherActive(vouchers);
 
             // All of the odd vouchers require a prerequisite
-            Vector256<int> prerequisiteRequiredMask = Vector256.Equals(vouchers.HardwareVector & Vector256<int>.One, Vector256<int>.One);
-            VectorEnum256<MotelyVoucher> prerequisiteVouchers = new(vouchers.HardwareVector - Vector256<int>.One);
+            Vector256<int> prerequisiteRequiredMask = Vector256.Equals(
+                vouchers.HardwareVector & Vector256<int>.One,
+                Vector256<int>.One
+            );
+            VectorEnum256<MotelyVoucher> prerequisiteVouchers = new(
+                vouchers.HardwareVector - Vector256<int>.One
+            );
 
-            Vector256<int> unlockedPrerequisiteMask = voucherState.IsVoucherActive(prerequisiteVouchers);
+            Vector256<int> unlockedPrerequisiteMask = voucherState.IsVoucherActive(
+                prerequisiteVouchers
+            );
 
-            Vector256<int> prerequisiteSatisfiedMask = Vector256.ConditionalSelect(prerequisiteRequiredMask, unlockedPrerequisiteMask, Vector256<int>.AllBitsSet);
+            Vector256<int> prerequisiteSatisfiedMask = Vector256.ConditionalSelect(
+                prerequisiteRequiredMask,
+                unlockedPrerequisiteMask,
+                Vector256<int>.AllBitsSet
+            );
 
             // Mask of vouchers we need to resample
-            Vector256<int> resampleMask = alreadyUnlockedMask | Vector256.OnesComplement(prerequisiteSatisfiedMask);
+            Vector256<int> resampleMask =
+                alreadyUnlockedMask | Vector256.OnesComplement(prerequisiteSatisfiedMask);
 
             if (Vector256.EqualsAll(resampleMask, Vector256<int>.Zero))
                 break;
 
             Vector256<int> newVouchers = GetNextRandomInt(
-                ref GetResamplePrngStream(ref voucherStream.ResampleStream, MotelyPrngKeys.Voucher + voucherStream.Ante, resampleCount),
-                0, MotelyEnum<MotelyVoucher>.ValueCount,
+                ref GetResamplePrngStream(
+                    ref voucherStream.ResampleStream,
+                    MotelyPrngKeys.Voucher + voucherStream.Ante,
+                    resampleCount
+                ),
+                0,
+                MotelyEnum<MotelyVoucher>.ValueCount,
                 MotelyVectorUtils.ExtendIntMaskToDouble(resampleMask)
             );
 
-            vouchers = new(Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector));
+            vouchers = new(
+                Vector256.ConditionalSelect(resampleMask, newVouchers, vouchers.HardwareVector)
+            );
 
             ++resampleCount;
         }

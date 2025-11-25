@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -7,29 +6,28 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
-
   <!-- Build as Library by default (for BalatroSeedOracle) -->
   <PropertyGroup>
     <OutputType>Library</OutputType>
   </PropertyGroup>
-
   <!-- Build as Exe when building standalone CLI -->
   <PropertyGroup Condition="'$(Configuration)' == 'CLI'">
     <OutputType>Exe</OutputType>
   </PropertyGroup>
-
   <PropertyGroup>
     <!-- Performance optimizations -->
     <Optimize>true</Optimize>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
-
   <!-- Desktop performance settings -->
   <PropertyGroup>
     <TieredCompilation>true</TieredCompilation>
     <TieredPGO>true</TieredPGO>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
     <ServerGarbageCollection>true</ServerGarbageCollection>
-
+    <!-- Platform target -->
+    <PlatformTarget>x64</PlatformTarget>
     <!-- SIMD and CPU optimizations -->
     <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
     <EnableAVX2>true</EnableAVX2>
@@ -42,24 +40,22 @@
     <EnableLZCNT>true</EnableLZCNT>
     <EnablePOPCNT>true</EnablePOPCNT>
     <EnableFMA>true</EnableFMA>
-
     <!-- Additional performance settings -->
-    <DebugSymbols>false</DebugSymbols>
+    <DebugType>none</DebugType>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishReadyToRun>false</PublishReadyToRun>
-    <IlcOptimizationPreference>Speed</IlcOptimizationPreference>
-    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
     <EnableDynamicPGO>true</EnableDynamicPGO>
-
     <!-- .NET 10 performance features -->
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
-    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+    <!-- Strip telemetry and tracing overhead -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <MetricsSupport>false</MetricsSupport>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
     <PackageReference Include="Terminal.Gui" />
-    <PackageReference Include="Tomlyn" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 </Project>

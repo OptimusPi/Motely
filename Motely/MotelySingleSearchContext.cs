@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -16,7 +15,6 @@ public struct MotelySinglePrngStream(double state)
 
 public struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngStream, bool isCached)
 {
-
     public static MotelySingleResampleStream Invalid => new(MotelySinglePrngStream.Invalid, false);
 
     public const int StackResampleCount = 4;
@@ -36,7 +34,6 @@ public struct MotelySingleResampleStream(MotelySinglePrngStream initialPrngStrea
     public readonly bool IsInvalid => InitialPrngStream.IsInvalid;
 }
 
-
 public readonly unsafe ref partial struct MotelySingleSearchContext
 {
     public readonly int VectorLane;
@@ -44,7 +41,8 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     private readonly ref readonly MotelySearchParameters _searchParameters;
     private readonly ref readonly MotelySearchContextParams _contextParams;
 
-    public MotelyStake Stake => _searchParameters.Stake != 0 ? _searchParameters.Stake : MotelyStake.White;
+    public MotelyStake Stake =>
+        _searchParameters.Stake != 0 ? _searchParameters.Stake : MotelyStake.White;
     public MotelyDeck Deck => _searchParameters.Deck != 0 ? _searchParameters.Deck : MotelyDeck.Red;
 
     private PartialSeedHashCache* SeedHashCache => _contextParams.SeedHashCache;
@@ -58,7 +56,11 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    internal MotelySingleSearchContext(ref readonly MotelySearchParameters searchParameters, ref readonly MotelySearchContextParams contextParams, int lane)
+    internal MotelySingleSearchContext(
+        ref readonly MotelySearchParameters searchParameters,
+        ref readonly MotelySearchContextParams contextParams,
+        int lane
+    )
     {
         _contextParams = ref contextParams;
         _searchParameters = ref searchParameters;
@@ -119,13 +121,21 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         // First we do the first characters of the seed which are the same between all vector lanes
         for (int i = SeedFirstCharactersLength - 1; i >= 0; i--)
         {
-            num = (1.1239285023 / num * SeedFirstCharacters[i] * Math.PI + Math.PI * (i + keyLength + seedLastCharacterLength + 1)) % 1;
+            num =
+                (
+                    1.1239285023 / num * SeedFirstCharacters[i] * Math.PI
+                    + Math.PI * (i + keyLength + seedLastCharacterLength + 1)
+                ) % 1;
         }
 
         // Then we get the characters for our lane
         for (int i = seedLastCharacterLength - 1; i >= 0; i--)
         {
-            num = (1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI + Math.PI * (keyLength + i + 1)) % 1;
+            num =
+                (
+                    1.1239285023 / num * SeedLastCharacters[i][VectorLane] * Math.PI
+                    + Math.PI * (keyLength + i + 1)
+                ) % 1;
         }
 
         return num;
@@ -147,21 +157,24 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
 
         ulong expo = (xInt & DblExpo) >> DblMantSZ;
 
-        if (expo < DblExpoBias) return x;
+        if (expo < DblExpoBias)
+            return x;
 
         // We don't have to worry about this edge case
-        
+
         // const int DblExpoSZ = 11;
         // if (expo == ((1 << DblExpoSZ) - 1)) return double.NaN;
 
         ulong expoBiased = expo - DblExpoBias;
 
-        if (expoBiased > DblMantSZ) return 0;
+        if (expoBiased > DblMantSZ)
+            return 0;
 
         ulong mant = xInt & DblMant;
         ulong fractMant = mant & ((1ul << (int)(DblMantSZ - expoBiased)) - 1);
 
-        if (fractMant == 0) return 0;
+        if (fractMant == 0)
+            return 0;
 
         int fractLzcnt = BitOperations.LeadingZeroCount(fractMant) - (64 - DblMantSZ);
         ulong resExpo = (expo - (ulong)fractLzcnt - 1) << DblMantSZ;
@@ -183,7 +196,10 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     {
         double normalCase = Math.Round(x * InvPrec, MidpointRounding.AwayFromZero) / InvPrec;
 
-        if (normalCase == Math.Round(Math.BitDecrement(x) * InvPrec, MidpointRounding.AwayFromZero) / InvPrec)
+        if (
+            normalCase
+            == Math.Round(Math.BitDecrement(x) * InvPrec, MidpointRounding.AwayFromZero) / InvPrec
+        )
             return normalCase;
 
         double truncated = Fract(x * TwoInvPrec) * FiveInvPrec;
@@ -273,18 +289,25 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     private MotelySinglePrngStream CreateResamplePrngStream(string key, int resample, bool isCached)
     {
         // We don't cache resamples >= 8 because they'd use an extra digit
-        if (isCached && resample >= 8) isCached = false;
+        if (isCached && resample >= 8)
+            isCached = false;
         return CreatePrngStream(key + MotelyPrngKeys.Resample + (resample + 2), isCached);
     }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private ref MotelySinglePrngStream GetResamplePrngStream(ref MotelySingleResampleStream resampleStream, string key, int resample)
+    private ref MotelySinglePrngStream GetResamplePrngStream(
+        ref MotelySingleResampleStream resampleStream,
+        string key,
+        int resample
+    )
     {
         if (resample < MotelySingleResampleStream.StackResampleCount)
         {
-            ref MotelySinglePrngStream prngStream = ref resampleStream.ResamplePrngStreams[resample];
+            ref MotelySinglePrngStream prngStream = ref resampleStream.ResamplePrngStreams[
+                resample
+            ];
 
             if (resample == resampleStream.ResamplePrngStreamInitCount)
             {
@@ -305,18 +328,21 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
 
             if (resample < resampleStream.HighResamplePrngStreams.Count)
             {
-                return ref Unsafe.Unbox<MotelySinglePrngStream>(resampleStream.HighResamplePrngStreams[resample]);
+                return ref Unsafe.Unbox<MotelySinglePrngStream>(
+                    resampleStream.HighResamplePrngStreams[resample]
+                );
             }
 
             object prngStreamObject = new MotelySinglePrngStream();
 
             resampleStream.HighResamplePrngStreams.Add(prngStreamObject);
 
-            ref MotelySinglePrngStream prngStream = ref Unsafe.Unbox<MotelySinglePrngStream>(prngStreamObject);
+            ref MotelySinglePrngStream prngStream = ref Unsafe.Unbox<MotelySinglePrngStream>(
+                prngStreamObject
+            );
             prngStream = CreateResamplePrngStream(key, resample, resampleStream.IsCached);
 
             return ref prngStream;
         }
     }
-
 }

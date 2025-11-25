@@ -1,4 +1,3 @@
-
 using System.ComponentModel;
 
 namespace Motely.Analysis;
@@ -6,7 +5,8 @@ namespace Motely.Analysis;
 /// <summary>
 /// Filter descriptor for seed analysis
 /// </summary>
-public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAnalyzerFilterDesc.AnalyzerFilter>
+public sealed class MotelyAnalyzerFilterDesc()
+    : IMotelySeedFilterDesc<MotelyAnalyzerFilterDesc.AnalyzerFilter>
 {
     public MotelySeedAnalysis? LastAnalysis { get; private set; } = null;
 
@@ -17,7 +17,6 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
 
     public readonly struct AnalyzerFilter(MotelyAnalyzerFilterDesc filterDesc) : IMotelySeedFilter
     {
-
         public MotelyAnalyzerFilterDesc FilterDesc { get; } = filterDesc;
 
         public readonly VectorMask Filter(ref MotelyVectorSearchContext ctx)
@@ -50,14 +49,13 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
             // Analyze each ante
             for (int ante = 1; ante <= 8; ante++)
             {
-
                 AnteAnalysisState state = new()
                 {
                     ArcanaStream = default,
                     CelestialStream = default,
                     SpectralStream = default,
                     StandardStream = MotelySingleStandardCardStream.Invalid,
-                    BuffoonStream = default
+                    BuffoonStream = default,
                 };
 
                 // Boss
@@ -93,20 +91,17 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
                 for (int i = 0; i < maxPacks; i++)
                 {
                     MotelyBoosterPack pack = ctx.GetNextBoosterPack(ref packStream);
-                    MotelySingleItemSet packContent = GetPackContents(ref ctx, ante, pack, ref state);
+                    MotelySingleItemSet packContent = GetPackContents(
+                        ref ctx,
+                        ante,
+                        pack,
+                        ref state
+                    );
 
                     packs[i] = new(pack, packContent.AsArray());
                 }
 
-                antes.Add(new(
-                    ante,
-                    boss,
-                    voucher,
-                    smallTag,
-                    bigTag,
-                    shopItems,
-                    packs
-                ));
+                antes.Add(new(ante, boss, voucher, smallTag, bigTag, shopItems, packs));
             }
 
             FilterDesc.LastAnalysis = new(null, antes);
@@ -115,7 +110,10 @@ public sealed class MotelyAnalyzerFilterDesc() : IMotelySeedFilterDesc<MotelyAna
         }
 
         private static MotelySingleItemSet GetPackContents(
-            ref MotelySingleSearchContext ctx, int ante, MotelyBoosterPack pack, ref AnteAnalysisState state
+            ref MotelySingleSearchContext ctx,
+            int ante,
+            MotelyBoosterPack pack,
+            ref AnteAnalysisState state
         )
         {
             var packType = pack.GetPackType();

@@ -1,6 +1,7 @@
 namespace Motely;
 
-internal enum InternalInvalid {
+internal enum InternalInvalid
+{
     Invalid,
     NotImplemented,
 
@@ -277,7 +278,7 @@ public enum MotelyItemType
     Brainstorm = MotelyItemTypeCategory.Joker | MotelyJoker.Brainstorm,
     DriversLicense = MotelyItemTypeCategory.Joker | MotelyJoker.DriversLicense,
     BurntJoker = MotelyItemTypeCategory.Joker | MotelyJoker.BurntJoker,
-    
+
     // Legendary Jokers
     Canio = MotelyItemTypeCategory.Joker | MotelyJoker.Canio,
     Triboulet = MotelyItemTypeCategory.Joker | MotelyJoker.Triboulet,
@@ -289,8 +290,9 @@ public enum MotelyItemType
     Invalid = MotelyItemTypeCategory.Invalid | InternalInvalid.Invalid,
     NotImplemented = MotelyItemTypeCategory.Invalid | InternalInvalid.NotImplemented,
     JokerExcludedByStream = MotelyItemTypeCategory.Invalid | InternalInvalid.JokerExcludedByStream,
-    PlanetExcludedByStream = MotelyItemTypeCategory.Invalid | InternalInvalid.PlanetExcludedByStream,
+    PlanetExcludedByStream =
+        MotelyItemTypeCategory.Invalid | InternalInvalid.PlanetExcludedByStream,
     TarotExcludedByStream = MotelyItemTypeCategory.Invalid | InternalInvalid.TarotExcludedByStream,
-    SpectralExcludedByStream = MotelyItemTypeCategory.Invalid | InternalInvalid.SpectralExcludedByStream,
+    SpectralExcludedByStream =
+        MotelyItemTypeCategory.Invalid | InternalInvalid.SpectralExcludedByStream,
 }
-

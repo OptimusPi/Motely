@@ -5,7 +5,6 @@ using System.Text;
 
 namespace Motely;
 
-
 public ref struct MotelyVectorItemSet
 {
     public const int MaxLength = 5;
@@ -97,11 +96,13 @@ public ref struct MotelyVectorItemSet
 
         for (int lane = 0; lane < MotelyItemVector.Count; lane++)
         {
-            if (lane != 0) sb.Append(", ");
+            if (lane != 0)
+                sb.Append(", ");
             sb.Append('[');
             for (int i = 0; i < Length; i++)
             {
-                if (i != 0) sb.Append(", ");
+                if (i != 0)
+                    sb.Append(", ");
                 sb.Append(GetItemRef(ref this, i)[lane]);
             }
             sb.Append(']');

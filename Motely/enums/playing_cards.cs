@@ -2,7 +2,6 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-
 public enum MotelyPlayingCardRank
 {
     Two,
@@ -20,7 +19,6 @@ public enum MotelyPlayingCardRank
     Ten,
 }
 
-
 public static class MotelyPlayingCardRankExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,13 +34,12 @@ public static class MotelyPlayingCardRankExt
     }
 }
 
-
 public enum MotelyPlayingCardSuit
 {
     Club = 0b00 << Motely.PlayingCardSuitOffset,
     Diamond = 0b01 << Motely.PlayingCardSuitOffset,
     Heart = 0b10 << Motely.PlayingCardSuitOffset,
-    Spade = 0b11 << Motely.PlayingCardSuitOffset
+    Spade = 0b11 << Motely.PlayingCardSuitOffset,
 }
 
 public static class MotelyPlayingCardSuitExt

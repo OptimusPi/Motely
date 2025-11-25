@@ -47,7 +47,9 @@ public static class FormatUtils
         switch (item.TypeCategory)
         {
             case MotelyItemTypeCategory.PlayingCard:
-                var playingCard = (MotelyPlayingCard)(item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask);
+                var playingCard = (MotelyPlayingCard)(
+                    item.Value & Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask
+                );
                 result.Append(FormatPlayingCard(playingCard));
                 break;
 
@@ -86,65 +88,65 @@ public static class FormatUtils
     {
         // Special cases that need custom formatting - copied from BalatroData.cs
         var specialCases = new Dictionary<string, string>
-            {
-                // Numbers
-                { "EightBall", "8 Ball" },
-                { "Cloud9", "Cloud 9" },
-                { "OopsAll6s", "Oops! All 6s" },
-                // Multi-word special formatting
-                { "ToTheMoon", "To the Moon" },
-                { "ToDoList", "To Do List" },
-                { "RiffRaff", "Riff-raff" },
-                { "MailInRebate", "Mail In Rebate" },
-                { "TheWheel", "The Wheel" },
-                { "TheWheelOfFortune", "The Wheel of Fortune" },
-                { "SockandBuskin", "Sock and Buskin" },
-                { "SockAndBuskin", "Sock and Buskin" },
-                { "DriversLicense", "Driver's License" },
-                { "DirectorsCut", "Director's Cut" },
-                { "PlanetX", "Planet X" },
-                // Spectral cards
-                { "Soul", "The Soul" },
-                // Other special formatting
-                { "MrBones", "Mr. Bones" },
-                { "ChaostheClown", "Chaos the Clown" },
-                // But Immolate test data has these variations we need to match:
-                { "ChaosTheClown", "Chaosthe Clown" }, // Weird but matches verified output
-                { "ShootTheMoon", "Shoot the Moon" },
-                { "RideTheBus", "Ride the Bus" },
-                { "HitTheRoad", "Hit the Road" },
-                { "TheVerdant", "Verdant Leaf" },
-                { "VerdantLeaf", "Verdant Leaf" },
-                { "VioletVessel", "Violet Vessel" },
-                { "CrimsonHeart", "Crimson Heart" },
-                { "AmberAcorn", "Amber Acorn" },
-                { "CeruleanBell", "Cerulean Bell" },
-                {"TheFool", "The Fool" },
-                {"TheMagician", "The Magician" },
-                {"TheHighPriestess", "The High Priestess" },
-                {"TheEmpress", "The Empress" },
-                {"TheEmperor", "The Emperor" },
-                {"TheHierophant", "The Hierophant" },
-                {"TheLovers", "The Lovers" },
-                {"TheChariot", "The Chariot" },
-                {"TheHermit", "The Hermit" },
-                {"Justice", "Justice" },
-                {"TheJustice", "Justice" },
-                {"TheHangedMan", "The Hanged Man" },
-                {"Death", "Death" },
-                {"TheDeath", "Death" },
-                {"Temperance", "Temperance" },
-                {"TheTemperance", "Temperance" },
-                {"TheDevil", "The Devil" },
-                {"TheTower", "The Tower" },
-                {"TheStar", "The Star" },
-                {"TheMoon", "The Moon" },
-                {"TheSun", "The Sun" },
-                {"Judgement", "Judgement" },
-                {"TheJudgement", "Judgement" },
-                {"TheWorld", "The World" },
-                {"Strength", "Strength" }
-            };
+        {
+            // Numbers
+            { "EightBall", "8 Ball" },
+            { "Cloud9", "Cloud 9" },
+            { "OopsAll6s", "Oops! All 6s" },
+            // Multi-word special formatting
+            { "ToTheMoon", "To the Moon" },
+            { "ToDoList", "To Do List" },
+            { "RiffRaff", "Riff-raff" },
+            { "MailInRebate", "Mail In Rebate" },
+            { "TheWheel", "The Wheel" },
+            { "TheWheelOfFortune", "The Wheel of Fortune" },
+            { "SockandBuskin", "Sock and Buskin" },
+            { "SockAndBuskin", "Sock and Buskin" },
+            { "DriversLicense", "Driver's License" },
+            { "DirectorsCut", "Director's Cut" },
+            { "PlanetX", "Planet X" },
+            // Spectral cards
+            { "Soul", "The Soul" },
+            // Other special formatting
+            { "MrBones", "Mr. Bones" },
+            { "ChaostheClown", "Chaos the Clown" },
+            // But Immolate test data has these variations we need to match:
+            { "ChaosTheClown", "Chaosthe Clown" }, // Weird but matches verified output
+            { "ShootTheMoon", "Shoot the Moon" },
+            { "RideTheBus", "Ride the Bus" },
+            { "HitTheRoad", "Hit the Road" },
+            { "TheVerdant", "Verdant Leaf" },
+            { "VerdantLeaf", "Verdant Leaf" },
+            { "VioletVessel", "Violet Vessel" },
+            { "CrimsonHeart", "Crimson Heart" },
+            { "AmberAcorn", "Amber Acorn" },
+            { "CeruleanBell", "Cerulean Bell" },
+            { "TheFool", "The Fool" },
+            { "TheMagician", "The Magician" },
+            { "TheHighPriestess", "The High Priestess" },
+            { "TheEmpress", "The Empress" },
+            { "TheEmperor", "The Emperor" },
+            { "TheHierophant", "The Hierophant" },
+            { "TheLovers", "The Lovers" },
+            { "TheChariot", "The Chariot" },
+            { "TheHermit", "The Hermit" },
+            { "Justice", "Justice" },
+            { "TheJustice", "Justice" },
+            { "TheHangedMan", "The Hanged Man" },
+            { "Death", "Death" },
+            { "TheDeath", "Death" },
+            { "Temperance", "Temperance" },
+            { "TheTemperance", "Temperance" },
+            { "TheDevil", "The Devil" },
+            { "TheTower", "The Tower" },
+            { "TheStar", "The Star" },
+            { "TheMoon", "The Moon" },
+            { "TheSun", "The Sun" },
+            { "Judgement", "Judgement" },
+            { "TheJudgement", "Judgement" },
+            { "TheWorld", "The World" },
+            { "Strength", "Strength" },
+        };
 
         if (specialCases.TryGetValue(enumName, out var special))
         {
@@ -185,7 +187,7 @@ public static class FormatUtils
             "D" => "Diamonds",
             "H" => "Hearts",
             "S" => "Spades",
-            _ => "Unknown"
+            _ => "Unknown",
         };
     }
 
@@ -206,7 +208,10 @@ public static class FormatUtils
             "Q" => "Queen",
             "K" => "King",
             "A" => "Ace",
-            _ => throw new ArgumentOutOfRangeException(nameof(rankAbbreviation), $"Invalid rank abbreviation: {rankAbbreviation}")
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(rankAbbreviation),
+                $"Invalid rank abbreviation: {rankAbbreviation}"
+            ),
         };
     }
 
@@ -231,7 +236,7 @@ public static class FormatUtils
                 "Q" => "Queen",
                 "K" => "King",
                 "A" => "Ace",
-                _ => cardStr.Substring(1)
+                _ => cardStr.Substring(1),
             };
 
             return $"{rank} of {suit}";
@@ -258,7 +263,7 @@ public static class FormatUtils
             MotelyBoosterPack.Standard => "Standard Pack",
             MotelyBoosterPack.JumboStandard => "Jumbo Standard Pack",
             MotelyBoosterPack.MegaStandard => "Mega Standard Pack",
-            _ => pack.ToString()
+            _ => pack.ToString(),
         };
     }
 }

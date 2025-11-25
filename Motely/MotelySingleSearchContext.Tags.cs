@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -10,11 +9,10 @@ public ref struct MotelySingleTagStream(MotelySingleResampleStream resampleStrea
     public MotelySingleResampleStream ResampleStream = resampleStream;
 }
 
-
 ref partial struct MotelySingleSearchContext
 {
-
-    private static readonly MotelyTag[] DisallowedAnteOneTags = [
+    private static readonly MotelyTag[] DisallowedAnteOneTags =
+    [
         MotelyTag.NegativeTag,
         MotelyTag.StandardTag,
         MotelyTag.MeteorTag,
@@ -23,9 +21,8 @@ ref partial struct MotelySingleSearchContext
         MotelyTag.GarbageTag,
         MotelyTag.EtherealTag,
         MotelyTag.TopupTag,
-        MotelyTag.OrbitalTag
+        MotelyTag.OrbitalTag,
     ];
-
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,19 +39,31 @@ ref partial struct MotelySingleSearchContext
     {
         if (tagStream.Ante > 1)
         {
-            return (MotelyTag)GetNextRandomInt(ref tagStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyTag>.ValueCount);
+            return (MotelyTag)GetNextRandomInt(
+                ref tagStream.ResampleStream.InitialPrngStream,
+                0,
+                MotelyEnum<MotelyTag>.ValueCount
+            );
         }
 
-        MotelyTag tag = (MotelyTag)
-            GetNextRandomInt(ref tagStream.ResampleStream.InitialPrngStream, 0, MotelyEnum<MotelyTag>.ValueCount);
+        MotelyTag tag = (MotelyTag)GetNextRandomInt(
+            ref tagStream.ResampleStream.InitialPrngStream,
+            0,
+            MotelyEnum<MotelyTag>.ValueCount
+        );
 
         int resampleCount = 0;
 
         while (DisallowedAnteOneTags.Contains(tag))
         {
-            tag = (MotelyTag) GetNextRandomInt(
-                ref GetResamplePrngStream(ref tagStream.ResampleStream, MotelyPrngKeys.Tags + tagStream.Ante, resampleCount),
-                0, MotelyEnum<MotelyTag>.ValueCount
+            tag = (MotelyTag)GetNextRandomInt(
+                ref GetResamplePrngStream(
+                    ref tagStream.ResampleStream,
+                    MotelyPrngKeys.Tags + tagStream.Ante,
+                    resampleCount
+                ),
+                0,
+                MotelyEnum<MotelyTag>.ValueCount
             );
 
             ++resampleCount;

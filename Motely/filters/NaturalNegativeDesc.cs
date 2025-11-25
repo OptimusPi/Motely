@@ -1,11 +1,10 @@
-
 using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public struct NaturalNegativesFilterDesc() : IMotelySeedFilterDesc<NaturalNegativesFilterDesc.NaturalNegativesFilter>
+public struct NaturalNegativesFilterDesc()
+    : IMotelySeedFilterDesc<NaturalNegativesFilterDesc.NaturalNegativesFilter>
 {
-
     public NaturalNegativesFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheAnteFirstVoucher(1);
@@ -27,8 +26,8 @@ public struct NaturalNegativesFilterDesc() : IMotelySeedFilterDesc<NaturalNegati
             bool soulStreamInit = false;
             bool boosterPackStreamInit = false;
 
-            
-            bool tarotStreamInit = false, spectralStreamInit = false;
+            bool tarotStreamInit = false,
+                spectralStreamInit = false;
 
             for (int i = 0; i < 2; i++)
             {
@@ -37,7 +36,11 @@ public struct NaturalNegativesFilterDesc() : IMotelySeedFilterDesc<NaturalNegati
                     soulStream = searchContext.CreateSoulJokerStream(ante);
                     soulStreamInit = true;
                     var wouldBe = searchContext.GetNextJoker(ref soulStream);
-                    if (wouldBe.Type != MotelyItemType.Perkeo || wouldBe.Edition != MotelyItemEdition.Negative) return false;
+                    if (
+                        wouldBe.Type != MotelyItemType.Perkeo
+                        || wouldBe.Edition != MotelyItemEdition.Negative
+                    )
+                        return false;
                 }
 
                 if (!boosterPackStreamInit)
@@ -56,9 +59,14 @@ public struct NaturalNegativesFilterDesc() : IMotelySeedFilterDesc<NaturalNegati
                         tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);
                     }
 
-                    if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                    if (
+                        searchContext.GetNextArcanaPackHasTheSoul(
+                            ref tarotStream,
+                            pack.GetPackSize()
+                        )
+                    )
                     {
-                            return true;
+                        return true;
                     }
                 }
 
@@ -70,10 +78,18 @@ public struct NaturalNegativesFilterDesc() : IMotelySeedFilterDesc<NaturalNegati
                         spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
                     }
 
-                    if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    if (
+                        searchContext.GetNextSpectralPackHasTheSoul(
+                            ref spectralStream,
+                            pack.GetPackSize()
+                        )
+                    )
                     {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(ante);
-                        if (searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo)
+                        if (!soulStreamInit)
+                            soulStream = searchContext.CreateSoulJokerStream(ante);
+                        if (
+                            searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo
+                        )
                             return true;
                     }
                 }
@@ -98,10 +114,14 @@ public struct NaturalNegativesFilterDesc() : IMotelySeedFilterDesc<NaturalNegati
 
             matching &= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
 
-            return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
-            {
-                return CheckAnteForPerkeo(1, ref searchContext) || CheckAnteForPerkeo(2, ref searchContext);
-            });
+            return searchContext.SearchIndividualSeeds(
+                matching,
+                (ref MotelySingleSearchContext searchContext) =>
+                {
+                    return CheckAnteForPerkeo(1, ref searchContext)
+                        || CheckAnteForPerkeo(2, ref searchContext);
+                }
+            );
         }
     }
 }

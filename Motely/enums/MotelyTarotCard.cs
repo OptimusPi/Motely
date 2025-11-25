@@ -23,5 +23,5 @@ public enum MotelyTarotCard
     TheMoon,
     TheSun,
     Judgement,
-    TheWorld
+    TheWorld,
 }

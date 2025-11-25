@@ -4,15 +4,13 @@ public ref struct MotelyFilterCreationContext
 {
     private readonly ref readonly MotelySearchParameters _searchParameters;
     private readonly HashSet<int> _cachedPseudohashKeyLengths;
-    public readonly IReadOnlyCollection<int> CachedPseudohashKeyLengths => _cachedPseudohashKeyLengths;
+    public readonly IReadOnlyCollection<int> CachedPseudohashKeyLengths =>
+        _cachedPseudohashKeyLengths;
     public bool IsAdditionalFilter;
 
     // Default parameters for unit tests
-    private static readonly MotelySearchParameters _defaultSearchParameters = new MotelySearchParameters
-    {
-        Deck = MotelyDeck.Red,
-        Stake = MotelyStake.White
-    };
+    private static readonly MotelySearchParameters _defaultSearchParameters =
+        new MotelySearchParameters { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
 
     public readonly MotelyStake Stake => _searchParameters.Stake;
     public readonly MotelyDeck Deck => _searchParameters.Deck;
@@ -43,7 +41,8 @@ public ref struct MotelyFilterCreationContext
     public readonly void CachePseudoHash(int keyLength, bool force = false)
     {
         // We don't cache values if they are not forced and this filter is an additional filter
-        if (!force && IsAdditionalFilter) return;
+        if (!force && IsAdditionalFilter)
+            return;
 
         _cachedPseudohashKeyLengths.Add(keyLength);
     }
@@ -60,15 +59,26 @@ public ref struct MotelyFilterCreationContext
         // We don't cache resamples >= 8 because they'd use an extra digit
     }
 
-    public readonly void CacheBoosterPackStream(int ante, bool force = false) => CachePseudoHash(MotelyPrngKeys.ShopPack + ante, force);
+    public readonly void CacheBoosterPackStream(int ante, bool force = false) =>
+        CachePseudoHash(MotelyPrngKeys.ShopPack + ante, force);
 
-    public readonly void CacheTagStream(int ante, bool force = false) => CachePseudoHash(MotelyPrngKeys.Tags + ante, force);
+    public readonly void CacheTagStream(int ante, bool force = false) =>
+        CachePseudoHash(MotelyPrngKeys.Tags + ante, force);
 
-    public readonly void CacheVoucherStream(int ante, bool force = false) => CacheResampleStream(MotelyPrngKeys.Voucher + ante, force);
+    public readonly void CacheVoucherStream(int ante, bool force = false) =>
+        CacheResampleStream(MotelyPrngKeys.Voucher + ante, force);
 
-    public readonly void CacheAnteFirstVoucher(int ante, bool force = false) => CacheVoucherStream(ante, force);
+    public readonly void CacheAnteFirstVoucher(int ante, bool force = false) =>
+        CacheVoucherStream(ante, force);
 
-    private readonly void CacheTarotStream(int ante, string source, bool cacheTarot, bool cacheResample, bool cacheSoul, bool force)
+    private readonly void CacheTarotStream(
+        int ante,
+        string source,
+        bool cacheTarot,
+        bool cacheResample,
+        bool cacheSoul,
+        bool force
+    )
     {
         if (cacheTarot)
         {
@@ -88,7 +98,11 @@ public ref struct MotelyFilterCreationContext
         }
     }
 
-    public readonly void CacheArcanaPackTarotStream(int ante, bool soulOnly = false, bool force = false)
+    public readonly void CacheArcanaPackTarotStream(
+        int ante,
+        bool soulOnly = false,
+        bool force = false
+    )
     {
         CacheTarotStream(ante, MotelyPrngKeys.ArcanaPackItemSource, !soulOnly, true, true, force);
     }
@@ -98,7 +112,13 @@ public ref struct MotelyFilterCreationContext
         CacheTarotStream(ante, MotelyPrngKeys.ShopItemSource, true, false, false, force);
     }
 
-    private readonly void CachePlanetStream(int ante, string source, bool cacheResample, bool cacheBlackHole, bool force)
+    private readonly void CachePlanetStream(
+        int ante,
+        string source,
+        bool cacheResample,
+        bool cacheBlackHole,
+        bool force
+    )
     {
         if (cacheResample)
         {
@@ -125,17 +145,26 @@ public ref struct MotelyFilterCreationContext
         CachePlanetStream(ante, MotelyPrngKeys.ShopItemSource, true, true, force);
     }
 
-    public readonly void CacheStandardPackStream(int ante,
+    public readonly void CacheStandardPackStream(
+        int ante,
         MotelyStandardCardStreamFlags flags = MotelyStandardCardStreamFlags.Default,
         bool force = false
     )
     {
-        CachePseudoHash(MotelyPrngKeys.StandardCardBase + MotelyPrngKeys.StandardPackItemSource + ante, force);
+        CachePseudoHash(
+            MotelyPrngKeys.StandardCardBase + MotelyPrngKeys.StandardPackItemSource + ante,
+            force
+        );
 
         if (!flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEnhancement))
         {
             CachePseudoHash(MotelyPrngKeys.StandardCardHasEnhancement + ante, force);
-            CachePseudoHash(MotelyPrngKeys.StandardCardEnhancement + MotelyPrngKeys.StandardPackItemSource + ante, force);
+            CachePseudoHash(
+                MotelyPrngKeys.StandardCardEnhancement
+                    + MotelyPrngKeys.StandardPackItemSource
+                    + ante,
+                force
+            );
         }
 
         if (!flags.HasFlag(MotelyStandardCardStreamFlags.ExcludeEdition))
@@ -150,9 +179,14 @@ public ref struct MotelyFilterCreationContext
         }
     }
 
-    private readonly void CacheJokerStream(int ante,
-        string source, string eternalPerishableSource, string rentalSource,
-        MotelyJokerStreamFlags flags, bool force)
+    private readonly void CacheJokerStream(
+        int ante,
+        string source,
+        string eternalPerishableSource,
+        string rentalSource,
+        MotelyJokerStreamFlags flags,
+        bool force
+    )
     {
         if (!flags.HasFlag(MotelyJokerStreamFlags.ExcludeEdition))
         {
@@ -181,18 +215,23 @@ public ref struct MotelyFilterCreationContext
     {
         CachePseudoHash(MotelyPrngKeys.JokerRarity + MotelyPrngKeys.ShopItemSource + ante, force);
 
-        CacheJokerStream(ante,
+        CacheJokerStream(
+            ante,
             MotelyPrngKeys.ShopItemSource,
             MotelyPrngKeys.ShopJokerEternalPerishableSource,
             MotelyPrngKeys.ShopJokerRentalSource,
-            flags, force
+            flags,
+            force
         );
 
         // TODO Cache the common joker stream?
     }
 
-    private readonly void CacheFixedRarityJokerStream(int ante,
-        string source, string eternalPerishableSource, string rentalSource,
+    private readonly void CacheFixedRarityJokerStream(
+        int ante,
+        string source,
+        string eternalPerishableSource,
+        string rentalSource,
         MotelyJokerRarity rarity,
         MotelyJokerStreamFlags flags = MotelyJokerStreamFlags.Default,
         bool force = false
@@ -200,11 +239,8 @@ public ref struct MotelyFilterCreationContext
     {
         CachePseudoHash(MotelyPrngKeys.FixedRarityJoker(rarity, source, ante), force);
 
-        CacheJokerStream(ante,
-            source, eternalPerishableSource, rentalSource, flags, force
-        );
+        CacheJokerStream(ante, source, eternalPerishableSource, rentalSource, flags, force);
     }
-
 
     public readonly void CacheSoulJokerStream(
         int ante,
@@ -212,16 +248,19 @@ public ref struct MotelyFilterCreationContext
         bool force = false
     )
     {
-        CacheFixedRarityJokerStream(ante,
+        CacheFixedRarityJokerStream(
+            ante,
             MotelyPrngKeys.JokerSoulSource,
             MotelyPrngKeys.ShopJokerEternalPerishableSource,
             MotelyPrngKeys.ShopJokerRentalSource,
             MotelyJokerRarity.Legendary,
-            flags, force
+            flags,
+            force
         );
     }
 
-    public readonly void CacheShopStream(int ante,
+    public readonly void CacheShopStream(
+        int ante,
         MotelyShopStreamFlags shopFlags = MotelyShopStreamFlags.Default,
         MotelyJokerStreamFlags jokerFlags = MotelyJokerStreamFlags.Default,
         bool force = false
