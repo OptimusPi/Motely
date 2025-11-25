@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
-using Terminal.Gui;
 using Motely.Filters;
+using Terminal.Gui;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -31,7 +31,7 @@ public class FilterBuilderWindow : Window
             X = Pos.Center(),
             Y = 1,
             Text = "🔧 BUILD YOUR PERFECT FILTER 🔧",
-            TextAlignment = Alignment.Center
+            TextAlignment = Alignment.Center,
         };
         Add(titleLabel);
 
@@ -43,8 +43,8 @@ public class FilterBuilderWindow : Window
             TextAlignment = Alignment.Center,
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
+            },
         };
         Add(instructionLabel);
 
@@ -56,7 +56,7 @@ public class FilterBuilderWindow : Window
         {
             X = 2,
             Y = yStart,
-            Text = "MUST Have (Required)"
+            Text = "MUST Have (Required)",
         };
         Add(mustLabel);
 
@@ -67,7 +67,7 @@ public class FilterBuilderWindow : Window
             Width = 35,
             Height = 15,
             AllowsMarking = false,
-            CanFocus = true
+            CanFocus = true,
         };
         _mustList.SetSource(new ObservableCollection<string>(_mustItems));
         Add(_mustList);
@@ -76,7 +76,7 @@ public class FilterBuilderWindow : Window
         {
             X = 2,
             Y = Pos.Bottom(_mustList),
-            Text = "Add Item (A)"
+            Text = "Add Item (A)",
         };
         mustAddBtn.Accept += (s, e) => AddItem("must");
         Add(mustAddBtn);
@@ -85,7 +85,7 @@ public class FilterBuilderWindow : Window
         {
             X = Pos.Right(mustAddBtn) + 1,
             Y = Pos.Bottom(_mustList),
-            Text = "Remove"
+            Text = "Remove",
         };
         mustRemoveBtn.Accept += (s, e) => RemoveItem("must");
         Add(mustRemoveBtn);
@@ -95,7 +95,7 @@ public class FilterBuilderWindow : Window
         {
             X = Pos.Right(_mustList) + 3,
             Y = yStart,
-            Text = "SHOULD Have (Bonus Points)"
+            Text = "SHOULD Have (Bonus Points)",
         };
         Add(shouldLabel);
 
@@ -106,7 +106,7 @@ public class FilterBuilderWindow : Window
             Width = 35,
             Height = 15,
             AllowsMarking = false,
-            CanFocus = true
+            CanFocus = true,
         };
         _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
         Add(_shouldList);
@@ -115,7 +115,7 @@ public class FilterBuilderWindow : Window
         {
             X = Pos.Right(_mustList) + 3,
             Y = Pos.Bottom(_shouldList),
-            Text = "Add Item (A)"
+            Text = "Add Item (A)",
         };
         shouldAddBtn.Accept += (s, e) => AddItem("should");
         Add(shouldAddBtn);
@@ -124,7 +124,7 @@ public class FilterBuilderWindow : Window
         {
             X = Pos.Right(shouldAddBtn) + 1,
             Y = Pos.Bottom(_shouldList),
-            Text = "Remove"
+            Text = "Remove",
         };
         shouldRemoveBtn.Accept += (s, e) => RemoveItem("should");
         Add(shouldRemoveBtn);
@@ -136,7 +136,7 @@ public class FilterBuilderWindow : Window
             {
                 X = Pos.Right(_shouldList) + 3,
                 Y = yStart,
-                Text = "MUST NOT Have"
+                Text = "MUST NOT Have",
             };
             Add(mustNotLabel);
 
@@ -147,7 +147,7 @@ public class FilterBuilderWindow : Window
                 Width = 30,
                 Height = 15,
                 AllowsMarking = false,
-                CanFocus = true
+                CanFocus = true,
             };
             _mustNotList.SetSource(new ObservableCollection<string>(_mustNotItems));
             Add(_mustNotList);
@@ -156,7 +156,7 @@ public class FilterBuilderWindow : Window
             {
                 X = Pos.Right(_shouldList) + 3,
                 Y = Pos.Bottom(_mustNotList),
-                Text = "Add (A)"
+                Text = "Add (A)",
             };
             mustNotAddBtn.Accept += (s, e) => AddItem("mustnot");
             Add(mustNotAddBtn);
@@ -165,7 +165,7 @@ public class FilterBuilderWindow : Window
             {
                 X = Pos.Right(mustNotAddBtn) + 1,
                 Y = Pos.Bottom(_mustNotList),
-                Text = "Remove"
+                Text = "Remove",
             };
             mustNotRemoveBtn.Accept += (s, e) => RemoveItem("mustnot");
             Add(mustNotRemoveBtn);
@@ -177,7 +177,8 @@ public class FilterBuilderWindow : Window
             X = 2,
             Y = Pos.Bottom(_mustList) + 2,
             Width = Dim.Fill() - 4,
-            Text = "Quick Add: (J)oker (L)egendary (C)ard (T)arot (S)pectral (P)lanet (V)oucher (B)oss (R)eward Tags"
+            Text =
+                "Quick Add: (J)oker (L)egendary (C)ard (T)arot (S)pectral (P)lanet (V)oucher (B)oss (R)eward Tags",
         };
         Add(hotkeysLabel);
 
@@ -186,7 +187,7 @@ public class FilterBuilderWindow : Window
         {
             X = 2,
             Y = Pos.AnchorEnd(3),
-            Text = "Start Search"
+            Text = "Start Search",
         };
         startSearchBtn.Accept += (s, e) => StartSearch();
         Add(startSearchBtn);
@@ -195,7 +196,7 @@ public class FilterBuilderWindow : Window
         {
             X = Pos.Right(startSearchBtn) + 2,
             Y = Pos.AnchorEnd(3),
-            Text = "Save Filter"
+            Text = "Save Filter",
         };
         saveBtn.Accept += (s, e) => SaveFilter();
         Add(saveBtn);
@@ -204,7 +205,7 @@ public class FilterBuilderWindow : Window
         {
             X = Pos.Right(saveBtn) + 2,
             Y = Pos.AnchorEnd(3),
-            Text = "Back to Menu"
+            Text = "Back to Menu",
         };
         backBtn.Accept += (s, e) => Application.RequestStop();
         Add(backBtn);
@@ -215,7 +216,7 @@ public class FilterBuilderWindow : Window
             X = Pos.Right(backBtn) + 4,
             Y = Pos.AnchorEnd(3),
             Width = Dim.Fill(),
-            Text = ""
+            Text = "",
         };
         Add(_statusLabel);
 
@@ -225,9 +226,12 @@ public class FilterBuilderWindow : Window
             if (e.KeyCode == KeyCode.A)
             {
                 // Determine which list has focus
-                if (_mustList.HasFocus) AddItem("must");
-                else if (_shouldList.HasFocus) AddItem("should");
-                else if (_mustNotList?.HasFocus == true) AddItem("mustnot");
+                if (_mustList.HasFocus)
+                    AddItem("must");
+                else if (_shouldList.HasFocus)
+                    AddItem("should");
+                else if (_mustNotList?.HasFocus == true)
+                    AddItem("mustnot");
                 e.Handled = true;
             }
             else if (e.KeyCode == KeyCode.J)
@@ -277,10 +281,28 @@ public class FilterBuilderWindow : Window
             }
             else if (e.KeyCode == KeyCode.Esc)
             {
-                if (ShowConfirmDialog("Back to Menu", "Return to main menu?"))
+                // Show menu with options
+                var choice = ShowChoiceDialog(
+                    "ESC Menu",
+                    "What would you like to do?",
+                    "Main Menu",
+                    "Exit",
+                    "Cancel"
+                );
+
+                if (choice == 0) // Main Menu
                 {
+                    // Return to main menu
                     Application.RequestStop();
                 }
+                else if (choice == 1) // Exit
+                {
+                    // Exit the entire application
+                    Application.RequestStop();
+                    Environment.Exit(0);
+                }
+                // choice == 2 (Cancel) - do nothing, stay in filter builder
+
                 e.Handled = true;
             }
         };
@@ -290,7 +312,8 @@ public class FilterBuilderWindow : Window
 
     private void AddItem(string listType)
     {
-        if (_isDialogOpen) return; // Prevent re-entrant dialog spawning
+        if (_isDialogOpen)
+            return; // Prevent re-entrant dialog spawning
         _isDialogOpen = true;
 
         try
@@ -312,15 +335,18 @@ public class FilterBuilderWindow : Window
 
     private void AddItemQuick(string category)
     {
-        if (_isDialogOpen) return; // Prevent re-entrant dialog spawning
+        if (_isDialogOpen)
+            return; // Prevent re-entrant dialog spawning
         _isDialogOpen = true;
 
         try
         {
             // Determine which list has focus
             string listType = "must"; // default
-            if (_shouldList.HasFocus) listType = "should";
-            else if (_mustNotList?.HasFocus == true) listType = "mustnot";
+            if (_shouldList.HasFocus)
+                listType = "should";
+            else if (_mustNotList?.HasFocus == true)
+                listType = "mustnot";
 
             ShowItemSelectorAndAdd(category, listType);
         }
@@ -381,7 +407,10 @@ public class FilterBuilderWindow : Window
                 }
                 break;
             case "mustnot":
-                if (_mustNotList?.SelectedItem >= 0 && _mustNotList.SelectedItem < _mustNotItems.Count)
+                if (
+                    _mustNotList?.SelectedItem >= 0
+                    && _mustNotList.SelectedItem < _mustNotItems.Count
+                )
                 {
                     _mustNotItems.RemoveAt(_mustNotList.SelectedItem);
                     _mustNotList.SetSource(new ObservableCollection<string>(_mustNotItems));
@@ -395,7 +424,13 @@ public class FilterBuilderWindow : Window
     {
         // Parse format: "ItemName (Category)"
         var lastParenIndex = displayText.LastIndexOf('(');
-        if (lastParenIndex < 0) return new MotelyJsonConfig.MotleyJsonFilterClause { Type = "Joker", Value = displayText };
+        if (lastParenIndex < 0)
+            return new MotelyJsonConfig.MotleyJsonFilterClause
+            {
+                Type = "Joker",
+                Value = displayText,
+                Antes = new[] { 1, 2, 3, 4, 5, 6, 7, 8 }, // Default: search all antes
+            };
 
         var itemName = displayText.Substring(0, lastParenIndex).Trim();
         var category = displayText.Substring(lastParenIndex + 1).TrimEnd(')').Trim();
@@ -412,25 +447,33 @@ public class FilterBuilderWindow : Window
             "Voucher" => "Voucher",
             "Boss" => "BossBlind",
             "Tags" => "Tag",
-            _ => "Joker"
+            _ => "Joker",
         };
 
         return new MotelyJsonConfig.MotleyJsonFilterClause
         {
             Type = type,
-            Value = itemName
+            Value = itemName,
+            Antes = new[] { 1, 2, 3, 4, 5, 6, 7, 8 }, // Default: search all antes
         };
     }
 
     private void SaveFilter()
     {
-        var dialog = new Dialog() { Title = "Save Filter" };
+        var dialog = new Dialog()
+        {
+            Title = "Save Filter",
+            X = Pos.Center(),
+            Y = Pos.Center(),
+            Width = 60,
+            Height = 10,
+        };
 
         var nameLabel = new Label()
         {
             X = 1,
             Y = 1,
-            Text = "Filter Name:"
+            Text = "Filter Name:",
         };
         dialog.Add(nameLabel);
 
@@ -439,7 +482,7 @@ public class FilterBuilderWindow : Window
             X = Pos.Right(nameLabel) + 1,
             Y = 1,
             Width = 30,
-            Text = ""
+            Text = "",
         };
         dialog.Add(nameField);
 
@@ -464,7 +507,7 @@ public class FilterBuilderWindow : Window
                     DateCreated = DateTime.UtcNow,
                     Must = _mustItems.Select(ParseDisplayTextToClause).ToList(),
                     Should = _shouldItems.Select(ParseDisplayTextToClause).ToList(),
-                    MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList()
+                    MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
                 };
 
                 // Serialize to YAML
@@ -500,7 +543,10 @@ public class FilterBuilderWindow : Window
     {
         if (_mustItems.Count == 0 && _shouldItems.Count == 0)
         {
-            ShowErrorDialog("Empty Filter", "Please add at least one item to MUST or SHOULD lists before starting a search.");
+            ShowErrorDialog(
+                "Empty Filter",
+                "Please add at least one item to MUST or SHOULD lists before starting a search."
+            );
             return;
         }
 
@@ -513,7 +559,7 @@ public class FilterBuilderWindow : Window
             DateCreated = DateTime.UtcNow,
             Must = _mustItems.Select(ParseDisplayTextToClause).ToList(),
             Should = _shouldItems.Select(ParseDisplayTextToClause).ToList(),
-            MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList()
+            MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
         };
 
         // Serialize to YAML
@@ -560,8 +606,8 @@ public class FilterBuilderWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
 
         var label = new Label()
@@ -569,16 +615,24 @@ public class FilterBuilderWindow : Window
             X = Pos.Center(),
             Y = 2,
             Text = message,
-            TextAlignment = Alignment.Center
+            TextAlignment = Alignment.Center,
         };
         dialog.Add(label);
 
         bool result = false;
         var yesBtn = new Button() { Text = "Yes" };
-        yesBtn.Accept += (s, e) => { result = true; Application.RequestStop(dialog); };
+        yesBtn.Accept += (s, e) =>
+        {
+            result = true;
+            Application.RequestStop(dialog);
+        };
 
         var noBtn = new Button() { Text = "No" };
-        noBtn.Accept += (s, e) => { result = false; Application.RequestStop(dialog); };
+        noBtn.Accept += (s, e) =>
+        {
+            result = false;
+            Application.RequestStop(dialog);
+        };
 
         dialog.AddButton(yesBtn);
         dialog.AddButton(noBtn);
@@ -600,8 +654,8 @@ public class FilterBuilderWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
 
         var label = new Label()
@@ -609,7 +663,7 @@ public class FilterBuilderWindow : Window
             X = Pos.Center(),
             Y = 2,
             Text = message,
-            TextAlignment = Alignment.Center
+            TextAlignment = Alignment.Center,
         };
         dialog.Add(label);
 
@@ -618,5 +672,68 @@ public class FilterBuilderWindow : Window
         dialog.AddButton(okBtn);
 
         Application.Run(dialog);
+    }
+
+    // Compact Balatro-styled choice dialog (3 buttons)
+    private static int ShowChoiceDialog(
+        string title,
+        string message,
+        string button1,
+        string button2,
+        string button3
+    )
+    {
+        var dialog = new Dialog()
+        {
+            Title = title,
+            Width = Math.Min(60, Math.Max(message.Length + 10, 50)),
+            Height = 9,
+            ColorScheme = new ColorScheme()
+            {
+                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
+                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
+                HotNormal = new Terminal.Gui.Attribute(ColorName.BrightYellow, ColorName.Black),
+                HotFocus = new Terminal.Gui.Attribute(ColorName.BrightYellow, ColorName.BrightRed),
+            },
+        };
+
+        var label = new Label()
+        {
+            X = Pos.Center(),
+            Y = 2,
+            Text = message,
+            TextAlignment = Alignment.Center,
+        };
+        dialog.Add(label);
+
+        int result = -1;
+
+        var btn1 = new Button() { Text = button1 };
+        btn1.Accept += (s, e) =>
+        {
+            result = 0;
+            Application.RequestStop(dialog);
+        };
+
+        var btn2 = new Button() { Text = button2 };
+        btn2.Accept += (s, e) =>
+        {
+            result = 1;
+            Application.RequestStop(dialog);
+        };
+
+        var btn3 = new Button() { Text = button3 };
+        btn3.Accept += (s, e) =>
+        {
+            result = 2;
+            Application.RequestStop(dialog);
+        };
+
+        dialog.AddButton(btn1);
+        dialog.AddButton(btn2);
+        dialog.AddButton(btn3);
+
+        Application.Run(dialog);
+        return result;
     }
 }

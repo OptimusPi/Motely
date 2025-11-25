@@ -18,13 +18,17 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
     {
         foreach (var clause in _criteria.Clauses)
         {
-            DebugLogger.Log($"[VOUCHER] Clause: VoucherType={clause.VoucherType}, VoucherTypes={clause.VoucherTypes?.Count ?? 0}");
+            DebugLogger.Log(
+                $"[VOUCHER] Clause: VoucherType={clause.VoucherType}, VoucherTypes={clause.VoucherTypes?.Count ?? 0}"
+            );
 
             for (int anteIndex = 0; anteIndex < 40; anteIndex++)
             {
                 if (clause.WantedAntes[anteIndex])
                 {
-                    DebugLogger.Log($"[VOUCHER] Caching ante {anteIndex} for voucher {clause.VoucherType}");
+                    DebugLogger.Log(
+                        $"[VOUCHER] Caching ante {anteIndex} for voucher {clause.VoucherType}"
+                    );
                     ctx.CacheAnteFirstVoucher(anteIndex);
                 }
             }
@@ -40,29 +44,37 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
         private readonly int _maxAnte;
         private readonly bool _lookingForPetroglyph;
 
-        public MotelyJsonVoucherFilter(List<MotelyJsonVoucherFilterClause> clauses, int minAnte, int maxAnte)
+        public MotelyJsonVoucherFilter(
+            List<MotelyJsonVoucherFilterClause> clauses,
+            int minAnte,
+            int maxAnte
+        )
         {
             _clauses = [.. clauses];
             _minAnte = minAnte;
             _maxAnte = maxAnte;
-            _lookingForPetroglyph = _clauses.Any(clause => clause.VoucherType == MotelyVoucher.Petroglyph);
-            
+            _lookingForPetroglyph = _clauses.Any(clause =>
+                clause.VoucherType == MotelyVoucher.Petroglyph
+            );
 
-            DebugLogger.Log($"[VOUCHER FILTER] Created filter with minAnte={minAnte}, maxAnte={maxAnte}, {clauses.Count} clauses");
+            DebugLogger.Log(
+                $"[VOUCHER FILTER] Created filter with minAnte={minAnte}, maxAnte={maxAnte}, {clauses.Count} clauses"
+            );
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             if (_clauses == null || _clauses.Length == 0)
                 return VectorMask.AllBitsSet;
-            
+
             // Stack-allocated clause masks - no heap allocation!
             Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Length];
             for (int i = 0; i < clauseMasks.Length; i++)
             {
                 clauseMasks[i] = VectorMask.NoBitsSet;
-
             }
             var voucherState = new MotelyVectorRunState();
 
@@ -71,7 +83,9 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
             {
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
 
-                DebugLogger.Log($"[VOUCHER VECTORIZED] Ante {ante}: Checking vouchers, lane 0 has {vouchers[0]}");
+                DebugLogger.Log(
+                    $"[VOUCHER VECTORIZED] Ante {ante}: Checking vouchers, lane 0 has {vouchers[0]}"
+                );
 
                 // Check all clauses for this ante (first voucher)
                 for (int i = 0; i < _clauses.Length; i++)
@@ -89,7 +103,10 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                         }
                         else
                         {
-                            clauseMasks[i] |= VectorEnum256.Equals(vouchers, _clauses[i].VoucherType);
+                            clauseMasks[i] |= VectorEnum256.Equals(
+                                vouchers,
+                                _clauses[i].VoucherType
+                            );
                         }
                     }
                 }
@@ -121,12 +138,18 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                                 // Multi-value: OR logic - match any voucher in the list
                                 foreach (var voucherType in _clauses[i].VoucherTypes!)
                                 {
-                                    bonusMatches |= VectorEnum256.Equals(bonusVouchers, voucherType);
+                                    bonusMatches |= VectorEnum256.Equals(
+                                        bonusVouchers,
+                                        voucherType
+                                    );
                                 }
                             }
                             else
                             {
-                                bonusMatches = VectorEnum256.Equals(bonusVouchers, _clauses[i].VoucherType);
+                                bonusMatches = VectorEnum256.Equals(
+                                    bonusVouchers,
+                                    _clauses[i].VoucherType
+                                );
                             }
 
                             // Only count matches in lanes that have Hieroglyph (bonus is only valid there)
@@ -155,81 +178,26 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
 
             if (resultMask.IsAllFalse() && !_lookingForPetroglyph)
                 return VectorMask.NoBitsSet;
-            
+
             // Use the SHARED scoring function - NO CONVERSION NEEDED! Uses typed clause directly!
             var clauses = _clauses;
             var maxAnte = _maxAnte; // Capture for lambda
-            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
-            {
-                var voucherState = new MotelyRunState();
-
-                // CRITICAL: Walk ALL antes from 1 to maxAnte ONCE, checking ALL clauses as we go!
-                // This builds voucher state progressively (like the vectorized filter does)
-                int[] clauseCounts = new int[clauses.Length];
-                int clausesSatisfied = 0; // Track how many clauses have met their Min threshold
-
-                for (int ante = 1; ante <= maxAnte; ante++)
+            return ctx.SearchIndividualSeeds(
+                resultMask,
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    var voucherAtAnte = singleCtx.GetAnteFirstVoucher(ante, voucherState);
+                    var voucherState = new MotelyRunState();
 
-                    // Check each clause for this ante
-                    for (int i = 0; i < clauses.Length; i++)
+                    // CRITICAL: Walk ALL antes from 1 to maxAnte ONCE, checking ALL clauses as we go!
+                    // This builds voucher state progressively (like the vectorized filter does)
+                    int[] clauseCounts = new int[clauses.Length];
+                    int clausesSatisfied = 0; // Track how many clauses have met their Min threshold
+
+                    for (int ante = 1; ante <= maxAnte; ante++)
                     {
-                        var clause = clauses[i];
+                        var voucherAtAnte = singleCtx.GetAnteFirstVoucher(ante, voucherState);
 
-                        // Check if this clause wants this ante
-                        if (clause.WantedAntes[ante])
-                        {
-                            // Check single voucher OR multi-voucher array
-                            bool matches = false;
-                            if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 0)
-                            {
-                                // Multi-value: Check if voucher matches ANY in the list
-                                foreach (var voucherType in clause.VoucherTypes)
-                                {
-                                    if (voucherAtAnte == voucherType)
-                                    {
-                                        matches = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // Single value
-                                matches = voucherAtAnte == clause.VoucherType;
-                            }
-
-                            if (matches)
-                            {
-                                int previousCount = clauseCounts[i];
-                                clauseCounts[i]++;
-
-                                // EARLY EXIT OPTIMIZATION: Check if this clause just became satisfied
-                                int minThreshold = clause.Min ?? 1;
-                                if (previousCount < minThreshold && clauseCounts[i] >= minThreshold)
-                                {
-                                    clausesSatisfied++;
-
-                                    // ALL CLAUSES SATISFIED - EARLY EXIT!
-                                    if (clausesSatisfied == clauses.Length)
-                                        return true;
-                                }
-                            }
-                        }
-                    }
-
-                    // ALWAYS activate voucher to update state for next ante
-                    voucherState.ActivateVoucher(voucherAtAnte);
-
-                    // CRITICAL FIX: Handle Hieroglyph bonus voucher (replay ante = second voucher from same ante!)
-                    // This allows Hieroglyph + Petroglyph both at ante 1
-                    if (voucherAtAnte == MotelyVoucher.Hieroglyph)
-                    {
-                        var voucherStream = singleCtx.CreateVoucherStream(ante, isCached: true);
-                        var bonusVoucher = singleCtx.GetNextVoucher(ref voucherStream, voucherState);
-
-                        // Check the bonus voucher against all clauses for THIS SAME ANTE!
+                        // Check each clause for this ante
                         for (int i = 0; i < clauses.Length; i++)
                         {
                             var clause = clauses[i];
@@ -241,10 +209,10 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                                 bool matches = false;
                                 if (clause.VoucherTypes != null && clause.VoucherTypes.Count > 0)
                                 {
-                                    // Multi-value: Check if bonus voucher matches ANY in the list
+                                    // Multi-value: Check if voucher matches ANY in the list
                                     foreach (var voucherType in clause.VoucherTypes)
                                     {
-                                        if (bonusVoucher == voucherType)
+                                        if (voucherAtAnte == voucherType)
                                         {
                                             matches = true;
                                             break;
@@ -254,7 +222,7 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                                 else
                                 {
                                     // Single value
-                                    matches = bonusVoucher == clause.VoucherType;
+                                    matches = voucherAtAnte == clause.VoucherType;
                                 }
 
                                 if (matches)
@@ -264,7 +232,10 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
 
                                     // EARLY EXIT OPTIMIZATION: Check if this clause just became satisfied
                                     int minThreshold = clause.Min ?? 1;
-                                    if (previousCount < minThreshold && clauseCounts[i] >= minThreshold)
+                                    if (
+                                        previousCount < minThreshold
+                                        && clauseCounts[i] >= minThreshold
+                                    )
                                     {
                                         clausesSatisfied++;
 
@@ -276,41 +247,111 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                             }
                         }
 
-                        voucherState.ActivateVoucher(bonusVoucher);
-                    }
+                        // ALWAYS activate voucher to update state for next ante
+                        voucherState.ActivateVoucher(voucherAtAnte);
 
-                    // CRITICAL EARLY EXIT: Check all clauses AFTER processing both main voucher AND Hieroglyph bonus
-                    for (int i = 0; i < clauses.Length; i++)
-                    {
-                        var clause = clauses[i];
-
-                        // Check if this is the FINAL ante for this clause
-                        if (clause.WantedAntes[ante])
+                        // CRITICAL FIX: Handle Hieroglyph bonus voucher (replay ante = second voucher from same ante!)
+                        // This allows Hieroglyph + Petroglyph both at ante 1
+                        if (voucherAtAnte == MotelyVoucher.Hieroglyph)
                         {
-                            var effectiveAntes = clause.EffectiveAntes;
-                            if (effectiveAntes.Length > 0 && ante == effectiveAntes[effectiveAntes.Length - 1])
+                            var voucherStream = singleCtx.CreateVoucherStream(ante, isCached: true);
+                            var bonusVoucher = singleCtx.GetNextVoucher(
+                                ref voucherStream,
+                                voucherState
+                            );
+
+                            // Check the bonus voucher against all clauses for THIS SAME ANTE!
+                            for (int i = 0; i < clauses.Length; i++)
                             {
-                                int minThreshold = clause.Min ?? 1;
-                                if (clauseCounts[i] < minThreshold)
+                                var clause = clauses[i];
+
+                                // Check if this clause wants this ante
+                                if (clause.WantedAntes[ante])
                                 {
-                                    // This clause FAILED at its final ante - no point continuing!
-                                    return false;
+                                    // Check single voucher OR multi-voucher array
+                                    bool matches = false;
+                                    if (
+                                        clause.VoucherTypes != null
+                                        && clause.VoucherTypes.Count > 0
+                                    )
+                                    {
+                                        // Multi-value: Check if bonus voucher matches ANY in the list
+                                        foreach (var voucherType in clause.VoucherTypes)
+                                        {
+                                            if (bonusVoucher == voucherType)
+                                            {
+                                                matches = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Single value
+                                        matches = bonusVoucher == clause.VoucherType;
+                                    }
+
+                                    if (matches)
+                                    {
+                                        int previousCount = clauseCounts[i];
+                                        clauseCounts[i]++;
+
+                                        // EARLY EXIT OPTIMIZATION: Check if this clause just became satisfied
+                                        int minThreshold = clause.Min ?? 1;
+                                        if (
+                                            previousCount < minThreshold
+                                            && clauseCounts[i] >= minThreshold
+                                        )
+                                        {
+                                            clausesSatisfied++;
+
+                                            // ALL CLAUSES SATISFIED - EARLY EXIT!
+                                            if (clausesSatisfied == clauses.Length)
+                                                return true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            voucherState.ActivateVoucher(bonusVoucher);
+                        }
+
+                        // CRITICAL EARLY EXIT: Check all clauses AFTER processing both main voucher AND Hieroglyph bonus
+                        for (int i = 0; i < clauses.Length; i++)
+                        {
+                            var clause = clauses[i];
+
+                            // Check if this is the FINAL ante for this clause
+                            if (clause.WantedAntes[ante])
+                            {
+                                var effectiveAntes = clause.EffectiveAntes;
+                                if (
+                                    effectiveAntes.Length > 0
+                                    && ante == effectiveAntes[effectiveAntes.Length - 1]
+                                )
+                                {
+                                    int minThreshold = clause.Min ?? 1;
+                                    if (clauseCounts[i] < minThreshold)
+                                    {
+                                        // This clause FAILED at its final ante - no point continuing!
+                                        return false;
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                // Check if all clauses met their Min thresholds (shouldn't get here if early exit worked)
-                for (int i = 0; i < clauses.Length; i++)
-                {
-                    int minThreshold = clauses[i].Min ?? 1;
-                    if (clauseCounts[i] < minThreshold)
-                        return false;
-                }
+                    // Check if all clauses met their Min thresholds (shouldn't get here if early exit worked)
+                    for (int i = 0; i < clauses.Length; i++)
+                    {
+                        int minThreshold = clauses[i].Min ?? 1;
+                        if (clauseCounts[i] < minThreshold)
+                            return false;
+                    }
 
-                return true;
-            });
+                    return true;
+                }
+            );
         }
     }
 }

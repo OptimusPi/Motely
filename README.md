@@ -1,6 +1,6 @@
 # Motely
 
-The fastest Balatro seed searcher with JSON, YAML, TOML support and an interactive TUI.
+The fastest Balatro seed searcher with JSON, YAML support and an interactive TUI.
 
 Based on [@tacodiva](https://github.com/tacodiva)'s incredible [Motely](https://github.com/tacodiva/Motely) - a blazing-fast SIMD-powered seed searcher. This fork extends it with multiple configuration formats (JSON, YAML, TOML) and a Terminal User Interface for easy filter creation.
 

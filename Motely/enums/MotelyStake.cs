@@ -1,4 +1,3 @@
-
 namespace Motely;
 
 public enum MotelyStake
@@ -10,5 +9,5 @@ public enum MotelyStake
     Blue = 4,
     Purple = 6,
     Orange = 7,
-    Gold = 8
+    Gold = 8,
 }

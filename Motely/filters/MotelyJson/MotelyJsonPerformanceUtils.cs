@@ -13,8 +13,10 @@ namespace Motely.Filters;
 public static class MotelyJsonPerformanceUtils
 {
     #region Pre-computed Type Mappings (eliminates string comparisons)
-    
-    private static readonly Dictionary<string, MotelyFilterItemType> TypeMap = new(StringComparer.OrdinalIgnoreCase)
+
+    private static readonly Dictionary<string, MotelyFilterItemType> TypeMap = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         ["joker"] = MotelyFilterItemType.Joker,
         ["souljoker"] = MotelyFilterItemType.SoulJoker,
@@ -32,10 +34,12 @@ public static class MotelyJsonPerformanceUtils
         ["standardcard"] = MotelyFilterItemType.PlayingCard,
         ["boss"] = MotelyFilterItemType.Boss,
         ["and"] = MotelyFilterItemType.And,
-        ["or"] = MotelyFilterItemType.Or
+        ["or"] = MotelyFilterItemType.Or,
     };
-    
-    private static readonly Dictionary<string, MotelyJsonConfigWildcards> WildcardMap = new(StringComparer.OrdinalIgnoreCase)
+
+    private static readonly Dictionary<string, MotelyJsonConfigWildcards> WildcardMap = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         ["any"] = MotelyJsonConfigWildcards.AnyJoker,
         ["anyjoker"] = MotelyJsonConfigWildcards.AnyJoker,
@@ -46,14 +50,14 @@ public static class MotelyJsonPerformanceUtils
         ["anylegendary"] = MotelyJsonConfigWildcards.AnyLegendary,
         ["anytarot"] = MotelyJsonConfigWildcards.AnyTarot,
         ["anyspectral"] = MotelyJsonConfigWildcards.AnySpectral,
-        ["anyplanet"] = MotelyJsonConfigWildcards.AnyPlanet
+        ["anyplanet"] = MotelyJsonConfigWildcards.AnyPlanet,
     };
-    
+
     #endregion
-    
-    
+
+
     #region SIMD Mask Operations (replaces per-lane loops)
-    
+
     /// <summary>
     /// Extract mask from vector comparison result using SIMD intrinsics
     /// Replaces slow per-lane loops with single instruction
@@ -72,50 +76,49 @@ public static class MotelyJsonPerformanceUtils
             uint mask = 0;
             for (int i = 0; i < 8; i++)
             {
-                if (comparison[i] == -1) mask |= (1u << i);
+                if (comparison[i] == -1)
+                    mask |= (1u << i);
             }
             return mask;
         }
     }
-    
 
-    
     #endregion
-    
+
     #region Type Parsing (eliminates string operations in hot paths)
-    
+
     /// <summary>
     /// Parse item type without string allocation
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MotelyFilterItemType ParseItemType(string? type)
     {
-        if (string.IsNullOrEmpty(type)) 
+        if (string.IsNullOrEmpty(type))
             throw new ArgumentException("Type cannot be null or empty");
-            
-        return TypeMap.TryGetValue(type, out var itemType) 
-            ? itemType 
+
+        return TypeMap.TryGetValue(type, out var itemType)
+            ? itemType
             : throw new ArgumentException($"Unknown filter item type: {type}");
     }
-    
+
     /// <summary>
     /// Parse wildcard without string comparisons
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static (bool isWildcard, MotelyJsonConfigWildcards? wildcard) ParseWildcard(string? value)
+    public static (bool isWildcard, MotelyJsonConfigWildcards? wildcard) ParseWildcard(
+        string? value
+    )
     {
         if (string.IsNullOrEmpty(value))
             return (false, null);
-            
-        return WildcardMap.TryGetValue(value, out var wildcard) 
-            ? (true, wildcard) 
-            : (false, null);
+
+        return WildcardMap.TryGetValue(value, out var wildcard) ? (true, wildcard) : (false, null);
     }
-    
+
     #endregion
-    
+
     #region Pre-computed Enum Values (eliminates repeated casting)
-    
+
     /// <summary>
     /// Pre-compute MotelyItemType values for jokers
     /// </summary>
@@ -124,7 +127,7 @@ public static class MotelyJsonPerformanceUtils
     {
         return (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)joker);
     }
-    
+
     /// <summary>
     /// Pre-compute MotelyItemType values for planet cards
     /// </summary>
@@ -133,7 +136,7 @@ public static class MotelyJsonPerformanceUtils
     {
         return (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)planet);
     }
-    
+
     /// <summary>
     /// Pre-compute MotelyItemType values for spectral cards
     /// </summary>
@@ -142,7 +145,7 @@ public static class MotelyJsonPerformanceUtils
     {
         return (MotelyItemType)((int)MotelyItemTypeCategory.SpectralCard | (int)spectral);
     }
-    
+
     /// <summary>
     /// Pre-compute MotelyItemType values for tarot cards
     /// </summary>
@@ -151,6 +154,6 @@ public static class MotelyJsonPerformanceUtils
     {
         return (MotelyItemType)((int)MotelyItemTypeCategory.TarotCard | (int)tarot);
     }
-    
+
     #endregion
 }

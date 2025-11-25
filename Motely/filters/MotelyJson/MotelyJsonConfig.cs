@@ -1130,11 +1130,35 @@ public class MotelyJsonConfig
         if (!string.IsNullOrEmpty(clause.Label))
             return MakeSafeColumnName(clause.Label);
 
+        // Handle OR/AND clauses with compact notation
+        if ((clause.Type?.ToLower() == "or" || clause.Type?.ToLower() == "and") && clause.Clauses != null && clause.Clauses.Count > 0)
+        {
+            var clauseType = clause.Type.ToUpper();
+            var count = clause.Clauses.Count;
+            var anteSuffix = "";
+            if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
+            {
+                // Use @A1A2A3 format to avoid ambiguity (not @A123)
+                // Example: [1,2,3] → @A1A2A3, [12,3] → @A12A3
+                anteSuffix = "@" + string.Join("", clause.Antes.Select(a => $"A{a}"));
+            }
+
+            return MakeSafeColumnName($"{count}_{clauseType}{anteSuffix}");
+        }
+
         // Build name from value/type
         string name;
         if (!string.IsNullOrEmpty(clause.Value))
         {
-            name = clause.Value;
+            // Special handling for wildcards (Any)
+            if (clause.Value.Equals("Any", StringComparison.OrdinalIgnoreCase))
+            {
+                name = $"Any_{clause.Type}";
+            }
+            else
+            {
+                name = clause.Value;
+            }
         }
         else if (clause.Values != null && clause.Values.Length > 0)
         {
@@ -1152,16 +1176,16 @@ public class MotelyJsonConfig
         else
         {
             // Fallback to type
-            name = clause.Type;
+            name = clause.Type ?? "Unknown";
         }
 
         // Add edition prefix if specified
         if (!string.IsNullOrEmpty(clause.Edition))
             name = clause.Edition + "_" + name;
 
-        // Add ante suffix if specified
+        // Add ante suffix if specified (use @A1A2A3 format to avoid ambiguity)
         if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
-            name += "_ante" + clause.Antes[0];
+            name += "@" + string.Join("", clause.Antes.Select(a => $"A{a}"));
 
         return MakeSafeColumnName(name);
     }

@@ -24,7 +24,7 @@ public class SettingsWindow : Window
             Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
             Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
             HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
+            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
         };
 
         // Title
@@ -36,8 +36,8 @@ public class SettingsWindow : Window
             TextAlignment = Alignment.Center,
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
+            },
         };
         Add(titleLabel);
 
@@ -46,7 +46,7 @@ public class SettingsWindow : Window
         {
             X = 2,
             Y = 3,
-            Text = "Thread Count:"
+            Text = "Thread Count:",
         };
         Add(threadLabel);
 
@@ -55,7 +55,7 @@ public class SettingsWindow : Window
             X = 2,
             Y = 4,
             Width = 20,
-            Text = TuiSettings.ThreadCount.ToString()
+            Text = TuiSettings.ThreadCount.ToString(),
         };
         Add(_threadCountField);
 
@@ -66,8 +66,8 @@ public class SettingsWindow : Window
             Text = $"(1-{Environment.ProcessorCount}, default: {Environment.ProcessorCount})",
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black),
+            },
         };
         Add(threadHint);
 
@@ -76,7 +76,7 @@ public class SettingsWindow : Window
         {
             X = 2,
             Y = 6,
-            Text = "Batch Character Count:"
+            Text = "Batch Character Count:",
         };
         Add(batchLabel);
 
@@ -85,7 +85,7 @@ public class SettingsWindow : Window
             X = 2,
             Y = 7,
             Width = 20,
-            Text = TuiSettings.BatchCharacterCount.ToString()
+            Text = TuiSettings.BatchCharacterCount.ToString(),
         };
         Add(_batchCharCountField);
 
@@ -96,8 +96,8 @@ public class SettingsWindow : Window
             Text = "(1-7, default: 2, recommended: 2-4)",
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black),
+            },
         };
         Add(batchHint);
 
@@ -106,7 +106,7 @@ public class SettingsWindow : Window
         {
             X = 2,
             Y = 9,
-            Text = "API Server Host:"
+            Text = "API Server Host:",
         };
         Add(hostLabel);
 
@@ -115,7 +115,7 @@ public class SettingsWindow : Window
             X = 2,
             Y = 10,
             Width = 40,
-            Text = TuiSettings.ApiServerHost
+            Text = TuiSettings.ApiServerHost,
         };
         Add(_apiHostField);
 
@@ -124,7 +124,7 @@ public class SettingsWindow : Window
         {
             X = 2,
             Y = 12,
-            Text = "API Server Port:"
+            Text = "API Server Port:",
         };
         Add(portLabel);
 
@@ -133,7 +133,7 @@ public class SettingsWindow : Window
             X = 2,
             Y = 13,
             Width = 20,
-            Text = TuiSettings.ApiServerPort.ToString()
+            Text = TuiSettings.ApiServerPort.ToString(),
         };
         Add(_apiPortField);
 
@@ -144,10 +144,32 @@ public class SettingsWindow : Window
             Text = "(1-65535, default: 3141)",
             ColorScheme = new ColorScheme()
             {
-                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black)
-            }
+                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black),
+            },
         };
         Add(portHint);
+
+        // Secret option
+        var secretButton = new Button()
+        {
+            X = 2,
+            Y = 15,
+            Text = "Secret...",
+            Width = 20,
+            ColorScheme = new ColorScheme()
+            {
+                Normal = new Terminal.Gui.Attribute(ColorName.DarkGray, ColorName.Black),
+                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightMagenta),
+                HotNormal = new Terminal.Gui.Attribute(ColorName.BrightMagenta, ColorName.Black),
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightMagenta),
+            },
+        };
+        secretButton.Accept += (s, e) =>
+        {
+            // Secret functionality placeholder
+            MessageBox.Query("Secret Discovered!", "You found the secret option!\n\nJimbo is proud of you! 🃏", "OK");
+        };
+        Add(secretButton);
 
         // Save button
         var saveButton = new Button()
@@ -160,8 +182,8 @@ public class SettingsWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightBlue),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightBlue)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightBlue),
+            },
         };
         saveButton.Accept += (s, e) => SaveSettings();
         Add(saveButton);
@@ -177,8 +199,8 @@ public class SettingsWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
         cancelButton.Accept += (s, e) => Application.RequestStop();
         Add(cancelButton);
@@ -205,8 +227,10 @@ public class SettingsWindow : Window
             {
                 if (threadCount < 1 || threadCount > Environment.ProcessorCount)
                 {
-                    ShowErrorDialog("Invalid Thread Count",
-                        $"Thread count must be between 1 and {Environment.ProcessorCount}");
+                    ShowErrorDialog(
+                        "Invalid Thread Count",
+                        $"Thread count must be between 1 and {Environment.ProcessorCount}"
+                    );
                     return;
                 }
                 TuiSettings.ThreadCount = threadCount;
@@ -222,16 +246,20 @@ public class SettingsWindow : Window
             {
                 if (batchCharCount < 1 || batchCharCount > 7)
                 {
-                    ShowErrorDialog("Invalid Batch Character Count",
-                        "Batch character count must be between 1 and 7");
+                    ShowErrorDialog(
+                        "Invalid Batch Character Count",
+                        "Batch character count must be between 1 and 7"
+                    );
                     return;
                 }
                 TuiSettings.BatchCharacterCount = batchCharCount;
             }
             else
             {
-                ShowErrorDialog("Invalid Batch Character Count",
-                    "Batch character count must be a valid number");
+                ShowErrorDialog(
+                    "Invalid Batch Character Count",
+                    "Batch character count must be a valid number"
+                );
                 return;
             }
 
@@ -281,8 +309,8 @@ public class SettingsWindow : Window
                 Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
                 Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
                 HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed)
-            }
+                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
+            },
         };
 
         var label = new Label()
@@ -290,7 +318,7 @@ public class SettingsWindow : Window
             X = Pos.Center(),
             Y = 2,
             Text = message,
-            TextAlignment = Alignment.Center
+            TextAlignment = Alignment.Center,
         };
         dialog.Add(label);
 

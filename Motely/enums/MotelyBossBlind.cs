@@ -1,4 +1,3 @@
-
 using System.Runtime.CompilerServices;
 
 namespace Motely;
@@ -6,7 +5,7 @@ namespace Motely;
 public enum MotelyBossBlindType
 {
     Normal = 0 << Motely.BossTypeOffset,
-    Finisher = 1 << Motely.BossTypeOffset
+    Finisher = 1 << Motely.BossTypeOffset,
 }
 
 internal enum MotelyBossBlindWithoutData
@@ -38,7 +37,7 @@ internal enum MotelyBossBlindWithoutData
     TheWall,
     TheWater,
     TheWheel,
-    TheWindow
+    TheWindow,
 }
 
 public enum MotelyBossBlind
@@ -49,34 +48,80 @@ public enum MotelyBossBlind
     VerdantLeaf = MotelyBossBlindWithoutData.VerdantLeaf | MotelyBossBlindType.Finisher,
     VioletVessel = MotelyBossBlindWithoutData.VioletVessel | MotelyBossBlindType.Finisher,
 
-    TheArm = MotelyBossBlindWithoutData.TheArm | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
+    TheArm =
+        MotelyBossBlindWithoutData.TheArm
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
     TheClub = MotelyBossBlindWithoutData.TheClub | MotelyBossBlindType.Normal,
-    TheEye = MotelyBossBlindWithoutData.TheEye | MotelyBossBlindType.Normal | (3 << Motely.BossRequiredAnteOffset),
-    TheFish = MotelyBossBlindWithoutData.TheFish | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
-    TheFlint = MotelyBossBlindWithoutData.TheFlint | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
+    TheEye =
+        MotelyBossBlindWithoutData.TheEye
+        | MotelyBossBlindType.Normal
+        | (3 << Motely.BossRequiredAnteOffset),
+    TheFish =
+        MotelyBossBlindWithoutData.TheFish
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
+    TheFlint =
+        MotelyBossBlindWithoutData.TheFlint
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
     TheGoad = MotelyBossBlindWithoutData.TheGoad | MotelyBossBlindType.Normal,
     TheHead = MotelyBossBlindWithoutData.TheHead | MotelyBossBlindType.Normal,
     TheHook = MotelyBossBlindWithoutData.TheHook | MotelyBossBlindType.Normal,
-    TheHouse = MotelyBossBlindWithoutData.TheHouse | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
+    TheHouse =
+        MotelyBossBlindWithoutData.TheHouse
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
     TheManacle = MotelyBossBlindWithoutData.TheManacle | MotelyBossBlindType.Normal,
-    TheMark = MotelyBossBlindWithoutData.TheMark | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
-    TheMouth = MotelyBossBlindWithoutData.TheMouth | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
-    TheNeedle = MotelyBossBlindWithoutData.TheNeedle | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
-    TheOx = MotelyBossBlindWithoutData.TheOx | MotelyBossBlindType.Normal | (6 << Motely.BossRequiredAnteOffset),
+    TheMark =
+        MotelyBossBlindWithoutData.TheMark
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
+    TheMouth =
+        MotelyBossBlindWithoutData.TheMouth
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
+    TheNeedle =
+        MotelyBossBlindWithoutData.TheNeedle
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
+    TheOx =
+        MotelyBossBlindWithoutData.TheOx
+        | MotelyBossBlindType.Normal
+        | (6 << Motely.BossRequiredAnteOffset),
     ThePillar = MotelyBossBlindWithoutData.ThePillar | MotelyBossBlindType.Normal,
-    ThePlant = MotelyBossBlindWithoutData.ThePlant | MotelyBossBlindType.Normal | (4 << Motely.BossRequiredAnteOffset),
+    ThePlant =
+        MotelyBossBlindWithoutData.ThePlant
+        | MotelyBossBlindType.Normal
+        | (4 << Motely.BossRequiredAnteOffset),
     ThePsychic = MotelyBossBlindWithoutData.ThePsychic | MotelyBossBlindType.Normal,
-    TheSerpent = MotelyBossBlindWithoutData.TheSerpent | MotelyBossBlindType.Normal | (5 << Motely.BossRequiredAnteOffset),
-    TheTooth = MotelyBossBlindWithoutData.TheTooth | MotelyBossBlindType.Normal | (3 << Motely.BossRequiredAnteOffset),
-    TheWall = MotelyBossBlindWithoutData.TheWall | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
-    TheWater = MotelyBossBlindWithoutData.TheWater | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
-    TheWheel = MotelyBossBlindWithoutData.TheWheel | MotelyBossBlindType.Normal | (2 << Motely.BossRequiredAnteOffset),
-    TheWindow = MotelyBossBlindWithoutData.TheWindow | MotelyBossBlindType.Normal
+    TheSerpent =
+        MotelyBossBlindWithoutData.TheSerpent
+        | MotelyBossBlindType.Normal
+        | (5 << Motely.BossRequiredAnteOffset),
+    TheTooth =
+        MotelyBossBlindWithoutData.TheTooth
+        | MotelyBossBlindType.Normal
+        | (3 << Motely.BossRequiredAnteOffset),
+    TheWall =
+        MotelyBossBlindWithoutData.TheWall
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
+    TheWater =
+        MotelyBossBlindWithoutData.TheWater
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
+    TheWheel =
+        MotelyBossBlindWithoutData.TheWheel
+        | MotelyBossBlindType.Normal
+        | (2 << Motely.BossRequiredAnteOffset),
+    TheWindow = MotelyBossBlindWithoutData.TheWindow | MotelyBossBlindType.Normal,
 }
 
 public static class MotelyBossBlindExt
 {
-    public static readonly MotelyBossBlind[] FinisherBossBlinds = [
+    public static readonly MotelyBossBlind[] FinisherBossBlinds =
+    [
         MotelyBossBlind.AmberAcorn,
         MotelyBossBlind.CeruleanBell,
         MotelyBossBlind.CrimsonHeart,
@@ -84,7 +129,8 @@ public static class MotelyBossBlindExt
         MotelyBossBlind.VioletVessel,
     ];
 
-    public static readonly MotelyBossBlind[] NormalBossBlinds = [
+    public static readonly MotelyBossBlind[] NormalBossBlinds =
+    [
         MotelyBossBlind.TheArm,
         MotelyBossBlind.TheClub,
         MotelyBossBlind.TheEye,
@@ -112,9 +158,12 @@ public static class MotelyBossBlindExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetBossIndex(this MotelyBossBlind blind) => ((int)blind) & 0xFF;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetBossMinAnte(this MotelyBossBlind blind) => (((int)blind) & Motely.BossRequiredAnteMask) >> Motely.BossRequiredAnteOffset;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static MotelyBossBlindType GetBossType(this MotelyBossBlind blind) => (MotelyBossBlindType)(((int)blind) & Motely.BossTypeMask);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int GetBossMinAnte(this MotelyBossBlind blind) =>
+        (((int)blind) & Motely.BossRequiredAnteMask) >> Motely.BossRequiredAnteOffset;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MotelyBossBlindType GetBossType(this MotelyBossBlind blind) =>
+        (MotelyBossBlindType)(((int)blind) & Motely.BossTypeMask);
 }

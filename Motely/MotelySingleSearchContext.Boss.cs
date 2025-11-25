@@ -21,10 +21,14 @@ unsafe ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelyBossBlind GetBossForAnte(ref MotelySingleBossStream stream, int ante, ref MotelyRunState state)
+    public MotelyBossBlind GetBossForAnte(
+        ref MotelySingleBossStream stream,
+        int ante,
+        ref MotelyRunState state
+    )
     {
         // 23 is the maximum number of boss blinds in the pool, because there is 23 non-finisher boss blinds
-        const int maxPoolLength = 23; 
+        const int maxPoolLength = 23;
 
         MotelyBossBlind* pool = stackalloc MotelyBossBlind[maxPoolLength];
         int poolLength = 0;
@@ -36,7 +40,8 @@ unsafe ref partial struct MotelySingleSearchContext
             {
                 MotelyBossBlind boss = MotelyBossBlindExt.FinisherBossBlinds[i];
 
-                if (state.HasSeenBoss(boss)) continue;
+                if (state.HasSeenBoss(boss))
+                    continue;
 
                 Debug.Assert(poolLength < maxPoolLength);
 
@@ -65,8 +70,10 @@ unsafe ref partial struct MotelySingleSearchContext
             {
                 MotelyBossBlind boss = MotelyBossBlindExt.NormalBossBlinds[i];
 
-                if (state.HasSeenBoss(boss)) continue;
-                if (ante < boss.GetBossMinAnte()) continue;
+                if (state.HasSeenBoss(boss))
+                    continue;
+                if (ante < boss.GetBossMinAnte())
+                    continue;
 
                 Debug.Assert(poolLength < maxPoolLength);
 
@@ -81,7 +88,8 @@ unsafe ref partial struct MotelySingleSearchContext
                 {
                     MotelyBossBlind boss = MotelyBossBlindExt.NormalBossBlinds[i];
 
-                    if (ante < boss.GetBossMinAnte()) continue;
+                    if (ante < boss.GetBossMinAnte())
+                        continue;
 
                     Debug.Assert(!state.HasSeenBoss(boss));
                     Debug.Assert(poolLength < maxPoolLength);

@@ -13,5 +13,5 @@ public enum MotelyPlanetCard
     Pluto,
     PlanetX,
     Ceres,
-    Eris
+    Eris,
 }

@@ -4,7 +4,11 @@ using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public ref struct MotelyVectorPlanetStream(string resampleKey, MotelyVectorResampleStream resampleStream, MotelyVectorPrngStream blackHolePrngStream)
+public ref struct MotelyVectorPlanetStream(
+    string resampleKey,
+    MotelyVectorResampleStream resampleStream,
+    MotelyVectorPrngStream blackHolePrngStream
+)
 {
     public readonly bool IsNull => ResampleStream.IsInvalid;
     public readonly string ResampleKey = resampleKey;
@@ -18,23 +22,33 @@ ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    private MotelyVectorPlanetStream CreatePlanetStream(string source, int ante, bool blackHoleable, bool isCached)
+    private MotelyVectorPlanetStream CreatePlanetStream(
+        string source,
+        int ante,
+        bool blackHoleable,
+        bool isCached
+    )
     {
         string resampleKey = MotelyPrngKeys.Planet + source + ante;
         return new(
             resampleKey,
             CreateResampleStream(resampleKey, isCached),
-            blackHoleable ?
-                CreatePrngStream(MotelyPrngKeys.PlanetBlackHole + MotelyPrngKeys.Planet + ante, isCached) :
-                MotelyVectorPrngStream.Invalid
+            blackHoleable
+                ? CreatePrngStream(
+                    MotelyPrngKeys.PlanetBlackHole + MotelyPrngKeys.Planet + ante,
+                    isCached
+                )
+                : MotelyVectorPrngStream.Invalid
         );
     }
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public MotelyVectorPlanetStream CreateCelestialPackPlanetStream(int ante, bool isCached = false) =>
-        CreatePlanetStream(MotelyPrngKeys.CelestialPackItemSource, ante, true, isCached);
+    public MotelyVectorPlanetStream CreateCelestialPackPlanetStream(
+        int ante,
+        bool isCached = false
+    ) => CreatePlanetStream(MotelyPrngKeys.CelestialPackItemSource, ante, true, isCached);
 
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,7 +56,10 @@ ref partial struct MotelyVectorSearchContext
     public MotelyVectorPlanetStream CreateShopPlanetStream(int ante, bool isCached = false) =>
         CreatePlanetStream(MotelyPrngKeys.ShopItemSource, ante, false, isCached);
 
-    public MotelyVectorItemSet GetNextCelestialPackContents(ref MotelyVectorPlanetStream planetStream, MotelyBoosterPackSize size)
+    public MotelyVectorItemSet GetNextCelestialPackContents(
+        ref MotelyVectorPlanetStream planetStream,
+        MotelyBoosterPackSize size
+    )
     {
         int cardCount = MotelyBoosterPackType.Celestial.GetCardCount(size);
         MotelyVectorItemSet pack = new();
@@ -58,34 +75,47 @@ ref partial struct MotelyVectorSearchContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItemVector GetNextShopPlanetOrNull(ref MotelyVectorPlanetStream planetStream, ref MotelyVectorPrngStream itemTypeStream,
-        Vector512<double> totalRate, Vector512<double> tarotRate, Vector512<double> planetRate)
+    public MotelyItemVector GetNextShopPlanetOrNull(
+        ref MotelyVectorPlanetStream planetStream,
+        ref MotelyVectorPrngStream itemTypeStream,
+        Vector512<double> totalRate,
+        Vector512<double> tarotRate,
+        Vector512<double> planetRate
+    )
     {
         // Check what type this slot is
         var itemTypePoll = GetNextRandom(ref itemTypeStream) * totalRate;
         itemTypePoll -= Vector512.Create(20.0); // Skip joker range
         itemTypePoll -= tarotRate; // Skip tarot range
         var isPlanetSlot = Vector512.LessThan(itemTypePoll, planetRate);
-        
+
         // Only advance planet stream for planet slots
         var planet = GetNextPlanet(ref planetStream, isPlanetSlot);
-        
+
         // Return planet or None for non-planet slots
         var planetIntMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(isPlanetSlot);
         var noneItem = Vector256<int>.Zero;
-        
+
         return new MotelyItemVector(
             Vector256.ConditionalSelect(planetIntMask, planet.Value, noneItem)
         );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyItemVector GetNextPlanet(ref MotelyVectorPlanetStream planetStream, in Vector512<double> mask)
+    public MotelyItemVector GetNextPlanet(
+        ref MotelyVectorPlanetStream planetStream,
+        in Vector512<double> mask
+    )
     {
         Vector512<double> blackHoleMask;
         if (planetStream.IsBlackHoleable)
         {
-            blackHoleMask = mask & Vector512.GreaterThan(GetNextRandom(ref planetStream.BlackHolePrngStream, mask), Vector512.Create(0.997));
+            blackHoleMask =
+                mask
+                & Vector512.GreaterThan(
+                    GetNextRandom(ref planetStream.BlackHolePrngStream, mask),
+                    Vector512.Create(0.997)
+                );
         }
         else
         {
@@ -103,7 +133,9 @@ ref partial struct MotelyVectorSearchContext
             var planetMask = mask & ~blackHoleMask;
             planets = GetNextRandomInt(
                 ref planetStream.ResampleStream.InitialPrngStream,
-                0, MotelyEnum<MotelyPlanetCard>.ValueCount, planetMask
+                0,
+                MotelyEnum<MotelyPlanetCard>.ValueCount,
+                planetMask
             );
             planets = Vector256.Create((int)MotelyItemTypeCategory.PlanetCard) | planets;
         }
@@ -113,21 +145,33 @@ ref partial struct MotelyVectorSearchContext
             return new(planets);
         }
 
-        return new(Vector256.ConditionalSelect(
-            MotelyVectorUtils.ShrinkDoubleMaskToInt(blackHoleMask),
-            Vector256.Create(new MotelyItem(MotelyItemType.BlackHole).Value),
-            planets
-        ));
+        return new(
+            Vector256.ConditionalSelect(
+                MotelyVectorUtils.ShrinkDoubleMaskToInt(blackHoleMask),
+                Vector256.Create(new MotelyItem(MotelyItemType.BlackHole).Value),
+                planets
+            )
+        );
     }
 
-    public MotelyItemVector GetNextPlanet(ref MotelyVectorPlanetStream planetStream, in MotelyVectorItemSet itemSet)
+    public MotelyItemVector GetNextPlanet(
+        ref MotelyVectorPlanetStream planetStream,
+        in MotelyVectorItemSet itemSet
+    )
     {
         Vector512<double> blackHoleMask;
         Vector256<int> blackHoleMaskInt;
         if (planetStream.IsBlackHoleable)
         {
-            Vector512<double> validMask = MotelyVectorUtils.ExtendIntMaskToDouble(~itemSet.Contains(MotelyItemType.BlackHole));
-            blackHoleMask = validMask & Vector512.GreaterThan(GetNextRandom(ref planetStream.BlackHolePrngStream, validMask), Vector512.Create(0.997));
+            Vector512<double> validMask = MotelyVectorUtils.ExtendIntMaskToDouble(
+                ~itemSet.Contains(MotelyItemType.BlackHole)
+            );
+            blackHoleMask =
+                validMask
+                & Vector512.GreaterThan(
+                    GetNextRandom(ref planetStream.BlackHolePrngStream, validMask),
+                    Vector512.Create(0.997)
+                );
             blackHoleMaskInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(blackHoleMask);
         }
         else
@@ -145,7 +189,9 @@ ref partial struct MotelyVectorSearchContext
         {
             planets = GetNextRandomInt(
                 ref planetStream.ResampleStream.InitialPrngStream,
-                0, MotelyEnum<MotelyPlanetCard>.ValueCount, ~blackHoleMask
+                0,
+                MotelyEnum<MotelyPlanetCard>.ValueCount,
+                ~blackHoleMask
             );
             planets = Vector256.Create((int)MotelyItemTypeCategory.PlanetCard) | planets;
 
@@ -157,70 +203,94 @@ ref partial struct MotelyVectorSearchContext
                 if (Vector256.EqualsAll(resampleMaskInt, Vector256<int>.Zero))
                     break;
                 Vector256<int> nextPlanets = GetNextRandomInt(
-                    ref GetResamplePrngStream(ref planetStream.ResampleStream, planetStream.ResampleKey, resampleCount),
-                    0, MotelyEnum<MotelyPlanetCard>.ValueCount, MotelyVectorUtils.ExtendIntMaskToDouble(resampleMaskInt)
+                    ref GetResamplePrngStream(
+                        ref planetStream.ResampleStream,
+                        planetStream.ResampleKey,
+                        resampleCount
+                    ),
+                    0,
+                    MotelyEnum<MotelyPlanetCard>.ValueCount,
+                    MotelyVectorUtils.ExtendIntMaskToDouble(resampleMaskInt)
                 );
-                nextPlanets = Vector256.Create((int)MotelyItemTypeCategory.PlanetCard) | nextPlanets;
-                planets = Vector256.ConditionalSelect(
-                    resampleMaskInt,
-                    nextPlanets, planets
-                );
+                nextPlanets =
+                    Vector256.Create((int)MotelyItemTypeCategory.PlanetCard) | nextPlanets;
+                planets = Vector256.ConditionalSelect(resampleMaskInt, nextPlanets, planets);
                 ++resampleCount;
             }
         }
 
-        return new(Vector256.ConditionalSelect(
-            blackHoleMaskInt,
-            Vector256.Create(new MotelyItem(MotelyItemType.BlackHole).Value),
-            planets
-        ));
+        return new(
+            Vector256.ConditionalSelect(
+                blackHoleMaskInt,
+                Vector256.Create(new MotelyItem(MotelyItemType.BlackHole).Value),
+                planets
+            )
+        );
     }
 
-    public VectorMask GetNextCelestialPackHasThe(ref MotelyVectorPlanetStream planetStream, MotelyPlanetCard targetPlanet, MotelyBoosterPackSize size)
+    public VectorMask GetNextCelestialPackHasThe(
+        ref MotelyVectorPlanetStream planetStream,
+        MotelyPlanetCard targetPlanet,
+        MotelyBoosterPackSize size
+    )
     {
         int cardCount = MotelyBoosterPackType.Celestial.GetCardCount(size);
         VectorMask hasTarget = VectorMask.NoBitsSet;
-        
+
         for (int i = 0; i < cardCount; i++)
         {
             var planet = GetNextPlanet(ref planetStream);
             // Extract planet card type using bit masking (similar to PlayingCardSuit pattern)
-            var planetType = new VectorEnum256<MotelyPlanetCard>(Vector256.BitwiseAnd(planet.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
+            var planetType = new VectorEnum256<MotelyPlanetCard>(
+                Vector256.BitwiseAnd(
+                    planet.Value,
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                )
+            );
             VectorMask isTarget = VectorEnum256.Equals(planetType, targetPlanet);
             hasTarget |= isTarget;
-            
+
             // Early exit optimization - if all lanes have found the target, no need to continue
             if (hasTarget.IsAllTrue())
                 break;
         }
-        
+
         return hasTarget;
     }
 
-    public VectorMask GetNextCelestialPackHasThe(ref MotelyVectorPlanetStream planetStream, MotelyPlanetCard[] targetPlanets, MotelyBoosterPackSize size)
+    public VectorMask GetNextCelestialPackHasThe(
+        ref MotelyVectorPlanetStream planetStream,
+        MotelyPlanetCard[] targetPlanets,
+        MotelyBoosterPackSize size
+    )
     {
         int cardCount = MotelyBoosterPackType.Celestial.GetCardCount(size);
         VectorMask hasAnyTarget = VectorMask.NoBitsSet;
-        
+
         for (int i = 0; i < cardCount; i++)
         {
             var planet = GetNextPlanet(ref planetStream);
             // Extract planet card type using bit masking (similar to PlayingCardSuit pattern)
-            var planetType = new VectorEnum256<MotelyPlanetCard>(Vector256.BitwiseAnd(planet.Value, Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)));
-            
+            var planetType = new VectorEnum256<MotelyPlanetCard>(
+                Vector256.BitwiseAnd(
+                    planet.Value,
+                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                )
+            );
+
             VectorMask isAnyTarget = VectorMask.NoBitsSet;
             foreach (var target in targetPlanets)
             {
                 isAnyTarget |= VectorEnum256.Equals(planetType, target);
             }
-            
+
             hasAnyTarget |= isAnyTarget;
-            
+
             // Early exit optimization - if all lanes have found any target, no need to continue
             if (hasAnyTarget.IsAllTrue())
                 break;
         }
-        
+
         return hasAnyTarget;
     }
 }

@@ -7,7 +7,7 @@ namespace Motely;
 public static class DebugLogger
 {
     public static bool IsEnabled { get; set; } = false;
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Log(string message)
     {
@@ -16,7 +16,7 @@ public static class DebugLogger
             Console.WriteLine($"[DEBUG {DateTime.Now:HH:mm:ss.fff}] {message}");
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LogBatch(long batchIdx, int threadId, string message)
     {
@@ -25,7 +25,7 @@ public static class DebugLogger
             Console.WriteLine($"[DEBUG BATCH {batchIdx} T{threadId}] {message}");
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe void LogSeed(char* seed, int length, string context)
     {
@@ -35,16 +35,18 @@ public static class DebugLogger
             Console.WriteLine($"[DEBUG SEED] {context}: {seedStr}");
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LogVector(Vector512<double> vec, string name)
     {
         if (IsEnabled)
         {
-            Console.WriteLine($"[DEBUG VEC] {name}: [{vec[0]:F2}, {vec[1]:F2}, {vec[2]:F2}, {vec[3]:F2}, {vec[4]:F2}, {vec[5]:F2}, {vec[6]:F2}, {vec[7]:F2}]");
+            Console.WriteLine(
+                $"[DEBUG VEC] {name}: [{vec[0]:F2}, {vec[1]:F2}, {vec[2]:F2}, {vec[3]:F2}, {vec[4]:F2}, {vec[5]:F2}, {vec[6]:F2}, {vec[7]:F2}]"
+            );
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LogMask(VectorMask mask, string context)
     {

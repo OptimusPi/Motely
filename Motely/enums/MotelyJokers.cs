@@ -65,7 +65,6 @@ public enum MotelyJokerCommon
     ShootTheMoon = 60,
 }
 
-
 public enum MotelyJokerUncommon
 {
     JokerStencil = 0,
@@ -164,7 +163,7 @@ public enum MotelyJokerLegendary
     Triboulet = 1,
     Yorick = 2,
     Chicot = 3,
-    Perkeo = 4 
+    Perkeo = 4,
 }
 
 public enum MotelyJokerRarity

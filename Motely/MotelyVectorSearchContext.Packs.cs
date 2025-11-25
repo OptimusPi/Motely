@@ -1,7 +1,9 @@
-
 namespace Motely;
 
-public struct MotelyVectorBoosterPackStream(MotelyVectorPrngStream prngStream, bool generatedFirstPack)
+public struct MotelyVectorBoosterPackStream(
+    MotelyVectorPrngStream prngStream,
+    bool generatedFirstPack
+)
 {
     public MotelyVectorPrngStream PrngStream = prngStream;
     public bool GeneratedFirstPack = generatedFirstPack;
@@ -14,15 +16,21 @@ public struct MotelyVectorBoosterPackStream(MotelyVectorPrngStream prngStream, b
 
 ref partial struct MotelyVectorSearchContext
 {
-    public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false)
-        => CreateBoosterPackStream(ante, ante > 1, isCached);
+    public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool isCached = false) =>
+        CreateBoosterPackStream(ante, ante > 1, isCached);
 
-    public MotelyVectorBoosterPackStream CreateBoosterPackStream(int ante, bool generatedFirstPack, bool isCached = false)
+    public MotelyVectorBoosterPackStream CreateBoosterPackStream(
+        int ante,
+        bool generatedFirstPack,
+        bool isCached = false
+    )
     {
         return new(CreatePrngStream(MotelyPrngKeys.ShopPack + ante, isCached), generatedFirstPack);
     }
 
-    public VectorEnum256<MotelyBoosterPack> GetNextBoosterPack(ref MotelyVectorBoosterPackStream stream)
+    public VectorEnum256<MotelyBoosterPack> GetNextBoosterPack(
+        ref MotelyVectorBoosterPackStream stream
+    )
     {
         if (!stream.GeneratedFirstPack)
         {
@@ -32,6 +40,4 @@ ref partial struct MotelyVectorSearchContext
 
         return MotelyWeightedPools.BoosterPacks.Choose(GetNextRandom(ref stream.PrngStream));
     }
-
-
 }

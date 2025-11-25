@@ -94,9 +94,9 @@ public static class MotelyJsonScoring
                     }
                     else if (
                         item.Type
-                            == (MotelyItemType)(
-                                (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotEnum.Value
-                            )
+                        == (MotelyItemType)(
+                            (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotEnum.Value
+                        )
                     )
                     {
                         tally++;
@@ -153,10 +153,10 @@ public static class MotelyJsonScoring
                             }
                             else if (
                                 contents[j].Type
-                                    == (MotelyItemType)(
-                                        (int)MotelyItemTypeCategory.TarotCard
-                                        | (int)clause.TarotEnum.Value
-                                    )
+                                == (MotelyItemType)(
+                                    (int)MotelyItemTypeCategory.TarotCard
+                                    | (int)clause.TarotEnum.Value
+                                )
                             )
                             {
                                 tally++;
@@ -2178,7 +2178,10 @@ public static class MotelyJsonScoring
 
                             // Mark as satisfied if we've met the minimum threshold
                             int minRequired = clause.Min ?? 1;
-                            if (!clauseSatisfied[clauseIdx] && clauseCounts[clauseIdx] >= minRequired)
+                            if (
+                                !clauseSatisfied[clauseIdx]
+                                && clauseCounts[clauseIdx] >= minRequired
+                            )
                             {
                                 clauseSatisfied[clauseIdx] = true;
                                 matchedClauses++;

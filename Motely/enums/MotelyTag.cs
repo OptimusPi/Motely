@@ -1,4 +1,3 @@
-
 namespace Motely;
 
 public enum MotelyTag
@@ -26,5 +25,5 @@ public enum MotelyTag
     TopupTag,
     SpeedTag,
     OrbitalTag,
-    EconomyTag
+    EconomyTag,
 }

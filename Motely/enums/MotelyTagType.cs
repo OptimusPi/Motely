@@ -18,5 +18,5 @@ public enum MotelyTagType
     /// <summary>
     /// Big blind tag only
     /// </summary>
-    BigBlind
+    BigBlind,
 }

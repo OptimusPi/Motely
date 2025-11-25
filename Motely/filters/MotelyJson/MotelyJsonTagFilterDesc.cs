@@ -42,7 +42,7 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
             foreach (var ante in allAntes)
             {
                 ctx.CacheBoosterPackStream(ante);
-                ctx.CacheTagStream(ante);  // Also cache tag stream for efficiency
+                ctx.CacheTagStream(ante); // Also cache tag stream for efficiency
             }
         }
 
@@ -55,24 +55,30 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
         private readonly int _minAnte;
         private readonly int _maxAnte;
 
-        public MotelyJsonTagFilter(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses, int minAnte, int maxAnte)
+        public MotelyJsonTagFilter(
+            List<MotelyJsonConfig.MotleyJsonFilterClause> clauses,
+            int minAnte,
+            int maxAnte
+        )
         {
             _clauses = clauses;
             _minAnte = minAnte;
             _maxAnte = maxAnte;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             DebugLogger.Log($"[TAG FILTER] Called with {_clauses?.Count ?? 0} clauses");
-            
+
             if (_clauses == null || _clauses.Count == 0)
             {
                 DebugLogger.Log("[TAG FILTER] No clauses - returning AllBitsSet");
                 return VectorMask.AllBitsSet;
             }
-            
+
             // Use pre-calculated ante range for maximum performance
             // Stack-allocated clause masks - accumulate results per clause across all antes
             Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
@@ -86,25 +92,43 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                 var tagStream = ctx.CreateTagStream(ante);
                 var smallTag = ctx.GetNextTag(ref tagStream);
                 var bigTag = ctx.GetNextTag(ref tagStream);
-                
+
                 // DEBUG: Log tag generation for specific seed
                 if (DebugLogger.IsEnabled)
                 {
-                    DebugLogger.Log($"[TAG FILTER] Ante {ante}: smallTag={smallTag}, bigTag={bigTag}");
+                    DebugLogger.Log(
+                        $"[TAG FILTER] Ante {ante}: smallTag={smallTag}, bigTag={bigTag}"
+                    );
                 }
-                
+
                 for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
                 {
                     var clause = _clauses[clauseIndex];
-                    
+
                     // Skip if this ante isn't in clause's effective antes
-                    if (clause.EffectiveAntes != null && !clause.EffectiveAntes.Contains(ante))
-                        continue;
-                    
-                    if (clause.TagEnum.HasValue || (clause.TagEnums != null && clause.TagEnums.Count > 0))
+                    // PERF: Avoid LINQ .Contains() in SIMD hotpath - use direct array check
+                    if (clause.EffectiveAntes != null)
+                    {
+                        bool foundAnte = false;
+                        for (int i = 0; i < clause.EffectiveAntes.Length; i++)
+                        {
+                            if (clause.EffectiveAntes[i] == ante)
+                            {
+                                foundAnte = true;
+                                break;
+                            }
+                        }
+                        if (!foundAnte)
+                            continue;
+                    }
+
+                    if (
+                        clause.TagEnum.HasValue
+                        || (clause.TagEnums != null && clause.TagEnums.Count > 0)
+                    )
                     {
                         VectorMask tagMatches;
-                        
+
                         // Handle multiple values (OR logic) or single value
                         if (clause.TagEnums != null && clause.TagEnums.Count > 0)
                         {
@@ -114,9 +138,13 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                             {
                                 var singleTagMatches = clause.TagTypeEnum switch
                                 {
-                                    MotelyTagType.SmallBlind => VectorEnum256.Equals(smallTag, tagEnum),
+                                    MotelyTagType.SmallBlind => VectorEnum256.Equals(
+                                        smallTag,
+                                        tagEnum
+                                    ),
                                     MotelyTagType.BigBlind => VectorEnum256.Equals(bigTag, tagEnum),
-                                    _ => VectorEnum256.Equals(smallTag, tagEnum) | VectorEnum256.Equals(bigTag, tagEnum)
+                                    _ => VectorEnum256.Equals(smallTag, tagEnum)
+                                        | VectorEnum256.Equals(bigTag, tagEnum),
                                 };
                                 tagMatches |= singleTagMatches;
                             }
@@ -126,21 +154,28 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                             // Single value: original logic
                             tagMatches = clause.TagTypeEnum switch
                             {
-                                MotelyTagType.SmallBlind => VectorEnum256.Equals(smallTag, clause.TagEnum.Value),
-                                MotelyTagType.BigBlind => VectorEnum256.Equals(bigTag, clause.TagEnum.Value),
-                                _ => VectorEnum256.Equals(smallTag, clause.TagEnum.Value) | VectorEnum256.Equals(bigTag, clause.TagEnum.Value)
+                                MotelyTagType.SmallBlind => VectorEnum256.Equals(
+                                    smallTag,
+                                    clause.TagEnum.Value
+                                ),
+                                MotelyTagType.BigBlind => VectorEnum256.Equals(
+                                    bigTag,
+                                    clause.TagEnum.Value
+                                ),
+                                _ => VectorEnum256.Equals(smallTag, clause.TagEnum.Value)
+                                    | VectorEnum256.Equals(bigTag, clause.TagEnum.Value),
                             };
                         }
                         else
                         {
                             tagMatches = VectorMask.NoBitsSet;
                         }
-                        
+
                         // Accumulate results for this clause across all antes (OR logic)
                         clauseMasks[clauseIndex] |= tagMatches;
                     }
                 }
-                
+
                 // OPTIMIZED: Early exit check after each ante (like joker filter)
                 bool canEarlyExit = false;
                 for (int i = 0; i < _clauses.Count; i++)
@@ -159,7 +194,7 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                             }
                         }
                     }
-                    
+
                     // If this clause has no matches and no antes left to check, we can exit
                     if (clauseMasks[i].IsAllFalse() && !hasAntesRemaining)
                     {
@@ -167,7 +202,7 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                         break;
                     }
                 }
-                
+
                 if (canEarlyExit)
                 {
                     DebugLogger.Log("[TAG FILTER] Early exit - clause cannot be satisfied");
@@ -181,23 +216,25 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
             for (int i = 0; i < clauseMasks.Length; i++)
             {
                 DebugLogger.Log($"[TAG FILTER] Clause {i} mask: {clauseMasks[i].Value:X}");
-                
+
                 // FIX: If this clause found nothing across all antes, fail immediately
                 if (clauseMasks[i].IsAllFalse())
                 {
-                    DebugLogger.Log($"[TAG FILTER] Clause {i} found no matches - failing all seeds");
+                    DebugLogger.Log(
+                        $"[TAG FILTER] Clause {i} found no matches - failing all seeds"
+                    );
                     return VectorMask.NoBitsSet;
                 }
-                
+
                 resultMask &= clauseMasks[i];
                 DebugLogger.Log($"[TAG FILTER] Result after clause {i}: {resultMask.Value:X}");
-                if (resultMask.IsAllFalse()) 
+                if (resultMask.IsAllFalse())
                 {
                     DebugLogger.Log("[TAG FILTER] All false after AND - returning NoBitsSet");
                     return VectorMask.NoBitsSet;
                 }
             }
-            
+
             DebugLogger.Log($"[TAG FILTER] FULLY VECTORIZED result: {resultMask.Value:X}");
 
             // PHASE 2: Scalar verification with min checking (like Joker filter)
@@ -210,27 +247,34 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
             // Copy struct fields to local variables for lambda (required for struct members)
             var clauses = _clauses;
 
-            return ctx.SearchIndividualSeeds(resultMask, (ref MotelySingleSearchContext singleCtx) =>
-            {
-                // Use SHARED scoring functions to check Min threshold
-                foreach (var clause in clauses)
+            return ctx.SearchIndividualSeeds(
+                resultMask,
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    // Count total occurrences across ALL wanted antes
-                    int totalCount = 0;
-                    foreach (var ante in clause.EffectiveAntes)
+                    // Use SHARED scoring functions to check Min threshold
+                    foreach (var clause in clauses)
                     {
-                        int anteCount = MotelyJsonScoring.CountTagOccurrences(ref singleCtx, clause, ante);
-                        totalCount += anteCount;
+                        // Count total occurrences across ALL wanted antes
+                        int totalCount = 0;
+                        foreach (var ante in clause.EffectiveAntes)
+                        {
+                            int anteCount = MotelyJsonScoring.CountTagOccurrences(
+                                ref singleCtx,
+                                clause,
+                                ante
+                            );
+                            totalCount += anteCount;
+                        }
+
+                        // Check Min threshold (if specified)
+                        int minThreshold = clause.Min ?? 1; // Default to 1 if not specified
+                        if (totalCount < minThreshold)
+                            return false; // Doesn't meet minimum count
                     }
 
-                    // Check Min threshold (if specified)
-                    int minThreshold = clause.Min ?? 1; // Default to 1 if not specified
-                    if (totalCount < minThreshold)
-                        return false; // Doesn't meet minimum count
+                    return true; // All clauses satisfied with Min thresholds
                 }
-
-                return true; // All clauses satisfied with Min thresholds
-            });
+            );
         }
     }
 }
