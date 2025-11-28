@@ -1,32 +1,28 @@
 using System;
-using Terminal.Gui;
 
 namespace Motely.TUI;
 
-/// <summary>
-/// Animated Balatro-style shader background using colored ASCII blocks
-/// </summary>
 public class BalatroShaderBackground : View
 {
-    private Random _random = new Random();
-    private double _time = 0;
-    private bool _isRunning = false;
+    private double _time;
+    private double _spinTime;
+    private bool _isRunning;
 
-    private static readonly ColorName[] BalatroColors = new[]
-    {
-        ColorName.BrightRed, // #ff4c40 Red (SIGNATURE BALATRO BUTTON COLOR)
-        ColorName.BrightBlue, // #0093ff Blue (SIGNATURE BALATRO BUTTON COLOR)
-        ColorName.Red, // #a02721 DarkRed
-        ColorName.Blue, // #0057a1 DarkBlue
-        ColorName.BrightRed, // Emphasize red again
-        ColorName.BrightBlue, // Emphasize blue again
-        ColorName.BrightMagenta, // #7d60e0 Purple
-        ColorName.Magenta, // #292189 DarkPurple
-        ColorName.BrightRed, // More signature red
-        ColorName.BrightBlue, // More signature blue
-        ColorName.DarkGray, // #3a5055 Grey
-        ColorName.Black, // #1e2b2d DarkGrey
-    };
+    private Color[,]? _frameBuffer;
+    private int _bufferWidth;
+    private int _bufferHeight;
+
+    private static readonly (int R, int G, int B) Color1 = (254, 95, 85); // #FE5F55 Red
+    private static readonly (int R, int G, int B) Color2 = (0, 157, 255); // #009dff Blue
+    private static readonly (int R, int G, int B) Color3 = (55, 66, 68); // #374244 Black
+
+    private const double Contrast = 1.8;
+    private const double SpinAmount = 0.6;
+    private const double ZoomScale = 12.0;
+    private const double SpinEase = 0.5;
+    private const double PixelSize = 200.0;
+    private const double ParallaxX = 0.05;
+    private const int LoopCount = 5;
 
     public BalatroShaderBackground()
     {
@@ -35,106 +31,181 @@ public class BalatroShaderBackground : View
         Width = Dim.Fill();
         Height = Dim.Fill();
         CanFocus = false;
-        WantContinuousButtonPressed = false;
+
+        DrawingContent += (s, e) => DrawToScreen();
+    }
+
+    public Color GetColorAt(int screenX, int screenY)
+    {
+        if (_frameBuffer == null || screenY < 0 || screenY >= _bufferHeight)
+            return new Color(Color3.R, Color3.G, Color3.B);
+
+        if (screenX < 0 || screenX >= _bufferWidth)
+            return new Color(Color3.R, Color3.G, Color3.B);
+
+        return _frameBuffer[screenX, screenY];
     }
 
     public void Start()
     {
         if (_isRunning)
             return;
-
         _isRunning = true;
 
-        // Render at 5 FPS (200ms) with pixel skipping for performance
-        Application.AddTimeout(
-            TimeSpan.FromMilliseconds(200),
+        // Calculate initial frame immediately
+        UpdateFrameBuffer();
+
+        MotelyTUI.App?.AddTimeout(
+            TimeSpan.FromMilliseconds(83),
             () =>
             {
                 if (!_isRunning)
                     return false;
 
-                _time += 0.02;
-                DrawShader();
-                SetNeedsDisplay();
-
+                _time += 0.03;
+                _spinTime += 0.02;
+                UpdateFrameBuffer();
+                SetNeedsDraw();
                 return true;
             }
         );
     }
 
-    public void Stop()
+    public void Stop() => _isRunning = false;
+
+    private void UpdateFrameBuffer()
     {
-        _isRunning = false;
-    }
-
-    private void DrawShader()
-    {
-        if (Driver == null)
-            return;
-
-        int width = Viewport.Width;
-        int height = Viewport.Height;
-
-        // Validate bounds before drawing
-        if (width <= 0 || height <= 0)
-            return;
-
         try
         {
-            // SICK Balatro-style flowing gradient with smooth color blending
-            // Full gradient characters for smooth transitions
-            char[] gradient = { ' ', '░', '▒', '▓', '█' };
+            int screenWidth = MotelyTUI.App?.Driver?.Cols ?? 80;
+            int screenHeight = MotelyTUI.App?.Driver?.Rows ?? 24;
 
-            // Skip every 3rd pixel for performance (~89% reduction in operations)
-            for (int y = 0; y < height; y += 3)
+            if (
+                _frameBuffer == null
+                || _bufferWidth != screenWidth
+                || _bufferHeight != screenHeight
+            )
             {
-                for (int x = 0; x < width; x += 3)
-                {
-                    // Normalized coordinates
-                    double fx = (double)x / width;
-                    double fy = (double)y / height;
+                _frameBuffer = new Color[screenWidth, screenHeight];
+                _bufferWidth = screenWidth;
+                _bufferHeight = screenHeight;
+            }
 
-                    // Multiple waves for depth and interest
-                    double wave1 = Math.Sin((fx + fy) * 3.0 + _time);
-                    double wave2 = Math.Sin((fx - fy) * 2.0 + _time * 0.7);
-                    double combined = (wave1 + wave2 * 0.5) / 1.5;
+            double resolution = Math.Sqrt(screenWidth * screenWidth + screenHeight * screenHeight);
+            CalculateFrame(screenWidth, screenHeight, resolution);
+        }
+        catch { }
+    }
 
-                    // Normalize to 0-1
-                    double value = (combined + 1.0) * 0.5;
+    public void DrawToScreen()
+    {
+        if (_frameBuffer == null || MotelyTUI.App?.Driver == null)
+            return;
 
-                    // DRAMATIC color blending - way more visible!
-                    ColorName color;
-                    if (value < 0.2)
-                        color = ColorName.Black; // Deep dark
-                    else if (value < 0.35)
-                        color = ColorName.Blue; // Blue
-                    else if (value < 0.5)
-                        color = ColorName.BrightBlue; // Bright blue
-                    else if (value < 0.65)
-                        color = ColorName.Magenta; // Purple transition
-                    else if (value < 0.8)
-                        color = ColorName.BrightRed; // Signature red
-                    else
-                        color = ColorName.BrightMagenta; // Hot magenta peaks
+        var driver = MotelyTUI.App.Driver;
+        var block = new System.Text.Rune('█');
+        int screenWidth = Math.Min(driver.Cols, _bufferWidth);
+        int screenHeight = Math.Min(driver.Rows, _bufferHeight);
 
-                    // Map value to gradient character (0-1 -> 0-4 index)
-                    int charIndex = Math.Min((int)(value * gradient.Length), gradient.Length - 1);
-                    char ch = gradient[charIndex];
-
-                    // Draw with smooth gradient
-                    Driver!.Move(x, y);
-                    Driver.SetAttribute(new Terminal.Gui.Attribute(color, ColorName.Black));
-                    Driver.AddRune(new System.Text.Rune(ch));
-                }
+        for (int y = 0; y < screenHeight; y++)
+        {
+            for (int x = 0; x < screenWidth; x++)
+            {
+                var color = _frameBuffer[x, y];
+                driver.SetAttribute(new Attribute(color, color));
+                driver.Move(x, y);
+                driver.AddRune(block);
             }
         }
-        catch (InvalidOperationException)
+    }
+
+    private void CalculateFrame(int width, int height, double resolution)
+    {
+        double time = _time;
+        double spinTime = _spinTime;
+
+        for (int y = 0; y < height; y++)
         {
-            // Terminal is being resized or in invalid state - skip this frame
+            for (int x = 0; x < width; x++)
+            {
+                _frameBuffer![x, y] = CalculatePixel(
+                    x,
+                    y,
+                    width,
+                    height,
+                    resolution,
+                    time,
+                    spinTime
+                );
+            }
         }
-        catch (ArgumentOutOfRangeException)
+    }
+
+    private static Color CalculatePixel(
+        int x,
+        int y,
+        int width,
+        int height,
+        double resolution,
+        double time,
+        double spinTime
+    )
+    {
+        double pixSize = resolution / PixelSize;
+
+        // Terminal chars are ~2x taller than wide, stretch X to compensate
+        double uvX =
+            ((Math.Floor(x / pixSize) * pixSize - 0.5 * width) / resolution - ParallaxX) * 0.6;
+        double uvY = (Math.Floor(y / pixSize) * pixSize - 0.5 * height) / resolution;
+        double uvLen = Math.Sqrt(uvX * uvX + uvY * uvY);
+
+        double speed = spinTime * SpinEase * 0.2 + 302.2;
+        double newAngle =
+            Math.Atan2(uvY, uvX)
+            + speed
+            - SpinEase * 20.0 * (SpinAmount * uvLen + (1.0 - SpinAmount));
+
+        double midX = (width / resolution) / 2.0;
+        double midY = (height / resolution) / 2.0;
+
+        uvX = uvLen * Math.Cos(newAngle) + midX - midX;
+        uvY = uvLen * Math.Sin(newAngle) + midY - midY;
+
+        uvX *= 30.0 + ZoomScale;
+        uvY *= 30.0 + ZoomScale;
+
+        double animSpeed = time * 2.0;
+        double uv2X = uvX + uvY;
+        double uv2Y = uvX + uvY;
+
+        for (int i = 0; i < LoopCount; i++)
         {
-            // Bounds changed during render - skip this frame
+            double maxUv = Math.Max(uvX, uvY);
+            uv2X += Math.Sin(maxUv) + uvX;
+            uv2Y += Math.Sin(maxUv) + uvY;
+            uvX += 0.5 * Math.Cos(5.1123314 + 0.353 * uv2Y + animSpeed * 0.131121);
+            uvY += 0.5 * Math.Sin(uv2X - 0.113 * animSpeed);
+            double cosVal = Math.Cos(uvX + uvY);
+            double sinVal = Math.Sin(uvX * 0.711 - uvY);
+            uvX -= cosVal - sinVal;
+            uvY -= cosVal - sinVal;
         }
+
+        double contrastMod = 0.25 * Contrast + 0.5 * SpinAmount + 1.2;
+        double paintRes = Math.Sqrt(uvX * uvX + uvY * uvY) * 0.035 * contrastMod;
+        paintRes = Math.Clamp(paintRes, 0.0, 2.0);
+
+        double c1p = Math.Max(0.0, 1.0 - contrastMod * Math.Abs(1.0 - paintRes));
+        double c2p = Math.Max(0.0, 1.0 - contrastMod * Math.Abs(paintRes));
+        double c3p = 1.0 - Math.Min(1.0, c1p + c2p);
+
+        double cf = 0.3 / Contrast;
+        double ncf = 1.0 - cf;
+
+        int r = (int)(cf * Color1.R + ncf * (Color1.R * c1p + Color2.R * c2p + Color3.R * c3p));
+        int g = (int)(cf * Color1.G + ncf * (Color1.G * c1p + Color2.G * c2p + Color3.G * c3p));
+        int b = (int)(cf * Color1.B + ncf * (Color1.B * c1p + Color2.B * c2p + Color3.B * c3p));
+
+        return new Color(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
     }
 }

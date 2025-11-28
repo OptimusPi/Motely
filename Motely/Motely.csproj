@@ -54,8 +54,17 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
-    <PackageReference Include="Terminal.Gui" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Condition="'$(Configuration)' == 'CLI'" />
+    <PackageReference Include="Terminal.Gui" Condition="'$(Configuration)' == 'CLI'" />
     <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Jimbo.png" />
+  </ItemGroup>
+  <!-- Exclude TUI folder and Program.cs when NOT building CLI (they require Terminal.Gui) -->
+  <ItemGroup Condition="'$(Configuration)' != 'CLI'">
+    <Compile Remove="TUI\**\*.cs" />
+    <Compile Remove="Program.cs" />
   </ItemGroup>
 </Project>

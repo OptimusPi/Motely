@@ -99,17 +99,22 @@ namespace Motely.Executors
                 // Print CSV header (even for filters with no SHOULD clauses, output seed with score 0)
                 PrintResultsHeader(config);
 
-                // Setup cancellation handler
-                Console.CancelKeyPress += (sender, e) =>
+                // Setup cancellation handler ONLY when NOT in TUI mode
+                // In TUI mode, the UI handles Ctrl+C via KeyDown event and calls Cancel() directly
+                ConsoleCancelEventHandler? cancelHandler = null;
+                if (_customCallback == null)
                 {
-                    e.Cancel = true;
-                    _cancelled = true;
-                    if (!_params.Quiet)
+                    cancelHandler = (sender, e) =>
                     {
-                        Console.WriteLine("\n🛑 Stopping search...");
-                    }
-                    // Don't dispose here - let it finish gracefully
-                };
+                        e.Cancel = true;
+                        _cancelled = true;
+                        if (!_params.Quiet)
+                        {
+                            Console.WriteLine("\n🛑 Stopping search...");
+                        }
+                    };
+                    Console.CancelKeyPress += cancelHandler;
+                }
 
                 search.Start();
 
@@ -140,6 +145,13 @@ namespace Motely.Executors
                 {
                     PrintResultsSummary(search, _cancelled);
                 }
+
+                // Cleanup cancel handler if registered
+                if (cancelHandler != null)
+                {
+                    Console.CancelKeyPress -= cancelHandler;
+                }
+
                 Console.Out.Flush();
                 return 0;
             }
@@ -195,14 +207,9 @@ namespace Motely.Executors
         private MotelyJsonConfig LoadConfig()
         {
             string configPath;
-            string extension =
-                _format == "toml" ? ".toml"
-                : _format == "yaml" ? ".yaml"
-                : ".json";
-            string filterDir =
-                _format == "toml" ? "TomlItemFilters"
-                : _format == "yaml" ? "YamlItemFilters"
-                : "JsonItemFilters";
+            bool isJamlFormat = _format == "jaml";
+            string extension = isJamlFormat ? ".jaml" : ".json";
+            string filterDir = isJamlFormat ? "JamlFilters" : "JsonItemFilters";
 
             // If the caller passed a rooted or path-containing config, use it directly
             // (but append extension only when no extension is present). Otherwise treat
@@ -229,9 +236,9 @@ namespace Motely.Executors
             string? error;
             bool success;
 
-            if (_format == "yaml")
+            if (isJamlFormat)
             {
-                success = YamlConfigLoader.TryLoadFromYaml(configPath, out config, out error);
+                success = JamlConfigLoader.TryLoadFromJaml(configPath, out config, out error);
             }
             else
             {

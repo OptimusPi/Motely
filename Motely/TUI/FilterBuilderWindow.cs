@@ -10,215 +10,195 @@ public class FilterBuilderWindow : Window
 {
     private ListView _mustList;
     private ListView _shouldList;
-    private ListView? _mustNotList;
     private List<string> _mustItems = new();
     private List<string> _shouldItems = new();
     private List<string> _mustNotItems = new();
     private Label _statusLabel;
+    private CleanButton _startSearchBtn;
     private bool _isDialogOpen = false;
+    private bool _filterSaved = false;
 
     public FilterBuilderWindow()
     {
         Title = "Filter Builder";
-        X = 0;
-        Y = 0;
-        Width = Dim.Fill();
-        Height = Dim.Fill();
+        X = Pos.Center();
+        Y = Pos.Center();
+        Width = 90;
+        Height = 24;
+        SetScheme(BalatroTheme.Window);
 
-        // Title with Jimbo
-        var titleLabel = new Label()
-        {
-            X = Pos.Center(),
-            Y = 1,
-            Text = "🔧 BUILD YOUR PERFECT FILTER 🔧",
-            TextAlignment = Alignment.Center,
-        };
-        Add(titleLabel);
+        // Create two columns in inner panel boxes
+        var yStart = 3;
 
-        var instructionLabel = new Label()
-        {
-            X = Pos.Center(),
-            Y = 2,
-            Text = "Jimbo says: Add items to find your dream seeds!",
-            TextAlignment = Alignment.Center,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            },
-        };
-        Add(instructionLabel);
-
-        // Create three columns for Must, Should, MustNot
-        var yStart = 4;
-
-        // MUST column
-        var mustLabel = new Label()
+        // FILTER ITEMS panel (was MUST)
+        var filterPanel = new FrameView()
         {
             X = 2,
             Y = yStart,
-            Text = "MUST Have (Required)",
+            Width = 40,
+            Height = 13,
+            Title = "Filter Items (Required)",
         };
-        Add(mustLabel);
+        filterPanel.SetScheme(BalatroTheme.InnerPanel);
+        Add(filterPanel);
 
         _mustList = new ListView()
         {
-            X = 2,
-            Y = yStart + 1,
-            Width = 35,
-            Height = 15,
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill() - 2,
             AllowsMarking = false,
             CanFocus = true,
         };
+        _mustList.SetScheme(
+            new Scheme()
+            {
+                Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+                Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+                HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+            }
+        );
         _mustList.SetSource(new ObservableCollection<string>(_mustItems));
-        Add(_mustList);
+        filterPanel.Add(_mustList);
 
-        var mustAddBtn = new Button()
+        var mustAddBtn = new CleanButton()
         {
-            X = 2,
-            Y = Pos.Bottom(_mustList),
-            Text = "Add Item (A)",
+            X = 0,
+            Y = Pos.AnchorEnd(1),
+            Text = " + Add ",
         };
+        mustAddBtn.SetScheme(BalatroTheme.GreenButton);
         mustAddBtn.Accept += (s, e) => AddItem("must");
-        Add(mustAddBtn);
+        filterPanel.Add(mustAddBtn);
 
-        var mustRemoveBtn = new Button()
+        var mustRemoveBtn = new CleanButton()
         {
             X = Pos.Right(mustAddBtn) + 1,
-            Y = Pos.Bottom(_mustList),
-            Text = "Remove",
+            Y = Pos.AnchorEnd(1),
+            Text = " - Remove ",
         };
+        mustRemoveBtn.SetScheme(BalatroTheme.ModalButton);
         mustRemoveBtn.Accept += (s, e) => RemoveItem("must");
-        Add(mustRemoveBtn);
+        filterPanel.Add(mustRemoveBtn);
 
-        // SHOULD column
-        var shouldLabel = new Label()
+        // SCORE ITEMS panel (was SHOULD)
+        var scorePanel = new FrameView()
         {
-            X = Pos.Right(_mustList) + 3,
+            X = Pos.Right(filterPanel) + 2,
             Y = yStart,
-            Text = "SHOULD Have (Bonus Points)",
+            Width = 40,
+            Height = 13,
+            Title = "Score Items (Bonus Points)",
         };
-        Add(shouldLabel);
+        scorePanel.SetScheme(BalatroTheme.InnerPanel);
+        Add(scorePanel);
 
         _shouldList = new ListView()
         {
-            X = Pos.Right(_mustList) + 3,
-            Y = yStart + 1,
-            Width = 35,
-            Height = 15,
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill() - 2,
             AllowsMarking = false,
             CanFocus = true,
         };
+        _shouldList.SetScheme(
+            new Scheme()
+            {
+                Normal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+                Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+                HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+            }
+        );
         _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
-        Add(_shouldList);
+        scorePanel.Add(_shouldList);
 
-        var shouldAddBtn = new Button()
+        var shouldAddBtn = new CleanButton()
         {
-            X = Pos.Right(_mustList) + 3,
-            Y = Pos.Bottom(_shouldList),
-            Text = "Add Item (A)",
+            X = 0,
+            Y = Pos.AnchorEnd(1),
+            Text = " + Add ",
         };
+        shouldAddBtn.SetScheme(BalatroTheme.GreenButton);
         shouldAddBtn.Accept += (s, e) => AddItem("should");
-        Add(shouldAddBtn);
+        scorePanel.Add(shouldAddBtn);
 
-        var shouldRemoveBtn = new Button()
+        var shouldRemoveBtn = new CleanButton()
         {
             X = Pos.Right(shouldAddBtn) + 1,
-            Y = Pos.Bottom(_shouldList),
-            Text = "Remove",
+            Y = Pos.AnchorEnd(1),
+            Text = " - Remove ",
         };
+        shouldRemoveBtn.SetScheme(BalatroTheme.ModalButton);
         shouldRemoveBtn.Accept += (s, e) => RemoveItem("should");
-        Add(shouldRemoveBtn);
+        scorePanel.Add(shouldRemoveBtn);
 
-        // MUST NOT column (if there's space)
-        if (Application.Driver.Cols > 120)
-        {
-            var mustNotLabel = new Label()
-            {
-                X = Pos.Right(_shouldList) + 3,
-                Y = yStart,
-                Text = "MUST NOT Have",
-            };
-            Add(mustNotLabel);
 
-            _mustNotList = new ListView()
-            {
-                X = Pos.Right(_shouldList) + 3,
-                Y = yStart + 1,
-                Width = 30,
-                Height = 15,
-                AllowsMarking = false,
-                CanFocus = true,
-            };
-            _mustNotList.SetSource(new ObservableCollection<string>(_mustNotItems));
-            Add(_mustNotList);
-
-            var mustNotAddBtn = new Button()
-            {
-                X = Pos.Right(_shouldList) + 3,
-                Y = Pos.Bottom(_mustNotList),
-                Text = "Add (A)",
-            };
-            mustNotAddBtn.Accept += (s, e) => AddItem("mustnot");
-            Add(mustNotAddBtn);
-
-            var mustNotRemoveBtn = new Button()
-            {
-                X = Pos.Right(mustNotAddBtn) + 1,
-                Y = Pos.Bottom(_mustNotList),
-                Text = "Remove",
-            };
-            mustNotRemoveBtn.Accept += (s, e) => RemoveItem("mustnot");
-            Add(mustNotRemoveBtn);
-        }
-
-        // Hotkey instructions
-        var hotkeysLabel = new Label()
+        // Action buttons row (above Back)
+        // Start Search button - initially disabled until filter is saved
+        _startSearchBtn = new CleanButton()
         {
             X = 2,
-            Y = Pos.Bottom(_mustList) + 2,
-            Width = Dim.Fill() - 4,
-            Text =
-                "Quick Add: (J)oker (L)egendary (C)ard (T)arot (S)pectral (P)lanet (V)oucher (B)oss (R)eward Tags",
+            Y = Pos.AnchorEnd(4),
+            Text = " save first... ",
+            Enabled = false,
         };
-        Add(hotkeysLabel);
-
-        // Bottom buttons
-        var startSearchBtn = new Button()
+        _startSearchBtn.SetScheme(new Scheme()
         {
-            X = 2,
-            Y = Pos.AnchorEnd(3),
-            Text = "Start Search",
-        };
-        startSearchBtn.Accept += (s, e) => StartSearch();
-        Add(startSearchBtn);
+            Normal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+            Focus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+            HotNormal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+            HotFocus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+        });
+        _startSearchBtn.Accept += (s, e) => StartSearch();
+        Add(_startSearchBtn);
 
-        var saveBtn = new Button()
+        var saveBtn = new CleanButton()
         {
-            X = Pos.Right(startSearchBtn) + 2,
-            Y = Pos.AnchorEnd(3),
-            Text = "Save Filter",
+            X = Pos.Right(_startSearchBtn) + 2,
+            Y = Pos.AnchorEnd(4),
+            Text = " Save Filter ",
         };
+        saveBtn.SetScheme(BalatroTheme.GreenButton);
         saveBtn.Accept += (s, e) => SaveFilter();
         Add(saveBtn);
 
-        var backBtn = new Button()
+        // Load Filter button - purple for "import" feel
+        var loadBtn = new CleanButton()
         {
             X = Pos.Right(saveBtn) + 2,
-            Y = Pos.AnchorEnd(3),
-            Text = "Back to Menu",
+            Y = Pos.AnchorEnd(4),
+            Text = " Load Filter ",
         };
-        backBtn.Accept += (s, e) => Application.RequestStop();
-        Add(backBtn);
+        loadBtn.SetScheme(BalatroTheme.PurpleButton);
+        loadBtn.Accept += (s, e) => LoadFilter();
+        Add(loadBtn);
 
-        // Status label
+        // Status label (same row as action buttons)
         _statusLabel = new Label()
         {
-            X = Pos.Right(backBtn) + 4,
-            Y = Pos.AnchorEnd(3),
+            X = Pos.Right(loadBtn) + 4,
+            Y = Pos.AnchorEnd(4),
             Width = Dim.Fill(),
             Text = "",
         };
         Add(_statusLabel);
+
+        // Back button - FULL WIDTH at very bottom
+        var backBtn = new CleanButton()
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(1),
+            Text = "Bac_k",
+            Width = Dim.Fill() - 2,
+            TextAlignment = Alignment.Center,
+        };
+        backBtn.SetScheme(BalatroTheme.BackButton);
+        backBtn.Accept += (s, e) => App?.RequestStop();
+        Add(backBtn);
 
         // Keyboard shortcuts
         KeyDown += (sender, e) =>
@@ -230,8 +210,6 @@ public class FilterBuilderWindow : Window
                     AddItem("must");
                 else if (_shouldList.HasFocus)
                     AddItem("should");
-                else if (_mustNotList?.HasFocus == true)
-                    AddItem("mustnot");
                 e.Handled = true;
             }
             else if (e.KeyCode == KeyCode.J)
@@ -293,12 +271,12 @@ public class FilterBuilderWindow : Window
                 if (choice == 0) // Main Menu
                 {
                     // Return to main menu
-                    Application.RequestStop();
+                    App?.RequestStop();
                 }
                 else if (choice == 1) // Exit
                 {
                     // Exit the entire application
-                    Application.RequestStop();
+                    App?.RequestStop();
                     Environment.Exit(0);
                 }
                 // choice == 2 (Cancel) - do nothing, stay in filter builder
@@ -320,7 +298,7 @@ public class FilterBuilderWindow : Window
         {
             // Show category selector
             var categoryDialog = new CategorySelectorDialog();
-            Application.Run(categoryDialog);
+            App?.Run(categoryDialog);
 
             if (categoryDialog.SelectedCategory != null)
             {
@@ -342,11 +320,9 @@ public class FilterBuilderWindow : Window
         try
         {
             // Determine which list has focus
-            string listType = "must"; // default
+            string listType = "must"; // default to Filter Items
             if (_shouldList.HasFocus)
                 listType = "should";
-            else if (_mustNotList?.HasFocus == true)
-                listType = "mustnot";
 
             ShowItemSelectorAndAdd(category, listType);
         }
@@ -356,32 +332,36 @@ public class FilterBuilderWindow : Window
         }
     }
 
-    private void ShowItemSelectorAndAdd(string category, string listType)
+    private void ShowItemSelectorAndAdd(string category, string listType, bool banItem = false)
     {
         var itemDialog = new ItemSelectorDialog(category);
-        Application.Run(itemDialog);
+        App?.Run(itemDialog);
 
         if (itemDialog.SelectedItem != null)
         {
             var displayText = $"{itemDialog.SelectedItem} ({category})";
 
-            switch (listType)
+            // Check if ban item was selected in dialog
+            if (itemDialog.BanItem || banItem)
             {
-                case "must":
-                    _mustItems.Add(displayText);
-                    _mustList.SetSource(new ObservableCollection<string>(_mustItems));
-                    _statusLabel.Text = $"Added '{itemDialog.SelectedItem}' to MUST list";
-                    break;
-                case "should":
-                    _shouldItems.Add(displayText);
-                    _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
-                    _statusLabel.Text = $"Added '{itemDialog.SelectedItem}' to SHOULD list";
-                    break;
-                case "mustnot":
-                    _mustNotItems.Add(displayText);
-                    _mustNotList?.SetSource(new ObservableCollection<string>(_mustNotItems));
-                    _statusLabel.Text = $"Added '{itemDialog.SelectedItem}' to MUST NOT list";
-                    break;
+                _mustNotItems.Add(displayText);
+                _statusLabel.Text = $"Banned '{itemDialog.SelectedItem}'";
+            }
+            else
+            {
+                switch (listType)
+                {
+                    case "must":
+                        _mustItems.Add(displayText);
+                        _mustList.SetSource(new ObservableCollection<string>(_mustItems));
+                        _statusLabel.Text = $"Added '{itemDialog.SelectedItem}' to Filter Items";
+                        break;
+                    case "should":
+                        _shouldItems.Add(displayText);
+                        _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
+                        _statusLabel.Text = $"Added '{itemDialog.SelectedItem}' to Score Items";
+                        break;
+                }
             }
         }
     }
@@ -391,30 +371,21 @@ public class FilterBuilderWindow : Window
         switch (listType)
         {
             case "must":
-                if (_mustList.SelectedItem >= 0 && _mustList.SelectedItem < _mustItems.Count)
+                var mustSelectedIndex = _mustList.SelectedItem ?? 0;
+                if (mustSelectedIndex >= 0 && mustSelectedIndex < _mustItems.Count)
                 {
-                    _mustItems.RemoveAt(_mustList.SelectedItem);
+                    _mustItems.RemoveAt(mustSelectedIndex);
                     _mustList.SetSource(new ObservableCollection<string>(_mustItems));
-                    _statusLabel.Text = "Item removed from MUST list";
+                    _statusLabel.Text = "Item removed from Filter Items";
                 }
                 break;
             case "should":
-                if (_shouldList.SelectedItem >= 0 && _shouldList.SelectedItem < _shouldItems.Count)
+                var shouldSelectedIndex = _shouldList.SelectedItem ?? 0;
+                if (shouldSelectedIndex >= 0 && shouldSelectedIndex < _shouldItems.Count)
                 {
-                    _shouldItems.RemoveAt(_shouldList.SelectedItem);
+                    _shouldItems.RemoveAt(shouldSelectedIndex);
                     _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
-                    _statusLabel.Text = "Item removed from SHOULD list";
-                }
-                break;
-            case "mustnot":
-                if (
-                    _mustNotList?.SelectedItem >= 0
-                    && _mustNotList.SelectedItem < _mustNotItems.Count
-                )
-                {
-                    _mustNotItems.RemoveAt(_mustNotList.SelectedItem);
-                    _mustNotList.SetSource(new ObservableCollection<string>(_mustNotItems));
-                    _statusLabel.Text = "Item removed from MUST NOT list";
+                    _statusLabel.Text = "Item removed from Score Items";
                 }
                 break;
         }
@@ -458,6 +429,213 @@ public class FilterBuilderWindow : Window
         };
     }
 
+    private string? _loadedFilterPath; // Track loaded filter path for Start Search
+
+    private void LoadFilter()
+    {
+        var filters = new List<(string name, string format, string fullPath)>();
+
+        // Scan for available filters
+        var currentDir = Directory.GetCurrentDirectory();
+
+        // JAML files first (promoted format!)
+        if (Directory.Exists(Path.Combine(currentDir, "JamlFilters")))
+        {
+            var jamlFiles = Directory.GetFiles(Path.Combine(currentDir, "JamlFilters"), "*.jaml");
+            foreach (var file in jamlFiles)
+            {
+                var name = Path.GetFileNameWithoutExtension(file);
+                filters.Add((name, "jaml", file));
+            }
+        }
+
+        // JSON files second
+        if (Directory.Exists(Path.Combine(currentDir, "JsonItemFilters")))
+        {
+            var jsonFiles = Directory.GetFiles(Path.Combine(currentDir, "JsonItemFilters"), "*.json");
+            foreach (var file in jsonFiles)
+            {
+                var name = Path.GetFileNameWithoutExtension(file);
+                filters.Add((name, "json", file));
+            }
+        }
+
+        if (filters.Count == 0)
+        {
+            ShowErrorDialog("No Filters Found", "No filter files found in JamlFilters/ or JsonItemFilters/");
+            return;
+        }
+
+        var dialog = new Dialog()
+        {
+            Title = "Load Filter",
+            Width = 60,
+            Height = 20,
+        };
+        dialog.SetScheme(BalatroTheme.Window);
+
+        var instructionLabel = new Label()
+        {
+            X = Pos.Center(),
+            Y = 1,
+            Text = "Select a filter to load (JAML first, then JSON):",
+            TextAlignment = Alignment.Center,
+        };
+        dialog.Add(instructionLabel);
+
+        var filterStrings = filters.Select(f => $"{f.name}.{f.format}").ToArray();
+        var filterList = new ListView()
+        {
+            X = 1,
+            Y = 3,
+            Width = Dim.Fill() - 2,
+            Height = Dim.Fill() - 7,
+            AllowsMarking = false,
+            CanFocus = true,
+        };
+        filterList.SetScheme(new Scheme()
+        {
+            Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+            HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+            HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+        });
+        filterList.SetSource(new ObservableCollection<string>(filterStrings));
+        filterList.SelectedItem = 0;
+
+        void DoLoad()
+        {
+            var selectedIndex = filterList.SelectedItem ?? 0;
+            if (selectedIndex >= 0 && selectedIndex < filters.Count)
+            {
+                var selected = filters[selectedIndex];
+                try
+                {
+                    // Load the config
+                    var content = File.ReadAllText(selected.fullPath);
+                    MotelyJsonConfig? config = selected.format.ToLower() switch
+                    {
+                        "json" => ConfigFormatConverter.LoadFromJsonString(content),
+                        "jaml" => ConfigFormatConverter.LoadFromJamlString(content),
+                        _ => ConfigFormatConverter.LoadFromJsonString(content),
+                    };
+
+                    if (config == null)
+                    {
+                        ShowErrorDialog("Load Error", "Failed to parse filter file");
+                        return;
+                    }
+
+                    // Clear current items
+                    _mustItems.Clear();
+                    _shouldItems.Clear();
+                    _mustNotItems.Clear();
+
+                    // Load MUST items
+                    if (config.Must != null)
+                    {
+                        foreach (var clause in config.Must)
+                        {
+                            var category = clause.Type switch
+                            {
+                                "Joker" => "Joker",
+                                "SoulJoker" => "Legendary",
+                                "PlayingCard" => "Card",
+                                "TarotCard" => "Tarot",
+                                "SpectralCard" => "Spectral",
+                                "PlanetCard" => "Planet",
+                                "Voucher" => "Voucher",
+                                "BossBlind" => "Boss",
+                                "Tag" => "Tags",
+                                _ => "Joker",
+                            };
+                            _mustItems.Add($"{clause.Value} ({category})");
+                        }
+                    }
+
+                    // Load SHOULD items
+                    if (config.Should != null)
+                    {
+                        foreach (var clause in config.Should)
+                        {
+                            var category = clause.Type switch
+                            {
+                                "Joker" => "Joker",
+                                "SoulJoker" => "Legendary",
+                                "PlayingCard" => "Card",
+                                "TarotCard" => "Tarot",
+                                "SpectralCard" => "Spectral",
+                                "PlanetCard" => "Planet",
+                                "Voucher" => "Voucher",
+                                "BossBlind" => "Boss",
+                                "Tag" => "Tags",
+                                _ => "Joker",
+                            };
+                            _shouldItems.Add($"{clause.Value} ({category})");
+                        }
+                    }
+
+                    // Update list views
+                    _mustList.SetSource(new ObservableCollection<string>(_mustItems));
+                    _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
+
+                    // Enable Start Search since filter is now loaded
+                    _loadedFilterPath = selected.fullPath;
+                    _filterSaved = true;
+                    _startSearchBtn.Text = " Start Search ";
+                    _startSearchBtn.Enabled = true;
+                    _startSearchBtn.SetScheme(BalatroTheme.BlueButton);
+
+                    _statusLabel.Text = $"Loaded: {selected.name}.{selected.format}";
+                    App?.RequestStop(dialog);
+                }
+                catch (Exception ex)
+                {
+                    ShowErrorDialog("Load Error", $"Failed to load filter: {ex.Message}");
+                }
+            }
+        }
+
+        filterList.KeyDown += (sender, e) =>
+        {
+            if (e.KeyCode == KeyCode.Enter)
+            {
+                DoLoad();
+                e.Handled = true;
+            }
+        };
+
+        filterList.OpenSelectedItem += (sender, e) => DoLoad();
+        dialog.Add(filterList);
+
+        var loadBtn = new CleanButton()
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(3),
+            Text = "Load Filter",
+            Width = Dim.Fill() - 2,
+            TextAlignment = Alignment.Center,
+        };
+        loadBtn.SetScheme(BalatroTheme.BlueButton);
+        loadBtn.Accept += (s, e) => DoLoad();
+        dialog.Add(loadBtn);
+
+        var cancelBtn = new CleanButton()
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(1),
+            Text = "Bac_k",
+            Width = Dim.Fill() - 2,
+            TextAlignment = Alignment.Center,
+        };
+        cancelBtn.SetScheme(BalatroTheme.BackButton);
+        cancelBtn.Accept += (s, e) => App?.RequestStop(dialog);
+        dialog.Add(cancelBtn);
+
+        filterList.SetFocus();
+        App?.Run(dialog);
+    }
+
     private void SaveFilter()
     {
         var dialog = new Dialog()
@@ -486,7 +664,8 @@ public class FilterBuilderWindow : Window
         };
         dialog.Add(nameField);
 
-        var saveBtn = new Button() { Text = "Save" };
+        var saveBtn = new CleanButton() { Text = " Save " };
+        saveBtn.SetScheme(BalatroTheme.BlueButton);
         saveBtn.Accept += (s, e) =>
         {
             var name = nameField.Text;
@@ -510,19 +689,32 @@ public class FilterBuilderWindow : Window
                     MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
                 };
 
-                // Serialize to YAML
+                // Serialize to JAML - skip nulls and empty values for clean output
                 var serializer = new SerializerBuilder()
                     .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .DisableAliases() // Prevent &o0/*o0 anchor/alias references
+                    .ConfigureDefaultValuesHandling(
+                        DefaultValuesHandling.OmitNull
+                            | DefaultValuesHandling.OmitEmptyCollections
+                            | DefaultValuesHandling.OmitDefaults
+                    )
                     .Build();
-                var yaml = serializer.Serialize(config);
+                var jaml = serializer.Serialize(config);
 
                 // Save to file
-                var fileName = $"{name.Replace(" ", "_")}.yaml";
+                var fileName = $"{name.Replace(" ", "_")}.jaml";
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
-                File.WriteAllText(filePath, yaml);
+                File.WriteAllText(filePath, jaml);
 
                 _statusLabel.Text = $"Filter '{name}' saved to {fileName}";
-                Application.RequestStop(dialog);
+
+                // Enable Start Search button now that filter is saved
+                _filterSaved = true;
+                _startSearchBtn.Text = " Start Search ";
+                _startSearchBtn.Enabled = true;
+                _startSearchBtn.SetScheme(BalatroTheme.BlueButton);
+
+                App?.RequestStop(dialog);
             }
             catch (Exception ex)
             {
@@ -530,17 +722,35 @@ public class FilterBuilderWindow : Window
             }
         };
 
-        var cancelBtn = new Button() { Text = "Cancel" };
-        cancelBtn.Accept += (s, e) => Application.RequestStop(dialog);
+        var cancelBtn = new CleanButton()
+        {
+            X = Pos.Right(saveBtn) + 2,
+            Y = Pos.AnchorEnd(1),
+            Text = " Back ",
+        };
+        cancelBtn.SetScheme(BalatroTheme.BackButton);
+        cancelBtn.Accept += (s, e) => App?.RequestStop(dialog);
 
-        dialog.AddButton(saveBtn);
-        dialog.AddButton(cancelBtn);
+        saveBtn.X = 2;
+        saveBtn.Y = Pos.AnchorEnd(1);
+        dialog.Add(saveBtn);
+        dialog.Add(cancelBtn);
 
-        Application.Run(dialog);
+        App?.Run(dialog);
     }
 
     private void StartSearch()
     {
+        // If we loaded a filter directly, use that file
+        if (!string.IsNullOrEmpty(_loadedFilterPath) && File.Exists(_loadedFilterPath))
+        {
+            var format = _loadedFilterPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) ? "jaml" : "json";
+            _statusLabel.Text = $"Starting search with loaded filter...";
+            var searchWindow = new SearchWindow(_loadedFilterPath, format);
+            App?.Run(searchWindow);
+            return;
+        }
+
         if (_mustItems.Count == 0 && _shouldItems.Count == 0)
         {
             ShowErrorDialog(
@@ -562,30 +772,36 @@ public class FilterBuilderWindow : Window
             MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
         };
 
-        // Serialize to YAML
+        // Serialize to JAML - skip nulls and empty values for clean output
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .DisableAliases() // Prevent &o0/*o0 anchor/alias references
+            .ConfigureDefaultValuesHandling(
+                DefaultValuesHandling.OmitNull
+                    | DefaultValuesHandling.OmitEmptyCollections
+                    | DefaultValuesHandling.OmitDefaults
+            )
             .Build();
-        var yaml = serializer.Serialize(config);
+        var jaml = serializer.Serialize(config);
 
         try
         {
-            // Save to temporary file in YamlItemFilters
-            var yamlDir = Path.Combine(Directory.GetCurrentDirectory(), "YamlItemFilters");
-            if (!Directory.Exists(yamlDir))
+            // Save to temporary file in JamlFilters
+            var jamlDir = Path.Combine(Directory.GetCurrentDirectory(), "JamlFilters");
+            if (!Directory.Exists(jamlDir))
             {
-                Directory.CreateDirectory(yamlDir);
+                Directory.CreateDirectory(jamlDir);
             }
 
-            var fileName = "TUI_QuickFilter.yaml";
-            var filePath = Path.Combine(yamlDir, fileName);
-            File.WriteAllText(filePath, yaml);
+            var fileName = "TUI_QuickFilter.jaml";
+            var filePath = Path.Combine(jamlDir, fileName);
+            File.WriteAllText(filePath, jaml);
 
             _statusLabel.Text = $"Starting search with quick filter...";
 
-            // Launch search window
-            var searchWindow = new SearchWindow("TUI_QuickFilter", "yaml");
-            Application.Run(searchWindow);
+            // Launch search window with full file path
+            var searchWindow = new SearchWindow(filePath, "jaml");
+            App?.Run(searchWindow);
         }
         catch (Exception ex)
         {
@@ -593,7 +809,7 @@ public class FilterBuilderWindow : Window
         }
     }
 
-    // Compact Balatro-styled confirmation dialog (Yes/No)
+    // Balatro-styled confirmation dialog (Yes/No)
     private static bool ShowConfirmDialog(string title, string message)
     {
         var dialog = new Dialog()
@@ -601,14 +817,8 @@ public class FilterBuilderWindow : Window
             Title = title,
             Width = Math.Min(60, message.Length + 10),
             Height = 9,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-            },
         };
+        dialog.SetScheme(BalatroTheme.Window);
 
         var label = new Label()
         {
@@ -620,28 +830,37 @@ public class FilterBuilderWindow : Window
         dialog.Add(label);
 
         bool result = false;
-        var yesBtn = new Button() { Text = "Yes" };
+        var yesBtn = new CleanButton() { Text = " Yes " };
+        yesBtn.SetScheme(BalatroTheme.ModalButton);
         yesBtn.Accept += (s, e) =>
         {
             result = true;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        var noBtn = new Button() { Text = "No" };
+        var noBtn = new CleanButton()
+        {
+            X = Pos.Right(yesBtn) + 2,
+            Y = Pos.AnchorEnd(1),
+            Text = " No ",
+        };
+        noBtn.SetScheme(BalatroTheme.BackButton);
         noBtn.Accept += (s, e) =>
         {
             result = false;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        dialog.AddButton(yesBtn);
-        dialog.AddButton(noBtn);
+        yesBtn.X = 2;
+        yesBtn.Y = Pos.AnchorEnd(1);
+        dialog.Add(yesBtn);
+        dialog.Add(noBtn);
 
-        Application.Run(dialog);
+        MotelyTUI.App?.Run(dialog);
         return result;
     }
 
-    // Compact Balatro-styled error dialog (OK button, red theme)
+    // Balatro-styled error dialog (OK button)
     private static void ShowErrorDialog(string title, string message)
     {
         var dialog = new Dialog()
@@ -649,14 +868,8 @@ public class FilterBuilderWindow : Window
             Title = title,
             Width = Math.Min(70, message.Length + 10),
             Height = 10,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-            },
         };
+        dialog.SetScheme(BalatroTheme.Window);
 
         var label = new Label()
         {
@@ -665,16 +878,25 @@ public class FilterBuilderWindow : Window
             Text = message,
             TextAlignment = Alignment.Center,
         };
+        label.SetScheme(BalatroTheme.ErrorText);
         dialog.Add(label);
 
-        var okBtn = new Button() { Text = "OK" };
-        okBtn.Accept += (s, e) => Application.RequestStop(dialog);
-        dialog.AddButton(okBtn);
+        var okBtn = new CleanButton()
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(1),
+            Text = "Bac_k",
+            Width = Dim.Fill() - 2,
+            TextAlignment = Alignment.Center,
+        };
+        okBtn.SetScheme(BalatroTheme.BackButton);
+        okBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        dialog.Add(okBtn);
 
-        Application.Run(dialog);
+        MotelyTUI.App?.Run(dialog);
     }
 
-    // Compact Balatro-styled choice dialog (3 buttons)
+    // Balatro-styled choice dialog (3 buttons)
     private static int ShowChoiceDialog(
         string title,
         string message,
@@ -688,14 +910,8 @@ public class FilterBuilderWindow : Window
             Title = title,
             Width = Math.Min(60, Math.Max(message.Length + 10, 50)),
             Height = 9,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.BrightYellow, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.BrightYellow, ColorName.BrightRed),
-            },
         };
+        dialog.SetScheme(BalatroTheme.Window);
 
         var label = new Label()
         {
@@ -708,32 +924,44 @@ public class FilterBuilderWindow : Window
 
         int result = -1;
 
-        var btn1 = new Button() { Text = button1 };
+        var btn1 = new CleanButton() { Text = $" {button1} " };
+        btn1.SetScheme(BalatroTheme.ModalButton);
         btn1.Accept += (s, e) =>
         {
             result = 0;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        var btn2 = new Button() { Text = button2 };
+        var btn2 = new CleanButton() { Text = $" {button2} " };
+        btn2.SetScheme(BalatroTheme.ModalButton);
         btn2.Accept += (s, e) =>
         {
             result = 1;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        var btn3 = new Button() { Text = button3 };
+        var btn3 = new CleanButton()
+        {
+            X = Pos.Right(btn2) + 2,
+            Y = Pos.AnchorEnd(1),
+            Text = $" {button3} ",
+        };
+        btn3.SetScheme(BalatroTheme.BackButton);
         btn3.Accept += (s, e) =>
         {
             result = 2;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        dialog.AddButton(btn1);
-        dialog.AddButton(btn2);
-        dialog.AddButton(btn3);
+        btn1.X = 2;
+        btn1.Y = Pos.AnchorEnd(1);
+        btn2.X = Pos.Right(btn1) + 2;
+        btn2.Y = Pos.AnchorEnd(1);
+        dialog.Add(btn1);
+        dialog.Add(btn2);
+        dialog.Add(btn3);
 
-        Application.Run(dialog);
+        MotelyTUI.App?.Run(dialog);
         return result;
     }
 }

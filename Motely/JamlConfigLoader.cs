@@ -4,10 +4,17 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Motely;
 
-public static class YamlConfigLoader
+/// <summary>
+/// JAML (Joker Ante Markup Language) configuration loader.
+/// JAML is a YAML-based format specifically designed for Balatro seed filter configuration.
+/// </summary>
+public static class JamlConfigLoader
 {
-    public static bool TryLoadFromYaml(
-        string yamlPath,
+    /// <summary>
+    /// Try to load a MotelyJsonConfig from a JAML file.
+    /// </summary>
+    public static bool TryLoadFromJaml(
+        string jamlPath,
         out MotelyJsonConfig? config,
         out string? error
     )
@@ -15,26 +22,26 @@ public static class YamlConfigLoader
         config = null;
         error = null;
 
-        if (!File.Exists(yamlPath))
+        if (!File.Exists(jamlPath))
         {
-            error = $"File not found: {yamlPath}";
+            error = $"File not found: {jamlPath}";
             return false;
         }
 
         try
         {
-            var yamlContent = File.ReadAllText(yamlPath);
+            var jamlContent = File.ReadAllText(jamlPath);
 
-            // Parse YAML to object
+            // Parse JAML (YAML-based) to object
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .Build();
 
-            var deserializedConfig = deserializer.Deserialize<MotelyJsonConfig>(yamlContent);
+            var deserializedConfig = deserializer.Deserialize<MotelyJsonConfig>(jamlContent);
 
             if (deserializedConfig == null)
             {
-                error = "Failed to deserialize YAML - result was null";
+                error = "Failed to deserialize JAML - result was null";
                 return false;
             }
 
@@ -49,7 +56,7 @@ public static class YamlConfigLoader
         catch (Exception ex)
         {
             config = null;
-            error = $"Failed to parse YAML: {ex.Message}";
+            error = $"Failed to parse JAML: {ex.Message}";
             return false;
         }
     }
