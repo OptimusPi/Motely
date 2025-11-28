@@ -17,6 +17,9 @@ public static class TuiSettings
     public static string ApiServerHost { get; set; } = "localhost";
     public static int ApiServerPort { get; set; } = 3141;
 
+    // Secret settings (in-memory only, not persisted)
+    public static bool CrudeSeedsEnabled { get; set; } = false;
+
     /// <summary>
     /// Reset all settings to defaults
     /// </summary>

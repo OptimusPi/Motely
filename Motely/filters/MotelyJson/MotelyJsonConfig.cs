@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using YamlDotNet.Serialization;
 
 namespace Motely.Filters;
 
@@ -173,8 +174,8 @@ public class MotelyJsonConfig
         [JsonPropertyName("tags")]
         public bool? Tags { get; set; }
 
-        // Get effective antes
         [JsonIgnore]
+        [YamlIgnore]
         public int[] EffectiveAntes
         {
             get => Antes ?? [];
@@ -184,93 +185,122 @@ public class MotelyJsonConfig
         // Pre-computed values (set during ProcessClause from Sources)
         // Min/Max are calculated from Sources.min/maxShopSlot or Sources.shopSlots array
         [JsonIgnore]
+        [YamlIgnore]
         public int? MinShopSlot { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public int? MaxShopSlot { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public int? MinPackSlot { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public int? MaxPackSlot { get; set; }
 
         // Pre-parsed enum (set during initialization, immutable after)
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyFilterItemType ItemTypeEnum { get; private set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyVoucher? VoucherEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyTarotCard? TarotEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyPlanetCard? PlanetEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelySpectralCard? SpectralEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyJoker? JokerEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyTag? TagEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyTagType TagTypeEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyBossBlind? BossEnum { get; set; }
 
         // Multi-value enum arrays for "values" property
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelyJoker>? JokerEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelyVoucher>? VoucherEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelyTarotCard>? TarotEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelyPlanetCard>? PlanetEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelySpectralCard>? SpectralEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelyTag>? TagEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelyBossBlind>? BossEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyItemEdition? EditionEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public List<MotelyJokerSticker>? StickerEnums { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyPlayingCardSuit? SuitEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyPlayingCardRank? RankEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyItemSeal? SealEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyItemEnhancement? EnhancementEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public MotelyJsonConfigWildcards? WildcardEnum { get; set; }
 
         [JsonIgnore]
+        [YamlIgnore]
         public bool IsWildcard { get; set; }
 
         // Catch unknown properties so we can validate them
         [JsonExtensionData]
+        [YamlIgnore]
         public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
         public void InitializeParsedEnums()
@@ -1108,13 +1138,25 @@ public class MotelyJsonConfig
     public List<string> GetColumnNames()
     {
         var columns = new List<string> { "seed", "score" };
+        var usedNames = new HashSet<string>(columns, StringComparer.OrdinalIgnoreCase);
 
         if (Should != null)
         {
             foreach (var clause in Should)
             {
                 var columnName = GetClauseColumnName(clause);
-                columns.Add(columnName);
+
+                // Ensure unique column names by adding suffix if duplicate
+                var uniqueName = columnName;
+                int suffix = 2;
+                while (usedNames.Contains(uniqueName))
+                {
+                    uniqueName = $"{columnName}_{suffix}";
+                    suffix++;
+                }
+
+                usedNames.Add(uniqueName);
+                columns.Add(uniqueName);
             }
         }
 

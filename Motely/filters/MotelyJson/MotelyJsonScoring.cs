@@ -2198,12 +2198,8 @@ public static class MotelyJsonScoring
             // For scoring: return count of satisfied clauses (but we return bool for now)
             return matchedClauses == clauses.Count;
         }
-        catch (NullReferenceException ex)
+        catch (NullReferenceException)
         {
-            Console.WriteLine($"[DEBUG] NullRef INSIDE CheckSoulJokerForSeed: {ex.Message}");
-            Console.WriteLine($"[DEBUG] Full Stack: {ex.StackTrace}");
-            Console.WriteLine($"[DEBUG] Clauses count: {clauses?.Count}");
-            Console.WriteLine($"[DEBUG] SearchContext is ref struct - can't check null easily");
             throw;
         }
     }

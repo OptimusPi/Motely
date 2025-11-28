@@ -313,8 +313,7 @@ public class MotelyApiServer
                 <label>Filter Format:</label>
                 <div class=""tabs"">
                     <div class=""tab active"" onclick=""switchTab('json')"">JSON</div>
-                    <div class=""tab"" onclick=""switchTab('yaml')"">YAML</div>
-                    <div class=""tab"" onclick=""switchTab('toml')"">TOML</div>
+                    <div class=""tab"" onclick=""switchTab('jaml')"">JAML</div>
                 </div>
 
                 <div id=""jsonTab"" class=""tab-content active"">
@@ -361,8 +360,8 @@ public class MotelyApiServer
 }</textarea>
                 </div>
 
-                <div id=""yamlTab"" class=""tab-content"">
-                    <textarea id=""filterYaml"">must:
+                <div id=""jamlTab"" class=""tab-content"">
+                    <textarea id=""filterJaml"">must:
   - type: Voucher
     value: Telescope
     antes: [1, 2, 3]
@@ -388,47 +387,6 @@ should:
     antes: [1]
 deck: Red
 stake: White</textarea>
-                </div>
-
-                <div id=""tomlTab"" class=""tab-content"">
-                    <textarea id=""filterToml"">[[must]]
-type = ""Voucher""
-value = ""Telescope""
-antes = [1, 2, 3]
-
-[[must]]
-type = ""Voucher""
-value = ""Observatory""
-antes = [1, 2, 3]
-
-[[must]]
-type = ""SoulJoker""
-edition = ""Negative""
-value = ""Perkeo""
-antes = [1]
-
-[[should]]
-type = ""SoulJoker""
-value = ""Perkeo""
-antes = [1]
-
-[[should]]
-type = ""SoulJoker""
-value = ""Perkeo""
-antes = [2]
-
-[[should]]
-type = ""SoulJoker""
-value = ""Perkeo""
-antes = [3]
-
-[[should]]
-type = ""Joker""
-value = ""Blueprint""
-antes = [1]
-
-deck = ""Red""
-stake = ""White""</textarea>
                 </div>
 
                 <button onclick=""searchSeeds()"">Search 1M Seeds</button>
@@ -594,8 +552,8 @@ stake = ""White""</textarea>
 
             var parameters = new JsonSearchParams
             {
-                Threads = TUI.TuiSettings.ThreadCount,
-                BatchSize = TUI.TuiSettings.BatchCharacterCount,
+                Threads = Environment.ProcessorCount,
+                BatchSize = 36,  // Default batch size
                 StartBatch = 0,
                 EndBatch = 0,
                 EnableDebug = false,
