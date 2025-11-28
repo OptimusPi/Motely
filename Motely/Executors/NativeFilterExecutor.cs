@@ -9,8 +9,8 @@ using Motely.Utils;
 namespace Motely.Executors
 {
     /// <summary>
-    /// Executes built-in native filters (--motely parameter)
-    /// Handles: PerkeoObservatory, Trickeoglyph, NegativeCopy, SoulTest, etc.
+    /// Executes built-in native filters (--native parameter)
+    /// Handles: PerkeoObservatory, Trickeoglyph, NegativeCopy, etc.
     /// </summary>
     public class NativeFilterExecutor
     {
@@ -168,7 +168,6 @@ namespace Motely.Executors
                 TrickeoglyphFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 NegativeCopyFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 NegativeTagFilterDesc d => BuildSearch(d, progressCallback, seeds),
-                SoulTestFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 FilledSoulFilterDesc d => BuildSearch(d, progressCallback, seeds),
                 _ => throw new ArgumentException($"Unknown filter type: {filterDesc.GetType()}"),
             };
@@ -225,7 +224,6 @@ namespace Motely.Executors
                 "negativecopy" => new NegativeCopyFilterDesc(),
                 "negativetags" => new NegativeTagFilterDesc(),
                 "negativetag" => new NegativeTagFilterDesc(),
-                "soultest" => new SoulTestFilterDesc(),
                 "filledsoul" => new FilledSoulFilterDesc(),
                 _ => throw new ArgumentException($"Unknown filter: {filterName}"),
             };

@@ -129,7 +129,6 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             VectorMask resultMask = VectorMask.NoBitsSet;
-            bool firstFind = true;
 
             for (int i = 0; i < PseudoHashKeys.Length; i++)
             {
@@ -139,19 +138,6 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
                     stream.State,
                     Vector512.Create(0.3211483013596)
                 );
-                if (resultMask3p2.IsPartiallyTrue())
-                {
-                    if (firstFind)
-                    {
-                        firstFind = false;
-                        Console.WriteLine("Found stream.State 0.3211483013596 value for key(s): ");
-                        Console.Write(key);
-                    }
-                    else
-                    {
-                        Console.Write(", " + key);
-                    }
-                }
                 resultMask |= resultMask3p2;
             }
             return resultMask;

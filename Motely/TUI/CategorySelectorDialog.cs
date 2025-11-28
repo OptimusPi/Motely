@@ -13,14 +13,7 @@ public class CategorySelectorDialog : Dialog
         Width = 45;
         Height = 15;
 
-        // Balatro-style color scheme: dark background with red accents
-        ColorScheme = new ColorScheme()
-        {
-            Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-            HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-        };
+        SetScheme(BalatroTheme.Window);
 
         var instructionLabel = new Label()
         {
@@ -53,39 +46,22 @@ public class CategorySelectorDialog : Dialog
             AllowsMarking = false,
             CanFocus = true,
         };
+        listView.SetScheme(BalatroTheme.ListView);
         listView.SetSource(new ObservableCollection<string>(categories));
+        listView.SelectedItem = 0; // Select first item by default
 
-        // Handle Enter key for selection
+        // Handle Enter key and hotkeys for selection
         listView.KeyDown += (sender, e) =>
         {
             if (e.KeyCode == KeyCode.Enter)
             {
-                SelectedCategory = GetCategoryFromIndex(listView.SelectedItem);
-                Application.RequestStop(this);
+                SelectedCategory = GetCategoryFromIndex(listView.SelectedItem ?? 0);
+                App?.RequestStop(this);
                 e.Handled = true;
+                return;
             }
-        };
 
-        // Handle mouse click for selection
-        listView.OpenSelectedItem += (s, e) =>
-        {
-            SelectedCategory = GetCategoryFromIndex(listView.SelectedItem);
-            Application.RequestStop(this);
-        };
-
-        Add(listView);
-
-        var cancelBtn = new Button() { Text = "Cancel" };
-        cancelBtn.Accept += (s, e) =>
-        {
-            SelectedCategory = null;
-            Application.RequestStop(this);
-        };
-        AddButton(cancelBtn);
-
-        // Hotkey handling
-        KeyDown += (sender, e) =>
-        {
+            // Hotkeys - check for category letter keys
             var key = char.ToUpper((char)e.KeyCode);
             string? category = key switch
             {
@@ -104,10 +80,34 @@ public class CategorySelectorDialog : Dialog
             if (category != null)
             {
                 SelectedCategory = category;
-                Application.RequestStop(this);
+                App?.RequestStop(this);
                 e.Handled = true;
             }
         };
+
+        // Handle mouse click for selection
+        listView.OpenSelectedItem += (s, e) =>
+        {
+            SelectedCategory = GetCategoryFromIndex(listView.SelectedItem ?? 0);
+            App?.RequestStop(this);
+        };
+
+        Add(listView);
+
+        var cancelBtn = new CleanButton()
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill() - 2,
+            Text = "Bac_k",
+        };
+        cancelBtn.SetScheme(BalatroTheme.BackButton);
+        cancelBtn.Accept += (s, e) =>
+        {
+            SelectedCategory = null;
+            App?.RequestStop(this);
+        };
+        Add(cancelBtn);
 
         listView.SetFocus();
     }

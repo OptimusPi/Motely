@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text.Json;
 using Terminal.Gui;
 
 namespace Motely.TUI;
@@ -16,16 +18,9 @@ public class SettingsWindow : Window
         X = Pos.Center();
         Y = Pos.Center();
         Width = 70;
-        Height = 18;
+        Height = 20;
         CanFocus = true;
-
-        ColorScheme = new ColorScheme()
-        {
-            Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-            HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-            HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-        };
+        SetScheme(BalatroTheme.Window);
 
         // Title
         var titleLabel = new Label()
@@ -34,11 +29,8 @@ public class SettingsWindow : Window
             Y = 1,
             Text = "SETTINGS",
             TextAlignment = Alignment.Center,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
-            },
         };
+        titleLabel.SetScheme(BalatroTheme.Title);
         Add(titleLabel);
 
         // Thread Count
@@ -64,11 +56,8 @@ public class SettingsWindow : Window
             X = 24,
             Y = 4,
             Text = $"(1-{Environment.ProcessorCount}, default: {Environment.ProcessorCount})",
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black),
-            },
         };
+        threadHint.SetScheme(BalatroTheme.Hint);
         Add(threadHint);
 
         // Batch Character Count
@@ -94,11 +83,8 @@ public class SettingsWindow : Window
             X = 24,
             Y = 7,
             Text = "(1-7, default: 2, recommended: 2-4)",
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black),
-            },
         };
+        batchHint.SetScheme(BalatroTheme.Hint);
         Add(batchHint);
 
         // API Server Host
@@ -142,67 +128,52 @@ public class SettingsWindow : Window
             X = 24,
             Y = 13,
             Text = "(1-65535, default: 3141)",
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.Gray, ColorName.Black),
-            },
         };
+        portHint.SetScheme(BalatroTheme.Hint);
         Add(portHint);
 
-        // Secret option
-        var secretButton = new Button()
+        // Secret option - blends into background until focused!
+        var secretButton = new CleanButton()
         {
             X = 2,
             Y = 15,
-            Text = "Secret...",
-            Width = 20,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.DarkGray, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightMagenta),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.BrightMagenta, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightMagenta),
-            },
+            Text = "          ",
+            Width = 12,
         };
-        secretButton.Accept += (s, e) =>
+        secretButton.SetScheme(new Scheme()
         {
-            // Secret functionality placeholder
-            MessageBox.Query("Secret Discovered!", "You found the secret option!\n\nJimbo is proud of you! 🃏", "OK");
-        };
+            // Invisible until focused - blends with window background
+            Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
+            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Purple),
+            HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
+            HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
+        });
+        secretButton.Accept += (s, e) => ShowSecretDialog();
         Add(secretButton);
 
-        // Save button
-        var saveButton = new Button()
+        // Save button (blue like PLAY) - above Back
+        var saveButton = new CleanButton()
         {
-            X = Pos.Center() - 10,
-            Y = Pos.AnchorEnd(1),
-            Text = "_Save",
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightBlue),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightBlue),
-            },
+            X = Pos.Center() - 6,
+            Y = Pos.AnchorEnd(3),
+            Text = " _Save ",
+            Width = 12,
         };
+        saveButton.SetScheme(BalatroTheme.BlueButton);
         saveButton.Accept += (s, e) => SaveSettings();
         Add(saveButton);
 
-        // Cancel button
-        var cancelButton = new Button()
+        // Back button (orange) - FULL WIDTH at very bottom
+        var cancelButton = new CleanButton()
         {
-            X = Pos.Center() + 2,
+            X = 1,
             Y = Pos.AnchorEnd(1),
-            Text = "_Cancel",
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-            },
+            Text = "Bac_k",
+            Width = Dim.Fill() - 2,
+            TextAlignment = Alignment.Center,
         };
-        cancelButton.Accept += (s, e) => Application.RequestStop();
+        cancelButton.SetScheme(BalatroTheme.BackButton);
+        cancelButton.Accept += (s, e) => App?.RequestStop();
         Add(cancelButton);
 
         // ESC key handler
@@ -210,7 +181,7 @@ public class SettingsWindow : Window
         {
             if (e.KeyCode == KeyCode.Esc)
             {
-                Application.RequestStop();
+                App?.RequestStop();
                 e.Handled = true;
             }
         };
@@ -289,7 +260,7 @@ public class SettingsWindow : Window
             }
 
             // Success - close window
-            Application.RequestStop();
+            App?.RequestStop();
         }
         catch (Exception ex)
         {
@@ -304,14 +275,8 @@ public class SettingsWindow : Window
             Title = title,
             Width = Math.Min(70, message.Length + 10),
             Height = 10,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-            },
         };
+        dialog.SetScheme(BalatroTheme.Window);
 
         var label = new Label()
         {
@@ -320,12 +285,67 @@ public class SettingsWindow : Window
             Text = message,
             TextAlignment = Alignment.Center,
         };
+        label.SetScheme(BalatroTheme.ErrorText);
         dialog.Add(label);
 
-        var okBtn = new Button() { Text = "OK" };
-        okBtn.Accept += (s, e) => Application.RequestStop(dialog);
-        dialog.AddButton(okBtn);
+        var okBtn = new CleanButton()
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(1),
+            Text = "Bac_k",
+            Width = Dim.Fill() - 2,
+            TextAlignment = Alignment.Center,
+        };
+        okBtn.SetScheme(BalatroTheme.BackButton);
+        okBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        dialog.Add(okBtn);
 
-        Application.Run(dialog);
+        MotelyTUI.App?.Run(dialog);
+    }
+
+    private static void ShowSecretDialog()
+    {
+        var dialog = new Dialog()
+        {
+            Title = "Jimbo is proud of you!",
+            Width = 50,
+            Height = 14,
+        };
+        dialog.SetScheme(BalatroTheme.Window);
+
+        var jimboLabel = new Label()
+        {
+            X = Pos.Center(),
+            Y = 1,
+            Text = "  .-\"\"\"-.\n /        \\\n|  O    O  |\n|    __    |\n \\  \\__/  /\n  '------'",
+            TextAlignment = Alignment.Center,
+        };
+        dialog.Add(jimboLabel);
+
+        var crudeBtn = new CleanButton()
+        {
+            X = Pos.Center(),
+            Y = 8,
+            Text = TuiSettings.CrudeSeedsEnabled ? " [X] Crude Seeds " : " [ ] Crude Seeds ",
+        };
+        crudeBtn.SetScheme(BalatroTheme.GrayButton);
+        crudeBtn.Accept += (s, e) =>
+        {
+            TuiSettings.CrudeSeedsEnabled = !TuiSettings.CrudeSeedsEnabled;
+            crudeBtn.Text = TuiSettings.CrudeSeedsEnabled ? " [X] Crude Seeds " : " [ ] Crude Seeds ";
+        };
+        dialog.Add(crudeBtn);
+
+        var closeBtn = new CleanButton()
+        {
+            X = Pos.Center(),
+            Y = Pos.AnchorEnd(1),
+            Text = " Back ",
+        };
+        closeBtn.SetScheme(BalatroTheme.BackButton);
+        closeBtn.Accept += (s, e) => MotelyTUI.App?.RequestStop(dialog);
+        dialog.Add(closeBtn);
+
+        MotelyTUI.App?.Run(dialog);
     }
 }

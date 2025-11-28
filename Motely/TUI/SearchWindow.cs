@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ public class SearchWindow : Window
 {
     private TextView _outputView;
     private TableView _topResultsTable;
-    private Button _stopButton;
+    private CleanButton _stopButton;
     private Label _statusLabel;
     private string _configName;
     private string _configFormat;
@@ -23,57 +24,40 @@ public class SearchWindow : Window
     private JsonSearchExecutor? _executor;
     private TopResultsTracker _topResults = new TopResultsTracker();
     private MotelyJsonConfig? _config;
+    private List<string> _columnNames = new();
 
     public SearchWindow(string configName, string configFormat)
     {
-        Title = $"Search: {configName}";
+        var displayName = Path.GetFileNameWithoutExtension(configName);
         _configName = configName;
         _configFormat = configFormat;
 
-        X = 0;
-        Y = 0;
-        Width = Dim.Fill();
-        Height = Dim.Fill();
+        // Compact draggable window with filter name as title
+        Title = $"Search: {displayName}";
+        X = Pos.Center();
+        Y = Pos.Center();
+        Width = 70;
+        Height = 22;
         CanFocus = true;
+        SetScheme(BalatroTheme.Window);
 
-        // Title centered at top
-        var titleLabel = new Label()
-        {
-            X = Pos.Center(),
-            Y = 0,
-            Text = $"Running search with {configFormat.ToUpper()} filter: {configName}",
-            TextAlignment = Alignment.Center,
-        };
-        Add(titleLabel);
-
-        // Top 10 Results label
-        var topLabel = new Label()
-        {
-            X = 2,
-            Y = 2,
-            Text = "[TOP 10 RESULTS]",
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black), // Signature Balatro red
-            },
-        };
-        Add(topLabel);
-
-        // Top 10 Results Table
+        // Top 10 Results Table - compact view showing Seed + Score
         _topResultsTable = new TableView()
         {
-            X = 2,
-            Y = 3,
-            Width = Dim.Fill() - 4,
+            X = 1,
+            Y = 1,
+            Width = Dim.Fill() - 2,
             Height = 13, // Header + 10 rows + borders
             FullRowSelect = true,
             CanFocus = true,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-            },
         };
+        _topResultsTable.SetScheme(
+            new Scheme()
+            {
+                Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+                Focus = new Attribute(BalatroTheme.Black, BalatroTheme.Red),
+            }
+        );
 
         // Handle mouse clicks on table rows to copy Blueprint URL
         _topResultsTable.MouseClick += (s, e) =>
@@ -92,26 +76,13 @@ public class SearchWindow : Window
 
         Add(_topResultsTable);
 
-        // Log label
-        var logLabel = new Label()
-        {
-            X = 2,
-            Y = Pos.Bottom(_topResultsTable) + 1,
-            Text = "[SEARCH LOG]",
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black), // Signature Balatro blue
-            },
-        };
-        Add(logLabel);
-
-        // Output view (scrollable text) - now below the table
+        // Output view (scrollable text) - compact, below the table
         _outputView = new TextView()
         {
-            X = 2,
-            Y = Pos.Bottom(logLabel) + 1,
-            Width = Dim.Fill() - 4,
-            Height = Dim.Fill() - 6,
+            X = 1,
+            Y = Pos.Bottom(_topResultsTable),
+            Width = Dim.Fill() - 2,
+            Height = 4,
             ReadOnly = true,
             WordWrap = false,
             CanFocus = true,
@@ -121,20 +92,23 @@ public class SearchWindow : Window
         // Status label
         _statusLabel = new Label()
         {
-            X = 2,
+            X = 1,
             Y = Pos.AnchorEnd(3),
-            Width = Dim.Fill() - 4,
+            Width = Dim.Fill() - 2,
             Text = "Initializing search...",
         };
         Add(_statusLabel);
 
-        // Stop button
-        _stopButton = new Button()
+        // Stop button (full width)
+        _stopButton = new CleanButton()
         {
-            X = Pos.Center(),
+            X = 1,
             Y = Pos.AnchorEnd(1),
-            Text = "Stop Search (Ctrl+C) | ESC for Menu",
+            Width = Dim.Fill() - 2,
+            Text = "Stop Search | ESC for Menu",
+            TextAlignment = Alignment.Center,
         };
+        _stopButton.SetScheme(BalatroTheme.BackButton);
         _stopButton.Accept += (s, e) => StopSearch();
         Add(_stopButton);
 
@@ -171,12 +145,12 @@ public class SearchWindow : Window
                 else if (choice == 1) // Main Menu
                 {
                     // Return to main menu
-                    Application.RequestStop();
+                    App?.RequestStop();
                 }
                 else if (choice == 2) // Exit
                 {
                     // Exit the entire application
-                    Application.RequestStop();
+                    App?.RequestStop();
                     // Set a flag to indicate full exit
                     Environment.Exit(0);
                 }
@@ -203,14 +177,26 @@ public class SearchWindow : Window
             _config = _configFormat.ToLower() switch
             {
                 "json" => ConfigFormatConverter.LoadFromJsonString(configContent),
-                "yaml" => ConfigFormatConverter.LoadFromYamlString(configContent),
+                "jaml" => ConfigFormatConverter.LoadFromJamlString(configContent),
                 _ => ConfigFormatConverter.LoadFromJsonString(configContent),
             };
 
+            // Get column names from config ONCE (includes labels for SHOULD clauses)
+            // Capitalize first letter for better UI presentation
+            _columnNames = (_config?.GetColumnNames() ?? new List<string> { "Seed", "Score" })
+                .Select(name =>
+                    string.IsNullOrEmpty(name) ? name : char.ToUpper(name[0]) + name.Substring(1)
+                )
+                .ToList();
+
+            // Initialize the results tracker with column names (set once, not per-result!)
+            _topResults.Initialize(_columnNames);
+
             // Create callback to receive typed results directly (NO CSV PARSING!)
+            // With AutoCutoff enabled, only top results are reported - no flooding!
             Action<MotelySeedScoreTally> resultCallback = (tally) =>
             {
-                Application.Invoke(() =>
+                App?.Invoke(() =>
                 {
                     _topResults.AddResult(tally, _topResultsTable);
                 });
@@ -220,12 +206,13 @@ public class SearchWindow : Window
             var writer = new TextViewWriter(_outputView);
             Console.SetOut(writer);
 
-            Application.Invoke(() =>
+            App?.Invoke(() =>
             {
                 _statusLabel.Text = "Search running...";
             });
 
             // Build search parameters
+            // If crude seeds mode is enabled, search the sick.txt wordlist first!
             var parameters = new JsonSearchParams
             {
                 Threads = TuiSettings.ThreadCount,
@@ -236,14 +223,19 @@ public class SearchWindow : Window
                 NoFancy = true, // Disable fancy output in TUI
                 Quiet = false,
                 SpecificSeed = null,
-                Wordlist = null,
+                Wordlist = TuiSettings.CrudeSeedsEnabled ? "sick" : null,
                 RandomSeeds = null,
                 Cutoff = 0,
-                AutoCutoff = false,
+                AutoCutoff = true, // Prevents flooding UI with low-score results
             };
 
             // Execute search with callback to receive typed results directly
-            _executor = new JsonSearchExecutor(_configName, parameters, _configFormat, resultCallback);
+            _executor = new JsonSearchExecutor(
+                _configName,
+                parameters,
+                _configFormat,
+                resultCallback
+            );
             var result = await Task.Run(() => _executor.Execute(), _cancellationTokenSource.Token);
 
             // Restore original console output ALWAYS
@@ -251,13 +243,13 @@ public class SearchWindow : Window
 
             if (_searchRunning) // Only update UI if window still active
             {
-                Application.Invoke(() =>
+                App?.Invoke(() =>
                 {
                     _statusLabel.Text =
                         result == 0
                             ? "Search completed successfully!"
                             : $"Search exited with code {result}";
-                    _stopButton.Text = "Close";
+                    _stopButton.Text = "Bac_k";
                     _searchRunning = false;
                 });
             }
@@ -269,10 +261,10 @@ public class SearchWindow : Window
 
             if (_searchRunning)
             {
-                Application.Invoke(() =>
+                App?.Invoke(() =>
                 {
                     _statusLabel.Text = "Search cancelled";
-                    _stopButton.Text = "Close";
+                    _stopButton.Text = "Bac_k";
                     _searchRunning = false;
                 });
             }
@@ -284,11 +276,11 @@ public class SearchWindow : Window
 
             if (_searchRunning) // Only update UI if window still active
             {
-                Application.Invoke(() =>
+                App?.Invoke(() =>
                 {
                     _outputView.Text += $"\n\nError: {ex.Message}\n{ex.StackTrace}";
                     _statusLabel.Text = "Search failed!";
-                    _stopButton.Text = "Close";
+                    _stopButton.Text = "Bac_k";
                     _searchRunning = false;
                 });
             }
@@ -313,7 +305,7 @@ public class SearchWindow : Window
             _executor?.Cancel();
             _searchRunning = false;
             _statusLabel.Text = "Search stopped by user";
-            _stopButton.Text = "Close";
+            _stopButton.Text = "Bac_k";
             _stopButton.Enabled = true;
 
             try
@@ -321,10 +313,13 @@ public class SearchWindow : Window
                 Console.SetOut(Console.Out);
             }
             catch { }
+
+            // Force UI refresh so changes are visible immediately
+            SetNeedsDraw();
         }
         else
         {
-            Application.RequestStop();
+            App?.RequestStop();
         }
     }
 
@@ -337,23 +332,29 @@ public class SearchWindow : Window
                 Title = "No Results",
                 Width = 40,
                 Height = 9,
-                ColorScheme = new ColorScheme()
-                {
-                    Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                    Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                },
             };
-            noResultsDialog.Add(new Label()
+            noResultsDialog.SetScheme(BalatroTheme.Window);
+            var noResultsLabel = new Label()
             {
                 X = Pos.Center(),
                 Y = 2,
                 Text = "No results to save yet!",
                 TextAlignment = Alignment.Center,
-            });
-            var okBtn = new Button() { Text = "OK" };
-            okBtn.Accept += (s, e) => Application.RequestStop(noResultsDialog);
-            noResultsDialog.AddButton(okBtn);
-            Application.Run(noResultsDialog);
+            };
+            noResultsLabel.SetScheme(BalatroTheme.ErrorText);
+            noResultsDialog.Add(noResultsLabel);
+            var okBtn = new CleanButton()
+            {
+                X = 1,
+                Y = Pos.AnchorEnd(1),
+                Text = "Bac_k",
+                Width = Dim.Fill() - 2,
+                TextAlignment = Alignment.Center,
+            };
+            okBtn.SetScheme(BalatroTheme.BackButton);
+            okBtn.Accept += (s, e) => App?.RequestStop(noResultsDialog);
+            noResultsDialog.Add(okBtn);
+            App?.Run(noResultsDialog);
             return;
         }
 
@@ -392,8 +393,10 @@ public class SearchWindow : Window
         };
         dialog.Add(formatLabel);
 
-        var okButton = new Button() { Text = "Save" };
-        var cancelButton = new Button() { Text = "Cancel" };
+        var okButton = new CleanButton() { Text = " Save " };
+        okButton.SetScheme(BalatroTheme.BlueButton);
+        var cancelButton = new CleanButton() { Text = " Back " };
+        cancelButton.SetScheme(BalatroTheme.BackButton);
 
         okButton.Accept += (s, e) =>
         {
@@ -405,29 +408,38 @@ public class SearchWindow : Window
                     Title = "Error",
                     Width = 45,
                     Height = 9,
-                    ColorScheme = new ColorScheme()
-                    {
-                        Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                        Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                    },
                 };
-                errorDialog.Add(new Label()
+                errorDialog.SetScheme(BalatroTheme.Window);
+                var errorLabel = new Label()
                 {
                     X = Pos.Center(),
                     Y = 2,
                     Text = "Filename cannot be empty!",
                     TextAlignment = Alignment.Center,
-                });
-                var okBtn = new Button() { Text = "OK" };
-                okBtn.Accept += (s, e) => Application.RequestStop(errorDialog);
-                errorDialog.AddButton(okBtn);
-                Application.Run(errorDialog);
+                };
+                errorLabel.SetScheme(BalatroTheme.ErrorText);
+                errorDialog.Add(errorLabel);
+                var okBtn = new CleanButton()
+                {
+                    X = 1,
+                    Y = Pos.AnchorEnd(1),
+                    Text = "Bac_k",
+                    Width = Dim.Fill() - 2,
+                    TextAlignment = Alignment.Center,
+                };
+                okBtn.SetScheme(BalatroTheme.BackButton);
+                okBtn.Accept += (s, e) => App?.RequestStop(errorDialog);
+                errorDialog.Add(okBtn);
+                App?.Run(errorDialog);
                 return;
             }
 
             try
             {
-                var filepath = System.IO.Path.Combine(Directory.GetCurrentDirectory(), filename + ".csv");
+                var filepath = System.IO.Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    filename + ".csv"
+                );
                 using (var writer = new System.IO.StreamWriter(filepath))
                 {
                     // Write header
@@ -445,24 +457,29 @@ public class SearchWindow : Window
                     Title = "Success",
                     Width = Math.Min(70, filepath.Length + 20),
                     Height = 9,
-                    ColorScheme = new ColorScheme()
-                    {
-                        Normal = new Terminal.Gui.Attribute(ColorName.BrightBlue, ColorName.Black),
-                        Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightBlue),
-                    },
                 };
-                successDialog.Add(new Label()
+                successDialog.SetScheme(BalatroTheme.Window);
+                var successLabel = new Label()
                 {
                     X = Pos.Center(),
                     Y = 2,
                     Text = $"Saved to:\n{filepath}",
                     TextAlignment = Alignment.Center,
-                });
-                var okBtn = new Button() { Text = "OK" };
-                okBtn.Accept += (s, e) => Application.RequestStop(successDialog);
-                successDialog.AddButton(okBtn);
-                Application.Run(successDialog);
-                Application.RequestStop(dialog);
+                };
+                successDialog.Add(successLabel);
+                var okBtn = new CleanButton()
+                {
+                    X = 1,
+                    Y = Pos.AnchorEnd(1),
+                    Text = "Bac_k",
+                    Width = Dim.Fill() - 2,
+                    TextAlignment = Alignment.Center,
+                };
+                okBtn.SetScheme(BalatroTheme.BackButton);
+                okBtn.Accept += (s, e) => App?.RequestStop(successDialog);
+                successDialog.Add(okBtn);
+                App?.Run(successDialog);
+                App?.RequestStop(dialog);
             }
             catch (Exception ex)
             {
@@ -471,32 +488,42 @@ public class SearchWindow : Window
                     Title = "Error",
                     Width = Math.Min(60, ex.Message.Length + 25),
                     Height = 10,
-                    ColorScheme = new ColorScheme()
-                    {
-                        Normal = new Terminal.Gui.Attribute(ColorName.BrightRed, ColorName.Black),
-                        Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                    },
                 };
-                errorDialog.Add(new Label()
+                errorDialog.SetScheme(BalatroTheme.Window);
+                var errorLabel = new Label()
                 {
                     X = Pos.Center(),
                     Y = 2,
                     Text = $"Failed to save:\n{ex.Message}",
                     TextAlignment = Alignment.Center,
-                });
-                var okBtn = new Button() { Text = "OK" };
-                okBtn.Accept += (s, e) => Application.RequestStop(errorDialog);
-                errorDialog.AddButton(okBtn);
-                Application.Run(errorDialog);
+                };
+                errorLabel.SetScheme(BalatroTheme.ErrorText);
+                errorDialog.Add(errorLabel);
+                var okBtn = new CleanButton()
+                {
+                    X = 1,
+                    Y = Pos.AnchorEnd(1),
+                    Text = "Bac_k",
+                    Width = Dim.Fill() - 2,
+                    TextAlignment = Alignment.Center,
+                };
+                okBtn.SetScheme(BalatroTheme.BackButton);
+                okBtn.Accept += (s, e) => App?.RequestStop(errorDialog);
+                errorDialog.Add(okBtn);
+                App?.Run(errorDialog);
             }
         };
 
-        cancelButton.Accept += (s, e) => Application.RequestStop(dialog);
+        cancelButton.Accept += (s, e) => App?.RequestStop(dialog);
 
-        dialog.AddButton(okButton);
-        dialog.AddButton(cancelButton);
+        okButton.X = 2;
+        okButton.Y = Pos.AnchorEnd(1);
+        cancelButton.X = Pos.Right(okButton) + 2;
+        cancelButton.Y = Pos.AnchorEnd(1);
+        dialog.Add(okButton);
+        dialog.Add(cancelButton);
 
-        Application.Run(dialog);
+        App?.Run(dialog);
     }
 
     private void CopyBlueprintUrl(int rowIndex)
@@ -517,16 +544,70 @@ public class SearchWindow : Window
             var stakeName = _config?.Stake ?? "White";
             var maxAnte = _config?.MaxBossAnte ?? 8;
 
-            var url = $"https://miaklwalker.github.io/Blueprint/?seed={seed}&deck={deckName}+Deck&antes={maxAnte}&stake={stakeName}+Stake";
+            var url =
+                $"https://miaklwalker.github.io/Blueprint/?seed={seed}&deck={deckName}+Deck&antes={maxAnte}&stake={stakeName}+Stake";
 
             // Copy to clipboard using platform-specific command
             CopyToClipboard(url);
 
-            MessageBox.Query("Blueprint URL Copied!", $"Seed: {seed}\n\nURL copied to clipboard:\n{url}", "OK");
+            var successDialog = new Dialog()
+            {
+                Title = "Blueprint URL Copied!",
+                Width = Math.Min(80, url.Length + 10),
+                Height = 12,
+            };
+            successDialog.SetScheme(BalatroTheme.Window);
+            var successLabel = new Label()
+            {
+                X = Pos.Center(),
+                Y = 2,
+                Text = $"Seed: {seed}\n\nURL copied to clipboard:\n{url}",
+                TextAlignment = Alignment.Center,
+            };
+            successDialog.Add(successLabel);
+            var okBtn = new CleanButton()
+            {
+                X = 1,
+                Y = Pos.AnchorEnd(1),
+                Text = "Bac_k",
+                Width = Dim.Fill() - 2,
+                TextAlignment = Alignment.Center,
+            };
+            okBtn.SetScheme(BalatroTheme.BackButton);
+            okBtn.Accept += (s, e) => App?.RequestStop(successDialog);
+            successDialog.Add(okBtn);
+            App?.Run(successDialog);
         }
         catch (Exception ex)
         {
-            MessageBox.ErrorQuery("Error", $"Failed to copy Blueprint URL: {ex.Message}", "OK");
+            var errorDialog = new Dialog()
+            {
+                Title = "Error",
+                Width = Math.Min(60, ex.Message.Length + 35),
+                Height = 10,
+            };
+            errorDialog.SetScheme(BalatroTheme.Window);
+            var errorLabel = new Label()
+            {
+                X = Pos.Center(),
+                Y = 2,
+                Text = $"Failed to copy Blueprint URL:\n{ex.Message}",
+                TextAlignment = Alignment.Center,
+            };
+            errorLabel.SetScheme(BalatroTheme.ErrorText);
+            errorDialog.Add(errorLabel);
+            var okBtn2 = new CleanButton()
+            {
+                X = 1,
+                Y = Pos.AnchorEnd(1),
+                Text = "Bac_k",
+                Width = Dim.Fill() - 2,
+                TextAlignment = Alignment.Center,
+            };
+            okBtn2.SetScheme(BalatroTheme.BackButton);
+            okBtn2.Accept += (s, e) => App?.RequestStop(errorDialog);
+            errorDialog.Add(okBtn2);
+            App?.Run(errorDialog);
         }
     }
 
@@ -534,10 +615,15 @@ public class SearchWindow : Window
     {
         try
         {
-            // Cross-platform clipboard copy
+            // Try Terminal.Gui's built-in clipboard first (v2 instance-based API)
+            if (App?.Clipboard?.TrySetClipboardData(text) == true)
+            {
+                return; // Success!
+            }
+
+            // Fallback to platform-specific commands if Terminal.Gui clipboard fails
             if (OperatingSystem.IsWindows())
             {
-                // Windows: use clip (pipe text to stdin to avoid special char issues)
                 var psi = new System.Diagnostics.ProcessStartInfo("clip")
                 {
                     RedirectStandardInput = true,
@@ -551,7 +637,6 @@ public class SearchWindow : Window
             }
             else if (OperatingSystem.IsMacOS())
             {
-                // macOS: use pbcopy
                 var psi = new System.Diagnostics.ProcessStartInfo("pbcopy")
                 {
                     RedirectStandardInput = true,
@@ -565,7 +650,6 @@ public class SearchWindow : Window
             }
             else
             {
-                // Linux: use xclip or xsel
                 var psi = new System.Diagnostics.ProcessStartInfo("xclip", "-selection clipboard")
                 {
                     RedirectStandardInput = true,
@@ -580,7 +664,6 @@ public class SearchWindow : Window
         }
         catch
         {
-            // Fallback: just show the URL
             throw new Exception("Clipboard not available. Please copy manually.");
         }
     }
@@ -601,7 +684,7 @@ public class SearchWindow : Window
         {
             try
             {
-                Application.Invoke(() =>
+                MotelyTUI.App?.Invoke(() =>
                 {
                     if (_textView != null)
                     {
@@ -622,7 +705,7 @@ public class SearchWindow : Window
                 return;
             try
             {
-                Application.Invoke(() =>
+                MotelyTUI.App?.Invoke(() =>
                 {
                     if (_textView != null)
                     {
@@ -641,7 +724,7 @@ public class SearchWindow : Window
         {
             try
             {
-                Application.Invoke(() =>
+                MotelyTUI.App?.Invoke(() =>
                 {
                     if (_textView != null)
                     {
@@ -668,41 +751,30 @@ public class SearchWindow : Window
 
         public int Count => _topResults.Count;
 
+        // Initialize column headers ONCE from config (not per-result!)
+        public void Initialize(List<string> columnNames)
+        {
+            _columnHeaders.Clear();
+            _columnHeaders.AddRange(columnNames);
+        }
+
         public void AddResult(MotelySeedScoreTally tally, TableView tableView)
         {
-            // Build column headers on first result (Seed, Score, + tally columns)
-            if (_columnHeaders.Count == 0)
-            {
-                _columnHeaders.Add("Seed");
-                _columnHeaders.Add("Score");
-                // Add tally column headers if any
-                for (int i = 0; i < tally.TallyCount; i++)
+            // AutoCutoff in executor already filters - just add and display
+            _topResults.Add(
+                new SeedResult
                 {
-                    _columnHeaders.Add($"Col{i + 1}");
+                    Seed = tally.Seed,
+                    Score = tally.Score,
+                    Data = new List<string> { tally.Seed, tally.Score.ToString() }
+                        .Concat(tally.TallyColumns.Select(v => v.ToString()))
+                        .ToList(),
                 }
-            }
+            );
 
-            // Build data list: [seed, score, tally1, tally2, ...]
-            var data = new List<string> { tally.Seed, tally.Score.ToString() };
-            data.AddRange(tally.TallyColumns.Select(v => v.ToString()));
-
-            var result = new SeedResult
-            {
-                Seed = tally.Seed,
-                Score = tally.Score,
-                Data = data,
-            };
-
-            // Add to top results (SortedSet maintains descending order)
-            _topResults.Add(result);
-
-            // Keep only top 10
-            while (_topResults.Count > MAX_RESULTS)
-            {
-                var min = _topResults.Min;
-                if (min != null)
-                    _topResults.Remove(min);
-            }
+            // Trim to top 10 (defensive)
+            if (_topResults.Count > MAX_RESULTS)
+                _topResults.Remove(_topResults.Min!);
 
             UpdateTable(tableView);
         }
@@ -745,10 +817,9 @@ public class SearchWindow : Window
                 // Update table
                 tableView.Table = new DataTableSource(dt);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Log table update errors to console
-                Console.WriteLine($"[DEBUG] Table update error: {ex.Message}");
+                // Silently ignore table update errors during rapid updates
             }
         }
 
@@ -787,7 +858,7 @@ public class SearchWindow : Window
         }
     }
 
-    // Compact Balatro-styled choice dialog (3 buttons)
+    // Balatro-styled choice dialog (3 buttons)
     private static int ShowChoiceDialog(
         string title,
         string message,
@@ -801,14 +872,8 @@ public class SearchWindow : Window
             Title = title,
             Width = Math.Min(60, Math.Max(message.Length + 10, 50)),
             Height = 9,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-            },
         };
+        dialog.SetScheme(BalatroTheme.Window);
 
         var label = new Label()
         {
@@ -821,36 +886,48 @@ public class SearchWindow : Window
 
         int result = -1;
 
-        var btn1 = new Button() { Text = button1 };
+        var btn1 = new CleanButton() { Text = $" {button1} " };
+        btn1.SetScheme(BalatroTheme.ModalButton);
         btn1.Accept += (s, e) =>
         {
             result = 0;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        var btn2 = new Button() { Text = button2 };
+        var btn2 = new CleanButton() { Text = $" {button2} " };
+        btn2.SetScheme(BalatroTheme.ModalButton);
         btn2.Accept += (s, e) =>
         {
             result = 1;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        var btn3 = new Button() { Text = button3 };
+        var btn3 = new CleanButton()
+        {
+            X = Pos.Right(btn2) + 2,
+            Y = Pos.AnchorEnd(1),
+            Text = $" {button3} ",
+        };
+        btn3.SetScheme(BalatroTheme.BackButton);
         btn3.Accept += (s, e) =>
         {
             result = 2;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
 
-        dialog.AddButton(btn1);
-        dialog.AddButton(btn2);
-        dialog.AddButton(btn3);
+        btn1.X = 2;
+        btn1.Y = Pos.AnchorEnd(1);
+        btn2.X = Pos.Right(btn1) + 2;
+        btn2.Y = Pos.AnchorEnd(1);
+        dialog.Add(btn1);
+        dialog.Add(btn2);
+        dialog.Add(btn3);
 
-        Application.Run(dialog);
+        MotelyTUI.App?.Run(dialog);
         return result;
     }
 
-    // Compact Balatro-styled choice dialog (4 buttons)
+    // Balatro-styled choice dialog (4 buttons stacked vertically)
     private static int ShowFourChoiceDialog(
         string title,
         string message,
@@ -863,21 +940,15 @@ public class SearchWindow : Window
         var dialog = new Dialog()
         {
             Title = title,
-            Width = Math.Min(60, Math.Max(message.Length + 10, 50)),
-            Height = 9,
-            ColorScheme = new ColorScheme()
-            {
-                Normal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                Focus = new Terminal.Gui.Attribute(ColorName.Black, ColorName.BrightRed),
-                HotNormal = new Terminal.Gui.Attribute(ColorName.White, ColorName.Black),
-                HotFocus = new Terminal.Gui.Attribute(ColorName.White, ColorName.BrightRed),
-            },
+            Width = 45,
+            Height = 14,
         };
+        dialog.SetScheme(BalatroTheme.Window);
 
         var label = new Label()
         {
             X = Pos.Center(),
-            Y = 2,
+            Y = 1,
             Text = message,
             TextAlignment = Alignment.Center,
         };
@@ -885,40 +956,74 @@ public class SearchWindow : Window
 
         int result = -1;
 
-        var btn1 = new Button() { Text = button1 };
+        // Stack buttons vertically
+        var btn1 = new CleanButton()
+        {
+            X = 1,
+            Y = 3,
+            Width = Dim.Fill() - 2,
+            Text = button1,
+            TextAlignment = Alignment.Center,
+        };
+        btn1.SetScheme(BalatroTheme.BlueButton);
         btn1.Accept += (s, e) =>
         {
             result = 0;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
+        dialog.Add(btn1);
 
-        var btn2 = new Button() { Text = button2 };
+        var btn2 = new CleanButton()
+        {
+            X = 1,
+            Y = 5,
+            Width = Dim.Fill() - 2,
+            Text = button2,
+            TextAlignment = Alignment.Center,
+        };
+        btn2.SetScheme(BalatroTheme.ModalButton);
         btn2.Accept += (s, e) =>
         {
             result = 1;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
+        dialog.Add(btn2);
 
-        var btn3 = new Button() { Text = button3 };
+        var btn3 = new CleanButton()
+        {
+            X = 1,
+            Y = 7,
+            Width = Dim.Fill() - 2,
+            Text = button3,
+            TextAlignment = Alignment.Center,
+        };
+        btn3.SetScheme(BalatroTheme.ModalButton);
         btn3.Accept += (s, e) =>
         {
             result = 2;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
+        dialog.Add(btn3);
 
-        var btn4 = new Button() { Text = button4 };
+        // Orange Back button at bottom (full width)
+        var btn4 = new CleanButton()
+        {
+            X = 1,
+            Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill() - 2,
+            Text = button4,
+            TextAlignment = Alignment.Center,
+        };
+        btn4.SetScheme(BalatroTheme.BackButton);
         btn4.Accept += (s, e) =>
         {
             result = 3;
-            Application.RequestStop(dialog);
+            MotelyTUI.App?.RequestStop(dialog);
         };
+        dialog.Add(btn4);
 
-        dialog.AddButton(btn1);
-        dialog.AddButton(btn2);
-        dialog.AddButton(btn3);
-        dialog.AddButton(btn4);
-
-        Application.Run(dialog);
+        btn1.SetFocus();
+        MotelyTUI.App?.Run(dialog);
         return result;
     }
 }

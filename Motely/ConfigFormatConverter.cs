@@ -8,7 +8,8 @@ namespace Motely;
 
 /// <summary>
 /// Provides format conversion capabilities for MotelyJsonConfig
-/// Enables round-trip conversion between JSON and YAML formats
+/// Enables round-trip conversion between JSON and JAML formats
+/// JAML (Joker Ante Markup Language) is a YAML-based format for Balatro filters
 /// </summary>
 public static class ConfigFormatConverter
 {
@@ -53,9 +54,9 @@ public static class ConfigFormatConverter
     }
 
     /// <summary>
-    /// Load config from YAML string
+    /// Load config from JAML string (Joker Ante Markup Language - YAML-based)
     /// </summary>
-    public static MotelyJsonConfig? LoadFromYamlString(string yamlContent)
+    public static MotelyJsonConfig? LoadFromJamlString(string jamlContent)
     {
         try
         {
@@ -64,7 +65,7 @@ public static class ConfigFormatConverter
                 .IgnoreUnmatchedProperties()
                 .Build();
 
-            var config = deserializer.Deserialize<MotelyJsonConfig>(yamlContent);
+            var config = deserializer.Deserialize<MotelyJsonConfig>(jamlContent);
             config?.PostProcess();
             return config;
         }
@@ -87,9 +88,9 @@ public static class ConfigFormatConverter
     }
 
     /// <summary>
-    /// Save config to YAML string
+    /// Save config to JAML string (Joker Ante Markup Language)
     /// </summary>
-    public static string SaveAsYaml(this MotelyJsonConfig config)
+    public static string SaveAsJaml(this MotelyJsonConfig config)
     {
         var serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -100,5 +101,4 @@ public static class ConfigFormatConverter
     }
 
     #endregion
-
 }
