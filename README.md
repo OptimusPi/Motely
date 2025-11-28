@@ -2,7 +2,7 @@
 
 The fastest Balatro seed searcher with JSON, YAML support and an interactive TUI.
 
-Based on [@tacodiva](https://github.com/tacodiva)'s incredible [Motely](https://github.com/tacodiva/Motely) - a blazing-fast SIMD-powered seed searcher. This fork extends it with multiple configuration formats (JSON, YAML, TOML) and a Terminal User Interface for easy filter creation.
+Based on [@tacodiva](https://github.com/tacodiva)'s incredible [Motely](https://github.com/tacodiva/Motely) - a blazing-fast SIMD-powered seed searcher. This fork extends it with multiple configuration formats (JSON, YAML) and a Terminal User Interface for easy filter creation.
 
 ## Quick Start
 
@@ -29,9 +29,6 @@ dotnet run -c Release -- --json PerkeoObservatory --threads 16 --cutoff 2
 # Search with a YAML filter
 dotnet run -c Release -- --yaml MyFilter --threads 16 --cutoff 2
 
-# Search with a TOML filter
-dotnet run -c Release -- --toml CustomSearch --threads 16 --cutoff 2
-
 # Use a native filter
 dotnet run -c Release -- --native PerkeoObservatory --threads 16
 
@@ -45,7 +42,6 @@ dotnet run -c Release -- --analyze ALEEB
 - `--tui`: Launch Terminal User Interface (default if no args provided)
 - `--json <filename>`: JSON config from JsonItemFilters/ (without .json extension)
 - `--yaml <filename>`: YAML config from YamlItemFilters/ (without .yaml extension)
-- `--toml <filename>`: TOML config from TomlItemFilters/ (without .toml extension)
 - `--native <filter name>`: Built-in native filter (without .cs extension)
 - `--analyze <SEED>`: Analyze specific seed
 
@@ -102,34 +98,12 @@ should:
     score: 100
 ```
 
-### TOML Filter Format
-
-Create in `TomlItemFilters/`:
-```toml
-name = "Example"
-description = "Example filter using TOML"
-author = "YourName"
-dateCreated = 2025-01-01T00:00:00Z
-
-[[must]]
-type = "Voucher"
-value = "Telescope"
-antes = [1, 2, 3]
-
-[[should]]
-type = "Joker"
-value = "Blueprint"
-antes = [1, 2, 3, 4]
-score = 100
-```
-
-All three formats support the same filter logic - choose whichever you prefer!
+Both formats support the same filter logic - choose whichever you prefer!
 
 ## Native Filters
 - `negativecopy`: Showman + copy jokers with negatives
 - `PerkeoObservatory`: Telescope/Observatory + soul jokers
 - `trickeoglyph`: Cartomancer + Hieroglyph
-- `soultest`: Soul joker testing
 
 ## Tweak the Batch Size 
 1. For the most responsive option, Use `--batchSize 1` to batch by one character count (35^1 = 35 seeds) 

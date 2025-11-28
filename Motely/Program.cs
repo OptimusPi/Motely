@@ -38,14 +38,9 @@ namespace Motely
                 "JSON config file (JsonItemFilters/)",
                 CommandOptionType.SingleValue
             );
-            var tomlOption = app.Option<string>(
-                "--toml <TOML>",
-                "TOML config file (TomlItemFilters/)",
-                CommandOptionType.SingleValue
-            );
-            var yamlOption = app.Option<string>(
-                "--yaml <YAML>",
-                "YAML config file (YamlItemFilters/)",
+            var jamlOption = app.Option<string>(
+                "--jaml <JAML>",
+                "JAML config file (JamlFilters/) - Joker Ante Markup Language",
                 CommandOptionType.SingleValue
             );
             var analyzeOption = app.Option<string>(
@@ -184,15 +179,10 @@ namespace Motely
                     string? configName = null;
                     string? configFormat = null;
 
-                    if (tomlOption.HasValue())
+                    if (jamlOption.HasValue())
                     {
-                        configName = tomlOption.Value();
-                        configFormat = "toml";
-                    }
-                    else if (yamlOption.HasValue())
-                    {
-                        configName = yamlOption.Value();
-                        configFormat = "yaml";
+                        configName = jamlOption.Value();
+                        configFormat = "jaml";
                     }
                     else if (jsonOption.HasValue())
                     {
@@ -328,7 +318,7 @@ namespace Motely
                 }
                 else
                 {
-                    // Config file mode (JSON/TOML/YAML)
+                    // Config file mode (JSON/JAML)
                     var cutoffStr = cutoffOption.Value() ?? "0";
                     bool autoCutoff = cutoffStr.ToLowerInvariant() == "auto";
                     parameters.Cutoff = autoCutoff
@@ -340,15 +330,10 @@ namespace Motely
                     string? configName = null;
                     string? configFormat = null;
 
-                    if (tomlOption.HasValue())
+                    if (jamlOption.HasValue())
                     {
-                        configName = tomlOption.Value();
-                        configFormat = "toml";
-                    }
-                    else if (yamlOption.HasValue())
-                    {
-                        configName = yamlOption.Value();
-                        configFormat = "yaml";
+                        configName = jamlOption.Value();
+                        configFormat = "jaml";
                     }
                     else
                     {
