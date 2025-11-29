@@ -40,7 +40,6 @@
     <EnableFMA>true</EnableFMA>
     <!-- Additional performance settings -->
     <DebugType>none</DebugType>
-    <PublishSingleFile>false</PublishSingleFile>
     <PublishReadyToRun>false</PublishReadyToRun>
     <EnableDynamicPGO>true</EnableDynamicPGO>
     <!-- .NET 10 performance features -->
@@ -49,6 +48,14 @@
     <EventSourceSupport>false</EventSourceSupport>
     <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
     <MetricsSupport>false</MetricsSupport>
+  </PropertyGroup>
+  <!-- Publish settings for Release builds only -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <SelfContained>true</SelfContained>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />

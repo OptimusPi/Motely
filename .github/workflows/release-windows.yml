@@ -1,0 +1,39 @@
+name: Windows Release Build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore Motely/Motely.csproj
+
+    - name: Build
+      run: dotnet build Motely/Motely.csproj --configuration Release --no-restore
+
+    - name: Publish
+      run: dotnet publish Motely/Motely.csproj -c Release -r win-x64 --no-build -o publish/win-x64
+
+    - name: Package ZIP
+      run: |
+        cd publish/win-x64
+        7z a ../../Motely-win-x64.zip *
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-zip
+        path: Motely-win-x64.zip
+        if-no-files-found: error
