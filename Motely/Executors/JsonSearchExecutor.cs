@@ -65,7 +65,7 @@ namespace Motely.Executors
             // Suppress startup messages in quiet mode
             if (!_params.Quiet)
             {
-                Console.WriteLine($"🔍 MotelyJSON Search Starting");
+                Console.WriteLine($"🔍 MotelyJAML Search Starting");
                 Console.WriteLine($"   Config: {_configPath}");
                 Console.WriteLine($"   Threads: {_params.Threads}");
 
