@@ -13,11 +13,11 @@ jobs:
   build-linux:
     uses: ./.github/workflows/release-linux.yml
 
-  build-macos:
-    uses: ./.github/workflows/release-macos.yml
+  # build-macos:
+  #   uses: ./.github/workflows/release-macos.yml
 
   create-release:
-    needs: [build-windows, build-linux, build-macos]
+    needs: [build-windows, build-linux]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
 
