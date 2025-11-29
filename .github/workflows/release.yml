@@ -31,6 +31,12 @@ jobs:
       with:
         dotnet-version: 10.0.x
 
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build -c Release --no-restore
+
     - name: Publish
       run: |
         dotnet publish Motely/Motely.csproj \
@@ -40,6 +46,7 @@ jobs:
           -p:PublishSingleFile=true \
           -p:PublishTrimmed=false \
           -p:IncludeNativeLibrariesForSelfExtract=true \
+          --no-build \
           -o publish/${{ matrix.target }}
 
     - name: Package (Windows)
