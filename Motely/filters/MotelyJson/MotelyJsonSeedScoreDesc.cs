@@ -230,11 +230,6 @@ public struct MotelyJsonSeedScoreDesc(
                                 switch (clause.ItemTypeEnum)
                                 {
                                     case MotelyFilterItemType.SoulJoker:
-#if DEBUG
-                                        System.Console.WriteLine(
-                                            $"[DEBUG] Processing SoulJoker Must clause - Value: {clause.Value}, JokerEnum: {clause.JokerEnum}, Ante: {ante}"
-                                        );
-#endif
                                         if (
                                             MotelyJsonScoring.CheckSoulJokerForSeed(
                                                 new List<MotelyJsonSoulJokerFilterClause>

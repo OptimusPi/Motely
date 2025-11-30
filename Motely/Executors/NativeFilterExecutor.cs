@@ -266,31 +266,47 @@ namespace Motely.Executors
 
             var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound);
 
-            return settings.WithSeedScoreProvider(scoreDesc);
+            return settings.WithSeedScoreProvider(scoreDesc).WithCsvOutput(true);
         }
 
         private MotelyJsonConfig LoadScoringConfig(string configPath)
         {
+            // If rooted path, load based on extension
             if (Path.IsPathRooted(configPath) && File.Exists(configPath))
             {
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config))
-                    throw new InvalidOperationException($"Config loading failed for: {configPath}");
-                return config;
+                if (configPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!JamlConfigLoader.TryLoadFromJaml(configPath, out var jamlConfig, out var error))
+                        throw new InvalidOperationException($"JAML loading failed: {error}");
+                    return jamlConfig!;
+                }
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var jsonConfig))
+                    throw new InvalidOperationException($"JSON loading failed: {configPath}");
+                return jsonConfig;
             }
 
-            string fileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
-            string jsonItemFiltersPath = Path.Combine("JsonItemFilters", fileName);
-            if (File.Exists(jsonItemFiltersPath))
+            // Try .jaml first (prefer JAML over JSON)
+            string jamlFileName = configPath.EndsWith(".jaml") ? configPath : configPath + ".jaml";
+            string jamlPath = Path.Combine("JamlFilters", jamlFileName);
+            if (File.Exists(jamlPath))
             {
-                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonItemFiltersPath, out var config))
-                    throw new InvalidOperationException(
-                        $"Config loading failed for: {jsonItemFiltersPath}"
-                    );
-                return config;
+                if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out var jamlConfig, out var error))
+                    throw new InvalidOperationException($"JAML loading failed: {error}");
+                return jamlConfig!;
+            }
+
+            // Fall back to .json
+            string jsonFileName = configPath.EndsWith(".json") ? configPath : configPath + ".json";
+            string jsonPath = Path.Combine("JsonItemFilters", jsonFileName);
+            if (File.Exists(jsonPath))
+            {
+                if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonPath, out var jsonConfig))
+                    throw new InvalidOperationException($"JSON loading failed: {jsonPath}");
+                return jsonConfig;
             }
 
             throw new FileNotFoundException(
-                $"Could not find JSON scoring config file: {configPath}"
+                $"Scoring config not found (tried {jamlPath} and {jsonPath})"
             );
         }
 
@@ -341,6 +357,11 @@ namespace Motely.Executors
             {
                 // Wordlist or specific seed mode - use actual seed count
                 totalSeedsSearched = (ulong)_searchSeeds.Count;
+            }
+            else if (_params.RandomSeeds.HasValue)
+            {
+                // Random mode - use the actual random seed count
+                totalSeedsSearched = (ulong)_params.RandomSeeds.Value;
             }
             else
             {
