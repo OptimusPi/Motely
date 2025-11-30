@@ -430,14 +430,23 @@ public class ApiServerWindow : Window
 
     private static string? FindCloudflared()
     {
-        // Try PATH first
+        // Determine executable name based on platform
+        bool isWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
+        string exeName = isWindows ? "cloudflared.exe" : "cloudflared";
+
+        // Try PATH first (works on all platforms)
         var pathDirs = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
         foreach (var dir in pathDirs)
         {
-            var exePath = Path.Combine(dir, "cloudflared.exe");
+            var exePath = Path.Combine(dir, exeName);
             if (File.Exists(exePath))
                 return exePath;
         }
+
+        // On Unix, if not found in PATH dirs checked above, just try running it
+        // The OS will find it if it's installed
+        if (!isWindows)
+            return "cloudflared";  // Let OS find it in PATH
 
         // Try common winget install locations
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);

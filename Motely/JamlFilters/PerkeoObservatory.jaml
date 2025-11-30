@@ -7,14 +7,8 @@ defaults:
 
 must:
   - voucher: Telescope
-    antes: [1,2]
-  - voucher: Observatory
-    antes: [2,3]
-  - soulJoker: Perkeo
-    antes: [1, 2]
+    antes: [1]
 
-should:
-  - joker: Blueprint
-  - joker: Brainstorm
+should: []
 
 mustNot: []
