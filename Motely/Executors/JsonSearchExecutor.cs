@@ -258,10 +258,6 @@ namespace Motely.Executors
                 Console.WriteLine("CreateSearch...");
             }
 
-            // Validate and normalize config ONCE at load time!
-            // This removes ALL ambiguity from the hot path!
-            MotelyJsonConfigValidator.ValidateConfig(config);
-
             // Create scoring config (SHOULD clauses + voucher Must clauses for activation)
             var voucherMustClauses =
                 config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList()
@@ -296,7 +292,7 @@ namespace Motely.Executors
                 }
             }
 
-            // Process the scoring config to calculate MaxVoucherAnte
+            // Process scoring config to calculate MaxVoucherAnte
             scoringConfig.PostProcess();
 
             // Create callback for CSV output - use custom callback if provided, otherwise console output
