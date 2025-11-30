@@ -114,9 +114,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                 bool tarotStreamInit = false,
                     spectralStreamInit = false;
 
-                int maxPackSlot = _maxPackSlotsPerAnte.ContainsKey(ante)
-                    ? _maxPackSlotsPerAnte[ante]
-                    : 3;
+                int maxPackSlot = _maxPackSlotsPerAnte[ante];  // Dictionary always populated by CreateCriteria
 
                 // Walk through each pack slot
                 for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)

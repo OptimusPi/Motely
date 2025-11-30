@@ -135,7 +135,7 @@ public class SearchWindow : Window
                     "Save Top 10",
                     "Main Menu",
                     "Exit",
-                    "Cancel"
+                    "Bac_k"
                 );
 
                 if (choice == 0) // Save Top 10

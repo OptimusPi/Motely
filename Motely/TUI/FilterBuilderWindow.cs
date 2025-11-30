@@ -264,7 +264,7 @@ public class FilterBuilderWindow : Window
                     "What would you like to do?",
                     "Main Menu",
                     "Exit",
-                    "Cancel"
+                    "Bac_k"
                 );
 
                 if (choice == 0) // Main Menu

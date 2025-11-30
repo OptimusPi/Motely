@@ -449,9 +449,9 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
                 }
             }
 
-            // Skip this ante entirely if no clause wants it (don't waste computation)
+            // If no pack slots specified by user, use game defaults
             if (maxSlots == 0)
-                continue;
+                maxSlots = shopPackSlots;  // 4 for ante 0/1, 6 for ante 2+
 
             maxPackSlotsPerAnte[ante] = maxSlots;
         }
