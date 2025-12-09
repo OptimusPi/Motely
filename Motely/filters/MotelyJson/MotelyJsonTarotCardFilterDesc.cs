@@ -28,8 +28,12 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
             ctx.CacheBoosterPackStream(ante);
         }
 
+        // SINGLE clause only - caller must chain multiple filters for multiple clauses
+        if (_criteria.Clauses.Count != 1)
+            throw new ArgumentException($"MotelyJsonTarotCardFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
+
         return new MotelyJsonTarotCardFilter(
-            _criteria.Clauses,
+            _criteria.Clauses[0],
             minAnte,
             maxAnte,
             _criteria.MaxShopSlotsNeeded
@@ -37,71 +41,63 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
     }
 
     public struct MotelyJsonTarotCardFilter(
-        List<MotelyJsonTarotFilterClause> clauses,
+        MotelyJsonTarotFilterClause clause,
         int minAnte,
         int maxAnte,
         int maxShopSlotsNeeded
     ) : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonTarotFilterClause> _clauses = clauses;
+        private readonly MotelyJsonTarotFilterClause Clause = clause;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
         private readonly int _maxShopSlotsNeeded = maxShopSlotsNeeded;
+        private readonly int _minThreshold = clause.Min ?? 1;
 
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Count == 0)
-                return VectorMask.AllBitsSet;
+            var clause = Clause;
 
-            // Stack-allocated clause masks - accumulate results per clause across all antes
-            Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
-            for (int i = 0; i < clauseMasks.Length; i++)
-                clauseMasks[i] = VectorMask.NoBitsSet;
+            // SINGLE clause - track if it matched across all antes
+            VectorMask clauseMask = VectorMask.NoBitsSet;
 
             // Initialize run state for voucher calculations
             var runState = ctx.Deck.GetDefaultRunState();
 
-            // Loop antes first, then clauses - ensures one stream per ante!
-            // Walk each ante and check all clauses as we go
+            // Walk each ante and check the clause
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                // Determine max slots needed across all clauses for this ante
+                // Skip ante if not wanted
+                if (!clause.WantedAntes[ante])
+                    continue;
+
+                bool hasShop = HasShopSlots(clause.WantedShopSlots);
+                bool hasPack = HasPackSlots(clause.WantedPackSlots);
+                bool useDefaults = !hasShop && !hasPack;
+
                 int maxShopSlots = 0;
                 int maxPackSlots = 0;
-                for (int i = 0; i < _clauses.Count; i++)
+
+                if (hasShop || useDefaults)
                 {
-                    var clause = _clauses[i];
-                    if (!clause.WantedAntes[ante])
-                        continue;
-
-                    bool hasShop = HasShopSlots(clause.WantedShopSlots);
-                    bool hasPack = HasPackSlots(clause.WantedPackSlots);
-                    bool useDefaults = !hasShop && !hasPack;
-
-                    if (hasShop || useDefaults)
-                    {
-                        int clauseMax = hasShop
-                            ? FindMaxSlotIndex(clause.WantedShopSlots) + 1
-                            : MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
-                        maxShopSlots = Math.Max(maxShopSlots, clauseMax);
-                    }
-                    if (hasPack || useDefaults)
-                    {
-                        int clauseMax = hasPack
-                            ? FindMaxSlotIndex(clause.WantedPackSlots) + 1
-                            : MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
-                        maxPackSlots = Math.Max(maxPackSlots, clauseMax);
-                    }
+                    maxShopSlots = hasShop
+                        ? FindMaxSlotIndex(clause.WantedShopSlots) + 1
+                        : MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+                }
+                if (hasPack || useDefaults)
+                {
+                    maxPackSlots = hasPack
+                        ? FindMaxSlotIndex(clause.WantedPackSlots) + 1
+                        : MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
                 }
 
                 // Create streams ONCE for this ante
                 var shopTarotStream =
                     maxShopSlots > 0 ? ctx.CreateShopTarotStreamNew(ante) : default;
 
-                // Walk shop slots once, check all clauses
+                // Walk shop slots
                 for (int slot = 0; slot < maxShopSlots; slot++)
                 {
                     var tarotItem = shopTarotStream.GetNext(ref ctx);
@@ -112,104 +108,59 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
 
                     if (!isActualTarot.IsAllFalse())
                     {
-                        // Check against ALL clauses
-                        for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+                        bool wantsSlot = !hasShop || clause.WantedShopSlots[slot];
+                        if (wantsSlot)
                         {
-                            var clause = _clauses[clauseIndex];
-                            if (!clause.WantedAntes[ante])
-                                continue;
-
-                            bool hasShop = HasShopSlots(clause.WantedShopSlots);
-                            bool useDefaults = !hasShop && !HasPackSlots(clause.WantedPackSlots);
-
-                            if (hasShop || useDefaults)
-                            {
-                                bool wantsSlot = !hasShop || clause.WantedShopSlots[slot];
-                                if (wantsSlot)
-                                {
-                                    VectorMask matches = CheckTarotMatchesClause(
-                                        tarotItem,
-                                        clause,
-                                        ref ctx
-                                    );
-                                    clauseMasks[clauseIndex] |= (isActualTarot & matches);
-                                }
-                            }
+                            VectorMask matches = CheckTarotMatchesClause(
+                                tarotItem,
+                                clause,
+                                ref ctx
+                            );
+                            clauseMask |= (isActualTarot & matches);
                         }
                     }
                 }
 
-                // Walk packs once, check all clauses
+                // Walk packs
                 if (maxPackSlots > 0)
                 {
-                    for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
-                    {
-                        var clause = _clauses[clauseIndex];
-                        if (!clause.WantedAntes[ante])
-                            continue;
-
-                        bool hasPack = HasPackSlots(clause.WantedPackSlots);
-                        bool useDefaults = !HasShopSlots(clause.WantedShopSlots) && !hasPack;
-
-                        if (hasPack || useDefaults)
-                        {
-                            clauseMasks[clauseIndex] |= CheckPacksVectorized(clause, ctx, ante);
-                        }
-                    }
+                    clauseMask |= CheckPacksVectorized(clause, ctx, ante);
                 }
             }
 
-            // All clauses must be satisfied (AND logic)
-            // If any clause found nothing (NoBitsSet), the entire filter fails!
-            var resultMask = VectorMask.AllBitsSet;
-            for (int i = 0; i < clauseMasks.Length; i++)
+            // SINGLE clause - if it found nothing, fail
+            if (clauseMask.IsAllFalse())
             {
-                // FIX: If this clause found nothing across all antes, fail immediately
-                if (clauseMasks[i].IsAllFalse())
-                {
-                    return VectorMask.NoBitsSet;
-                }
-
-                resultMask &= clauseMasks[i];
-                if (resultMask.IsAllFalse())
-                    return VectorMask.NoBitsSet;
+                return VectorMask.NoBitsSet;
             }
 
             // USE THE SHARED FUNCTION - same logic as scoring!
-            var clauses = _clauses;
+            int minThreshold = _minThreshold; // Use pre-calculated value
             return ctx.SearchIndividualSeeds(
-                resultMask,
+                clauseMask,
                 (ref MotelySingleSearchContext singleCtx) =>
                 {
                     var state = new MotelyRunState();
 
-                    // Check all clauses using the SAME shared function used in scoring
-                    foreach (var clause in clauses)
+                    // Count total occurrences across ALL wanted antes
+                    int clauseCount = 0;
+                    for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
                     {
-                        // Count total occurrences across ALL wanted antes
-                        int totalCount = 0;
-                        for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
-                        {
-                            if (!clause.WantedAntes[ante])
-                                continue;
+                        if (!clause.WantedAntes[ante])
+                            continue;
 
-                            int anteCount = MotelyJsonScoring.TarotCardsTally(
-                                ref singleCtx,
-                                clause,
-                                ante,
-                                ref state,
-                                earlyExit: false
-                            );
-                            totalCount += anteCount;
-                        }
-
-                        // Check Min threshold (default to 1 if not specified)
-                        int minThreshold = clause.Min ?? 1;
-                        if (totalCount < minThreshold)
-                            return false;
+                        int anteCount = MotelyJsonScoring.TarotCardsTally(
+                            ref singleCtx,
+                            clause,
+                            ante,
+                            ref state,
+                            earlyExit: false
+                        );
+                        clauseCount += anteCount;
                     }
 
-                    return true;
+                    // Check Min threshold (pre-calculated value!)
+                    return clauseCount >= minThreshold;
                 }
             );
         }

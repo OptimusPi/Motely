@@ -105,11 +105,13 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                     MotelyJsonFilterClauseExtensions.CreateEventCriteria(clauses)
                 ).CreateFilter(ref ctx),
                 FilterCategory.ErraticRank => new MotelyJsonErraticRankFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateErraticRankCriteria(clauses)
-                ).CreateFilter(ref ctx),
+                        clauses[0].RankEnum!.Value,
+                        clauses[0].Min ?? 1
+                    ).CreateFilter(ref ctx),
                 FilterCategory.ErraticSuit => new MotelyJsonErraticSuitFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateErraticSuitCriteria(clauses)
-                ).CreateFilter(ref ctx),
+                        clauses[0].SuitEnum!.Value,
+                        clauses[0].Min ?? 1
+                    ).CreateFilter(ref ctx),
                 FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(clauses)
                 ).CreateFilter(ref ctx),

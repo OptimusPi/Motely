@@ -86,13 +86,7 @@ public static class JamlConfigLoader
             // Include inner exception and stack trace for better debugging
             var innerMsg = ex.InnerException?.Message;
             var details = innerMsg != null ? $" -> {innerMsg}" : "";
-            error = $"Failed to parse JAML: {ex.Message}{details}";
-
-            // Debug: log preprocessed content to help diagnose issues
-            #if DEBUG
-            Console.WriteLine($"[JAML DEBUG] Preprocessed content:\n{jamlContent}");
-            Console.WriteLine($"[JAML DEBUG] Exception: {ex}");
-            #endif
+            error = $"Failed to parse JAML: {ex.Message}{details}\n{ex.StackTrace}";
 
             return false;
         }
@@ -102,13 +96,28 @@ public static class JamlConfigLoader
     {
         // Support clean type-as-key syntax: "joker: Blueprint" instead of "type: Joker, value: Blueprint"
         // Support plural values arrays: "jokers: [Blueprint, Brainstorm]" expands to multiple clauses
-        var typeKeys = new[] { "joker", "soulJoker", "souljoker", "voucher", "tarot", "tarotCard", "tarotcard",
-            "planet", "planetCard", "planetcard", "spectral", "spectralCard", "spectralcard",
-            "playingCard", "playingcard", "standardCard", "standardcard", "boss", "tag", "smallBlindTag", "bigBlindTag",
-            "erraticRank", "erraticrank", "erraticSuit", "erraticsuit", "event", "and", "or" };
-        
-        var pluralTypeKeys = new[] { "jokers", "soulJokers", "vouchers", "tarots", "tarotCards", 
-            "planets", "planetCards", "spectrals", "spectralCards", "playingCards", "standardCards", "bosses", "tags" };
+        // Singular type keys (case-insensitive matching handled via ToLowerInvariant)
+        var typeKeys = new[] {
+            "joker", "souljoker", "voucher",
+            "tarot", "tarotcard",
+            "planet", "planetcard",
+            "spectral", "spectralcard",
+            "playingcard", "standardcard",
+            "boss", "tag", "smallblindtag", "bigblindtag",
+            "erraticrank", "erraticsuit",
+            "event", "and", "or"
+        };
+
+        // Plural type keys for array syntax (case-insensitive)
+        var pluralTypeKeys = new[] {
+            "jokers", "souljokers", "vouchers",
+            "tarots", "tarotcards",
+            "planets", "planetcards",
+            "spectrals", "spectralcards",
+            "playingcards", "standardcards",
+            "bosses", "tags", "smallblindtags", "bigblindtags",
+            "erraticranks", "erraticsuits", "events"
+        };
 
         var lines = jamlContent.Split('\n');
         var result = new System.Text.StringBuilder();
@@ -208,13 +217,18 @@ public static class JamlConfigLoader
         {
             "jokers" => "joker",
             "souljokers" => "soulJoker",
-            "vouchers" => "voucher", 
+            "vouchers" => "voucher",
             "tarots" or "tarotcards" => "tarot",
             "planets" or "planetcards" => "planet",
             "spectrals" or "spectralcards" => "spectral",
             "playingcards" or "standardcards" => "playingCard",
             "bosses" => "boss",
             "tags" => "tag",
+            "smallblindtags" => "smallBlindTag",
+            "bigblindtags" => "bigBlindTag",
+            "events" => "event",
+            "erraticranks" => "erraticRank",
+            "erraticsuits" => "erraticSuit",
             _ => pluralKey.TrimEnd('s') // fallback: remove 's'
         };
     }
