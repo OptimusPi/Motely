@@ -69,4 +69,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Jimbo.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

@@ -11,24 +11,27 @@ namespace Motely.Filters;
 /// Filters seeds based on Erratic Deck starting composition - SUIT only.
 /// Counts how many cards of specific suit(s) appear in the 52-card starting deck.
 /// </summary>
-public struct MotelyJsonErraticSuitFilterDesc(MotelyJsonErraticSuitFilterCriteria criteria)
+public struct MotelyJsonErraticSuitFilterDesc(MotelyPlayingCardSuit suit, int minCount)
     : IMotelySeedFilterDesc<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>
 {
-    private readonly MotelyJsonErraticSuitFilterCriteria _criteria = criteria;
+    private readonly MotelyPlayingCardSuit _suit = suit;
+    private readonly int _minCount = minCount;
 
     public MotelyJsonErraticSuitFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheErraticDeckPrngStream();
-        return new MotelyJsonErraticSuitFilter(_criteria.Clauses);
+        return new MotelyJsonErraticSuitFilter(_suit, _minCount);
     }
 
     public struct MotelyJsonErraticSuitFilter : IMotelySeedFilter
     {
-        private readonly MotelyJsonErraticSuitFilterClause[] _clauses;
+        private readonly MotelyPlayingCardSuit _suit;
+        private readonly int _minCount;
 
-        public MotelyJsonErraticSuitFilter(List<MotelyJsonErraticSuitFilterClause> clauses)
+        public MotelyJsonErraticSuitFilter(MotelyPlayingCardSuit suit, int minCount)
         {
-            _clauses = [.. clauses];
+            _suit = suit;
+            _minCount = minCount;
         }
 
         [MethodImpl(
@@ -36,109 +39,33 @@ public struct MotelyJsonErraticSuitFilterDesc(MotelyJsonErraticSuitFilterCriteri
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Length == 0)
-                return VectorMask.AllBitsSet;
+            Vector256<int> count = Vector256<int>.Zero;
 
-            // Stack-allocated clause masks
-            Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Length];
-            for (int i = 0; i < clauseMasks.Length; i++)
-                clauseMasks[i] = VectorMask.NoBitsSet;
-
-            // Stack-allocated count vectors for each clause
-            Span<Vector256<int>> counts = stackalloc Vector256<int>[_clauses.Length];
-            for (int i = 0; i < counts.Length; i++)
-                counts[i] = Vector256<int>.Zero;
-
-            // Single loop through all 52 cards
+            // Loop through all 52 cards and count matching suits
             var stream = ctx.CreateErraticDeckPrngStream(true);
             for (int cardIndex = 0; cardIndex < 52; cardIndex++)
             {
                 var card = ctx.GetNextErraticDeckCard(ref stream);
 
-                // Check each clause
-                for (int clauseIndex = 0; clauseIndex < _clauses.Length; clauseIndex++)
-                {
-                    var clause = _clauses[clauseIndex];
-
-                    // Check if this card's suit matches the clause
-                    VectorMask suitMatch = VectorEnum256.Equals(
-                        card.PlayingCardSuit,
-                        clause.Suit
-                    );
-
-                    // Increment count for matching cards
-                    counts[clauseIndex] += Vector256.ConditionalSelect(
-                        MotelyVectorUtils.VectorMaskToConditionalSelectMask(suitMatch),
-                        Vector256<int>.One,
-                        Vector256<int>.Zero
-                    );
-                }
-            }
-
-            // Compare counts against min thresholds
-            for (int clauseIndex = 0; clauseIndex < _clauses.Length; clauseIndex++)
-            {
-                var clause = _clauses[clauseIndex];
-                clauseMasks[clauseIndex] = Vector256.GreaterThanOrEqual(
-                    counts[clauseIndex],
-                    Vector256.Create(clause.MinCount)
+                // Increment count for matching cards
+                count += Vector256.ConditionalSelect(
+                    VectorEnum256.Equals(card.PlayingCardSuit, _suit),
+                    Vector256<int>.One,
+                    Vector256<int>.Zero
                 );
             }
 
-            // Combine all clause masks (AND logic - all clauses must match)
-            VectorMask finalMask = VectorMask.AllBitsSet;
-            for (int i = 0; i < _clauses.Length; i++)
-            {
-                finalMask &= clauseMasks[i];
-            }
-
-            return finalMask;
+            // Return mask where count >= minCount
+            return Vector256.GreaterThanOrEqual(count, Vector256.Create(_minCount));
         }
     }
 }
 
 /// <summary>
-/// Criteria for ErraticSuit filter
+/// Simple clause struct for combined ErraticRankAndSuit filter
 /// </summary>
-public class MotelyJsonErraticSuitFilterCriteria
-{
-    public List<MotelyJsonErraticSuitFilterClause> Clauses { get; set; } = new();
-}
-
-/// <summary>
-/// Individual ErraticSuit clause
-/// </summary>
-public class MotelyJsonErraticSuitFilterClause
+public struct MotelyJsonErraticSuitFilterClause
 {
     public MotelyPlayingCardSuit Suit { get; set; }
     public int MinCount { get; set; }
-}
-
-/// <summary>
-/// Extension methods for creating ErraticSuit filter criteria
-/// </summary>
-public static partial class MotelyJsonFilterClauseExtensions
-{
-    public static MotelyJsonErraticSuitFilterCriteria CreateErraticSuitCriteria(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
-    )
-    {
-        var criteria = new MotelyJsonErraticSuitFilterCriteria();
-
-        foreach (var clause in clauses)
-        {
-            if (clause.SuitEnum == null)
-                continue;
-
-            criteria.Clauses.Add(
-                new MotelyJsonErraticSuitFilterClause
-                {
-                    Suit = clause.SuitEnum.Value,
-                    MinCount = clause.Min ?? 1,
-                }
-            );
-        }
-
-        return criteria;
-    }
 }

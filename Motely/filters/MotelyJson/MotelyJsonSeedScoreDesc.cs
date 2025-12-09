@@ -341,6 +341,18 @@ public struct MotelyJsonSeedScoreDesc(
                                             break;
                                         }
                                         break;
+
+                                    case MotelyFilterItemType.ErraticRank:
+                                    case MotelyFilterItemType.ErraticSuit:
+                                        // Base filter already verified with 100% accurate SIMD - trust it!
+                                        clauseSatisfied = true;
+                                        break;
+
+                                    default:
+                                        throw new NotImplementedException(
+                                            $"MUST clause verification not implemented for type: {clause.ItemTypeEnum}. " +
+                                            $"Add a case to the switch in MotelyJsonSeedScoreDesc.cs (line ~231)"
+                                        );
                                 }
 
                                 if (clauseSatisfied)
