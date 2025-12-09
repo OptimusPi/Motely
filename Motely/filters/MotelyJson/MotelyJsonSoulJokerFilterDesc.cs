@@ -20,6 +20,10 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
 
     public MotelyJsonSoulJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        // SINGLE-CLAUSE MODEL: Enforce exactly ONE clause per filter
+        if (_criteria.Clauses.Count != 1)
+            throw new ArgumentException($"MotelyJsonSoulJokerFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
+
         // Use pre-calculated values from criteria
         int minAnte = _criteria.MinAnte;
         int maxAnte = _criteria.MaxAnte;
@@ -32,77 +36,46 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
         }
 
         return new MotelyJsonSoulJokerFilter(
-            _criteria.Clauses,
+            _criteria.Clauses[0],
             minAnte,
             maxAnte,
             _criteria.MaxPackSlotsPerAnte
         );
     }
 
-    public struct MotelyJsonSoulJokerFilter : IMotelySeedFilter
+    public struct MotelyJsonSoulJokerFilter(
+        MotelyJsonSoulJokerFilterClause clause,
+        int minAnte,
+        int maxAnte,
+        Dictionary<int, int> maxPackSlotsPerAnte
+    ) : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonSoulJokerFilterClause> _clauses;
-        private readonly int _minAnte;
-        private readonly int _maxAnte;
-        private readonly Dictionary<int, int> _maxPackSlotsPerAnte;
-        private readonly int[] _lastAnteForClause;
-
-        public MotelyJsonSoulJokerFilter(
-            List<MotelyJsonSoulJokerFilterClause> clauses,
-            int minAnte,
-            int maxAnte,
-            Dictionary<int, int> maxPackSlotsPerAnte
-        )
-        {
-            _clauses = clauses;
-            _minAnte = minAnte;
-            _maxAnte = maxAnte;
-            _maxPackSlotsPerAnte = maxPackSlotsPerAnte;
-
-            // Pre-compute the last ante for each clause ONCE
-            _lastAnteForClause = new int[clauses.Count];
-            for (int i = 0; i < clauses.Count; i++)
-            {
-                _lastAnteForClause[i] = -1;
-                for (int a = maxAnte; a >= minAnte; a--)
-                {
-                    if (a < clauses[i].WantedAntes.Length && clauses[i].WantedAntes[a])
-                    {
-                        _lastAnteForClause[i] = a;
-                        break;
-                    }
-                }
-            }
-        }
+        private readonly MotelyJsonSoulJokerFilterClause Clause = clause;
+        private readonly int MinAnte = minAnte;
+        private readonly int MaxAnte = maxAnte;
+        private readonly Dictionary<int, int> MaxPackSlotsPerAnte = maxPackSlotsPerAnte;
+        private readonly int _minThreshold = clause.Min ?? 1; // Pre-calculate ONCE!
 
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(
-                _clauses != null && _clauses.Count > 0,
-                "MotelyJsonSoulJokerFilter called with null or empty clauses"
-            );
-
             // STAGE 1: Vectorized pre-filter - just detect Soul cards
             // We can't properly track soul joker sequences in vectorized mode
             // because different seeds have different Soul patterns
             VectorMask anySoulFound = VectorMask.NoBitsSet;
 
+            var clause = Clause; // SINGLE clause
+            int minAnte = MinAnte;
+            int maxAnte = MaxAnte;
+            var maxPackSlotsPerAnte = MaxPackSlotsPerAnte;
+
             // Walk through ALL antes looking for Soul cards
-            for (int ante = _minAnte; ante <= _maxAnte; ante++)
+            for (int ante = minAnte; ante <= maxAnte; ante++)
             {
-                // Check if any of the clauses want this ante
-                bool anteWanted = false;
-                for (int i = 0; i < _clauses.Count; i++)
-                {
-                    if (ante < _clauses[i].WantedAntes.Length && _clauses[i].WantedAntes[ante])
-                    {
-                        anteWanted = true;
-                        break;
-                    }
-                }
+                // Check if THIS clause wants this ante
+                bool anteWanted = ante < clause.WantedAntes.Length && clause.WantedAntes[ante];
 
                 if (!anteWanted)
                     continue;
@@ -114,7 +87,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                 bool tarotStreamInit = false,
                     spectralStreamInit = false;
 
-                int maxPackSlot = _maxPackSlotsPerAnte[ante];  // Dictionary always populated by CreateCriteria
+                int maxPackSlot = maxPackSlotsPerAnte[ante];  // Dictionary always populated by CreateCriteria
 
                 // Walk through each pack slot
                 for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
@@ -163,17 +136,13 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
 
             // Pass seeds with Soul cards to individual validation
             // The individual validation will check the specific joker requirements
-            var clauses = _clauses;
-            int minAnte = _minAnte;
-            int maxAnte = _maxAnte;
-            var maxPackSlotsPerAnte = _maxPackSlotsPerAnte;
-            var lastAnteForClause = _lastAnteForClause; // Use pre-computed values
+            int minThreshold = _minThreshold; // Use pre-computed value
             return ctx.SearchIndividualSeeds(
                 anySoulFound,
                 (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    // Track counts for each clause
-                    int[] clauseCounts = new int[clauses.Count];
+                    // Track count for SINGLE clause
+                    int clauseCount = 0;
 
                     // Soul joker has TWO components with different ante-dependency behavior:
                     // 1. Face/Type (Perkeo, Canio, etc.) - NOT ante-dependent (same PRNG sequence for entire seed)
@@ -252,108 +221,82 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                                     ref soulEditionStream
                                 );
 
-                                // Check this joker against ALL clauses
-                                for (int clauseIdx = 0; clauseIdx < clauses.Count; clauseIdx++)
+                                // Check this joker against THE clause
+                                // Check if this ante is wanted
+                                if (
+                                    ante < clause.WantedAntes.Length
+                                    && clause.WantedAntes[ante]
+                                )
                                 {
-                                    var clause = clauses[clauseIdx];
-
-                                    // Check if this ante is wanted
-                                    if (
-                                        ante >= clause.WantedAntes.Length
-                                        || !clause.WantedAntes[ante]
-                                    )
-                                        continue;
-
                                     // Check pack slot if specified
                                     if (
-                                        packIndex >= clause.WantedPackSlots.Length
-                                        || !clause.WantedPackSlots[packIndex]
+                                        packIndex < clause.WantedPackSlots.Length
+                                        && clause.WantedPackSlots[packIndex]
                                     )
-                                        continue;
-
-                                    // Check mega requirement
-                                    if (
-                                        clause.RequireMega
-                                        && pack.GetPackSize() != MotelyBoosterPackSize.Mega
-                                    )
-                                        continue;
-
-                                    // Check joker type using FACE stream (not ante-dependent)
-                                    bool typeMatches = true;
-                                    if (!clause.IsWildcard)
                                     {
+                                        // Check mega requirement
                                         if (
-                                            clause.JokerTypes != null
-                                            && clause.JokerTypes.Count > 0
+                                            !clause.RequireMega
+                                            || pack.GetPackSize() == MotelyBoosterPackSize.Mega
                                         )
                                         {
-                                            // Multiple types specified - match ANY of them (OR logic)
-                                            typeMatches = false;
-                                            foreach (var jokerType in clause.JokerTypes)
+                                            // Check joker type using FACE stream (not ante-dependent)
+                                            bool typeMatches = true;
+                                            if (!clause.IsWildcard)
                                             {
-                                                var expectedType = (MotelyItemType)(
-                                                    (int)MotelyItemTypeCategory.Joker
-                                                    | (int)jokerType
-                                                );
-                                                if (soulJokerFace.Type == expectedType)
+                                                if (
+                                                    clause.JokerTypes != null
+                                                    && clause.JokerTypes.Count > 0
+                                                )
                                                 {
-                                                    typeMatches = true;
-                                                    break;
+                                                    // Multiple types specified - match ANY of them (OR logic)
+                                                    typeMatches = false;
+                                                    foreach (var jokerType in clause.JokerTypes)
+                                                    {
+                                                        var expectedType = (MotelyItemType)(
+                                                            (int)MotelyItemTypeCategory.Joker
+                                                            | (int)jokerType
+                                                        );
+                                                        if (soulJokerFace.Type == expectedType)
+                                                        {
+                                                            typeMatches = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                else if (clause.JokerType.HasValue)
+                                                {
+                                                    // Single type specified
+                                                    var expectedType = (MotelyItemType)(
+                                                        (int)MotelyItemTypeCategory.Joker
+                                                        | (int)clause.JokerType.Value
+                                                    );
+                                                    typeMatches = (soulJokerFace.Type == expectedType);
+                                                }
+                                            }
+                                            // If IsWildcard is true (e.g., "Any"), typeMatches stays true
+
+                                            if (typeMatches)
+                                            {
+                                                // Check edition using EDITION stream (ante-dependent)
+                                                if (
+                                                    !clause.EditionEnum.HasValue
+                                                    || soulJokerEdition.Edition == clause.EditionEnum.Value
+                                                )
+                                                {
+                                                    // This joker matches the clause!
+                                                    clauseCount++;
                                                 }
                                             }
                                         }
-                                        else if (clause.JokerType.HasValue)
-                                        {
-                                            // Single type specified
-                                            var expectedType = (MotelyItemType)(
-                                                (int)MotelyItemTypeCategory.Joker
-                                                | (int)clause.JokerType.Value
-                                            );
-                                            typeMatches = (soulJokerFace.Type == expectedType);
-                                        }
                                     }
-                                    // If IsWildcard is true (e.g., "Any"), typeMatches stays true
-
-                                    if (!typeMatches)
-                                        continue;
-
-                                    // Check edition using EDITION stream (ante-dependent)
-                                    if (
-                                        clause.EditionEnum.HasValue
-                                        && soulJokerEdition.Edition != clause.EditionEnum.Value
-                                    )
-                                        continue;
-
-                                    // This joker matches this clause!
-                                    clauseCounts[clauseIdx]++;
-                                }
-                            }
-                        }
-
-                        // EARLY EXIT: Check if any clause is past its last ante and failed
-                        for (int i = 0; i < clauses.Count; i++)
-                        {
-                            // If we're past this clause's last ante and it hasn't met minimum, fail
-                            if (ante >= lastAnteForClause[i])
-                            {
-                                int minThreshold = clauses[i].Min ?? 1;
-                                if (clauseCounts[i] < minThreshold)
-                                {
-                                    return false; // EARLY EXIT - this clause failed!
                                 }
                             }
                         }
                     }
 
-                    // Check if all clauses met their Min threshold
-                    for (int i = 0; i < clauses.Count; i++)
-                    {
-                        int minThreshold = clauses[i].Min ?? 1;
-                        if (clauseCounts[i] < minThreshold)
-                            return false;
-                    }
-
-                    return true;
+                    // Check if the clause met its Min threshold (pre-calculated value!)
+                    return clauseCount >= minThreshold;
                 }
             );
         }

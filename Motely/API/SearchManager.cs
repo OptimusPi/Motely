@@ -33,7 +33,8 @@ public class SearchManager
     }
 
     private readonly ConcurrentDictionary<string, ActiveSearch> _activeSearches = new();
-    
+    private static readonly string _searchResultsDir = "SearchResults";
+
     public class ActiveSearch
     {
         public string SearchId { get; set; } = "";
@@ -53,8 +54,10 @@ public class SearchManager
     public async Task<(List<SearchResult> immediateResults, string searchId)> StartSearchAsync(
         string filterJaml, string deck, string stake, int seedCount)
     {
+        Directory.CreateDirectory(_searchResultsDir);
+
         var searchId = $"{GetFilterName(filterJaml)}_{deck}_{stake}";
-        var dbPath = $"{searchId}.db";
+        var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
         
         // Step 1: Stop all existing searches
         StopAllSearches();
@@ -106,7 +109,7 @@ public class SearchManager
     /// </summary>
     public (List<SearchResult> results, int progressPercent) GetSearchStatus(string searchId)
     {
-        var dbPath = $"{searchId}.db";
+        var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
         var results = GetTopResultsFromDb(dbPath, 1000);
         
         var progressPercent = 0;
@@ -132,7 +135,7 @@ public class SearchManager
             search.Connection?.Close();
         }
         
-        var dbPath = $"{searchId}.db";
+        var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
         return GetTopResultsFromDb(dbPath, 1000);
     }
     
@@ -152,7 +155,7 @@ public class SearchManager
         try
         {
             // Save JAML to temp file for JsonSearchExecutor
-            var tempConfigPath = $"{search.SearchId}_temp.jaml";
+            var tempConfigPath = Path.Combine(_searchResultsDir, $"{search.SearchId}_temp.jaml");
             await File.WriteAllTextAsync(tempConfigPath, filterJaml);
             
             // Create JsonSearchParams (check actual properties)

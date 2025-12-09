@@ -25,9 +25,9 @@ namespace Motely.Filters
             }
 
             // Validate all filter items
-            ValidateFilterItems(config.Must, "must", errors, warnings, stake, isMust: true);
-            ValidateFilterItems(config.Should, "should", errors, warnings, stake);
-            ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake);
+            ValidateFilterItems(config.Must, "must", errors, warnings, stake, config.Deck, isMust: true);
+            ValidateFilterItems(config.Should, "should", errors, warnings, stake, config.Deck);
+            ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake, config.Deck);
 
             // Validate deck
             if (
@@ -87,6 +87,7 @@ namespace Motely.Filters
             List<string> errors,
             List<string> warnings,
             MotelyStake stake,
+            string? deck = null,
             bool isMust = false
         )
         {
@@ -646,11 +647,23 @@ namespace Motely.Filters
                         break;
 
                     case "erraticrank":
-                        // ErraticRank filters don't need value validation here - handled in ProcessClause
+                        // ErraticRank only works with Erratic deck
+                        if (!deck?.Equals("Erratic", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            warnings.Add(
+                                $"{prefix}: erraticRank filter requires deck: Erratic (current deck: {deck ?? "not specified"}). This filter will never find seeds with other decks."
+                            );
+                        }
                         break;
 
                     case "erraticsuit":
-                        // ErraticSuit filters don't need value validation here - handled in ProcessClause
+                        // ErraticSuit only works with Erratic deck
+                        if (!deck?.Equals("Erratic", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            warnings.Add(
+                                $"{prefix}: erraticSuit filter requires deck: Erratic (current deck: {deck ?? "not specified"}). This filter will never find seeds with other decks."
+                            );
+                        }
                         break;
 
                     case "and":
@@ -670,7 +683,8 @@ namespace Motely.Filters
                                 $"{prefix}.clauses",
                                 errors,
                                 warnings,
-                                stake
+                                stake,
+                                deck
                             );
                         }
                         break;
@@ -698,18 +712,15 @@ namespace Motely.Filters
                 {
                     bool typeSupportsEdition =
                         item.Type?.Equals("joker", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("souljoker", StringComparison.OrdinalIgnoreCase)
-                            == true
-                        || item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase)
-                            == true
-                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase)
-                            == true
-                        || item.Type?.Equals("tarotcard", StringComparison.OrdinalIgnoreCase)
-                            == true
-                        || item.Type?.Equals("spectralcard", StringComparison.OrdinalIgnoreCase)
-                            == true
-                        || item.Type?.Equals("planetcard", StringComparison.OrdinalIgnoreCase)
-                            == true;
+                        || item.Type?.Equals("souljoker", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("tarot", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("spectral", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("planet", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("planetcard", StringComparison.OrdinalIgnoreCase) == true;
                     if (!typeSupportsEdition)
                     {
                         errors.Add(
@@ -725,6 +736,40 @@ namespace Motely.Filters
                         errors.Add(
                             $"{prefix}: Invalid edition '{item.Edition}'. Valid editions are: {validEditions}"
                         );
+                    }
+                }
+
+                // Validate enhancement if specified
+                if (!string.IsNullOrEmpty(item.Enhancement))
+                {
+                    bool typeSupportsEnhancement =
+                        item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase) == true;
+                    if (!typeSupportsEnhancement)
+                    {
+                        errors.Add(
+                            $"{prefix}: Enhancement specified ('{item.Enhancement}') but type '{item.Type}' does not support enhancements. Only PlayingCard/StandardCard types support enhancements."
+                        );
+                    }
+                    else if (!Enum.TryParse<MotelyItemEnhancement>(item.Enhancement, true, out _))
+                    {
+                        // Check if they used an edition value instead (common mistake)
+                        if (Enum.TryParse<MotelyItemEdition>(item.Enhancement, true, out _))
+                        {
+                            errors.Add(
+                                $"{prefix}: '{item.Enhancement}' is an EDITION, not an enhancement. Use 'edition: {item.Enhancement}' instead. Valid enhancements are: {string.Join(", ", Enum.GetNames(typeof(MotelyItemEnhancement)))}"
+                            );
+                        }
+                        else
+                        {
+                            var validEnhancements = string.Join(
+                                ", ",
+                                Enum.GetNames(typeof(MotelyItemEnhancement))
+                            );
+                            errors.Add(
+                                $"{prefix}: Invalid enhancement '{item.Enhancement}'. Valid enhancements are: {validEnhancements}"
+                            );
+                        }
                     }
                 }
 

@@ -64,8 +64,13 @@ public static class MotelyJsonScoring
     {
         int tally = 0;
 
-        // Check shop slots
-        if (BoolArrayHasTrue(clause.WantedShopSlots))
+        // USE PRE-COMPUTED FLAGS - NO LINQ!
+        bool hasShopSlots = BoolArrayHasTrue(clause.WantedShopSlots);
+        bool hasPackSlots = BoolArrayHasTrue(clause.WantedPackSlots);
+        bool useDefaults = !hasShopSlots && !hasPackSlots;
+
+        // Check shop slots if any are wanted OR if using defaults
+        if (hasShopSlots || useDefaults)
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             int maxSlot = clause.MaxShopSlot ?? clause.MaxShopSlotsNeeded - 1;
@@ -73,10 +78,9 @@ public static class MotelyJsonScoring
             for (int i = 0; i <= maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (
-                    clause.WantedShopSlots[i]
-                    && item.TypeCategory == MotelyItemTypeCategory.TarotCard
-                )
+                // Check if this slot should be checked (either explicitly wanted OR using defaults)
+                bool checkThisSlot = useDefaults || clause.WantedShopSlots[i];
+                if (checkThisSlot && item.TypeCategory == MotelyItemTypeCategory.TarotCard)
                 {
                     // If no specific tarot specified, match ANY tarot card
                     if (!clause.TarotType.HasValue)
@@ -100,8 +104,8 @@ public static class MotelyJsonScoring
             }
         }
 
-        // Check pack slots
-        if (BoolArrayHasTrue(clause.WantedPackSlots))
+        // Check pack slots if any are wanted OR if using defaults
+        if (hasPackSlots || useDefaults)
         {
             var packStream = ctx.CreateBoosterPackStream(
                 ante,
@@ -123,7 +127,9 @@ public static class MotelyJsonScoring
                         pack.GetPackSize()
                     );
 
-                    if (clause.WantedPackSlots[i])
+                    // Check if this pack slot should be checked (either explicitly wanted OR using defaults)
+                    bool checkThisPack = useDefaults || clause.WantedPackSlots[i];
+                    if (checkThisPack)
                     {
                         for (int j = 0; j < contents.Length; j++)
                         {
@@ -211,8 +217,13 @@ public static class MotelyJsonScoring
 
         int tally = 0;
 
-        // Check shop slots
-        if (BoolArrayHasTrue(clause.WantedShopSlots))
+        // USE PRE-COMPUTED FLAGS - NO LINQ!
+        bool hasShopSlots = BoolArrayHasTrue(clause.WantedShopSlots);
+        bool hasPackSlots = BoolArrayHasTrue(clause.WantedPackSlots);
+        bool useDefaults = !hasShopSlots && !hasPackSlots;
+
+        // Check shop slots if any are wanted OR if using defaults
+        if (hasShopSlots || useDefaults)
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             int maxSlot = clause.MaxShopSlot ?? clause.MaxShopSlotsNeeded - 1;
@@ -220,10 +231,9 @@ public static class MotelyJsonScoring
             for (int i = 0; i <= maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (
-                    clause.WantedShopSlots[i]
-                    && item.TypeCategory == MotelyItemTypeCategory.PlanetCard
-                )
+                // Check if this slot should be checked (either explicitly wanted OR using defaults)
+                bool checkThisSlot = useDefaults || clause.WantedShopSlots[i];
+                if (checkThisSlot && item.TypeCategory == MotelyItemTypeCategory.PlanetCard)
                 {
                     if (
                         clause.PlanetType.HasValue
@@ -242,8 +252,8 @@ public static class MotelyJsonScoring
             }
         }
 
-        // Check pack slots
-        if (BoolArrayHasTrue(clause.WantedPackSlots))
+        // Check pack slots if any are wanted OR if using defaults
+        if (hasPackSlots || useDefaults)
         {
             var packStream = ctx.CreateBoosterPackStream(
                 ante,
@@ -265,7 +275,9 @@ public static class MotelyJsonScoring
                         pack.GetPackSize()
                     );
 
-                    if (clause.WantedPackSlots[i])
+                    // Check if this pack slot should be checked (either explicitly wanted OR using defaults)
+                    bool checkThisPack = useDefaults || clause.WantedPackSlots[i];
+                    if (checkThisPack)
                     {
                         for (int j = 0; j < contents.Length; j++)
                         {
@@ -302,8 +314,13 @@ public static class MotelyJsonScoring
         bool searchAnySpectral = !clause.SpectralType.HasValue;
         int tally = 0;
 
-        // Check shop slots
-        if (BoolArrayHasTrue(clause.WantedShopSlots))
+        // USE PRE-COMPUTED FLAGS - NO LINQ!
+        bool hasShopSlots = BoolArrayHasTrue(clause.WantedShopSlots);
+        bool hasPackSlots = BoolArrayHasTrue(clause.WantedPackSlots);
+        bool useDefaults = !hasShopSlots && !hasPackSlots;
+
+        // Check shop slots if any are wanted OR if using defaults
+        if (hasShopSlots || useDefaults)
         {
             var shopStream = ctx.CreateShopItemStream(ante, isCached: false);
             int maxSlot = clause.MaxShopSlot ?? clause.MaxShopSlotsNeeded - 1;
@@ -311,10 +328,9 @@ public static class MotelyJsonScoring
             for (int i = 0; i <= maxSlot; i++)
             {
                 var item = ctx.GetNextShopItem(ref shopStream);
-                if (
-                    clause.WantedShopSlots[i]
-                    && item.TypeCategory == MotelyItemTypeCategory.SpectralCard
-                )
+                // Check if this slot should be checked (either explicitly wanted OR using defaults)
+                bool checkThisSlot = useDefaults || clause.WantedShopSlots[i];
+                if (checkThisSlot && item.TypeCategory == MotelyItemTypeCategory.SpectralCard)
                 {
                     if (searchAnySpectral)
                     {
@@ -342,8 +358,8 @@ public static class MotelyJsonScoring
             }
         }
 
-        // Check pack slots
-        if (BoolArrayHasTrue(clause.WantedPackSlots))
+        // Check pack slots if any are wanted OR if using defaults
+        if (hasPackSlots || useDefaults)
         {
             var packStream = ctx.CreateBoosterPackStream(
                 ante,
@@ -365,7 +381,9 @@ public static class MotelyJsonScoring
                         pack.GetPackSize()
                     );
 
-                    if (clause.WantedPackSlots[i])
+                    // Check if this pack slot should be checked (either explicitly wanted OR using defaults)
+                    bool checkThisPack = useDefaults || clause.WantedPackSlots[i];
+                    if (checkThisPack)
                     {
                         for (int j = 0; j < contents.Length; j++)
                         {
@@ -443,15 +461,9 @@ public static class MotelyJsonScoring
             "CountPlayingCardOccurrences requires at least one filter criteria"
         );
         Debug.Assert(
-            clause.Sources?.PackSlots != null,
-            "CountPlayingCardOccurrences requires PackSlots"
+            clause.Sources?.PackSlots != null && clause.Sources.PackSlots.Length > 0,
+            "CountPlayingCardOccurrences requires non-empty PackSlots (should be caught by validator)"
         );
-
-        // Safety check: StandardCard clauses must have Sources.PackSlots defined
-        if (clause.Sources?.PackSlots == null || clause.Sources.PackSlots.Length == 0)
-        {
-            return 0; // Invalid clause configuration - no pack slots to check
-        }
 
         int tally = 0;
         // For ante 2+, we need generatedFirstPack: true to skip the phantom first Buffoon pack!
@@ -1233,6 +1245,8 @@ public static class MotelyJsonScoring
                 )
                     ? 1
                     : 0,
+                MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, clause.RankEnum!.Value),
+                MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, clause.SuitEnum!.Value),
                 _ => 0,
             };
 
@@ -1308,8 +1322,8 @@ public static class MotelyJsonScoring
 
         for (int i = 0; i < 52; i++)
         {
-            var card = ctx.GetNextErraticDeckCard(ref stream);
-            if (card.PlayingCardRank == rank)
+            var card = ctx.GetNextRandomElement(ref stream, MotelyEnum<MotelyPlayingCard>.Values);
+            if (card.GetRank() == rank)
             {
                 count++;
             }
@@ -1331,8 +1345,8 @@ public static class MotelyJsonScoring
 
         for (int i = 0; i < 52; i++)
         {
-            var card = ctx.GetNextErraticDeckCard(ref stream);
-            if (card.PlayingCardSuit == suit)
+            var card = ctx.GetNextRandomElement(ref stream, MotelyEnum<MotelyPlayingCard>.Values);
+            if (card.GetSuit() == suit)
             {
                 count++;
             }
@@ -1633,6 +1647,8 @@ public static class MotelyJsonScoring
                                 nestedClause,
                                 ref runState
                             ), // Recursive for nested And/Or
+                            MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, nestedClause.RankEnum!.Value),
+                            MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, nestedClause.SuitEnum!.Value),
                             _ => 0,
                         };
                     }
@@ -1806,6 +1822,8 @@ public static class MotelyJsonScoring
                     )
                         ? 1
                         : 0,
+                    MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, clause.RankEnum!.Value),
+                    MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, clause.SuitEnum!.Value),
                     _ => 0,
                 };
                 totalCount += anteCount;
