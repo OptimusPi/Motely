@@ -702,7 +702,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         private long _localMatchingSeeds = 0;
         private long _localBatchesCompleted = 0;
         private const int SEED_COUNT_FLUSH_THRESHOLD = 128; // Flush every N seeds
-        private const int BATCH_COUNT_FLUSH_THRESHOLD = 1; // Flush every batch for responsive UI (was 10)
+        private const int BATCH_COUNT_FLUSH_THRESHOLD = 50; // Flush every 50 batches (balance performance vs UI responsiveness)
 
         // Pre-allocated result buffer - ONE allocation per thread, reused forever
         // Old stale data is fine - mask controls which slots are valid
@@ -862,14 +862,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
 
-                // 2. Flush counters so PrintReport can show accurate stats
-                if (_localMatchingSeeds > 0)
+                // 2. Flush counters periodically (not every batch!) to reduce Interlocked contention
+                if (_localBatchesCompleted >= BATCH_COUNT_FLUSH_THRESHOLD)
                 {
-                    Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
-                    _localMatchingSeeds = 0;
-                }
-                if (_localBatchesCompleted > 0)
-                {
+                    if (_localMatchingSeeds > 0)
+                    {
+                        Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
+                        _localMatchingSeeds = 0;
+                    }
                     Interlocked.Add(ref Search._actualBatchesCompleted, _localBatchesCompleted);
                     _localBatchesCompleted = 0;
                 }
@@ -953,6 +953,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // If CSV output is enabled and we have a score provider, use it
             if (Search._csvOutput && Search.TryGetScoreProvider(out var scoreProvider))
             {
+                DebugLogger.Log($"[REPORT] Using score provider path (CSV={Search._csvOutput})");
                 // Create search context for scoring
                 MotelyVectorSearchContext searchContext = new(
                     in Search._searchParameters,
@@ -968,11 +969,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     0
                 );
 
+                DebugLogger.Log($"[REPORT] Score provider returned mask with {(scoredMask.IsPartiallyTrue() ? "matches" : "NO matches")}");
                 // Report the scored results!
                 ReportScoredResults(scoredMask, in searchParams);
             }
             else
             {
+                DebugLogger.Log($"[REPORT] Using basic seeds path (no score provider or CSV off)");
                 // No score provider - report basic seeds
                 ReportBasicSeeds(searchResultMask, in searchParams);
             }

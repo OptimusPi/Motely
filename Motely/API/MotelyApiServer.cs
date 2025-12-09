@@ -28,6 +28,7 @@ public class BackgroundSearchState
 {
     public bool IsRunning { get; set; }
     public int SeedsAdded { get; set; }
+    public int BatchSize { get; set; } // Batch size for this search
     public long StartBatch { get; set; } // Batch we started from (for resume)
     public long CurrentBatch { get; set; } // Updated during search via progress callback
     public long TotalBatches { get; set; } // Total batches for progress calculation
@@ -117,7 +118,8 @@ public class MotelyApiServer
 
     // Paths for persistence
     private static readonly string _filtersDir = "JamlFilters";
-    private static readonly string _fertilizerDbPath = "fertilizer.db";
+    private static readonly string _searchResultsDir = "SearchResults";
+    private static readonly string _fertilizerDbPath = Path.Combine("SearchResults", "fertilizer.db");
 
     public bool IsRunning => _listener?.IsListening ?? false;
     public string Url => $"http://{_host}:{_port}/";
@@ -139,11 +141,8 @@ public class MotelyApiServer
         // 1. Mark as stopped so callback stops processing
         bgState.IsRunning = false;
 
-        // 2. Cancel the Motely executor
+        // 2. Cancel the Motely executor (calls Pause internally - immediate stop)
         bgState.Search?.Cancel();
-
-        // 3. Wait a moment for graceful shutdown
-        await Task.Delay(500);
 
         // 4. Close appender first (may fail if duplicates exist - that's ok)
         try
@@ -173,7 +172,7 @@ public class MotelyApiServer
                 using var saveCmd = bgState.Connection.CreateCommand();
                 saveCmd.CommandText = @"
                     INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                    VALUES (1, 4, ?, CURRENT_TIMESTAMP)
+                    VALUES (1, 2, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT (id) DO UPDATE SET
                         last_completed_batch = excluded.last_completed_batch,
                         updated_at = excluded.updated_at";
@@ -237,8 +236,8 @@ public class MotelyApiServer
             throw new InvalidOperationException("Server is already running");
 
         // Initialize data directories
-        Directory.CreateDirectory(".");
         Directory.CreateDirectory(_filtersDir);
+        Directory.CreateDirectory(_searchResultsDir);
 
         // Initialize fertilizer DuckDB (replaces old txt file)
         InitializeFertilizerDb();
@@ -366,20 +365,17 @@ public class MotelyApiServer
 
             if (seeds.Count == 0) return;
 
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] Migrating {seeds.Count} seeds from fertilizer.txt to DB...");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Migrating {seeds.Count} seeds from fertilizer.txt using DuckDB COPY...");
 
             lock (_fertilizerLock)
             {
                 if (_fertilizerConnection == null) return;
 
-                // Bulk insert using INSERT OR IGNORE for deduplication
-                foreach (var seed in seeds)
-                {
-                    using var insertCmd = _fertilizerConnection.CreateCommand();
-                    insertCmd.CommandText = "INSERT OR IGNORE INTO seeds (seed) VALUES (?)";
-                    insertCmd.Parameters.Add(new DuckDBParameter(seed));
-                    insertCmd.ExecuteNonQuery();
-                }
+                // Use DuckDB's COPY FROM for instant bulk loading (4.4M seeds in seconds!)
+                var escapedPath = oldPath.Replace("\\", "/").Replace("'", "''");
+                using var copyCmd = _fertilizerConnection.CreateCommand();
+                copyCmd.CommandText = $"COPY seeds FROM '{escapedPath}' (HEADER false)";
+                copyCmd.ExecuteNonQuery();
 
                 // Checkpoint to persist
                 using var checkpointCmd = _fertilizerConnection.CreateCommand();
@@ -505,16 +501,16 @@ public class MotelyApiServer
                 var jaml = File.ReadAllText(file);
 
                 // Parse the JAML to extract name, deck, stake - same logic as POST /search
-                if (!JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out _))
+                if (!JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out var parseError))
                 {
-                    _logCallback($"[{DateTime.Now:HH:mm:ss}] Failed to parse {Path.GetFileName(file)}, skipping");
+                    _logCallback($"[{DateTime.Now:HH:mm:ss}] ❌ Failed to parse {Path.GetFileName(file)}:\n    {parseError}");
                     continue;
                 }
 
                 // Use same searchId generation as POST /search for consistency
-                var filterName = ExtractFilterName(config!, jaml);
-                var deck = ExtractDeckFromJaml(jaml);
-                var stake = ExtractStakeFromJaml(jaml);
+                var filterName = GetFilterName(config!);
+                var deck = GetDeckFromConfig(config!);
+                var stake = GetStakeFromConfig(config!);
                 var searchId = SanitizeSearchId($"{filterName}_{deck}_{stake}");
 
                 _savedSearches[searchId] = new SavedSearch
@@ -589,50 +585,37 @@ public class MotelyApiServer
     {
         try
         {
-            var filePath = Path.Combine(_filtersDir, $"{searchId}.jaml");
+            // Extract just the filter name (without deck/stake) for the filename
+            if (!JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out var parseError))
+            {
+                _logCallback($"[{DateTime.Now:HH:mm:ss}] Failed to parse JAML for saving filter: {parseError}");
+                return;
+            }
+
+            var filterName = GetFilterName(config!);
+            var filePath = Path.Combine(_filtersDir, $"{filterName}.jaml");
             File.WriteAllText(filePath, jaml);
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] Saved filter: {searchId}");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Saved filter: {filterName}");
         }
         catch (Exception ex)
         {
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] Failed to save filter {searchId}: {ex.Message}");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Failed to save filter: {ex.Message}");
         }
     }
 
-    private static string ExtractFilterName(MotelyJsonConfig config, string jaml)
+    /// <summary>
+    /// Get sanitized filter name from config for use in searchId/filenames
+    /// </summary>
+    private static string GetFilterName(MotelyJsonConfig config)
     {
-        // Try to get name from config first
+        // Direct property access - this is how configs work in 2025!
         if (!string.IsNullOrWhiteSpace(config.Name))
-        {
             return SanitizeFilterName(config.Name);
-        }
 
-        // Try to extract from JAML (look for "name:" line)
-        var lines = jaml.Split('\n');
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.StartsWith("name:", StringComparison.OrdinalIgnoreCase))
-            {
-                var name = trimmed.Substring(5).Trim().Trim('"', '\'');
-                if (!string.IsNullOrWhiteSpace(name))
-                {
-                    return SanitizeFilterName(name);
-                }
-            }
-        }
-
-        // Fallback: generate from first must/should item
-        if (config.Must?.Count > 0)
-        {
-            var first = config.Must[0];
-            return SanitizeFilterName($"{first.Type}_{first.Value}");
-        }
-        if (config.Should?.Count > 0)
-        {
-            var first = config.Should[0];
-            return SanitizeFilterName($"{first.Type}_{first.Value}");
-        }
+        // Fallback: generate from first clause
+        var firstClause = config.Must?.FirstOrDefault() ?? config.Should?.FirstOrDefault();
+        if (firstClause != null)
+            return SanitizeFilterName($"{firstClause.Type}_{firstClause.Value}");
 
         return "UnnamedFilter";
     }
@@ -645,33 +628,17 @@ public class MotelyApiServer
         return sanitized.Length > 50 ? sanitized.Substring(0, 50) : sanitized;
     }
 
-    private static string ExtractDeckFromJaml(string jaml)
-    {
-        var lines = jaml.Split('\n');
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.StartsWith("deck:", StringComparison.OrdinalIgnoreCase))
-            {
-                return trimmed.Substring(5).Trim().Trim('"', '\'');
-            }
-        }
-        return "Red";
-    }
+    /// <summary>
+    /// Get deck from parsed config (uses MotelyJsonConfig.Deck property)
+    /// </summary>
+    private static string GetDeckFromConfig(MotelyJsonConfig config)
+        => config.Deck ?? "Red";
 
-    private static string ExtractStakeFromJaml(string jaml)
-    {
-        var lines = jaml.Split('\n');
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.StartsWith("stake:", StringComparison.OrdinalIgnoreCase))
-            {
-                return trimmed.Substring(6).Trim().Trim('"', '\'');
-            }
-        }
-        return "White";
-    }
+    /// <summary>
+    /// Get stake from parsed config (uses MotelyJsonConfig.Stake property)
+    /// </summary>
+    private static string GetStakeFromConfig(MotelyJsonConfig config)
+        => config.Stake ?? "White";
 
     private static string SanitizeSearchId(string id)
     {
@@ -821,10 +788,10 @@ public class MotelyApiServer
             return;
         }
 
-        // Extract filter name, deck, stake from JAML
-        var filterName = ExtractFilterName(config!, filterJaml);
-        var deck = ExtractDeckFromJaml(filterJaml);
-        var stake = ExtractStakeFromJaml(filterJaml);
+        // Extract filter name, deck, stake from parsed config
+        var filterName = GetFilterName(config!);
+        var deck = GetDeckFromConfig(config!);
+        var stake = GetStakeFromConfig(config!);
         var searchId = SanitizeSearchId($"{filterName}_{deck}_{stake}");
 
         var isUpdated = _savedSearches.TryGetValue(searchId, out var existingSearch)
@@ -841,7 +808,7 @@ public class MotelyApiServer
             }
 
             // Delete stale DB file - filter changed so old results are invalid
-            var staleDbPath = $"{searchId}.db";
+            var staleDbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
             try
             {
                 if (File.Exists(staleDbPath)) File.Delete(staleDbPath);
@@ -874,6 +841,8 @@ public class MotelyApiServer
         try
         {
             var bgConfig = config!;
+            var requestedBatchSize = searchRequest?.BatchSize ?? 2; // Default batch size
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] 🔧 Search settings: batchSize={requestedBatchSize}, threads={ThreadCount}, cutoff={searchRequest?.Cutoff ?? 0}");
 
             // Create or reuse background state for this search
             var bgState = (_currentSearchId == searchId && _currentSearch != null)
@@ -884,7 +853,7 @@ public class MotelyApiServer
             _currentSearchId = searchId;
 
             // Set up DuckDB connection FIRST (before fertilizer search so we can save results)
-            var dbPath = $"{searchId}.db";
+            var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
             _logCallback($"[{DateTime.Now:HH:mm:ss}] Creating DB at: {Path.GetFullPath(dbPath)}");
 
             // Calculate expected tally columns for schema check
@@ -975,7 +944,7 @@ public class MotelyApiServer
             stateCmd.ExecuteNonQuery();
 
             // Load persisted batch position (survives server restart!)
-            // BUT if filter was updated, CLEAR the search_state in THIS DB and start fresh!
+            // BUT if filter was updated OR batch size changed, CLEAR the search_state and start fresh!
             if (filterWasUpdated)
             {
                 using var clearCmd = bgState.Connection.CreateCommand();
@@ -986,13 +955,33 @@ public class MotelyApiServer
             }
             else
             {
-                using var loadCmd = bgState.Connection.CreateCommand();
-                loadCmd.CommandText = "SELECT last_completed_batch FROM search_state WHERE id = 1";
-                var savedBatch = loadCmd.ExecuteScalar();
-                if (savedBatch != null && savedBatch != DBNull.Value)
+                // Check if batch size changed - if so, reset!
+                using var checkBatchSizeCmd = bgState.Connection.CreateCommand();
+                checkBatchSizeCmd.CommandText = "SELECT batch_size FROM search_state WHERE id = 1";
+                var savedBatchSize = checkBatchSizeCmd.ExecuteScalar();
+                if (savedBatchSize != null && savedBatchSize != DBNull.Value)
                 {
-                    bgState.StartBatch = Convert.ToInt64(savedBatch);
-                    _logCallback($"[{DateTime.Now:HH:mm:ss}] Restored batch position: {bgState.StartBatch}");
+                    var oldBatchSize = Convert.ToInt32(savedBatchSize);
+                    if (oldBatchSize != requestedBatchSize)
+                    {
+                        _logCallback($"[{DateTime.Now:HH:mm:ss}] Batch size changed from {oldBatchSize} to {requestedBatchSize} - clearing search_state!");
+                        using var clearCmd = bgState.Connection.CreateCommand();
+                        clearCmd.CommandText = "DELETE FROM search_state";
+                        clearCmd.ExecuteNonQuery();
+                        bgState.StartBatch = 0;
+                    }
+                    else
+                    {
+                        // Batch size matches - safe to restore position
+                        using var loadCmd = bgState.Connection.CreateCommand();
+                        loadCmd.CommandText = "SELECT last_completed_batch FROM search_state WHERE id = 1";
+                        var savedBatch = loadCmd.ExecuteScalar();
+                        if (savedBatch != null && savedBatch != DBNull.Value)
+                        {
+                            bgState.StartBatch = Convert.ToInt64(savedBatch);
+                            _logCallback($"[{DateTime.Now:HH:mm:ss}] Restored batch position: {bgState.StartBatch}");
+                        }
+                    }
                 }
             }
 
@@ -1006,17 +995,19 @@ public class MotelyApiServer
                 using var overrideSaveCmd = bgState.Connection.CreateCommand();
                 overrideSaveCmd.CommandText = @"
                     INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                    VALUES (1, 4, ?, CURRENT_TIMESTAMP)
+                    VALUES (1, ?, ?, CURRENT_TIMESTAMP)
                     ON CONFLICT (id) DO UPDATE SET
+                        batch_size = excluded.batch_size,
                         last_completed_batch = excluded.last_completed_batch,
                         updated_at = excluded.updated_at";
+                overrideSaveCmd.Parameters.Add(new DuckDBParameter(requestedBatchSize));
                 overrideSaveCmd.Parameters.Add(new DuckDBParameter(bgState.StartBatch));
                 overrideSaveCmd.ExecuteNonQuery();
-                _logCallback($"[{DateTime.Now:HH:mm:ss}] Saved override batch position {bgState.StartBatch} to DB");
+                _logCallback($"[{DateTime.Now:HH:mm:ss}] Saved override batch position {bgState.StartBatch} with batch_size={requestedBatchSize} to DB");
             }
 
-            // Validate StartBatch is within range for 4-character seeds (26^4 = 456,976)
-            const long maxBatches = 456_976; // 26^4
+            // Validate StartBatch is within range for 2-character batches (35^(8-2) = 35^6 = 1,838,265,625)
+            const long maxBatches = 1_838_265_625; // 35^6
             if (bgState.StartBatch >= maxBatches)
             {
                 _logCallback($"[{DateTime.Now:HH:mm:ss}] StartBatch {bgState.StartBatch} is beyond max {maxBatches} - resetting to 0");
@@ -1176,6 +1167,8 @@ public class MotelyApiServer
 
             _logCallback($"[{DateTime.Now:HH:mm:ss}] Immediate response sent with {topResults.Count} results");
 
+            bgState.BatchSize = requestedBatchSize; // Store in state for later use
+
             _ = Task.Run(() =>
             {
                 try
@@ -1186,7 +1179,7 @@ public class MotelyApiServer
                         EnableDebug = false,
                         NoFancy = true,
                         Quiet = true,
-                        BatchSize = 4, // Use 4-character sequential search
+                        BatchSize = requestedBatchSize, // Use batch size from request or default (2)
                         StartBatch = (ulong)bgState.StartBatch,
                         EndBatch = searchRequest?.EndBatch ?? 0, // User-specified end batch or no limit
                         AutoCutoff = false,
@@ -1196,7 +1189,7 @@ public class MotelyApiServer
                             // Update progress state for GET /search to read
                             var newBatch = bgState.StartBatch + completed;
                             bgState.CurrentBatch = newBatch;
-                            bgState.TotalBatches = total;
+                            bgState.TotalBatches = bgState.StartBatch + total;
                             bgState.SeedsSearched = seedsSearched;
                             bgState.SeedsPerMs = seedsPerMs;
 
@@ -1209,10 +1202,12 @@ public class MotelyApiServer
                                     using var saveCmd = bgState.Connection.CreateCommand();
                                     saveCmd.CommandText = @"
                                         INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                                        VALUES (1, 4, ?, CURRENT_TIMESTAMP)
+                                        VALUES (1, ?, ?, CURRENT_TIMESTAMP)
                                         ON CONFLICT (id) DO UPDATE SET
+                                            batch_size = excluded.batch_size,
                                             last_completed_batch = excluded.last_completed_batch,
                                             updated_at = excluded.updated_at";
+                                    saveCmd.Parameters.Add(new DuckDBParameter(bgState.BatchSize));
                                     saveCmd.Parameters.Add(new DuckDBParameter(newBatch));
                                     saveCmd.ExecuteNonQuery();
                                 }
@@ -1328,7 +1323,7 @@ public class MotelyApiServer
 
             // Get results from DuckDB database
             var results = new List<SearchResult>();
-            var dbPath = $"{searchId}.db";
+            var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
 
             // If THIS search is running, ask it to query its own connection (safe!)
             if (_currentSearchId == searchId && _currentSearch?.IsRunning == true)
@@ -1535,10 +1530,7 @@ public class MotelyApiServer
                 }
             }
 
-            _currentSearch.Search?.Cancel();
-
-            // Wait a moment for executor to stop
-            await Task.Delay(400);
+            _currentSearch.Search?.Cancel(); // Calls Pause internally - immediate stop
 
             // Save batch position to DuckDB for resume!
             try
@@ -1548,7 +1540,7 @@ public class MotelyApiServer
                     using var saveCmd = _currentSearch.Connection.CreateCommand();
                     saveCmd.CommandText = @"
                         INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                        VALUES (1, 4, ?, CURRENT_TIMESTAMP)
+                        VALUES (1, 2, ?, CURRENT_TIMESTAMP)
                         ON CONFLICT (id) DO UPDATE SET
                             last_completed_batch = excluded.last_completed_batch,
                             updated_at = excluded.updated_at";
@@ -1708,18 +1700,24 @@ public class MotelyApiServer
                     var fileName = Path.GetFileName(filePath);
                     var content = await File.ReadAllTextAsync(filePath);
 
-                    // Extract the actual "name:" field from the filter content
-                    var displayName = ExtractFilterName(content) ?? Path.GetFileNameWithoutExtension(fileName);
-
-                    // Generate searchId EXACTLY like LoadSavedFilters does
+                    // Parse the filter and extract metadata from the config object
+                    string? displayName = null;
                     string? searchId = null;
-                    if (JamlConfigLoader.TryLoadFromJamlString(content, out var config, out _))
+
+                    if (JamlConfigLoader.TryLoadFromJamlString(content, out var config, out var parseError))
                     {
-                        var filterName = ExtractFilterName(config!, content);
-                        var deck = ExtractDeckFromJaml(content);
-                        var stake = ExtractStakeFromJaml(content);
-                        searchId = SanitizeSearchId($"{filterName}_{deck}_{stake}");
+                        displayName = GetFilterName(config!);
+                        var deck = GetDeckFromConfig(config!);
+                        var stake = GetStakeFromConfig(config!);
+                        searchId = SanitizeSearchId($"{displayName}_{deck}_{stake}");
                     }
+                    else
+                    {
+                        _logCallback($"[{DateTime.Now:HH:mm:ss}] ⚠️ Failed to parse {fileName}: {parseError}");
+                    }
+
+                    // Fallback to filename if parsing failed
+                    displayName ??= Path.GetFileNameWithoutExtension(fileName);
 
                     filters.Add(new
                     {
@@ -1741,39 +1739,6 @@ public class MotelyApiServer
             response.StatusCode = 500;
             await WriteJsonAsync(response, new { error = ex.Message });
         }
-    }
-
-    /// <summary>
-    /// Extract the "name:" field from JAML or "name" from JSON content
-    /// </summary>
-    private string? ExtractFilterName(string content)
-    {
-        if (string.IsNullOrWhiteSpace(content)) return null;
-
-        // Try JAML format first (name: value or name: "value")
-        var lines = content.Split('\n');
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.StartsWith("name:", StringComparison.OrdinalIgnoreCase))
-            {
-                var value = trimmed.Substring(5).Trim();
-                // Remove quotes if present
-                if (value.StartsWith("\"") && value.EndsWith("\""))
-                    value = value.Substring(1, value.Length - 2);
-                if (value.StartsWith("'") && value.EndsWith("'"))
-                    value = value.Substring(1, value.Length - 2);
-                if (!string.IsNullOrWhiteSpace(value))
-                    return value;
-            }
-        }
-
-        // Try JSON format ("name": "value")
-        var nameMatch = System.Text.RegularExpressions.Regex.Match(content, "\"name\"\\s*:\\s*\"([^\"]+)\"");
-        if (nameMatch.Success)
-            return nameMatch.Groups[1].Value;
-
-        return null;
     }
 
     private async Task HandleSearchDeleteAsync(HttpListenerRequest request, HttpListenerResponse response)
@@ -1962,6 +1927,9 @@ public class SearchRequest
 
     [JsonPropertyName("cutoff")]
     public int? Cutoff { get; set; }
+
+    [JsonPropertyName("batchSize")]
+    public int? BatchSize { get; set; }
 }
 
 public class SearchResult

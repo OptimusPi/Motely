@@ -71,12 +71,8 @@ public struct MotelyJsonErraticRankAndSuitFilterDesc(
                 for (int rankIdx = 0; rankIdx < _rankClauses.Length; rankIdx++)
                 {
                     var clause = _rankClauses[rankIdx];
-                    VectorMask rankMatch = VectorEnum256.Equals(
-                        card.PlayingCardRank,
-                        clause.Rank
-                    );
                     rankCounts[rankIdx] += Vector256.ConditionalSelect(
-                        MotelyVectorUtils.VectorMaskToConditionalSelectMask(rankMatch),
+                        VectorEnum256.Equals(card.PlayingCardRank, clause.Rank),
                         Vector256<int>.One,
                         Vector256<int>.Zero
                     );
@@ -86,12 +82,8 @@ public struct MotelyJsonErraticRankAndSuitFilterDesc(
                 for (int suitIdx = 0; suitIdx < _suitClauses.Length; suitIdx++)
                 {
                     var clause = _suitClauses[suitIdx];
-                    VectorMask suitMatch = VectorEnum256.Equals(
-                        card.PlayingCardSuit,
-                        clause.Suit
-                    );
                     suitCounts[suitIdx] += Vector256.ConditionalSelect(
-                        MotelyVectorUtils.VectorMaskToConditionalSelectMask(suitMatch),
+                        VectorEnum256.Equals(card.PlayingCardSuit, clause.Suit),
                         Vector256<int>.One,
                         Vector256<int>.Zero
                     );
