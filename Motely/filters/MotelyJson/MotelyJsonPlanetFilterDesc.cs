@@ -28,8 +28,12 @@ public struct MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterCriteria criteria
             ctx.CacheBoosterPackStream(ante);
         }
 
+        // SINGLE clause only - caller must chain multiple filters for multiple clauses
+        if (_criteria.Clauses.Count != 1)
+            throw new ArgumentException($"MotelyJsonPlanetFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
+
         return new MotelyJsonPlanetFilter(
-            _criteria.Clauses,
+            _criteria.Clauses[0],
             minAnte,
             maxAnte,
             _criteria.MaxShopSlotsNeeded
@@ -37,123 +41,93 @@ public struct MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterCriteria criteria
     }
 
     public struct MotelyJsonPlanetFilter(
-        List<MotelyJsonPlanetFilterClause> clauses,
+        MotelyJsonPlanetFilterClause clause,
         int minAnte,
         int maxAnte,
         int maxShopSlotsNeeded
     ) : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonPlanetFilterClause> _clauses = clauses;
+        private readonly MotelyJsonPlanetFilterClause Clause = clause;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
         private readonly int _maxShopSlotsNeeded = maxShopSlotsNeeded;
+        private readonly int _minThreshold = clause.Min ?? 1;
 
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Count == 0)
-                return VectorMask.AllBitsSet;
+            var clause = Clause;
 
-            // Stack-allocated clause masks - accumulate results per clause across all antes
-            Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Count];
-            for (int i = 0; i < clauseMasks.Length; i++)
-                clauseMasks[i] = VectorMask.NoBitsSet;
+            // SINGLE clause - track if it matched across all antes
+            VectorMask clauseMask = VectorMask.NoBitsSet;
 
             // Initialize run state for voucher calculations
             var runState = ctx.Deck.GetDefaultRunState();
 
-            // Loop antes first, then clauses - ensures one stream per ante!
+            // Walk each ante and check the clause
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                for (int clauseIndex = 0; clauseIndex < _clauses.Count; clauseIndex++)
+                // Skip ante if not wanted
+                if (!clause.WantedAntes[ante])
+                    continue;
+
+                // Determine if we should use ante-based defaults
+                bool hasShopSlots = HasShopSlots(clause.WantedShopSlots);
+                bool hasPackSlots = HasPackSlots(clause.WantedPackSlots);
+                bool useDefaults = !hasShopSlots && !hasPackSlots;
+
+                // Check shops if explicitly wanted OR if using defaults
+                if (hasShopSlots || useDefaults)
                 {
-                    var clause = _clauses[clauseIndex];
+                    // Use the self-contained shop planet stream - NO SYNCHRONIZATION ISSUES!
+                    var shopPlanetStream = ctx.CreateShopPlanetStream(ante);
+                    clauseMask |= CheckShopPlanetVectorized(
+                        clause,
+                        ctx,
+                        ref shopPlanetStream,
+                        ante
+                    );
+                }
 
-                    // Skip ante if not wanted
-                    if (!clause.WantedAntes[ante])
-                        continue;
-
-                    VectorMask clauseResult = VectorMask.NoBitsSet;
-
-                    // Determine if we should use ante-based defaults
-                    bool hasShopSlots = HasShopSlots(clause.WantedShopSlots);
-                    bool hasPackSlots = HasPackSlots(clause.WantedPackSlots);
-                    bool useDefaults = !hasShopSlots && !hasPackSlots;
-
-                    // Check shops if explicitly wanted OR if using defaults
-                    if (hasShopSlots || useDefaults)
-                    {
-                        // Use the self-contained shop planet stream - NO SYNCHRONIZATION ISSUES!
-                        var shopPlanetStream = ctx.CreateShopPlanetStream(ante);
-                        clauseResult |= CheckShopPlanetVectorized(
-                            clause,
-                            ctx,
-                            ref shopPlanetStream,
-                            ante
-                        );
-                    }
-
-                    // Check packs if explicitly wanted OR if using defaults
-                    if (hasPackSlots || useDefaults)
-                    {
-                        clauseResult |= CheckPacksVectorized(clause, ctx, ante);
-                    }
-
-                    // Accumulate results for this clause across all antes (OR logic)
-                    clauseMasks[clauseIndex] |= clauseResult;
+                // Check packs if explicitly wanted OR if using defaults
+                if (hasPackSlots || useDefaults)
+                {
+                    clauseMask |= CheckPacksVectorized(clause, ctx, ante);
                 }
             }
 
-            // All clauses must be satisfied (AND logic)
-            // If any clause found nothing (NoBitsSet), the entire filter fails!
-            var resultMask = VectorMask.AllBitsSet;
-            for (int i = 0; i < clauseMasks.Length; i++)
+            // SINGLE clause - if it found nothing, fail
+            if (clauseMask.IsAllFalse())
             {
-                // FIX: If this clause found nothing across all antes, fail immediately
-                if (clauseMasks[i].IsAllFalse())
-                {
-                    return VectorMask.NoBitsSet;
-                }
-
-                resultMask &= clauseMasks[i];
-                if (resultMask.IsAllFalse())
-                    return VectorMask.NoBitsSet;
+                return VectorMask.NoBitsSet;
             }
 
             // USE THE SHARED FUNCTION - same logic as scoring!
-            var clauses = _clauses;
+            int minThreshold = _minThreshold; // Use pre-calculated value
             return ctx.SearchIndividualSeeds(
-                resultMask,
+                clauseMask,
                 (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    // Check all clauses using the SAME shared function used in scoring
-                    foreach (var clause in clauses)
+                    // Count total occurrences across ALL wanted antes
+                    int clauseCount = 0;
+                    for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
                     {
-                        // Count total occurrences across ALL wanted antes
-                        int totalCount = 0;
-                        for (int ante = 0; ante < clause.WantedAntes.Length; ante++)
-                        {
-                            if (!clause.WantedAntes[ante])
-                                continue;
+                        if (!clause.WantedAntes[ante])
+                            continue;
 
-                            int anteCount = MotelyJsonScoring.CountPlanetOccurrences(
-                                ref singleCtx,
-                                clause,
-                                ante,
-                                earlyExit: false
-                            );
-                            totalCount += anteCount;
-                        }
-
-                        // Check Min threshold (default to 1 if not specified)
-                        int minThreshold = clause.Min ?? 1;
-                        if (totalCount < minThreshold)
-                            return false;
+                        int anteCount = MotelyJsonScoring.CountPlanetOccurrences(
+                            ref singleCtx,
+                            clause,
+                            ante,
+                            earlyExit: false
+                        );
+                        clauseCount += anteCount;
                     }
 
-                    return true;
+                    // Check Min threshold (pre-calculated value!)
+                    return clauseCount >= minThreshold;
                 }
             );
         }

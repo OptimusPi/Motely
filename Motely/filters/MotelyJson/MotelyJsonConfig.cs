@@ -495,7 +495,13 @@ public class MotelyJsonConfig
                         case MotelyFilterItemType.ErraticRank:
                             // Parse rank from Value
                             if (Enum.TryParse<MotelyPlayingCardRank>(Value, true, out var erraticRank))
+                            {
                                 RankEnum = erraticRank;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"[InitParsedEnums] ErraticRank: FAILED to parse '{Value}' as MotelyPlayingCardRank! Valid values include: Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two, or One.");
+                            }
                             break;
                         case MotelyFilterItemType.ErraticSuit:
                             // Parse suit from Value
@@ -1132,6 +1138,8 @@ public class MotelyJsonConfig
     /// </summary>
     public void PostProcess()
     {
+        DebugLogger.Log($"[PostProcess] START");
+
         // Parse top-level mode (score aggregation)
         if (!string.IsNullOrWhiteSpace(Mode))
         {
@@ -1155,10 +1163,13 @@ public class MotelyJsonConfig
             }
         }
 
+        DebugLogger.Log($"[PostProcess] About to process clauses");
+
         // Process all filter items recursively (handles nested And/Or clauses)
-        var sections = new[] { ("must", Must), ("should", Should), ("mustNot", MustNot) };
+        var sections = new[] { ("must", Must ?? []), ("should", Should ?? []), ("mustNot", MustNot ?? []) };
         foreach (var (sectionName, items) in sections)
         {
+            DebugLogger.Log($"[PostProcess] Processing section: {sectionName}, count={items.Count}");
             for (int i = 0; i < items.Count; i++)
             {
                 try
@@ -1172,13 +1183,15 @@ public class MotelyJsonConfig
             }
         }
 
+        DebugLogger.Log($"[PostProcess] Finished processing clauses. Starting voucher partitioning. Must.Count={Must?.Count}, Should.Count={Should?.Count}");
+
         // PERFORMANCE: Pre-partition clauses by type to avoid repeated iteration in hot paths
         var mustVouchers = new List<MotleyJsonFilterClause>();
         var mustNonVouchers = new List<MotleyJsonFilterClause>();
         var shouldVouchers = new List<MotleyJsonFilterClause>();
         var shouldNonVouchers = new List<MotleyJsonFilterClause>();
 
-        foreach (var clause in Must)
+        foreach (var clause in Must ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
                 mustVouchers.Add(clause);
@@ -1186,7 +1199,7 @@ public class MotelyJsonConfig
                 mustNonVouchers.Add(clause);
         }
 
-        foreach (var clause in Should)
+        foreach (var clause in Should ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
                 shouldVouchers.Add(clause);
@@ -1198,6 +1211,8 @@ public class MotelyJsonConfig
         MustNonVouchers = mustNonVouchers.ToArray();
         ShouldVouchers = shouldVouchers.ToArray();
         ShouldNonVouchers = shouldNonVouchers.ToArray();
+
+        DebugLogger.Log($"[PostProcess] Partitioned. MustVouchers={MustVouchers.Length}, ShouldVouchers={ShouldVouchers.Length}");
 
         // Compute MaxVoucherAnte once during PostProcess (use pre-partitioned arrays!)
         int maxAnte = 0;
@@ -1222,13 +1237,13 @@ public class MotelyJsonConfig
 
         // Compute MaxBossAnte once during PostProcess (check BOTH Must and Should)
         int maxBossAnte = 0;
-        foreach (var clause in Must!)
+        foreach (var clause in Must ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Boss)
                 maxBossAnte = Math.Max(maxBossAnte,
                     clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
         }
-        foreach (var clause in Should!)
+        foreach (var clause in Should ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Boss)
                 maxBossAnte = Math.Max(maxBossAnte,
@@ -1316,7 +1331,7 @@ public class MotelyJsonConfig
         var columns = new List<string> { "seed", "score" };
         var usedNames = new HashSet<string>(columns, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var clause in Should)
+        foreach (var clause in Should ?? [])
         {
             var columnName = GetClauseColumnName(clause);
 

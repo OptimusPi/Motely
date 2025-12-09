@@ -324,41 +324,16 @@ namespace Motely.Executors
                 Console.WriteLine("CreateSearch...");
             }
 
-            // Create scoring config (SHOULD clauses + voucher Must clauses for activation)
-            var voucherMustClauses =
-                config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList()
-                ?? [];
+            // Scoring: ALL Must clauses (verify strictly) + Should clauses (score)
             MotelyJsonConfig scoringConfig = new()
             {
                 Name = config.Name,
-                Must = voucherMustClauses, // Include voucher Must clauses for MaxVoucherAnte calculation
-                Should = config.Should, // ONLY the SHOULD clauses for scoring
+                Must = config.Must, // ALL Must clauses - verify without vector approximation
+                Should = config.Should, // Should clauses for scoring
                 MustNot = [], // Empty - filters handle this
             };
 
-            // Initialize parsed enums for scoring config clauses with helpful errors
-            // NOTE: Don't re-initialize SHOULD clauses if they're the same objects as MUST clauses!
-            for (int i = 0; i < voucherMustClauses.Count; i++)
-            {
-                InitializeClauseWithContext(voucherMustClauses[i], "MUST", i);
-            }
-
-            // Only initialize SHOULD clauses if they haven't been initialized already
-            if (config.Should != null)
-            {
-                for (int i = 0; i < config.Should.Count; i++)
-                {
-                    var shouldClause = config.Should[i];
-                    // Check if this clause was already initialized as part of MUST clauses
-                    bool alreadyInitialized = config.Must?.Contains(shouldClause) == true;
-                    if (!alreadyInitialized)
-                    {
-                        InitializeClauseWithContext(shouldClause, "SHOULD", i);
-                    }
-                }
-            }
-
-            // Process scoring config to calculate MaxVoucherAnte
+            // PostProcess to calculate MaxVoucherAnte and other metrics
             scoringConfig.PostProcess();
 
             // Create callback for CSV output - use custom callback if provided, otherwise console output
@@ -391,22 +366,12 @@ namespace Motely.Executors
                 }
             }
 
-            // Use specialized filter system
+            // Use specialized filter system - DON'T GROUP! Chain each clause separately!
+            // config.PostProcess() already initialized all clauses!
             List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses = config.Must?.ToList() ?? [];
 
-            // Initialize parsed enums for all MUST clauses with helpful errors
-            for (int i = 0; i < mustClauses.Count; i++)
-            {
-                InitializeClauseWithContext(mustClauses[i], "MUST", i);
-            }
-
-            Dictionary<
-                FilterCategory,
-                List<MotelyJsonConfig.MotleyJsonFilterClause>
-            > clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
-
             // If no MUST clauses, check if we have mustNot clauses to use as a composite filter
-            if (clausesByCategory.Count == 0)
+            if (mustClauses.Count == 0)
             {
                 if (config.MustNot != null && config.MustNot.Count > 0)
                 {
@@ -470,10 +435,16 @@ namespace Motely.Executors
                     if (_params.ProgressCallback != null)
                         compositeSettings = compositeSettings.WithProgressCallback(_params.ProgressCallback);
 
-                    if (seeds != null)
-                        return (IMotelySearch)compositeSettings.WithListSearch(seeds, preSorted).Start();
+                    // Configure search mode
+                    if (_params.RandomSeeds.HasValue)
+                        compositeSettings = compositeSettings.WithRandomSearch(_params.RandomSeeds.Value);
+                    else if (seeds != null)
+                        compositeSettings = compositeSettings.WithListSearch(seeds, preSorted);
                     else
-                        return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
+                        compositeSettings = compositeSettings.WithSequentialSearch();
+
+                    // Start search
+                    return (IMotelySearch)compositeSettings.Start();
                 }
 
                 // No MUST or MUSTNOT clauses - use passthrough filter (accept all seeds, score via SHOULD)
@@ -526,9 +497,189 @@ namespace Motely.Executors
                     return passthroughSettings.WithSequentialSearch().Start();
             }
 
-            // Boss filter now works with proper ante-loop structure
+            // Chain each Must clause as a separate filter (vector -> vector -> vector -> ...)
+            // First clause becomes primary filter
+            var firstClause = mustClauses[0];
 
-            // BYPASS BROKEN CHAINING: Use composite filter for multiple categories
+            if (!_params.Quiet)
+            {
+                Console.WriteLine($"[CHAINING] Primary filter: {firstClause.ItemTypeEnum}");
+            }
+
+            // Create primary filter from SINGLE clause
+            var primaryFilter = CreateSingleClauseFilterDesc(firstClause);
+            dynamic searchSettings = CreateSearchSettings(primaryFilter, firstClause.ItemTypeEnum);
+
+            // Chain remaining clauses with WithAdditionalFilter
+            for (int i = 1; i < mustClauses.Count; i++)
+            {
+                var clause = mustClauses[i];
+                var additionalFilter = CreateSingleClauseFilterDesc(clause);
+                searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
+
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"   + Chained filter {i}: {clause.ItemTypeEnum}");
+                }
+            }
+
+            // Chain mustNot clauses as inverted filters
+            if (config.MustNot != null && config.MustNot.Count > 0)
+            {
+                foreach (var clause in config.MustNot)
+                {
+                    clause.IsInverted = true;
+                    var invertedFilter = CreateSingleClauseFilterDesc(clause);
+                    searchSettings = searchSettings.WithAdditionalFilter(invertedFilter);
+                }
+            }
+
+            // Apply all settings
+            if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck deck))
+                searchSettings = searchSettings.WithDeck(deck);
+            if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake stake))
+                searchSettings = searchSettings.WithStake(stake);
+
+            searchSettings = searchSettings.WithThreadCount(_params.Threads);
+            searchSettings = searchSettings.WithBatchCharacterCount(_params.BatchSize);
+            searchSettings = searchSettings.WithStartBatchIndex((long)_params.StartBatch);
+            if (_params.EndBatch > 0)
+                searchSettings = searchSettings.WithEndBatchIndex((long)_params.EndBatch);
+
+            searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
+            searchSettings = searchSettings.WithCsvOutput(true);
+
+            if (_params.Quiet)
+                searchSettings = searchSettings.WithQuietMode(true);
+            if (_params.ProgressCallback != null)
+                searchSettings = searchSettings.WithProgressCallback(_params.ProgressCallback);
+
+            // Configure search mode
+            if (_params.RandomSeeds.HasValue)
+                searchSettings = searchSettings.WithRandomSearch(_params.RandomSeeds.Value);
+            else if (seeds != null)
+                searchSettings = searchSettings.WithListSearch(seeds, preSorted);
+            else
+                searchSettings = searchSettings.WithSequentialSearch();
+
+            // Start search
+            return (IMotelySearch)searchSettings.Start();
+        }
+
+        // Helper: Create filter descriptor for a SINGLE clause
+        private static IMotelySeedFilterDesc CreateSingleClauseFilterDesc(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        {
+            var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clause };
+
+            return clause.ItemTypeEnum switch
+            {
+                MotelyFilterItemType.Joker => new MotelyJsonJokerFilterDesc(
+                    MotelyJsonJokerFilterClause.CreateCriteria(
+                        MotelyJsonJokerFilterClause.ConvertClauses(singleClauseList)
+                    )
+                ),
+                MotelyFilterItemType.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                    MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                        MotelyJsonSoulJokerFilterClause.ConvertClauses(singleClauseList)
+                    )
+                ),
+                MotelyFilterItemType.Voucher => new MotelyJsonVoucherFilterDesc(
+                    MotelyJsonVoucherFilterClause.CreateCriteria(
+                        MotelyJsonVoucherFilterClause.ConvertClauses(singleClauseList)
+                    )
+                ),
+                MotelyFilterItemType.TarotCard => new MotelyJsonTarotCardFilterDesc(
+                    MotelyJsonTarotFilterClause.CreateCriteria(
+                        MotelyJsonTarotFilterClause.ConvertClauses(singleClauseList)
+                    )
+                ),
+                MotelyFilterItemType.PlanetCard => new MotelyJsonPlanetFilterDesc(
+                    MotelyJsonPlanetFilterClause.CreateCriteria(
+                        MotelyJsonPlanetFilterClause.ConvertClauses(singleClauseList)
+                    )
+                ),
+                MotelyFilterItemType.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
+                    MotelyJsonSpectralFilterClause.CreateCriteria(
+                        MotelyJsonSpectralFilterClause.ConvertClauses(singleClauseList)
+                    )
+                ),
+                MotelyFilterItemType.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
+                    MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(singleClauseList)
+                ),
+                MotelyFilterItemType.Boss => new MotelyJsonBossFilterDesc(
+                    MotelyJsonFilterClauseExtensions.CreateBossCriteria(singleClauseList)
+                ),
+                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => new MotelyJsonTagFilterDesc(
+                    MotelyJsonFilterClauseExtensions.CreateTagCriteria(singleClauseList)
+                ),
+                MotelyFilterItemType.Event => new MotelyJsonEventFilterDesc(
+                    MotelyJsonFilterClauseExtensions.CreateEventCriteria(singleClauseList)
+                ),
+                MotelyFilterItemType.ErraticRank => new MotelyJsonErraticRankFilterDesc(
+                    clause.RankEnum!.Value,
+                    clause.Min ?? 1
+                ),
+                MotelyFilterItemType.ErraticSuit => new MotelyJsonErraticSuitFilterDesc(
+                    clause.SuitEnum!.Value,
+                    clause.Min ?? 1
+                ),
+                MotelyFilterItemType.And or MotelyFilterItemType.Or => new MotelyCompositeFilterDesc(singleClauseList),
+                _ => throw new ArgumentException($"Unsupported filter type: {clause.ItemTypeEnum}")
+            };
+        }
+
+        // Helper: Create search settings for a filter (handles all filter types)
+        private static dynamic CreateSearchSettings(IMotelySeedFilterDesc filterDesc, MotelyFilterItemType itemType)
+        {
+            return itemType switch
+            {
+                MotelyFilterItemType.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
+                    (MotelyJsonJokerFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.SoulJoker => new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(
+                    (MotelyJsonSoulJokerFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.Voucher => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>(
+                    (MotelyJsonVoucherFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.TarotCard => new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>(
+                    (MotelyJsonTarotCardFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.PlanetCard => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>(
+                    (MotelyJsonPlanetFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.SpectralCard => new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>(
+                    (MotelyJsonSpectralCardFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.PlayingCard => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>(
+                    (MotelyJsonPlayingCardFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.Boss => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>(
+                    (MotelyJsonBossFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>(
+                    (MotelyJsonTagFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.Event => new MotelySearchSettings<MotelyJsonEventFilterDesc.MotelyJsonEventFilter>(
+                    (MotelyJsonEventFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.ErraticRank => new MotelySearchSettings<MotelyJsonErraticRankFilterDesc.MotelyJsonErraticRankFilter>(
+                    (MotelyJsonErraticRankFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.ErraticSuit => new MotelySearchSettings<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>(
+                    (MotelyJsonErraticSuitFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.And or MotelyFilterItemType.Or => new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
+                    (MotelyCompositeFilterDesc)filterDesc
+                ),
+                _ => throw new ArgumentException($"Unsupported search settings type: {itemType}")
+            };
+        }
+
+        // Keep old category-based code for now in case we need to revert
+        private IMotelySearch CreateSearchOLD_GROUPED(MotelyJsonConfig config, IEnumerable<string>? seeds, bool preSorted, MotelyJsonSeedScoreDesc scoreDesc, List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses)
+        {
+            Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
             List<FilterCategory> categories = [.. clausesByCategory.Keys];
 
             if (categories.Count > 1)
@@ -763,10 +914,12 @@ namespace Motely.Executors
                     MotelyJsonFilterClauseExtensions.CreateEventCriteria(primaryClauses)
                 ),
                 FilterCategory.ErraticRank => new MotelyJsonErraticRankFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateErraticRankCriteria(primaryClauses)
+                    primaryClauses[0].RankEnum!.Value,
+                    primaryClauses[0].Min ?? 1
                 ),
                 FilterCategory.ErraticSuit => new MotelyJsonErraticSuitFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateErraticSuitCriteria(primaryClauses)
+                    primaryClauses[0].SuitEnum!.Value,
+                    primaryClauses[0].Min ?? 1
                 ),
                 FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(primaryClauses)
@@ -910,10 +1063,12 @@ namespace Motely.Executors
                         MotelyJsonFilterClauseExtensions.CreateEventCriteria(clauses)
                     ),
                     FilterCategory.ErraticRank => new MotelyJsonErraticRankFilterDesc(
-                        MotelyJsonFilterClauseExtensions.CreateErraticRankCriteria(clauses)
+                        clauses[0].RankEnum!.Value,
+                        clauses[0].Min ?? 1
                     ),
                     FilterCategory.ErraticSuit => new MotelyJsonErraticSuitFilterDesc(
-                        MotelyJsonFilterClauseExtensions.CreateErraticSuitCriteria(clauses)
+                        clauses[0].SuitEnum!.Value,
+                        clauses[0].Min ?? 1
                     ),
                     FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
                         MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(clauses)
@@ -1120,17 +1275,14 @@ namespace Motely.Executors
             Console.WriteLine($"   Seeds passed filter: {search.FilteredSeeds}");
             Console.WriteLine($"   Seeds passed cutoff: {search.MatchingSeeds}");
 
-            TimeSpan elapsed = search.ElapsedTime;
-            if (elapsed.TotalMilliseconds > 100)
-            {
-                Console.WriteLine($"   Duration: {elapsed:hh\\:mm\\:ss\\.fff}");
+            
+                Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
                 Console.WriteLine(
                     $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
                 );
-                double speed = (double)search.TotalSeedsSearched / elapsed.TotalMilliseconds;
+                double speed = (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds;
                 Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
-            }
-            Console.WriteLine(new string('═', 60));
+            
 
             // Only show "To continue" message if search was cancelled (interrupted)
             if (wasCancelled)
