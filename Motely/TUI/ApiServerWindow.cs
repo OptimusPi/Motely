@@ -313,9 +313,46 @@ public class ApiServerWindow : Window
         {
             try
             {
-                // Use .NET HTTP hosting instead of external cloudflared dependency
-                LogMessage("[TUNNEL] External tunneling not supported - use local network access or port forwarding");
-                throw new NotSupportedException("External tunneling removed - use local network or manual port forwarding");
+                var cloudflared = FindCloudflared();
+                if (string.IsNullOrEmpty(cloudflared))
+                    throw new FileNotFoundException("cloudflared not found. Install from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/");
+
+                LogMessage($"[TUNNEL] Found cloudflared: {cloudflared}");
+                LogMessage("[TUNNEL] Starting free trycloudflare.com tunnel...");
+
+                var uri = new Uri(_serverUrl);
+                var port = uri.Port;
+
+                var psi = new ProcessStartInfo
+                {
+                    FileName = cloudflared,
+                    Arguments = $"tunnel --url http://localhost:{port}",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+
+                _tunnelProcess = new Process { StartInfo = psi };
+                _tunnelProcess.OutputDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data)) { LogMessage($"[TUNNEL] {e.Data}"); ParseTunnelOutput(e.Data); }
+                };
+                _tunnelProcess.ErrorDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data)) { LogMessage($"[TUNNEL] {e.Data}"); ParseTunnelOutput(e.Data); }
+                };
+
+                _tunnelProcess.Start();
+                _tunnelProcess.BeginOutputReadLine();
+                _tunnelProcess.BeginErrorReadLine();
+
+                App?.Invoke(() =>
+                {
+                    _tunnelButton.Text = "Stop Tunnel";
+                    _tunnelButton.Enabled = true;
+                    _tunnelButton.SetScheme(BalatroTheme.RedButton);
+                });
             }
             catch (Exception ex)
             {
@@ -326,10 +363,74 @@ public class ApiServerWindow : Window
                     _tunnelLabel.Text = "";
                 });
                 LogMessage($"[TUNNEL] Error: {ex.Message}");
-                LogMessage("[TUNNEL] Use local network access or manual port forwarding instead");
                 _tunnelProcess = null;
             }
         });
+    }
+
+    private void ParseTunnelOutput(string line)
+    {
+        if (line.Contains("trycloudflare.com"))
+        {
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                if (part.StartsWith("https://") && part.Contains("trycloudflare.com"))
+                {
+                    var tunnelUrl = part.TrimEnd('/', '.', ',');
+                    App?.Invoke(() => _tunnelLabel.Text = tunnelUrl);
+                    LogMessage($"[TUNNEL] Public URL: {tunnelUrl}");
+                    break;
+                }
+            }
+        }
+    }
+
+    private string? FindCloudflared()
+    {
+        var candidates = new List<string>();
+        if (OperatingSystem.IsWindows())
+        {
+            candidates.Add("cloudflared.exe");
+            candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "cloudflared", "cloudflared.exe"));
+            candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "cloudflared", "cloudflared.exe"));
+            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
+                if (!string.IsNullOrEmpty(dir)) candidates.Add(Path.Combine(dir, "cloudflared.exe"));
+        }
+        else
+        {
+            candidates.Add("cloudflared");
+            candidates.Add("/usr/local/bin/cloudflared");
+            candidates.Add("/usr/bin/cloudflared");
+            candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin", "cloudflared"));
+            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':'))
+                if (!string.IsNullOrEmpty(dir)) candidates.Add(Path.Combine(dir, "cloudflared"));
+        }
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                if (File.Exists(candidate)) return candidate;
+                if (candidate == "cloudflared" || candidate == "cloudflared.exe")
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = candidate,
+                        Arguments = "--version",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    };
+                    using var proc = Process.Start(psi);
+                    proc?.WaitForExit(2000);
+                    if (proc?.ExitCode == 0) return candidate;
+                }
+            }
+            catch { }
+        }
+        return null;
     }
 
     private void StopTunnel()
@@ -372,8 +473,6 @@ public class ApiServerWindow : Window
             // Window closed while logging - ignore
         }
     }
-
-    // Removed FindCloudflared() - external tunnel dependencies removed for cross-platform compatibility
 
     private void CopyToClipboard(string text)
     {
