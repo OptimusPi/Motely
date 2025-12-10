@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Motely.Filters;
 
 namespace Motely.Filters;
 
@@ -20,10 +17,11 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(
 
     public MotelyJsonSoulJokerEditionOnlyFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
-        // Cache soul joker edition streams for all antes
+        // Cache soul joker EDITION-ONLY streams for all antes (ultra-fast!)
         for (int ante = _criteria.MinAnte; ante <= _criteria.MaxAnte; ante++)
         {
-            ctx.CacheSoulJokerStream(ante);
+            ctx.CacheSoulJokerStream(ante,
+                MotelyJokerFixedRarityStreamFlags.ExcludeJokerType | MotelyJokerFixedRarityStreamFlags.ExcludeStickers);
         }
 
         return new MotelyJsonSoulJokerEditionOnlyFilter(
@@ -77,8 +75,10 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(
                     if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
                         continue;
 
-                    // Create edition stream for this ante
-                    var editionStream = ctx.CreateSoulJokerStream(ante);
+                    // Create edition-ONLY stream for this ante (ULTRA FAST!)
+                    // ExcludeJokerType + ExcludeStickers = only check edition PRNG (1 cheap call!)
+                    var editionStream = ctx.CreateSoulJokerStream(ante,
+                        MotelyJokerFixedRarityStreamFlags.ExcludeJokerType | MotelyJokerFixedRarityStreamFlags.ExcludeStickers);
 
                     // Check first soul joker edition
                     clauseMatched |= VectorEnum256.Equals(

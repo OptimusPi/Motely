@@ -1,8 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Text;
-using VerifyTests;
-using DiffPlex;
-using DiffPlex.DiffBuilder;
 
 namespace Motely.Tests;
 

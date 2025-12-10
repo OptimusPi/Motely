@@ -1,8 +1,4 @@
-using System;
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using Terminal.Gui;
 
 namespace Motely.TUI;
 

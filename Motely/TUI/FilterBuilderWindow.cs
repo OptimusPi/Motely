@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using Motely.Filters;
-using Terminal.Gui;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
