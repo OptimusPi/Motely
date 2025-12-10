@@ -76,22 +76,26 @@ function setJamlValue(value) {
 // Toggle between Monaco and Plain text editor
 let usePlainEditor = false;
 
-function toggleEditorMode() {
+function setEditorMode(mode) {
     const monacoContainer = document.getElementById('monacoEditor');
     const plainTextarea = document.getElementById('filterJaml');
-    const toggleBtn = document.getElementById('editorToggle');
+    const monacoBtn = document.getElementById('monacoBtn');
+    const plainBtn = document.getElementById('plainBtn');
 
-    usePlainEditor = !usePlainEditor;
-
-    if (usePlainEditor) {
+    if (mode === 'plain') {
         // Switch to plain editor
+        usePlainEditor = true;
+
         // Sync content from Monaco to textarea
         if (window.jamlEditor) {
             plainTextarea.value = window.jamlEditor.getValue();
         }
         monacoContainer.style.display = 'none';
         plainTextarea.style.display = 'block';
-        toggleBtn.textContent = 'Monaco';
+
+        // Update button states
+        monacoBtn.classList.remove('active');
+        plainBtn.classList.add('active');
 
         // Override getJamlValue/setJamlValue to use textarea
         window.getJamlValue = () => plainTextarea.value;
@@ -104,13 +108,18 @@ function toggleEditorMode() {
         plainTextarea.oninput = () => onUserJamlEdit();
     } else {
         // Switch to Monaco editor
+        usePlainEditor = false;
+
         // Sync content from textarea to Monaco
         if (window.jamlEditor) {
             window.jamlEditor.setValue(plainTextarea.value);
         }
         plainTextarea.style.display = 'none';
         monacoContainer.style.display = 'block';
-        toggleBtn.textContent = 'Plain';
+
+        // Update button states
+        plainBtn.classList.remove('active');
+        monacoBtn.classList.add('active');
 
         // Restore Monaco-based getJamlValue/setJamlValue
         window.getJamlValue = () => window.jamlEditor ? window.jamlEditor.getValue() : plainTextarea.value;
@@ -219,17 +228,17 @@ function onUserJamlEdit() {
 // ================================================
 // Initialization
 // ================================================
-document.addEventListener('DOMContentLoaded', function() {
-    loadFilters();
+document.addEventListener('DOMContentLoaded', async function() {
+    // Load filters FIRST (so dropdown is populated)
+    await loadFilters();
     startTaglineRotation();
-    
-    
+
     // Load search ID from URL if present and check its status
     const urlParams = new URLSearchParams(window.location.search);
     const searchId = urlParams.get('search');
     if (searchId) {
         currentSearchId = searchId;
-        checkExistingSearchStatus(searchId);
+        await checkExistingSearchStatus(searchId);
     }
 });
 
@@ -394,7 +403,15 @@ async function runSearch() {
 
     isSearching = true;
     searchAborted = false;
-    searchResults = [];
+
+    // Only clear results if filter changed! Same filter = keep accumulating via fertilizer!
+    const filterChanged = currentSearchJaml && currentSearchJaml !== filterJaml.trim();
+    if (filterChanged || !currentSearchJaml) {
+        searchResults = []; // Clear only if filter changed or first search
+        showStatus('Filter changed - clearing old results...');
+    } else {
+        showStatus('Same filter - keeping existing results...');
+    }
 
     const searchBtn = document.getElementById('searchBtn');
 
@@ -449,14 +466,28 @@ async function runSearch() {
         searchBtn.textContent = 'Stop';
         searchBtn.className = 'button-danger';
 
-        // Show immediate fertilizer results
-        if (data.results && data.results.length > 0) {
-            searchResults = data.results;
-            displayResults({ results: searchResults, columns: data.columns });
-            document.getElementById('shareBtn').disabled = false;
+        // Handle fertilizer results based on whether filter changed
+        if (filterChanged || !currentSearchJaml) {
+            // Filter changed - replace with new fertilizer results (or empty if none)
+            searchResults = data.results || [];
+        } else {
+            // Same filter - merge new fertilizer results with existing ones
+            if (data.results && data.results.length > 0) {
+                mergeResults(data.results);
+            }
+            // Keep existing searchResults if fertilizer returned empty
         }
 
+        // ALWAYS update display
+        if (searchResults.length > 0) {
+            document.getElementById('shareBtn').disabled = false;
+        }
+        displayResults({ results: searchResults, columns: data.columns || ['seed', 'score'] });
+
         // POST /search returns isBackgroundRunning=true, so we KNOW it's running
+        // Update filter dots to show this search is now running
+        loadFilters();
+
         // Start polling after 2s delay - the search IS running, we just need to wait for results
         showStatus('Search started...');
         await pollSearchStatus(2000);
@@ -525,8 +556,12 @@ async function pollSearchStatus(delay = 1000) {
                 updateSearchButton('CONTINUE', 0);
                 showStatus(`Stopped at batch ${data.currentBatch || 0} | ${(seedsSearched / 1000000).toFixed(1)}M searched | ${foundCount} found`);
                 isSearching = false;
+                loadFilters(); // Update dots when search stops
                 return;
             }
+
+            // Update filter dots EVERY poll - no hiding info!
+            loadFilters();
 
             // Progressive backoff: 1→2→3→4→5→5→5... (min 1s, max 5s between polls)
             pollCount++;
@@ -597,14 +632,26 @@ async function stopSearch() {
 }
 
 function shareSearch() {
-    if (!currentSearchId) {
-        alert('No active search to share');
+    // Share current filter - works even if search isn't running!
+    let searchIdToShare = currentSearchId;
+
+    // If no currentSearchId, try to get from selected dropdown item
+    if (!searchIdToShare) {
+        const dropdown = document.getElementById('savedSearches');
+        const idx = dropdown.value;
+        if (idx !== '' && savedFilters[parseInt(idx)]) {
+            searchIdToShare = savedFilters[parseInt(idx)].searchId;
+        }
+    }
+
+    if (!searchIdToShare) {
+        alert('Please select a filter first');
         return;
     }
-    
+
     const url = new URL(window.location);
-    url.searchParams.set('search', currentSearchId);
-    
+    url.searchParams.set('search', searchIdToShare);
+
     navigator.clipboard.writeText(url.toString()).then(() => {
         const btn = document.getElementById('shareBtn');
         const originalText = btn.textContent;
@@ -753,10 +800,12 @@ async function loadFilters() {
             // Handle both old (array) and new (object with filters array) response formats
             savedFilters = data.filters || data;
             const dropdown = document.getElementById('savedSearches');
-            dropdown.innerHTML = '<option value="">Select a saved search...</option>';
+            dropdown.innerHTML = '<option value="">Select a filter...</option>';
             savedFilters.forEach((filter, i) => {
-                const runningIndicator = (data.runningSearchId === filter.searchId && data.isSearchRunning) ? ' 🔍' : '';
-                dropdown.innerHTML += `<option value="${i}">${filter.name}${runningIndicator}</option>`;
+                // Show GREEN dot if this filter is running, RED dot if not
+                const isRunning = data.runningSearchId === filter.searchId && data.isSearchRunning;
+                const statusDot = isRunning ? '🟢' : '🔴';
+                dropdown.innerHTML += `<option value="${i}">${statusDot} ${filter.name}</option>`;
             });
         }
     } catch (e) {
@@ -807,6 +856,9 @@ async function loadSavedSearch() {
             extractFromJaml(filter.filterJaml, 'deck') || 'Red',
             extractFromJaml(filter.filterJaml, 'stake') || 'White'
         );
+
+        // Update URL when filter is selected (before fetching status)
+        updateUrlWithSearchId(searchId);
 
         // Check if this search exists and get its status
         try {
@@ -928,6 +980,13 @@ async function checkExistingSearchStatus(searchId) {
             currentSearchJaml = data.filterJaml.trim();
         }
 
+        // Pre-select the dropdown if this filter exists in savedFilters
+        const dropdown = document.getElementById('savedSearches');
+        const filterIndex = savedFilters.findIndex(f => f.searchId === searchId);
+        if (filterIndex >= 0) {
+            dropdown.value = filterIndex.toString();
+        }
+
         // Show existing results
         if (data.results && data.results.length > 0) {
             searchResults = data.results;
@@ -980,72 +1039,58 @@ async function checkExistingSearchStatus(searchId) {
 // ================================================
 // Seed Analysis
 // ================================================
+let currentBlueprintUrl = '';
+
 async function quickAnalyze(seed) {
     // Switch to analyze tab
     switchTab('analyze', document.querySelector('.tab:nth-child(3)'));
-    
-    // Populate the seed field
-    document.getElementById('analyzeSeed').value = seed;
-    
+
     // Get deck/stake from current filter if available
     const filterJaml = getJamlValue();
     const deckMatch = filterJaml.match(/^deck:\s*(.+)$/m);
     const stakeMatch = filterJaml.match(/^stake:\s*(.+)$/m);
-    
-    if (deckMatch) {
-        document.getElementById('analyzeDeck').value = deckMatch[1].trim();
-    }
-    if (stakeMatch) {
-        document.getElementById('analyzeStake').value = stakeMatch[1].trim();
-    }
-    
-    // Auto-analyze immediately
-    await analyzeSeed();
+
+    const deck = deckMatch ? deckMatch[1].trim() : 'Red';
+    const stake = stakeMatch ? stakeMatch[1].trim() : 'White';
+
+    // Load Blueprint immediately
+    loadBlueprint(seed, deck, stake);
 }
 
-async function analyzeSeed() {
-    const seed = document.getElementById('analyzeSeed').value.trim().toUpperCase();
-    const deck = document.getElementById('analyzeDeck').value;
-    const stake = document.getElementById('analyzeStake').value;
+function loadBlueprint(seed, deck, stake) {
     const resultDiv = document.getElementById('analyzeResult');
 
-    if (!seed) {
-        resultDiv.innerHTML = '<div class="status-message error">Please enter a seed!</div>';
-        return;
+    // Build Blueprint URL - uses "Red Deck" format not just "Red"
+    const deckParam = encodeURIComponent(deck + ' Deck');
+    const stakeParam = encodeURIComponent(stake + ' Stake');
+
+    // Try to control Blueprint view with URL params (experimental!)
+    // Common param names: view, tab, mode, page
+    const blueprintUrl = `https://miaklwalker.github.io/Blueprint/?seed=${seed}&deck=${deckParam}&antes=8&stake=${stakeParam}&view=text&tab=text`;
+
+    // Store for "open in new tab" link
+    currentBlueprintUrl = blueprintUrl;
+
+    // Wire up "open in new tab" link
+    const openTabLink = document.getElementById('openBlueprintTab');
+    if (openTabLink) {
+        openTabLink.onclick = (e) => {
+            e.preventDefault();
+            if (currentBlueprintUrl) {
+                window.open(currentBlueprintUrl, '_blank');
+            }
+        };
     }
 
-    if (seed.length !== 8 || !/^[A-Z0-9]{8}$/.test(seed)) {
-        resultDiv.innerHTML = '<div class="status-message error">Seed must be 8 characters (A-Z, 0-9)</div>';
-        return;
-    }
-
-    resultDiv.innerHTML = '<div class="status-message loading">🔍 Analyzing seed...</div>';
-
-    try {
-        const response = await fetch('/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ seed, deck, stake })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            resultDiv.innerHTML = `<div class="status-message error">Analysis failed: ${data.error}</div>`;
-            return;
-        }
-
-        // Display analysis results - no fanfare, just the data
-        resultDiv.innerHTML = `
-            <div class="analyze-output">
-                <div class="analyze-header">${seed} | ${deck} | ${stake}</div>
-                <pre class="analyze-pre">${data.analysis}</pre>
-            </div>
-        `;
-
-    } catch (error) {
-        resultDiv.innerHTML = `<div class="status-message error">Analysis error: ${error.message}</div>`;
-    }
+    // Embed Blueprint in fullscreen iframe (no scrollbars, fills container)
+    resultDiv.innerHTML = `
+        <iframe
+            src="${blueprintUrl}"
+            style="width: 100%; height: 100%; border: none;"
+            title="Blueprint Seed Analysis"
+            sandbox="allow-scripts allow-same-origin"
+        ></iframe>
+    `;
 }
 
 // ================================================

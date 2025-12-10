@@ -969,5 +969,146 @@ label {
 
 .editor-buttons {
   display: flex;
-  gap: 4px;
+  gap: 8px;
+  align-items: center;
+}
+
+.editor-toggle-group {
+  display: flex;
+  gap: 0;
+  border: 1px solid #565b5c;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  background: #2a3a3f;
+  color: #888;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-right: 1px solid #565b5c;
+}
+
+.toggle-btn:last-child {
+  border-right: none;
+}
+
+.toggle-btn.active {
+  background: #33464b;
+  color: #4a9eff;
+  font-weight: bold;
+}
+
+.toggle-btn:not(.active):hover {
+  background: #344a4f;
+  color: #b9c2d2;
+}
+
+/* Analyze Tab - Fullscreen Blueprint */
+.analyze-fullscreen {
+  padding: 0 !important;
+}
+
+.analyze-header {
+  padding: 12px 12px 8px 12px;
+  background: #1a2a2f;
+  border-bottom: 1px solid #565b5c;
+  flex-shrink: 0;
+}
+
+.analyze-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.analyze-placeholder {
+  text-align: center;
+  color: #888;
+}
+
+/* ================================================ */
+/* MOBILE OPTIMIZATIONS - iPhone & Mobile Devices */
+/* ================================================ */
+@media (max-width: 768px) {
+  /* Stack side-by-side panels vertically */
+  .side-by-side {
+    flex-direction: column !important;
+  }
+
+  .left-panel, .right-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Reduce Monaco editor height on mobile */
+  .monaco-container {
+    height: 250px !important; /* Shorter on mobile */
+  }
+
+  .plain-editor {
+    height: 250px !important;
+  }
+
+  /* Make buttons bigger for touch */
+  .toggle-btn {
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    min-height: 44px; /* iOS tap target minimum */
+  }
+
+  .button-small, .button-tiny {
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    min-height: 44px;
+  }
+
+  .delete-btn {
+    min-height: 44px;
+    padding: 10px 14px !important;
+  }
+
+  /* Make Start Batch / Cutoff Score inline on mobile (save vertical space) */
+  .action-buttons {
+    flex-wrap: wrap !important;
+  }
+
+  .action-buttons > div {
+    margin-left: 0 !important;
+    margin-right: 8px !important;
+  }
+
+  /* Results table horizontal scroll */
+  .results-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .results-table {
+    min-width: 600px; /* Force horizontal scroll if too many columns */
+  }
+
+  /* Bigger tap targets for dropdown */
+  select {
+    min-height: 44px !important;
+    font-size: 16px !important; /* Prevents iOS auto-zoom */
+  }
+
+  input[type="number"] {
+    font-size: 16px !important; /* Prevents iOS auto-zoom */
+  }
+
+  /* Compact header on mobile */
+  .jaml-logo {
+    font-size: 1.4rem !important;
+  }
+
+  .jaml-tagline {
+    font-size: 0.8rem !important;
+  }
 }
