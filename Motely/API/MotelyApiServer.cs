@@ -671,12 +671,12 @@ public class MotelyApiServer
             response.AddHeader("Cross-Origin-Opener-Policy", "unsafe-none");
             response.AddHeader("Cross-Origin-Resource-Policy", "cross-origin");
 
-            // Content Security Policy - allow Monaco editor from CDN and inline scripts
+            // Content Security Policy - everything bundled locally now!
             response.AddHeader("Content-Security-Policy",
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
-                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com data:; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                "style-src 'self' 'unsafe-inline'; " +
+                "font-src 'self' data:; " +
                 "img-src 'self' data: https:; " +
                 "connect-src 'self'; " +
                 "worker-src 'self' blob:");
@@ -702,6 +702,10 @@ public class MotelyApiServer
             else if (request.HttpMethod == "GET" && path == "/script.js")
             {
                 await ServeFileAsync(response, "wwwroot/script.js", "application/javascript");
+            }
+            else if (request.HttpMethod == "GET" && path == "/js-yaml.min.js")
+            {
+                await ServeFileAsync(response, "wwwroot/js-yaml.min.js", "application/javascript");
             }
             else if (request.HttpMethod == "GET" && path.StartsWith("/monaco-editor/"))
             {
