@@ -30,60 +30,15 @@ public class BackgroundSearchState
     public double SeedsPerMs { get; set; } // Current search speed
     public int EffectiveCutoff { get; set; } // Cutoff used for this search (user override or smart)
     public JsonSearchExecutor? Search { get; set; }
-    public DuckDBConnection? Connection { get; set; }
-    public DuckDBAppender? Appender { get; set; }
+    public MotelySearchDatabase? Database { get; set; }
     public string? FilterJamlHash { get; set; } // Track if JAML changed to invalidate DB
 
     /// <summary>
-    /// Safely get top results from this search's connection (called by GET /search)
+    /// Get top results from search database (clean delegation pattern).
     /// </summary>
     public List<SearchResult> GetTopResults(int limit = 1000)
     {
-        var results = new List<SearchResult>();
-        if (Connection == null) return results;
-
-        try
-        {
-            // Flush appender before query so we see latest results (BSO pattern)
-            lock (this)
-            {
-                if (Appender != null)
-                {
-                    try
-                    {
-                        Appender.Dispose();
-                    }
-                    catch { /* ignore dispose errors */ }
-                    Appender = null;
-                }
-            }
-
-            using var cmd = Connection.CreateCommand();
-            cmd.CommandText = $"SELECT * FROM results ORDER BY score DESC LIMIT {limit}";
-            using var reader = cmd.ExecuteReader();
-
-            while (reader.Read())
-            {
-                var tallies = new List<int>();
-                for (int i = 2; i < reader.FieldCount; i++)
-                {
-                    tallies.Add(reader.IsDBNull(i) ? 0 : reader.GetInt32(i));
-                }
-
-                results.Add(new SearchResult
-                {
-                    Seed = reader.GetString(0),
-                    Score = reader.GetInt32(1),
-                    Tallies = tallies
-                });
-            }
-        }
-        catch
-        {
-            // Connection busy or error - return empty, fallback will use file
-        }
-
-        return results;
+        return Database?.GetTopResults(limit) ?? new List<SearchResult>();
     }
 }
 
@@ -138,46 +93,14 @@ public class MotelyApiServer
         // 2. Cancel the Motely executor (calls Pause internally - immediate stop)
         bgState.Search?.Cancel();
 
-        // 4. Close appender first (may fail if duplicates exist - that's ok)
+        // 4. Save batch position and checkpoint
         try
         {
-            bgState.Appender?.Close();
-        }
-        catch (Exception ex)
-        {
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] Appender flush warning (duplicates ok): {ex.Message}");
-        }
-        bgState.Appender = null;
-
-        // 5. Get DB path BEFORE closing (for fertilizer dump after close)
-        string? searchDbPath = null;
-        if (bgState.Connection != null)
-        {
-            searchDbPath = bgState.Connection.ConnectionString
-                .Replace("Data Source=", "")
-                .Trim();
-        }
-
-        // 6. Save batch position to DuckDB BEFORE closing connection
-        try
-        {
-            if (bgState.Connection != null)
+            if (bgState.Database != null)
             {
-                using var saveCmd = bgState.Connection.CreateCommand();
-                saveCmd.CommandText = @"
-                    INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                    VALUES (1, 2, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT (id) DO UPDATE SET
-                        last_completed_batch = excluded.last_completed_batch,
-                        updated_at = excluded.updated_at";
-                saveCmd.Parameters.Add(new DuckDB.NET.Data.DuckDBParameter(bgState.CurrentBatch));
-                saveCmd.ExecuteNonQuery();
+                bgState.Database.SaveBatchPosition(bgState.CurrentBatch, bgState.BatchSize);
+                bgState.Database.Checkpoint();
                 _logCallback($"[{DateTime.Now:HH:mm:ss}] Saved batch position {bgState.CurrentBatch} to DB");
-
-                // Flush WAL to main DB file
-                using var checkpointCmd = bgState.Connection.CreateCommand();
-                checkpointCmd.CommandText = "FORCE CHECKPOINT";
-                checkpointCmd.ExecuteNonQuery();
             }
         }
         catch (Exception ex)
@@ -185,15 +108,21 @@ public class MotelyApiServer
             _logCallback($"[{DateTime.Now:HH:mm:ss}] Warning: Failed to save batch position: {ex.Message}");
         }
 
-        // 7. Close the connection
+        // 5. Get DB path for fertilizer dump
+        var searchDbPath = bgState.Database?.DatabasePath;
+
+        // 6. Dispose database (closes connections, checkpoints)
         try
         {
-            bgState.Connection?.Close();
-            bgState.Connection = null;
+            bgState.Database?.Dispose();
+            bgState.Database = null;
         }
-        catch { /* ignore */ }
+        catch (Exception ex)
+        {
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Warning: Failed to dispose database: {ex.Message}");
+        }
 
-        // 8. Dump seeds to fertilizer AFTER closing search connection (avoids file lock conflict)
+        // 7. Dump seeds to fertilizer AFTER closing search DB (avoids file lock conflict)
         if (!string.IsNullOrEmpty(searchDbPath))
         {
             try
@@ -244,12 +173,28 @@ public class MotelyApiServer
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _listener = new HttpListener();
+
+        // Add localhost prefix for local access
         _listener.Prefixes.Add(Url);
+
+        // ALSO add wildcard prefix for Cloudflare tunnels (accepts any hostname on this port)
+        // Uses '+' which means "any hostname" - requires admin on Windows but works with tunnels!
+        try
+        {
+            _listener.Prefixes.Add($"http://+:{_port}/");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Added wildcard prefix for Cloudflare tunnels: http://+:{_port}/");
+        }
+        catch (Exception ex)
+        {
+            // If wildcard fails (no admin), fallback to localhost only
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Wildcard prefix failed (need admin): {ex.Message}");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Server will only accept localhost connections");
+        }
 
         try
         {
             _listener.Start();
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] API Server started on {Url}");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] API Server started on {Url} (+ wildcard if admin)");
 
             while (!_cts.Token.IsCancellationRequested)
             {
@@ -654,7 +599,7 @@ public class MotelyApiServer
             // Enable CORS with comprehensive headers
             // Allow specific trusted domains (Cloudflare tunnels, genie app, localhost, and wildcard for dev)
             var origin = request.Headers["Origin"];
-            var allowedOrigins = new[] { "*.8pi.me", "www.balatrogenie.app", "localhost", "127.0.0.1" };
+            var allowedOrigins = new[] { "*.8pi.me", "*.trycloudflare.com", "balatrogenie.app", "www.balatrogenie.app", "localhost", "127.0.0.1" };
             var isAllowedOrigin = !string.IsNullOrEmpty(origin) && allowedOrigins.Any(allowed =>
                 allowed.StartsWith('*') ? origin.EndsWith(allowed[1..]) : origin.Contains(allowed));
 
@@ -671,15 +616,17 @@ public class MotelyApiServer
             response.AddHeader("Cross-Origin-Opener-Policy", "unsafe-none");
             response.AddHeader("Cross-Origin-Resource-Policy", "cross-origin");
 
-            // Content Security Policy - allow CDN for Monaco (faster + cached!)
+            // Content Security Policy - allow CDN for Monaco + Blueprint iframe!
             response.AddHeader("Content-Security-Policy",
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net blob:; " +
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
                 "font-src 'self' https://cdn.jsdelivr.net data:; " +
                 "img-src 'self' data: https:; " +
-                "connect-src 'self'; " +
-                "worker-src 'self' blob:");
+                "connect-src 'self' https://cdn.jsdelivr.net blob:; " +
+                "frame-src https://miaklwalker.github.io; " +
+                "child-src 'self' blob: https://cdn.jsdelivr.net; " +
+                "worker-src 'self' blob: https://cdn.jsdelivr.net;");
 
             if (request.HttpMethod == "OPTIONS")
             {
@@ -702,10 +649,6 @@ public class MotelyApiServer
             else if (request.HttpMethod == "GET" && path == "/script.js")
             {
                 await ServeFileAsync(response, "wwwroot/script.js", "application/javascript");
-            }
-            else if (request.HttpMethod == "GET" && path == "/js-yaml.min.js")
-            {
-                await ServeFileAsync(response, "wwwroot/js-yaml.min.js", "application/javascript");
             }
             else if (request.HttpMethod == "GET" && path.StartsWith("/monaco-editor/"))
             {
@@ -950,111 +893,49 @@ public class MotelyApiServer
                 }
             }
 
-            bgState.Connection = new DuckDBConnection($"Data Source={dbPath}");
-            bgState.Connection.Open();
+            // Create database with clean abstraction (dual read/write connections!)
+            bgState.Database = new MotelySearchDatabase(dbPath, columnNames);
 
-            // Create results table with tally columns
-            using var createCmd = bgState.Connection.CreateCommand();
-            var tallyColumnsDef = tallyColumns.Count > 0
-                ? ", " + string.Join(", ", tallyColumns.Select((c, i) => $"tally{i} INTEGER"))
-                : "";
-            createCmd.CommandText = $@"
-                CREATE TABLE IF NOT EXISTS results (
-                    seed VARCHAR,
-                    score INTEGER{tallyColumnsDef},
-                    PRIMARY KEY (seed)
-                )";
-            createCmd.ExecuteNonQuery();
-
-            // Create search_state table (same schema as BalatroSeedOracle)
-            using var stateCmd = bgState.Connection.CreateCommand();
-            stateCmd.CommandText = @"
-                CREATE TABLE IF NOT EXISTS search_state (
-                    id INTEGER PRIMARY KEY,
-                    batch_size INTEGER,
-                    last_completed_batch BIGINT,
-                    updated_at TIMESTAMP
-                )";
-            stateCmd.ExecuteNonQuery();
-
-            // Load persisted batch position (survives server restart!)
-            // BUT if filter was updated OR batch size changed, CLEAR the search_state and start fresh!
-            if (filterWasUpdated)
+            // Load persisted batch position (or reset if filter/batch size changed)
+            if (!filterWasUpdated)
             {
-                using var clearCmd = bgState.Connection.CreateCommand();
-                clearCmd.CommandText = "DELETE FROM search_state";
-                clearCmd.ExecuteNonQuery();
-                bgState.StartBatch = 0;
-                _logCallback($"[{DateTime.Now:HH:mm:ss}] Filter changed - cleared search_state, starting from batch 0");
-            }
-            else
-            {
-                // Check if batch size changed - if so, reset!
-                using var checkBatchSizeCmd = bgState.Connection.CreateCommand();
-                checkBatchSizeCmd.CommandText = "SELECT batch_size FROM search_state WHERE id = 1";
-                var savedBatchSize = checkBatchSizeCmd.ExecuteScalar();
-                if (savedBatchSize != null && savedBatchSize != DBNull.Value)
+                var (savedBatch, savedSize) = bgState.Database.GetLastBatchPosition();
+                if (savedBatch.HasValue && savedSize.HasValue)
                 {
-                    var oldBatchSize = Convert.ToInt32(savedBatchSize);
-                    if (oldBatchSize != requestedBatchSize)
+                    if (savedSize.Value != requestedBatchSize)
                     {
-                        _logCallback($"[{DateTime.Now:HH:mm:ss}] Batch size changed from {oldBatchSize} to {requestedBatchSize} - clearing search_state!");
-                        using var clearCmd = bgState.Connection.CreateCommand();
-                        clearCmd.CommandText = "DELETE FROM search_state";
-                        clearCmd.ExecuteNonQuery();
+                        _logCallback($"[{DateTime.Now:HH:mm:ss}] Batch size changed from {savedSize.Value} to {requestedBatchSize} - clearing search_state!");
                         bgState.StartBatch = 0;
                     }
                     else
                     {
-                        // Batch size matches - safe to restore position
-                        using var loadCmd = bgState.Connection.CreateCommand();
-                        loadCmd.CommandText = "SELECT last_completed_batch FROM search_state WHERE id = 1";
-                        var savedBatch = loadCmd.ExecuteScalar();
-                        if (savedBatch != null && savedBatch != DBNull.Value)
-                        {
-                            bgState.StartBatch = Convert.ToInt64(savedBatch);
-                            _logCallback($"[{DateTime.Now:HH:mm:ss}] Restored batch position: {bgState.StartBatch}");
-                        }
+                        bgState.StartBatch = savedBatch.Value;
+                        _logCallback($"[{DateTime.Now:HH:mm:ss}] Restored batch position: {bgState.StartBatch}");
                     }
                 }
             }
+            else
+            {
+                bgState.StartBatch = 0;
+                _logCallback($"[{DateTime.Now:HH:mm:ss}] Filter changed - starting from batch 0");
+            }
 
-            // Allow user override of start batch (manual jump to any batch number)
+            // Allow user override of start batch
             if (searchRequest?.StartBatch.HasValue == true)
             {
                 bgState.StartBatch = searchRequest.StartBatch.Value;
                 _logCallback($"[{DateTime.Now:HH:mm:ss}] USER OVERRIDE: Starting at batch {bgState.StartBatch}");
-
-                // IMMEDIATELY save override to DuckDB so it persists!
-                using var overrideSaveCmd = bgState.Connection.CreateCommand();
-                overrideSaveCmd.CommandText = @"
-                    INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                    VALUES (1, ?, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT (id) DO UPDATE SET
-                        batch_size = excluded.batch_size,
-                        last_completed_batch = excluded.last_completed_batch,
-                        updated_at = excluded.updated_at";
-                overrideSaveCmd.Parameters.Add(new DuckDBParameter(requestedBatchSize));
-                overrideSaveCmd.Parameters.Add(new DuckDBParameter(bgState.StartBatch));
-                overrideSaveCmd.ExecuteNonQuery();
+                bgState.Database.SaveBatchPosition(bgState.StartBatch, requestedBatchSize);
                 _logCallback($"[{DateTime.Now:HH:mm:ss}] Saved override batch position {bgState.StartBatch} with batch_size={requestedBatchSize} to DB");
             }
 
-            // Validate StartBatch is within range for 2-character batches (35^(8-2) = 35^6 = 1,838,265,625)
-            const long maxBatches = 1_838_265_625; // 35^6
+            // Validate StartBatch is within range
+            const long maxBatches = 1_838_265_625;
             if (bgState.StartBatch >= maxBatches)
             {
                 _logCallback($"[{DateTime.Now:HH:mm:ss}] StartBatch {bgState.StartBatch} is beyond max {maxBatches} - resetting to 0");
                 bgState.StartBatch = 0;
-
-                // Clear the invalid batch position from DB
-                using var clearCmd = bgState.Connection.CreateCommand();
-                clearCmd.CommandText = "DELETE FROM search_state";
-                clearCmd.ExecuteNonQuery();
             }
-
-            // Create appender for saving results
-            bgState.Appender = bgState.Connection.CreateAppender("results");
 
             // ========== FERTILIZER SEARCH ==========
             // Run this on EVERY search (new or continue) to get instant results from known good seeds
@@ -1100,53 +981,13 @@ public class MotelyApiServer
 
             var topResults = results.OrderByDescending(r => r.Score).Take(1000).ToList();
 
-            // SAVE FERTILIZER RESULTS TO DB using SQL UPSERT (appender can't handle duplicates)
-            var savedCount = 0;
+            // SAVE FERTILIZER RESULTS TO DB using clean database API
             foreach (var result in topResults)
             {
-                try
-                {
-                    using var upsertCmd = bgState.Connection!.CreateCommand();
-
-                    // Build column names and values for upsert
-                    var cols = new List<string> { "seed", "score" };
-                    var vals = new List<string> { "?", "?" };
-                    if (result.Tallies != null)
-                    {
-                        for (int i = 0; i < result.Tallies.Count; i++)
-                        {
-                            cols.Add($"tally{i}");
-                            vals.Add("?");
-                        }
-                    }
-
-                    upsertCmd.CommandText = $@"
-                        INSERT INTO results ({string.Join(", ", cols)})
-                        VALUES ({string.Join(", ", vals)})
-                        ON CONFLICT (seed) DO UPDATE SET
-                            score = excluded.score
-                            {(result.Tallies != null ? ", " + string.Join(", ", Enumerable.Range(0, result.Tallies.Count).Select(i => $"tally{i} = excluded.tally{i}")) : "")}";
-
-                    upsertCmd.Parameters.Add(new DuckDBParameter(result.Seed));
-                    upsertCmd.Parameters.Add(new DuckDBParameter(result.Score));
-                    if (result.Tallies != null)
-                    {
-                        foreach (var tallyVal in result.Tallies)
-                        {
-                            upsertCmd.Parameters.Add(new DuckDBParameter(tallyVal));
-                        }
-                    }
-
-                    upsertCmd.ExecuteNonQuery();
-                    savedCount++;
-                    bgState.SeedsAdded++;
-                }
-                catch (Exception ex)
-                {
-                    _logCallback($"[{DateTime.Now:HH:mm:ss}] Failed to upsert fertilizer result: {ex.Message}");
-                }
+                bgState.Database.InsertResult(result);
+                bgState.SeedsAdded++;
             }
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] Upserted {savedCount} fertilizer results to DB");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Inserted {topResults.Count} fertilizer results to DB");
 
             // Also add fertilizer results to the fertilizer DB (they're good seeds!)
             foreach (var result in topResults)
@@ -1228,22 +1069,11 @@ public class MotelyApiServer
                             bgState.SeedsPerMs = seedsPerMs;
 
                             // POWER OUTAGE PROTECTION: Save batch position every callback
-                            // DuckDB is fast enough to handle this - no need to throttle!
-                            if (bgState.Connection != null)
+                            if (bgState.Database != null)
                             {
                                 try
                                 {
-                                    using var saveCmd = bgState.Connection.CreateCommand();
-                                    saveCmd.CommandText = @"
-                                        INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                                        VALUES (1, ?, ?, CURRENT_TIMESTAMP)
-                                        ON CONFLICT (id) DO UPDATE SET
-                                            batch_size = excluded.batch_size,
-                                            last_completed_batch = excluded.last_completed_batch,
-                                            updated_at = excluded.updated_at";
-                                    saveCmd.Parameters.Add(new DuckDBParameter(bgState.BatchSize));
-                                    saveCmd.Parameters.Add(new DuckDBParameter(newBatch));
-                                    saveCmd.ExecuteNonQuery();
+                                    bgState.Database.SaveBatchPosition(newBatch, bgState.BatchSize);
                                 }
                                 catch (Exception ex)
                                 {
@@ -1260,41 +1090,24 @@ public class MotelyApiServer
 
                         _logCallback($"[{DateTime.Now:HH:mm:ss}] Found seed: {tally.Seed} (score: {tally.Score})");
 
-                        // Skip DB save if search stopped or connection closed
-                        if (!bgState.IsRunning || bgState.Connection == null) return;
+                        // Skip DB save if search stopped
+                        if (!bgState.IsRunning || bgState.Database == null) return;
 
-                        // Lock around appender operations - multiple tally callbacks can fire concurrently!
-                        lock (bgState)
+                        // Insert result using clean database API (thread-safe internally!)
+                        try
                         {
-                            if (!bgState.IsRunning || bgState.Connection == null) return;
-
-                            try
+                            bgState.Database.InsertResult(new SearchResult
                             {
-                                // Lazily create appender (same pattern as BSO SearchInstance)
-                                bgState.Appender ??= bgState.Connection.CreateAppender("results");
-
-                                var row = bgState.Appender.CreateRow();
-                                row.AppendValue(tally.Seed);
-                                row.AppendValue(tally.Score);
-
-                                if (tally.TallyColumns != null)
-                                {
-                                    foreach (var tallyVal in tally.TallyColumns)
-                                    {
-                                        row.AppendValue(tallyVal);
-                                    }
-                                }
-
-                                row.EndRow();
-                                // Don't flush here - flush happens in GetTopResults before SELECT
-                            }
-                            catch (Exception ex)
+                                Seed = tally.Seed,
+                                Score = tally.Score,
+                                Tallies = tally.TallyColumns?.ToList()
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!ex.Message.Contains("closed") && !ex.Message.Contains("disposed"))
                             {
-                                // Silently ignore "closed" errors during shutdown
-                                if (!ex.Message.Contains("closed"))
-                                {
-                                    _logCallback($"[{DateTime.Now:HH:mm:ss}] DB save warning: {ex.Message}");
-                                }
+                                _logCallback($"[{DateTime.Now:HH:mm:ss}] DB save warning: {ex.Message}");
                             }
                         }
                     });
@@ -1387,17 +1200,11 @@ public class MotelyApiServer
             }
 
             // Get actual total count from DB (not capped at 1000)
-            if (_currentSearchId == searchId && _currentSearch?.Connection != null)
+            if (_currentSearchId == searchId && _currentSearch?.Database != null)
             {
                 try
                 {
-                    using var countCmd = _currentSearch.Connection.CreateCommand();
-                    countCmd.CommandText = "SELECT COUNT(*) FROM results";
-                    var countResult = countCmd.ExecuteScalar();
-                    if (countResult != null && countResult != DBNull.Value)
-                    {
-                        totalSeedsFound = Convert.ToInt64(countResult);
-                    }
+                    totalSeedsFound = _currentSearch.Database.GetResultCount();
                 }
                 catch (Exception ex)
                 {
@@ -1553,41 +1360,18 @@ public class MotelyApiServer
                 return;
             }
 
-            // Stop the search - acquire lock to safely dispose appender
-            lock (_currentSearch)
-            {
-                _currentSearch.IsRunning = false;
-                if (_currentSearch.Appender != null)
-                {
-                    try { _currentSearch.Appender.Dispose(); } catch { }
-                    _currentSearch.Appender = null;
-                }
-            }
+            // Stop the search
+            _currentSearch.IsRunning = false;
+            _currentSearch.Search?.Cancel();
 
-            _currentSearch.Search?.Cancel(); // Calls Pause internally - immediate stop
-
-            // Save batch position to DuckDB for resume!
+            // Save batch position and checkpoint
             try
             {
-                if (_currentSearch.Connection != null)
+                if (_currentSearch.Database != null)
                 {
-                    using var saveCmd = _currentSearch.Connection.CreateCommand();
-                    saveCmd.CommandText = @"
-                        INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                        VALUES (1, 2, ?, CURRENT_TIMESTAMP)
-                        ON CONFLICT (id) DO UPDATE SET
-                            last_completed_batch = excluded.last_completed_batch,
-                            updated_at = excluded.updated_at";
-                    saveCmd.Parameters.Add(new DuckDB.NET.Data.DuckDBParameter(_currentSearch.CurrentBatch));
-                    saveCmd.ExecuteNonQuery();
+                    _currentSearch.Database.SaveBatchPosition(_currentSearch.CurrentBatch, _currentSearch.BatchSize);
+                    _currentSearch.Database.Checkpoint();
                     _logCallback($"[{DateTime.Now:HH:mm:ss}] Saved batch position {_currentSearch.CurrentBatch} to DB");
-
-                    // Flush WAL to main DB file
-                    using var checkpointCmd = _currentSearch.Connection.CreateCommand();
-                    checkpointCmd.CommandText = "FORCE CHECKPOINT";
-                    checkpointCmd.ExecuteNonQuery();
-
-                    // Update StartBatch for in-memory resume
                     _currentSearch.StartBatch = _currentSearch.CurrentBatch;
                 }
             }
