@@ -19,7 +19,7 @@ must:
     value: Perkeo
     antes: [1]
     sources:
-      shopSlots: [1, 2, 3]
+      packSlots: [1]
 
 should:
   # Oops All 6s from Judgement tarot (first usage gives random joker)

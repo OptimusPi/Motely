@@ -749,11 +749,14 @@ async function loadFilters() {
     try {
         const response = await fetch('/filters');
         if (response.ok) {
-            savedFilters = await response.json();
+            const data = await response.json();
+            // Handle both old (array) and new (object with filters array) response formats
+            savedFilters = data.filters || data;
             const dropdown = document.getElementById('savedSearches');
             dropdown.innerHTML = '<option value="">Select a saved search...</option>';
             savedFilters.forEach((filter, i) => {
-                dropdown.innerHTML += `<option value="${i}">${filter.name}</option>`;
+                const runningIndicator = (data.runningSearchId === filter.searchId && data.isSearchRunning) ? ' 🔍' : '';
+                dropdown.innerHTML += `<option value="${i}">${filter.name}${runningIndicator}</option>`;
             });
         }
     } catch (e) {
