@@ -13,6 +13,7 @@ public enum FilterCategory
     SpectralCard,
     PlayingCard,
     Joker,
+    JokerRarityEditionPreFilter, // Rarity+edition pre-filter for shop jokers (ultra-fast early-exit before precise slot checking)
     SoulJoker,
     SoulJokerEditionOnly, // Edition-only soul joker checks (Value="Any" + edition) for instant early-exit
     SoulJokerTypeOnly, // Type-specific soul joker checks (Value="Perkeo") for fast verification
