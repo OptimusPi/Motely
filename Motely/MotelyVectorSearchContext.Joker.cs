@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.Intrinsics;
+using System.Runtime.CompilerServices;
 
 namespace Motely;
 
