@@ -1,5 +1,3 @@
-using System.Runtime.Intrinsics;
-
 namespace Motely;
 
 public struct PerkeoObservatoryFilterDesc()

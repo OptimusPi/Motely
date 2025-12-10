@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Motely.Filters;
 
 namespace Motely.Utils;
@@ -81,6 +78,10 @@ public static class SpecializedFilterFactory
             MotelyJsonSoulJokerFilterDesc soulJokerDesc =>
                 new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(
                     soulJokerDesc
+                ),
+            MotelyJsonSoulJokerEditionOnlyFilterDesc editionOnlyDesc =>
+                new MotelySearchSettings<MotelyJsonSoulJokerEditionOnlyFilterDesc.MotelyJsonSoulJokerEditionOnlyFilter>(
+                    editionOnlyDesc
                 ),
             MotelyJsonJokerFilterDesc jokerDesc =>
                 new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(

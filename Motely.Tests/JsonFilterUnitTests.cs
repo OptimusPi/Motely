@@ -1,7 +1,4 @@
-using System.IO;
-using System.Linq;
 using Motely.Filters;
-using Xunit;
 
 namespace Motely.Tests;
 

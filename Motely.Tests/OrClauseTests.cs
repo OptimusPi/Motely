@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Motely.Filters;
 
 namespace Motely.Tests;
