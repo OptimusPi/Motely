@@ -179,7 +179,7 @@ public class ApiServerWindow : Window
             Width = Dim.Fill(),
             Height = Dim.Fill(),
             ReadOnly = true,
-            WordWrap = false,
+            WordWrap = true, // Wrap long lines instead of cutting them off!
             CanFocus = true,
         };
         _logView.SetScheme(new Scheme()
