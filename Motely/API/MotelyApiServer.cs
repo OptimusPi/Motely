@@ -651,10 +651,35 @@ public class MotelyApiServer
 
         try
         {
-            // Enable CORS
-            response.AddHeader("Access-Control-Allow-Origin", "*");
+            // Enable CORS with comprehensive headers
+            // Allow specific trusted domains (Cloudflare tunnels, genie app, localhost, and wildcard for dev)
+            var origin = request.Headers["Origin"];
+            var allowedOrigins = new[] { "*.8pi.me", "www.balatrogenie.app", "localhost", "127.0.0.1" };
+            var isAllowedOrigin = !string.IsNullOrEmpty(origin) && allowedOrigins.Any(allowed =>
+                allowed.StartsWith('*') ? origin.EndsWith(allowed[1..]) : origin.Contains(allowed));
+
+            response.AddHeader("Access-Control-Allow-Origin", isAllowedOrigin ? origin! : "*");
             response.AddHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-            response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
+            response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+            if (isAllowedOrigin)
+            {
+                response.AddHeader("Access-Control-Allow-Credentials", "true");
+            }
+
+            // Allow cross-origin resource loading for Monaco editor and other CDN resources
+            response.AddHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
+            response.AddHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+            response.AddHeader("Cross-Origin-Resource-Policy", "cross-origin");
+
+            // Content Security Policy - allow Monaco editor from CDN and inline scripts
+            response.AddHeader("Content-Security-Policy",
+                "default-src 'self'; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com data:; " +
+                "img-src 'self' data: https:; " +
+                "connect-src 'self'; " +
+                "worker-src 'self' blob:");
 
             if (request.HttpMethod == "OPTIONS")
             {
@@ -674,9 +699,20 @@ public class MotelyApiServer
             {
                 await ServeFileAsync(response, "wwwroot/styles.css", "text/css");
             }
-            else if (request.HttpMethod == "GET" && path == "/script.js")  
+            else if (request.HttpMethod == "GET" && path == "/script.js")
             {
                 await ServeFileAsync(response, "wwwroot/script.js", "application/javascript");
+            }
+            else if (request.HttpMethod == "GET" && path.StartsWith("/monaco-editor/"))
+            {
+                // Serve Monaco editor files (bundled locally)
+                var monacoPath = "wwwroot" + path.Replace("/", Path.DirectorySeparatorChar.ToString());
+                var contentType = path.EndsWith(".js") ? "application/javascript" :
+                                 path.EndsWith(".css") ? "text/css" :
+                                 path.EndsWith(".ttf") ? "font/ttf" :
+                                 path.EndsWith(".json") ? "application/json" :
+                                 "application/octet-stream";
+                await ServeFileAsync(response, monacoPath, contentType);
             }
             else if (path.StartsWith("/.well-known/"))
             {
@@ -1724,8 +1760,13 @@ public class MotelyApiServer
             }
 
             response.StatusCode = 200;
-            await WriteJsonAsync(response, filters);
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] Returned {filters.Count} filter files");
+            await WriteJsonAsync(response, new
+            {
+                filters = filters,
+                runningSearchId = _currentSearchId,
+                isSearchRunning = _currentSearch?.IsRunning ?? false
+            });
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Returned {filters.Count} filter files, running: {_currentSearchId ?? "none"}");
         }
         catch (Exception ex)
         {
