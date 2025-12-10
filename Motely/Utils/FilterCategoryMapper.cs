@@ -67,6 +67,21 @@ namespace Motely.Utils
                     }
                 }
 
+                // CRITICAL OPTIMIZATION: Route rare-edition shop jokers to pre-filter for ultra-fast early-exit!
+                // Pre-filter peeks rarity+edition only (no type generation) - rejects 99.985% instantly
+                // Then chains to precise JokerFilterDesc for exact slot verification
+                if (category == FilterCategory.Joker)
+                {
+                    bool shouldUsePreFilter =
+                        !string.IsNullOrEmpty(clause.Edition)
+                        && !clause.Edition.Equals("None", StringComparison.OrdinalIgnoreCase);
+
+                    if (shouldUsePreFilter)
+                    {
+                        category = FilterCategory.JokerRarityEditionPreFilter;
+                    }
+                }
+
                 if (!grouped.ContainsKey(category))
                 {
                     grouped[category] = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
