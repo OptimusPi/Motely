@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JAML - Joker Ante Markup Language</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Monaco Editor (Local) -->
-    <link rel="stylesheet" data-name="vs/editor/editor.main" href="monaco-editor/min/vs/editor/editor.main.css">
+    <!-- Monaco Editor (CDN - switch to local after downloading) -->
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css">
 </head>
 
 <body>
@@ -318,11 +318,11 @@ stake: White</textarea>
         <!-- js-yaml for proper YAML parsing/formatting (Local) -->
         <script src="js-yaml.min.js"></script>
         <script src="script.js"></script>
-        <!-- Monaco Editor Loader (Local) -->
-        <script src="monaco-editor/min/vs/loader.js"></script>
+        <!-- Monaco Editor Loader (CDN) -->
+        <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
         <script>
-            // Initialize Monaco Editor (Local)
-            require.config({ paths: { vs: 'monaco-editor/min/vs' } });
+            // Initialize Monaco Editor (CDN)
+            require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
             require(['vs/editor/editor.main'], function () {
 
                 // Register JAML autocomplete provider - CONTEXT AWARE!
