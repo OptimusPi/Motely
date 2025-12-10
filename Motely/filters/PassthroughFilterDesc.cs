@@ -1,6 +1,3 @@
-using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
-
 namespace Motely;
 
 public struct PassthroughFilterDesc()

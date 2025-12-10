@@ -1,6 +1,4 @@
-using Motely;
 using Motely.Filters;
-using Xunit;
 
 namespace Motely.Tests;
 

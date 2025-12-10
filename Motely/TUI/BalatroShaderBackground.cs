@@ -1,5 +1,3 @@
-using System;
-
 namespace Motely.TUI;
 
 public class BalatroShaderBackground : View

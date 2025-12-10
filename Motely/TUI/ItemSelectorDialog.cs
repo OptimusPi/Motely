@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using Motely.Filters;
-using Terminal.Gui;
 
 namespace Motely.TUI;
 

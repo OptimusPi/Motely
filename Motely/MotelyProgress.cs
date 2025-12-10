@@ -1,5 +1,3 @@
-using System;
-
 namespace Motely
 {
     /// <summary>

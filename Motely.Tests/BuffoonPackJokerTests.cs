@@ -1,6 +1,3 @@
-using Motely;
-using Xunit;
-
 namespace Motely.Tests;
 
 public sealed class BuffoonPackJokerTests

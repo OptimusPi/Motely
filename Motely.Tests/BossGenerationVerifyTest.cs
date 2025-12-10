@@ -1,8 +1,4 @@
 using System.Text;
-using System.Threading.Tasks;
-using Xunit;
-using VerifyXunit;
-using Motely;
 using Motely.Analysis;
 
 namespace Motely.Tests

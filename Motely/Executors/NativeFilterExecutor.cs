@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using Motely.Filters;
-using Motely.Utils;
 
 namespace Motely.Executors
 {

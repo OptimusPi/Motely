@@ -1,10 +1,7 @@
-using System;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.Executors;
-using Motely.Filters;
 using Motely.TUI;
-using Motely.Utils;
 
 namespace Motely
 {

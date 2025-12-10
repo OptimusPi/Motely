@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using System.Text.Json;
-using Terminal.Gui;
-
 namespace Motely.TUI;
 
 public class SettingsWindow : Window
