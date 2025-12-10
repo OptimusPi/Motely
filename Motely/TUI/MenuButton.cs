@@ -1,5 +1,3 @@
-using Terminal.Gui;
-
 namespace Motely.TUI;
 
 /// <summary>

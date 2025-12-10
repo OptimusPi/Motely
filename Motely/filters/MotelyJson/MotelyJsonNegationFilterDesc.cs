@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using Motely.Filters;
 using Motely.Utils;
 
 namespace Motely.Filters
