@@ -1,6 +1,3 @@
-using Terminal.Gui;
-using Terminal.Gui.App;
-
 namespace Motely.TUI;
 
 public static class MotelyTUI

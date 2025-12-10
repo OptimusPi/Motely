@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using Xunit;
 using Motely.Filters;
 
 namespace Motely.Tests

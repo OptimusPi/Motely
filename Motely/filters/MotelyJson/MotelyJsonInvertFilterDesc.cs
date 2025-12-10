@@ -1,6 +1,3 @@
-using System;
-using Motely.Filters;
-
 namespace Motely.Filters
 {
     /// <summary>

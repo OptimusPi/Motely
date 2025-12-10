@@ -1,6 +1,3 @@
-
-using System;
-
 namespace Motely;
 
 public static class MotelyEnum<T> where T : unmanaged, Enum
