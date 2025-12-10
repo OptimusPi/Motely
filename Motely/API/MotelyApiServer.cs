@@ -671,12 +671,12 @@ public class MotelyApiServer
             response.AddHeader("Cross-Origin-Opener-Policy", "unsafe-none");
             response.AddHeader("Cross-Origin-Resource-Policy", "cross-origin");
 
-            // Content Security Policy - everything bundled locally now!
+            // Content Security Policy - allow CDN for Monaco (faster + cached!)
             response.AddHeader("Content-Security-Policy",
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-                "style-src 'self' 'unsafe-inline'; " +
-                "font-src 'self' data:; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+                "font-src 'self' https://cdn.jsdelivr.net data:; " +
                 "img-src 'self' data: https:; " +
                 "connect-src 'self'; " +
                 "worker-src 'self' blob:");
