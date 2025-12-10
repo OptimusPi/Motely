@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 namespace Motely;
 
 public ref struct MotelySingleShopItemStream
