@@ -3,10 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>JAML - Joker Ante Markup Language</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Monaco Editor (CDN - switch to local after downloading) -->
+    <!-- Monaco Editor from CDN (best practice - global cache, zero server load) -->
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css">
 </head>
 
@@ -215,19 +218,21 @@
 
                 <!-- JAML Search Tab -->
                 <div id="jaml-tab" class="tab-content  active">
-                    <label>Saved Filters:</label>
                     <div class="search-row">
-                        <select id="savedSearches" onchange="loadSavedSearch()">
-                            <option value="">Select a saved filter...</option>
+                        <select id="savedSearches" onchange="loadSavedSearch()" style="flex: 1;">
+                            <option value="">Select a filter...</option>
                         </select>
                         <button onclick="deleteSelectedSearch()" class="delete-btn"
-                            title="Delete selected filter">Del</button>
+                            title="Delete selected filter">Delete Filter</button>
                     </div>
                     <div class="editor-header">
                         <label>Filter (JAML):</label>
                         <div class="editor-buttons">
-                            <button onclick="formatJaml()" class="button-tiny" title="Auto-format JAML (Ctrl+Shift+F)">Format</button>
-                            <button onclick="toggleEditorMode()" id="editorToggle" class="button-tiny" title="Switch editor mode">Plain</button>
+                            <button onclick="formatJaml()" class="button-small" title="Auto-format JAML (Ctrl+Shift+F)">Format Code</button>
+                            <div class="editor-toggle-group">
+                                <button onclick="setEditorMode('monaco')" id="monacoBtn" class="toggle-btn active" title="Use Monaco editor with syntax highlighting">Monaco Editor</button>
+                                <button onclick="setEditorMode('plain')" id="plainBtn" class="toggle-btn" title="Use plain text editor">Plain Text</button>
+                            </div>
                         </div>
                     </div>
                     <div id="monacoEditor" class="monaco-container"></div>
@@ -247,54 +252,30 @@ stake: White</textarea>
                     <div class="action-buttons">
                         <button id="searchBtn" onclick="toggleSearch()" class="button-primary" style="width: 120px;">Start Search</button>
                         <button id="shareBtn" onclick="shareSearch()" class="button-small" style="width: 70px;">Share</button>
-                        <label style="margin-left: 12px; font-size: 13px;">Start Batch:</label>
-                        <input type="number" id="batchOverride" placeholder="Auto" title="Override start batch (leave empty for auto-resume)" style="width: 70px; margin-left: 4px;">
-                        <label style="margin-left: 8px; font-size: 13px;">Cutoff Score:</label>
-                        <input type="number" id="cutoffOverride" placeholder="Auto" title="Minimum score cutoff (leave empty for smart cutoff)" style="width: 70px; margin-left: 4px;" min="0">
+                        <div style="display: flex; flex-direction: column; margin-left: 12px;">
+                            <label style="font-size: 11px; margin-bottom: 2px;">Start Batch:</label>
+                            <input type="number" id="batchOverride" placeholder="Auto" title="Override start batch (leave empty for auto-resume)" style="width: 90px;">
+                        </div>
+                        <div style="display: flex; flex-direction: column; margin-left: 8px;">
+                            <label style="font-size: 11px; margin-bottom: 2px;">Cutoff Score:</label>
+                            <input type="number" id="cutoffOverride" placeholder="Auto" title="Minimum score cutoff (leave empty for smart cutoff)" style="width: 90px;" min="0">
+                        </div>
                     </div>
                 </div>
 
                 <!-- Analyze Tab -->
-                <div id="analyze-tab" class="tab-content">
-                    <label>Analyze specific seed:</label>
-                    <input type="text" id="analyzeSeed" placeholder="Enter seed (e.g., ABCD1234)" maxlength="8">
-                    <div class="deck-stake-row">
-                        <div>
-                            <label>Deck:</label>
-                            <select id="analyzeDeck">
-                                <option value="Red">Red Deck</option>
-                                <option value="Blue">Blue Deck</option>
-                                <option value="Yellow">Yellow Deck</option>
-                                <option value="Green">Green Deck</option>
-                                <option value="Black">Black Deck</option>
-                                <option value="Magic">Magic Deck</option>
-                                <option value="Nebula">Nebula Deck</option>
-                                <option value="Ghost">Ghost Deck</option>
-                                <option value="Abandoned">Abandoned Deck</option>
-                                <option value="Checkered">Checkered Deck</option>
-                                <option value="Zodiac">Zodiac Deck</option>
-                                <option value="Painted">Painted Deck</option>
-                                <option value="Anaglyph">Anaglyph Deck</option>
-                                <option value="Plasma">Plasma Deck</option>
-                                <option value="Erratic">Erratic Deck</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Stake:</label>
-                            <select id="analyzeStake">
-                                <option value="White">White Stake</option>
-                                <option value="Red">Red Stake</option>
-                                <option value="Green">Green Stake</option>
-                                <option value="Black">Black Stake</option>
-                                <option value="Blue">Blue Stake</option>
-                                <option value="Purple">Purple Stake</option>
-                                <option value="Orange">Orange Stake</option>
-                                <option value="Gold">Gold Stake</option>
-                            </select>
+                <div id="analyze-tab" class="tab-content analyze-fullscreen">
+                    <div class="analyze-header">
+                        <div style="font-size: 12px; color: #888; text-align: center;">
+                            Powered by <a href="https://miaklwalker.github.io/Blueprint/" target="_blank" style="color: #4a9eff; text-decoration: none;">Blueprint</a> by <a href="https://github.com/miaklwalker/Blueprint" target="_blank" style="color: #4a9eff; text-decoration: none;">miaklwalker</a> | <a href="#" id="openBlueprintTab" style="color: #4a9eff; text-decoration: none;" title="Open in new tab">Open in new tab ↗</a>
                         </div>
                     </div>
-                    <button onclick="analyzeSeed()" class="button-blue">Analyze</button>
-                    <div id="analyzeResult"></div>
+                    <div id="analyzeResult" class="analyze-content">
+                        <div class="analyze-placeholder">
+                            <p style="font-size: 18px; margin-bottom: 8px;">🎰 Click a seed to analyze</p>
+                            <p style="font-size: 14px;">Blueprint will load here with full seed details</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -315,13 +296,13 @@ stake: White</textarea>
             </div>
         </div>
 
-        <!-- js-yaml for proper YAML parsing/formatting (Local) -->
-        <script src="js-yaml.min.js"></script>
+        <!-- js-yaml from CDN (consistency - all external libs from CDN) -->
+        <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
         <script src="script.js"></script>
-        <!-- Monaco Editor Loader (CDN) -->
+        <!-- Monaco Editor from CDN (best practice - faster + cached globally) -->
         <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
         <script>
-            // Initialize Monaco Editor (CDN)
+            // Initialize Monaco Editor from jsdelivr CDN
             require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
             require(['vs/editor/editor.main'], function () {
 
