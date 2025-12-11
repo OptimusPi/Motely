@@ -818,7 +818,7 @@ public class MotelyApiServer
         try
         {
             var bgConfig = config!;
-            var requestedBatchSize = searchRequest?.BatchSize ?? 2; // Default batch size
+            var requestedBatchSize = searchRequest?.BatchSize ?? 3; // Default batch size
             _logCallback($"[{DateTime.Now:HH:mm:ss}] 🔧 Search settings: batchSize={requestedBatchSize}, threads={ThreadCount}, cutoff={searchRequest?.Cutoff ?? 0}");
 
             // Create or reuse background state for this search
@@ -894,7 +894,7 @@ public class MotelyApiServer
             }
 
             // Create database with clean abstraction (dual read/write connections!)
-            bgState.Database = new MotelySearchDatabase(dbPath, columnNames);
+            bgState.Database = new MotelySearchDatabase(dbPath, columnNames, _logCallback);
 
             // Load persisted batch position (or reset if filter/batch size changed)
             if (!filterWasUpdated)
@@ -984,7 +984,7 @@ public class MotelyApiServer
             // SAVE FERTILIZER RESULTS TO DB using clean database API
             foreach (var result in topResults)
             {
-                bgState.Database.InsertResult(result);
+                bgState.Database.InsertRow(result.Seed, result.Score, result.Tallies);
                 bgState.SeedsAdded++;
             }
             _logCallback($"[{DateTime.Now:HH:mm:ss}] Inserted {topResults.Count} fertilizer results to DB");
@@ -1096,12 +1096,7 @@ public class MotelyApiServer
                         // Insert result using clean database API (thread-safe internally!)
                         try
                         {
-                            bgState.Database.InsertResult(new SearchResult
-                            {
-                                Seed = tally.Seed,
-                                Score = tally.Score,
-                                Tallies = tally.TallyColumns?.ToList()
-                            });
+                            bgState.Database.InsertRow(tally.Seed, tally.Score, tally.TallyColumns?.ToList());
                         }
                         catch (Exception ex)
                         {
@@ -1135,7 +1130,7 @@ public class MotelyApiServer
         }
         catch (Exception ex)
         {
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] Search failed: {ex.Message}");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] Search failed: {ex}");
             response.StatusCode = 500;
             await WriteJsonAsync(response, new { error = ex.Message });
         }
@@ -1242,7 +1237,7 @@ public class MotelyApiServer
                 : seedsPerMs > 0 ? $"{seedsPerMs * 1000:F0}/s" : "-";
             var searchedStr = seedsSearched >= 1000000 ? $"{seedsSearched / 1000000.0:F1}M"
                 : seedsSearched > 0 ? $"{seedsSearched / 1000.0:F1}K" : "0";
-            _logCallback($"[{DateTime.Now:HH:mm:ss}] GET /search: {status} | batch {currentBatch}/{456976} | {searchedStr} searched | {totalSeedsFound} found | {speedStr}");
+            _logCallback($"[{DateTime.Now:HH:mm:ss}] GET /search: {status} | batch {currentBatch}/{totalBatches} | {searchedStr} searched | {totalSeedsFound} found | {speedStr}");
 
             // Get effective cutoff from current search state
             var effectiveCutoff = (_currentSearchId == searchId && _currentSearch != null)
