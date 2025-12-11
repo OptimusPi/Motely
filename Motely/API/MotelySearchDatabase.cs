@@ -10,11 +10,11 @@ public class MotelySearchDatabase : IDisposable
 {
     private readonly string _dbPath;
     private readonly List<string> _columnNames;
-    private readonly DuckDBConnection _writeConnection;
-    private readonly DuckDBConnection _readConnection;
+    private readonly DuckDBConnection _connection;
     private DuckDBAppender? _appender;
     private readonly object _lock = new();
     private bool _disposed = false;
+    private readonly Action<string>? _logCallback;
 
     /// <summary>
     /// Creates a new search database with dual connections (write + read).
@@ -22,7 +22,8 @@ public class MotelySearchDatabase : IDisposable
     /// </summary>
     /// <param name="dbPath">Path to DuckDB database file</param>
     /// <param name="columnNames">Column schema (must start with 'seed', 'score', then tallies)</param>
-    public MotelySearchDatabase(string dbPath, List<string> columnNames)
+    /// <param name="logCallback">Optional logging callback</param>
+    public MotelySearchDatabase(string dbPath, List<string> columnNames, Action<string>? logCallback = null)
     {
         if (string.IsNullOrWhiteSpace(dbPath))
             throw new ArgumentException("Database path cannot be empty", nameof(dbPath));
@@ -33,16 +34,15 @@ public class MotelySearchDatabase : IDisposable
 
         _dbPath = dbPath;
         _columnNames = new List<string>(columnNames);
+        _logCallback = logCallback;
 
         var dir = Path.GetDirectoryName(_dbPath);
         if (!string.IsNullOrEmpty(dir))
             Directory.CreateDirectory(dir);
 
         var connectionString = $"Data Source={_dbPath}";
-        _writeConnection = new DuckDBConnection(connectionString);
-        _writeConnection.Open();
-        _readConnection = new DuckDBConnection(connectionString);
-        _readConnection.Open();
+        _connection = new DuckDBConnection(connectionString);
+        _connection.Open();
 
         InitializeSchema();
     }
@@ -51,12 +51,12 @@ public class MotelySearchDatabase : IDisposable
     public IReadOnlyList<string> ColumnNames => _columnNames.AsReadOnly();
 
     /// <summary>
-    /// Insert a search result into the database.
+    /// Insert a row into the database.
     /// Thread-safe. Handles duplicate keys gracefully.
     /// </summary>
-    public void InsertResult(SearchResult result)
+    public void InsertRow(string seed, int score, List<int>? tallies = null)
     {
-        if (result == null) throw new ArgumentNullException(nameof(result));
+        if (string.IsNullOrEmpty(seed)) throw new ArgumentException("Seed cannot be empty", nameof(seed));
 
         lock (_lock)
         {
@@ -64,18 +64,16 @@ public class MotelySearchDatabase : IDisposable
 
             try
             {
-                _appender ??= _writeConnection.CreateAppender("results");
+                _appender ??= _connection.CreateAppender("results");
 
                 var row = _appender.CreateRow();
-                row.AppendValue(result.Seed);
-                row.AppendValue(result.Score);
+                row.AppendValue(seed);
+                row.AppendValue(score);
 
                 int tallyCount = _columnNames.Count - 2;
                 for (int i = 0; i < tallyCount; i++)
                 {
-                    int value = (result.Tallies != null && i < result.Tallies.Count)
-                        ? result.Tallies[i]
-                        : 0;
+                    int value = (tallies != null && i < tallies.Count) ? tallies[i] : 0;
                     row.AppendValue(value);
                 }
 
@@ -100,7 +98,7 @@ public class MotelySearchDatabase : IDisposable
         {
             ThrowIfDisposed();
 
-            using var cmd = _writeConnection.CreateCommand();
+            using var cmd = _connection.CreateCommand();
             cmd.CommandText = @"
                 INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
                 VALUES (1, ?, ?, CURRENT_TIMESTAMP)
@@ -132,7 +130,7 @@ public class MotelySearchDatabase : IDisposable
             }
 
             var results = new List<SearchResult>();
-            using var cmd = _readConnection.CreateCommand();
+            using var cmd = _connection.CreateCommand();
             cmd.CommandText = "SELECT * FROM results ORDER BY score DESC LIMIT ?";
             cmd.Parameters.Add(new DuckDBParameter(limit));
 
@@ -173,7 +171,7 @@ public class MotelySearchDatabase : IDisposable
                 _appender = null;
             }
 
-            using var cmd = _readConnection.CreateCommand();
+            using var cmd = _connection.CreateCommand();
             cmd.CommandText = "SELECT COUNT(*) FROM results";
             var result = cmd.ExecuteScalar();
             return result == null ? 0 : Convert.ToInt64(result);
@@ -189,7 +187,7 @@ public class MotelySearchDatabase : IDisposable
         {
             ThrowIfDisposed();
 
-            using var cmd = _readConnection.CreateCommand();
+            using var cmd = _connection.CreateCommand();
             cmd.CommandText = "SELECT last_completed_batch, batch_size FROM search_state WHERE id = 1";
             using var reader = cmd.ExecuteReader();
 
@@ -220,7 +218,7 @@ public class MotelySearchDatabase : IDisposable
                 _appender = null;
             }
 
-            using var cmd = _writeConnection.CreateCommand();
+            using var cmd = _connection.CreateCommand();
             cmd.CommandText = "FORCE CHECKPOINT";
             cmd.ExecuteNonQuery();
         }
@@ -241,7 +239,7 @@ public class MotelySearchDatabase : IDisposable
                     _appender = null;
                 }
 
-                using var cmd = _writeConnection.CreateCommand();
+                using var cmd = _connection.CreateCommand();
                 cmd.CommandText = "FORCE CHECKPOINT";
                 cmd.ExecuteNonQuery();
             }
@@ -249,15 +247,8 @@ public class MotelySearchDatabase : IDisposable
 
             try
             {
-                _writeConnection?.Close();
-                _writeConnection?.Dispose();
-            }
-            catch { }
-
-            try
-            {
-                _readConnection?.Close();
-                _readConnection?.Dispose();
+                _connection?.Close();
+                _connection?.Dispose();
             }
             catch { }
 
@@ -272,19 +263,31 @@ public class MotelySearchDatabase : IDisposable
         var columnDefs = new List<string> { "seed VARCHAR PRIMARY KEY", "score INTEGER" };
         for (int i = 2; i < _columnNames.Count; i++)
         {
-            columnDefs.Add($"{_columnNames[i]} INTEGER");
+            // Quote column names to handle special characters and reserved words
+            columnDefs.Add($"\"{_columnNames[i]}\" INTEGER");
         }
 
-        using (var cmd = _writeConnection.CreateCommand())
-        {
-            cmd.CommandText = $@"
+        var createTableSql = $@"
                 CREATE TABLE IF NOT EXISTS results (
                     {string.Join(",\n                    ", columnDefs)}
                 )";
-            cmd.ExecuteNonQuery();
+
+        try
+        {
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = createTableSql;
+                cmd.ExecuteNonQuery();
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorMsg = $"[MotelySearchDatabase] Failed to create table!\nSQL: {createTableSql}\nColumns: {string.Join(", ", _columnNames)}\nError: {ex}";
+            _logCallback?.Invoke(errorMsg);
+            throw new InvalidOperationException($"DuckDB table creation failed. SQL: {createTableSql}", ex);
         }
 
-        using (var cmd = _writeConnection.CreateCommand())
+        using (var cmd = _connection.CreateCommand())
         {
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS search_state (
@@ -301,7 +304,7 @@ public class MotelySearchDatabase : IDisposable
     {
         try
         {
-            using (var cmd = _writeConnection.CreateCommand())
+            using (var cmd = _connection.CreateCommand())
             {
                 cmd.CommandText = "SELECT table_name FROM information_schema.tables WHERE table_name='results'";
                 var result = cmd.ExecuteScalar();
@@ -309,7 +312,7 @@ public class MotelySearchDatabase : IDisposable
             }
 
             var existingColumns = new List<string>();
-            using (var cmd = _writeConnection.CreateCommand())
+            using (var cmd = _connection.CreateCommand())
             {
                 cmd.CommandText = "SELECT column_name FROM information_schema.columns WHERE table_name='results' ORDER BY ordinal_position";
                 using var reader = cmd.ExecuteReader();
@@ -324,16 +327,14 @@ public class MotelySearchDatabase : IDisposable
 
             if (!match)
             {
-                _writeConnection.Close();
-                _readConnection.Close();
+                _connection.Close();
 
                 if (File.Exists(_dbPath))
                     File.Delete(_dbPath);
                 if (File.Exists(_dbPath + ".wal"))
                     File.Delete(_dbPath + ".wal");
 
-                _writeConnection.Open();
-                _readConnection.Open();
+                _connection.Open();
             }
         }
         catch

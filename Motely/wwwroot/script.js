@@ -368,16 +368,26 @@ async function generateJAML() {
 // ================================================
 // Search Functions
 // ================================================
+// Track button state explicitly - NEVER rely on button text for control flow!
+let searchButtonState = 'START'; // 'START' | 'RUNNING' | 'CONTINUE' | 'STOPPING'
+
 function toggleSearch() {
-    if (isSearching) {
-        stopSearch();
-    } else {
-        const btn = document.getElementById('searchBtn');
-        if (btn.textContent.includes('Continue')) {
+    // Use explicit state machine - NEVER rely on button text!
+    switch (searchButtonState) {
+        case 'RUNNING':
+            stopSearch();
+            break;
+        case 'STOPPING':
+            // Ignore clicks while stop is in progress - prevents race condition
+            console.log('Stop in progress, ignoring click');
+            break;
+        case 'CONTINUE':
             continueSearch();
-        } else {
+            break;
+        case 'START':
+        default:
             runSearch();
-        }
+            break;
     }
 }
 
@@ -413,9 +423,10 @@ async function runSearch() {
         showStatus('Same filter - keeping existing results...');
     }
 
+    // CRITICAL: Set state to STOPPING to prevent race conditions during POST
+    // This also disables the button via updateSearchButton
+    searchButtonState = 'STOPPING';  // Temporarily block clicks
     const searchBtn = document.getElementById('searchBtn');
-
-    // CRITICAL: Disable button during POST to prevent race conditions
     searchBtn.textContent = 'Starting...';
     searchBtn.className = 'button-blue';
     searchBtn.disabled = true;
@@ -446,9 +457,6 @@ async function runSearch() {
             body: JSON.stringify(requestBody)
         });
 
-        // Re-enable button after POST completes
-        searchBtn.disabled = false;
-
         if (!response.ok) {
             const error = await response.json();
             showStatus(`❌ Error: ${error.error}`);
@@ -463,8 +471,8 @@ async function runSearch() {
         updateUrlWithSearchId(currentSearchId); // Sync URL so refresh/bookmark works
 
         // NOW we can show Stop button - searchId is set!
-        searchBtn.textContent = 'Stop';
-        searchBtn.className = 'button-danger';
+        // Use updateSearchButton to keep state machine in sync!
+        updateSearchButton('RUNNING', 0);
 
         // Handle fertilizer results based on whether filter changed
         if (filterChanged || !currentSearchJaml) {
@@ -495,8 +503,7 @@ async function runSearch() {
     } catch (error) {
         showStatus(`❌ Network error: ${error.message}`);
         isSearching = false;
-        searchBtn.disabled = false;
-        updateSearchButton('START', 0);
+        updateSearchButton('START', 0);  // This also re-enables the button
     }
 }
 
@@ -549,6 +556,14 @@ async function pollSearchStatus(delay = 1000) {
             // Update button and status based on isBackgroundRunning (most reliable)
             // Use data.seedsFound for accurate count (actual DB count, not capped at 1000)
             const foundCount = data.seedsFound || searchResults.length;
+
+            // CRITICAL: If stopSearch() was called (searchButtonState is STOPPING),
+            // do NOT update button - let stopSearch() handle the final state
+            if (searchButtonState === 'STOPPING') {
+                // User clicked stop - exit poll loop and let stopSearch() handle button
+                return;
+            }
+
             if (running) {
                 updateSearchButton('RUNNING', 0);
                 showStatus(`Batch ${data.currentBatch || 0} | ${speedStr} | ${(seedsSearched / 1000000).toFixed(1)}M searched | ${foundCount} found`);
@@ -581,16 +596,20 @@ async function pollSearchStatus(delay = 1000) {
 }
 
 async function stopSearch() {
-    // Set flags immediately to stop polling
+    // CRITICAL: Set STOPPING state FIRST to prevent race conditions
+    // This must happen BEFORE we set isSearching = false!
+    updateSearchButton('STOPPING', 0);
+
+    // Now set flags to stop polling loop
     isSearching = false;
     searchAborted = true;
-    
+
     if (!currentSearchId) {
         updateSearchButton('START', 0);
         showStatus('No search to stop');
         return;
     }
-    
+
     try {
         const response = await fetch('/search/stop', {
             method: 'POST',
@@ -607,7 +626,7 @@ async function stopSearch() {
 
         const data = await response.json();
         showStatus(`${data.message} - ${searchResults.length} results`);
-        
+
         // Get current progress from the API to show accurate state
         const statusResponse = await fetch(`/search?id=${currentSearchId}`);
         if (statusResponse.ok) {
@@ -624,7 +643,7 @@ async function stopSearch() {
         } else {
             updateSearchButton('START', 0);
         }
-        
+
     } catch (error) {
         showStatus(`❌ Network error: ${error.message}`);
         updateSearchButton('START', 0);
@@ -816,13 +835,15 @@ async function loadFilters() {
 async function loadSavedSearch() {
     const dropdown = document.getElementById('savedSearches');
     const idx = dropdown.value;
-    
+
     // STOP any currently running search first
     if (isSearching && currentSearchId) {
-        showStatus('🛑 Stopping current search...');
+        showStatus('Stopping current search...');
+        // Use state machine to prevent race conditions
+        updateSearchButton('STOPPING', 0);
         searchAborted = true;
         isSearching = false;
-        
+
         try {
             await fetch('/search/stop', {
                 method: 'POST',
@@ -1100,20 +1121,32 @@ function updateSearchButton(state, progress = 0) {
     const searchBtn = document.getElementById('searchBtn');
     searchBtn.style.background = '';
 
+    // CRITICAL: Update the state machine variable FIRST, then the visual
+    searchButtonState = state;
+
     switch (state) {
         case 'START':
             searchBtn.textContent = 'Start Search';
             searchBtn.className = 'button-primary';
+            searchBtn.disabled = false;
             break;
 
         case 'CONTINUE':
             searchBtn.textContent = 'Continue';
             searchBtn.className = 'button-blue';
+            searchBtn.disabled = false;
             break;
 
         case 'RUNNING':
             searchBtn.textContent = 'Stop';
             searchBtn.className = 'button-danger';
+            searchBtn.disabled = false;
+            break;
+
+        case 'STOPPING':
+            searchBtn.textContent = 'Stopping...';
+            searchBtn.className = 'button-danger';
+            searchBtn.disabled = true;  // Prevent clicks during stop
             break;
     }
 }
@@ -1165,15 +1198,38 @@ function showStatus(message) {
 }
 
 function exportResults() {
-    if (!searchResults || searchResults.length === 0) {
-        alert('No results to export!');
-        return;
+    // Fallback: Scrape from visible table if searchResults is empty
+    let dataToExport = searchResults;
+    let columnsToExport = searchColumns;
+
+    if (!dataToExport || dataToExport.length === 0) {
+        // Try to extract from displayed table
+        const tableRows = document.querySelectorAll('.results-table tbody tr');
+        if (tableRows.length === 0) {
+            alert('No results to export!');
+            return;
+        }
+
+        // Extract headers
+        const headers = Array.from(document.querySelectorAll('.results-table th'))
+            .map(th => th.textContent.trim());
+        columnsToExport = headers;
+
+        // Extract rows
+        dataToExport = Array.from(tableRows).map(row => {
+            const cells = Array.from(row.querySelectorAll('td'));
+            return {
+                seed: cells[0]?.textContent.trim(),
+                score: parseInt(cells[1]?.textContent),
+                tallies: cells.slice(2).map(c => parseInt(c.textContent) || 0)
+            };
+        });
     }
 
     // Headers from columns, rows from results - simple array join
     const rows = [
-        searchColumns.join(','),
-        ...searchResults.map(r => [r.seed, r.score, ...(r.tallies || [])].join(','))
+        columnsToExport.join(','),
+        ...dataToExport.map(r => [r.seed, r.score, ...(r.tallies || [])].join(','))
     ];
 
     // Download
