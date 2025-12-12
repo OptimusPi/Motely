@@ -61,13 +61,11 @@ namespace Motely.Filters
             // If there are warnings, print them
             if (warnings.Count > 0)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("WARNINGS:");
                 foreach (var warning in warnings)
                 {
                     Console.WriteLine($"  ⚠️  {warning}");
                 }
-                Console.ResetColor();
             }
 
             // If there are errors, throw exception with all of them
@@ -955,18 +953,14 @@ namespace Motely.Filters
                             {
                                 if (!autoFixedSlots)
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Cyan;
                                     Console.WriteLine(
                                         $"  ✨ AUTO-FIX: Ante 1 only has 4 packs (slots 0-3)"
                                     );
-                                    Console.ResetColor();
                                     autoFixedSlots = true;
                                 }
-                                Console.ForegroundColor = ConsoleColor.Cyan;
                                 Console.WriteLine(
                                     $"  ✨ {prefix}: Adjusted pack slot {slot} → {adjustedSlot} for ante 1 compatibility"
                                 );
-                                Console.ResetColor();
                             }
                             continue; // Skip adding original slot
                         }
