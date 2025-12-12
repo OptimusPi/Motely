@@ -1,25 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <!-- <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks> -->
+    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0'">win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
     <Version>1.0.0</Version>
   </PropertyGroup>
-  <!-- Build as Exe by default (TUI mode), but Library when referenced by other projects -->
+  <!-- Build as Exe by default (TUI mode), but Library when multi-targeting or in BSO_LIBRARY mode -->
   <PropertyGroup>
-    <OutputType Condition="'$(IsReferenced)' == 'true'">Library</OutputType>
-    <OutputType Condition="'$(IsReferenced)' != 'true'">Exe</OutputType>
+    <!-- Multi-targeting (net10.0 + browser) means building for BSO -> always Library -->
+    <OutputType Condition="$(TargetFrameworks.Contains(';'))">Library</OutputType>
+    <!-- Single-targeting: Exe by default, Library if BSO_LIBRARY config -->
+    <OutputType Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' == 'BSO_LIBRARY'">Library</OutputType>
+    <OutputType Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' != 'BSO_LIBRARY'">Exe</OutputType>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Performance optimizations -->
     <Optimize>true</Optimize>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
-  <!-- Desktop performance settings -->
-  <PropertyGroup>
+  <!-- Desktop performance settings (not applicable to browser) -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <TieredCompilation>true</TieredCompilation>
     <TieredPGO>true</TieredPGO>
     <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
@@ -50,6 +54,10 @@
     <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
     <MetricsSupport>false</MetricsSupport>
   </PropertyGroup>
+  <!-- Browser-specific settings -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
+  </PropertyGroup>
   <!-- Publish settings for Release builds only (NOT for BSO_LIBRARY builds) -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishSingleFile>true</PublishSingleFile>
@@ -58,11 +66,15 @@
     <SelfContained>true</SelfContained>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
-  <ItemGroup>
+  <!-- Desktop-only packages (native dependencies that don't work in browser) -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="DuckDB.NET.Data.Full" />
+    <PackageReference Include="Terminal.Gui" />
+  </ItemGroup>
+  <!-- Cross-platform packages -->
+  <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
-    <PackageReference Include="Terminal.Gui" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
@@ -71,5 +83,22 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- Exclude desktop-only files from browser build (Terminal.Gui TUI, CLI executors) -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <!-- TUI uses Terminal.Gui - definitely not browser compatible -->
+    <Compile Remove="TUI\**\*.cs" />
+    <!-- API server uses native HTTP listener - not browser compatible -->
+    <Compile Remove="API\**\*.cs" />
+    <!-- Executors are CLI-focused, exclude from browser -->
+    <Compile Remove="Executors\**\*.cs" />
+    <!-- Program.cs is the CLI entry point -->
+    <Compile Remove="Program.cs" />
+    <!-- MotelySearch.cs has DuckDB classes - use browser stub instead -->
+    <Compile Remove="MotelySearch.cs" />
+  </ItemGroup>
+  <!-- Exclude browser stub from desktop build -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Compile Remove="MotelySearch.Browser.cs" />
   </ItemGroup>
 </Project>
