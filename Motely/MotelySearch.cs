@@ -118,6 +118,7 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     }
 }
 
+#if !BROWSER
 /// <summary>
 /// Streams seeds from a DuckDB database, sorted by length.
 /// Returns IEnumerable for use with WithListSearch(seeds, alreadySorted: true).
@@ -190,6 +191,7 @@ public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
         _connection?.Dispose();
     }
 }
+#endif
 
 public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySeedFilterDesc<TBaseFilter> baseFilterDesc
