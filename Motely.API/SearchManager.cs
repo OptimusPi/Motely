@@ -287,6 +287,32 @@ public class SearchManager
         }
     }
 
+    public async Task StopAllSearchesAsync()
+    {
+        await _lifecycleGate.WaitAsync();
+        try
+        {
+            var ids = _activeSearches.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
+            foreach (var id in ids)
+            {
+                if (_activeSearches.TryRemove(id, out var search))
+                {
+                    var stopped = await StopSearchInternalAsync(search, reason: "stop_all");
+                    if (!stopped)
+                    {
+                        _activeSearches[id] = search;
+                    }
+                }
+            }
+
+            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
     private async Task<bool> StopSearchInternalAsync(ActiveSearch search, string reason)
     {
         _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "search_halted", searchId = search.SearchId, reason }));

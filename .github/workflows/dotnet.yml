@@ -24,12 +24,12 @@ jobs:
       with:
         dotnet-version: 10.0.x
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore Motely.sln
     - name: Build Motely as library for tests
       run: dotnet build Motely/Motely.csproj -c BSO_LIBRARY --no-restore
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build Motely.sln --no-restore
     - name: Build CLI configuration
-      run: dotnet build Motely/Motely.csproj -c CLI
+      run: dotnet build Motely/Motely.csproj -c CLI --no-restore
     - name: Test
-      run: dotnet test --verbosity normal
+      run: dotnet test Motely.Tests/Motely.Tests.csproj --verbosity normal
