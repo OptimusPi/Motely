@@ -1,0 +1,39 @@
+name: 9ZXMM1M-test
+description: Test duplicate prevention - should show Perkeo in ante 1, Canio in ante 8
+deck: Red
+stake: White
+must:
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: &o0 []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+- type: souljoker
+  value: Canio
+  antes:
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+should: []
+mustNot: []

@@ -1,0 +1,67 @@
+name: FREE NEGATIVE RARE NEGATIVE PERKEO Duplicator
+author: pifreak
+description: Find Perkeo & Ankh in any MEGA pack!!!!
+dateCreated: 2025-08-18T00:00:00.0000000Z
+deck: Ghost
+stake: white
+must:
+- type: voucher
+  value: overstock
+  antes: &o0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: voucher
+  value: OverstockPlus
+  antes: *o0
+  score: 1
+  stickers: []
+- type: souljoker
+  value: Perkeo
+  antes: *o0
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: &o1 []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+- type: souljoker
+  value: Chicot
+  antes: *o0
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: *o1
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+should:
+- type: joker
+  value: blueprint
+  antes: *o0
+  score: 1
+  stickers: []
+- type: joker
+  value: brainstorm
+  antes: *o0
+  score: 1
+  stickers: []
+mustNot: []

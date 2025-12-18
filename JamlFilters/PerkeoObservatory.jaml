@@ -1,0 +1,94 @@
+name: Perkeo Observatory (Native Match)
+author: Claude Code
+description: Exact 1:1 match of native PerkeoObservatoryDesc - Telescope + Observatory + Perkeo
+dateCreated: 2025-01-28T00:00:00.0000000Z
+deck: Red
+stake: White
+must:
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: &o0 []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+should:
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: joker
+  value: Brainstorm
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: joker
+  value: OopsAll6s
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: souljoker
+  value: any
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+mustNot: []

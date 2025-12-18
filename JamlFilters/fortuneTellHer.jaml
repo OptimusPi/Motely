@@ -1,0 +1,40 @@
+name: Pair of Pants
+author: pifreak
+description: finds 1 spare trousers to start. lol.
+dateCreated: 2025-08-24T05:46:12.6691000Z
+deck: Yellow
+stake: White
+must:
+- type: joker
+  value: SpareTrousers
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+- type: spectralcard
+  value: Ankh
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 1
+should:
+- type: planetcard
+  value: Uranus
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+mustNot: []

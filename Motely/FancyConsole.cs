@@ -2,14 +2,28 @@ using System.Runtime.CompilerServices;
 
 namespace Motely;
 
-public static class FancyConsole
+/// <summary>
+/// Desktop-specific console implementation with fancy bottom line support
+/// </summary>
+public class FancyConsoleImpl : IMotelyConsole
 {
     public static bool IsEnabled { get; set; } = true;
-
     private static string? _bottomLine;
+    private static readonly FancyConsoleImpl _instance = new();
+
+    public static FancyConsoleImpl Instance => _instance;
+
+    // IMotelyConsole implementation
+    bool IMotelyConsole.IsEnabled 
+    { 
+        get => IsEnabled; 
+        set => IsEnabled = value; 
+    }
+
+    private FancyConsoleImpl() { } // Private constructor for singleton
 
     [MethodImpl(MethodImplOptions.Synchronized)]
-    private static void WriteBottomLine(string bottomLine)
+    private void WriteBottomLine(string bottomLine)
     {
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
         Console.SetCursorPosition(0, Console.BufferHeight - 1);
@@ -20,7 +34,7 @@ public static class FancyConsole
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
-    private static void ClearBottomLine()
+    private void ClearBottomLine()
     {
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
         Console.SetCursorPosition(0, Console.BufferHeight - 1);
@@ -29,7 +43,7 @@ public static class FancyConsole
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
-    public static void SetBottomLine(string? bottomLine)
+    public void SetBottomLine(string? bottomLine)
     {
         _bottomLine = bottomLine;
 
@@ -44,14 +58,13 @@ public static class FancyConsole
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
-    public static void WriteLine<T>(T message)
+    public void WriteLine<T>(T message)
     {
         WriteLine(message?.ToString() ?? null);
     }
 
-
     [MethodImpl(MethodImplOptions.Synchronized)]
-    public static void WriteLine(string? message)
+    public void WriteLine(string? message)
     {
         try
         {
@@ -74,5 +87,31 @@ public static class FancyConsole
             // No console available (e.g., running in test environment) - just write to stdout
             Console.WriteLine(message ?? "null");
         }
+    }
+}
+
+/// <summary>
+/// Static facade for backward compatibility
+/// </summary>
+public static class FancyConsole
+{
+    public static bool IsEnabled { get; set; } = true;
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    public static void SetBottomLine(string? bottomLine)
+    {
+        FancyConsoleImpl.Instance.SetBottomLine(bottomLine);
+    }
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    public static void WriteLine<T>(T message)
+    {
+        FancyConsoleImpl.Instance.WriteLine(message);
+    }
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    public static void WriteLine(string? message)
+    {
+        FancyConsoleImpl.Instance.WriteLine(message);
     }
 }
