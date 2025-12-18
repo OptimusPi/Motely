@@ -1,0 +1,19 @@
+name: Negative Triboulet Test
+author: pifreak
+description: Test filter for Negative Triboulet from Soul
+dateCreated: 2025-08-15T00:00:00.0000000Z
+deck: Red
+stake: White
+must:
+- type: souljoker
+  value: Triboulet
+  antes:
+  - 1
+  score: 1
+  edition: negative
+  stickers: []
+  sources:
+    packSlots:
+    - 3
+should: []
+mustNot: []

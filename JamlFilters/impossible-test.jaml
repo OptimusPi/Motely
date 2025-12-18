@@ -1,0 +1,40 @@
+name: Impossible Test
+author: Claude Code
+description: Should find ZERO results - tests MUST clause AND logic
+deck: Red
+stake: White
+must:
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: &o0 []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+- type: souljoker
+  value: Chicot
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+should: []
+mustNot: []

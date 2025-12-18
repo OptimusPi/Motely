@@ -1,0 +1,149 @@
+name: Fortune Tell Her
+author: pifreak
+description: Purple Seals Galore! Use them tarot cards baby!
+dateCreated: 2025-08-24T05:46:12.6691000Z
+deck: Yellow
+stake: White
+must:
+- type: joker
+  value: oopsall6s
+  antes:
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    packSlots:
+    - 0
+    - 1
+    requireMega: true
+- type: spectralcard
+  value: Ankh
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 1
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: &o0 []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+should:
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 10
+  stickers: []
+- type: joker
+  value: Brainstorm
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 10
+  stickers: []
+- type: joker
+  value: LuckyCat
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 1
+  stickers: []
+- type: playingcard
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 1
+  stickers: []
+  seal: Purple
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: false
+- type: playingcard
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 1
+  stickers: []
+  seal: Purple
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: false
+- type: spectralcard
+  value: Medium
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    tags: true
+- type: joker
+  value: Juggler
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 6
+  edition: Negative
+  stickers: []
+- type: joker
+  value: Drunkard
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 6
+  edition: Negative
+  stickers: []
+mustNot: []

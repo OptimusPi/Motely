@@ -1,0 +1,23 @@
+name: Simple Test
+description: Testing thread safety
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: Telescope
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 1
+  stickers: []
+should:
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 1
+  stickers: []
+mustNot: []

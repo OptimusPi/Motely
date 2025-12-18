@@ -1,0 +1,57 @@
+name: Full Spread
+author: pifreak
+description: Constellation + Negative Astronomer + Baseball/Certificate/Hologram + Blueprint/Brainstorm
+dateCreated: 2025-01-29T00:00:00.0000000
+deck: Red
+stake: white
+must:
+- type: joker
+  value: OnyxAgate
+  antes: &o0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: joker
+  value: Bloodstone
+  antes: *o0
+  score: 1
+  stickers: []
+- type: joker
+  value: RoughGem
+  antes: *o0
+  score: 1
+  stickers: []
+- type: joker
+  value: Arrowhead
+  antes: *o0
+  score: 1
+  stickers: []
+should:
+- type: joker
+  value: Cavendish
+  antes: *o0
+  score: 1
+  stickers: []
+- type: joker
+  value: Blueprint
+  antes: *o0
+  score: 1
+  stickers: []
+- type: joker
+  value: Brainstorm
+  antes: *o0
+  score: 1
+  stickers: []
+- type: joker
+  value: GrosMichel
+  antes: *o0
+  score: 1
+  stickers: []
+mustNot: []

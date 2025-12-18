@@ -1,0 +1,23 @@
+name: Untitled Filter
+author: Jimbo
+description: ''
+dateCreated: 2025-09-22T01:18:51.8825712Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: Joker
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources: {}
+should: []
+mustNot: []

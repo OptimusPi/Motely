@@ -1,0 +1,18 @@
+name: Simple Joker Test
+description: Find any Jolly Joker in shops
+deck: Red
+stake: White
+must:
+- type: joker
+  value: JollyJoker
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+should: []
+mustNot: []

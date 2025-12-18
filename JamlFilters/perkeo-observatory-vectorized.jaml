@@ -1,0 +1,111 @@
+name: Perkeo Observatory (Vectorized)
+author: Claude Code
+description: Telescope + Observatory vouchers + Perkeo soul joker with The Soul in antes 1-5
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: Telescope
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 1
+  stickers: []
+- type: voucher
+  value: Observatory
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 1
+  stickers: []
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+should:
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: joker
+  value: Brainstorm
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  edition: Negative
+  stickers: []
+- type: joker
+  value: Brainstorm
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  edition: Negative
+  stickers: []
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 1
+  edition: Negative
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+mustNot: []

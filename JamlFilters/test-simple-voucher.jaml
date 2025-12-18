@@ -1,0 +1,13 @@
+name: Simple Voucher Test
+description: Just find Overstock voucher in ante 1
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: Overstock
+  antes:
+  - 1
+  score: 1
+  stickers: []
+should: []
+mustNot: []

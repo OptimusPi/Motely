@@ -1,0 +1,19 @@
+name: telescope-observatory-test
+description: Test voucher state management with Telescope + Observatory
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: Telescope
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: voucher
+  value: Observatory
+  antes:
+  - 2
+  score: 1
+  stickers: []
+should: []
+mustNot: []
