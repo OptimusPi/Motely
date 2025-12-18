@@ -10,6 +10,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Collections.Concurrent;
 using System.Linq;
+using Microsoft.Extensions.Hosting;
 
 namespace Motely.API;
 
@@ -88,8 +89,17 @@ public static class MotelyApiFactory
         app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
 
         // Close endpoint
-        app.MapPost("/close", () => 
+        app.MapPost("/close", async (IHostApplicationLifetime lifetime) => 
         {
+            try
+            {
+                await SearchManager.Instance.StopAllSearchesAsync();
+            }
+            catch
+            {
+            }
+
+            lifetime.StopApplication();
             return Results.Ok(new { message = "Server shutting down..." });
         });
 
