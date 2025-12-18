@@ -1,0 +1,60 @@
+name: Banana
+author: pifreak
+description: find banana
+dateCreated: 2025-08-28T05:46:12.6691000Z
+deck: red
+stake: white
+must:
+- type: joker
+  value: OopsAll6s
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: joker
+  value: GrosMichel
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: joker
+  value: Showman
+  antes:
+  - 1
+  - 2
+  score: 1
+  stickers: []
+- type: joker
+  value: Cavendish
+  antes:
+  - 3
+  - 4
+  - 5
+  score: 1
+  stickers: []
+should:
+- type: joker
+  value: Cavendish
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: joker
+  value: InvisibleJoker
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+mustNot: []

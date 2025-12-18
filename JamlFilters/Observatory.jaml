@@ -1,0 +1,30 @@
+name: Perkeo Observatory
+author: tacodiva
+description: Perkeo with the Telescope and Observatory Vouchers.
+dateCreated: 2025-01-01T05:46:12.6691000Z
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: Telescope
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: voucher
+  value: Observatory
+  antes:
+  - 2
+  score: 1
+  stickers: []
+should:
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+mustNot: []

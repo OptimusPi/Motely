@@ -1,0 +1,59 @@
+name: Max Mode Test
+author: Test
+description: Test filter using Max mode with Or clause
+dateCreated: 2025-10-18T00:00:00.0000000Z
+deck: Red
+stake: White
+mode: Max
+must: []
+should:
+- type: or
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  clauses:
+  - type: joker
+    value: OopsAll6s
+    antes:
+    - 4
+    score: 1
+    stickers: []
+    sources:
+      shopSlots:
+      - 2
+      - 3
+      - 4
+      - 5
+  - type: joker
+    value: OopsAll6s
+    antes:
+    - 4
+    score: 1
+    stickers: []
+    sources:
+      shopSlots:
+      - 6
+      - 7
+      - 8
+      - 9
+  - type: joker
+    value: OopsAll6s
+    antes:
+    - 4
+    score: 1
+    stickers: []
+    sources:
+      shopSlots:
+      - 10
+      - 11
+      - 12
+      - 13
+  score: 100
+  stickers: []
+mustNot: []

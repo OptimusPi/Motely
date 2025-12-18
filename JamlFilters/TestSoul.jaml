@@ -1,0 +1,20 @@
+name: Test Soul
+deck: Red
+stake: White
+must:
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  - 2
+  score: 1
+  edition: Negative
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+should: []
+mustNot: []

@@ -1,0 +1,336 @@
+name: Claude's X-Mult Madness
+author: Claude (with love for pifreak!)
+description: Early Baron + Steel/Glass jokers with copy support for exponential X-mult scaling. Baron requires Kings in hand for X-mult!
+dateCreated: 2025-01-28T00:00:00.0000000Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: Baron
+  label: Baron (X1.5 mult per King in hand)
+  antes:
+  - 1
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    packSlots:
+    - 0
+    - 1
+- type: voucher
+  value: Telescope
+  label: Telescope for strategic planning
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 1
+  stickers: []
+should:
+- type: joker
+  value: SteelJoker
+  label: Steel Joker (+X0.2 per Steel card)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 80
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: GlassJoker
+  label: Glass Joker (+X0.75 per Glass card)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 75
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Blueprint
+  label: Blueprint to copy Baron/Steel/Glass
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 100
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: Brainstorm
+  label: Brainstorm to copy Baron/Steel/Glass
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 100
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: Blueprint
+  label: Negative Blueprint (doesn't take slot!)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 150
+  edition: Negative
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: Brainstorm
+  label: Negative Brainstorm (doesn't take slot!)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 150
+  edition: Negative
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: tarotcard
+  value: TheEmperor
+  label: The Emperor (creates 2 Tarot cards)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 30
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: tarotcard
+  value: TheHierophant
+  label: The Hierophant (enhances Kings!)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 40
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: voucher
+  value: Observatory
+  label: Observatory for planet scaling
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 60
+  stickers: []
+- type: joker
+  value: MidasMask
+  label: Midas Mask (face cards become Gold)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 50
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Vampire
+  label: Vampire (+X0.1 per enhanced card removed)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 70
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: smallblindtag
+  value: NegativeTag
+  label: Negative Tag for free negative joker
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 25
+  stickers: []
+  sources:
+    shopSlots: &o0 []
+    packSlots: *o0
+    tags: true
+- type: bigblindtag
+  value: NegativeTag
+  label: Big Blind Negative Tag
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 25
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots: *o0
+    tags: true
+mustNot: []

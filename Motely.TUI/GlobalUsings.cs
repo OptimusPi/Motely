@@ -1,0 +1,17 @@
+// Standard .NET global usings
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+// Global usings for Terminal.Gui v2 develop namespaces
+global using Terminal.Gui.Drawing;
+global using Terminal.Gui.Views;
+global using Terminal.Gui.ViewBase;
+global using Terminal.Gui.App;
+global using Terminal.Gui.Drivers;
+
+// Type aliases for API changes in v2 develop
+global using Attribute = Terminal.Gui.Drawing.Attribute;

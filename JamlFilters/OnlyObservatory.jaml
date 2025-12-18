@@ -1,0 +1,42 @@
+name: Perkeo Observatory with Copy Jokers
+author: pifreak
+description: Telescope + Observatory vouchers with Perkeo (via The Soul) and copy jokers (Showman, Blueprint, Brainstorm, Invisible Joker)
+dateCreated: 2025-01-28T00:00:00.0000000Z
+deck: Ghost
+stake: White
+must:
+- type: voucher
+  value: Telescope
+  label: Telescope
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 1
+  stickers: []
+- type: voucher
+  value: Observatory
+  label: Observatory
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 1
+  stickers: []
+should:
+- type: joker
+  value: Supernova
+  label: Supernova
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+mustNot: []

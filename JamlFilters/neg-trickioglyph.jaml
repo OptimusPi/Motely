@@ -1,0 +1,64 @@
+name: Neg Trickeoglyph
+author: qcom
+description: Negative perkeo ante 1, canio ante 8, both hieroglyph vouchers and magic trick before ante 8
+dateCreated: 2025-08-19T05:46:12.6691000Z
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: Hieroglyph
+  antes:
+  - 1
+  - 2
+  score: 1
+  stickers: []
+- type: voucher
+  value: MagicTrick
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 1
+  stickers: []
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 1
+    - 2
+    - 3
+should:
+- type: voucher
+  value: Petroglyph
+  antes:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: souljoker
+  value: Canio
+  antes:
+  - 8
+  score: 100
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+mustNot: []
