@@ -17,7 +17,7 @@ body {
     background: #0b1415; /* ColorDarkShadow */
     color: #FFFFFF;
     font-size: 16px; /* Bigger base font */
-    padding: 12px;
+    padding: 8px;
     margin: 0;
 }
 
@@ -55,9 +55,9 @@ body {
     background: #ff4c40;
     color: #FFFFFF;
     border: 1px solid #a02721;
-    padding: 6px 12px;
+    padding: 5px 10px;
     font-family: 'm6x11', 'Courier New', monospace;
-    font-size: 14px;
+    font-size: 15px;
     cursor: pointer;
     border-radius: 3px;
     text-shadow: 1px 1px 0px #000000;
@@ -115,9 +115,9 @@ button {
     background: #ff4c40;
     color: #FFFFFF;
     border: 1px solid #a02721;
-    padding: 6px 12px;
+    padding: 4px 10px;
     font-family: 'm6x11', 'Courier New', monospace;
-    font-size: 13px;
+    font-size: 15px;
     cursor: pointer;
     border-radius: 3px;
     text-shadow: 1px 1px 0px #000000;
@@ -237,9 +237,9 @@ label {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 3px solid #565b5c; /* ColorFadedGrey */
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #565b5c; /* ColorFadedGrey */
 }
 
 .results-header h3 {
@@ -251,14 +251,18 @@ label {
 
 .results-container {
     background: #1e2b2d; /* ColorDarkGrey */
-    border: 3px solid #565b5c; /* ColorFadedGrey */
-    border-radius: 8px;
-    padding: 12px; /* reasonable padding */
+    border: none;
+    border-radius: 0;
+    padding: 0;
     flex: 1; /* GROW to fill available space */
     min-height: 0; /* CRITICAL: allow shrinking in flex */
     overflow-y: auto;
     /* NO max-height - let flex handle it! */
 }
+
+ .results-table {
+    margin: 0;
+ }
 
 .results-table {
     width: 100%;
@@ -315,8 +319,8 @@ label {
 
 .action-buttons button {
     flex: 1;
-    padding: 10px 20px;
-    font-size: 14px;
+    padding: 6px 12px;
+    font-size: 15px;
 }
 
 .search-row {
@@ -335,11 +339,11 @@ label {
     background: #ff4c40;
     border: 1px solid #a02721;
     color: #fff;
-    padding: 6px 10px;
+    padding: 4px 8px;
     border-radius: 3px;
     cursor: pointer;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .deck-stake-row {
@@ -376,7 +380,7 @@ label {
 .side-by-side {
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  gap: 12px;
   flex: 1;             /* take all remaining vertical space */
   min-height: 0;       /* CRITICAL: allow flex children to shrink below content size */
   overflow: hidden;    /* contain children */
@@ -395,7 +399,7 @@ label {
   background: #3a5055;
   border: 4px solid #b9c2d2;
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   box-sizing: border-box;
   color: #FFFFFF;
 
@@ -464,7 +468,9 @@ label {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 1000;
   justify-content: center;
   align-items: center;
