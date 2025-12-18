@@ -1,0 +1,27 @@
+name: test
+author: pifreak
+description: test is fucking ankh works bro
+dateCreated: 2025-08-16T05:46:12.6691000Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: oopsAll6s
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+- type: spectralcard
+  value: dejaVu
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 1
+should: []
+mustNot: []

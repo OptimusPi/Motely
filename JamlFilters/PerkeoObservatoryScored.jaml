@@ -1,0 +1,70 @@
+name: Perkeo Observatory Scored
+author: pifreak
+description: Perkeo with Telescope/Observatory, scored for additional items
+dateCreated: 2025-08-27T00:00:00.0000000Z
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: Telescope
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: voucher
+  value: Observatory
+  antes:
+  - 2
+  score: 1
+  stickers: []
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: &o0 []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+should:
+- type: tarotcard
+  value: The Fool
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 10
+  stickers: []
+- type: spectralcard
+  value: Soul
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 25
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    tags: true
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 50
+  stickers: []
+mustNot: []

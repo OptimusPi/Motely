@@ -1,0 +1,141 @@
+name: banana finder
+author: pifreak
+description: banana
+dateCreated: 2025-08-18T15:17:57.3467835Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: GrosMichel
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+- type: joker
+  value: showman
+  antes:
+  - 1
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+should:
+- type: joker
+  value: GrosMichel
+  antes:
+  - 2
+  - 3
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: Cavendish
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: GrosMichel
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  edition: Negative
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: Cavendish
+  antes:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  edition: Negative
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+mustNot: []

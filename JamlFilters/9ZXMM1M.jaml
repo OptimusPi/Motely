@@ -1,0 +1,86 @@
+name: ALEEB
+author: test
+description: Test filter for seed ALEEB - checking actual items from verified output
+deck: Red
+stake: White
+must: []
+should:
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 1
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: souljoker
+  value: Canio
+  antes:
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+- type: souljoker
+  value: Triboulet
+  antes:
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+- type: souljoker
+  value: Chicot
+  antes:
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+- type: souljoker
+  value: Yorick
+  antes:
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+- type: voucher
+  value: MagicTrick
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: voucher
+  value: Hieroglyph
+  antes:
+  - 2
+  score: 1
+  stickers: []
+- type: tarotcard
+  value: TheFool
+  antes:
+  - 3
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 17
+mustNot: []

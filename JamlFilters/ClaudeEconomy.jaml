@@ -1,0 +1,531 @@
+name: Claude's Gold Rush Economy
+author: Claude
+description: Early economy engine with Bull + Gold cards + money jokers for infinite scaling wealth
+dateCreated: 2025-01-28T00:00:00.0000000Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: Bull
+  label: Bull (+$2 per dollar, X2 chips)
+  antes:
+  - 1
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+- type: voucher
+  value: ClearanceSale
+  label: Clearance Sale (All -25% cost)
+  antes:
+  - 1
+  - 2
+  score: 1
+  stickers: []
+should:
+- type: joker
+  value: ToDoList
+  label: To Do List ($1 per hand if Poker hand changes)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 60
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: EvenSteven
+  label: Even Steven (+$4 on even cards)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 70
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: OddTodd
+  label: Odd Todd (+$3 on odd cards)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 60
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: CreditCard
+  label: Credit Card (Go -$20 in debt)
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 50
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: GiftCard
+  label: Gift Card (+$1 per round, sells for double)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 40
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: MailInRebate
+  label: Mail-In Rebate ($5 per discard)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 65
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: BusinessCard
+  label: Business Card (Random chance for $2 per face card)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 55
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: TradingCard
+  label: Trading Card (First discard -1, no rank)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 30
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: GoldenJoker
+  label: Golden Joker (+$4 at end of round)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 75
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: GoldenTicket
+  label: Golden Ticket ($3 per Gold card played)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 80
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: MidasMask
+  label: Midas Mask (Face cards become Gold)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 90
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Rocket
+  label: Rocket ($1 + $2 per round)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 45
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: ToTheMoon
+  label: To The Moon ($1 + 25 cents per hand)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 35
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: ReservedParking
+  label: Reserved Parking ($1 per face card held)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  score: 50
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: voucher
+  value: Liquidation
+  label: Liquidation (All -50% cost)
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 100
+  stickers: []
+- type: voucher
+  value: SeedMoney
+  label: Seed Money (+$50)
+  antes:
+  - 1
+  score: 70
+  stickers: []
+- type: voucher
+  value: MoneyTree
+  label: Money Tree (+$150)
+  antes:
+  - 1
+  - 2
+  score: 120
+  stickers: []
+- type: joker
+  value: Blueprint
+  label: Blueprint to copy Bull/economy jokers
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 100
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: Brainstorm
+  label: Brainstorm to copy Bull/economy jokers
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 100
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: any
+  label: Any Polychrome Joker (X1.5 mult)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 20
+  edition: Polychrome
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: any
+  label: Any Foil Joker (+50 chips)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 10
+  edition: Foil
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: any
+  label: Any Holographic Joker (+10 mult)
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  score: 15
+  edition: Holographic
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+mustNot: []

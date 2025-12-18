@@ -1,0 +1,25 @@
+name: test-spectral
+author: test
+description: Test spectral detection
+dateCreated: 2025-08-17T00:00:00.0000000Z
+deck: Red
+stake: White
+must:
+- type: spectralcard
+  value: any
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    tags: true
+should: []
+mustNot: []

@@ -1,0 +1,350 @@
+name: SickStart
+author: pifreak
+description: A sick as hell start
+deck: Ghost
+stake: White
+must:
+- type: or
+  antes: &o0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  clauses:
+  - type: and
+    antes: *o0
+    clauses:
+    - type: voucher
+      value: Hieroglyph
+      antes:
+      - 1
+      score: 1
+      stickers: []
+    - type: souljoker
+      value: Perkeo
+      antes:
+      - 0
+      score: 1
+      edition: Negative
+      stickers: []
+      sources:
+        shopSlots: &o1 []
+        packSlots:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        tags: true
+    score: 1
+    stickers: []
+  - type: souljoker
+    value: Perkeo
+    antes:
+    - 1
+    score: 1
+    stickers: []
+    sources:
+      shopSlots: *o1
+      packSlots:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      tags: true
+  score: 1
+  stickers: []
+- type: joker
+  value: Showman
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  score: 1
+  stickers: []
+should:
+- type: playingcard
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  enhancement: Lucky
+  sources:
+    shopSlots: *o1
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: false
+- type: playingcard
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 2
+  stickers: []
+  seal: Red
+  enhancement: Lucky
+  sources:
+    shopSlots: *o1
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: false
+- type: joker
+  value: OopsAll6s
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 10
+  stickers: []
+- type: joker
+  value: OopsAll6s
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 100
+  edition: Negative
+  stickers: []
+- type: and
+  antes: *o0
+  clauses:
+  - type: smallblindtag
+    value: NegativeTag
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots: *o1
+      packSlots: *o1
+      tags: true
+  - type: joker
+    value: Blueprint
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots:
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      minShopSlot: 2
+      maxShopSlot: 10
+  score: 69
+  stickers: []
+- type: and
+  antes: *o0
+  clauses:
+  - type: smallblindtag
+    value: NegativeTag
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots: *o1
+      packSlots: *o1
+      tags: true
+  - type: joker
+    value: Blueprint
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots:
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
+      - 18
+      - 19
+      - 20
+      minShopSlot: 11
+      maxShopSlot: 20
+  score: 60
+  stickers: []
+- type: and
+  antes: *o0
+  clauses:
+  - type: smallblindtag
+    value: NegativeTag
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots: *o1
+      packSlots: *o1
+      tags: true
+  - type: joker
+    value: Blueprint
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots:
+      - 21
+      - 22
+      - 23
+      - 24
+      - 25
+      - 26
+      - 27
+      - 28
+      - 29
+      - 30
+      minShopSlot: 21
+      maxShopSlot: 30
+  score: 40
+  stickers: []
+- type: and
+  antes: *o0
+  clauses:
+  - type: smallblindtag
+    value: NegativeTag
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots: *o1
+      packSlots: *o1
+      tags: true
+  - type: joker
+    value: Blueprint
+    antes:
+    - 8
+    score: 1
+    stickers: []
+    sources:
+      shopSlots:
+      - 31
+      - 32
+      - 33
+      - 34
+      - 35
+      - 36
+      - 37
+      - 38
+      - 39
+      - 40
+      - 41
+      - 42
+      - 43
+      - 44
+      - 45
+      - 46
+      - 47
+      - 48
+      - 49
+      - 50
+      - 51
+      - 52
+      - 53
+      - 54
+      - 55
+      - 56
+      - 57
+      - 58
+      - 59
+      - 60
+      - 61
+      - 62
+      - 63
+      - 64
+      - 65
+      - 66
+      - 67
+      - 68
+      - 69
+      - 70
+      - 71
+      - 72
+      - 73
+      - 74
+      - 75
+      - 76
+      - 77
+      - 78
+      - 79
+      - 80
+      - 81
+      - 82
+      - 83
+      - 84
+      - 85
+      - 86
+      - 87
+      - 88
+      - 89
+      - 90
+      - 91
+      - 92
+      - 93
+      - 94
+      - 95
+      - 96
+      - 97
+      - 98
+      - 99
+      - 100
+      minShopSlot: 31
+      maxShopSlot: 100
+  score: 20
+  stickers: []
+mustNot: []
