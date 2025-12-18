@@ -222,8 +222,8 @@
                         <select id="savedSearches" onchange="loadSavedSearch()" style="flex: 1;">
                             <option value="">Select a filter...</option>
                         </select>
-                        <button onclick="deleteSelectedSearch()" class="delete-btn"
-                            title="Delete selected filter">Delete Filter</button>
+                        <button onclick="openSettingsModal()" class="delete-btn"
+                            title="Filter settings">Settings...</button>
                     </div>
                     <div class="editor-header">
                         <label>Filter (JAML):</label>
@@ -292,6 +292,26 @@ stake: White</textarea>
                         <p>No results yet</p>
                         <p class="help-text">Start a search to see results</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settingsModal" class="modal" style="display:none;" onclick="handleSettingsModalBackdrop(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3 id="settingsModalTitle">Settings</h3>
+                    <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="builder-row">
+                        <label>Filter</label>
+                        <select id="settingsSavedSearches" onchange="settingsSelectFilter()"></select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="closeSettingsModal()">Back</button>
+                    <button class="button-secondary" onclick="cloneSelectedFilterFromSettings()">Clone This Filter</button>
+                    <button class="button-danger" onclick="deleteSelectedFilterFromSettings()">Delete Filter</button>
                 </div>
             </div>
         </div>
