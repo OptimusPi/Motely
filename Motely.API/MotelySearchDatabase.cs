@@ -100,12 +100,11 @@ public class MotelySearchDatabase : IDisposable
 
             using var cmd = _connection.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO search_state (id, batch_size, last_completed_batch, updated_at)
-                VALUES (1, ?, ?, CURRENT_TIMESTAMP)
+                INSERT INTO search_state (id, batch_size, last_completed_batch)
+                VALUES (1, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     batch_size = excluded.batch_size,
-                    last_completed_batch = excluded.last_completed_batch,
-                    updated_at = excluded.updated_at";
+                    last_completed_batch = excluded.last_completed_batch";
             cmd.Parameters.Add(new DuckDBParameter(batchSize));
             cmd.Parameters.Add(new DuckDBParameter(batchNumber));
             cmd.ExecuteNonQuery();
@@ -293,8 +292,7 @@ public class MotelySearchDatabase : IDisposable
                 CREATE TABLE IF NOT EXISTS search_state (
                     id INTEGER PRIMARY KEY,
                     batch_size INTEGER,
-                    last_completed_batch BIGINT,
-                    updated_at TIMESTAMP
+                    last_completed_batch BIGINT
                 )";
             cmd.ExecuteNonQuery();
         }

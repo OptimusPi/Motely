@@ -268,6 +268,9 @@ public class ApiServerWindow : Window
             var args = new[] { "--urls", $"http://{host}:{port}" };
             _server = MotelyApiFactory.CreateApi(args);
 
+            // Apply TUI thread budget to API search manager (multi-search allocator uses this budget)
+            SearchManager.Instance.SetThreadBudget(TuiSettings.ThreadCount);
+
             App?.Invoke(() =>
             {
                 _statusLabel.Text = "Running";

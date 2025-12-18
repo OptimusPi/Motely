@@ -42,6 +42,73 @@ let sortColumn = 'score';
 let sortDirection = 'desc'; // 'asc' or 'desc'
 const maxRows = 1000; // Display limit message (API returns up to 1000)
 
+let runningSearchIds = [];
+
+let ws = null;
+
+function ensureWebSocket() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+    ws.onmessage = (evt) => {
+        try {
+            const msg = JSON.parse(evt.data);
+            if (!msg || !msg.type) return;
+
+            if (msg.type === 'progress') {
+                if (msg.searchId && currentSearchId && msg.searchId !== currentSearchId) return;
+                const seedsSearched = msg.seedsSearched || 0;
+                const seedsPerSecond = msg.seedsPerSecond || 0;
+                const foundCount = msg.seedsFound || searchResults.length;
+                const threadsInUse = msg.threadsInUse || 0;
+
+                const speedStr = seedsPerSecond >= 1000000
+                    ? `${(seedsPerSecond / 1000000).toFixed(1)}M/s`
+                    : seedsPerSecond >= 1000
+                        ? `${(seedsPerSecond / 1000).toFixed(0)}K/s`
+                        : `${seedsPerSecond.toFixed(0)}/s`;
+
+                const batchInput = document.getElementById('batchOverride');
+                if (batchInput && msg.currentBatch !== undefined) {
+                    batchInput.value = msg.currentBatch;
+                    batchInput.placeholder = `Current: ${msg.currentBatch}`;
+                }
+
+                if (searchButtonState !== 'STOPPING') {
+                    updateSearchButton('RUNNING', 0);
+                }
+
+                const sid = msg.searchId || currentSearchId || '';
+                const threadStr = threadsInUse > 0 ? `${threadsInUse}T` : '';
+                showStatus(`${sid} | ${threadStr} | Batch ${msg.currentBatch || 0} | ${speedStr} | ${(seedsSearched / 1000000).toFixed(1)}M searched | ${foundCount} found`);
+                return;
+            }
+
+            if (msg.type === 'result' && msg.result) {
+                if (msg.searchId && currentSearchId && msg.searchId !== currentSearchId) return;
+                const r = msg.result;
+                mergeResults([{ seed: r.seed, score: r.score, tallies: r.tallies }]);
+                if (searchResults.length > 0) {
+                    document.getElementById('shareBtn').disabled = false;
+                }
+                displayResults({ results: searchResults, columns: msg.columns || searchColumns });
+                return;
+            }
+
+            if (msg.type === 'filters_changed') {
+                loadFilters();
+                return;
+            }
+        } catch (e) {
+            // ignore
+        }
+    };
+}
+
 // Sync URL with current search ID (so refresh/bookmark works)
 function updateUrlWithSearchId(searchId) {
     const url = new URL(window.location);
@@ -52,25 +119,6 @@ function updateUrlWithSearchId(searchId) {
     }
     // Update URL without reloading page
     window.history.replaceState({}, '', url);
-}
-
-// ================================================
-// JAML Editor Helpers (Monaco or textarea fallback)
-// ================================================
-function getJamlValue() {
-    if (window.jamlEditor) {
-        return window.jamlEditor.getValue();
-    }
-    return document.getElementById('filterJaml').value;
-}
-
-function setJamlValue(value) {
-    isProgrammaticEdit = true; // Mark as programmatic so change events don't invalidate
-    document.getElementById('filterJaml').value = value;
-    if (window.jamlEditor) {
-        window.jamlEditor.setValue(value);
-    }
-    isProgrammaticEdit = false;
 }
 
 // Toggle between Monaco and Plain text editor
@@ -232,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load filters FIRST (so dropdown is populated)
     await loadFilters();
     startTaglineRotation();
+    ensureWebSocket();
 
     // Load search ID from URL if present and check its status
     const urlParams = new URLSearchParams(window.location.search);
@@ -301,7 +350,7 @@ async function convertJsonToJaml() {
         return;
     }
 
-    showStatus('🔄 Converting JSON to JAML...');
+    showStatus(' Converting JSON to JAML...');
 
     try {
         const response = await fetch('/convert', {
@@ -313,15 +362,15 @@ async function convertJsonToJaml() {
         const data = await response.json();
 
         if (!response.ok) {
-            showStatus(`❌ Convert failed: ${data.error || 'Unknown error'}`);
+            showStatus(` Convert failed: ${data.error || 'Unknown error'}`);
             return;
         }
 
         setJamlValue(data.jaml);
-        showStatus('✅ Converted to JAML! Review and start search.');
+        showStatus(' Converted to JAML! Review and start search.');
 
     } catch (error) {
-        showStatus(`❌ Convert error: ${error.message}`);
+        showStatus(` Convert error: ${error.message}`);
     }
 }
 
@@ -337,7 +386,7 @@ async function generateJAML() {
         return;
     }
 
-    statusDiv.innerHTML = '<div class="status-message loading">🧞 Genie is thinking...</div>';
+    statusDiv.innerHTML = '<div class="status-message loading"> Genie is thinking...</div>';
 
     try {
         const response = await fetch('/genie', {
@@ -359,7 +408,7 @@ async function generateJAML() {
         // Switch to JAML tab
         document.querySelector('.tab:nth-child(2)').click();
         
-        statusDiv.innerHTML = '<div class="status-message success">✨ JAML generated! Switched to editor.</div>';
+        statusDiv.innerHTML = '<div class="status-message success"> JAML generated! Switched to editor.</div>';
     } catch (error) {
         statusDiv.innerHTML = `<div class="status-message error">Genie error: ${error.message}</div>`;
     }
@@ -459,7 +508,7 @@ async function runSearch() {
 
         if (!response.ok) {
             const error = await response.json();
-            showStatus(`❌ Error: ${error.error}`);
+            showStatus(` Error: ${error.error}`);
             isSearching = false;
             updateSearchButton('START', 0);
             return;
@@ -496,102 +545,15 @@ async function runSearch() {
         // Update filter dots to show this search is now running
         loadFilters();
 
-        // Start polling after 2s delay - the search IS running, we just need to wait for results
+        // Start WebSocket connection
+        ensureWebSocket();
+
         showStatus('Search started...');
-        await pollSearchStatus(2000);
 
     } catch (error) {
-        showStatus(`❌ Network error: ${error.message}`);
+        showStatus(` Network error: ${error.message}`);
         isSearching = false;
         updateSearchButton('START', 0);  // This also re-enables the button
-    }
-}
-
-async function pollSearchStatus(delay = 1000) {
-    let pollCount = 0;
-
-    while (isSearching && !searchAborted) {
-        try {
-            // Always wait at least 1s between polls to avoid overwhelming the search
-            await new Promise(r => setTimeout(r, delay));
-            
-            const response = await fetch(`/search?id=${currentSearchId}`);
-            if (!response.ok) {
-                showStatus('❌ Error polling search status');
-                stopSearch();
-                return;
-            }
-
-            const data = await response.json();
-            const running = data.isBackgroundRunning === true;
-            const seedsSearched = data.seedsSearched || 0;
-            const seedsPerSecond = data.seedsPerSecond || 0;
-
-            // Format speed nicely (M/s for millions)
-            const speedStr = seedsPerSecond >= 1000000
-                ? `${(seedsPerSecond / 1000000).toFixed(1)}M/s`
-                : seedsPerSecond >= 1000
-                    ? `${(seedsPerSecond / 1000).toFixed(0)}K/s`
-                    : `${seedsPerSecond.toFixed(0)}/s`;
-
-            // Update batch override field with current position
-            const batchInput = document.getElementById('batchOverride');
-            if (batchInput && data.currentBatch !== undefined) {
-                batchInput.value = data.currentBatch;
-                batchInput.placeholder = `Current: ${data.currentBatch}`;
-            }
-
-            // Update cutoff field with effective cutoff from server
-            const cutoffInput = document.getElementById('cutoffOverride');
-            if (cutoffInput && data.cutoff !== undefined && cutoffInput.value === '') {
-                cutoffInput.placeholder = `Auto (current: ${data.cutoff})`;
-            }
-
-            // Update results from DB FIRST so count is accurate
-            if (data.results && data.results.length > 0) {
-                mergeResults(data.results);
-                displayResults({ results: searchResults, columns: data.columns });
-            }
-
-            // Update button and status based on isBackgroundRunning (most reliable)
-            // Use data.seedsFound for accurate count (actual DB count, not capped at 1000)
-            const foundCount = data.seedsFound || searchResults.length;
-
-            // CRITICAL: If stopSearch() was called (searchButtonState is STOPPING),
-            // do NOT update button - let stopSearch() handle the final state
-            if (searchButtonState === 'STOPPING') {
-                // User clicked stop - exit poll loop and let stopSearch() handle button
-                return;
-            }
-
-            if (running) {
-                updateSearchButton('RUNNING', 0);
-                showStatus(`Batch ${data.currentBatch || 0} | ${speedStr} | ${(seedsSearched / 1000000).toFixed(1)}M searched | ${foundCount} found`);
-            } else {
-                updateSearchButton('CONTINUE', 0);
-                showStatus(`Stopped at batch ${data.currentBatch || 0} | ${(seedsSearched / 1000000).toFixed(1)}M searched | ${foundCount} found`);
-                isSearching = false;
-                loadFilters(); // Update dots when search stops
-                return;
-            }
-
-            // Update filter dots EVERY poll - no hiding info!
-            loadFilters();
-
-            // Progressive backoff: 1→2→3→4→5→5→5... (min 1s, max 5s between polls)
-            pollCount++;
-            delay = Math.min(1000 + pollCount * 1000, 5000);
-            
-        } catch (error) {
-            if (!searchAborted) {
-                console.error('Poll error:', error);
-                showStatus('⚠️ Connection error, retrying...');
-                await new Promise(r => setTimeout(r, 5000));
-            } else {
-                // If aborted, break out of loop and ensure button is updated
-                break;
-            }
-        }
     }
 }
 
@@ -818,42 +780,116 @@ async function loadFilters() {
             const data = await response.json();
             // Handle both old (array) and new (object with filters array) response formats
             savedFilters = data.filters || data;
+
+            runningSearchIds = data.runningSearchIds || (data.runningSearchId ? [data.runningSearchId] : []);
+
             const dropdown = document.getElementById('savedSearches');
             dropdown.innerHTML = '<option value="">Select a filter...</option>';
             savedFilters.forEach((filter, i) => {
                 // Show GREEN dot if this filter is running, RED dot if not
-                const isRunning = data.runningSearchId === filter.searchId && data.isSearchRunning;
+                const isRunning = data.isSearchRunning && filter.searchId && runningSearchIds.includes(filter.searchId);
                 const statusDot = isRunning ? '🟢' : '🔴';
                 dropdown.innerHTML += `<option value="${i}">${statusDot} ${filter.name}</option>`;
             });
+
+            if (currentSearchId) {
+                const idx = savedFilters.findIndex(f => f.searchId === currentSearchId);
+                if (idx >= 0) {
+                    dropdown.value = idx.toString();
+                }
+            }
         }
     } catch (e) {
         console.error('Failed to load filters:', e);
     }
 }
 
+function openSettingsModal() {
+    const modal = document.getElementById('settingsModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    refreshSettingsModalUI();
+}
+
+function closeSettingsModal() {
+    const modal = document.getElementById('settingsModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+}
+
+function handleSettingsModalBackdrop(e) {
+    // Click outside modal-content closes
+    if (e && e.target && e.target.id === 'settingsModal') {
+        closeSettingsModal();
+    }
+}
+
+function refreshSettingsModalUI() {
+    const dropdown = document.getElementById('settingsSavedSearches');
+    if (!dropdown) return;
+
+    // Sort: running first, then alpha
+    const indexed = savedFilters.map((f, idx) => ({ f, idx }));
+    indexed.sort((a, b) => {
+        const aRunning = a.f.searchId && runningSearchIds.includes(a.f.searchId);
+        const bRunning = b.f.searchId && runningSearchIds.includes(b.f.searchId);
+        if (aRunning !== bRunning) return aRunning ? -1 : 1;
+        return (a.f.name || '').localeCompare((b.f.name || ''), undefined, { sensitivity: 'base' });
+    });
+
+    dropdown.innerHTML = '';
+    indexed.forEach(({ f, idx }) => {
+        const isRunning = f.searchId && runningSearchIds.includes(f.searchId);
+        const statusDot = isRunning ? '🟢' : '🔴';
+        dropdown.innerHTML += `<option value="${idx}">${statusDot} ${f.name}</option>`;
+    });
+
+    // Sync selection from main dropdown if possible
+    const mainDropdown = document.getElementById('savedSearches');
+    if (mainDropdown && mainDropdown.value !== '') {
+        dropdown.value = mainDropdown.value;
+    } else if (currentSearchId) {
+        const idx = savedFilters.findIndex(f => f.searchId === currentSearchId);
+        if (idx >= 0) dropdown.value = idx.toString();
+    }
+
+    updateSettingsModalTitle();
+}
+
+function updateSettingsModalTitle() {
+    const title = document.getElementById('settingsModalTitle');
+    const dropdown = document.getElementById('settingsSavedSearches');
+    if (!title || !dropdown) return;
+    const idx = dropdown.value;
+    const filter = idx !== '' ? savedFilters[parseInt(idx)] : null;
+    const name = filter && filter.name ? filter.name : 'Select a filter';
+    title.textContent = `Settings for ${name}`;
+}
+
+function settingsSelectFilter() {
+    const dropdown = document.getElementById('settingsSavedSearches');
+    if (!dropdown) return;
+    const idx = dropdown.value;
+    const mainDropdown = document.getElementById('savedSearches');
+    if (mainDropdown) {
+        mainDropdown.value = idx;
+    }
+    updateSettingsModalTitle();
+}
+
+function deleteSelectedFilterFromSettings() {
+    // Placeholder: until we move deleteSelectedSearch fully under modal
+    deleteSelectedSearch();
+    closeSettingsModal();
+}
+
+function cloneSelectedFilterFromSettings() {
+    alert('Clone filter: not implemented yet');
+}
+
 async function loadSavedSearch() {
     const dropdown = document.getElementById('savedSearches');
     const idx = dropdown.value;
-
-    // STOP any currently running search first
-    if (isSearching && currentSearchId) {
-        showStatus('Stopping current search...');
-        // Use state machine to prevent race conditions
-        updateSearchButton('STOPPING', 0);
-        searchAborted = true;
-        isSearching = false;
-
-        try {
-            await fetch('/search/stop', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ searchId: currentSearchId })
-            });
-        } catch (e) {
-            console.error('Failed to stop search:', e);
-        }
-    }
     
     if (idx === '') {
         setJamlValue('');
@@ -922,7 +958,7 @@ async function loadSavedSearch() {
                     isSearching = true;
                     updateSearchButton('RUNNING', progress / 100);
                     showStatus(`🔍 Search running at batch ${data.currentBatch || 0}`);
-                    await pollSearchStatus(0);
+                    ensureWebSocket();
                 } else if (data.currentBatch > 0) {
                     updateSearchButton('CONTINUE', progress / 100);
                     showStatus(`📊 Loaded existing search - ${searchResults.length} results, batch ${data.currentBatch}`);
@@ -975,7 +1011,13 @@ async function deleteSelectedSearch() {
     if (!confirm(`Delete filter ${filter.name}?`)) return;
     
     try {
-        const response = await fetch(`/filters/${filter.filePath}`, { method: 'DELETE' });
+        const filterId = filter.filePath;
+        if (!filterId) {
+            alert('This filter cannot be deleted (no file)');
+            return;
+        }
+
+        const response = await fetch(`/filters/${encodeURIComponent(filterId)}`, { method: 'DELETE' });
         if (response.ok) {
             await loadFilters();
             setJamlValue('');
@@ -1038,7 +1080,7 @@ async function checkExistingSearchStatus(searchId) {
             isSearching = true;
             updateSearchButton('RUNNING', progress / 100);
             showStatus(`🔍 Search running at batch ${data.currentBatch || 0}`);
-            await pollSearchStatus(0); // Start polling immediately
+            ensureWebSocket();
         } else if (data.currentBatch > 0) {
             // Stopped search with progress - show Continue button
             updateSearchButton('CONTINUE', progress / 100);
