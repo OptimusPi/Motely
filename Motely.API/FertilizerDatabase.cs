@@ -50,11 +50,19 @@ public sealed class FertilizerDatabase : IDisposable
             // Create table if not exists
             using var cmd = _connection.CreateCommand();
             cmd.CommandText = @"
-                CREATE TABLE IF NOT EXISTS fertilizer_pile (
-                    seed VARCHAR PRIMARY KEY,
-                    score INTEGER DEFAULT 0
+                CREATE TABLE IF NOT EXISTS seeds (
+                    seed VARCHAR PRIMARY KEY
                 )";
             cmd.ExecuteNonQuery();
+
+            using (var migrateCmd = _connection.CreateCommand())
+            {
+                migrateCmd.CommandText = @"
+                    INSERT INTO seeds (seed)
+                    SELECT seed FROM fertilizer_pile
+                    ON CONFLICT (seed) DO NOTHING";
+                try { migrateCmd.ExecuteNonQuery(); } catch { }
+            }
 
             // Migrate from fertilizer.txt if it exists
             MigrateFromTxtIfNeeded();
@@ -73,7 +81,7 @@ public sealed class FertilizerDatabase : IDisposable
         {
             // Check if DB already has data
             using var countCmd = _connection.CreateCommand();
-            countCmd.CommandText = "SELECT COUNT(*) FROM fertilizer_pile";
+            countCmd.CommandText = "SELECT COUNT(*) FROM seeds";
             var count = (long)countCmd.ExecuteScalar()!;
 
             if (count > 0) return; // DB already populated
@@ -82,7 +90,7 @@ public sealed class FertilizerDatabase : IDisposable
 
             // Use DuckDB's COPY command for efficient bulk import
             using var cmd = _connection.CreateCommand();
-            cmd.CommandText = $"COPY fertilizer_pile(seed) FROM '{_txtPath.Replace("\\", "\\\\")}' (FORMAT CSV, HEADER false, DELIMITER '\n')";
+            cmd.CommandText = $"COPY seeds(seed) FROM '{_txtPath.Replace("\\", "\\\\")}' (FORMAT CSV, HEADER false, DELIMITER '\n')";
             cmd.ExecuteNonQuery();
 
             // Get final count
@@ -100,23 +108,29 @@ public sealed class FertilizerDatabase : IDisposable
     }
 
     /// <summary>
-    /// Add seeds with scores to the fertilizer pile (upserts on conflict)
+    /// Add seeds to the fertilizer pile (ignore duplicates)
     /// </summary>
-    public async Task AddSeedsAsync(IEnumerable<(string seed, int score)> seedsWithScores)
+    public async Task AddSeedsAsync(IEnumerable<string> seeds)
     {
         if (_connection == null) return;
 
         try
         {
-            using var appender = _connection.CreateAppender("fertilizer_pile");
-            foreach (var (seed, score) in seedsWithScores)
+            using var cmd = _connection.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO seeds (seed)
+                VALUES (?)
+                ON CONFLICT (seed) DO NOTHING";
+
+            foreach (var seed in seeds)
             {
-                var row = appender.CreateRow();
-                row.AppendValue(seed);
-                row.AppendValue(score);
-                row.EndRow();
+                if (string.IsNullOrWhiteSpace(seed))
+                    continue;
+
+                cmd.Parameters.Clear();
+                cmd.Parameters.Add(new DuckDBParameter(seed));
+                cmd.ExecuteNonQuery();
             }
-            appender.Close();
         }
         catch (Exception ex)
         {
@@ -125,29 +139,29 @@ public sealed class FertilizerDatabase : IDisposable
     }
 
     /// <summary>
-    /// Get top N seeds by score for API responses
+    /// Get top N seeds (arbitrary order)
     /// </summary>
-    public List<(string seed, int score)> GetTopSeeds(int limit = 1000)
+    public List<string> GetTopSeeds(int limit = 1000)
     {
-        if (_connection == null) return new List<(string, int)>();
+        if (_connection == null) return new List<string>();
 
         try
         {
             using var cmd = _connection.CreateCommand();
-            cmd.CommandText = $"SELECT seed, score FROM fertilizer_pile ORDER BY score DESC LIMIT {limit}";
+            cmd.CommandText = $"SELECT seed FROM seeds LIMIT {limit}";
             
-            var results = new List<(string, int)>();
+            var results = new List<string>();
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                results.Add((reader.GetString(0), reader.GetInt32(1)));
+                results.Add(reader.GetString(0));
             }
             return results;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to query fertilizer pile: {ex.Message}");
-            return new List<(string, int)>();
+            return new List<string>();
         }
     }
 
@@ -161,7 +175,7 @@ public sealed class FertilizerDatabase : IDisposable
         try
         {
             using var cmd = _connection.CreateCommand();
-            cmd.CommandText = "SELECT COUNT(*) FROM fertilizer_pile";
+            cmd.CommandText = "SELECT COUNT(*) FROM seeds";
             return (long)cmd.ExecuteScalar()!;
         }
         catch

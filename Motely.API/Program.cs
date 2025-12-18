@@ -4,6 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
+using System.IO;
+using Microsoft.Extensions.FileProviders;
+using System.Net.WebSockets;
+using System.Text;
+using System.Collections.Concurrent;
+using System.Linq;
 
 namespace Motely.API;
 
@@ -20,9 +26,26 @@ public static class MotelyApiFactory
     public static WebApplication CreateApi(string[]? args = null)
     {
         var builder = WebApplication.CreateBuilder(args ?? new string[0]);
-        
-        // Configure WebRootPath to find wwwroot correctly
-        builder.Environment.WebRootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+
+        static string FindMotelyRoot(string startDir)
+        {
+            var dir = new DirectoryInfo(startDir);
+            while (dir != null)
+            {
+                var wwwroot = Path.Combine(dir.FullName, "wwwroot");
+                if (Directory.Exists(wwwroot))
+                    return dir.FullName;
+
+                dir = dir.Parent;
+            }
+
+            return startDir;
+        }
+
+        var motelyRoot = FindMotelyRoot(builder.Environment.ContentRootPath);
+
+        // Keep Environment in sync for any direct path usage
+        builder.Environment.WebRootPath = Path.Combine(motelyRoot, "wwwroot");
         
         // Configure logging to redirect to console (which will be captured by TUI)
         builder.Logging.ClearProviders();
@@ -45,11 +68,21 @@ public static class MotelyApiFactory
         });
 
         var app = builder.Build();
+
+        var ws = new WebSocketBroadcaster();
+        SearchManager.Instance.SetBroadcaster(ws);
         
         // Configure middleware
         app.UseCors("AllowAll");
-        app.UseStaticFiles(); // Static files first
+        // Static files first (explicit file provider so it works when launched from Motely.TUI)
+        var webRoot = Path.Combine(motelyRoot, "wwwroot");
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(webRoot),
+            RequestPath = ""
+        });
         app.UseRouting();
+        app.UseWebSockets();
         
         // Health check
         app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
@@ -58,6 +91,36 @@ public static class MotelyApiFactory
         app.MapPost("/close", () => 
         {
             return Results.Ok(new { message = "Server shutting down..." });
+        });
+
+        app.Map("/ws", async context =>
+        {
+            if (!context.WebSockets.IsWebSocketRequest)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            using var socket = await context.WebSockets.AcceptWebSocketAsync();
+            var id = ws.Add(socket);
+            try
+            {
+                var buffer = new byte[1024];
+                while (socket.State == WebSocketState.Open && !context.RequestAborted.IsCancellationRequested)
+                {
+                    var result = await socket.ReceiveAsync(buffer, context.RequestAborted);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                        break;
+                }
+            }
+            catch
+            {
+            }
+            finally
+            {
+                ws.Remove(id);
+                try { await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
+            }
         });
 
         // Search endpoints - use existing SearchManager
@@ -74,18 +137,29 @@ public static class MotelyApiFactory
                 var seedCountInt = seedCount.HasValue
                     ? (int)Math.Min(seedCount.Value, int.MaxValue)
                     : 0;
+
+                var deck = "Red";
+                var stake = "White";
+                string? jamlErr;
+                if (global::Motely.JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var cfg, out jamlErr) && cfg != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(cfg.Deck)) deck = cfg.Deck;
+                    if (!string.IsNullOrWhiteSpace(cfg.Stake)) stake = cfg.Stake;
+                }
                 
                 (List<SearchResult> immediateResults, string searchId) = await SearchManager.Instance.StartSearchAsync(
                     filterJaml,
-                    deck: "RedDeck",
-                    stake: "White",
+                    deck: deck,
+                    stake: stake,
                     seedCount: seedCountInt);
+
+                var columns = SearchManager.Instance.GetColumnNames(searchId);
                 
                 return Results.Ok(new { 
                     searchId = searchId, 
                     status = "running",
                     results = immediateResults,
-                    columns = new[] { "seed", "score" },
+                    columns = columns,
                     isBackgroundRunning = true,
                     progressPercent = 0
                 });
@@ -102,15 +176,27 @@ public static class MotelyApiFactory
             {
                 var (results, progressPercent) = SearchManager.Instance.GetSearchStatus(id);
                 var isRunning = SearchManager.Instance.IsSearchRunning(id);
+
+                SearchManager.Instance.TryGetSearchMetrics(
+                    id,
+                    out var currentBatch,
+                    out var totalBatches,
+                    out var seedsSearched,
+                    out var seedsPerSecond);
+
                 return Results.Ok(new { 
                     searchId = id, 
                     status = isRunning ? "running" : "stopped",
                     searchStatus = isRunning ? "running" : "stopped",
                     progressPercent = progressPercent,
                     results = results,
-                    columns = new[] { "seed", "score" },
+                    columns = SearchManager.Instance.GetColumnNames(id),
                     isBackgroundRunning = isRunning,
-                    seedsFound = results?.Count ?? 0
+                    seedsFound = results?.Count ?? 0,
+                    currentBatch = currentBatch,
+                    totalBatches = totalBatches,
+                    seedsSearched = seedsSearched,
+                    seedsPerSecond = seedsPerSecond
                 });
             }
             catch (Exception ex)
@@ -126,7 +212,7 @@ public static class MotelyApiFactory
                 var req = await request.ReadFromJsonAsync<SearchStopRequest>();
                 var searchId = req?.SearchId ?? "";
                 
-                var results = SearchManager.Instance.StopSearch(searchId);
+                var results = await SearchManager.Instance.StopSearchAsync(searchId);
                 return Results.Ok(new { 
                     message = "Search stopped",
                     results = results,
@@ -140,33 +226,117 @@ public static class MotelyApiFactory
             }
         });
 
-        // Filters endpoint - load actual filter files
+        // Filters endpoint - load JAML filters (what the UI expects)
         app.MapGet("/filters", () => 
         {
-            var filtersPath = Path.Combine(builder.Environment.ContentRootPath, "..", "JsonFilters");
+            var filtersPath = Path.Combine(motelyRoot, "JamlFilters");
             var filters = new List<object>();
-            
+
             if (Directory.Exists(filtersPath))
             {
-                var filterFiles = Directory.GetFiles(filtersPath, "*.json");
+                var filterFiles = Directory.GetFiles(filtersPath, "*.jaml")
+                    .Concat(Directory.GetFiles(filtersPath, "*.yaml"))
+                    .Concat(Directory.GetFiles(filtersPath, "*.yml"));
+
                 foreach (var file in filterFiles)
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(file);
-                    filters.Add(new { name = fileName, filePath = fileName, searchId = (string?)null });
+                    var name = Path.GetFileNameWithoutExtension(file);
+                    string filterJaml;
+                    try
+                    {
+                        filterJaml = File.ReadAllText(file);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    var deck = "Red";
+                    var stake = "White";
+                    string? jamlErr;
+                    if (global::Motely.JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var cfg, out jamlErr) && cfg != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(cfg.Deck)) deck = cfg.Deck;
+                        if (!string.IsNullOrWhiteSpace(cfg.Stake)) stake = cfg.Stake;
+                    }
+
+                    var searchId = $"{SearchManager.Instance.GetFilterNameForId(filterJaml)}_{deck}_{stake}";
+
+                    filters.Add(new
+                    {
+                        name,
+                        filterJaml,
+                        filePath = Path.GetFileName(file),
+                        searchId
+                    });
                 }
             }
-            
-            return Results.Ok(new { 
-                filters = filters,
-                runningSearchId = (string?)null,
-                isSearchRunning = false
+
+            var runningSearchIds = SearchManager.Instance.GetRunningSearchIds();
+            var isSearchRunning = runningSearchIds.Count > 0;
+
+            foreach (var activeId in runningSearchIds)
+            {
+                SearchManager.Instance.TryGetRunningSearchFilterJaml(activeId, out var activeFilterJaml);
+
+                var alreadyListed = filters.Any(f =>
+                {
+                    var prop = f.GetType().GetProperty("searchId");
+                    return (prop?.GetValue(f) as string) == activeId;
+                });
+
+                if (!alreadyListed)
+                {
+                    filters.Insert(0, new
+                    {
+                        name = $"(unsaved) {activeId}",
+                        filterJaml = string.IsNullOrWhiteSpace(activeFilterJaml) ? (string?)null : activeFilterJaml,
+                        filePath = (string?)null,
+                        searchId = activeId
+                    });
+                }
+            }
+
+            return Results.Ok(new
+            {
+                filters,
+                runningSearchIds,
+                isSearchRunning
             });
         });
 
-        app.MapDelete("/filters/{name}", (string name) => 
+        app.MapDelete("/filters/{filterId}", (string filterId) => 
         {
-            // TODO: Implement actual filter deletion
-            return Results.Ok(new { message = $"Filter {name} deleted" });
+            try
+            {
+                var filtersPath = Path.Combine(motelyRoot, "JamlFilters");
+
+                if (string.IsNullOrWhiteSpace(filterId))
+                    return Results.BadRequest(new { error = "Missing filterId" });
+
+                var safeName = Path.GetFileName(filterId);
+                if (!string.Equals(safeName, filterId, StringComparison.Ordinal))
+                    return Results.BadRequest(new { error = "Invalid filterId" });
+
+                var ext = Path.GetExtension(safeName);
+                if (!string.Equals(ext, ".jaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yml", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest(new { error = "Invalid filter extension" });
+                }
+
+                var fullPath = Path.Combine(filtersPath, safeName);
+                if (!File.Exists(fullPath))
+                    return Results.NotFound(new { error = "Filter not found" });
+
+                File.Delete(fullPath);
+                return Results.Ok(new { message = $"Filter {safeName} deleted" });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
         });
 
         // Convert endpoint (needs proper implementation)
@@ -177,7 +347,7 @@ public static class MotelyApiFactory
         });
 
         // Default route - serve the web UI
-        app.MapGet("/", () => Results.File(Path.Combine(builder.Environment.WebRootPath, "index.html"), "text/html"));
+        app.MapGet("/", () => Results.File(Path.Combine(webRoot, "index.html"), "text/html"));
         
         return app;
     }
@@ -185,3 +355,46 @@ public static class MotelyApiFactory
 
 internal sealed record SearchStartRequest(string? FilterJaml, long? SeedCount, long? StartBatch, int? Cutoff);
 internal sealed record SearchStopRequest(string? SearchId);
+
+public sealed class WebSocketBroadcaster
+{
+    private readonly ConcurrentDictionary<Guid, WebSocket> _sockets = new();
+
+    public Guid Add(WebSocket socket)
+    {
+        var id = Guid.NewGuid();
+        _sockets[id] = socket;
+        return id;
+    }
+
+    public void Remove(Guid id)
+    {
+        _sockets.TryRemove(id, out _);
+    }
+
+    public void Broadcast(string json)
+    {
+        _ = BroadcastAsync(json);
+    }
+
+    private async Task BroadcastAsync(string json)
+    {
+        var payload = Encoding.UTF8.GetBytes(json);
+        var seg = new ArraySegment<byte>(payload);
+
+        foreach (var kvp in _sockets)
+        {
+            var socket = kvp.Value;
+            if (socket.State != WebSocketState.Open)
+                continue;
+
+            try
+            {
+                await socket.SendAsync(seg, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+            catch
+            {
+            }
+        }
+    }
+}
