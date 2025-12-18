@@ -1,0 +1,270 @@
+name: Untitled Filter
+author: pifreak
+description: Get a lot of Copy jokers, with late Perkeo!
+dateCreated: 2025-08-14T15:49:50.8250000Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Brainstorm
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: voucher
+  value: Blank
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: voucher
+  value: Telescope
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+- type: joker
+  value: Showman
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+should:
+- type: joker
+  value: HangingChad
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: spectralcard
+  value: Ankh
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Brainstorm
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Brainstorm
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+- type: joker
+  value: Blueprint
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+mustNot: []

@@ -1,0 +1,125 @@
+name: aleeb-all-categories-test (Copy)
+author: pifreak
+description: Test that ALEEB matches ALL categories with actual items from the seed
+dateCreated: 2025-10-14T04:41:43.5767328Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: Blueprint
+  antes:
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 7
+- type: joker
+  value: TradingCard
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+- type: voucher
+  value: MagicTrick
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: voucher
+  value: Hieroglyph
+  antes:
+  - 2
+  score: 1
+  stickers: []
+- type: boss
+  value: TheWindow
+  antes:
+  - 1
+  score: 1
+  stickers: []
+- type: boss
+  value: TheArm
+  antes:
+  - 2
+  score: 1
+  stickers: []
+- type: boss
+  value: TheMouth
+  antes:
+  - 3
+  score: 1
+  stickers: []
+- type: smallblindtag
+  value: SpeedTag
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: &o0 []
+    packSlots: *o0
+    tags: true
+- type: bigblindtag
+  value: HandyTag
+  antes:
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots: *o0
+    tags: true
+- type: tarotcard
+  value: TheEmpress
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 1
+- type: tarotcard
+  value: TheTower
+  antes:
+  - 2
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 27
+- type: planetcard
+  value: Mars
+  antes:
+  - 4
+  score: 1
+  stickers: []
+  sources:
+    packSlots:
+    - 1
+    - 3
+- type: playingcard
+  value: 7 of Clubs
+  antes:
+  - 1
+  score: 1
+  stickers:
+  - Lucky
+  sources:
+    packSlots:
+    - 2
+- type: playingcard
+  value: 9 of Spades
+  antes:
+  - 2
+  score: 1
+  stickers:
+  - Blue Seal
+  sources:
+    packSlots:
+    - 2
+should: []
+mustNot: []

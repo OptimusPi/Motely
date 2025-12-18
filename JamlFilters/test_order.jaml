@@ -1,0 +1,22 @@
+name: Untitled Filter
+author: pifreak
+description: ''
+dateCreated: 2025-09-06T02:16:09.2301584Z
+deck: Red
+stake: White
+must:
+- type: joker
+  value: Joker
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources: {}
+- type: voucher
+  value: Overstock
+  antes:
+  - 1
+  score: 1
+  stickers: []
+should: []
+mustNot: []

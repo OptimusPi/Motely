@@ -1,0 +1,223 @@
+name: MoneyTree
+author: IS-100
+description: MoneyTree before ante 4, startying Bull
+dateCreated: 2025-08-30T05:46:12.6691000Z
+deck: Red
+stake: White
+must:
+- type: voucher
+  value: SeedMoney
+  antes:
+  - 1
+  - 2
+  - 3
+  score: 1
+  stickers: []
+- type: voucher
+  value: MoneyTree
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 1
+  stickers: []
+- type: joker
+  value: Bull
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+- type: joker
+  value: ToTheMoon
+  antes:
+  - 1
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    packSlots:
+    - 0
+    - 1
+should:
+- type: playingcard
+  antes:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  score: 100
+  stickers: []
+  seal: Gold
+  sources:
+    shopSlots: &o0 []
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: false
+- type: joker
+  value: Blueprint
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: joker
+  value: Brainstorm
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 1
+  stickers: []
+  sources:
+    shopSlots:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+- type: souljoker
+  value: Perkeo
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 5
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+- type: souljoker
+  value: Yorick
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 5
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+- type: souljoker
+  value: Chicot
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 5
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+- type: souljoker
+  value: Canio
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 5
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+- type: souljoker
+  value: Triboulet
+  antes:
+  - 2
+  - 3
+  - 4
+  score: 5
+  stickers: []
+  sources:
+    shopSlots: *o0
+    packSlots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    tags: true
+mustNot: []

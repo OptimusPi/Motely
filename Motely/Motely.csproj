@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
     <!-- <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks> -->
     <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0'">win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -79,9 +79,6 @@
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Jimbo.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <!-- Exclude desktop-only files from browser build (Terminal.Gui TUI, CLI executors) -->
@@ -98,6 +95,12 @@
     <Compile Remove="MotelySearch.cs" />
   </ItemGroup>
   <!-- Exclude browser stub from desktop build -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <!-- API files are now in separate Motely.API project -->
+    <Compile Remove="API\**\*.cs" />
+    <!-- TUI files are now compiled by Motely.TUI project -->
+    <Compile Remove="TUI\**\*.cs" />
+  </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <Compile Remove="MotelySearch.Browser.cs" />
   </ItemGroup>
