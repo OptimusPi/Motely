@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
 using Motely.API;
 
 namespace Motely.TUI;
@@ -15,6 +16,7 @@ public class ApiServerWindow : Window
     private WebApplication? _server;
     private CancellationTokenSource? _cts;
     private Process? _tunnelProcess;
+    private Task? _serverTask;
     private bool _isRunning = false;
     private string _serverUrl = "";
 
@@ -200,7 +202,7 @@ public class ApiServerWindow : Window
             TextAlignment = Alignment.Center,
         };
         _stopButton.SetScheme(BalatroTheme.RedButton);
-        _stopButton.Accept += (s, e) => StopServerOnly();
+        _stopButton.Accept += async (s, e) => await StopServerOnlyAsync();
         Add(_stopButton);
 
         // Back button - orange
@@ -213,7 +215,7 @@ public class ApiServerWindow : Window
             TextAlignment = Alignment.Center,
         };
         backButton.SetScheme(BalatroTheme.BackButton);
-        backButton.Accept += (s, e) => StopAndClose();
+        backButton.Accept += (s, e) => AttemptClose();
         Add(backButton);
 
         // Keyboard shortcuts
@@ -221,13 +223,13 @@ public class ApiServerWindow : Window
         {
             if (e.KeyCode == KeyCode.Esc)
             {
-                StopAndClose();
+                AttemptClose();
                 e.Handled = true;
             }
         };
 
         // Start server automatically
-        Task.Run(() => StartServerAsync(host, port));
+        _serverTask = Task.Run(() => StartServerAsync(host, port));
     }
 
     private string FindSolutionRoot()
@@ -283,8 +285,12 @@ public class ApiServerWindow : Window
             LogMessage($"Clean API started on {_serverUrl}");
             LogMessage("Web UI available at same URL");
 
-            // Start the API directly
-            await _server.RunAsync($"http://{host}:{port}");
+            await _server.StartAsync(_cts.Token);
+            await _server.WaitForShutdownAsync(_cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during Stop
         }
         catch (Exception ex)
         {
@@ -300,6 +306,17 @@ public class ApiServerWindow : Window
         }
         finally
         {
+            if (_server != null)
+            {
+                try
+                {
+                    using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    await _server.StopAsync(stopCts.Token);
+                }
+                catch { }
+                try { await _server.DisposeAsync(); } catch { }
+            }
+
             // Restore original console output
             Console.SetOut(originalOut);
             Console.SetError(originalError);
@@ -314,27 +331,121 @@ public class ApiServerWindow : Window
                 });
                 _stopButton.Visible = false; // Hide when server stops (back button remains)
             });
+
+            _server = null;
+            _cts = null;
         }
     }
 
-    private void StopServerOnly()
+    private async Task StopServerOnlyAsync()
     {
         if (_isRunning)
         {
+            try
+            {
+                LogMessage("Stopping searches...");
+                await SearchManager.Instance.StopAllSearchesAsync();
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"[WARN] Failed to stop all searches: {ex.Message}");
+            }
+
             LogMessage("Stopping clean API server...");
-            _cts?.Cancel();
-            _cts = null;
-            _server = null;
-            _stopButton.Enabled = false;
-            _stopButton.Visible = false; // Hide when stopped
+            var cts = _cts;
+            var server = _server;
+
+            App?.Invoke(() =>
+            {
+                _stopButton.Enabled = false;
+                _stopButton.Visible = false;
+            });
+
+            try { cts?.Cancel(); } catch { }
+
+            if (server != null)
+            {
+                try
+                {
+                    using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await server.StopAsync(stopCts.Token);
+                }
+                catch { }
+                try { await server.DisposeAsync(); } catch { }
+            }
         }
     }
 
-    private void StopAndClose()
+    private void AttemptClose()
     {
-        StopServerOnly();
+        if (_isRunning)
+        {
+            var shouldStop = ShowStopConfirmDialog();
+            if (!shouldStop)
+                return;
+        }
+
+        _ = StopAndCloseAsync();
+    }
+
+    private async Task StopAndCloseAsync()
+    {
+        await StopServerOnlyAsync();
         StopTunnel();
-        App?.RequestStop();
+        App?.Invoke(() => App?.RequestStop());
+    }
+
+    private bool ShowStopConfirmDialog()
+    {
+        var dialog = new Dialog()
+        {
+            Title = "Stop API Server?",
+            Width = 60,
+            Height = 9,
+        };
+        dialog.SetScheme(BalatroTheme.Window);
+
+        var label = new Label()
+        {
+            X = Pos.Center(),
+            Y = 2,
+            Text = "API server is still running.\nStop it before closing?",
+            TextAlignment = Alignment.Center,
+        };
+        dialog.Add(label);
+
+        var stop = false;
+
+        var stopBtn = new CleanButton()
+        {
+            X = 2,
+            Y = Pos.AnchorEnd(1),
+            Text = " Stop & Close ",
+        };
+        stopBtn.SetScheme(BalatroTheme.RedButton);
+        stopBtn.Accept += (s, e) =>
+        {
+            stop = true;
+            MotelyTUI.App?.RequestStop(dialog);
+        };
+        dialog.Add(stopBtn);
+
+        var cancelBtn = new CleanButton()
+        {
+            X = Pos.Right(stopBtn) + 2,
+            Y = Pos.AnchorEnd(1),
+            Text = " Cancel ",
+        };
+        cancelBtn.SetScheme(BalatroTheme.BackButton);
+        cancelBtn.Accept += (s, e) =>
+        {
+            stop = false;
+            MotelyTUI.App?.RequestStop(dialog);
+        };
+        dialog.Add(cancelBtn);
+
+        MotelyTUI.App?.Run(dialog);
+        return stop;
     }
 
     private void StartTunnel()
