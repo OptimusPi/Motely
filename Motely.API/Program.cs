@@ -20,6 +20,11 @@ namespace Motely.API;
 /// </summary>
 public static class MotelyApiFactory
 {
+    // Shared JSON options for camelCase serialization (JavaScript expects seed/score, not Seed/Score)
+    private static readonly JsonSerializerOptions CamelCaseOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
     /// <summary>
     /// Creates and configures a new Motely WebApplication instance.
     /// </summary>
@@ -43,6 +48,12 @@ public static class MotelyApiFactory
             options.SingleLine = true; // Make logs more compact
         });
         
+        // Configure JSON to use camelCase (JavaScript expects seed/score, not Seed/Score)
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        });
+
         // Add CORS
         builder.Services.AddCors(options =>
         {
@@ -152,6 +163,7 @@ public static class MotelyApiFactory
                             var isRunning = SearchManager.Instance.IsSearchRunning(searchId);
                             SearchManager.Instance.TryGetRunningSearchFilterJaml(searchId, out var runningFilterJaml);
                             SearchManager.Instance.TryGetSearchOverrides(searchId, out var _, out var cutoffOverride);
+                            SearchManager.Instance.TryGetLastError(searchId, out var lastError);
                             SearchManager.Instance.TryGetSearchMetrics(
                                 searchId,
                                 out var currentBatch,
@@ -175,8 +187,9 @@ public static class MotelyApiFactory
                                 totalBatches = totalBatches,
                                 seedsSearched = seedsSearched,
                                 seedsPerSecond = seedsPerSecond,
-                                cutoff = cutoffOverride
-                            });
+                                cutoff = cutoffOverride,
+                                lastError = string.IsNullOrWhiteSpace(lastError) ? (string?)null : lastError
+                            }, CamelCaseOptions);
 
                             await ws.SendToAsync(id, snapshotJson);
                         }
@@ -259,6 +272,7 @@ public static class MotelyApiFactory
 
                 SearchManager.Instance.TryGetRunningSearchFilterJaml(id, out var runningFilterJaml);
                 SearchManager.Instance.TryGetSearchOverrides(id, out var _, out var cutoffOverride);
+                SearchManager.Instance.TryGetLastError(id, out var lastError);
 
                 SearchManager.Instance.TryGetSearchMetrics(
                     id,
@@ -281,7 +295,8 @@ public static class MotelyApiFactory
                     totalBatches = totalBatches,
                     seedsSearched = seedsSearched,
                     seedsPerSecond = seedsPerSecond,
-                    cutoff = cutoffOverride
+                    cutoff = cutoffOverride,
+                    lastError = string.IsNullOrWhiteSpace(lastError) ? (string?)null : lastError
                 });
             }
             catch (Exception ex)
@@ -304,6 +319,19 @@ public static class MotelyApiFactory
                     isBackgroundRunning = false,
                     progressPercent = 100
                 });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPost("/search/stop-all", async () => 
+        {
+            try
+            {
+                await SearchManager.Instance.StopAllSearchesAsync();
+                return Results.Ok(new { message = "All searches stopped" });
             }
             catch (Exception ex)
             {
@@ -753,10 +781,10 @@ public static class MotelyApiFactory
                 }
 
                 var filtersPath = Path.Combine(motelyRoot, "JamlFilters");
+                Directory.CreateDirectory(filtersPath); // Ensure directory exists
                 var fullPath = Path.Combine(filtersPath, safeName);
-                if (!File.Exists(fullPath))
-                    return Results.NotFound(new { error = "Filter not found" });
 
+                // UPSERT: Create new or update existing filter
                 File.WriteAllText(fullPath, filterJaml);
 
                 ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));

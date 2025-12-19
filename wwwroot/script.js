@@ -54,6 +54,7 @@ let previousSeedSource = 'all';
 let isHydrationMode = false;
 
 let ws = null;
+let wsDesiredSearchId = null;
 
 // Global editor functions
 function getJamlValue() {
@@ -75,11 +76,113 @@ function setJamlValue(val) {
 }
 
 function showStatus(message) {
-    const statusElement = document.getElementById('statusMessage');
+    // Update the "Results" header in the right panel with status info
+    const statusElement = document.getElementById('status');
     if (statusElement) {
         statusElement.textContent = message;
-        statusElement.style.display = 'block';
     }
+}
+
+function formatJaml() {
+    const jaml = getJamlValue();
+    if (!jaml.trim()) {
+        showStatus('Nothing to format');
+        return;
+    }
+
+    try {
+        // Parse YAML to object
+        const obj = jsyaml.load(jaml);
+        if (!obj) {
+            showStatus('Could not parse JAML');
+            return;
+        }
+
+        // Dump with default block style
+        const formatted = jsyaml.dump(obj, {
+            indent: 2,
+            lineWidth: -1,
+            noRefs: true,
+            sortKeys: false
+        });
+
+        // Post-process: collapse arrays of primitives to single line [1, 2, 3]
+        const result = collapseSimpleArrays(formatted);
+
+        isProgrammaticEdit = true;
+        setJamlValue(result);
+        isProgrammaticEdit = false;
+
+        showStatus('Formatted!');
+    } catch (e) {
+        showStatus(`Format error: ${e.message}`);
+    }
+}
+
+function collapseSimpleArrays(yamlStr) {
+    const lines = yamlStr.split('\n');
+    const result = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+        // Match a key with no inline value (array will follow)
+        // Also match keys with YAML anchors like "shopSlots: &o0"
+        const match = line.match(/^(\s*)([a-zA-Z_][a-zA-Z0-9_]*):\s*(&\w+)?\s*$/);
+
+        if (match) {
+            const indent = match[1];
+            const key = match[2];
+            const anchor = match[3] || '';
+            const arrayIndent = indent + '  ';
+            const arrayItems = [];
+            let j = i + 1;
+            let isSimpleArray = true;
+
+            // Collect array items
+            while (j < lines.length) {
+                const itemLine = lines[j];
+                // Match "  - value" or "  - 'value'" with flexible spacing
+                const itemMatch = itemLine.match(/^(\s*)-\s+(.*)$/);
+                
+                if (itemMatch && itemMatch[1] === arrayIndent) {
+                    const value = itemMatch[2].trim();
+                    if (isSimpleValue(value)) {
+                        arrayItems.push(value);
+                        j++;
+                    } else {
+                        isSimpleArray = false;
+                        break;
+                    }
+                } else if (itemLine.trim() === '') {
+                    j++;
+                } else {
+                    break;
+                }
+            }
+
+            if (isSimpleArray && arrayItems.length > 0) {
+                const anchorPart = anchor ? ` ${anchor}` : '';
+                result.push(`${indent}${key}:${anchorPart} [${arrayItems.join(', ')}]`);
+                i = j;
+                continue;
+            }
+        }
+
+        result.push(line);
+        i++;
+    }
+
+    return result.join('\n');
+}
+
+function isSimpleValue(value) {
+    if (!value || value.trim() === '') return false;
+    if (/^-?\d+(\.\d+)?$/.test(value)) return true;
+    if (/^["'].*["']$/.test(value)) return true;
+    if (/^[a-zA-Z0-9_-]+$/.test(value)) return true;
+    if (!value.includes(':') && !value.startsWith('{') && !value.startsWith('[')) return true;
+    return false;
 }
 
 function ensureWebSocket() {
@@ -90,10 +193,65 @@ function ensureWebSocket() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws`);
 
+    ws.onopen = () => {
+        try {
+            if (wsDesiredSearchId) {
+                ws.send(JSON.stringify({ type: 'subscribe', searchId: wsDesiredSearchId }));
+            }
+        } catch (e) {
+            console.error('WebSocket subscribe error:', e);
+        }
+    };
+
+    ws.onclose = () => {
+        ws = null;
+    };
+
     ws.onmessage = (evt) => {
         try {
             const msg = JSON.parse(evt.data);
             if (!msg || !msg.type) return;
+
+            if (msg.type === 'snapshot') {
+                if (msg.searchId) {
+                    currentSearchId = msg.searchId;
+
+                    if (msg.isBackgroundRunning) {
+                        if (!runningSearchIds.includes(msg.searchId)) runningSearchIds.push(msg.searchId);
+                        if (searchButtonState !== 'STOPPING') updateSearchButton('RUNNING', 0);
+                    } else {
+                        runningSearchIds = runningSearchIds.filter(id => id !== msg.searchId);
+                        updateSearchButton('CONTINUE', (msg.progressPercent || 0) / 100);
+                    }
+
+                    if (msg.lastError) {
+                        showStatus(`Search error: ${msg.lastError}`);
+                    }
+
+                    if (msg.results && Array.isArray(msg.results)) {
+                        searchResults = msg.results;
+                        if (searchResults.length > 0) {
+                            document.getElementById('shareBtn').disabled = false;
+                        }
+                        displayResults({ results: searchResults, columns: msg.columns || searchColumns });
+                    }
+
+                    loadFilters();
+                }
+                return;
+            }
+
+            if (msg.type === 'search_failed') {
+                if (msg.searchId && currentSearchId && msg.searchId !== currentSearchId) return;
+                isSearching = false;
+                updateSearchButton('START', 0);
+                showStatus(`Search failed: ${msg.error || 'unknown error'}`);
+                if (msg.searchId) {
+                    runningSearchIds = runningSearchIds.filter(id => id !== msg.searchId);
+                }
+                loadFilters();
+                return;
+            }
 
             if (msg.type === 'progress') {
                 if (msg.searchId && currentSearchId && msg.searchId !== currentSearchId) return;
@@ -139,10 +297,44 @@ function ensureWebSocket() {
                 loadFilters();
                 return;
             }
+
+            if (msg.type === 'search_started') {
+                if (msg.searchId) {
+                    // Keep subscription target in sync if server announces start.
+                    currentSearchId = msg.searchId;
+                    subscribeToSearch(msg.searchId);
+                    if (!runningSearchIds.includes(msg.searchId)) runningSearchIds.push(msg.searchId);
+                    loadFilters();
+                }
+                return;
+            }
+
+            if (msg.type === 'search_halted') {
+                if (msg.searchId && currentSearchId && msg.searchId !== currentSearchId) return;
+                isSearching = false;
+                updateSearchButton('CONTINUE', 0);
+                showStatus(`Search halted: ${msg.reason || 'unknown'}`);
+                if (msg.searchId) {
+                    runningSearchIds = runningSearchIds.filter(id => id !== msg.searchId);
+                }
+                loadFilters();
+                return;
+            }
         } catch (e) {
             console.error('WebSocket message processing error:', e);
         }
     };
+}
+
+function subscribeToSearch(searchId) {
+    wsDesiredSearchId = searchId || null;
+    try {
+        if (ws && ws.readyState === WebSocket.OPEN && wsDesiredSearchId) {
+            ws.send(JSON.stringify({ type: 'subscribe', searchId: wsDesiredSearchId }));
+        }
+    } catch (e) {
+        console.error('WebSocket subscribe error:', e);
+    }
 }
 
 // Sync URL with current search ID (so refresh/bookmark works)
@@ -354,11 +546,26 @@ function loadSavedSearch() {
         updateUrlWithSearchId(filter.searchId);
     }
     
-    showStatus(`Loaded: ${filter.name}`);
-    
-    // Update dropdown status indicator
+    // Update dropdown status indicator and button state
     const isRunning = !!(filter.searchId && runningSearchIds.includes(filter.searchId));
-    dropdown.options[parseInt(idx) + 1].text = `🔴 ${filter.name}`;
+    const statusDot = isFilterDirty ? '🟡' : (isRunning ? '🟢' : '🔴');
+    dropdown.options[parseInt(idx) + 1].text = `${statusDot} ${filter.name}`;
+
+    // Update button to reflect running state
+    if (isRunning) {
+        updateSearchButton('RUNNING', 0);
+        showStatus(`Loaded: ${filter.name} (running)`);
+        ensureWebSocket();
+        subscribeToSearch(filter.searchId);
+    } else if (filter.searchId) {
+        updateSearchButton('CONTINUE', 0);
+        showStatus(`Loaded: ${filter.name}`);
+        ensureWebSocket();
+        subscribeToSearch(filter.searchId);
+    } else {
+        updateSearchButton('START', 0);
+        showStatus(`Loaded: ${filter.name}`);
+    }
 }
 
 function settingsSelectFilter() {
@@ -402,17 +609,6 @@ function updateBuilderValues2() {
     console.log('Filter builder initialized');
 }
 
-function initPanelSplitter() {
-    // Initialize panel resizing functionality
-    const splitter = document.getElementById('panelSplitter');
-    if (splitter) {
-        splitter.addEventListener('mousedown', (e) => {
-            // Implement panel resizing logic
-            console.log('Panel splitter initialized');
-        });
-    }
-}
-
 function quickAnalyze(seed) {
     // Quick analysis of a seed - could open a modal or navigate to analysis
     console.log('Quick analyze seed:', seed);
@@ -421,15 +617,53 @@ function quickAnalyze(seed) {
 
 async function checkExistingSearchStatus(searchId) {
     try {
-        const response = await fetch(`/search/status/${searchId}`);
+        const response = await fetch(`/search?id=${encodeURIComponent(searchId)}`);
         if (!response.ok) return;
         
         const data = await response.json();
-        if (data.isRunning) {
-            currentSearchId = searchId;
-            runningSearchIds.push(searchId);
-            updateSearchButton('CONTINUE', 0);
+        
+        // Load the filter JAML into the editor if available
+        if (data.filterJaml) {
+            isProgrammaticEdit = true;
+            setJamlValue(data.filterJaml);
+            isProgrammaticEdit = false;
+            selectedFilterBaseHash = computeJamlHash(data.filterJaml);
+            isFilterDirty = false;
+        }
+
+        // Load results if available
+        if (data.results && Array.isArray(data.results) && data.results.length > 0) {
+            searchResults = data.results;
+            searchColumns = data.columns || ['seed', 'score'];
+            displayResults({ results: searchResults, columns: searchColumns });
+            document.getElementById('shareBtn').disabled = false;
+        }
+
+        // Find and select the filter in the dropdown by searchId
+        const dropdown = document.getElementById('savedSearches');
+        if (dropdown) {
+            const idx = savedFilters.findIndex(f => f.searchId === searchId);
+            if (idx >= 0) {
+                dropdown.value = idx.toString();
+                selectedFilterFilePath = savedFilters[idx].filePath;
+            }
+        }
+
+        currentSearchId = searchId;
+        
+        if (data.isBackgroundRunning || data.status === 'running' || data.searchStatus === 'running') {
+            if (!runningSearchIds.includes(searchId)) runningSearchIds.push(searchId);
+            updateSearchButton('RUNNING', 0);
             showStatus(`Resuming search ${searchId}`);
+            ensureWebSocket();
+            subscribeToSearch(searchId);
+        } else {
+            // Search exists but not running - show Continue
+            const progress = (data.progressPercent || 0) / 100;
+            updateSearchButton('CONTINUE', progress);
+            showStatus(`Loaded search ${searchId} - ${searchResults.length} results`);
+            ensureWebSocket();
+            subscribeToSearch(searchId);
         }
     } catch (e) {
         console.error('Failed to check search status:', e);
@@ -444,6 +678,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadFilters();
     startTaglineRotation();
     ensureWebSocket();
+    initPanelSplitter();
 
     // Load search ID from URL if present and check its status
     const urlParams = new URLSearchParams(window.location.search);
@@ -583,6 +818,48 @@ async function generateJAML() {
 // Track button state explicitly - NEVER rely on button text for control flow!
 let searchButtonState = 'START'; // 'START' | 'RUNNING' | 'CONTINUE' | 'STOPPING'
 
+function updateSearchButton(state, progress = 0) {
+    if (typeof state !== 'string' || !state) {
+        state = searchButtonState;
+    }
+
+    searchButtonState = state;
+
+    const btn = document.getElementById('searchBtn');
+    if (!btn) return;
+
+    const pct = (typeof progress === 'number' && isFinite(progress)) ? Math.max(0, Math.min(1, progress)) : 0;
+
+    if (searchButtonState === 'RUNNING') {
+        btn.textContent = 'Stop Search';
+        btn.className = 'button-primary';
+        btn.disabled = false;
+        isSearching = true;
+        return;
+    }
+
+    if (searchButtonState === 'CONTINUE') {
+        const p = Math.round(pct * 100);
+        btn.textContent = p > 0 ? `Continue (${p}%)` : 'Continue';
+        btn.className = 'button-primary';
+        btn.disabled = false;
+        isSearching = false;
+        return;
+    }
+
+    if (searchButtonState === 'STOPPING') {
+        btn.textContent = 'Starting...';
+        btn.className = 'button-blue';
+        btn.disabled = true;
+        return;
+    }
+
+    btn.textContent = 'Start Search';
+    btn.className = 'button-primary';
+    btn.disabled = false;
+    isSearching = false;
+}
+
 function toggleSearch() {
     if ((searchButtonState === 'START' || searchButtonState === 'CONTINUE') && isFilterDirty && selectedFilterFilePath) {
         void saveDirtyFilter();
@@ -648,6 +925,7 @@ async function runSearch() {
     searchBtn.className = 'button-blue';
     searchBtn.disabled = true;
 
+    let timeoutId = null;
     try {
         // ONE POST to start search
         showStatus('Starting search...');
@@ -671,10 +949,15 @@ async function runSearch() {
             requestBody.cutoff = cutoffOverride;
         }
 
+        const controller = new AbortController();
+        const timeoutMs = 15000;
+        timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
         const response = await fetch('/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
         });
 
         if (!response.ok) {
@@ -689,6 +972,10 @@ async function runSearch() {
         currentSearchId = data.searchId;
         currentSearchJaml = filterJaml.trim(); // Save JAML that started this search
         updateUrlWithSearchId(currentSearchId); // Sync URL so refresh/bookmark works
+
+        if (currentSearchId && !runningSearchIds.includes(currentSearchId)) {
+            runningSearchIds.push(currentSearchId);
+        }
 
         // NOW we can show Stop button - searchId is set!
         // Use updateSearchButton to keep state machine in sync!
@@ -718,13 +1005,22 @@ async function runSearch() {
 
         // Start WebSocket connection
         ensureWebSocket();
+        subscribeToSearch(currentSearchId);
 
         showStatus('Search started...');
 
     } catch (error) {
-        showStatus(` Network error: ${error.message}`);
+        if (error && error.name === 'AbortError') {
+            showStatus(' Network error: /search timed out');
+        } else {
+            showStatus(` Network error: ${error.message}`);
+        }
         isSearching = false;
         updateSearchButton('START', 0);  // This also re-enables the button
+    } finally {
+        if (timeoutId !== null) {
+            clearTimeout(timeoutId);
+        }
     }
 }
 
@@ -760,6 +1056,10 @@ async function stopSearch() {
         const data = await response.json();
         showStatus(`${data.message} - ${searchResults.length} results`);
 
+        if (currentSearchId) {
+            runningSearchIds = runningSearchIds.filter(id => id !== currentSearchId);
+        }
+
         // Get current progress from the API to show accurate state
         const statusResponse = await fetch(`/search?id=${currentSearchId}`);
         if (statusResponse.ok) {
@@ -780,6 +1080,78 @@ async function stopSearch() {
     } catch (error) {
         showStatus(`❌ Network error: ${error.message}`);
         updateSearchButton('START', 0);
+    }
+}
+
+async function stopAllSearches() {
+    if (!confirm('Stop ALL running searches?')) return;
+    
+    showStatus('Stopping all searches...');
+    try {
+        const response = await fetch('/search/stop-all', { method: 'POST' });
+        if (response.ok) {
+            runningSearchIds = [];
+            updateSearchButton('START', 0);
+            showStatus('All searches stopped');
+            await loadFilters();
+        } else {
+            const err = await response.json();
+            showStatus(`Error: ${err.error || 'Failed to stop'}`);
+        }
+    } catch (e) {
+        showStatus(`Error: ${e.message}`);
+    }
+}
+
+async function saveDirtyFilter() {
+    // Save the current JAML to the selected filter (or create new if name changed)
+    const jaml = getJamlValue();
+    if (!jaml.trim()) {
+        showStatus('Cannot save empty filter');
+        return;
+    }
+
+    // Extract filter name from JAML (look for "name:" line)
+    const nameMatch = jaml.match(/^name:\s*(.+)$/m);
+    const filterName = nameMatch ? nameMatch[1].trim() : null;
+
+    if (!filterName) {
+        showStatus('Filter must have a name: field');
+        return;
+    }
+
+    // Generate filename from name (sanitize for filesystem)
+    const safeName = filterName.replace(/[^a-zA-Z0-9_-]/g, '_') + '.jaml';
+
+    try {
+        showStatus('Saving filter...');
+
+        const response = await fetch('/filters/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filterId: safeName, filterJaml: jaml })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            showStatus(`Save failed: ${err.error}`);
+            return;
+        }
+
+        const data = await response.json();
+
+        // Update state to reflect saved filter - use the filename returned by API
+        selectedFilterFilePath = data.filePath;
+        selectedFilterBaseHash = computeJamlHash(jaml);
+        isFilterDirty = false;
+
+        showStatus(`Saved: ${filterName}`);
+
+        // Reload filters to show updated list
+        await loadFilters();
+
+    } catch (e) {
+        showStatus(`Save error: ${e.message}`);
     }
 }
 
@@ -880,7 +1252,6 @@ function displayResults(data) {
         container.innerHTML = `
             <div class="no-results">
                 <p>🎰 No results yet</p>
-                <p class="help-text">Search is running...</p>
             </div>
         `;
         return;
@@ -896,12 +1267,13 @@ function displayResults(data) {
     `;
     
     // Add clickable headers with sort indicators
+    // Use ' - ' placeholder replaced by arrow to prevent column width jumping
     searchColumns.forEach(column => {
         const isCurrentSort = sortColumn === column;
-        const arrow = isCurrentSort ? (sortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+        const arrow = isCurrentSort ? (sortDirection === 'asc' ? '↑' : '↓') : '-';
         const displayName = column === 'seed' ? 'Seed' : 
                            column === 'score' ? 'Score' : column;
-        html += `<th onclick="sortResults('${column}')" style="cursor: pointer; user-select: none;">${displayName}${arrow}</th>`;
+        html += `<th onclick="sortResults('${column}')" style="cursor: pointer; user-select: none; text-align: left;">${arrow} ${displayName}</th>`;
     });
     
     html += `
@@ -959,9 +1331,20 @@ async function loadFilters() {
 
             const dropdown = document.getElementById('savedSearches');
             dropdown.innerHTML = '<option value="">Select a filter...</option>';
-            savedFilters.forEach((filter, i) => {
+            
+            // Sort filters: running (green) first, then stopped (red), alphabetically within each group
+            const sortedIndices = savedFilters.map((filter, i) => {
+                const isRunning = !!(filter.searchId && runningSearchIds.includes(filter.searchId));
+                return { index: i, isRunning, name: filter.name };
+            }).sort((a, b) => {
+                if (a.isRunning !== b.isRunning) return b.isRunning - a.isRunning; // Running first
+                return a.name.localeCompare(b.name); // Then alphabetically
+            });
+
+            sortedIndices.forEach(({ index: i }) => {
+                const filter = savedFilters[i];
                 // Show GREEN dot if this filter is running, RED dot if not
-                const isRunning = data.isSearchRunning && filter.searchId && runningSearchIds.includes(filter.searchId);
+                const isRunning = !!(filter.searchId && runningSearchIds.includes(filter.searchId));
                 const isDirtySelected = !!(isFilterDirty && desiredFilePath && filter.filePath && filter.filePath === desiredFilePath);
                 const statusDot = isDirtySelected ? '🟡' : (isRunning ? '🟢' : '🔴');
                 dropdown.innerHTML += `<option value="${i}">${statusDot} ${filter.name}</option>`;
@@ -995,6 +1378,15 @@ function closeSettingsModal() {
     const modal = document.getElementById('settingsModal');
     if (!modal) return;
     modal.style.display = 'none';
+    
+    // Restore main dropdown selection after closing settings
+    const dropdown = document.getElementById('savedSearches');
+    if (dropdown && selectedFilterFilePath) {
+        const idx = savedFilters.findIndex(f => f.filePath && f.filePath === selectedFilterFilePath);
+        if (idx >= 0) {
+            dropdown.value = idx.toString();
+        }
+    }
 }
 
 function refreshSettingsModalUI() {
@@ -1237,31 +1629,51 @@ function initPanelSplitter() {
 
     let isDragging = false;
 
+    // Check if we're in stacked (vertical) mode
+    function isStackedMode() {
+        return window.innerWidth <= 768;
+    }
+
     splitter.addEventListener('mousedown', (e) => {
         isDragging = true;
-        document.body.style.cursor = 'col-resize';
+        document.body.style.cursor = isStackedMode() ? 'row-resize' : 'col-resize';
         splitter.classList.add('active');
+        e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
 
-        const containerRect = container.getBoundingClientRect();
-        const containerWidth = containerRect.width;
-        let newLeftWidth = e.clientX - containerRect.left;
+        if (isStackedMode()) {
+            // Vertical resize for stacked mode
+            const leftRect = leftPanel.getBoundingClientRect();
+            let newHeight = e.clientY - leftRect.top;
 
-        // Min/Max constraints (percentage or pixels)
-        const minWidth = 300;
-        const maxWidth = containerWidth - 300;
+            // Min/Max constraints
+            const minHeight = 150;
+            const maxHeight = window.innerHeight - 200;
 
-        if (newLeftWidth < minWidth) newLeftWidth = minWidth;
-        if (newLeftWidth > maxWidth) newLeftWidth = maxWidth;
+            if (newHeight < minHeight) newHeight = minHeight;
+            if (newHeight > maxHeight) newHeight = maxHeight;
 
-        // Use percentage for responsiveness
-        const widthPercent = (newLeftWidth / containerWidth) * 100;
-        
-        leftPanel.style.flex = `0 0 ${widthPercent}%`;
-        // rightPanel automatically takes remaining space due to flex: 1
+            leftPanel.style.height = `${newHeight}px`;
+            leftPanel.style.flex = 'none';
+        } else {
+            // Horizontal resize for side-by-side mode
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            let newLeftWidth = e.clientX - containerRect.left;
+
+            // Min/Max constraints
+            const minWidth = 300;
+            const maxWidth = containerWidth - 300;
+
+            if (newLeftWidth < minWidth) newLeftWidth = minWidth;
+            if (newLeftWidth > maxWidth) newLeftWidth = maxWidth;
+
+            const widthPercent = (newLeftWidth / containerWidth) * 100;
+            leftPanel.style.flex = `0 0 ${widthPercent}%`;
+        }
     });
 
     document.addEventListener('mouseup', () => {
@@ -1271,6 +1683,42 @@ function initPanelSplitter() {
             splitter.classList.remove('active');
             
             // Trigger Monaco layout refresh if it exists
+            if (window.jamlEditor) {
+                window.jamlEditor.layout();
+            }
+        }
+    });
+
+    // Also handle touch events for mobile
+    splitter.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        splitter.classList.add('active');
+        e.preventDefault();
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+
+        if (isStackedMode()) {
+            const leftRect = leftPanel.getBoundingClientRect();
+            let newHeight = touch.clientY - leftRect.top;
+
+            const minHeight = 150;
+            const maxHeight = window.innerHeight - 200;
+
+            if (newHeight < minHeight) newHeight = minHeight;
+            if (newHeight > maxHeight) newHeight = maxHeight;
+
+            leftPanel.style.height = `${newHeight}px`;
+            leftPanel.style.flex = 'none';
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        if (isDragging) {
+            isDragging = false;
+            splitter.classList.remove('active');
             if (window.jamlEditor) {
                 window.jamlEditor.layout();
             }

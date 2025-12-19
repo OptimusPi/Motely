@@ -6,22 +6,9 @@ deck: red
 stake: white
 must:
 - type: joker
-  value: OopsAll6s
-  antes:
-  - 1
-  score: 1
-  stickers: []
-- type: joker
-  value: GrosMichel
-  antes:
-  - 1
-  score: 1
-  stickers: []
-- type: joker
   value: Showman
   antes:
   - 1
-  - 2
   score: 1
   stickers: []
 - type: joker
