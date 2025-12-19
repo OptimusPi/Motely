@@ -380,10 +380,45 @@ label {
 .side-by-side {
   display: flex;
   flex-direction: row;
-  gap: 12px;
+  gap: 0;
   flex: 1;             /* take all remaining vertical space */
   min-height: 0;       /* CRITICAL: allow flex children to shrink below content size */
   overflow: hidden;    /* contain children */
+}
+
+.panel-splitter {
+  flex: 0 0 12px;
+  margin: 0 8px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #7c8798, #5d6673);
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+  cursor: col-resize;
+  user-select: none;
+  position: relative;
+}
+
+.panel-splitter::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 40px;
+  border-radius: 4px;
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, 0.55) 0 1px, transparent 2px) 0 0 / 4px 8px,
+    radial-gradient(circle, rgba(255, 255, 255, 0.20) 0 1px, transparent 2px) 0 4px / 4px 8px;
+}
+
+.panel-splitter:focus {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 0 0 3px rgba(234, 186, 68, 0.45);
 }
 
 /* Panels: keep your Balatro look, add scrolling */
@@ -430,6 +465,10 @@ label {
     gap: 15px;
     flex: none; /* Don't flex-grow, just be natural height */
     overflow: visible;
+  }
+
+  .panel-splitter {
+    display: none;
   }
 
   .left-panel,
