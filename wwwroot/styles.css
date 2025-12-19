@@ -386,9 +386,16 @@ label {
   overflow: hidden;    /* contain children */
 }
 
+.panel-shell {
+  background: #3a5055;
+  border: 4px solid #b9c2d2;
+  border-radius: 12px;
+  padding: 12px;
+}
+
 .panel-splitter {
   flex: 0 0 12px;
-  margin: 0 8px;
+  margin: 0; /* Remove margin to attach panels */
   border-radius: 10px;
   background: #3a5055; /* ColorGrey - FLAT */
   box-shadow:
@@ -430,11 +437,11 @@ label {
   display: flex;
   flex-direction: column;
 
-  /* preserve your colors */
-  background: #3a5055;
-  border: 4px solid #b9c2d2;
-  border-radius: 12px;
-  padding: 12px;
+  /* unified shell provides outer background/border */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
   box-sizing: border-box;
   color: #FFFFFF;
 
@@ -465,6 +472,10 @@ label {
     gap: 15px;
     flex: none; /* Don't flex-grow, just be natural height */
     overflow: visible;
+  }
+
+  .panel-shell {
+    padding: 8px;
   }
 
   .panel-splitter {
