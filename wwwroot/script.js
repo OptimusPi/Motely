@@ -44,6 +44,15 @@ const maxRows = 1000; // Display limit message (API returns up to 1000)
 
 let runningSearchIds = [];
 
+let selectedFilterFilePath = null;
+let selectedFilterBaseHash = null;
+let isFilterDirty = false;
+
+let seedSources = [];
+let currentSeedSource = 'all';
+let previousSeedSource = 'all';
+let isHydrationMode = false;
+
 let ws = null;
 
 function ensureWebSocket() {
@@ -121,6 +130,50 @@ function updateUrlWithSearchId(searchId) {
     window.history.replaceState({}, '', url);
 }
 
+function canonicalizeJamlForHash(jaml) {
+    const text = (jaml ?? '').toString();
+    if (!text.trim()) return '';
+    if (typeof jsyaml !== 'undefined') {
+        try {
+            const parsed = jsyaml.load(text);
+            return jsyaml.dump(parsed, {
+                indent: 2,
+                lineWidth: -1,
+                noArrayIndent: true,
+                sortKeys: false,
+                quotingType: "'",
+                forceQuotes: false,
+                flowLevel: -1
+            });
+        } catch {
+        }
+    }
+    return text.replace(/\s+/g, '');
+}
+
+function hashStringDjb2(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) + h) + str.charCodeAt(i);
+        h = h | 0;
+    }
+    return h.toString();
+}
+
+function computeJamlHash(jaml) {
+    return hashStringDjb2(canonicalizeJamlForHash(jaml));
+}
+
+function upsertNameFieldClient(jaml, newName) {
+    const safe = (newName ?? '').toString().trim();
+    if (!safe) return jaml;
+
+    if (/^name:\s*.+$/m.test(jaml)) {
+        return jaml.replace(/^name:\s*.+$/m, `name: ${safe}`);
+    }
+    return `name: ${safe}\n${jaml}`;
+}
+
 // Toggle between Monaco and Plain text editor
 let usePlainEditor = false;
 
@@ -178,98 +231,53 @@ function setEditorMode(mode) {
     }
 }
 
-// ================================================
-// JAML Auto-Formatter - keeps arrays inline, NEVER uses {} brackets
-// ================================================
-function formatJaml() {
-    const content = getJamlValue();
-    if (!content.trim()) return;
-
-    if (typeof jsyaml === 'undefined') {
-        showStatus('YAML library not loaded yet, try again');
-        return;
-    }
-
-    try {
-        const parsed = jsyaml.load(content);
-        if (!parsed || typeof parsed !== 'object') {
-            showStatus('Invalid JAML - could not parse');
-            return;
-        }
-
-        // Dump fully expanded first (flowLevel: -1 = no flow syntax at all)
-        let formatted = jsyaml.dump(parsed, {
-            indent: 2,
-            lineWidth: -1,
-            noArrayIndent: false,
-            sortKeys: false,
-            quotingType: "'",
-            forceQuotes: false,
-            flowLevel: -1  // NEVER use {} or [] flow syntax
-        });
-
-        // Post-process: collapse simple number arrays back to inline [1, 2, 3]
-        // Match patterns like:
-        //   antes:
-        //     - 1
-        //     - 2
-        // And convert to: antes: [1, 2]
-        formatted = formatted.replace(
-            /^(\s*)(antes|shopSlots|packSlots|sources|rolls):\n((?:\1  - \d+\n?)+)/gm,
-            (match, indent, key, items) => {
-                const values = items.match(/\d+/g);
-                if (values) {
-                    return `${indent}${key}: [${values.join(', ')}]\n`;
-                }
-                return match;
-            }
-        );
-
-        // Post-process: remove "null" from or:/and: shorthand (JAML allows "- or:" without value)
-        formatted = formatted.replace(/^(\s*- )(or|and): null$/gm, '$1$2:');
-
-        setJamlValue(formatted);
-        showStatus('JAML formatted!');
-
-    } catch (e) {
-        showStatus(`Format error: ${e.message}`);
-    }
-}
-
-// Quick format shortcut: Ctrl+Shift+F
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'F') {
-        e.preventDefault();
-        formatJaml();
-    }
-});
-
 // Called when user edits JAML (not programmatic loads) - invalidates current search
 // No string comparison needed: ANY user edit means the filter might be different!
 function onUserJamlEdit() {
     if (isProgrammaticEdit) return; // Ignore programmatic setJamlValue calls
 
-    // User edited the JAML - reset dropdown to show they're creating something new
     const dropdown = document.getElementById('savedSearches');
-    if (dropdown && dropdown.value !== '') {
-        dropdown.value = '';
+    const idx = dropdown ? dropdown.value : '';
+    const hasSavedSelection = idx !== '' && !!selectedFilterFilePath;
+
+    if (hasSavedSelection && selectedFilterBaseHash !== null) {
+        const newHash = computeJamlHash(getJamlValue());
+        isFilterDirty = newHash !== selectedFilterBaseHash;
+    } else {
+        isFilterDirty = false;
+        selectedFilterFilePath = null;
+        selectedFilterBaseHash = null;
     }
 
-    if (!currentSearchId) return; // No active search to invalidate
-
-    // User edited the JAML - invalidate the search
     currentSearchId = null;
     currentSearchJaml = null;
     updateUrlWithSearchId(null); // Clear URL - filter changed
     searchResults = [];
     updateSearchButton('START', 0);
-    showStatus('Filter changed - ready to start new search');
 
-    // Clear batch override - new filter means fresh start
     const batchInput = document.getElementById('batchOverride');
     if (batchInput) {
         batchInput.value = '';
         batchInput.placeholder = 'Batch #';
+    }
+
+    if (hasSavedSelection && isFilterDirty) {
+        showStatus('Filter changed - save or start new search');
+    } else {
+        showStatus('Filter changed - ready to start new search');
+    }
+
+    const optIndex = idx !== '' ? parseInt(idx) : -1;
+    if (dropdown && optIndex >= 0 && savedFilters[optIndex]) {
+        const f = savedFilters[optIndex];
+        const isRunning = !!(f.searchId && runningSearchIds.includes(f.searchId));
+        const statusDot = isFilterDirty ? '🟡' : (isRunning ? '🟢' : '🔴');
+        dropdown.options[optIndex + 1].text = `${statusDot} ${f.name}`;
+
+        const settingsModal = document.getElementById('settingsModal');
+        if (settingsModal && settingsModal.style.display !== 'none') {
+            refreshSettingsModalUI();
+        }
     }
 }
 
@@ -421,6 +429,11 @@ async function generateJAML() {
 let searchButtonState = 'START'; // 'START' | 'RUNNING' | 'CONTINUE' | 'STOPPING'
 
 function toggleSearch() {
+    if ((searchButtonState === 'START' || searchButtonState === 'CONTINUE') && isFilterDirty && selectedFilterFilePath) {
+        void saveDirtyFilter();
+        return;
+    }
+
     // Use explicit state machine - NEVER rely on button text!
     switch (searchButtonState) {
         case 'RUNNING':
@@ -493,6 +506,9 @@ async function runSearch() {
         const cutoffOverride = cutoffOverrideInput && cutoffOverrideInput.value !== '' ? parseInt(cutoffOverrideInput.value) : null;
 
         const requestBody = { filterJaml, seedCount: 100000000 };
+        if (currentSeedSource && currentSeedSource !== 'all') {
+            requestBody.seedSource = currentSeedSource;
+        }
         if (batchOverride !== null && !isNaN(batchOverride)) {
             requestBody.startBatch = batchOverride;
         }
@@ -783,17 +799,24 @@ async function loadFilters() {
 
             runningSearchIds = data.runningSearchIds || (data.runningSearchId ? [data.runningSearchId] : []);
 
+            const desiredFilePath = selectedFilterFilePath;
+            const desiredSearchId = currentSearchId;
+
             const dropdown = document.getElementById('savedSearches');
             dropdown.innerHTML = '<option value="">Select a filter...</option>';
             savedFilters.forEach((filter, i) => {
                 // Show GREEN dot if this filter is running, RED dot if not
                 const isRunning = data.isSearchRunning && filter.searchId && runningSearchIds.includes(filter.searchId);
-                const statusDot = isRunning ? '🟢' : '🔴';
+                const isDirtySelected = !!(isFilterDirty && desiredFilePath && filter.filePath && filter.filePath === desiredFilePath);
+                const statusDot = isDirtySelected ? '🟡' : (isRunning ? '🟢' : '🔴');
                 dropdown.innerHTML += `<option value="${i}">${statusDot} ${filter.name}</option>`;
             });
 
-            if (currentSearchId) {
-                const idx = savedFilters.findIndex(f => f.searchId === currentSearchId);
+            if (desiredFilePath) {
+                const idx = savedFilters.findIndex(f => f.filePath && f.filePath === desiredFilePath);
+                if (idx >= 0) dropdown.value = idx.toString();
+            } else if (desiredSearchId) {
+                const idx = savedFilters.findIndex(f => f.searchId === desiredSearchId);
                 if (idx >= 0) {
                     dropdown.value = idx.toString();
                 }
