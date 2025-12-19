@@ -1,0 +1,24 @@
+name: Negative PerkeoObservatory
+must:
+  - voucher: Telescope
+    antes: [1, 2]
+  - voucher: Observatory
+    antes: [2, 3]
+should:
+  - soulJoker: Perkeo
+    edition: Negative
+    antes: [1]
+    score: 100
+  - soulJoker: Perkeo
+    edition: Negative
+    antes: [2]
+    score: 96
+  - soulJoker: Perkeo
+    edition: Negative
+    antes: [3]
+    score: 95
+  - joker: Blueprint
+    antes: [1, 2, 3]
+    score: 1
+deck: Ghost
+stake: White

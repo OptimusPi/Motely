@@ -290,7 +290,19 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                     }
 
                     // Check if the clause met its Min threshold (pre-calculated value!)
-                    return clauseCount >= minThreshold;
+                    // For "should" clauses (Min = 0), we need to validate joker exists but don't require it
+                    // For "must" clauses (Min >= 1), require the minimum count
+                    if (minThreshold == 0)
+                    {
+                        // "should" clause: return true if we found valid jokers, false if none found
+                        // This allows composite filters to work correctly
+                        return clauseCount > 0;
+                    }
+                    else
+                    {
+                        // "must" clause: require minimum count
+                        return clauseCount >= minThreshold;
+                    }
                 }
             );
         }

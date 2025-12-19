@@ -28,192 +28,8 @@
             <!-- Left Side: Tabs and Content -->
             <div class="left-panel">
                 <div class="tabs">
-                    <button class="tab" onclick="switchTab('builder', this)">Builder</button>
                     <button class="tab active" onclick="switchTab('jaml', this)">Search</button>
                     <button class="tab" onclick="switchTab('analyze', this)">Analyze</button>
-                </div>
-                <!-- Filter Builder Tab - FRIENDLY VERSION -->
-                <div id="builder-tab" class="tab-content">
-                    <div class="builder-friendly">
-                        <!-- Step 1: Name your search -->
-                        <div class="builder-section">
-                            <div class="builder-section-header">
-                                <span class="section-number">1</span>
-                                <span class="section-title">Name Your Search</span>
-                            </div>
-                            <input type="text" id="builderName" placeholder="e.g., Early Perkeo Run" value="My Filter">
-                        </div>
-
-                        <!-- Step 2: Choose your run settings -->
-                        <div class="builder-section">
-                            <div class="builder-section-header">
-                                <span class="section-number">2</span>
-                                <span class="section-title">Run Settings</span>
-                            </div>
-                            <div class="builder-row-2col">
-                                <div>
-                                    <label class="friendly-label">Deck</label>
-                                    <select id="builderDeck">
-                                        <option value="Red">Red</option>
-                                        <option value="Blue">Blue</option>
-                                        <option value="Yellow">Yellow</option>
-                                        <option value="Green">Green</option>
-                                        <option value="Black">Black</option>
-                                        <option value="Magic">Magic</option>
-                                        <option value="Nebula">Nebula</option>
-                                        <option value="Ghost" selected>Ghost</option>
-                                        <option value="Abandoned">Abandoned</option>
-                                        <option value="Checkered">Checkered</option>
-                                        <option value="Zodiac">Zodiac</option>
-                                        <option value="Painted">Painted</option>
-                                        <option value="Anaglyph">Anaglyph</option>
-                                        <option value="Plasma">Plasma</option>
-                                        <option value="Erratic">Erratic</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="friendly-label">Stake</label>
-                                    <select id="builderStake">
-                                        <option value="White" selected>White</option>
-                                        <option value="Red">Red</option>
-                                        <option value="Green">Green</option>
-                                        <option value="Black">Black</option>
-                                        <option value="Blue">Blue</option>
-                                        <option value="Purple">Purple</option>
-                                        <option value="Orange">Orange</option>
-                                        <option value="Gold">Gold</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3: What are you looking for? -->
-                        <div class="builder-section">
-                            <div class="builder-section-header">
-                                <span class="section-number">3</span>
-                                <span class="section-title">Add Items to Find</span>
-                            </div>
-
-                            <!-- Requirement type - friendly buttons -->
-                            <div class="requirement-buttons">
-                                <button type="button" class="req-btn req-must active" onclick="setRequirement('must', this)" title="Seed MUST have this item">
-                                    I NEED this
-                                </button>
-                                <button type="button" class="req-btn req-should" onclick="setRequirement('should', this)" title="Nice to have, adds to score">
-                                    I WANT this
-                                </button>
-                                <button type="button" class="req-btn req-mustnot" onclick="setRequirement('mustNot', this)" title="Skip seeds with this item">
-                                    AVOID this
-                                </button>
-                            </div>
-                            <input type="hidden" id="builderSection2" value="must">
-
-                            <!-- Item selection -->
-                            <div class="builder-row-2col" style="margin-top: 12px;">
-                                <div>
-                                    <label class="friendly-label">Item Type</label>
-                                    <select id="builderType2" onchange="updateBuilderValues2()">
-                                        <option value="joker">Joker</option>
-                                        <option value="soulJoker">Legendary Joker</option>
-                                        <option value="voucher">Voucher</option>
-                                        <option value="tag">Tag (Skip Blind)</option>
-                                        <option value="tarot">Tarot Card</option>
-                                        <option value="spectral">Spectral Card</option>
-                                        <option value="planet">Planet Card</option>
-                                        <option value="boss">Boss Blind</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="friendly-label">Which One?</label>
-                                    <select id="builderValue2"></select>
-                                </div>
-                            </div>
-
-                            <!-- Edition (for jokers) -->
-                            <div class="builder-row" id="editionRow2">
-                                <label class="friendly-label">Special Edition?</label>
-                                <select id="builderEdition2">
-                                    <option value="">Any / Normal</option>
-                                    <option value="Foil">Foil (+50 Chips)</option>
-                                    <option value="Holo">Holo (+10 Mult)</option>
-                                    <option value="Polychrome">Polychrome (x1.5 Mult)</option>
-                                    <option value="Negative">Negative (+1 Joker Slot)</option>
-                                </select>
-                            </div>
-
-                            <!-- When to find it -->
-                            <div class="builder-row">
-                                <label class="friendly-label">When should it appear?</label>
-                                <p class="help-text">Check the antes where you want to find this item</p>
-                                <div class="ante-buttons">
-                                    <button type="button" class="ante-btn active" data-ante="1">Ante 1</button>
-                                    <button type="button" class="ante-btn active" data-ante="2">Ante 2</button>
-                                    <button type="button" class="ante-btn active" data-ante="3">Ante 3</button>
-                                    <button type="button" class="ante-btn" data-ante="4">Ante 4</button>
-                                    <button type="button" class="ante-btn" data-ante="5">Ante 5</button>
-                                    <button type="button" class="ante-btn" data-ante="6">Ante 6</button>
-                                    <button type="button" class="ante-btn" data-ante="7">Ante 7</button>
-                                    <button type="button" class="ante-btn" data-ante="8">Ante 8</button>
-                                </div>
-                                <div class="ante-quick-buttons">
-                                    <button type="button" class="ante-quick" onclick="selectAntes('early')">Early (1-3)</button>
-                                    <button type="button" class="ante-quick" onclick="selectAntes('mid')">Mid (4-5)</button>
-                                    <button type="button" class="ante-quick" onclick="selectAntes('late')">Late (6-8)</button>
-                                    <button type="button" class="ante-quick" onclick="selectAntes('all')">All</button>
-                                </div>
-                            </div>
-
-                            <!-- Score (only for "should") -->
-                            <div class="builder-row" id="scoreRow2" style="display:none;">
-                                <label class="friendly-label">How important is this? (Score)</label>
-                                <p class="help-text">Higher = more important. Seeds are ranked by total score.</p>
-                                <input type="number" id="builderScore2" value="100" min="1" max="1000">
-                            </div>
-
-                            <!-- Advanced options (hidden by default) -->
-                            <details class="advanced-options">
-                                <summary>Advanced Options</summary>
-                                <div class="builder-row" id="shopSlotsRow2">
-                                    <label class="friendly-label">Shop Position</label>
-                                    <p class="help-text">Which shop slots to check (left to right)</p>
-                                    <div class="slots-inline">
-                                        <label><input type="checkbox" class="shop-cb2" value="0" checked>1st</label>
-                                        <label><input type="checkbox" class="shop-cb2" value="1" checked>2nd</label>
-                                        <label><input type="checkbox" class="shop-cb2" value="2">3rd</label>
-                                        <label><input type="checkbox" class="shop-cb2" value="3">4th</label>
-                                        <label><input type="checkbox" class="shop-cb2" value="4">5th</label>
-                                        <label><input type="checkbox" class="shop-cb2" value="5">6th</label>
-                                    </div>
-                                </div>
-                                <div class="builder-row" id="packSlotsRow2">
-                                    <label class="friendly-label">Pack Position</label>
-                                    <p class="help-text">Which pack slots to check</p>
-                                    <div class="slots-inline">
-                                        <label><input type="checkbox" class="pack-cb2" value="0" checked>1st</label>
-                                        <label><input type="checkbox" class="pack-cb2" value="1" checked>2nd</label>
-                                        <label><input type="checkbox" class="pack-cb2" value="2">3rd</label>
-                                        <label><input type="checkbox" class="pack-cb2" value="3">4th</label>
-                                        <label><input type="checkbox" class="pack-cb2" value="4">5th</label>
-                                        <label><input type="checkbox" class="pack-cb2" value="5">6th</label>
-                                    </div>
-                                </div>
-                                <div class="builder-row" id="requireMegaRow2" style="display:none;">
-                                    <label><input type="checkbox" id="builderRequireMega2"> Must be in Mega Pack</label>
-                                </div>
-                            </details>
-
-                            <button onclick="addClauseFromBuilder()" class="button-primary add-item-btn">
-                                + Add This Item
-                            </button>
-                        </div>
-
-                        <!-- Create filter button -->
-                        <div class="builder-actions">
-                            <button onclick="newFilterFromBuilder()" class="button-primary">
-                                Create Filter & Search
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- JAML Search Tab -->
@@ -222,8 +38,13 @@
                         <select id="savedSearches" onchange="loadSavedSearch()" style="flex: 1;">
                             <option value="">Select a filter...</option>
                         </select>
+                        <select id="seedSource" onchange="onSeedSourceChange()" style="flex: 1;">
+                            <option value="all">All Seeds (Default)</option>
+                        </select>
                         <button onclick="openSettingsModal()" class="delete-btn"
                             title="Filter settings">Settings...</button>
+                    </div>
+                    <div class="search-row">
                     </div>
                     <div class="editor-header">
                         <label>Filter (JAML):</label>
@@ -236,22 +57,10 @@
                         </div>
                     </div>
                     <div id="monacoEditor" class="monaco-container"></div>
-                    <textarea id="filterJaml" class="plain-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" style="display:none;">name: Negative Perkeo
-must:
-  - soulJoker: Perkeo
-    edition: Negative
-    antes: [1, 2, 3]
-  - voucher: Observatory
-    antes: [2, 3]
-should:
-  - joker: Blueprint
-    antes: [1, 2, 3]
-    score: 100
-deck: Ghost
-stake: White</textarea>
+                    <textarea id="filterJaml" class="plain-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" style="display:none;"></textarea>
                     <div class="action-buttons">
                         <button id="searchBtn" onclick="toggleSearch()" class="button-primary" style="width: 120px;">Start Search</button>
-                        <button id="saveBtn" onclick="saveCurrentFilter()" class="button-small" style="width: 70px;">Save</button>
+                        <button id="saveBtn" onclick="saveDirtyFilter()" class="button-small" style="width: 70px;">Save</button>
                         <button id="shareBtn" onclick="shareSearch()" class="button-small" style="width: 70px;">Share</button>
                     </div>
                 </div>
@@ -569,43 +378,23 @@ stake: White</textarea>
 
                         // Fallback: show everything relevant for general editing
                         const keywords = ['name:', 'deck:', 'stake:', 'must:', 'should:', 'mustNot:'];
-                        keywords.forEach(k => suggestions.push({
-                            label: k,
-                            kind: monaco.languages.CompletionItemKind.Keyword,
-                            insertText: k + ' ',
-                            range: range
-                        }));
+                        keywords.forEach(k => {
+                            suggestions.push({
+                                label: k,
+                                kind: monaco.languages.CompletionItemKind.Keyword,
+                                insertText: k + ' ',
+                                range: range
+                            });
+                        });
+
+                        // If multiple lines selected, indent all of them
+                        if (selection && selection.startLineNumber !== selection.endLineNumber) {
+                            window.jamlEditor.trigger('keyboard', 'editor.action.indentLines');
+                        } else {
+                            // Single line or no selection - just insert 2 spaces
+                            window.jamlEditor.trigger('keyboard', 'type', { text: '  ' });
+                        }
                         return { suggestions };
-                    }
-                });
-
-                window.jamlEditor = monaco.editor.create(document.getElementById('monacoEditor'), {
-                    value: document.getElementById('filterJaml').value,
-                    language: 'yaml',
-                    theme: 'vs-dark',
-                    minimap: { enabled: false },
-                    fontSize: 15,
-                    lineNumbers: 'on',
-                    folding: true,
-                    wordWrap: 'on',
-                    automaticLayout: true,
-                    scrollBeyondLastLine: false,
-                    renderWhitespace: 'selection',
-                    tabSize: 2,
-                    insertSpaces: true,
-                    quickSuggestions: true,
-                    suggestOnTriggerCharacters: true
-                });
-
-                // Make Tab key indent properly (insert spaces OR indent selection)
-                window.jamlEditor.addCommand(monaco.KeyCode.Tab, () => {
-                    const selection = window.jamlEditor.getSelection();
-                    // If multiple lines selected, indent all of them
-                    if (selection && selection.startLineNumber !== selection.endLineNumber) {
-                        window.jamlEditor.trigger('keyboard', 'editor.action.indentLines');
-                    } else {
-                        // Single line or no selection - just insert 2 spaces
-                        window.jamlEditor.trigger('keyboard', 'type', { text: '  ' });
                     }
                 });
 
