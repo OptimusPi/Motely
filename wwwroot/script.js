@@ -60,13 +60,6 @@ function showStatus(message) {
     if (statusElement) {
         statusElement.textContent = message;
         statusElement.style.display = 'block';
-        
-        // Auto-hide after 5 seconds if it's a success message
-        if (message.includes('✅') || message.includes('Saved') || message.includes('Converted')) {
-            setTimeout(() => {
-                statusElement.style.display = 'none';
-            }, 5000);
-        }
     }
 }
 
@@ -128,7 +121,7 @@ function ensureWebSocket() {
                 return;
             }
         } catch (e) {
-            // ignore
+            console.error('WebSocket message processing error:', e);
         }
     };
 }
@@ -314,6 +307,32 @@ function onUserJamlEdit() {
             refreshSettingsModalUI();
         }
     }
+}
+
+// ================================================
+// Filter Builder Functions
+// ================================================
+function updateBuilderValues2() {
+    // Initialize filter builder UI values
+    // This would populate dropdowns and set up the filter builder interface
+    console.log('Filter builder initialized');
+}
+
+function initPanelSplitter() {
+    // Initialize panel resizing functionality
+    const splitter = document.getElementById('panelSplitter');
+    if (splitter) {
+        splitter.addEventListener('mousedown', (e) => {
+            // Implement panel resizing logic
+            console.log('Panel splitter initialized');
+        });
+    }
+}
+
+function quickAnalyze(seed) {
+    // Quick analysis of a seed - could open a modal or navigate to analysis
+    console.log('Quick analyze seed:', seed);
+    alert(`Analysis for seed ${seed} - feature not yet implemented`);
 }
 
 // ================================================
@@ -877,20 +896,20 @@ function closeSettingsModal() {
     modal.style.display = 'none';
 }
 
-// Initialize builder on page load
-document.addEventListener('DOMContentLoaded', () => {
-    updateBuilderValues2();
-
-    // Add click handlers for ante buttons
-    document.querySelectorAll('.ante-btn').forEach(btn => {
-        // Add ante button functionality here if needed
-        btn.addEventListener('click', () => {
-            console.log('Ante button clicked');
-        });
-    });
-
-    initPanelSplitter();
-});
+function refreshSettingsModalUI() {
+    // Update the settings modal UI with current values
+    const seedSourceSelect = document.getElementById('settingsSeedSource');
+    if (seedSourceSelect && currentSeedSource) {
+        seedSourceSelect.value = currentSeedSource;
+    }
+    
+    // Update word list editor visibility
+    const isTxt = currentSeedSource && currentSeedSource.startsWith('txt:');
+    const editBtn = document.getElementById('settingsEditWordListBtn');
+    if (editBtn) {
+        editBtn.disabled = !isTxt;
+    }
+}
 
 // ================================================
 // Filter Builder - Item Data
