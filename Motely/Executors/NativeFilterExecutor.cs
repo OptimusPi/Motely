@@ -251,7 +251,12 @@ namespace Motely.Executors
             int cutoff = _params.Cutoff;
             bool autoCutoff = _params.AutoCutoff;
 
-            var scoreDesc = new MotelyJsonSeedScoreDesc(config, cutoff, autoCutoff, onResultFound);
+            var scoreDesc = new MotelyJsonSeedScoreDesc(
+                config,
+                cutoff,
+                autoCutoff ? ScoreCutoffMode.AutoSmart : ScoreCutoffMode.Manual,
+                onResultFound
+            );
 
             return settings.WithSeedScoreProvider(scoreDesc).WithCsvOutput(true);
         }

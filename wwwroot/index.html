@@ -23,7 +23,7 @@
         </header>
 
         <!-- Side by Side Container -->
-        <div class="side-by-side">
+        <div class="side-by-side panel-shell">
 
             <!-- Left Side: Tabs and Content -->
             <div class="left-panel">
@@ -194,6 +194,18 @@
             // Initialize Monaco Editor from jsdelivr CDN
             require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
             require(['vs/editor/editor.main'], function () {
+                // Create the Monaco editor instance
+                const container = document.getElementById('monacoEditor');
+                const initialValue = document.getElementById('filterJaml')?.value || '';
+                window.jamlEditor = monaco.editor.create(container, {
+                    value: initialValue,
+                    language: 'yaml',
+                    automaticLayout: true,
+                    theme: 'vs-dark',
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                });
 
                 // Register JAML autocomplete provider - CONTEXT AWARE!
                 monaco.languages.registerCompletionItemProvider('yaml', {
@@ -201,6 +213,7 @@
                         const lineContent = model.getLineContent(position.lineNumber);
                         const textBeforeCursor = lineContent.substring(0, position.column - 1);
                         const word = model.getWordUntilPosition(position);
+                        const selection = window.jamlEditor ? window.jamlEditor.getSelection() : null;
                         const range = {
                             startLineNumber: position.lineNumber,
                             endLineNumber: position.lineNumber,
@@ -419,6 +432,11 @@
                     window.jamlEditor.setValue(val);
                     isProgrammaticEdit = false;
                 };
+
+                // Notify script.js that Monaco is ready
+                if (typeof window.onMonacoReady === 'function') {
+                    window.onMonacoReady();
+                }
             });
         </script>
     </div>
