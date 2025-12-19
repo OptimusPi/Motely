@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Microsoft.Extensions.Hosting;
 using System.Text.RegularExpressions;
+using System.Net;
 
 namespace Motely.API;
 
@@ -80,6 +81,11 @@ public static class MotelyApiFactory
             FileProvider = new PhysicalFileProvider(webRoot),
             RequestPath = ""
         });
+        
+        // Enable Swagger middleware
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
         app.UseRouting();
         app.UseWebSockets();
         

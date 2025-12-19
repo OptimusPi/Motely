@@ -356,7 +356,7 @@ namespace Motely.Executors
             MotelyJsonSeedScoreDesc scoreDesc = new(
                 scoringConfig,
                 _params.Cutoff,
-                _params.AutoCutoff,
+                _params.AutoCutoff ? ScoreCutoffMode.AutoSmart : ScoreCutoffMode.Manual,
                 scoreCallback
             );
 
