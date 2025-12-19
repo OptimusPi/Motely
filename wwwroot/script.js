@@ -55,6 +55,21 @@ let isHydrationMode = false;
 
 let ws = null;
 
+function showStatus(message) {
+    const statusElement = document.getElementById('statusMessage');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.style.display = 'block';
+        
+        // Auto-hide after 5 seconds if it's a success message
+        if (message.includes('✅') || message.includes('Saved') || message.includes('Converted')) {
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+    }
+}
+
 function ensureWebSocket() {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         return;
@@ -171,7 +186,27 @@ function upsertNameFieldClient(jaml, newName) {
     if (/^name:\s*.+$/m.test(jaml)) {
         return jaml.replace(/^name:\s*.+$/m, `name: ${safe}`);
     }
-    return `name: ${safe}\n${jaml}`;
+    
+    // If no name field exists, add it after the first line or at the beginning
+    const lines = jaml.split('\n');
+    if (lines.length === 0) return `name: ${safe}`;
+    
+    // Insert name after first line if first line is not empty, otherwise at beginning
+    if (lines[0].trim()) {
+        lines.splice(1, 0, `name: ${safe}`);
+    } else {
+        lines.unshift(`name: ${safe}`);
+    }
+    
+    return lines.join('\n');
+}
+
+function extractFromJaml(jaml, field) {
+    if (!jaml || !field) return null;
+    
+    const regex = new RegExp(`^${field}:\\s*(.+)$`, 'm');
+    const match = jaml.match(regex);
+    return match ? match[1].trim() : null;
 }
 
 // Toggle between Monaco and Plain text editor
