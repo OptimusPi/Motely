@@ -822,16 +822,13 @@ async function loadFilters() {
                 }
             }
         }
-    } catch (e) {
-        console.error('Failed to load filters:', e);
-    }
-}
 
 function openSettingsModal() {
     const modal = document.getElementById('settingsModal');
     if (!modal) return;
     modal.style.display = 'flex';
     refreshSettingsModalUI();
+    loadSeedSourcesForSettings(); // Load seeds when modal opens
 }
 
 function closeSettingsModal() {
@@ -840,708 +837,7 @@ function closeSettingsModal() {
     modal.style.display = 'none';
 }
 
-function handleSettingsModalBackdrop(e) {
-    // Click outside modal-content closes
-    if (e && e.target && e.target.id === 'settingsModal') {
-        closeSettingsModal();
-    }
-}
-
-function refreshSettingsModalUI() {
-    const dropdown = document.getElementById('settingsSavedSearches');
-    if (!dropdown) return;
-
-    // Sort: running first, then alpha
-    const indexed = savedFilters.map((f, idx) => ({ f, idx }));
-    indexed.sort((a, b) => {
-        const aRunning = a.f.searchId && runningSearchIds.includes(a.f.searchId);
-        const bRunning = b.f.searchId && runningSearchIds.includes(b.f.searchId);
-        if (aRunning !== bRunning) return aRunning ? -1 : 1;
-        return (a.f.name || '').localeCompare((b.f.name || ''), undefined, { sensitivity: 'base' });
-    });
-
-    dropdown.innerHTML = '';
-    indexed.forEach(({ f, idx }) => {
-        const isRunning = f.searchId && runningSearchIds.includes(f.searchId);
-        const statusDot = isRunning ? '🟢' : '🔴';
-        dropdown.innerHTML += `<option value="${idx}">${statusDot} ${f.name}</option>`;
-    });
-
-    // Sync selection from main dropdown if possible
-    const mainDropdown = document.getElementById('savedSearches');
-    if (mainDropdown && mainDropdown.value !== '') {
-        dropdown.value = mainDropdown.value;
-    } else if (currentSearchId) {
-        const idx = savedFilters.findIndex(f => f.searchId === currentSearchId);
-        if (idx >= 0) dropdown.value = idx.toString();
-    }
-
-    updateSettingsModalTitle();
-}
-
-function updateSettingsModalTitle() {
-    const title = document.getElementById('settingsModalTitle');
-    const dropdown = document.getElementById('settingsSavedSearches');
-    if (!title || !dropdown) return;
-    const idx = dropdown.value;
-    const filter = idx !== '' ? savedFilters[parseInt(idx)] : null;
-    const name = filter && filter.name ? filter.name : 'Select a filter';
-    title.textContent = `Settings for ${name}`;
-}
-
-function settingsSelectFilter() {
-    const dropdown = document.getElementById('settingsSavedSearches');
-    if (!dropdown) return;
-    const idx = dropdown.value;
-    const mainDropdown = document.getElementById('savedSearches');
-    if (mainDropdown) {
-        mainDropdown.value = idx;
-    }
-    updateSettingsModalTitle();
-}
-
-function deleteSelectedFilterFromSettings() {
-    // Placeholder: until we move deleteSelectedSearch fully under modal
-    deleteSelectedSearch();
-    closeSettingsModal();
-}
-
-function cloneSelectedFilterFromSettings() {
-    alert('Clone filter: not implemented yet');
-}
-
-async function loadSavedSearch() {
-    const dropdown = document.getElementById('savedSearches');
-    const idx = dropdown.value;
-    
-    if (idx === '') {
-        setJamlValue('');
-        updateSearchButton('START', 0);
-        currentSearchId = null;
-        currentSearchJaml = null;
-        updateUrlWithSearchId(null); // Clear URL param
-        searchResults = [];
-        displayResults({ results: [], columns: ['seed', 'score'] });
-        return;
-    }
-
-    const filter = savedFilters[parseInt(idx)];
-    if (filter && filter.filterJaml) {
-        setJamlValue(filter.filterJaml);
-
-        // Use server-provided searchId (guaranteed to match what LoadSavedFilters generated)
-        // Fallback to generating our own if server didn't provide one (shouldn't happen)
-        const searchId = filter.searchId || generateSearchId(
-            filter.name || 'unnamed',
-            extractFromJaml(filter.filterJaml, 'deck') || 'Red',
-            extractFromJaml(filter.filterJaml, 'stake') || 'White'
-        );
-
-        // Update URL when filter is selected (before fetching status)
-        updateUrlWithSearchId(searchId);
-
-        // Check if this search exists and get its status
-        try {
-            const response = await fetch(`/search?id=${searchId}`);
-            if (response.ok) {
-                const data = await response.json();
-                currentSearchId = searchId;
-                updateUrlWithSearchId(currentSearchId); // Sync URL
-                // Use server's JAML as source of truth for what built the results
-                currentSearchJaml = data.filterJaml ? data.filterJaml.trim() : filter.filterJaml.trim();
-
-                // Show existing results if any
-                if (data.results && data.results.length > 0) {
-                    searchResults = data.results;
-                    displayResults({ results: searchResults, columns: data.columns });
-                    document.getElementById('shareBtn').disabled = false;
-                }
-
-                // Auto-fill batch override with current batch position (user can still override)
-                const batchOverrideInput = document.getElementById('batchOverride');
-                if (batchOverrideInput && data.currentBatch !== undefined) {
-                    batchOverrideInput.value = data.currentBatch;
-                    batchOverrideInput.placeholder = `Current: ${data.currentBatch}`;
-                }
-
-                // Show current effective cutoff in placeholder (don't auto-fill to avoid spam)
-                const cutoffOverrideInput = document.getElementById('cutoffOverride');
-                if (cutoffOverrideInput && data.cutoff !== undefined) {
-                    // Only set value if user hasn't filled it in yet
-                    if (cutoffOverrideInput.value === '') {
-                        cutoffOverrideInput.placeholder = `Auto (current: ${data.cutoff})`;
-                    }
-                }
-
-                // Update button based on search status
-                const status = data.searchStatus || data.status || 'stopped';
-                const progress = data.progressPercent || 0;
-
-                if (status === 'running' || data.isBackgroundRunning) {
-                    isSearching = true;
-                    updateSearchButton('RUNNING', progress / 100);
-                    showStatus(`🔍 Search running at batch ${data.currentBatch || 0}`);
-                    ensureWebSocket();
-                } else if (data.currentBatch > 0) {
-                    updateSearchButton('CONTINUE', progress / 100);
-                    showStatus(`📊 Loaded existing search - ${searchResults.length} results, batch ${data.currentBatch}`);
-                } else {
-                    // No existing search - show START button
-                    currentSearchJaml = null;
-                    updateSearchButton('START', 0);
-                    showStatus(`📄 Filter loaded: ${filter.name}`);
-                }
-            } else {
-                // No existing search - show START button
-                currentSearchId = null;
-                currentSearchJaml = null;
-                updateUrlWithSearchId(null); // Clear URL param
-                updateSearchButton('START', 0);
-                showStatus(`📄 Filter loaded: ${filter.name}`);
-                // Clear batch override for new search
-                const batchInput = document.getElementById('batchOverride');
-                if (batchInput) {
-                    batchInput.value = '';
-                    batchInput.placeholder = 'Batch #';
-                }
-            }
-        } catch (error) {
-            console.error('Failed to check search status:', error);
-            currentSearchId = null;
-            currentSearchJaml = null;
-            updateUrlWithSearchId(null); // Clear URL param
-            updateSearchButton('START', 0);
-            showStatus(`📄 Filter loaded: ${filter.name}`);
-            // Clear batch override on error
-            const batchInput = document.getElementById('batchOverride');
-            if (batchInput) {
-                batchInput.value = '';
-                batchInput.placeholder = 'Batch #';
-            }
-        }
-    }
-}
-
-async function deleteSelectedSearch() {
-    const dropdown = document.getElementById('savedSearches');
-    const idx = dropdown.value;
-    if (idx === '') {
-        alert('No filter selected');
-        return;
-    }
-    
-    const filter = savedFilters[parseInt(idx)];
-    if (!confirm(`Delete filter ${filter.name}?`)) return;
-    
-    try {
-        const filterId = filter.filePath;
-        if (!filterId) {
-            alert('This filter cannot be deleted (no file)');
-            return;
-        }
-
-        const response = await fetch(`/filters/${encodeURIComponent(filterId)}`, { method: 'DELETE' });
-        if (response.ok) {
-            await loadFilters();
-            setJamlValue('');
-        } else {
-            alert('Delete failed');
-        }
-    } catch (e) {
-        console.error('Delete failed:', e);
-        alert('Delete failed');
-    }
-}
-
-async function checkExistingSearchStatus(searchId) {
-    try {
-        const response = await fetch(`/search?id=${searchId}`);
-        if (!response.ok) return;
-
-        const data = await response.json();
-
-        // Populate JAML editor and track the JAML that built these results
-        if (data.filterJaml) {
-            setJamlValue(data.filterJaml);
-            currentSearchJaml = data.filterJaml.trim();
-        }
-
-        // Pre-select the dropdown if this filter exists in savedFilters
-        const dropdown = document.getElementById('savedSearches');
-        const filterIndex = savedFilters.findIndex(f => f.searchId === searchId);
-        if (filterIndex >= 0) {
-            dropdown.value = filterIndex.toString();
-        }
-
-        // Show existing results
-        if (data.results && data.results.length > 0) {
-            searchResults = data.results;
-            displayResults({ results: searchResults, columns: data.columns });
-            document.getElementById('shareBtn').disabled = false;
-        }
-        
-        // Check if search is still running - use isBackgroundRunning as primary signal
-        const status = data.searchStatus || data.status || 'stopped';
-        const progress = data.progressPercent || 0; // Already 0-100
-        const running = status === 'running' || data.isBackgroundRunning;
-
-        // Update batch override field with current position
-        const batchInput = document.getElementById('batchOverride');
-        if (batchInput && data.currentBatch !== undefined) {
-            batchInput.value = data.currentBatch;
-            batchInput.placeholder = `Current: ${data.currentBatch}`;
-        }
-
-        // Update cutoff field with effective cutoff from server
-        const cutoffInput = document.getElementById('cutoffOverride');
-        if (cutoffInput && data.cutoff !== undefined && cutoffInput.value === '') {
-            cutoffInput.placeholder = `Auto (current: ${data.cutoff})`;
-        }
-
-        if (running) {
-            // Resume polling existing search - search IS RUNNING!
-            isSearching = true;
-            updateSearchButton('RUNNING', progress / 100);
-            showStatus(`🔍 Search running at batch ${data.currentBatch || 0}`);
-            ensureWebSocket();
-        } else if (data.currentBatch > 0) {
-            // Stopped search with progress - show Continue button
-            updateSearchButton('CONTINUE', progress / 100);
-            showStatus(`📊 Loaded existing search - ${searchResults.length} results, batch ${data.currentBatch}`);
-        } else {
-            // New search
-            updateSearchButton('START', 0);
-            showStatus(`📊 Loaded existing search - ${searchResults.length} results`);
-        }
-        
-        // Switch to JAML tab
-        document.querySelector('.tab:nth-child(2)').click();
-        
-    } catch (e) {
-        console.error('Failed to check search status:', e);
-    }
-}
-
-// ================================================
-// Seed Analysis
-// ================================================
-let currentBlueprintUrl = '';
-
-async function quickAnalyze(seed) {
-    // Switch to analyze tab
-    switchTab('analyze', document.querySelector('.tab:nth-child(3)'));
-
-    // Get deck/stake from current filter if available
-    const filterJaml = getJamlValue();
-    const deckMatch = filterJaml.match(/^deck:\s*(.+)$/m);
-    const stakeMatch = filterJaml.match(/^stake:\s*(.+)$/m);
-
-    const deck = deckMatch ? deckMatch[1].trim() : 'Red';
-    const stake = stakeMatch ? stakeMatch[1].trim() : 'White';
-
-    // Load Blueprint immediately
-    loadBlueprint(seed, deck, stake);
-}
-
-function loadBlueprint(seed, deck, stake) {
-    const resultDiv = document.getElementById('analyzeResult');
-
-    // Build Blueprint URL - uses "Red Deck" format not just "Red"
-    const deckParam = encodeURIComponent(deck + ' Deck');
-    const stakeParam = encodeURIComponent(stake + ' Stake');
-
-    // Try to control Blueprint view with URL params (experimental!)
-    // Common param names: view, tab, mode, page
-    const blueprintUrl = `https://miaklwalker.github.io/Blueprint/?seed=${seed}&deck=${deckParam}&antes=8&stake=${stakeParam}&view=text&tab=text`;
-
-    // Store for "open in new tab" link
-    currentBlueprintUrl = blueprintUrl;
-
-    // Wire up "open in new tab" link
-    const openTabLink = document.getElementById('openBlueprintTab');
-    if (openTabLink) {
-        openTabLink.onclick = (e) => {
-            e.preventDefault();
-            if (currentBlueprintUrl) {
-                window.open(currentBlueprintUrl, '_blank');
-            }
-        };
-    }
-
-    // Embed Blueprint in fullscreen iframe (no scrollbars, fills container)
-    resultDiv.innerHTML = `
-        <iframe
-            src="${blueprintUrl}"
-            style="width: 100%; height: 100%; border: none;"
-            title="Blueprint Seed Analysis"
-            sandbox="allow-scripts allow-same-origin"
-        ></iframe>
-    `;
-}
-
-// ================================================
-// Button State Management
-// ================================================
-function updateSearchButton(state, progress = 0) {
-    const searchBtn = document.getElementById('searchBtn');
-    searchBtn.style.background = '';
-
-    // CRITICAL: Update the state machine variable FIRST, then the visual
-    searchButtonState = state;
-
-    switch (state) {
-        case 'START':
-            searchBtn.textContent = 'Start Search';
-            searchBtn.className = 'button-primary';
-            searchBtn.disabled = false;
-            break;
-
-        case 'CONTINUE':
-            searchBtn.textContent = 'Continue';
-            searchBtn.className = 'button-blue';
-            searchBtn.disabled = false;
-            break;
-
-        case 'RUNNING':
-            searchBtn.textContent = 'Stop';
-            searchBtn.className = 'button-danger';
-            searchBtn.disabled = false;
-            break;
-
-        case 'STOPPING':
-            searchBtn.textContent = 'Stopping...';
-            searchBtn.className = 'button-danger';
-            searchBtn.disabled = true;  // Prevent clicks during stop
-            break;
-    }
-}
-
-// ================================================
-// Utility Functions
-// ================================================
-function sanitizeSearchId(id) {
-    // Match the C# SanitizeSearchId function
-    const invalid = ['<', '>', ':', '"', '|', '?', '*', '/', '\\'];
-    invalid.forEach(c => {
-        id = id.replaceAll(c, '-');
-    });
-    return id.replace(/,/g, '-').replace(/ /g, '-');
-}
-
-function generateSearchId(filterName, deck, stake) {
-    // Match the C# API logic exactly
-    return sanitizeSearchId(`${filterName}_${deck}_${stake}`);
-}
-
-function extractFromJaml(jaml, key) {
-    // Extract a top-level key value from JAML (e.g., deck: Ghost -> "Ghost")
-    const match = jaml.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
-    return match ? match[1].trim().replace(/^['"]|['"]$/g, '') : null;
-}
-
-function autoRenameFilter(jaml) {
-    const nameMatch = jaml.match(/^name:\\s*(.+)$/m);
-    if (!nameMatch) return jaml;
-    
-    const currentName = nameMatch[1].trim();
-    const editMatch = currentName.match(/_edit(\\d+)$/);
-    
-    let newName;
-    if (editMatch) {
-        const num = parseInt(editMatch[1]) + 1;
-        newName = currentName.replace(/_edit\\d+$/, `_edit${num}`);
-    } else {
-        newName = currentName + '_edit1';
-    }
-    
-    return jaml.replace(/^name:\\s*.+$/m, `name: ${newName}`);
-}
-
-function showStatus(message) {
-    const statusBar = document.getElementById('status');
-    statusBar.textContent = message;
-}
-
-function exportResults() {
-    // Fallback: Scrape from visible table if searchResults is empty
-    let dataToExport = searchResults;
-    let columnsToExport = searchColumns;
-
-    if (!dataToExport || dataToExport.length === 0) {
-        // Try to extract from displayed table
-        const tableRows = document.querySelectorAll('.results-table tbody tr');
-        if (tableRows.length === 0) {
-            alert('No results to export!');
-            return;
-        }
-
-        // Extract headers
-        const headers = Array.from(document.querySelectorAll('.results-table th'))
-            .map(th => th.textContent.trim());
-        columnsToExport = headers;
-
-        // Extract rows
-        dataToExport = Array.from(tableRows).map(row => {
-            const cells = Array.from(row.querySelectorAll('td'));
-            return {
-                seed: cells[0]?.textContent.trim(),
-                score: parseInt(cells[1]?.textContent),
-                tallies: cells.slice(2).map(c => parseInt(c.textContent) || 0)
-            };
-        });
-    }
-
-    // Headers from columns, rows from results - simple array join
-    const rows = [
-        columnsToExport.join(','),
-        ...dataToExport.map(r => [r.seed, r.score, ...(r.tallies || [])].join(','))
-    ];
-
-    // Download
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `jaml-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-}
-
-// ================================================
-// Filter Builder - Item Data
-// ================================================
-const ITEM_DATA = {
-    joker: [
-        // Rare
-        'DNA', 'Vagabond', 'Baron', 'Obelisk', 'BaseballCard', 'AncientJoker', 'Campfire', 'Blueprint',
-        'WeeJoker', 'HitTheRoad', 'TheDuo', 'TheTrio', 'TheFamily', 'TheOrder', 'TheTribe', 'Stuntman',
-        'InvisibleJoker', 'Brainstorm', 'DriversLicense', 'BurntJoker',
-        // Uncommon
-        'JokerStencil', 'FourFingers', 'Mime', 'CeremonialDagger', 'MarbleJoker', 'LoyaltyCard', 'Dusk',
-        'Fibonacci', 'SteelJoker', 'Hack', 'Pareidolia', 'SpaceJoker', 'Burglar', 'Blackboard', 'SixthSense',
-        'Constellation', 'Hiker', 'CardSharp', 'Madness', 'Seance', 'Vampire', 'Shortcut', 'Hologram',
-        'Cloud9', 'Rocket', 'MidasMask', 'Luchador', 'GiftCard', 'TurtleBean', 'Erosion', 'ToTheMoon',
-        'StoneJoker', 'LuckyCat', 'Bull', 'DietCola', 'TradingCard', 'FlashCard', 'SpareTrousers', 'Ramen',
-        'Seltzer', 'Castle', 'MrBones', 'Acrobat', 'SockAndBuskin', 'Troubadour', 'Certificate', 'SmearedJoker',
-        'Throwback', 'RoughGem', 'Bloodstone', 'Arrowhead', 'OnyxAgate', 'GlassJoker', 'Showman', 'FlowerPot',
-        'MerryAndy', 'OopsAll6s', 'TheIdol', 'SeeingDouble', 'Matador', 'Satellite', 'Cartomancer', 'Astronomer', 'Bootstraps',
-        // Common
-        'Joker', 'GreedyJoker', 'LustyJoker', 'WrathfulJoker', 'GluttonousJoker', 'JollyJoker', 'ZanyJoker',
-        'MadJoker', 'CrazyJoker', 'DrollJoker', 'SlyJoker', 'WilyJoker', 'CleverJoker', 'DeviousJoker',
-        'CraftyJoker', 'HalfJoker', 'CreditCard', 'Banner', 'MysticSummit', 'EightBall', 'Misprint',
-        'RaisedFist', 'ChaostheClown', 'ScaryFace', 'AbstractJoker', 'DelayedGratification', 'GrosMichel',
-        'EvenSteven', 'OddTodd', 'Scholar', 'BusinessCard', 'Supernova', 'RideTheBus', 'Egg', 'Runner',
-        'IceCream', 'Splash', 'BlueJoker', 'FacelessJoker', 'GreenJoker', 'Superposition', 'ToDoList',
-        'Cavendish', 'RedCard', 'SquareJoker', 'RiffRaff', 'Photograph', 'ReservedParking', 'MailInRebate',
-        'Hallucination', 'FortuneTeller', 'Juggler', 'Drunkard', 'GoldenJoker', 'Popcorn', 'WalkieTalkie',
-        'SmileyFace', 'GoldenTicket', 'Swashbuckler', 'HangingChad', 'ShootTheMoon'
-    ],
-    soulJoker: ['Canio', 'Triboulet', 'Yorick', 'Chicot', 'Perkeo'],
-    voucher: [
-        'Overstock', 'OverstockPlus', 'ClearanceSale', 'Liquidation', 'Hone', 'GlowUp', 'RerollSurplus',
-        'RerollGlut', 'CrystalBall', 'OmenGlobe', 'Telescope', 'Observatory', 'Grabber', 'NachoTong',
-        'Wasteful', 'Recyclomancy', 'TarotMerchant', 'TarotTycoon', 'PlanetMerchant', 'PlanetTycoon',
-        'SeedMoney', 'MoneyTree', 'Blank', 'Antimatter', 'MagicTrick', 'Illusion', 'Hieroglyph',
-        'Petroglyph', 'DirectorsCut', 'Retcon', 'PaintBrush', 'Palette'
-    ],
-    tag: [
-        'UncommonTag', 'RareTag', 'NegativeTag', 'FoilTag', 'HolographicTag', 'PolychromeTag',
-        'InvestmentTag', 'VoucherTag', 'BossTag', 'StandardTag', 'CharmTag', 'MeteorTag', 'BuffoonTag',
-        'HandyTag', 'GarbageTag', 'EtherealTag', 'CouponTag', 'DoubleTag', 'JuggleTag', 'D6Tag',
-        'TopupTag', 'SpeedTag', 'OrbitalTag', 'EconomyTag'
-    ],
-    tarot: [
-        'TheFool', 'TheMagician', 'TheHighPriestess', 'TheEmpress', 'TheEmperor', 'TheHierophant',
-        'TheLovers', 'TheChariot', 'Justice', 'TheHermit', 'TheWheelOfFortune', 'Strength',
-        'TheHangedMan', 'Death', 'Temperance', 'TheDevil', 'TheTower', 'TheStar', 'TheMoon',
-        'TheSun', 'Judgement', 'TheWorld'
-    ],
-    spectral: [
-        'Familiar', 'Grim', 'Incantation', 'Talisman', 'Aura', 'Wraith', 'Sigil', 'Ouija',
-        'Ectoplasm', 'Immolate', 'Ankh', 'DejaVu', 'Hex', 'Trance', 'Medium', 'Cryptid', 'Soul', 'BlackHole'
-    ],
-    planet: ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'PlanetX', 'Ceres', 'Eris'],
-    boss: [
-        'AmberAcorn', 'CeruleanBell', 'CrimsonHeart', 'VerdantLeaf', 'VioletVessel', 'TheArm', 'TheClub',
-        'TheEye', 'TheFish', 'TheFlint', 'TheGoad', 'TheHead', 'TheHook', 'TheHouse', 'TheManacle',
-        'TheMark', 'TheMouth', 'TheNeedle', 'TheOx', 'ThePillar', 'ThePlant', 'ThePsychic', 'TheSerpent',
-        'TheTooth', 'TheWall', 'TheWater', 'TheWheel', 'TheWindow'
-    ]
-};
-
-// ================================================
-// Filter Builder Functions
-// ================================================
-
-// Type-specific field visibility rules
-const TYPE_FIELDS = {
-    joker:     { edition: true,  shopSlots: true,  packSlots: true,  requireMega: false },
-    soulJoker: { edition: true,  shopSlots: false, packSlots: true,  requireMega: true  },
-    voucher:   { edition: false, shopSlots: true,  packSlots: false, requireMega: false },
-    tag:       { edition: false, shopSlots: false, packSlots: false, requireMega: false },
-    tarot:     { edition: false, shopSlots: false, packSlots: true,  requireMega: false },
-    spectral:  { edition: false, shopSlots: false, packSlots: true,  requireMega: false },
-    planet:    { edition: false, shopSlots: false, packSlots: true,  requireMega: false },
-    boss:      { edition: false, shopSlots: false, packSlots: false, requireMega: false }
-};
-
-function updateBuilderValues2() {
-    const type = document.getElementById('builderType2').value;
-    const valueSelect = document.getElementById('builderValue2');
-    const items = ITEM_DATA[type] || [];
-    valueSelect.innerHTML = items.map(item => `<option value="${item}">${item}</option>`).join('');
-
-    // Update field visibility based on type
-    const fields = TYPE_FIELDS[type] || { edition: false, shopSlots: false, packSlots: false, requireMega: false };
-
-    document.getElementById('builderEdition2').parentElement.style.display = fields.edition ? '' : 'none';
-    document.getElementById('shopSlotsRow2').style.display = fields.shopSlots ? '' : 'none';
-    document.getElementById('packSlotsRow2').style.display = fields.packSlots ? '' : 'none';
-    document.getElementById('requireMegaRow2').style.display = fields.requireMega ? '' : 'none';
-}
-
-function updateScoreVisibility2() {
-    const section = document.getElementById('builderSection2').value;
-    document.getElementById('scoreRow2').style.display = section === 'should' ? 'block' : 'none';
-}
-
-function newFilterFromBuilder() {
-    const name = document.getElementById('builderName').value.trim() || 'My Filter';
-    const deck = document.getElementById('builderDeck').value;
-    const stake = document.getElementById('builderStake').value;
-
-    const jaml = `name: ${name}
-deck: ${deck}
-stake: ${stake}
-must:
-should:
-`;
-
-    setJamlValue(jaml);
-    switchTab('jaml', document.querySelector('.tab:nth-child(2)'));
-    showStatus(`Created new filter: ${name}`);
-}
-
-function addClauseFromBuilder() {
-    const section = document.getElementById('builderSection2').value;
-    const type = document.getElementById('builderType2').value;
-    const value = document.getElementById('builderValue2').value;
-    const edition = document.getElementById('builderEdition2').value;
-    const score = document.getElementById('builderScore2').value;
-    const requireMega = document.getElementById('builderRequireMega2').checked;
-
-    // Get antes from the new button-based UI
-    const antes = getSelectedAntes();
-
-    const shopCheckboxes = document.querySelectorAll('.shop-cb2:checked');
-    const shopSlots = Array.from(shopCheckboxes).map(cb => cb.value);
-
-    const packCheckboxes = document.querySelectorAll('.pack-cb2:checked');
-    const packSlots = Array.from(packCheckboxes).map(cb => cb.value);
-
-    if (antes.length === 0) {
-        showStatus('Select at least one ante');
-        return;
-    }
-
-    const fields = TYPE_FIELDS[type] || {};
-
-    let clause = `  - ${type}: ${value}\n`;
-    if (fields.edition && edition) clause += `    edition: ${edition}\n`;
-    clause += `    antes: [${antes.join(', ')}]\n`;
-    if (fields.shopSlots && shopSlots.length > 0) clause += `    shopSlots: [${shopSlots.join(', ')}]\n`;
-    if (fields.packSlots && packSlots.length > 0) clause += `    packSlots: [${packSlots.join(', ')}]\n`;
-    if (fields.requireMega && requireMega) clause += `    requireMega: true\n`;
-    if (section === 'should') clause += `    score: ${score}\n`;
-
-    let jaml = getJamlValue();
-
-    // If JAML is empty or missing name, create base structure from builder inputs
-    if (!jaml.trim() || !jaml.match(/^name:/m)) {
-        const name = document.getElementById('builderName').value.trim() || 'My Filter';
-        const deck = document.getElementById('builderDeck').value;
-        const stake = document.getElementById('builderStake').value;
-        jaml = `name: ${name}\ndeck: ${deck}\nstake: ${stake}\nmust:\nshould:\nmustNot:\n`;
-    }
-
-    // Find where the section is (or where to add it)
-    const sectionMatch = jaml.match(new RegExp(`^${section}:`, 'm'));
-
-    if (sectionMatch) {
-        // Section exists - insert clause right after the section header
-        const sectionStart = jaml.indexOf(sectionMatch[0]);
-        const afterHeader = sectionStart + sectionMatch[0].length;
-        jaml = jaml.slice(0, afterHeader) + '\n' + clause + jaml.slice(afterHeader).replace(/^\n/, '');
-    } else {
-        // Section doesn't exist - add before deck/stake or at end
-        const deckMatch = jaml.match(/^deck:/m);
-        if (deckMatch) {
-            const deckIdx = jaml.indexOf(deckMatch[0]);
-            jaml = jaml.slice(0, deckIdx) + `${section}:\n${clause}` + jaml.slice(deckIdx);
-        } else {
-            jaml += `\n${section}:\n${clause}`;
-        }
-    }
-
-    setJamlValue(jaml.trim());
-    switchTab('jaml', document.querySelector('.tab:nth-child(2)'));
-    showStatus(`Added ${type}: ${value}`);
-}
-
-// ================================================
-// Builder: Requirement Button Selection
-// ================================================
-function setRequirement(type, button) {
-    // Update hidden field
-    document.getElementById('builderSection2').value = type;
-
-    // Update button active states
-    document.querySelectorAll('.req-btn').forEach(btn => btn.classList.remove('active'));
-    button.classList.add('active');
-
-    // Show/hide score row based on section type
-    document.getElementById('scoreRow2').style.display = type === 'should' ? 'block' : 'none';
-}
-
-// ================================================
-// Builder: Ante Quick-Select Buttons
-// ================================================
-function selectAntes(preset) {
-    const anteButtons = document.querySelectorAll('.ante-btn');
-
-    anteButtons.forEach(btn => {
-        const ante = parseInt(btn.dataset.ante);
-        let shouldBeActive = false;
-
-        switch (preset) {
-            case 'early':
-                shouldBeActive = ante >= 1 && ante <= 3;
-                break;
-            case 'mid':
-                shouldBeActive = ante >= 4 && ante <= 5;
-                break;
-            case 'late':
-                shouldBeActive = ante >= 6 && ante <= 8;
-                break;
-            case 'all':
-                shouldBeActive = true;
-                break;
-        }
-
-        if (shouldBeActive) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-}
-
-// ================================================
-// Builder: Get Selected Antes from Buttons
-// ================================================
-function getSelectedAntes() {
-    const activeButtons = document.querySelectorAll('.ante-btn.active');
-    return Array.from(activeButtons).map(btn => btn.dataset.ante);
-}
+// ... (rest of the code remains the same)
 
 // Initialize builder on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -1549,8 +845,357 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add click handlers for ante buttons
     document.querySelectorAll('.ante-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.classList.toggle('active');
         });
+
+        initPanelSplitter();
     });
-});
+
+    // ================================================
+    // Filter Builder - Item Data
+    // ================================================
+    const ITEM_DATA = {
+        joker: [
+            // Rare
+            'DNA', 'Vagabond', 'Baron', 'Obelisk', 'BaseballCard', 'AncientJoker', 'Campfire', 'Blueprint',
+            'WeeJoker', 'HitTheRoad', 'TheDuo', 'TheTrio', 'TheFamily', 'TheOrder', 'TheTribe', 'Stuntman',
+            'InvisibleJoker', 'Brainstorm', 'DriversLicense', 'BurntJoker',
+            // Uncommon
+            'JokerStencil', 'FourFingers', 'Mime', 'CeremonialDagger', 'MarbleJoker', 'LoyaltyCard', 'Dusk',
+            'Fibonacci', 'SteelJoker', 'Hack', 'Pareidolia', 'SpaceJoker', 'Burglar', 'Blackboard', 'SixthSense',
+            'Constellation', 'Hiker', 'CardSharp', 'Madness', 'Seance', 'Vampire', 'Shortcut', 'Hologram',
+            'Cloud9', 'Rocket', 'MidasMask', 'Luchador', 'GiftCard', 'TurtleBean', 'Erosion', 'ToTheMoon',
+            'StoneJoker', 'LuckyCat', 'Bull', 'DietCola', 'TradingCard', 'FlashCard', 'SpareTrousers', 'Ramen',
+            'Seltzer', 'Castle', 'MrBones', 'Acrobat', 'SockAndBuskin', 'Troubadour', 'Certificate', 'SmearedJoker',
+            'Throwback', 'RoughGem', 'Bloodstone', 'Arrowhead', 'OnyxAgate', 'GlassJoker', 'Showman', 'FlowerPot',
+            'MerryAndy', 'OopsAll6s', 'TheIdol', 'SeeingDouble', 'Matador', 'Satellite', 'Cartomancer', 'Astronomer', 'Bootstraps',
+            // Common
+            'Joker', 'GreedyJoker', 'LustyJoker', 'WrathfulJoker', 'GluttonousJoker', 'JollyJoker', 'ZanyJoker',
+            'MadJoker', 'CrazyJoker', 'DrollJoker', 'SlyJoker', 'WilyJoker', 'CleverJoker', 'DeviousJoker',
+            'CraftyJoker', 'HalfJoker', 'CreditCard', 'Banner', 'MysticSummit', 'EightBall', 'Misprint',
+            'RaisedFist', 'ChaostheClown', 'ScaryFace', 'AbstractJoker', 'DelayedGratification', 'GrosMichel',
+            'EvenSteven', 'OddTodd', 'Scholar', 'BusinessCard', 'Supernova', 'RideTheBus', 'Egg', 'Runner',
+            'IceCream', 'Splash', 'BlueJoker', 'FacelessJoker', 'GreenJoker', 'Superposition', 'ToDoList',
+            'Cavendish', 'RedCard', 'SquareJoker', 'RiffRaff', 'Photograph', 'ReservedParking', 'MailInRebate',
+            'Hallucination', 'FortuneTeller', 'Juggler', 'Drunkard', 'GoldenJoker', 'Popcorn', 'WalkieTalkie',
+            'SmileyFace', 'GoldenTicket', 'Swashbuckler', 'HangingChad', 'ShootTheMoon'
+        ],
+        soulJoker: ['Canio', 'Triboulet', 'Yorick', 'Chicot', 'Perkeo'],
+        voucher: [
+            'Overstock', 'OverstockPlus', 'ClearanceSale', 'Liquidation', 'Hone', 'GlowUp', 'RerollSurplus',
+            'RerollGlut', 'CrystalBall', 'OmenGlobe', 'Telescope', 'Observatory', 'Grabber', 'NachoTong',
+            'Wasteful', 'Recyclomancy', 'TarotMerchant', 'TarotTycoon', 'PlanetMerchant', 'PlanetTycoon',
+            'SeedMoney', 'MoneyTree', 'Blank', 'Antimatter', 'MagicTrick', 'Illusion', 'Hieroglyph',
+            'Petroglyph', 'DirectorsCut', 'Retcon', 'PaintBrush', 'Palette'
+        ],
+        tag: [
+            'UncommonTag', 'RareTag', 'NegativeTag', 'FoilTag', 'HolographicTag', 'PolychromeTag',
+            'InvestmentTag', 'VoucherTag', 'BossTag', 'StandardTag', 'CharmTag', 'MeteorTag', 'BuffoonTag',
+            'HandyTag', 'GarbageTag', 'EtherealTag', 'CouponTag', 'DoubleTag', 'JuggleTag', 'D6Tag',
+            'TopupTag', 'SpeedTag', 'OrbitalTag', 'EconomyTag'
+        ],
+        tarot: [
+            'TheFool', 'TheMagician', 'TheHighPriestess', 'TheEmpress', 'TheEmperor', 'TheHierophant',
+            'TheLovers', 'TheChariot', 'Justice', 'TheHermit', 'TheWheelOfFortune', 'Strength',
+            'TheHangedMan', 'Death', 'Temperance', 'TheDevil', 'TheTower', 'TheStar', 'TheMoon',
+            'TheSun', 'Judgement', 'TheWorld'
+        ],
+        spectral: [
+            'Familiar', 'Grim', 'Incantation', 'Talisman', 'Aura', 'Wraith', 'Sigil', 'Ouija',
+            'Ectoplasm', 'Immolate', 'Ankh', 'DejaVu', 'Hex', 'Trance', 'Medium', 'Cryptid', 'Soul', 'BlackHole'
+        ],
+        planet: ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'PlanetX', 'Ceres', 'Eris'],
+        boss: [
+            'AmberAcorn', 'CeruleanBell', 'CrimsonHeart', 'VerdantLeaf', 'VioletVessel', 'TheArm', 'TheClub',
+            'TheEye', 'TheFish', 'TheFlint', 'TheGoad', 'TheHead', 'TheHook', 'TheHouse', 'TheManacle',
+            'TheMark', 'TheMouth', 'TheNeedle', 'TheOx', 'ThePillar', 'ThePlant', 'ThePsychic', 'TheSerpent',
+            'TheTooth', 'TheWall', 'TheWater', 'TheWheel', 'TheWindow'
+        ]
+    };
+
+    // ================================================
+    // Filter Builder Functions
+    // ================================================
+    // We can use a custom modal later, for now use confirm/prompt flow
+    // But since this is triggered by a button labeled "Save Changes?", we can assume they want to save.
+    // The ambiguity is: Overwrite existing file? Or Save as Copy?
+
+    // Check if we can overwrite (is it a file we loaded?)
+    const canOverwrite = !!selectedFilterFilePath;
+
+    let action = 'cancel'; // 'overwrite', 'clone', 'cancel'
+
+    if (canOverwrite) {
+        // Simple mechanic: confirm to overwrite, cancel to see more options?
+        // Or better: prompt "Click OK to overwrite [file]. Click Cancel to save as a new file."
+        // This is a bit janky standard alert UX but robust for now.
+        if (confirm(`Overwrite existing filter?\n\nFile: ${selectedFilterFilePath}`)) {
+            action = 'overwrite';
+        } else {
+            if (confirm("Save as a new copy instead?")) {
+                action = 'clone';
+            }
+        }
+    } else {
+        action = 'clone';
+    }
+
+    if (action === 'cancel') return;
+
+    const currentJaml = getJamlValue();
+
+    try {
+        if (action === 'overwrite') {
+            const response = await fetch('/filters/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filterId: selectedFilterFilePath,
+                    filterJaml: currentJaml
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Update failed');
+            }
+
+            const data = await response.json();
+            showStatus(`Saved: ${data.name}`);
+            
+            // Update local state hash so it's not dirty anymore
+            selectedFilterBaseHash = computeJamlHash(currentJaml);
+            isFilterDirty = false;
+            
+            // Reload filters to refresh list but keep selection
+            await loadFilters();
+            
+            // Update button state immediately
+            updateSearchButton(searchButtonState); // Refreshes label
+            
+        } else if (action === 'clone') {
+            let defaultName = 'Copy of ' + (extractFromJaml(currentJaml, 'name') || 'Filter');
+            const newName = prompt("Enter name for new filter:", defaultName);
+            if (!newName) return;
+
+            const response = await fetch('/filters/clone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filterId: selectedFilterFilePath || 'new', // If new, this might need handling, but logic above implies we have a path. For brand new, we need a create endpoint or treat as clone of template? 
+                    // Actually API /filters/clone requires a source filterId. 
+                    // If we are "brand new" (no filePath), we can't use /clone easily unless we have a "create" endpoint.
+                    // Fallback: If no filePath, we probably shouldn't have reached here via "saveDirtyFilter" logic usually implies editing EXISTING.
+                    // But if we did:
+                    filterId: selectedFilterFilePath,
+                    newName: newName
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Clone failed');
+            }
+
+            const data = await response.json();
+            showStatus(`Saved copy: ${data.name}`);
+
+            // Update editor to the NEW file (implicit switch)
+            selectedFilterFilePath = data.filePath;
+            selectedFilterBaseHash = computeJamlHash(data.filterJaml); // The server might have modified it (name update)
+            setJamlValue(data.filterJaml); // Update editor with server version
+            isFilterDirty = false;
+
+            await loadFilters();
+        }
+    } catch (e) {
+        alert(`Error saving: ${e.message}`);
+    }
+}
+
+// ================================================
+// Seed Sources & Word Lists
+// ================================================
+async function loadSeedSourcesForSettings() {
+    const select = document.getElementById('settingsSeedSource');
+    if (!select) return;
+
+    try {
+        const response = await fetch('/seed-sources');
+        if (!response.ok) return;
+        const data = await response.json();
+        seedSources = data.sources || [];
+
+        // Preserve selection
+        const currentVal = select.value;
+        
+        select.innerHTML = '';
+        seedSources.forEach(src => {
+            const opt = document.createElement('option');
+            opt.value = src.key;
+            opt.textContent = src.label;
+            select.appendChild(opt);
+        });
+
+        // Restore or default
+        if (currentSeedSource && Array.from(select.options).some(o => o.value === currentSeedSource)) {
+            select.value = currentSeedSource;
+        } else {
+            select.value = 'all';
+        }
+        
+        settingsSeedSourceChanged(); // Update visibility of Edit button
+    } catch (e) {
+        console.error('Failed to load seed sources', e);
+    }
+}
+
+function settingsSeedSourceChanged() {
+    const select = document.getElementById('settingsSeedSource');
+    const val = select.value;
+    currentSeedSource = val;
+    
+    // Update global state/UI for hydration
+    isHydrationMode = val !== 'all' && val !== 'random:1000000';
+    
+    // Update main Search button text to reflect mode
+    updateSearchButton(searchButtonState);
+
+    // Show/Hide Edit/New buttons
+    const actionsDiv = document.getElementById('settingsWordListActions');
+    const editBtn = document.getElementById('settingsEditWordListBtn');
+    
+    if (actionsDiv) {
+        actionsDiv.style.display = 'flex'; // Always show actions row in modal
+        // But only enable Edit if it's a text file
+        const isTxt = val.startsWith('txt:');
+        if (editBtn) editBtn.disabled = !isTxt;
+    }
+}
+
+function openNewWordListEditor() {
+    document.getElementById('settingsWordListEditor').style.display = 'flex';
+    document.getElementById('settingsWordListName').value = '';
+    document.getElementById('settingsWordListName').disabled = false; // Editable for new
+    document.getElementById('settingsWordListText').value = '';
+    document.getElementById('settingsWordListActions').style.display = 'none'; // Hide buttons while editing
+}
+
+async function openEditWordListEditor() {
+    const key = currentSeedSource;
+    if (!key.startsWith('txt:')) return;
+    
+    const fileName = key.substring(4); // Remove txt: prefix
+    
+    try {
+        const response = await fetch(`/wordlists/${encodeURIComponent(fileName)}`);
+        if (!response.ok) throw new Error('Failed to load');
+        
+        const data = await response.json();
+        
+        document.getElementById('settingsWordListEditor').style.display = 'flex';
+        document.getElementById('settingsWordListName').value = data.name;
+        document.getElementById('settingsWordListName').disabled = true; // Cannot rename existing yet
+        document.getElementById('settingsWordListText').value = data.text;
+        document.getElementById('settingsWordListActions').style.display = 'none';
+        
+    } catch (e) {
+        alert("Could not load word list: " + e.message);
+    }
+}
+
+function closeWordListEditor() {
+    document.getElementById('settingsWordListEditor').style.display = 'none';
+    document.getElementById('settingsWordListActions').style.display = 'flex';
+}
+
+async function saveWordListFromEditor() {
+    const nameInput = document.getElementById('settingsWordListName');
+    const textInput = document.getElementById('settingsWordListText');
+    const name = nameInput.value.trim();
+    const text = textInput.value;
+    
+    if (!name) {
+        alert("Please enter a name");
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/wordlists/${encodeURIComponent(name)}`, {
+            method: 'PUT', // UPSERT
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Save failed');
+        }
+        
+        const data = await response.json();
+        alert("Saved word list!");
+        
+        closeWordListEditor();
+        await loadSeedSourcesForSettings(); // Refresh list
+        
+        // Select the new/updated one
+        const select = document.getElementById('settingsSeedSource');
+        if (select) {
+            select.value = data.key;
+            settingsSeedSourceChanged();
+        }
+        
+    } catch (e) {
+        alert("Error saving: " + e.message);
+    }
+}
+
+function initPanelSplitter() {
+    const splitter = document.getElementById('panelSplitter');
+    const leftPanel = document.querySelector('.left-panel');
+    const rightPanel = document.querySelector('.right-panel');
+    const container = document.querySelector('.side-by-side');
+
+    if (!splitter || !leftPanel || !rightPanel || !container) return;
+
+    let isDragging = false;
+
+    splitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        splitter.classList.add('active');
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        let newLeftWidth = e.clientX - containerRect.left;
+
+        // Min/Max constraints (percentage or pixels)
+        const minWidth = 300;
+        const maxWidth = containerWidth - 300;
+
+        if (newLeftWidth < minWidth) newLeftWidth = minWidth;
+        if (newLeftWidth > maxWidth) newLeftWidth = maxWidth;
+
+        // Use percentage for responsiveness
+        const widthPercent = (newLeftWidth / containerWidth) * 100;
+        
+        leftPanel.style.flex = `0 0 ${widthPercent}%`;
+        // rightPanel automatically takes remaining space due to flex: 1
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+            splitter.classList.remove('active');
+            
+            // Trigger Monaco layout refresh if it exists
+            if (window.jamlEditor) {
+                window.jamlEditor.layout();
+            }
+        }
+    });
+}
