@@ -11,6 +11,7 @@ using System.Text;
 using System.Collections.Concurrent;
 using System.Linq;
 using Microsoft.Extensions.Hosting;
+using System.Text.RegularExpressions;
 
 namespace Motely.API;
 
@@ -28,22 +29,7 @@ public static class MotelyApiFactory
     {
         var builder = WebApplication.CreateBuilder(args ?? new string[0]);
 
-        static string FindMotelyRoot(string startDir)
-        {
-            var dir = new DirectoryInfo(startDir);
-            while (dir != null)
-            {
-                var wwwroot = Path.Combine(dir.FullName, "wwwroot");
-                if (Directory.Exists(wwwroot))
-                    return dir.FullName;
-
-                dir = dir.Parent;
-            }
-
-            return startDir;
-        }
-
-        var motelyRoot = FindMotelyRoot(builder.Environment.ContentRootPath);
+        var motelyRoot = Directory.GetCurrentDirectory();
 
         // Keep Environment in sync for any direct path usage
         builder.Environment.WebRootPath = Path.Combine(motelyRoot, "wwwroot");
@@ -72,6 +58,7 @@ public static class MotelyApiFactory
 
         var ws = new WebSocketBroadcaster();
         SearchManager.Instance.SetBroadcaster(ws);
+        SearchManager.Instance.SetMotelyRoot(motelyRoot);
         
         // Configure middleware
         app.UseCors("AllowAll");
@@ -115,12 +102,92 @@ public static class MotelyApiFactory
             var id = ws.Add(socket);
             try
             {
-                var buffer = new byte[1024];
+                var buffer = new byte[4096];
                 while (socket.State == WebSocketState.Open && !context.RequestAborted.IsCancellationRequested)
                 {
-                    var result = await socket.ReceiveAsync(buffer, context.RequestAborted);
+                    var sb = new StringBuilder();
+                    WebSocketReceiveResult result;
+                    do
+                    {
+                        result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), context.RequestAborted);
+                        if (result.MessageType == WebSocketMessageType.Close)
+                            break;
+
+                        if (result.MessageType == WebSocketMessageType.Text && result.Count > 0)
+                            sb.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                    }
+                    while (!result.EndOfMessage);
+
                     if (result.MessageType == WebSocketMessageType.Close)
                         break;
+
+                    if (result.MessageType != WebSocketMessageType.Text)
+                        continue;
+
+                    var payload = sb.ToString();
+                    if (string.IsNullOrWhiteSpace(payload))
+                        continue;
+
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(payload);
+                        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                            continue;
+
+                        if (!doc.RootElement.TryGetProperty("type", out var typeEl))
+                            continue;
+
+                        var type = typeEl.GetString() ?? "";
+                        if (string.Equals(type, "subscribe", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!doc.RootElement.TryGetProperty("searchId", out var searchIdEl))
+                                continue;
+                            var searchId = (searchIdEl.GetString() ?? string.Empty).Trim();
+                            if (string.IsNullOrWhiteSpace(searchId))
+                                continue;
+
+                            ws.SetSubscription(id, searchId);
+
+                            var (results, progressPercent) = SearchManager.Instance.GetSearchStatus(searchId);
+                            var isRunning = SearchManager.Instance.IsSearchRunning(searchId);
+                            SearchManager.Instance.TryGetRunningSearchFilterJaml(searchId, out var runningFilterJaml);
+                            SearchManager.Instance.TryGetSearchOverrides(searchId, out var _, out var cutoffOverride);
+                            SearchManager.Instance.TryGetSearchMetrics(
+                                searchId,
+                                out var currentBatch,
+                                out var totalBatches,
+                                out var seedsSearched,
+                                out var seedsPerSecond);
+
+                            var snapshotJson = JsonSerializer.Serialize(new
+                            {
+                                type = "snapshot",
+                                searchId = searchId,
+                                status = isRunning ? "running" : "stopped",
+                                searchStatus = isRunning ? "running" : "stopped",
+                                progressPercent = progressPercent,
+                                results = results,
+                                filterJaml = string.IsNullOrWhiteSpace(runningFilterJaml) ? (string?)null : runningFilterJaml,
+                                columns = SearchManager.Instance.GetColumnNames(searchId),
+                                isBackgroundRunning = isRunning,
+                                seedsFound = results?.Count ?? 0,
+                                currentBatch = currentBatch,
+                                totalBatches = totalBatches,
+                                seedsSearched = seedsSearched,
+                                seedsPerSecond = seedsPerSecond,
+                                cutoff = cutoffOverride
+                            });
+
+                            await ws.SendToAsync(id, snapshotJson);
+                        }
+                        else if (string.Equals(type, "unsubscribe", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ws.SetSubscription(id, null);
+                        }
+                    }
+                    catch
+                    {
+                    }
                 }
             }
             catch
@@ -161,7 +228,10 @@ public static class MotelyApiFactory
                     filterJaml,
                     deck: deck,
                     stake: stake,
-                    seedCount: seedCountInt);
+                    seedCount: seedCountInt,
+                    startBatchOverride: req.StartBatch,
+                    cutoffOverride: req.Cutoff,
+                    seedSource: req.SeedSource);
 
                 var columns = SearchManager.Instance.GetColumnNames(searchId);
                 
@@ -187,6 +257,9 @@ public static class MotelyApiFactory
                 var (results, progressPercent) = SearchManager.Instance.GetSearchStatus(id);
                 var isRunning = SearchManager.Instance.IsSearchRunning(id);
 
+                SearchManager.Instance.TryGetRunningSearchFilterJaml(id, out var runningFilterJaml);
+                SearchManager.Instance.TryGetSearchOverrides(id, out var _, out var cutoffOverride);
+
                 SearchManager.Instance.TryGetSearchMetrics(
                     id,
                     out var currentBatch,
@@ -200,13 +273,15 @@ public static class MotelyApiFactory
                     searchStatus = isRunning ? "running" : "stopped",
                     progressPercent = progressPercent,
                     results = results,
+                    filterJaml = string.IsNullOrWhiteSpace(runningFilterJaml) ? (string?)null : runningFilterJaml,
                     columns = SearchManager.Instance.GetColumnNames(id),
                     isBackgroundRunning = isRunning,
                     seedsFound = results?.Count ?? 0,
                     currentBatch = currentBatch,
                     totalBatches = totalBatches,
                     seedsSearched = seedsSearched,
-                    seedsPerSecond = seedsPerSecond
+                    seedsPerSecond = seedsPerSecond,
+                    cutoff = cutoffOverride
                 });
             }
             catch (Exception ex)
@@ -263,11 +338,21 @@ public static class MotelyApiFactory
 
                     var deck = "Red";
                     var stake = "White";
+                    var columns = new List<string> { "seed", "score" };
                     string? jamlErr;
                     if (global::Motely.JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var cfg, out jamlErr) && cfg != null)
                     {
                         if (!string.IsNullOrWhiteSpace(cfg.Deck)) deck = cfg.Deck;
                         if (!string.IsNullOrWhiteSpace(cfg.Stake)) stake = cfg.Stake;
+
+                        try
+                        {
+                            columns = cfg.GetColumnNames();
+                        }
+                        catch
+                        {
+                            columns = new List<string> { "seed", "score" };
+                        }
                     }
 
                     var searchId = $"{SearchManager.Instance.GetFilterNameForId(filterJaml)}_{deck}_{stake}";
@@ -277,7 +362,8 @@ public static class MotelyApiFactory
                         name,
                         filterJaml,
                         filePath = Path.GetFileName(file),
-                        searchId
+                        searchId,
+                        columns
                     });
                 }
             }
@@ -297,12 +383,29 @@ public static class MotelyApiFactory
 
                 if (!alreadyListed)
                 {
+                    var columns = new List<string> { "seed", "score" };
+                    if (!string.IsNullOrWhiteSpace(activeFilterJaml))
+                    {
+                        try
+                        {
+                            if (global::Motely.JamlConfigLoader.TryLoadFromJamlString(activeFilterJaml, out var cfg, out var jamlErr) && cfg != null)
+                            {
+                                columns = cfg.GetColumnNames();
+                            }
+                        }
+                        catch
+                        {
+                            columns = new List<string> { "seed", "score" };
+                        }
+                    }
+
                     filters.Insert(0, new
                     {
                         name = $"(unsaved) {activeId}",
                         filterJaml = string.IsNullOrWhiteSpace(activeFilterJaml) ? (string?)null : activeFilterJaml,
                         filePath = (string?)null,
-                        searchId = activeId
+                        searchId = activeId,
+                        columns
                     });
                 }
             }
@@ -313,6 +416,140 @@ public static class MotelyApiFactory
                 runningSearchIds,
                 isSearchRunning
             });
+        });
+
+        app.MapGet("/seed-sources", () =>
+        {
+            var results = new List<object>
+            {
+                new { key = "all", label = "All Seeds (default)", kind = "builtin" },
+                new { key = "random:1000000", label = "Random 1M", kind = "builtin" }
+            };
+
+            static IEnumerable<string> SafeListFiles(string dir, string pattern)
+            {
+                if (!Directory.Exists(dir))
+                    return Enumerable.Empty<string>();
+                try
+                {
+                    return Directory.GetFiles(dir, pattern)
+                        .Select(p => Path.GetFileName(p) ?? string.Empty)
+                        .Where(f => !string.IsNullOrWhiteSpace(f));
+                }
+                catch
+                {
+                    return Enumerable.Empty<string>();
+                }
+            }
+
+            var wordListsDir = Path.Combine(motelyRoot, "WordLists");
+            var legacyDir = Path.Combine(motelyRoot, "wordlists");
+
+            var dbFiles = SafeListFiles(wordListsDir, "*.db").Concat(SafeListFiles(legacyDir, "*.db"))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var f in dbFiles)
+            {
+                results.Add(new { key = $"db:{f}", label = f, kind = "db", fileName = f });
+            }
+
+            var txtFiles = SafeListFiles(wordListsDir, "*.txt").Concat(SafeListFiles(legacyDir, "*.txt"))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var f in txtFiles)
+            {
+                results.Add(new { key = $"txt:{f}", label = f, kind = "txt", fileName = f });
+            }
+
+            results.Add(new { key = "new", label = "New word list…", kind = "action" });
+
+            return Results.Ok(new { sources = results });
+        });
+
+        static string SanitizeWordListFileStem(string name)
+        {
+            var trimmed = (name ?? string.Empty).Trim();
+            if (trimmed.Length == 0)
+                return string.Empty;
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var chars = trimmed.Select(c => invalid.Contains(c) ? '-' : c).ToArray();
+            var safe = new string(chars).Trim();
+            safe = safe.Replace(Path.DirectorySeparatorChar, '-').Replace(Path.AltDirectorySeparatorChar, '-');
+            return safe;
+        }
+
+        app.MapGet("/wordlists/{name}", (string name) =>
+        {
+            try
+            {
+                var safeName = Path.GetFileName(name);
+                if (string.IsNullOrWhiteSpace(safeName))
+                    return Results.BadRequest(new { error = "Missing name" });
+
+                var ext = Path.GetExtension(safeName);
+                if (string.IsNullOrWhiteSpace(ext))
+                    safeName += ".txt";
+                else if (!string.Equals(ext, ".txt", StringComparison.OrdinalIgnoreCase))
+                    return Results.BadRequest(new { error = "Invalid wordlist extension" });
+
+                var wordListsDir = Path.Combine(motelyRoot, "WordLists");
+                var legacyDir = Path.Combine(motelyRoot, "wordlists");
+
+                var p1 = Path.Combine(wordListsDir, safeName);
+                var p2 = Path.Combine(legacyDir, safeName);
+
+                var path = File.Exists(p1) ? p1 : (File.Exists(p2) ? p2 : null);
+                if (path == null)
+                    return Results.NotFound(new { error = "Word list not found" });
+
+                var content = File.ReadAllText(path);
+                return Results.Ok(new
+                {
+                    name = Path.GetFileNameWithoutExtension(safeName),
+                    fileName = safeName,
+                    text = content
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPut("/wordlists/{name}", async (string name, HttpRequest request) =>
+        {
+            try
+            {
+                var req = await request.ReadFromJsonAsync<WordListUpsertRequest>();
+                var text = req?.Text ?? string.Empty;
+
+                var safeName = Path.GetFileName(name);
+                var stemRaw = Path.GetFileNameWithoutExtension(safeName);
+                var stem = SanitizeWordListFileStem(stemRaw);
+                if (string.IsNullOrWhiteSpace(stem))
+                    return Results.BadRequest(new { error = "Missing name" });
+
+                var wordListsDir = Path.Combine(motelyRoot, "WordLists");
+                Directory.CreateDirectory(wordListsDir);
+
+                var fileName = stem + ".txt";
+                var fullPath = Path.Combine(wordListsDir, fileName);
+                await File.WriteAllTextAsync(fullPath, text);
+
+                return Results.Ok(new
+                {
+                    name = stem,
+                    fileName,
+                    key = $"txt:{fileName}"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
         });
 
         app.MapDelete("/filters/{filterId}", (string filterId) => 
@@ -341,7 +578,194 @@ public static class MotelyApiFactory
                     return Results.NotFound(new { error = "Filter not found" });
 
                 File.Delete(fullPath);
+
+                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
                 return Results.Ok(new { message = $"Filter {safeName} deleted" });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        static string SanitizeFilterFileStem(string name)
+        {
+            var trimmed = (name ?? string.Empty).Trim();
+            if (trimmed.Length == 0)
+                return string.Empty;
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var chars = trimmed.Select(c => invalid.Contains(c) ? '-' : c).ToArray();
+            var safe = new string(chars).Trim();
+            safe = safe.Replace(Path.DirectorySeparatorChar, '-').Replace(Path.AltDirectorySeparatorChar, '-');
+            return safe;
+        }
+
+        static string UpsertNameField(string content, string newName)
+        {
+            var updated = Regex.Replace(content ?? string.Empty, "(?m)^name:\\s*.*$", $"name: {newName}");
+            if (!Regex.IsMatch(updated, "(?m)^name:\\s*.+$"))
+            {
+                updated = $"name: {newName}\n" + (content ?? string.Empty);
+            }
+            return updated;
+        }
+
+        app.MapPost("/filters/clone", async (HttpRequest request) =>
+        {
+            try
+            {
+                var req = await request.ReadFromJsonAsync<FilterCloneRequest>();
+                var filterId = req?.FilterId ?? string.Empty;
+                var newNameRaw = req?.NewName ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(filterId))
+                    return Results.BadRequest(new { error = "Missing filterId" });
+
+                var safeName = Path.GetFileName(filterId);
+                if (!string.Equals(safeName, filterId, StringComparison.Ordinal))
+                    return Results.BadRequest(new { error = "Invalid filterId" });
+
+                var ext = Path.GetExtension(safeName);
+                if (!string.Equals(ext, ".jaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yml", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest(new { error = "Invalid filter extension" });
+                }
+
+                var filtersPath = Path.Combine(motelyRoot, "JamlFilters");
+                var srcPath = Path.Combine(filtersPath, safeName);
+                if (!File.Exists(srcPath))
+                    return Results.NotFound(new { error = "Filter not found" });
+
+                var newStem = SanitizeFilterFileStem(newNameRaw);
+                if (string.IsNullOrWhiteSpace(newStem))
+                    return Results.BadRequest(new { error = "Missing newName" });
+
+                var baseDest = Path.Combine(filtersPath, newStem + ext);
+                var destPath = baseDest;
+                for (var i = 2; File.Exists(destPath); i++)
+                {
+                    destPath = Path.Combine(filtersPath, $"{newStem} {i}{ext}");
+                }
+
+                var content = File.ReadAllText(srcPath);
+                var updated = UpsertNameField(content, Path.GetFileNameWithoutExtension(destPath));
+                File.WriteAllText(destPath, updated);
+
+                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+
+                return Results.Ok(new
+                {
+                    name = Path.GetFileNameWithoutExtension(destPath),
+                    filePath = Path.GetFileName(destPath),
+                    filterJaml = updated
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPost("/filters/rename", async (HttpRequest request) =>
+        {
+            try
+            {
+                var req = await request.ReadFromJsonAsync<FilterRenameRequest>();
+                var filterId = req?.FilterId ?? string.Empty;
+                var newNameRaw = req?.NewName ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(filterId))
+                    return Results.BadRequest(new { error = "Missing filterId" });
+
+                var safeName = Path.GetFileName(filterId);
+                if (!string.Equals(safeName, filterId, StringComparison.Ordinal))
+                    return Results.BadRequest(new { error = "Invalid filterId" });
+
+                var ext = Path.GetExtension(safeName);
+                if (!string.Equals(ext, ".jaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yml", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest(new { error = "Invalid filter extension" });
+                }
+
+                var filtersPath = Path.Combine(motelyRoot, "JamlFilters");
+                var srcPath = Path.Combine(filtersPath, safeName);
+                if (!File.Exists(srcPath))
+                    return Results.NotFound(new { error = "Filter not found" });
+
+                var newStem = SanitizeFilterFileStem(newNameRaw);
+                if (string.IsNullOrWhiteSpace(newStem))
+                    return Results.BadRequest(new { error = "Missing newName" });
+
+                var destName = newStem + ext;
+                var destPath = Path.Combine(filtersPath, destName);
+                if (!string.Equals(destPath, srcPath, StringComparison.OrdinalIgnoreCase) && File.Exists(destPath))
+                    return Results.Conflict(new { error = "A filter with that name already exists" });
+
+                var content = File.ReadAllText(srcPath);
+                var updated = UpsertNameField(content, newStem);
+
+                if (!string.Equals(destPath, srcPath, StringComparison.OrdinalIgnoreCase))
+                    File.Move(srcPath, destPath);
+
+                File.WriteAllText(destPath, updated);
+
+                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+
+                return Results.Ok(new
+                {
+                    name = newStem,
+                    filePath = Path.GetFileName(destPath),
+                    filterJaml = updated
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPost("/filters/update", async (HttpRequest request) =>
+        {
+            try
+            {
+                var req = await request.ReadFromJsonAsync<FilterUpdateRequest>();
+                var filterId = req?.FilterId ?? string.Empty;
+                var filterJaml = req?.FilterJaml ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(filterId))
+                    return Results.BadRequest(new { error = "Missing filterId" });
+
+                var safeName = Path.GetFileName(filterId);
+                if (!string.Equals(safeName, filterId, StringComparison.Ordinal))
+                    return Results.BadRequest(new { error = "Invalid filterId" });
+
+                var ext = Path.GetExtension(safeName);
+                if (!string.Equals(ext, ".jaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yaml", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(ext, ".yml", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest(new { error = "Invalid filter extension" });
+                }
+
+                var filtersPath = Path.Combine(motelyRoot, "JamlFilters");
+                var fullPath = Path.Combine(filtersPath, safeName);
+                if (!File.Exists(fullPath))
+                    return Results.NotFound(new { error = "Filter not found" });
+
+                File.WriteAllText(fullPath, filterJaml);
+
+                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+
+                return Results.Ok(new
+                {
+                    filePath = safeName,
+                    filterJaml = filterJaml
+                });
             }
             catch (Exception ex)
             {
@@ -363,17 +787,32 @@ public static class MotelyApiFactory
     }
 }
 
-internal sealed record SearchStartRequest(string? FilterJaml, long? SeedCount, long? StartBatch, int? Cutoff);
+internal sealed record SearchStartRequest(string? FilterJaml, long? SeedCount, long? StartBatch, int? Cutoff, string? SeedSource);
 internal sealed record SearchStopRequest(string? SearchId);
+internal sealed record FilterCloneRequest(string? FilterId, string? NewName);
+internal sealed record FilterRenameRequest(string? FilterId, string? NewName);
+internal sealed record FilterUpdateRequest(string? FilterId, string? FilterJaml);
+internal sealed record WordListUpsertRequest(string? Text);
 
 public sealed class WebSocketBroadcaster
 {
-    private readonly ConcurrentDictionary<Guid, WebSocket> _sockets = new();
+    private sealed class SocketInfo
+    {
+        public WebSocket Socket { get; }
+        public string? SearchId;
+
+        public SocketInfo(WebSocket socket)
+        {
+            Socket = socket;
+        }
+    }
+
+    private readonly ConcurrentDictionary<Guid, SocketInfo> _sockets = new();
 
     public Guid Add(WebSocket socket)
     {
         var id = Guid.NewGuid();
-        _sockets[id] = socket;
+        _sockets[id] = new SocketInfo(socket);
         return id;
     }
 
@@ -382,9 +821,46 @@ public sealed class WebSocketBroadcaster
         _sockets.TryRemove(id, out _);
     }
 
+    public void SetSubscription(Guid id, string? searchId)
+    {
+        if (_sockets.TryGetValue(id, out var info))
+        {
+            info.SearchId = string.IsNullOrWhiteSpace(searchId) ? null : searchId;
+        }
+    }
+
+    public void BroadcastToSearch(string searchId, string json)
+    {
+        if (string.IsNullOrWhiteSpace(searchId))
+            return;
+
+        _ = BroadcastToSearchAsync(searchId, json);
+    }
+
     public void Broadcast(string json)
     {
         _ = BroadcastAsync(json);
+    }
+
+    public async Task SendToAsync(Guid id, string json)
+    {
+        if (!_sockets.TryGetValue(id, out var info))
+            return;
+
+        var socket = info.Socket;
+        if (socket.State != WebSocketState.Open)
+            return;
+
+        var payload = Encoding.UTF8.GetBytes(json);
+        var seg = new ArraySegment<byte>(payload);
+
+        try
+        {
+            await socket.SendAsync(seg, WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+        catch
+        {
+        }
     }
 
     private async Task BroadcastAsync(string json)
@@ -394,7 +870,32 @@ public sealed class WebSocketBroadcaster
 
         foreach (var kvp in _sockets)
         {
-            var socket = kvp.Value;
+            var socket = kvp.Value.Socket;
+            if (socket.State != WebSocketState.Open)
+                continue;
+
+            try
+            {
+                await socket.SendAsync(seg, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private async Task BroadcastToSearchAsync(string searchId, string json)
+    {
+        var payload = Encoding.UTF8.GetBytes(json);
+        var seg = new ArraySegment<byte>(payload);
+
+        foreach (var kvp in _sockets)
+        {
+            var info = kvp.Value;
+            if (!string.Equals(info.SearchId, searchId, StringComparison.Ordinal))
+                continue;
+
+            var socket = info.Socket;
             if (socket.State != WebSocketState.Open)
                 continue;
 
