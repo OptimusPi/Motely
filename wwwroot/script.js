@@ -2,6 +2,24 @@
 // JAML Web UI - JavaScript Functions
 // ================================================
 
+// Constants - Remove magic numbers
+const SEED_COUNT_DEFAULT = 100000000;
+const BATCH_SIZE_DEFAULT = 1000000;
+const MAX_DISPLAY_ROWS = 1000;
+const TAGLINE_ROTATION_INTERVAL = 5000;
+const TAGLINE_FADE_DURATION = 300;
+const COPY_BUTTON_RESET_DELAY = 2000;
+const PROGRESS_PERCENT_MULTIPLIER = 100;
+const SPEED_MILLION_THRESHOLD = 1000000;
+const SPEED_THOUSAND_THRESHOLD = 1000;
+const HASH_DJB2_SEED = 5381;
+const MOBILE_BREAKPOINT = 768;
+const PANEL_MIN_HEIGHT = 150;
+const PANEL_MARGIN = 200;
+const PANEL_MIN_WIDTH = 300;
+const BLUEPRINT_SCALE = 0.85;
+const BLUEPRINT_HEIGHT = 600;
+
 // JAML Taglines (from TUI)
 const jamlTaglines = [
     "Jetting At Maximum Lightspeed",
@@ -28,11 +46,10 @@ const jamlTaglines = [
 ];
 
 // Global State
-let isSearching = false;
 let searchAborted = false;
 let currentSearchId = null;
 let currentSearchJaml = null; // The JAML content that started the current search
-let currentBatchSize = 1000000;
+let currentBatchSize = BATCH_SIZE_DEFAULT;
 let isProgrammaticEdit = false; // Flag to ignore programmatic setJamlValue calls
 let totalSeedsSearched = 0;
 let searchResults = [];
@@ -40,7 +57,7 @@ let searchColumns = ['seed', 'score'];
 let savedFilters = [];
 let sortColumn = 'score';
 let sortDirection = 'desc'; // 'asc' or 'desc'
-const maxRows = 1000; // Display limit message (API returns up to 1000)
+const maxRows = MAX_DISPLAY_ROWS; // Display limit message
 
 let runningSearchIds = [];
 
@@ -50,42 +67,205 @@ let isFilterDirty = false;
 
 let seedSources = [];
 let currentSeedSource = 'all';
-let previousSeedSource = 'all';
-let isHydrationMode = false;
 
 let ws = null;
 let wsDesiredSearchId = null;
 
-// Global editor functions
-function getJamlValue() {
-    if (window.jamlEditor) {
-        return window.jamlEditor.getValue();
+// Centralized status message management
+const StatusTypes = {
+    INFO: 'info',
+    SUCCESS: 'success', 
+    ERROR: 'error',
+    WARNING: 'warning',
+    PROGRESS: 'progress'
+};
+
+class StatusManager {
+    constructor() {
+        this.statusElement = null;
+        this.lastMessage = '';
+        this.messageQueue = [];
+        this.isProcessing = false;
     }
-    const textarea = document.getElementById('filterJaml');
-    return textarea ? textarea.value : '';
+
+    init() {
+        this.statusElement = document.getElementById('status');
+    }
+
+    show(message, type = StatusTypes.INFO) {
+        if (!this.statusElement) {
+            console.warn('Status element not found');
+            return;
+        }
+
+        // Avoid duplicate messages
+        if (message === this.lastMessage) {
+            return;
+        }
+
+        this.lastMessage = message;
+        
+        // Add timestamp for errors and warnings
+        const timestamp = (type === StatusTypes.ERROR || type === StatusTypes.WARNING) 
+            ? `[${new Date().toLocaleTimeString()}] ` 
+            : '';
+        
+        this.statusElement.textContent = timestamp + message;
+        
+        // Add visual feedback based on type
+        this.statusElement.className = `status-${type}`;
+    }
+
+    // Convenience methods for common message types
+    info(message) { this.show(message, StatusTypes.INFO); }
+    success(message) { this.show(message, StatusTypes.SUCCESS); }
+    error(message) { this.show(message, StatusTypes.ERROR); }
+    warning(message) { this.show(message, StatusTypes.WARNING); }
+    progress(message) { this.show(message, StatusTypes.PROGRESS); }
+
+    // Batch status updates
+    showProgress(searchId, threads, batch, speed, searched, found) {
+        const sid = searchId || '';
+        const threadStr = threads > 0 ? `${threads}T` : '';
+        const speedStr = speed >= SPEED_MILLION_THRESHOLD
+            ? `${(speed / SPEED_MILLION_THRESHOLD).toFixed(1)}M/s`
+            : speed >= SPEED_THOUSAND_THRESHOLD
+                ? `${(speed / SPEED_THOUSAND_THRESHOLD).toFixed(0)}K/s`
+                : `${speed.toFixed(0)}/s`;
+        
+        this.progress(`${sid} | ${threadStr} | Batch ${batch} | ${speedStr} | ${(searched / SPEED_MILLION_THRESHOLD).toFixed(1)}M searched | ${found} found`);
+    }
+
+    showLoaded(filterName, isRunning = false) {
+        if (isRunning) {
+            this.info(`Loaded: ${filterName} (running)`);
+        } else {
+            this.info(`Loaded: ${filterName}`);
+        }
+    }
+
+    showFilterChanged(hasSavedSelection = false, isDirty = false) {
+        if (hasSavedSelection && isDirty) {
+            this.warning('Filter changed - save or start new search');
+        } else {
+            this.info('Filter changed - ready to start new search');
+        }
+    }
+
+    showSearchError(error) {
+        this.error(`Search failed: ${error || 'unknown error'}`);
+    }
+
+    showSearchProgress(progress) {
+        this.info(`Search progress: ${progress}%`);
+    }
+
+    showHalted(reason) {
+        this.warning(`Search halted: ${reason || 'unknown'}`);
+    }
 }
 
-function setJamlValue(val) {
-    const textarea = document.getElementById('filterJaml');
-    if (textarea) {
-        textarea.value = val;
+// Global status manager instance
+const statusManager = new StatusManager();
+
+// Centralized event listener management to prevent memory leaks
+class EventManager {
+    constructor() {
+        this.listeners = new Map();
+        this.timers = new Set();
+        this.intervals = new Set();
     }
-    if (window.jamlEditor) {
-        window.jamlEditor.setValue(val);
+
+    addListener(element, event, handler, options = {}) {
+        if (!element) return null;
+        
+        const key = `${element.id || 'anonymous'}-${event}`;
+        
+        // Remove existing listener if present
+        if (this.listeners.has(key)) {
+            const existing = this.listeners.get(key);
+            element.removeEventListener(event, existing.handler, existing.options);
+        }
+        
+        // Add new listener
+        element.addEventListener(event, handler, options);
+        this.listeners.set(key, { element, event, handler, options });
+        
+        return key;
+    }
+
+    removeListener(key) {
+        if (!this.listeners.has(key)) return false;
+        
+        const listener = this.listeners.get(key);
+        listener.element.removeEventListener(listener.event, listener.handler, listener.options);
+        this.listeners.delete(key);
+        return true;
+    }
+
+    addTimer(callback, delay) {
+        const timerId = setTimeout(callback, delay);
+        this.timers.add(timerId);
+        return timerId;
+    }
+
+    removeTimer(timerId) {
+        if (this.timers.has(timerId)) {
+            clearTimeout(timerId);
+            this.timers.delete(timerId);
+            return true;
+        }
+        return false;
+    }
+
+    addInterval(callback, delay) {
+        const intervalId = setInterval(callback, delay);
+        this.intervals.add(intervalId);
+        return intervalId;
+    }
+
+    removeInterval(intervalId) {
+        if (this.intervals.has(intervalId)) {
+            clearInterval(intervalId);
+            this.intervals.delete(intervalId);
+            return true;
+        }
+        return false;
+    }
+
+    cleanup() {
+        // Remove all event listeners
+        for (const [key, listener] of this.listeners) {
+            listener.element.removeEventListener(listener.event, listener.handler, listener.options);
+        }
+        this.listeners.clear();
+        
+        // Clear all timers
+        for (const timerId of this.timers) {
+            clearTimeout(timerId);
+        }
+        this.timers.clear();
+        
+        // Clear all intervals
+        for (const intervalId of this.intervals) {
+            clearInterval(intervalId);
+        }
+        this.intervals.clear();
     }
 }
 
+// Global event manager instance
+const eventManager = new EventManager();
+
+// Legacy showStatus function for backward compatibility
 function showStatus(message) {
-    // Update the "Results" header in the right panel with status info
-    const statusElement = document.getElementById('status');
-    if (statusElement) {
-        statusElement.textContent = message;
-    }
+    statusManager.info(message);
 }
 
 function formatJaml() {
     const jaml = getJamlValue();
     if (!jaml.trim()) {
+        statusManager.info('Nothing to format');
         showStatus('Nothing to format');
         return;
     }
@@ -186,8 +366,15 @@ function isSimpleValue(value) {
 }
 
 function ensureWebSocket() {
+    // Prevent duplicate connections - check if we already have a healthy connection
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         return;
+    }
+
+    // Close any existing dead connection before creating a new one
+    if (ws && ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING) {
+        ws.close();
+        ws = null;
     }
 
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -205,6 +392,8 @@ function ensureWebSocket() {
 
     ws.onclose = () => {
         ws = null;
+        // Clear desired search ID when connection closes to prevent stale subscriptions
+        wsDesiredSearchId = null;
     };
 
     ws.onmessage = (evt) => {
@@ -221,7 +410,7 @@ function ensureWebSocket() {
                         if (searchButtonState !== 'STOPPING') updateSearchButton('RUNNING', 0);
                     } else {
                         runningSearchIds = runningSearchIds.filter(id => id !== msg.searchId);
-                        updateSearchButton('CONTINUE', (msg.progressPercent || 0) / 100);
+                        updateSearchButton('CONTINUE', (msg.progressPercent || 0) / PROGRESS_PERCENT_MULTIPLIER);
                     }
 
                     if (msg.lastError) {
@@ -243,9 +432,9 @@ function ensureWebSocket() {
 
             if (msg.type === 'search_failed') {
                 if (msg.searchId && currentSearchId && msg.searchId !== currentSearchId) return;
-                isSearching = false;
+                searchButtonState = 'START';
                 updateSearchButton('START', 0);
-                showStatus(`Search failed: ${msg.error || 'unknown error'}`);
+                statusManager.showSearchError(msg.error || 'unknown error');
                 if (msg.searchId) {
                     runningSearchIds = runningSearchIds.filter(id => id !== msg.searchId);
                 }
@@ -260,10 +449,10 @@ function ensureWebSocket() {
                 const foundCount = msg.seedsFound || searchResults.length;
                 const threadsInUse = msg.threadsInUse || 0;
 
-                const speedStr = seedsPerSecond >= 1000000
-                    ? `${(seedsPerSecond / 1000000).toFixed(1)}M/s`
-                    : seedsPerSecond >= 1000
-                        ? `${(seedsPerSecond / 1000).toFixed(0)}K/s`
+                const speedStr = seedsPerSecond >= SPEED_MILLION_THRESHOLD
+                    ? `${(seedsPerSecond / SPEED_MILLION_THRESHOLD).toFixed(1)}M/s`
+                    : seedsPerSecond >= SPEED_THOUSAND_THRESHOLD
+                        ? `${(seedsPerSecond / SPEED_THOUSAND_THRESHOLD).toFixed(0)}K/s`
                         : `${seedsPerSecond.toFixed(0)}/s`;
 
                 const batchInput = document.getElementById('batchOverride');
@@ -278,7 +467,7 @@ function ensureWebSocket() {
 
                 const sid = msg.searchId || currentSearchId || '';
                 const threadStr = threadsInUse > 0 ? `${threadsInUse}T` : '';
-                showStatus(`${sid} | ${threadStr} | Batch ${msg.currentBatch || 0} | ${speedStr} | ${(seedsSearched / 1000000).toFixed(1)}M searched | ${foundCount} found`);
+                statusManager.showProgress(sid, threadsInUse, msg.currentBatch, seedsPerSecond, seedsSearched, foundCount);
                 return;
             }
 
@@ -311,9 +500,9 @@ function ensureWebSocket() {
 
             if (msg.type === 'search_halted') {
                 if (msg.searchId && currentSearchId && msg.searchId !== currentSearchId) return;
-                isSearching = false;
+                searchButtonState = 'CONTINUE';
                 updateSearchButton('CONTINUE', 0);
-                showStatus(`Search halted: ${msg.reason || 'unknown'}`);
+                statusManager.showHalted(msg.reason || 'unknown');
                 if (msg.searchId) {
                     runningSearchIds = runningSearchIds.filter(id => id !== msg.searchId);
                 }
@@ -324,269 +513,9 @@ function ensureWebSocket() {
             console.error('WebSocket message processing error:', e);
         }
     };
-}
-
-function subscribeToSearch(searchId) {
-    wsDesiredSearchId = searchId || null;
-    try {
-        if (ws && ws.readyState === WebSocket.OPEN && wsDesiredSearchId) {
-            ws.send(JSON.stringify({ type: 'subscribe', searchId: wsDesiredSearchId }));
-        }
-    } catch (e) {
-        console.error('WebSocket subscribe error:', e);
-    }
-}
-
-// Sync URL with current search ID (so refresh/bookmark works)
-function updateUrlWithSearchId(searchId) {
-    const url = new URL(window.location);
-    if (searchId) {
-        url.searchParams.set('search', searchId);
-    } else {
-        url.searchParams.delete('search');
-    }
-    // Update URL without reloading page
-    window.history.replaceState({}, '', url);
-}
-
-function canonicalizeJamlForHash(jaml) {
-    const text = (jaml ?? '').toString();
-    if (!text.trim()) return '';
-    if (typeof jsyaml !== 'undefined') {
-        try {
-            const parsed = jsyaml.load(text);
-            return jsyaml.dump(parsed, {
-                indent: 2,
-                lineWidth: -1,
-                noArrayIndent: true,
-                sortKeys: false,
-                quotingType: "'",
-                forceQuotes: false,
-                flowLevel: -1
-            });
-        } catch {
-        }
-    }
-    return text.replace(/\s+/g, '');
-}
-
-function hashStringDjb2(str) {
-    let h = 5381;
-    for (let i = 0; i < str.length; i++) {
-        h = ((h << 5) + h) + str.charCodeAt(i);
-        h = h | 0;
-    }
-    return h.toString();
-}
-
-function computeJamlHash(jaml) {
-    return hashStringDjb2(canonicalizeJamlForHash(jaml));
-}
-
-function upsertNameFieldClient(jaml, newName) {
-    const safe = (newName ?? '').toString().trim();
-    if (!safe) return jaml;
-
-    if (/^name:\s*.+$/m.test(jaml)) {
-        return jaml.replace(/^name:\s*.+$/m, `name: ${safe}`);
-    }
+    const filter = loadFilterByIdx(dropdown.value);
     
-    // If no name field exists, add it after the first line or at the beginning
-    const lines = jaml.split('\n');
-    if (lines.length === 0) return `name: ${safe}`;
-    
-    // Insert name after first line if first line is not empty, otherwise at beginning
-    if (lines[0].trim()) {
-        lines.splice(1, 0, `name: ${safe}`);
-    } else {
-        lines.unshift(`name: ${safe}`);
-    }
-    
-    return lines.join('\n');
-}
-
-function extractFromJaml(jaml, field) {
-    if (!jaml || !field) return null;
-    
-    const regex = new RegExp(`^${field}:\\s*(.+)$`, 'm');
-    const match = jaml.match(regex);
-    return match ? match[1].trim() : null;
-}
-
-// Toggle between Monaco and Plain text editor
-let usePlainEditor = false;
-
-function setEditorMode(mode) {
-    const monacoContainer = document.getElementById('monacoEditor');
-    const plainTextarea = document.getElementById('filterJaml');
-    const monacoBtn = document.getElementById('monacoBtn');
-    const plainBtn = document.getElementById('plainBtn');
-
-    if (mode === 'plain') {
-        // Switch to plain editor
-        usePlainEditor = true;
-
-        // Sync content from Monaco to textarea
-        if (window.jamlEditor) {
-            plainTextarea.value = window.jamlEditor.getValue();
-        }
-        monacoContainer.style.display = 'none';
-        plainTextarea.style.display = 'block';
-
-        // Update button states
-        monacoBtn.classList.remove('active');
-        plainBtn.classList.add('active');
-
-        // Override getJamlValue/setJamlValue to use textarea
-        window.getJamlValue = () => plainTextarea.value;
-        window.setJamlValue = (val) => {
-            plainTextarea.value = val;
-            if (window.jamlEditor) window.jamlEditor.setValue(val);
-        };
-
-        // Add change listener to plain textarea
-        plainTextarea.oninput = () => onUserJamlEdit();
-    } else {
-        // Switch to Monaco editor
-        usePlainEditor = false;
-
-        // Sync content from textarea to Monaco
-        if (window.jamlEditor) {
-            window.jamlEditor.setValue(plainTextarea.value);
-        }
-        plainTextarea.style.display = 'none';
-        monacoContainer.style.display = 'block';
-
-        // Update button states
-        plainBtn.classList.remove('active');
-        monacoBtn.classList.add('active');
-
-        // Restore Monaco-based getJamlValue/setJamlValue
-        window.getJamlValue = () => window.jamlEditor ? window.jamlEditor.getValue() : plainTextarea.value;
-        window.setJamlValue = (val) => {
-            plainTextarea.value = val;
-            if (window.jamlEditor) window.jamlEditor.setValue(val);
-        };
-    }
-}
-
-// Called when user edits JAML (not programmatic loads) - invalidates current search
-// No string comparison needed: ANY user edit means the filter might be different!
-function onUserJamlEdit() {
-    if (isProgrammaticEdit) return; // Ignore programmatic setJamlValue calls
-
-    const dropdown = document.getElementById('savedSearches');
-    const idx = dropdown ? dropdown.value : '';
-    const hasSavedSelection = idx !== '' && !!selectedFilterFilePath;
-
-    if (hasSavedSelection && selectedFilterBaseHash !== null) {
-        const newHash = computeJamlHash(getJamlValue());
-        isFilterDirty = newHash !== selectedFilterBaseHash;
-    } else {
-        isFilterDirty = false;
-        selectedFilterFilePath = null;
-        selectedFilterBaseHash = null;
-    }
-
-    currentSearchId = null;
-    currentSearchJaml = null;
-    updateUrlWithSearchId(null); // Clear URL - filter changed
-    searchResults = [];
-    updateSearchButton('START', 0);
-
-    const batchInput = document.getElementById('batchOverride');
-    if (batchInput) {
-        batchInput.value = '';
-        batchInput.placeholder = 'Batch #';
-    }
-
-    if (hasSavedSelection && isFilterDirty) {
-        showStatus('Filter changed - save or start new search');
-    } else {
-        showStatus('Filter changed - ready to start new search');
-    }
-
-    const optIndex = idx !== '' ? parseInt(idx) : -1;
-    if (dropdown && optIndex >= 0 && savedFilters[optIndex]) {
-        const f = savedFilters[optIndex];
-        const isRunning = !!(f.searchId && runningSearchIds.includes(f.searchId));
-        const statusDot = isFilterDirty ? '🟡' : (isRunning ? '🟢' : '🔴');
-        dropdown.options[optIndex + 1].text = `${statusDot} ${f.name}`;
-
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsModal && settingsModal.style.display !== 'none') {
-            refreshSettingsModalUI();
-        }
-    }
-}
-
-function loadSavedSearch() {
-    const dropdown = document.getElementById('savedSearches');
-    const idx = dropdown.value;
-    
-    if (idx === '' || !savedFilters[parseInt(idx)]) {
-        return;
-    }
-    
-    const filter = savedFilters[parseInt(idx)];
-    
-    // Load the filter into the editor
-    isProgrammaticEdit = true;
-    setJamlValue(filter.filterJaml);
-    isProgrammaticEdit = false;
-    
-    // Update state
-    selectedFilterFilePath = filter.filePath;
-    selectedFilterBaseHash = computeJamlHash(filter.filterJaml);
-    isFilterDirty = false;
-    
-    // Update current search ID if available
-    if (filter.searchId) {
-        currentSearchId = filter.searchId;
-        updateUrlWithSearchId(filter.searchId);
-    }
-    
-    // Update dropdown status indicator and button state
-    const isRunning = !!(filter.searchId && runningSearchIds.includes(filter.searchId));
-    const statusDot = isFilterDirty ? '🟡' : (isRunning ? '🟢' : '🔴');
-    dropdown.options[parseInt(idx) + 1].text = `${statusDot} ${filter.name}`;
-
-    // Update button to reflect running state
-    if (isRunning) {
-        updateSearchButton('RUNNING', 0);
-        showStatus(`Loaded: ${filter.name} (running)`);
-        ensureWebSocket();
-        subscribeToSearch(filter.searchId);
-    } else if (filter.searchId) {
-        updateSearchButton('CONTINUE', 0);
-        showStatus(`Loaded: ${filter.name}`);
-        ensureWebSocket();
-        subscribeToSearch(filter.searchId);
-    } else {
-        updateSearchButton('START', 0);
-        showStatus(`Loaded: ${filter.name}`);
-    }
-}
-
-function settingsSelectFilter() {
-    const dropdown = document.getElementById('settingsSavedSearches');
-    const idx = dropdown.value;
-    
-    if (idx === '' || !savedFilters[parseInt(idx)]) {
-        return;
-    }
-    
-    const filter = savedFilters[parseInt(idx)];
-    
-    // Update the editor with the selected filter
-    isProgrammaticEdit = true;
-    setJamlValue(filter.filterJaml);
-    isProgrammaticEdit = false;
-    
-    // Update state
-    selectedFilterFilePath = filter.filePath;
-    selectedFilterBaseHash = computeJamlHash(filter.filterJaml);
-    isFilterDirty = false;
+    if (!filter) return;
     
     // Update current search ID if available
     if (filter.searchId) {
@@ -659,7 +588,7 @@ async function checkExistingSearchStatus(searchId) {
             subscribeToSearch(searchId);
         } else {
             // Search exists but not running - show Continue
-            const progress = (data.progressPercent || 0) / 100;
+            const progress = (data.progressPercent || 0) / PROGRESS_PERCENT_MULTIPLIER;
             updateSearchButton('CONTINUE', progress);
             showStatus(`Loaded search ${searchId} - ${searchResults.length} results`);
             ensureWebSocket();
@@ -673,42 +602,92 @@ async function checkExistingSearchStatus(searchId) {
 // ================================================
 // Initialization
 // ================================================
-document.addEventListener('DOMContentLoaded', async function() {
-    // Load filters FIRST (so dropdown is populated)
-    await loadFilters();
-    startTaglineRotation();
-    ensureWebSocket();
-    initPanelSplitter();
-
-    // Load search ID from URL if present and check its status
+async function loadUrlParametersAfterMonaco() {
+    // Load URL parameters AFTER Monaco is initialized
     const urlParams = new URLSearchParams(window.location.search);
     const searchId = urlParams.get('search');
+    const seedSource = urlParams.get('seedSource');
+    
+    // Load seed source from URL
+    if (seedSource) {
+        currentSeedSource = seedSource;
+        // Update both dropdowns to reflect loaded seed source
+        const settingsDropdown = document.getElementById('settingsSeedSource');
+        const mainDropdown = document.getElementById('seedSource');
+        if (settingsDropdown) settingsDropdown.value = seedSource;
+        if (mainDropdown) mainDropdown.value = seedSource;
+        showStatus(`Loaded seed source: ${seedSource}`);
+    }
+    
+    // Load search ID and filter JAML from URL
     if (searchId) {
         currentSearchId = searchId;
         await checkExistingSearchStatus(searchId);
     }
+}
+
+// Monaco ready callback
+window.onMonacoReady = async function() {
+    await loadUrlParametersAfterMonaco();
+};
+
+// Initialize unified JAML editor functions after all functions are defined
+updateJamlEditorFunctions();
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize status manager first
+    statusManager.init();
+    
+    // Load filters FIRST (so dropdown is populated)
+    await loadFilters();
+    await loadSeedSourcesForSettings(); // Load seed sources in settings
+    syncMainSeedSourceDropdown(); // Sync main dropdown with settings
+    
+    // Initialize remaining UI components
+    startTaglineRotation();
+    ensureWebSocket();
+    initPanelSplitter();
+    
+    // Load URL parameters immediately if Monaco is ready, otherwise callback will handle it
+    if (window.jamlEditor) {
+        await loadUrlParametersAfterMonaco();
+    }
+    
+    // Add cleanup on page unload to prevent memory leaks
+    eventManager.addListener(window, 'beforeunload', () => {
+        eventManager.cleanup();
+    });
+    
+    // Handle orientation changes for mobile
+    eventManager.addListener(window, 'orientationchange', () => {
+        // Force layout recalculation after orientation change
+        setTimeout(() => {
+            if (window.jamlEditor) {
+                window.jamlEditor.layout();
+            }
+        }, 100);
+    });
 });
 
-// ================================================
-// JAML Branding Functions
-// ================================================
 function startTaglineRotation() {
     const taglineElement = document.getElementById('jaml-tagline');
+    if (!taglineElement) return;
+    
     let currentIndex = 0;
     
-    // Rotate tagline every 5 seconds
-    setInterval(() => {
+    // Rotate tagline every TAGLINE_ROTATION_INTERVAL seconds
+    const rotationInterval = eventManager.addInterval(() => {
         currentIndex = (currentIndex + 1) % jamlTaglines.length;
         taglineElement.style.opacity = '0';
         
-        setTimeout(() => {
+        eventManager.addTimer(() => {
             taglineElement.textContent = jamlTaglines[currentIndex];
             taglineElement.style.opacity = '1';
-        }, 300);
-    }, 5000);
+        }, TAGLINE_FADE_DURATION);
+    }, TAGLINE_ROTATION_INTERVAL);
     
     // Click to manually cycle
-    taglineElement.addEventListener('click', () => {
+    eventManager.addListener(taglineElement, 'click', () => {
         currentIndex = (currentIndex + 1) % jamlTaglines.length;
         taglineElement.textContent = jamlTaglines[currentIndex];
     });
@@ -834,16 +813,14 @@ function updateSearchButton(state, progress = 0) {
         btn.textContent = 'Stop Search';
         btn.className = 'button-primary';
         btn.disabled = false;
-        isSearching = true;
         return;
     }
 
     if (searchButtonState === 'CONTINUE') {
-        const p = Math.round(pct * 100);
+        const p = Math.round(pct * PROGRESS_PERCENT_MULTIPLIER);
         btn.textContent = p > 0 ? `Continue (${p}%)` : 'Continue';
         btn.className = 'button-primary';
         btn.disabled = false;
-        isSearching = false;
         return;
     }
 
@@ -857,15 +834,9 @@ function updateSearchButton(state, progress = 0) {
     btn.textContent = 'Start Search';
     btn.className = 'button-primary';
     btn.disabled = false;
-    isSearching = false;
 }
 
 function toggleSearch() {
-    if ((searchButtonState === 'START' || searchButtonState === 'CONTINUE') && isFilterDirty && selectedFilterFilePath) {
-        void saveDirtyFilter();
-        return;
-    }
-
     // Use explicit state machine - NEVER rely on button text!
     switch (searchButtonState) {
         case 'RUNNING':
@@ -900,12 +871,12 @@ async function runSearch() {
         return;
     }
 
-    if (isSearching) {
+    if (searchButtonState === 'RUNNING') {
         showStatus('Search already running...');
         return;
     }
 
-    isSearching = true;
+    searchButtonState = 'RUNNING';
     searchAborted = false;
 
     // Only clear results if filter changed! Same filter = keep accumulating via fertilizer!
@@ -925,7 +896,6 @@ async function runSearch() {
     searchBtn.className = 'button-blue';
     searchBtn.disabled = true;
 
-    let timeoutId = null;
     try {
         // ONE POST to start search
         showStatus('Starting search...');
@@ -938,7 +908,7 @@ async function runSearch() {
         const cutoffOverrideInput = document.getElementById('cutoffOverride');
         const cutoffOverride = cutoffOverrideInput && cutoffOverrideInput.value !== '' ? parseInt(cutoffOverrideInput.value) : null;
 
-        const requestBody = { filterJaml, seedCount: 100000000 };
+        const requestBody = { filterJaml, seedCount: SEED_COUNT_DEFAULT };
         if (currentSeedSource && currentSeedSource !== 'all') {
             requestBody.seedSource = currentSeedSource;
         }
@@ -949,21 +919,19 @@ async function runSearch() {
             requestBody.cutoff = cutoffOverride;
         }
 
-        const controller = new AbortController();
-        const timeoutMs = 15000;
-        timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
         const response = await fetch('/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-            signal: controller.signal
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
             const error = await response.json();
-            showStatus(` Error: ${error.error}`);
-            isSearching = false;
+            const errorMsg = ` Error: ${error.error}`;
+            showStatus(errorMsg);
+            console.error('Search failed:', error);
+            alert(errorMsg); // Keep error visible
+            searchButtonState = 'START';
             updateSearchButton('START', 0);
             return;
         }
@@ -1010,30 +978,32 @@ async function runSearch() {
         showStatus('Search started...');
 
     } catch (error) {
-        if (error && error.name === 'AbortError') {
-            showStatus(' Network error: /search timed out');
-        } else {
-            showStatus(` Network error: ${error.message}`);
-        }
-        isSearching = false;
+        showStatus(` Network error: ${error.message}`);
+        searchButtonState = 'START';
         updateSearchButton('START', 0);  // This also re-enables the button
-    } finally {
-        if (timeoutId !== null) {
-            clearTimeout(timeoutId);
-        }
     }
 }
 
 async function stopSearch() {
     // CRITICAL: Set STOPPING state FIRST to prevent race conditions
-    // This must happen BEFORE we set isSearching = false!
+    // This must happen BEFORE we set searchButtonState = 'START'!
     updateSearchButton('STOPPING', 0);
 
     // Now set flags to stop polling loop
-    isSearching = false;
+    searchButtonState = 'START';
     searchAborted = true;
 
-    if (!currentSearchId) {
+    // DEBUG: Log current state
+    console.log('stopSearch called - currentSearchId:', currentSearchId, 'runningSearchIds:', runningSearchIds);
+
+    // Try to get searchId from running searches if currentSearchId is missing
+    let searchIdToStop = currentSearchId;
+    if (!searchIdToStop && runningSearchIds.length > 0) {
+        searchIdToStop = runningSearchIds[0];
+        console.log('Using fallback searchId from runningSearchIds:', searchIdToStop);
+    }
+
+    if (!searchIdToStop) {
         updateSearchButton('START', 0);
         showStatus('No search to stop');
         return;
@@ -1043,7 +1013,7 @@ async function stopSearch() {
         const response = await fetch('/search/stop', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ searchId: currentSearchId })
+            body: JSON.stringify({ searchId: searchIdToStop })
         });
 
         if (!response.ok) {
@@ -1056,16 +1026,20 @@ async function stopSearch() {
         const data = await response.json();
         showStatus(`${data.message} - ${searchResults.length} results`);
 
-        if (currentSearchId) {
-            runningSearchIds = runningSearchIds.filter(id => id !== currentSearchId);
+        // Remove from running searches
+        runningSearchIds = runningSearchIds.filter(id => id !== searchIdToStop);
+        
+        // Clear currentSearchId if it was the one we stopped
+        if (currentSearchId === searchIdToStop) {
+            currentSearchId = null;
         }
 
         // Get current progress from the API to show accurate state
-        const statusResponse = await fetch(`/search?id=${currentSearchId}`);
+        const statusResponse = await fetch(`/search?id=${searchIdToStop}`);
         if (statusResponse.ok) {
             const statusData = await statusResponse.json();
             const progress = statusData.progressPercent || 0;
-            updateSearchButton('CONTINUE', progress / 100);
+            updateSearchButton('CONTINUE', progress / PROGRESS_PERCENT_MULTIPLIER);
 
             // Sync batch input with final position
             const batchInput = document.getElementById('batchOverride');
@@ -1104,59 +1078,41 @@ async function stopAllSearches() {
             }
         }
     } catch (e) {
-        showStatus(`Error: ${e.message}`);
+        console.error('Failed to stop all searches:', e);
+        showStatus(`Error: ${e?.message || 'Failed to stop all searches'}`);
+        updateSearchButton('START', 0);
     }
 }
 
-async function saveDirtyFilter() {
-    // Save the current JAML to the selected filter (or create new if name changed)
-    const jaml = getJamlValue();
-    if (!jaml.trim()) {
-        showStatus('Cannot save empty filter');
-        return;
+// Sync main seed source dropdown from settings on initial load
+function syncMainSeedSourceDropdown() {
+    const settingsDropdown = document.getElementById('settingsSeedSource');
+    const mainDropdown = document.getElementById('seedSource');
+    if (settingsDropdown && mainDropdown) {
+        mainDropdown.innerHTML = settingsDropdown.innerHTML;
+        mainDropdown.value = settingsDropdown.value;
+        currentSeedSource = mainDropdown.value;
     }
+}
 
-    // Extract filter name from JAML (look for "name:" line)
-    const nameMatch = jaml.match(/^name:\s*(.+)$/m);
-    const filterName = nameMatch ? nameMatch[1].trim() : null;
+function onSeedSourceChange() {
+    const mainDropdown = document.getElementById('seedSource');
+    const settingsDropdown = document.getElementById('settingsSeedSource');
+    syncSeedSourceDropdowns(mainDropdown, settingsDropdown);
 
-    if (!filterName) {
-        showStatus('Filter must have a name: field');
-        return;
-    }
-
-    // Generate filename from name (sanitize for filesystem)
-    const safeName = filterName.replace(/[^a-zA-Z0-9_-]/g, '_') + '.jaml';
-
-    try {
-        showStatus('Saving filter...');
-
-        const response = await fetch('/filters/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filterId: safeName, filterJaml: jaml })
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            showStatus(`Save failed: ${err.error}`);
-            return;
-        }
-
-        const data = await response.json();
-
-        // Update state to reflect saved filter - use the filename returned by API
-        selectedFilterFilePath = data.filePath;
-        selectedFilterBaseHash = computeJamlHash(jaml);
-        isFilterDirty = false;
-
-        showStatus(`Saved: ${filterName}`);
-
-        // Reload filters to show updated list
-        await loadFilters();
-
-    } catch (e) {
-        showStatus(`Save error: ${e.message}`);
+    // Update global state/UI for hydration
+    isHydrationMode = currentSeedSource !== 'all' && currentSeedSource !== 'random:' + BATCH_SIZE_DEFAULT;
+    updateSearchButton(searchButtonState);
+    
+    // Show/Hide Edit/New buttons
+    const actionsDiv = document.getElementById('settingsWordListActions');
+    const editBtn = document.getElementById('settingsEditWordListBtn');
+    
+    if (actionsDiv) {
+        actionsDiv.style.display = 'flex'; // Always show actions row in modal
+        // But only enable Edit if it's a text file
+        const isTxt = currentSeedSource.startsWith('txt:');
+        if (editBtn) editBtn.disabled = !isTxt;
     }
 }
 
@@ -1180,12 +1136,17 @@ function shareSearch() {
 
     const url = new URL(window.location);
     url.searchParams.set('search', searchIdToShare);
+    
+    // Include seed source in share URL if set
+    if (currentSeedSource && currentSeedSource !== 'all') {
+        url.searchParams.set('seedSource', currentSeedSource);
+    }
 
     navigator.clipboard.writeText(url.toString()).then(() => {
         const btn = document.getElementById('shareBtn');
         const originalText = btn.textContent;
         btn.textContent = '✅ Copied!';
-        setTimeout(() => btn.textContent = originalText, 2000);
+        setTimeout(() => btn.textContent = originalText, COPY_BUTTON_RESET_DELAY);
     });
 }
 
@@ -1287,7 +1248,7 @@ function displayResults(data) {
             <tbody>
     `;
 
-    // Add result rows (show all 1000 from API)
+    // Add result rows (show all MAX_DISPLAY_ROWS from API)
     const displayResults = data.results;
     
     displayResults.forEach(result => {
@@ -1311,8 +1272,8 @@ function displayResults(data) {
         </table>
     `;
 
-    if (data.results.length > maxRows) {
-        html += `<div class="info-text">Showing top ${maxRows} of ${data.results.length} results</div>`;
+    if (data.results.length > MAX_DISPLAY_ROWS) {
+        html += `<div class="info-text">Showing top ${MAX_DISPLAY_ROWS} of ${data.results.length} results</div>`;
     }
 
     container.innerHTML = html;
@@ -1367,6 +1328,12 @@ async function loadFilters() {
         }
     } catch (e) {
         console.error('Failed to load filters', e);
+        showStatus('Failed to load filters - server may not be running');
+        // Try to populate dropdown with error message
+        const dropdown = document.getElementById('savedSearches');
+        if (dropdown) {
+            dropdown.innerHTML = '<option value="">Server not running - check connection</option>';
+        }
     }
 }
 
@@ -1521,20 +1488,23 @@ async function loadSeedSourcesForSettings() {
         settingsSeedSourceChanged(); // Update visibility of Edit button
     } catch (e) {
         console.error('Failed to load seed sources', e);
+        showStatus('Failed to load seed sources - server may not be running');
+        // Try to populate dropdown with error message
+        if (select) {
+            select.innerHTML = '<option value="">Server not running - check connection</option>';
+        }
     }
 }
 
 function settingsSeedSourceChanged() {
-    const select = document.getElementById('settingsSeedSource');
-    const val = select.value;
-    currentSeedSource = val;
+    const settingsDropdown = document.getElementById('settingsSeedSource');
+    const mainDropdown = document.getElementById('seedSource');
+    syncSeedSourceDropdowns(settingsDropdown, mainDropdown);
     
     // Update global state/UI for hydration
-    isHydrationMode = val !== 'all' && val !== 'random:1000000';
-    
-    // Update main Search button text to reflect mode
+    isHydrationMode = currentSeedSource !== 'all' && currentSeedSource !== 'random:' + BATCH_SIZE_DEFAULT;
     updateSearchButton(searchButtonState);
-
+    
     // Show/Hide Edit/New buttons
     const actionsDiv = document.getElementById('settingsWordListActions');
     const editBtn = document.getElementById('settingsEditWordListBtn');
@@ -1542,7 +1512,7 @@ function settingsSeedSourceChanged() {
     if (actionsDiv) {
         actionsDiv.style.display = 'flex'; // Always show actions row in modal
         // But only enable Edit if it's a text file
-        const isTxt = val.startsWith('txt:');
+        const isTxt = currentSeedSource.startsWith('txt:');
         if (editBtn) editBtn.disabled = !isTxt;
     }
 }
@@ -1634,9 +1604,9 @@ function initPanelSplitter() {
 
     let isDragging = false;
 
-    // Check if we're in stacked (vertical) mode
+    // Check if we're in stacked (vertical) mode - only stack on mobile vertical
     function isStackedMode() {
-        return window.innerWidth <= 768;
+        return window.innerWidth <= MOBILE_BREAKPOINT && window.innerHeight > window.innerWidth;
     }
 
     splitter.addEventListener('mousedown', (e) => {
@@ -1655,8 +1625,8 @@ function initPanelSplitter() {
             let newHeight = e.clientY - leftRect.top;
 
             // Min/Max constraints
-            const minHeight = 150;
-            const maxHeight = window.innerHeight - 200;
+            const minHeight = PANEL_MIN_HEIGHT;
+            const maxHeight = window.innerHeight - PANEL_MIN_HEIGHT;
 
             if (newHeight < minHeight) newHeight = minHeight;
             if (newHeight > maxHeight) newHeight = maxHeight;
@@ -1670,8 +1640,8 @@ function initPanelSplitter() {
             let newLeftWidth = e.clientX - containerRect.left;
 
             // Min/Max constraints
-            const minWidth = 300;
-            const maxWidth = containerWidth - 300;
+            const minWidth = PANEL_MIN_WIDTH;
+            const maxWidth = containerWidth - PANEL_MIN_WIDTH;
 
             if (newLeftWidth < minWidth) newLeftWidth = minWidth;
             if (newLeftWidth > maxWidth) newLeftWidth = maxWidth;
@@ -1729,4 +1699,79 @@ function initPanelSplitter() {
             }
         }
     });
+}
+
+// ================================================
+// Settings Modal Functions
+// ================================================
+function handleSettingsModalBackdrop(event) {
+    // Close modal when clicking backdrop
+    if (event.target.id === 'settingsModal') {
+        closeSettingsModal();
+    }
+}
+
+function renameSelectedFilterFromSettings() {
+    showStatus('Rename filter not yet implemented');
+}
+
+function cloneSelectedFilterFromSettings() {
+    showStatus('Clone filter not yet implemented');
+}
+
+// ================================================
+// Fast Seed Analyzer with iframe
+// ================================================
+function quickAnalyze(seed) {
+    // Switch to Analyze tab
+    document.querySelector('.tab:nth-child(2)').click();
+    
+    const analyzeResult = document.getElementById('analyzeResult');
+    
+    // Show loading immediately with seed info
+    analyzeResult.innerHTML = `
+        <div style="padding: 20px; color: #fff;">
+            <h3>Seed: ${seed}</h3>
+            <div style="margin-top: 15px;">
+                <p><strong>Loading Blueprint analyzer...</strong></p>
+                <p style="font-size: 14px; color: #888; margin-top: 5px;">Score: ${searchResults.find(r => r.seed === seed)?.score || 'N/A'}</p>
+            </div>
+            <div style="margin-top: 20px; border: 1px solid #565b5c; border-radius: 8px; overflow: hidden;">
+                <iframe 
+                    src="https://miaklwalker.github.io/Blueprint/?seed=${seed}" 
+                    style="width: 100%; height: 600px; border: none; transform: scale(0.85); transform-origin: top left;"
+                    onload="this.style.opacity='1'"
+                    onerror="this.parentElement.innerHTML='<div style=\\'padding: 40px; text-align: center; color: #888;\\'>Failed to load Blueprint. <a href=\\\"https://miaklwalker.github.io/Blueprint/?seed=${seed}\\\" target=\\\"_blank\\\" style=\\\"color: #4a9eff;\\\">Open in new tab ↗</a></div>'">
+                </iframe>
+            </div>
+        </div>
+    `;
+}
+
+// ================================================
+// Export Results
+// ================================================
+function exportResults() {
+    if (!searchResults || searchResults.length === 0) {
+        showStatus('No results to export');
+        return;
+    }
+    
+    // Build CSV from results
+    const headers = Object.keys(searchResults[0]);
+    const csv = [
+        headers.join(','),
+        ...searchResults.map(r => headers.map(h => r[h] ?? '').join(','))
+    ].join('\n');
+    
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `motely_results_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showStatus(`Exported ${searchResults.length} results`);
 }
