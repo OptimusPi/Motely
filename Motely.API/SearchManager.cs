@@ -33,6 +33,7 @@ public class SearchManager
     }
 
     private readonly ConcurrentDictionary<string, ActiveSearch> _activeSearches = new();
+    private readonly ConcurrentDictionary<string, string> _lastErrors = new(StringComparer.OrdinalIgnoreCase);
     private static readonly string _searchResultsDir = "SearchResults";
 
     private string? _motelyRoot;
@@ -51,6 +52,19 @@ public class SearchManager
     internal void SetMotelyRoot(string motelyRoot)
     {
         _motelyRoot = motelyRoot;
+    }
+
+    public bool TryGetLastError(string searchId, out string error)
+    {
+        error = "";
+        if (string.IsNullOrWhiteSpace(searchId))
+            return false;
+
+        if (!_lastErrors.TryGetValue(searchId, out var e))
+            return false;
+
+        error = e;
+        return !string.IsNullOrWhiteSpace(error);
     }
 
     public class ActiveSearch
@@ -103,6 +117,8 @@ public class SearchManager
 
             var searchId = $"{GetFilterName(filterJaml)}_{deck}_{stake}";
             var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
+
+            _lastErrors.TryRemove(searchId, out _);
 
             // If this searchId already exists, stop it first (restart semantics)
             if (_activeSearches.TryGetValue(searchId, out var existing))
@@ -379,7 +395,7 @@ public class SearchManager
         }
         catch { }
 
-        var timeout = TimeSpan.FromSeconds(5);
+        var timeout = TimeSpan.FromSeconds(1);
         var completed = true;
         if (search.SearchTask != null)
         {
@@ -613,6 +629,15 @@ public class SearchManager
         }
         catch (Exception ex)
         {
+            var err = ex.ToString();
+            _lastErrors[search.SearchId] = err;
+            _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+            {
+                type = "search_failed",
+                searchId = search.SearchId,
+                error = ex.Message
+            }));
+
             Console.WriteLine($"Search {search.SearchId} failed: {ex.Message}");
         }
         finally
@@ -666,6 +691,14 @@ public class SearchManager
         {
             if (_activeSearches.TryGetValue(id, out var s))
             {
+                if (s.SearchTask == null)
+                {
+                    // Brand new (or already stopped) search: don't broadcast a rebalance halt.
+                    // Just mark it as eligible to start below.
+                    stoppable.Add(id);
+                    continue;
+                }
+
                 var stopped = await StopSearchInternalAsync(s, reason: "rebalance");
                 if (stopped)
                     stoppable.Add(id);

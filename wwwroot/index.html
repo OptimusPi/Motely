@@ -279,6 +279,7 @@ stake: White</textarea>
                     <span id="status" class="status-inline">Results</span>
                     <div class="results-actions">
                         <button onclick="exportResults()" class="button-small">Export CSV</button>
+                        <button onclick="stopAllSearches()" class="button-small button-danger">Stop All</button>
                     </div>
                 </div>
                 <div id="resultsGrid" class="results-container">
@@ -376,7 +377,7 @@ stake: White</textarea>
 
         <!-- js-yaml from CDN (consistency - all external libs from CDN) -->
         <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
-        <script src="script.js"></script>
+        <script>document.write('<script src="script.js?v=' + Date.now() + '"><\/script>');</script>
         <!-- Monaco Editor from CDN (best practice - faster + cached globally) -->
         <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
         <script>

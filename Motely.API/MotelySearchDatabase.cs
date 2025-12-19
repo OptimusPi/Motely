@@ -262,8 +262,12 @@ public class MotelySearchDatabase : IDisposable
         var columnDefs = new List<string> { "seed VARCHAR PRIMARY KEY", "score INTEGER" };
         for (int i = 2; i < _columnNames.Count; i++)
         {
-            // Quote column names to handle special characters and reserved words
-            columnDefs.Add($"\"{_columnNames[i]}\" INTEGER");
+            // Sanitize column names: replace spaces/special chars with underscores for DuckDB compatibility
+            var safeName = _columnNames[i]
+                .Replace(" ", "_")
+                .Replace("-", "_")
+                .Replace(".", "_");
+            columnDefs.Add($"\"{safeName}\" INTEGER");
         }
 
         var createTableSql = $@"
@@ -320,8 +324,13 @@ public class MotelySearchDatabase : IDisposable
                 }
             }
 
-            bool match = existingColumns.Count == _columnNames.Count &&
-                         existingColumns.SequenceEqual(_columnNames);
+            // Sanitize column names for comparison (same logic as InitializeSchema)
+            var sanitizedColumnNames = _columnNames.Select((name, i) => 
+                i < 2 ? name : name.Replace(" ", "_").Replace("-", "_").Replace(".", "_")
+            ).ToList();
+            
+            bool match = existingColumns.Count == sanitizedColumnNames.Count &&
+                         existingColumns.SequenceEqual(sanitizedColumnNames);
 
             if (!match)
             {
