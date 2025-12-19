@@ -262,11 +262,12 @@ public class MotelySearchDatabase : IDisposable
         var columnDefs = new List<string> { "seed VARCHAR PRIMARY KEY", "score INTEGER" };
         for (int i = 2; i < _columnNames.Count; i++)
         {
-            // Sanitize column names: replace spaces/special chars with underscores for DuckDB compatibility
+            // Sanitize column names: replace spaces/special chars with underscores, remove quotes for DuckDB compatibility
             var safeName = _columnNames[i]
                 .Replace(" ", "_")
                 .Replace("-", "_")
-                .Replace(".", "_");
+                .Replace(".", "_")
+                .Replace("\"", "");
             columnDefs.Add($"\"{safeName}\" INTEGER");
         }
 
