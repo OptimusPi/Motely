@@ -550,8 +550,18 @@ public class SearchManager
     {
         try
         {
-            var tempConfigPath = Path.Combine(_searchResultsDir, $"{search.SearchId}_temp.jaml");
-            await File.WriteAllTextAsync(tempConfigPath, filterJaml);
+            if (!JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var config, out var parseError) || config == null)
+            {
+                var errText = parseError ?? "Invalid filter";
+                _lastErrors[search.SearchId] = errText;
+                _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+                {
+                    type = "search_failed",
+                    searchId = search.SearchId,
+                    error = errText
+                }));
+                return;
+            }
 
             var searchParams = new JsonSearchParams
             {
@@ -598,9 +608,8 @@ public class SearchManager
             };
 
             search.Executor = new JsonSearchExecutor(
-                tempConfigPath,
+                config,
                 searchParams,
-                "jaml",
                 result =>
                 {
                     search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
@@ -618,7 +627,6 @@ public class SearchManager
             await Task.Run(() =>
             {
                 search.Executor.Execute();
-                try { File.Delete(tempConfigPath); } catch { }
             }, search.CancellationToken?.Token ?? CancellationToken.None);
         }
         catch (OperationCanceledException)
@@ -735,7 +743,7 @@ public class SearchManager
 
             var runId = Guid.NewGuid();
             search.RunInstanceId = runId;
-            search.SearchTask = Task.Run(() => RunSequentialSearch(runId, search, search.FilterJaml, search.Deck, search.Stake, seedCount: 0, startBatchOverride: search.ResumeStartBatch));
+            search.SearchTask = RunSequentialSearch(runId, search, search.FilterJaml, search.Deck, search.Stake, seedCount: 0, startBatchOverride: search.ResumeStartBatch);
         }
     }
 
