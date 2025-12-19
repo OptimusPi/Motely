@@ -55,6 +55,25 @@ let isHydrationMode = false;
 
 let ws = null;
 
+// Global editor functions
+function getJamlValue() {
+    if (window.jamlEditor) {
+        return window.jamlEditor.getValue();
+    }
+    const textarea = document.getElementById('filterJaml');
+    return textarea ? textarea.value : '';
+}
+
+function setJamlValue(val) {
+    const textarea = document.getElementById('filterJaml');
+    if (textarea) {
+        textarea.value = val;
+    }
+    if (window.jamlEditor) {
+        window.jamlEditor.setValue(val);
+    }
+}
+
 function showStatus(message) {
     const statusElement = document.getElementById('statusMessage');
     if (statusElement) {
@@ -309,6 +328,71 @@ function onUserJamlEdit() {
     }
 }
 
+function loadSavedSearch() {
+    const dropdown = document.getElementById('savedSearches');
+    const idx = dropdown.value;
+    
+    if (idx === '' || !savedFilters[parseInt(idx)]) {
+        return;
+    }
+    
+    const filter = savedFilters[parseInt(idx)];
+    
+    // Load the filter into the editor
+    isProgrammaticEdit = true;
+    setJamlValue(filter.filterJaml);
+    isProgrammaticEdit = false;
+    
+    // Update state
+    selectedFilterFilePath = filter.filePath;
+    selectedFilterBaseHash = computeJamlHash(filter.filterJaml);
+    isFilterDirty = false;
+    
+    // Update current search ID if available
+    if (filter.searchId) {
+        currentSearchId = filter.searchId;
+        updateUrlWithSearchId(filter.searchId);
+    }
+    
+    showStatus(`Loaded: ${filter.name}`);
+    
+    // Update dropdown status indicator
+    const isRunning = !!(filter.searchId && runningSearchIds.includes(filter.searchId));
+    dropdown.options[parseInt(idx) + 1].text = `🔴 ${filter.name}`;
+}
+
+function settingsSelectFilter() {
+    const dropdown = document.getElementById('settingsSavedSearches');
+    const idx = dropdown.value;
+    
+    if (idx === '' || !savedFilters[parseInt(idx)]) {
+        return;
+    }
+    
+    const filter = savedFilters[parseInt(idx)];
+    
+    // Update the editor with the selected filter
+    isProgrammaticEdit = true;
+    setJamlValue(filter.filterJaml);
+    isProgrammaticEdit = false;
+    
+    // Update state
+    selectedFilterFilePath = filter.filePath;
+    selectedFilterBaseHash = computeJamlHash(filter.filterJaml);
+    isFilterDirty = false;
+    
+    // Update current search ID if available
+    if (filter.searchId) {
+        currentSearchId = filter.searchId;
+        updateUrlWithSearchId(filter.searchId);
+    }
+    
+    showStatus(`Loaded: ${filter.name}`);
+    
+    // Update UI
+    refreshSettingsModalUI();
+}
+
 // ================================================
 // Filter Builder Functions
 // ================================================
@@ -333,6 +417,23 @@ function quickAnalyze(seed) {
     // Quick analysis of a seed - could open a modal or navigate to analysis
     console.log('Quick analyze seed:', seed);
     alert(`Analysis for seed ${seed} - feature not yet implemented`);
+}
+
+async function checkExistingSearchStatus(searchId) {
+    try {
+        const response = await fetch(`/search/status/${searchId}`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        if (data.isRunning) {
+            currentSearchId = searchId;
+            runningSearchIds.push(searchId);
+            updateSearchButton('CONTINUE', 0);
+            showStatus(`Resuming search ${searchId}`);
+        }
+    } catch (e) {
+        console.error('Failed to check search status:', e);
+    }
 }
 
 // ================================================
@@ -909,171 +1010,83 @@ function refreshSettingsModalUI() {
     if (editBtn) {
         editBtn.disabled = !isTxt;
     }
+    
+    // Populate the settings modal filter dropdown
+    const settingsDropdown = document.getElementById('settingsSavedSearches');
+    if (settingsDropdown) {
+        settingsDropdown.innerHTML = '<option value="">Select a filter...</option>';
+        savedFilters.forEach((filter, i) => {
+            const isRunning = !!(filter.searchId && runningSearchIds.includes(filter.searchId));
+            const isDirtySelected = !!(isFilterDirty && selectedFilterFilePath && filter.filePath && filter.filePath === selectedFilterFilePath);
+            const statusDot = isDirtySelected ? '🟡' : (isRunning ? '🟢' : '🔴');
+            settingsDropdown.innerHTML += `<option value="${i}">${statusDot} ${filter.name}</option>`;
+        });
+        
+        // Set selected filter if one is currently selected
+        if (selectedFilterFilePath) {
+            const idx = savedFilters.findIndex(f => f.filePath && f.filePath === selectedFilterFilePath);
+            if (idx >= 0) settingsDropdown.value = idx.toString();
+        }
+    }
 }
 
-// ================================================
-// Filter Builder - Item Data
-// ================================================
-const ITEM_DATA = {
-    joker: [
-            // Rare
-            'DNA', 'Vagabond', 'Baron', 'Obelisk', 'BaseballCard', 'AncientJoker', 'Campfire', 'Blueprint',
-            'WeeJoker', 'HitTheRoad', 'TheDuo', 'TheTrio', 'TheFamily', 'TheOrder', 'TheTribe', 'Stuntman',
-            'InvisibleJoker', 'Brainstorm', 'DriversLicense', 'BurntJoker',
-            // Uncommon
-            'JokerStencil', 'FourFingers', 'Mime', 'CeremonialDagger', 'MarbleJoker', 'LoyaltyCard', 'Dusk',
-            'Fibonacci', 'SteelJoker', 'Hack', 'Pareidolia', 'SpaceJoker', 'Burglar', 'Blackboard', 'SixthSense',
-            'Constellation', 'Hiker', 'CardSharp', 'Madness', 'Seance', 'Vampire', 'Shortcut', 'Hologram',
-            'Cloud9', 'Rocket', 'MidasMask', 'Luchador', 'GiftCard', 'TurtleBean', 'Erosion', 'ToTheMoon',
-            'StoneJoker', 'LuckyCat', 'Bull', 'DietCola', 'TradingCard', 'FlashCard', 'SpareTrousers', 'Ramen',
-            'Seltzer', 'Castle', 'MrBones', 'Acrobat', 'SockAndBuskin', 'Troubadour', 'Certificate', 'SmearedJoker',
-            'Throwback', 'RoughGem', 'Bloodstone', 'Arrowhead', 'OnyxAgate', 'GlassJoker', 'Showman', 'FlowerPot',
-            'MerryAndy', 'OopsAll6s', 'TheIdol', 'SeeingDouble', 'Matador', 'Satellite', 'Cartomancer', 'Astronomer', 'Bootstraps',
-            // Common
-            'Joker', 'GreedyJoker', 'LustyJoker', 'WrathfulJoker', 'GluttonousJoker', 'JollyJoker', 'ZanyJoker',
-            'MadJoker', 'CrazyJoker', 'DrollJoker', 'SlyJoker', 'WilyJoker', 'CleverJoker', 'DeviousJoker',
-            'CraftyJoker', 'HalfJoker', 'CreditCard', 'Banner', 'MysticSummit', 'EightBall', 'Misprint',
-            'RaisedFist', 'ChaostheClown', 'ScaryFace', 'AbstractJoker', 'DelayedGratification', 'GrosMichel',
-            'EvenSteven', 'OddTodd', 'Scholar', 'BusinessCard', 'Supernova', 'RideTheBus', 'Egg', 'Runner',
-            'IceCream', 'Splash', 'BlueJoker', 'FacelessJoker', 'GreenJoker', 'Superposition', 'ToDoList',
-            'Cavendish', 'RedCard', 'SquareJoker', 'RiffRaff', 'Photograph', 'ReservedParking', 'MailInRebate',
-            'Hallucination', 'FortuneTeller', 'Juggler', 'Drunkard', 'GoldenJoker', 'Popcorn', 'WalkieTalkie',
-            'SmileyFace', 'GoldenTicket', 'Swashbuckler', 'HangingChad', 'ShootTheMoon',
-            'NewJoker', 'AnotherJoker',
-            'NewJoker2', 'AnotherJoker2'
-        ],
-    soulJoker: ['Canio', 'Triboulet', 'Yorick', 'Chicot', 'Perkeo'],
-    voucher: [
-            'Overstock', 'OverstockPlus', 'ClearanceSale', 'Liquidation', 'Hone', 'GlowUp', 'RerollSurplus',
-            'RerollGlut', 'CrystalBall', 'OmenGlobe', 'Telescope', 'Observatory', 'Grabber', 'NachoTong',
-            'Wasteful', 'Recyclomancy', 'TarotMerchant', 'TarotTycoon', 'PlanetMerchant', 'PlanetTycoon',
-            'SeedMoney', 'MoneyTree', 'Blank', 'Antimatter', 'MagicTrick', 'Illusion', 'Hieroglyph',
-            'Petroglyph', 'DirectorsCut', 'Retcon', 'PaintBrush', 'Palette'
-        ],
-        tag: [
-            'UncommonTag', 'RareTag', 'NegativeTag', 'FoilTag', 'HolographicTag', 'PolychromeTag',
-            'InvestmentTag', 'VoucherTag', 'BossTag', 'StandardTag', 'CharmTag', 'MeteorTag', 'BuffoonTag',
-            'HandyTag', 'GarbageTag', 'EtherealTag', 'CouponTag', 'DoubleTag', 'JuggleTag', 'D6Tag',
-            'TopupTag', 'SpeedTag', 'OrbitalTag', 'EconomyTag',
-            'NewTag', 'AnotherTag'
-        ],
-        tarot: [
-            'TheFool', 'TheMagician', 'TheHighPriestess', 'TheEmpress', 'TheEmperor', 'TheHierophant',
-            'TheLovers', 'TheChariot', 'Justice', 'TheHermit', 'TheWheelOfFortune', 'Strength',
-            'TheHangedMan', 'Death', 'Temperance', 'TheDevil', 'TheTower', 'TheStar', 'TheMoon',
-            'TheSun', 'Judgement', 'TheWorld'
-        ],
-        spectral: [
-            'Familiar', 'Grim', 'Incantation', 'Talisman', 'Aura', 'Wraith', 'Sigil', 'Ouija',
-            'Ectoplasm', 'Immolate', 'Ankh', 'DejaVu', 'Hex', 'Trance', 'Medium', 'Cryptid', 'Soul', 'BlackHole'
-        ],
-        planet: ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'PlanetX', 'Ceres', 'Eris'],
-        boss: [
-            'AmberAcorn', 'CeruleanBell', 'CrimsonHeart', 'VerdantLeaf', 'VioletVessel', 'TheArm', 'TheClub',
-            'TheEye', 'TheFish', 'TheFlint', 'TheGoad', 'TheHead', 'TheHook', 'TheHouse', 'TheManacle',
-            'TheMark', 'TheMouth', 'TheNeedle', 'TheOx', 'ThePillar', 'ThePlant', 'ThePsychic', 'TheSerpent',
-            'TheTooth', 'TheWall', 'TheWater', 'TheWheel', 'TheWindow',
-        ]
-    };
-
-    // ================================================
-    // Filter Builder Functions
-    // ================================================
-    async function saveDirtyFilter() {
-    // We can use a custom modal later, for now use confirm/prompt flow
-    // But since this is triggered by a button labeled "Save Changes?", we can assume they want to save.
-    // The ambiguity is: Overwrite existing file? Or Save as Copy?
-
-    // Check if we can overwrite (is it a file we loaded?)
-    const canOverwrite = !!selectedFilterFilePath;
-
-    let action = 'cancel'; // 'overwrite', 'clone', 'cancel'
-
-    if (canOverwrite) {
-        // Simple mechanic: confirm to overwrite, cancel to see more options?
-        // Or better: prompt "Click OK to overwrite [file]. Click Cancel to save as a new file."
-        // This is a bit janky standard alert UX but robust for now.
-        if (confirm(`Overwrite existing filter?\n\nFile: ${selectedFilterFilePath}`)) {
-            action = 'overwrite';
-        } else {
-            if (confirm("Save as a new copy instead?")) {
-                action = 'clone';
-            }
-        }
-    } else {
-        action = 'clone';
+function deleteSelectedFilterFromSettings() {
+    const dropdown = document.getElementById('settingsSavedSearches');
+    const idx = dropdown.value;
+    
+    if (idx === '' || !savedFilters[parseInt(idx)]) {
+        alert('Please select a filter to delete');
+        return;
     }
+    
+    const filter = savedFilters[parseInt(idx)];
+    
+    if (!confirm(`Are you sure you want to delete "${filter.name}"?`)) {
+        return;
+    }
+    
+    // Don't close the modal - just delete and refresh
+    deleteFilter(filter.filePath, false);
+}
 
-    if (action === 'cancel') return;
-
-    const currentJaml = getJamlValue();
-
+async function deleteFilter(filterId, closeAfterDelete = true) {
     try {
-        if (action === 'overwrite') {
-            const response = await fetch('/filters/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filterId: selectedFilterFilePath,
-                    filterJaml: currentJaml
-                })
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Update failed');
-            }
-
-            const data = await response.json();
-            showStatus(`Saved: ${data.name}`);
-            
-            // Update local state hash so it's not dirty anymore
-            selectedFilterBaseHash = computeJamlHash(currentJaml);
-            isFilterDirty = false;
-            
-            // Reload filters to refresh list but keep selection
-            await loadFilters();
-            
-            // Update button state immediately
-            updateSearchButton(searchButtonState); // Refreshes label
-            
-        } else if (action === 'clone') {
-            let defaultName = 'Copy of ' + (extractFromJaml(currentJaml, 'name') || 'Filter');
-            const newName = prompt("Enter name for new filter:", defaultName);
-            if (!newName) return;
-
-            const response = await fetch('/filters/clone', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filterId: selectedFilterFilePath || 'new', // If new, this might need handling, but logic above implies we have a path. For brand new, we need a create endpoint or treat as clone of template? 
-                    // Actually API /filters/clone requires a source filterId. 
-                    // If we are "brand new" (no filePath), we can't use /clone easily unless we have a "create" endpoint.
-                    // Fallback: If no filePath, we probably shouldn't have reached here via "saveDirtyFilter" logic usually implies editing EXISTING.
-                    // But if we did:
-                    filterId: selectedFilterFilePath,
-                    newName: newName
-                })
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Clone failed');
-            }
-
-            const data = await response.json();
-            showStatus(`Saved copy: ${data.name}`);
-
-            // Update editor to the NEW file (implicit switch)
-            selectedFilterFilePath = data.filePath;
-            selectedFilterBaseHash = computeJamlHash(data.filterJaml); // The server might have modified it (name update)
-            setJamlValue(data.filterJaml); // Update editor with server version
-            isFilterDirty = false;
-
-            await loadFilters();
+        const response = await fetch(`/filters/${encodeURIComponent(filterId)}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Delete failed');
         }
+        
+        showStatus(`Deleted: ${filterId}`);
+        
+        // Clear current selection if it was the deleted filter
+        if (selectedFilterFilePath === filterId) {
+            selectedFilterFilePath = null;
+            selectedFilterBaseHash = null;
+            isFilterDirty = false;
+            currentSearchId = null;
+            updateUrlWithSearchId(null);
+        }
+        
+        // Reload filters to refresh list
+        await loadFilters();
+        
+        // Refresh settings modal if it's open
+        const modal = document.getElementById('settingsModal');
+        if (modal && modal.style.display !== 'none') {
+            refreshSettingsModalUI();
+        }
+        
+        // Only close modal if requested (default behavior for non-settings delete)
+        if (closeAfterDelete) {
+            closeSettingsModal();
+        }
+        
     } catch (e) {
-        alert(`Error saving: ${e.message}`);
+        alert(`Error deleting filter: ${e.message}`);
     }
 }
 
