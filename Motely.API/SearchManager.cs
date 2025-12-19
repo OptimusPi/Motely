@@ -361,11 +361,8 @@ public class SearchManager
             {
                 if (_activeSearches.TryRemove(id, out var search))
                 {
-                    var stopped = await StopSearchInternalAsync(search, reason: "stop_all");
-                    if (!stopped)
-                    {
-                        _activeSearches[id] = search;
-                    }
+                    // For stop_all, we don't re-add even if stop times out - force clear
+                    await StopSearchInternalAsync(search, reason: "stop_all");
                 }
             }
 
