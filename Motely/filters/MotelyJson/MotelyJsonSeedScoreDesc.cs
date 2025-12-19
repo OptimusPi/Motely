@@ -334,6 +334,21 @@ public struct MotelyJsonSeedScoreDesc(
                                         }
                                         break;
 
+                                    case MotelyFilterItemType.Boss:
+                                        if (
+                                            MotelyJsonScoring.CheckBossSingle(
+                                                ref singleCtx,
+                                                clause,
+                                                ante,
+                                                ref runState
+                                            )
+                                        )
+                                        {
+                                            clauseSatisfied = true;
+                                            break;
+                                        }
+                                        break;
+
                                     case MotelyFilterItemType.ErraticRank:
                                     case MotelyFilterItemType.ErraticSuit:
                                         // Base filter already verified with 100% accurate SIMD - trust it!

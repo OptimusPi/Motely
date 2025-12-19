@@ -574,7 +574,11 @@ public static class MotelyJsonScoring
         // USE PRE-COMPUTED FLAGS - NO LINQ!
         bool hasShopSlots = clause.HasShopSlots;
         bool hasPackSlots = clause.HasPackSlots;
-        bool useDefaults = !hasShopSlots && !hasPackSlots;
+        bool hasJokerStreamSources =
+            clause.Sources?.Judgement is { Length: > 0 }
+            || clause.Sources?.RareTag is { Length: > 0 }
+            || clause.Sources?.UncommonTag is { Length: > 0 };
+        bool useDefaults = !hasShopSlots && !hasPackSlots && !hasJokerStreamSources;
 
         // Check shop slots if any are wanted OR if using defaults
         if (hasShopSlots || useDefaults)
