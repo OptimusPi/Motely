@@ -822,9 +822,14 @@ async function loadFilters() {
                 }
             }
         }
+    } catch (e) {
+        console.error('Failed to load filters', e);
+    }
+}
 
 function openSettingsModal() {
     const modal = document.getElementById('settingsModal');
+    
     if (!modal) return;
     modal.style.display = 'flex';
     refreshSettingsModalUI();
@@ -837,24 +842,26 @@ function closeSettingsModal() {
     modal.style.display = 'none';
 }
 
-// ... (rest of the code remains the same)
-
 // Initialize builder on page load
 document.addEventListener('DOMContentLoaded', () => {
     updateBuilderValues2();
 
     // Add click handlers for ante buttons
     document.querySelectorAll('.ante-btn').forEach(btn => {
+        // Add ante button functionality here if needed
+        btn.addEventListener('click', () => {
+            console.log('Ante button clicked');
         });
-
-        initPanelSplitter();
     });
 
-    // ================================================
-    // Filter Builder - Item Data
-    // ================================================
-    const ITEM_DATA = {
-        joker: [
+    initPanelSplitter();
+});
+
+// ================================================
+// Filter Builder - Item Data
+// ================================================
+const ITEM_DATA = {
+    joker: [
             // Rare
             'DNA', 'Vagabond', 'Baron', 'Obelisk', 'BaseballCard', 'AncientJoker', 'Campfire', 'Blueprint',
             'WeeJoker', 'HitTheRoad', 'TheDuo', 'TheTrio', 'TheFamily', 'TheOrder', 'TheTribe', 'Stuntman',
@@ -877,10 +884,12 @@ document.addEventListener('DOMContentLoaded', () => {
             'IceCream', 'Splash', 'BlueJoker', 'FacelessJoker', 'GreenJoker', 'Superposition', 'ToDoList',
             'Cavendish', 'RedCard', 'SquareJoker', 'RiffRaff', 'Photograph', 'ReservedParking', 'MailInRebate',
             'Hallucination', 'FortuneTeller', 'Juggler', 'Drunkard', 'GoldenJoker', 'Popcorn', 'WalkieTalkie',
-            'SmileyFace', 'GoldenTicket', 'Swashbuckler', 'HangingChad', 'ShootTheMoon'
+            'SmileyFace', 'GoldenTicket', 'Swashbuckler', 'HangingChad', 'ShootTheMoon',
+            'NewJoker', 'AnotherJoker',
+            'NewJoker2', 'AnotherJoker2'
         ],
-        soulJoker: ['Canio', 'Triboulet', 'Yorick', 'Chicot', 'Perkeo'],
-        voucher: [
+    soulJoker: ['Canio', 'Triboulet', 'Yorick', 'Chicot', 'Perkeo'],
+    voucher: [
             'Overstock', 'OverstockPlus', 'ClearanceSale', 'Liquidation', 'Hone', 'GlowUp', 'RerollSurplus',
             'RerollGlut', 'CrystalBall', 'OmenGlobe', 'Telescope', 'Observatory', 'Grabber', 'NachoTong',
             'Wasteful', 'Recyclomancy', 'TarotMerchant', 'TarotTycoon', 'PlanetMerchant', 'PlanetTycoon',
@@ -891,7 +900,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'UncommonTag', 'RareTag', 'NegativeTag', 'FoilTag', 'HolographicTag', 'PolychromeTag',
             'InvestmentTag', 'VoucherTag', 'BossTag', 'StandardTag', 'CharmTag', 'MeteorTag', 'BuffoonTag',
             'HandyTag', 'GarbageTag', 'EtherealTag', 'CouponTag', 'DoubleTag', 'JuggleTag', 'D6Tag',
-            'TopupTag', 'SpeedTag', 'OrbitalTag', 'EconomyTag'
+            'TopupTag', 'SpeedTag', 'OrbitalTag', 'EconomyTag',
+            'NewTag', 'AnotherTag'
         ],
         tarot: [
             'TheFool', 'TheMagician', 'TheHighPriestess', 'TheEmpress', 'TheEmperor', 'TheHierophant',
@@ -908,13 +918,14 @@ document.addEventListener('DOMContentLoaded', () => {
             'AmberAcorn', 'CeruleanBell', 'CrimsonHeart', 'VerdantLeaf', 'VioletVessel', 'TheArm', 'TheClub',
             'TheEye', 'TheFish', 'TheFlint', 'TheGoad', 'TheHead', 'TheHook', 'TheHouse', 'TheManacle',
             'TheMark', 'TheMouth', 'TheNeedle', 'TheOx', 'ThePillar', 'ThePlant', 'ThePsychic', 'TheSerpent',
-            'TheTooth', 'TheWall', 'TheWater', 'TheWheel', 'TheWindow'
+            'TheTooth', 'TheWall', 'TheWater', 'TheWheel', 'TheWindow',
         ]
     };
 
     // ================================================
     // Filter Builder Functions
     // ================================================
+    async function saveDirtyFilter() {
     // We can use a custom modal later, for now use confirm/prompt flow
     // But since this is triggered by a button labeled "Save Changes?", we can assume they want to save.
     // The ambiguity is: Overwrite existing file? Or Save as Copy?
