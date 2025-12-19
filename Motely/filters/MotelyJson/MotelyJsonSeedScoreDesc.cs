@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
@@ -49,44 +52,63 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     }
 }
 
+public enum ScoreCutoffMode
+{
+    None = 0,       // No cutoff (0)
+    Manual = 1,     // User defined
+    AutoBest = 2,   // Strict High Score
+    AutoSmart = 3   // Smart (80% of High Score)
+}
+
+public class SharedScoreState
+{
+    public int LearnedCutoff;
+    public long SeedsFiltered;
+    public long StartTime;
+
+    public SharedScoreState()
+    {
+        StartTime = DateTime.UtcNow.Ticks;
+    }
+}
+
 /// <summary>
 /// Clean filter descriptor for MongoDB-style queries
 /// </summary>
 public struct MotelyJsonSeedScoreDesc(
     MotelyJsonConfig Config,
     int Cutoff,
-    bool AutoCutoff,
+    ScoreCutoffMode Mode,
     Action<MotelySeedScoreTally> OnResultFound
 ) : IMotelySeedScoreDesc<MotelyJsonSeedScoreDesc.MotelyJsonSeedScoreProvider>
 {
-    // Auto cutoff state
-    private static int _learnedCutoff = 0;
-
-    // Track seeds that passed filter (before cutoff check)
-    private static long _seedsFiltered = 0;
-
     // Callback to return the score object to (the caller can print, send to a db, I don't care)
     private readonly Action<MotelySeedScoreTally> _onResultFound = OnResultFound;
 
     public MotelyJsonSeedScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
     {
-        // Reset for new search
-        // Auto-cutoff starts at 0, manual cutoff uses specified value
-        _learnedCutoff = AutoCutoff ? 0 : Cutoff;
-        _seedsFiltered = 0;
-        return new MotelyJsonSeedScoreProvider(Config, Cutoff, AutoCutoff, _onResultFound);
+        // Initialize shared state for this search instance
+        var state = new SharedScoreState
+        {
+            LearnedCutoff = (Mode == ScoreCutoffMode.Manual) ? Cutoff : 0,
+            SeedsFiltered = 0
+        };
+        
+        return new MotelyJsonSeedScoreProvider(Config, Cutoff, Mode, _onResultFound, state);
     }
 
-    public static long FilteredSeedCount => _seedsFiltered;
+    public static long FilteredSeedCount => 0; // Deprecated static access
 
     public struct MotelyJsonSeedScoreProvider(
         MotelyJsonConfig Config,
         int Cutoff,
-        bool AutoCutoff,
-        Action<MotelySeedScoreTally> OnResultFound
+        ScoreCutoffMode Mode,
+        Action<MotelySeedScoreTally> OnResultFound,
+        SharedScoreState State
     ) : IMotelySeedScoreProvider
     {
         public static bool IsCancelled;
+        private readonly SharedScoreState _state = State;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VectorMask Score(
@@ -107,8 +129,9 @@ public struct MotelyJsonSeedScoreDesc(
             // Copy fields to local variables to avoid struct closure issues
             var config = Config;
             var cutoff = scoreThreshold > 0 ? scoreThreshold : Cutoff;
-            var autoCutoff = AutoCutoff;
+            var mode = Mode;
             var onResultFound = OnResultFound;
+            var state = _state;
 
 
             // Score individual seeds that passed the base filter
@@ -454,7 +477,7 @@ public struct MotelyJsonSeedScoreDesc(
                     localFiltered++;
 
                     // Apply cutoff filtering - return true/false, caller will count results
-                    var currentCutoff = GetCurrentCutoff(totalScore, autoCutoff, cutoff);
+                    var currentCutoff = GetCurrentCutoff(totalScore, mode, cutoff, state);
                     bool passedCutoff = totalScore >= currentCutoff;
 
                     // Invoke callback for seeds that passed cutoff
@@ -470,7 +493,7 @@ public struct MotelyJsonSeedScoreDesc(
             // Batch update filtered counter ONCE per vector (instead of 8 times per seed!)
             if (localFiltered > 0)
             {
-                Interlocked.Add(ref _seedsFiltered, localFiltered);
+                Interlocked.Add(ref state.SeedsFiltered, localFiltered);
             }
 
             // Return the mask - caller will count how many passed and invoke callbacks
@@ -478,19 +501,49 @@ public struct MotelyJsonSeedScoreDesc(
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetCurrentCutoff(int currentScore, bool autoCutoff, int cutoff)
+        private static int GetCurrentCutoff(int currentScore, ScoreCutoffMode mode, int cutoff, SharedScoreState state)
         {
-            if (!autoCutoff)
-                return cutoff;
-
             // Thread-safe auto cutoff: Start at 1, raise to highest score found
-            if (currentScore > _learnedCutoff)
+            if (mode == ScoreCutoffMode.AutoBest || mode == ScoreCutoffMode.AutoSmart)
             {
-                var oldCutoff = Interlocked.Exchange(ref _learnedCutoff, currentScore);
-                // DebugLogger.Log($"[AutoCutoff] Raised cutoff from {oldCutoff} to {currentScore}"); // DISABLED FOR PERFORMANCE
+                if (currentScore > state.LearnedCutoff)
+                {
+                    Interlocked.Exchange(ref state.LearnedCutoff, currentScore);
+                }
             }
 
-            return _learnedCutoff;
+            return mode switch
+            {
+                ScoreCutoffMode.None => 0,
+                ScoreCutoffMode.Manual => cutoff,
+                ScoreCutoffMode.AutoBest => state.LearnedCutoff,
+                ScoreCutoffMode.AutoSmart => GetSmartCutoff(state),
+                _ => 0
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GetSmartCutoff(SharedScoreState state)
+        {
+            // Smart Mode:
+            // 1. Warmup: Keep cutoff 0 for first 1 second
+            // 2. Filter: If best score > 0, set cutoff to at least 1 (or 80% of best)
+            
+            long elapsedTicks = DateTime.UtcNow.Ticks - state.StartTime;
+            if (elapsedTicks < TimeSpan.TicksPerSecond)
+            {
+                return 0; // Warmup period
+            }
+
+            int best = state.LearnedCutoff;
+            if (best > 0)
+            {
+                // If we found something, filter out garbage (0s)
+                // Use 80% rule but ensure at least 1
+                return Math.Max(1, (int)(best * 0.8));
+            }
+
+            return 0; // Nothing found yet, keep searching everything
         }
     }
 }

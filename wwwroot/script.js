@@ -538,11 +538,7 @@ function updateBuilderValues2() {
     console.log('Filter builder initialized');
 }
 
-function quickAnalyze(seed) {
-    // Quick analysis of a seed - could open a modal or navigate to analysis
-    console.log('Quick analyze seed:', seed);
-    alert(`Analysis for seed ${seed} - feature not yet implemented`);
-}
+
 
 async function checkExistingSearchStatus(searchId) {
     try {
@@ -632,7 +628,38 @@ window.onMonacoReady = async function() {
 };
 
 // Initialize unified JAML editor functions after all functions are defined
+function updateJamlEditorFunctions() {
+    const textarea = document.getElementById('filterJaml');
+    window.getJamlValue = () => {
+        if (window.jamlEditor) return window.jamlEditor.getValue();
+        return textarea ? textarea.value : '';
+    };
+    window.setJamlValue = (val) => {
+        if (window.jamlEditor) {
+            isProgrammaticEdit = true;
+            window.jamlEditor.setValue(val || '');
+            isProgrammaticEdit = false;
+        } else if (textarea) {
+            textarea.value = val || '';
+        }
+    };
+}
 updateJamlEditorFunctions();
+
+function setEditorMode(mode) {
+    const mono = document.getElementById('monacoEditor');
+    const plain = document.getElementById('filterJaml');
+    if (mode === 'monaco') {
+        if (mono) mono.style.display = 'block';
+        if (plain) plain.style.display = 'none';
+        // If Monaco not yet created, it will be initialized by index.html loader; nothing else to do here
+    } else {
+        if (mono) mono.style.display = 'none';
+        if (plain) plain.style.display = 'block';
+        // Ensure get/set refer to textarea when in plain mode
+        updateJamlEditorFunctions();
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Initialize status manager first
@@ -1775,3 +1802,179 @@ function exportResults() {
     
     showStatus(`Exported ${searchResults.length} results`);
 }
+
+// ================================================
+// Missing Functions Polyfill & UI Fixes
+// ================================================
+
+function syncSeedSourceDropdowns(source, target) {
+    if (!source || !target) return;
+    
+    // If options don't match, copy them
+    if (source.innerHTML !== target.innerHTML) {
+        target.innerHTML = source.innerHTML;
+    }
+    
+    // Sync value
+    if (source.value !== target.value) {
+        target.value = source.value;
+    }
+    
+    currentSeedSource = source.value;
+}
+
+function loadFilterByIdx(idx) {
+    if (idx === '' || idx === null || idx === undefined) return null;
+    const i = parseInt(idx);
+    if (isNaN(i) || i < 0 || i >= savedFilters.length) return null;
+    
+    const filter = savedFilters[i];
+    selectedFilterFilePath = filter.filePath;
+    
+    // Load JAML content
+    if (filter.jaml) {
+        isProgrammaticEdit = true;
+        setJamlValue(filter.jaml);
+        isProgrammaticEdit = false;
+        selectedFilterBaseHash = computeJamlHash(filter.jaml);
+        isFilterDirty = false;
+    } else {
+        // Fetch if not inline
+        fetch(`/filters/${encodeURIComponent(filter.filePath)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.jaml) {
+                    isProgrammaticEdit = true;
+                    setJamlValue(data.jaml);
+                    isProgrammaticEdit = false;
+                    selectedFilterBaseHash = computeJamlHash(data.jaml);
+                    isFilterDirty = false;
+                }
+            })
+            .catch(e => console.error('Failed to load filter content', e));
+    }
+    
+    return filter;
+}
+
+function loadSavedSearch() {
+    const dropdown = document.getElementById('savedSearches');
+    if (!dropdown) return;
+    
+    const idx = dropdown.value;
+    if (idx === '') return;
+    
+    const filter = loadFilterByIdx(idx);
+    if (!filter) return;
+    
+    if (filter.searchId) {
+        currentSearchId = filter.searchId;
+        updateUrlWithSearchId(filter.searchId);
+        
+        // Check status if it has a search ID
+        checkExistingSearchStatus(filter.searchId);
+    }
+    
+    showStatus(`Loaded: ${filter.name}`);
+}
+
+function updateUrlWithSearchId(searchId) {
+    const url = new URL(window.location);
+    if (searchId) {
+        url.searchParams.set('search', searchId);
+    } else {
+        url.searchParams.delete('search');
+    }
+    
+    if (currentSeedSource && currentSeedSource !== 'all') {
+        url.searchParams.set('seedSource', currentSeedSource);
+    } else {
+        url.searchParams.delete('seedSource');
+    }
+    
+    window.history.replaceState({}, '', url);
+}
+
+function computeJamlHash(jaml) {
+    if (!jaml) return 0;
+    let hash = 5381; // DJB2 seed
+    for (let i = 0; i < jaml.length; i++) {
+        hash = ((hash << 5) + hash) + jaml.charCodeAt(i);
+    }
+    return hash;
+}
+
+function subscribeToSearch(searchId) {
+    if (!ws) {
+        wsDesiredSearchId = searchId;
+        ensureWebSocket();
+        return;
+    }
+    
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'subscribe', searchId: searchId }));
+    } else {
+        wsDesiredSearchId = searchId;
+    }
+}
+
+function initSplitter() {
+    const splitter = document.getElementById('panelSplitter');
+    const leftPanel = document.querySelector('.left-panel');
+    const rightPanel = document.querySelector('.right-panel');
+    const container = document.querySelector('.side-by-side');
+    
+    if (!splitter || !leftPanel || !rightPanel || !container) return;
+    
+    let isDragging = false;
+    
+    splitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        splitter.classList.add('active');
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const containerRect = container.getBoundingClientRect();
+        let newLeftWidth = e.clientX - containerRect.left;
+        
+        // Constraints (min 200px, max container width - 200px)
+        const minWidth = 300;
+        const maxWidth = containerRect.width - 300;
+        
+        if (newLeftWidth < minWidth) newLeftWidth = minWidth;
+        if (newLeftWidth > maxWidth) newLeftWidth = maxWidth;
+        
+        const percentage = (newLeftWidth / containerRect.width) * 100;
+        
+        leftPanel.style.flex = `0 0 ${percentage}%`;
+        leftPanel.style.width = `${percentage}%`;
+        rightPanel.style.flex = `1 1 ${100 - percentage}%`;
+        rightPanel.style.width = `${100 - percentage}%`;
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+            splitter.classList.remove('active');
+        }
+    });
+}
+
+// Initialize components
+document.addEventListener('DOMContentLoaded', () => {
+    initSplitter();
+    
+    // Also try to sync sources on load if they exist
+    setTimeout(() => {
+        const settingsDropdown = document.getElementById('settingsSeedSource');
+        const mainDropdown = document.getElementById('seedSource');
+        if (settingsDropdown && mainDropdown) {
+             syncSeedSourceDropdowns(mainDropdown, settingsDropdown);
+        }
+    }, 1000);
+});
