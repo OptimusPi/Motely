@@ -406,6 +406,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             // Call each filter directly and AND the results (Must logic)
             foreach (var (filter, isInverted) in _filterEntries)
             {
+                // Early exit BEFORE calling filter if no seeds left
+                if (result.IsAllFalse())
+                    return VectorMask.NoBitsSet;
+
                 var filterMask = filter.Filter(ref ctx);
 
                 // If this is a mustNot filter (inverted), negate the mask
@@ -413,10 +417,6 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                     filterMask = ~filterMask;
 
                 result &= filterMask;
-
-                // Early exit if no seeds pass
-                if (result.IsAllFalse())
-                    return VectorMask.NoBitsSet;
             }
 
             return result;

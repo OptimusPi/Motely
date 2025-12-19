@@ -293,7 +293,9 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     )
     {
         JokerType = jokerType;
-        JokerItemType = jokerType.HasValue ? (MotelyItemType)jokerType.Value : null;
+        JokerItemType = jokerType.HasValue 
+            ? (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType.Value) 
+            : null;
         IsWildcard = !jokerType.HasValue;
         RequireMega = requireMega;
 
@@ -354,7 +356,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             JokerType = jsonClause.JokerEnum,
             JokerTypes = jsonClause.JokerEnums?.Count > 0 ? jsonClause.JokerEnums : null,
             JokerItemType = jsonClause.JokerEnum.HasValue
-                ? (MotelyItemType)jsonClause.JokerEnum.Value
+                ? (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jsonClause.JokerEnum.Value)
                 : null,
             IsWildcard = jsonClause.IsWildcard,
             EditionEnum = jsonClause.EditionEnum,

@@ -18,10 +18,10 @@ jobs:
         dotnet-version: '10.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore Motely/Motely.csproj
+      run: dotnet restore Motely.TUI/Motely.TUI.csproj
 
     - name: Publish
-      run: dotnet publish Motely/Motely.csproj -c Release -r osx-x64 -f net10.0 -o publish/osx-x64
+      run: dotnet publish Motely.TUI/Motely.TUI.csproj -c Release -r osx-x64 -o publish/osx-x64
 
     - name: Package TAR.GZ
       run: |
