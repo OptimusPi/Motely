@@ -26,6 +26,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts
+        merge-multiple: true
 
     - name: Display Artifact Structure
       run: ls -R artifacts
@@ -33,7 +34,9 @@ jobs:
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: artifacts/**/*
+        files: |
+          artifacts/*.zip
+          artifacts/*.tar.gz
         draft: false
         prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-RC') }}
         generate_release_notes: true
