@@ -20,11 +20,8 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore Motely/Motely.csproj
 
-    - name: Build
-      run: dotnet build Motely/Motely.csproj --configuration Release --no-restore
-
     - name: Publish
-      run: dotnet publish Motely/Motely.csproj -c Release -r linux-x64 -f net10.0 --no-build -o publish/linux-x64
+      run: dotnet publish Motely/Motely.csproj -c Release -r linux-x64 -f net10.0 -o publish/linux-x64
 
     - name: Package TAR.GZ
       run: |
