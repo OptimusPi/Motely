@@ -354,6 +354,13 @@ public static class MotelyApiFactory
                 foreach (var file in filterFiles)
                 {
                     var name = Path.GetFileNameWithoutExtension(file);
+                    
+                    // Skip unsaved/temp files
+                    if (name.StartsWith("_UNSAVED_", StringComparison.OrdinalIgnoreCase) ||
+                        name.StartsWith("__TEMP_", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("{unsaved}", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    
                     string filterJaml;
                     try
                     {

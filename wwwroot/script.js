@@ -1095,8 +1095,13 @@ async function stopAllSearches() {
             showStatus('All searches stopped');
             await loadFilters();
         } else {
-            const err = await response.json();
-            showStatus(`Error: ${err.error || 'Failed to stop'}`);
+            // Handle empty or invalid JSON response
+            try {
+                const err = await response.json();
+                showStatus(`Error: ${err.error || 'Failed to stop'}`);
+            } catch {
+                showStatus(`Error: HTTP ${response.status}`);
+            }
         }
     } catch (e) {
         showStatus(`Error: ${e.message}`);
