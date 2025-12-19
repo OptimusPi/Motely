@@ -231,7 +231,15 @@ namespace Motely.Executors
                 string wordlistPath = Path.Combine("wordlists", _params.Wordlist + ".txt");
                 if (!File.Exists(wordlistPath))
                 {
-                    throw new FileNotFoundException($"Wordlist not found: {wordlistPath}");
+                    var altPath = Path.Combine("WordLists", _params.Wordlist + ".txt");
+                    if (File.Exists(altPath))
+                    {
+                        wordlistPath = altPath;
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException($"Wordlist not found: {wordlistPath}");
+                    }
                 }
 
                 List<string> seeds =

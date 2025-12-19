@@ -81,7 +81,11 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
 
                 bool hasShop = HasShopSlots(clause.WantedShopSlots);
                 bool hasPack = HasPackSlots(clause.WantedPackSlots);
-                bool useDefaults = !hasShop && !hasPack;
+                bool hasJokerStreamSources =
+                    clause.Sources?.Judgement is { Length: > 0 }
+                    || clause.Sources?.RareTag is { Length: > 0 }
+                    || clause.Sources?.UncommonTag is { Length: > 0 };
+                bool useDefaults = !hasShop && !hasPack && !hasJokerStreamSources;
 
                 int maxShopSlots = 0;
                 int maxPackSlots = 0;
