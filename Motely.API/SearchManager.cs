@@ -35,6 +35,8 @@ public class SearchManager
     private readonly ConcurrentDictionary<string, ActiveSearch> _activeSearches = new();
     private static readonly string _searchResultsDir = "SearchResults";
 
+    private string? _motelyRoot;
+
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private int _configuredThreadBudget = Environment.ProcessorCount;
     private const int ReservedThreads = 1;
@@ -46,12 +48,18 @@ public class SearchManager
         _broadcaster = broadcaster;
     }
 
+    internal void SetMotelyRoot(string motelyRoot)
+    {
+        _motelyRoot = motelyRoot;
+    }
+
     public class ActiveSearch
     {
         public string SearchId { get; set; } = "";
         public string FilterJaml { get; set; } = "";
         public string Deck { get; set; } = "";
         public string Stake { get; set; } = "";
+        public string? SeedSource { get; set; }
         public JsonSearchExecutor? Executor { get; set; }
         public CancellationTokenSource? CancellationToken { get; set; }
         public MotelySearchDatabase? Database { get; set; }
@@ -59,6 +67,7 @@ public class SearchManager
         public int AssignedThreads { get; set; } = 1;
         public int BatchSize { get; set; } = 3;
         public long ResumeStartBatch { get; set; } = 0;
+        public int? CutoffOverride { get; set; }
         public Guid RunInstanceId { get; set; } = Guid.Empty;
         public string? StopReason { get; set; }
         public List<string> ColumnNames { get; set; } = new();
@@ -74,7 +83,13 @@ public class SearchManager
     /// Returns immediate results from existing DB if available
     /// </summary>
     public async Task<(List<SearchResult> immediateResults, string searchId)> StartSearchAsync(
-        string filterJaml, string deck, string stake, int seedCount)
+        string filterJaml,
+        string deck,
+        string stake,
+        int seedCount,
+        long? startBatchOverride = null,
+        int? cutoffOverride = null,
+        string? seedSource = null)
     {
         await _lifecycleGate.WaitAsync();
         try
@@ -112,15 +127,20 @@ public class SearchManager
                 FilterJaml = filterJaml,
                 Deck = deck,
                 Stake = stake,
+                SeedSource = seedSource,
                 CancellationToken = new CancellationTokenSource(),
                 ColumnNames = columnNames,
-                BatchSize = 3
+                BatchSize = 3,
+                CutoffOverride = cutoffOverride
             };
 
             search.StopReason = null;
 
             ReadResumeCursor(dbPath, columnNames, out var startBatch, out var batchSize);
-            search.ResumeStartBatch = startBatch;
+            if (startBatchOverride.HasValue)
+                search.ResumeStartBatch = Math.Max(0, startBatchOverride.Value);
+            else
+                search.ResumeStartBatch = startBatch;
             if (batchSize > 0)
                 search.BatchSize = batchSize;
 
@@ -147,15 +167,32 @@ public class SearchManager
     public (List<SearchResult> results, int progressPercent) GetSearchStatus(string searchId)
     {
         var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
-        var results = GetTopResultsFromDb(dbPath, 1000);
+        var results = new List<SearchResult>();
         
         var progressPercent = 0;
         if (_activeSearches.TryGetValue(searchId, out var search))
         {
+            try
+            {
+                if (search.Database != null)
+                {
+                    results = search.Database.GetTopResults(1000);
+                }
+            }
+            catch
+            {
+                results = new List<SearchResult>();
+            }
+
             if (search.TotalBatches > 0)
             {
                 progressPercent = (int)Math.Min(100, (search.CompletedBatches * 100) / search.TotalBatches);
             }
+        }
+
+        if (results.Count == 0)
+        {
+            results = GetTopResultsFromDb(dbPath, 1000);
         }
         
         return (results, progressPercent);
@@ -218,6 +255,17 @@ public class SearchManager
             return false;
         filterJaml = search.FilterJaml;
         return !string.IsNullOrWhiteSpace(filterJaml);
+    }
+
+    public bool TryGetSearchOverrides(string searchId, out long? startBatchOverride, out int? cutoffOverride)
+    {
+        startBatchOverride = null;
+        cutoffOverride = null;
+        if (!_activeSearches.TryGetValue(searchId, out var search))
+            return false;
+
+        cutoffOverride = search.CutoffOverride;
+        return true;
     }
 
     public List<string> GetRunningSearchIds()
@@ -315,7 +363,7 @@ public class SearchManager
 
     private async Task<bool> StopSearchInternalAsync(ActiveSearch search, string reason)
     {
-        _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "search_halted", searchId = search.SearchId, reason }));
+        _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new { type = "search_halted", searchId = search.SearchId, reason }));
 
         search.StopReason = reason;
 
@@ -403,6 +451,206 @@ public class SearchManager
         return allocations;
     }
 
+    private void ReadResumeCursor(string dbPath, List<string> columnNames, out long startBatch, out int batchSize)
+    {
+        startBatch = 0;
+        batchSize = 0;
+
+        try
+        {
+            using var db = new MotelySearchDatabase(dbPath, columnNames);
+            var (lastBatch, lastBatchSize) = db.GetLastBatchPosition();
+            if (lastBatch.HasValue)
+                startBatch = lastBatch.Value;
+            if (lastBatchSize.HasValue)
+                batchSize = lastBatchSize.Value;
+        }
+        catch
+        {
+            startBatch = 0;
+            batchSize = 0;
+        }
+    }
+
+    private void ApplySeedSource(JsonSearchParams searchParams, string? seedSource)
+    {
+        if (string.IsNullOrWhiteSpace(seedSource))
+            return;
+
+        var s = seedSource.Trim();
+        if (string.Equals(s, "all", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (string.Equals(s, "new", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (s.StartsWith("random:", StringComparison.OrdinalIgnoreCase))
+        {
+            var raw = s.Substring("random:".Length);
+            if (int.TryParse(raw, out var n) && n > 0)
+            {
+                searchParams.RandomSeeds = n;
+            }
+            return;
+        }
+
+        if (s.StartsWith("txt:", StringComparison.OrdinalIgnoreCase))
+        {
+            var file = s.Substring("txt:".Length).Trim();
+            if (file.Length == 0) return;
+            var stem = Path.GetFileNameWithoutExtension(file);
+            if (stem.Length == 0) return;
+            searchParams.Wordlist = stem;
+            return;
+        }
+
+        if (s.StartsWith("db:", StringComparison.OrdinalIgnoreCase))
+        {
+            var file = s.Substring("db:".Length).Trim();
+            if (file.Length == 0) return;
+
+            var safeName = Path.GetFileName(file);
+
+            if (!string.IsNullOrWhiteSpace(_motelyRoot))
+            {
+                var p1 = Path.Combine(_motelyRoot, "WordLists", safeName);
+                if (File.Exists(p1))
+                {
+                    searchParams.DbList = p1;
+                    return;
+                }
+
+                var p2 = Path.Combine(_motelyRoot, "wordlists", safeName);
+                if (File.Exists(p2))
+                {
+                    searchParams.DbList = p2;
+                    return;
+                }
+            }
+
+            searchParams.DbList = file;
+            return;
+        }
+    }
+
+    private async Task RunSequentialSearch(Guid runId, ActiveSearch search, string filterJaml, string deck, string stake, int seedCount, long startBatchOverride)
+    {
+        try
+        {
+            var tempConfigPath = Path.Combine(_searchResultsDir, $"{search.SearchId}_temp.jaml");
+            await File.WriteAllTextAsync(tempConfigPath, filterJaml);
+
+            var searchParams = new JsonSearchParams
+            {
+                Threads = Math.Max(1, search.AssignedThreads),
+                BatchSize = search.BatchSize,
+                StartBatch = (ulong)Math.Max(0, startBatchOverride),
+                Cutoff = search.CutoffOverride ?? 0,
+                AutoCutoff = !search.CutoffOverride.HasValue || search.CutoffOverride.Value <= 0,
+                EnableDebug = false,
+                NoFancy = true,
+                Quiet = false
+            };
+
+            ApplySeedSource(searchParams, search.SeedSource);
+
+            searchParams.ProgressCallback = (completedBatches, totalBatches, seedsSearched, seedsPerMs) =>
+            {
+                search.CompletedBatches = completedBatches;
+                search.TotalBatches = totalBatches;
+                search.SeedsSearched = seedsSearched;
+                search.SeedsPerSecond = seedsPerMs * 1000.0;
+
+                try
+                {
+                    var absoluteBatch = (long)searchParams.StartBatch + completedBatches;
+                    search.Database?.SaveBatchPosition(absoluteBatch, searchParams.BatchSize);
+                }
+                catch
+                {
+                }
+
+                _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+                {
+                    type = "progress",
+                    searchId = search.SearchId,
+                    currentBatch = search.CompletedBatches,
+                    totalBatches = search.TotalBatches,
+                    seedsSearched = search.SeedsSearched,
+                    seedsPerSecond = search.SeedsPerSecond,
+                    seedsFound = search.TotalResults,
+                    columns = search.ColumnNames,
+                    threadsInUse = search.AssignedThreads
+                }));
+            };
+
+            search.Executor = new JsonSearchExecutor(
+                tempConfigPath,
+                searchParams,
+                "jaml",
+                result =>
+                {
+                    search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
+                    search.TotalResults++;
+
+                    _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+                    {
+                        type = "result",
+                        searchId = search.SearchId,
+                        result = new { seed = result.Seed, score = result.Score, tallies = result.TallyColumns },
+                        columns = search.ColumnNames
+                    }));
+                });
+
+            await Task.Run(() =>
+            {
+                search.Executor.Execute();
+                try { File.Delete(tempConfigPath); } catch { }
+            }, search.CancellationToken?.Token ?? CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Search {search.SearchId} failed: {ex.Message}");
+        }
+        finally
+        {
+            if (search.StopReason == null && search.RunInstanceId == runId)
+            {
+                try
+                {
+                    var dbPath = search.Database?.DatabasePath
+                                 ?? Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
+                    await ExportTopResultsToFertilizerAsync(dbPath, limit: 1000);
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    search.Database?.Checkpoint();
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    search.Database?.Dispose();
+                }
+                catch
+                {
+                }
+
+                _activeSearches.TryRemove(search.SearchId, out _);
+                _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+            }
+        }
+    }
+
     private async Task RebalanceAndRestartAllSearchesAsync()
     {
         var ids = _activeSearches.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
@@ -445,159 +693,19 @@ public class SearchManager
 
             search.Database = new MotelySearchDatabase(dbPath, search.ColumnNames);
 
-            _broadcaster?.Broadcast(JsonSerializer.Serialize(new
+            _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
             {
                 type = "search_started",
                 searchId = search.SearchId,
-                startBatch,
-                threadsInUse = search.AssignedThreads
+                deck = search.Deck,
+                stake = search.Stake,
+                threads = search.AssignedThreads,
+                batchSize = search.BatchSize
             }));
 
             var runId = Guid.NewGuid();
             search.RunInstanceId = runId;
-            search.SearchTask = Task.Run(() => RunSequentialSearch(runId, search, search.FilterJaml, search.Deck, search.Stake, seedCount: 0, startBatchOverride: startBatch));
-        }
-    }
-    
-    private void ReadResumeCursor(string dbPath, List<string> columnNames, out long startBatch, out int batchSize)
-    {
-        startBatch = 0;
-        batchSize = 0;
-
-        try
-        {
-            using var db = new MotelySearchDatabase(dbPath, columnNames);
-            var (lastBatch, lastBatchSize) = db.GetLastBatchPosition();
-            if (lastBatch.HasValue)
-                startBatch = lastBatch.Value;
-            if (lastBatchSize.HasValue)
-                batchSize = lastBatchSize.Value;
-        }
-        catch
-        {
-            startBatch = 0;
-            batchSize = 0;
-        }
-    }
-
-    private async Task RunSequentialSearch(Guid runId, ActiveSearch search, string filterJaml, string deck, string stake, int seedCount, long startBatchOverride)
-    {
-        try
-        {
-            // Save JAML to temp file for JsonSearchExecutor
-            var tempConfigPath = Path.Combine(_searchResultsDir, $"{search.SearchId}_temp.jaml");
-            await File.WriteAllTextAsync(tempConfigPath, filterJaml);
-            
-            // Create JsonSearchParams (check actual properties)
-            var searchParams = new JsonSearchParams
-            {
-                Threads = Math.Max(1, search.AssignedThreads),
-                BatchSize = search.BatchSize,
-                StartBatch = (ulong)Math.Max(0, startBatchOverride),
-                EnableDebug = false,
-                NoFancy = true,
-                Quiet = false
-            };
-
-            searchParams.ProgressCallback = (completedBatches, totalBatches, seedsSearched, seedsPerMs) =>
-            {
-                search.CompletedBatches = completedBatches;
-                search.TotalBatches = totalBatches;
-                search.SeedsSearched = seedsSearched;
-                search.SeedsPerSecond = seedsPerMs * 1000.0;
-
-                try
-                {
-                    var absoluteBatch = (long)searchParams.StartBatch + completedBatches;
-                    search.Database?.SaveBatchPosition(absoluteBatch, searchParams.BatchSize);
-                }
-                catch
-                {
-                }
-
-                _broadcaster?.Broadcast(JsonSerializer.Serialize(new
-                {
-                    type = "progress",
-                    searchId = search.SearchId,
-                    currentBatch = search.CompletedBatches,
-                    totalBatches = search.TotalBatches,
-                    seedsSearched = search.SeedsSearched,
-                    seedsPerSecond = search.SeedsPerSecond,
-                    seedsFound = search.TotalResults,
-                    columns = search.ColumnNames,
-                    threadsInUse = search.AssignedThreads
-                }));
-            };
-
-            search.Executor = new JsonSearchExecutor(
-                tempConfigPath,
-                searchParams,
-                "jaml",
-                result =>
-                {
-                    search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
-                    search.TotalResults++;
-
-                    _broadcaster?.Broadcast(JsonSerializer.Serialize(new
-                    {
-                        type = "result",
-                        searchId = search.SearchId,
-                        result = new { seed = result.Seed, score = result.Score, tallies = result.TallyColumns },
-                        columns = search.ColumnNames
-                    }));
-                });
-            
-            // Run the actual search in background - JsonSearchExecutor handles everything
-            await Task.Run(() => 
-            {
-                search.Executor.Execute();
-                // Clean up temp file after search
-                try { File.Delete(tempConfigPath); } catch { }
-            }, search.CancellationToken?.Token ?? CancellationToken.None);
-        }
-        catch (OperationCanceledException)
-        {
-            // Search was cancelled - normal
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Search {search.SearchId} failed: {ex.Message}");
-        }
-        finally
-        {
-            // Natural completion path: if nothing requested a stop, remove from active list and export to fertilizer.
-            // If we were cancelled for rebalance/user_stop/etc, StopSearchInternalAsync handles cleanup.
-            if (search.StopReason == null && search.RunInstanceId == runId)
-            {
-                try
-                {
-                    var dbPath = search.Database?.DatabasePath
-                                 ?? Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
-                    await ExportTopResultsToFertilizerAsync(dbPath, limit: 1000);
-                }
-                catch
-                {
-                }
-
-                try
-                {
-                    search.Database?.Checkpoint();
-                }
-                catch
-                {
-                }
-
-                try
-                {
-                    search.Database?.Dispose();
-                }
-                catch
-                {
-                }
-
-                _activeSearches.TryRemove(search.SearchId, out _);
-                _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
-            }
+            search.SearchTask = Task.Run(() => RunSequentialSearch(runId, search, search.FilterJaml, search.Deck, search.Stake, seedCount: 0, startBatchOverride: search.ResumeStartBatch));
         }
     }
 
