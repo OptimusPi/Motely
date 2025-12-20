@@ -201,20 +201,21 @@ button:active {
   box-shadow: none; 
 }
 
-.button-primary { 
-  background: var(--balatro-green); 
-  color: #fff; 
-  padding: 8px 16px; 
-  font-size: 1.5rem; /* Chunky Big */
+.button-primary, .button-secondary, .button-danger, .button-small, .icon-btn {
+  min-height: 38px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  border-radius: 4px;
 }
+
+.button-primary { background: var(--balatro-green); color: #fff; }
 .button-primary:hover { background: var(--balatro-dark-green); }
 
-.button-small { 
-  background: var(--light-grey); 
-  color: #fff; 
-  padding: 6px 12px; 
-  font-size: 1.1rem;
-}
+.button-small { background: var(--light-grey); color: #fff; }
 .button-small:hover { background: #888e99; }
 
 .button-danger { background: var(--balatro-red); color: #fff; }
@@ -223,12 +224,8 @@ button:active {
 .icon-btn {
   background: var(--light-grey);
   color: #fff;
-  padding: 8px 12px;
-  font-size: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 46px; /* Match button-primary height approximately */
+  font-size: 1.2rem;
+  min-width: 38px;
 }
 .icon-btn:hover { background: #888e99; }
 
@@ -279,7 +276,7 @@ button:active {
   border-radius: 8px; 
   padding: 12px; 
   font-family: Consolas, monospace; 
-  font-size: 16px; 
+  font-size: 18px; 
   box-shadow: inset 0 0 10px rgba(0,0,0,0.1); 
 }
 
@@ -287,11 +284,21 @@ button:active {
 
 /* Results */
 .results-header { 
-  display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; 
-  background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 6px; gap: 8px;
+  display:flex; flex-direction: column; align-items: stretch; margin-bottom: 8px; 
+  background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; gap: 8px;
 }
+.results-header-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
 .results-actions-left { display: flex; gap: 8px; align-items: center; }
 .results-actions-right { display: flex; gap: 8px; align-items: center; }
+#status {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--balatro-green);
+  font-weight: bold;
+  text-align: center;
+  min-height: 1.2rem;
+  width: 100%;
+}
 
 #resultsTitle { font-size: 1.2rem; color: #fff; margin: 0; display: none; /* Hide title to save space for buttons */ }
 
