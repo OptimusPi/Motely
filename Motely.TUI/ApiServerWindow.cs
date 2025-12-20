@@ -114,75 +114,56 @@ public class ApiServerWindow : Window
         _tunnelButton.Accept += (s, e) => StartTunnel();
         Add(_tunnelButton);
 
-        // Endpoints panel
-        var endpointsFrame = new FrameView()
+        // Endpoints panel removed to make room for log
+        
+        // Request log (expanded to fill space)
+        var logFrame = new FrameView()
         {
             X = 1,
             Y = 5,
             Width = Dim.Fill() - 2,
-            Height = 5,
-            Title = "Endpoints",
-        };
-        endpointsFrame.SetScheme(BalatroTheme.InnerPanel);
-        Add(endpointsFrame);
-
-        // Endpoint buttons (visual, show what's available)
-        var searchEndpoint = new CleanButton()
-        {
-            X = 1,
-            Y = 0,
-            Text = "POST /search",
-        };
-        searchEndpoint.SetScheme(BalatroTheme.BlueButton);
-        searchEndpoint.Accept += (s, e) => LogMessage("[INFO] /search - Search random seeds with filter");
-        endpointsFrame.Add(searchEndpoint);
-
-        var searchDesc = new Label()
-        {
-            X = Pos.Right(searchEndpoint) + 2,
-            Y = 0,
-            Text = "Search random seeds",
-        };
-        endpointsFrame.Add(searchDesc);
-
-        var analyzeEndpoint = new CleanButton()
-        {
-            X = 1,
-            Y = 2,
-            Text = "POST /analyze",
-        };
-        analyzeEndpoint.SetScheme(BalatroTheme.GreenButton);
-        analyzeEndpoint.Accept += (s, e) => LogMessage("[INFO] /analyze - Analyze a specific seed");
-        endpointsFrame.Add(analyzeEndpoint);
-
-        var analyzeDesc = new Label()
-        {
-            X = Pos.Right(analyzeEndpoint) + 2,
-            Y = 2,
-            Text = "Analyze specific seed",
-        };
-        endpointsFrame.Add(analyzeDesc);
-
-        // Request log (taller for better visibility)
-        var logFrame = new FrameView()
-        {
-            X = 1,
-            Y = 10,
-            Width = Dim.Fill() - 2,
-            Height = 11,
+            Height = Dim.Fill() - 4, // Leave room for buttons at bottom
             Title = "Request Log",
         };
         logFrame.SetScheme(BalatroTheme.InnerPanel);
         Add(logFrame);
 
+        // Copy Logs button inside the frame
+        var copyLogsButton = new CleanButton()
+        {
+            X = Pos.AnchorEnd(15), // "Copy Logs" is ~9 chars + padding
+            Y = 0,
+            Text = "Copy Logs",
+        };
+        copyLogsButton.SetScheme(BalatroTheme.BackButton); // Orange
+        copyLogsButton.Accept += (s, e) => 
+        {
+            if (_logView?.Text != null)
+            {
+                CopyToClipboard(_logView.Text.ToString());
+                // Flash message
+                 copyLogsButton.Text = "COPIED!";
+                 copyLogsButton.SetScheme(BalatroTheme.GreenButton);
+                 
+                 Task.Run(async () => {
+                     await Task.Delay(1000);
+                     MotelyTUI.App?.Invoke(() => {
+                         copyLogsButton.Text = "Copy Logs";
+                         copyLogsButton.SetScheme(BalatroTheme.BackButton);
+                     });
+                 });
+            }
+        };
+        logFrame.Add(copyLogsButton);
+
         _logView = new TextView()
         {
             X = 0,
-            Y = 0,
+            Y = 1, // Below the button row
             Width = Dim.Fill(),
             Height = Dim.Fill(),
             ReadOnly = true,
-            WordWrap = true, // Wrap long lines instead of cutting them off!
+            WordWrap = true,
             CanFocus = true,
         };
         _logView.SetScheme(new Scheme()

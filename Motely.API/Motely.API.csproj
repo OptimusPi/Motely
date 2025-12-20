@@ -19,4 +19,10 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="wwwroot\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

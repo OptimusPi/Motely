@@ -7,7 +7,11 @@ public class Motely
     public static readonly char[] SeedDigits = [.. "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
     public const int MaxSeedLength = 8;
 
-    public const int MaxVectorWidth = 8; // Equals Motely.MaxVectorWidth (but a const)
+#if BROWSER
+    public const int MaxVectorWidth = 2; // Vector128<double>
+#else
+    public const int MaxVectorWidth = 8; // Vector512<double>
+#endif
 
     public const int ItemTypeMask = 0xFFFF;
 
