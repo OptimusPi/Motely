@@ -35,10 +35,46 @@ public static class MotelyApiFactory
     {
         var builder = WebApplication.CreateBuilder(args ?? new string[0]);
 
-        var motelyRoot = Directory.GetCurrentDirectory();
+        // Use the assembly location (bin folder) to find wwwroot, since we copy it there now
+        var assemblyPath = Path.GetDirectoryName(typeof(MotelyApiFactory).Assembly.Location) 
+                           ?? AppContext.BaseDirectory;
+        
+        // Try to find the real Motely root (where JamlFilters/WordLists are)
+        var cwd = Directory.GetCurrentDirectory();
+        
+        // When running via 'dotnet run', the static files are often in the project source folder, not bin
+        // But for published builds, they are in bin.
+        // Let's check typical source locations first if debugging
+        var possibleWebRoots = new[]
+        {
+            Path.Combine(assemblyPath, "wwwroot"),
+            Path.Combine(cwd, "wwwroot"),
+            Path.Combine(cwd, "external", "Motely", "Motely.API", "wwwroot"),
+            Path.Combine(cwd, "Motely.API", "wwwroot")
+        };
 
-        // Keep Environment in sync for any direct path usage
-        builder.Environment.WebRootPath = Path.Combine(motelyRoot, "wwwroot");
+        var webRoot = possibleWebRoots.FirstOrDefault(Directory.Exists) ?? Path.Combine(assemblyPath, "wwwroot");
+
+        // Look up to 4 levels up for Motely root
+        var candidates = new List<string> { cwd, assemblyPath };
+        var check = cwd;
+        for (int i = 0; i < 4; i++)
+        {
+            candidates.Add(Path.Combine(check, "external", "Motely"));
+            candidates.Add(Path.Combine(check, "Motely"));
+            check = Directory.GetParent(check)?.FullName;
+            if (check == null) break;
+            candidates.Add(check);
+        }
+
+        var motelyRoot = candidates.FirstOrDefault(d => 
+            Directory.Exists(Path.Combine(d, "JamlFilters")) || 
+            Directory.Exists(Path.Combine(d, "WordLists"))) 
+            ?? cwd;
+
+        Console.WriteLine($"[Init] Resolved MotelyRoot: {motelyRoot}");
+        Console.WriteLine($"[Init] WebRoot: {webRoot}");
+        builder.Environment.WebRootPath = webRoot;
         
         // Configure logging to redirect to console (which will be captured by TUI)
         builder.Logging.ClearProviders();
@@ -66,21 +102,36 @@ public static class MotelyApiFactory
             });
         });
 
+        // Register Swagger services
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+
         var app = builder.Build();
 
         var ws = new WebSocketBroadcaster();
         SearchManager.Instance.SetBroadcaster(ws);
-        SearchManager.Instance.SetMotelyRoot(motelyRoot);
+        // SearchManager still needs project root for JamlFilters/WordLists if they aren't copied
+        // But for now, let's fallback to current directory for those if not found relative to bin
+        var projectRoot = Directory.GetCurrentDirectory();
+        SearchManager.Instance.SetMotelyRoot(projectRoot);
         
         // Configure middleware
         app.UseCors("AllowAll");
         // Static files first (explicit file provider so it works when launched from Motely.TUI)
-        var webRoot = Path.Combine(motelyRoot, "wwwroot");
-        app.UseStaticFiles(new StaticFileOptions
+        if (Directory.Exists(webRoot))
         {
-            FileProvider = new PhysicalFileProvider(webRoot),
-            RequestPath = ""
-        });
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(webRoot),
+                RequestPath = ""
+            });
+        }
+        else
+        {
+            // Fallback for dev environment if not copied yet? 
+            // Or just log a warning. For now, let's assume the csproj fix works.
+            Console.WriteLine($"[Warning] wwwroot not found at {webRoot}");
+        }
         
         // Enable Swagger middleware
         app.UseSwagger();
