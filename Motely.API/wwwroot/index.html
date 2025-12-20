@@ -66,17 +66,19 @@
 
       <div class="right-panel">
         <div class="results-header">
-          <div class="results-actions-left">
-            <button id="searchBtn" onclick="toggleSearch()" class="button-primary">Start Search</button>
-            <button onclick="shareLink()" class="icon-btn" title="Share Link">🔗</button>
-            <button onclick="toggleColorMode()" class="icon-btn" title="Toggle Color Mode">🎨</button>
-            <span id="status" style="margin-left:8px; font-size:0.9rem; color:var(--balatro-green); font-weight:bold"></span>
+          <div class="results-header-top">
+            <div class="results-actions-left">
+              <button id="searchBtn" onclick="toggleSearch()" class="button-primary">Start Search</button>
+              <button onclick="shareLink()" class="icon-btn" title="Share Link">🔗</button>
+              <button onclick="toggleColorMode()" class="icon-btn" title="Toggle Color Mode">🎨</button>
+            </div>
+            
+            <div class="results-actions-right">
+              <button onclick="exportCsv()" class="icon-btn" title="Export CSV" style="background: var(--balatro-blue)">CSV 💾</button>
+              <button onclick="stopAll()" class="button-small button-danger">Stop All</button>
+            </div>
           </div>
-          
-          <div class="results-actions-right">
-            <button onclick="exportCsv()" class="button-small">Export CSV</button>
-            <button onclick="stopAll()" class="button-small button-danger">Stop All</button>
-          </div>
+          <div id="status"></div>
         </div>
         
         <div id="resultsGrid" class="results-container">
@@ -138,6 +140,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="jaml.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
   <script>
     require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
@@ -150,7 +153,7 @@
         automaticLayout: true,
         theme: 'vs-dark',
         minimap: { enabled: false },
-        fontSize: 14,
+        fontSize: 18,
         fontFamily: "'Consolas', 'Cascadia Code', 'JetBrains Mono', monospace", /* Soft Normie Monospace */
         lineNumbers: 'on',
         scrollBeyondLastLine: false,
@@ -165,6 +168,5 @@
       if (typeof window.onMonacoReady === 'function') window.onMonacoReady();
     });
   </script>
-  <script src="jaml.js?v=3"></script>
 </body>
 </html>
