@@ -1,3 +1,6 @@
+// Global state
+let colorModeActive = false;
+
 // Status helper
 const statusEl = document.getElementById('status');
 function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
@@ -110,7 +113,6 @@ let results = [];
 let sortCol = 'score';
 let sortAsc = false;
 let searchState = 'START'; // START | RUNNING
-let colorModeActive = false;
 
 async function loadHealth() {
   try {
@@ -698,4 +700,5 @@ window.onMonacoReady = async function () {
 
   // Normal flow
   await loadFilters(true);
+  setStatus('Ready');
 };
