@@ -25,21 +25,30 @@ public class FancyConsoleImpl : IMotelyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     private void WriteBottomLine(string bottomLine)
     {
+#if !BROWSER
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
         Console.SetCursorPosition(0, Console.BufferHeight - 1);
         Console.Write(new string(' ', Console.BufferWidth));
         Console.SetCursorPosition(0, Console.BufferHeight - 1);
         Console.Write(bottomLine);
         Console.SetCursorPosition(oldLeft, oldTop);
+#else
+        // Browser platform - no fancy console operations
+        Console.WriteLine(bottomLine);
+#endif
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     private void ClearBottomLine()
     {
+#if !BROWSER
         (int oldLeft, int oldTop) = Console.GetCursorPosition();
         Console.SetCursorPosition(0, Console.BufferHeight - 1);
         Console.Write(new string(' ', Console.BufferWidth));
         Console.SetCursorPosition(oldLeft, oldTop);
+#else
+        // Browser platform - no fancy console operations
+#endif
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
@@ -68,6 +77,7 @@ public class FancyConsoleImpl : IMotelyConsole
     {
         try
         {
+#if !BROWSER
             (int oldLeft, int oldTop) = Console.GetCursorPosition();
 
             if (oldTop == Console.BufferHeight - 1)
@@ -81,6 +91,10 @@ public class FancyConsoleImpl : IMotelyConsole
             {
                 SetBottomLine(_bottomLine);
             }
+#else
+            // Browser platform - simple console output
+            Console.WriteLine(message ?? "null");
+#endif
         }
         catch (System.IO.IOException)
         {

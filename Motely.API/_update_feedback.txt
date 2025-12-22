@@ -1,0 +1,8 @@
+// Summary: I need to:
+// 1. Update GenerateJamlWithAIAsync to include past failures in prompt and capture reasoning
+// 2. Update ProcessPromptAsync to log failures with full context
+// 3. Add feedback endpoints to Program.cs
+// 4. Add admin endpoint to view failures
+// 5. Update JamlGenie HTML to include thumbs up/down
+
+// This is complex, so I'll create a comprehensive update script

@@ -374,6 +374,47 @@ public class SearchManager
         }
     }
 
+    public async Task ClearAllSearchesAsync()
+    {
+        await _lifecycleGate.WaitAsync();
+        try
+        {
+            // Clear all active searches
+            var ids = _activeSearches.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
+            foreach (var id in ids)
+            {
+                if (_activeSearches.TryRemove(id, out var search))
+                {
+                    await StopSearchInternalAsync(search, reason: "clear_all");
+                }
+            }
+
+            // Clear all stored results by deleting all database files
+            if (Directory.Exists(_searchResultsDir))
+            {
+                var dbFiles = Directory.GetFiles(_searchResultsDir, "*.db");
+                foreach (var file in dbFiles)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch
+                    {
+                        // Ignore file deletion errors
+                    }
+                }
+            }
+            
+            // Broadcast clear event
+            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "results_cleared" }));
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
     private async Task<bool> StopSearchInternalAsync(ActiveSearch search, string reason)
     {
         _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new { type = "search_halted", searchId = search.SearchId, reason }));

@@ -78,16 +78,25 @@ function initSplitter() {
       // Reset flex/width from landscape mode if present
       left.style.flex = 'none';
       
-      const newH = Math.max(150, Math.min(window.innerHeight - 150, clientY - rect.top));
+      const isMobile = window.innerWidth <= 768;
+      const minHeight = isMobile ? 100 : 150;
+      const maxHeight = window.innerHeight;
+      const newH = Math.max(minHeight, Math.min(maxHeight, clientY - rect.top));
       left.style.height = `${newH}px`; 
     } else {
       const rect = container.getBoundingClientRect();
       // Reset height from portrait mode if present
       left.style.height = ''; 
       
-      const w = rect.width; 
+      const w = rect.width;
+      const isMobile = window.innerWidth <= 768;
       let newW = clientX - rect.left;
-      newW = Math.max(300, Math.min(w - 300, newW));
+      
+      // On mobile, allow much more extreme resizing - down to 80px, up to almost full width
+      // This allows the user to collapse panels almost completely to the edges
+      const minWidth = isMobile ? 80 : 300;
+      const maxWidth = isMobile ? w - 80 : w - 300;
+      newW = Math.max(minWidth, Math.min(maxWidth, newW));
       left.style.flex = `0 0 ${(newW / w) * 100}%`;
     }
   };
@@ -113,6 +122,7 @@ let results = [];
 let sortCol = 'score';
 let sortAsc = false;
 let searchState = 'START'; // START | RUNNING
+let isSettingDropdownProgrammatically = false; // Flag to prevent onchange from firing when setting dropdown programmatically
 
 async function loadHealth() {
   try {
@@ -143,12 +153,14 @@ async function loadFilters(autoSelect = true) {
       dd.appendChild(opt);
     });
     dd.onchange = async () => {
+      // Don't trigger if we're setting the dropdown programmatically
+      if (isSettingDropdownProgrammatically) return;
       const idx = parseInt(dd.value);
       await selectFilterAndRun(idx);
     };
-    // If first filter exists, select and load
+    // If first filter exists, select and load (but don't auto-start search on initial load)
     if (autoSelect && savedFilters.length > 0) { 
-      selectFilterAndRun(0); 
+      await selectFilter(0, false); 
     }
   } catch (e) {
     dd.innerHTML = '<option>Offline / Error</option>';
@@ -156,12 +168,19 @@ async function loadFilters(autoSelect = true) {
   }
 }
 
-async function selectFilterAndRun(idx) {
+async function selectFilter(idx, autoStart = true) {
   const f = savedFilters[idx];
   if (!f) return;
 
   const dd = document.getElementById('filtersDropdown');
-  if (dd.value !== idx.toString()) dd.value = idx.toString();
+  // Set flag to prevent onchange from firing when we set the value programmatically
+  isSettingDropdownProgrammatically = true;
+  try {
+    if (dd.value !== idx.toString()) dd.value = idx.toString();
+  } finally {
+    // Reset flag after a microtask to ensure the value is set before onchange could fire
+    Promise.resolve().then(() => { isSettingDropdownProgrammatically = false; });
+  }
 
   if (f.filterJaml) setJamlValue(f.filterJaml);
 
@@ -183,16 +202,33 @@ async function selectFilterAndRun(idx) {
           renderResults();
           setStatus(`Found ${results.length} existing seeds`);
         }
+        // Update search state based on server status
+        if (data.status === 'running') {
+          searchState = 'RUNNING';
+          currentSearchId = searchId;
+          document.getElementById('searchBtn').textContent = 'Stop Search';
+          document.getElementById('searchBtn').classList.add('button-danger');
+          ensureWs();
+        } else {
+          searchState = 'START';
+          document.getElementById('searchBtn').textContent = 'Start Search';
+          document.getElementById('searchBtn').classList.remove('button-danger');
+        }
       }
     } catch (e) {
       console.warn('Failed to fetch existing results:', e);
     }
   }
 
-  // 2. Auto-Start/Restart Search via POST (handles streaming)
-  if (searchState === 'RUNNING') await stopAll();
-  
-  await startSearch();
+  // 2. Only auto-start if requested (not on initial page load)
+  if (autoStart) {
+    if (searchState === 'RUNNING') await stopAll();
+    await startSearch();
+  }
+}
+
+async function selectFilterAndRun(idx) {
+  await selectFilter(idx, true);
 }
 
 async function loadSeedSources() {
@@ -241,20 +277,53 @@ function ensureWs() {
   };
 }
 
+// Helper function to extract value from result based on column name
+function getValueFromResult(result, col, colIndex) {
+  if (col === 'seed') {
+    return result.seed;
+  }
+  if (col === 'score') {
+    return result.score;
+  }
+  // Custom tally column - access from tallies array
+  // Columns are [seed, score, tally1, tally2...], so tally1 is at index 2
+  if (result.tallies && colIndex >= 2) {
+    const tallyIdx = colIndex - 2;
+    return (result.tallies[tallyIdx] !== undefined) ? result.tallies[tallyIdx] : 0;
+  }
+  return 0; // Default for missing values
+}
+
 function renderResults() {
   const container = document.getElementById('resultsGrid');
   if (!results || results.length === 0) {
     container.innerHTML = '<div class="no-results"><p>No results yet</p></div>'; return;
   }
   
+  // Find the column index for sorting
+  const sortColIndex = columns.indexOf(sortCol);
+  
   // Sort results
   const sorted = [...results].sort((a, b) => {
-    let valA = a[sortCol];
-    let valB = b[sortCol];
+    let valA = getValueFromResult(a, sortCol, sortColIndex);
+    let valB = getValueFromResult(b, sortCol, sortColIndex);
     
-    // Handle numeric strings
+    // Handle numeric strings (for seed column)
+    if (sortCol === 'seed') {
+      // String comparison for seeds
+      if (valA < valB) return sortAsc ? -1 : 1;
+      if (valA > valB) return sortAsc ? 1 : -1;
+      return 0;
+    }
+    
+    // Numeric comparison for score and tallies
+    // Ensure we're comparing numbers
     if (typeof valA === 'string' && !isNaN(valA)) valA = parseFloat(valA);
     if (typeof valB === 'string' && !isNaN(valB)) valB = parseFloat(valB);
+    
+    // Handle null/undefined
+    if (valA == null) valA = 0;
+    if (valB == null) valB = 0;
     
     if (valA < valB) return sortAsc ? -1 : 1;
     if (valA > valB) return sortAsc ? 1 : -1;
@@ -342,7 +411,16 @@ function analyzeSeed(seed) {
 }
 
 async function toggleSearch() {
-  if (searchState === 'RUNNING') { await stopAll(); return; }
+  if (searchState === 'RUNNING') { 
+    // Update UI immediately for responsiveness
+    searchState = 'START';
+    const btn = document.getElementById('searchBtn');
+    btn.textContent = 'Stopping...';
+    btn.disabled = true;
+    
+    await stopAll(); 
+    return; 
+  }
   await startSearch();
 }
 
@@ -381,14 +459,20 @@ async function startSearch() {
 }
 
 async function stopAll() {
+  // UI already updated in toggleSearch for immediate feedback
   try {
     const r = await fetch('/search/stop-all', { method: 'POST' });
     if (r.ok) setStatus('Stopped');
-  } catch {}
+  } catch (e) {
+    setStatus(`Error stopping: ${e.message}`);
+  }
+  
+  // Ensure UI is in correct state
   searchState = 'START';
   const btn = document.getElementById('searchBtn');
   btn.textContent = 'Start Search';
   btn.classList.remove('button-danger');
+  btn.disabled = false;
 }
 
 function exportCsv() {
@@ -476,10 +560,17 @@ async function performSave(filename, jaml) {
     // Reload filters to pick up the changes/new file (don't auto-select first one)
     await loadFilters(false);
     
-    // Try to select and run the one we just saved
+    // Update dropdown to select the saved filter, but DON'T reload the editor content
+    // (keep current edits - the file was already saved with them)
     const newIdx = savedFilters.findIndex(f => f.filePath === data.filePath);
     if (newIdx >= 0) {
-      await selectFilterAndRun(newIdx);
+      const dd = document.getElementById('filtersDropdown');
+      dd.value = newIdx.toString();
+      // Update the savedFilters entry with current jaml so it matches what's saved
+      if (savedFilters[newIdx]) {
+        savedFilters[newIdx].filterJaml = jaml;
+        savedFilters[newIdx].filePath = data.filePath;
+      }
     }
   } catch (e) {
     setStatus(`Error: ${e.message}`);
@@ -605,9 +696,9 @@ async function renameFilter() {
       if (!r.ok) throw new Error('Rename failed');
       setStatus(`Renamed to ${newName}`);
       await loadFilters(false);
-      // Try to select the renamed one
+      // Try to select the renamed one (don't auto-start)
       const newIdx = savedFilters.findIndex(f => f.name === newName);
-      if (newIdx >= 0) await selectFilterAndRun(newIdx);
+      if (newIdx >= 0) await selectFilter(newIdx, false);
       closeSettings();
     } catch (e) { setStatus(e.message); }
   });
@@ -631,9 +722,9 @@ async function cloneFilter() {
       if (!r.ok) throw new Error('Clone failed');
       setStatus(`Cloned to ${newName}`);
       await loadFilters(false);
-      // Try to select the cloned one
+      // Try to select the cloned one (don't auto-start)
       const newIdx = savedFilters.findIndex(f => f.name === newName);
-      if (newIdx >= 0) await selectFilterAndRun(newIdx);
+      if (newIdx >= 0) await selectFilter(newIdx, false);
       closeSettings();
     } catch (e) { setStatus(e.message); }
   });

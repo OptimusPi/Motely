@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JamlGenie</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">?? JamlGenie</h1>
+        
+        <div class="wish-area">
+            <input 
+                type="text" 
+                id="wishInput" 
+                placeholder="Make a wish... (e.g., '2 Blueprints')"
+                autocomplete="off"
+            />
+            <button id="grantBtn">? Grant</button>
+        </div>
+
+        <!-- Pizza Tracker -->
+        <div class="tracker hidden" id="tracker">
+            <div class="tracker-step" data-step="thinking">
+                <div class="step-icon">?</div>
+                <div class="step-label">Genie is thinking...</div>
+                <div class="step-desc">Crafting your wish into JAML</div>
+            </div>
+            <div class="tracker-step" data-step="plan">
+                <div class="step-icon">?</div>
+                <div class="step-label">Genie has a plan!</div>
+                <div class="step-desc">JAML filter generated</div>
+            </div>
+            <div class="tracker-step" data-step="searching">
+                <div class="step-icon">?</div>
+                <div class="step-label">Genie is searching...</div>
+                <div class="step-desc"><span id="progressText">Starting search...</span></div>
+            </div>
+            <div class="tracker-step" data-step="found">
+                <div class="step-icon">?</div>
+                <div class="step-label">Genie found it!</div>
+                <div class="step-desc">Your seed is ready</div>
+            </div>
+        </div>
+
+        <div class="result-area hidden" id="resultArea">
+            <div class="genie-says">?? Genie says:</div>
+            <div class="seed-result" id="seedResult"></div>
+            <div class="jaml-code" id="jamlCode"></div>
+            <button class="new-wish" onclick="location.reload()">Make Another Wish</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
