@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>JAML – New UI</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Tray: Filter selection, Hydrate sources, Controls -->
+    <div id="topTray" class="top-tray">
+      <div class="tray-content">
+        <div class="tray-row">
+          <div class="tray-group">
+            <label for="filterSelect" class="tray-label">Filter:</label>
+            <select id="filterSelect" class="tray-select"></select>
+          </div>
+          
+          <div class="tray-group">
+            <label for="seedSourceDropdown" class="tray-label">Seed Source:</label>
+            <select id="seedSourceDropdown" class="tray-select"></select>
+          </div>
+          
+          <div class="tray-group">
+            <label class="tray-label">Hydrate Sources:</label>
+            <div id="hydrateSources" class="hydrate-multiselect">
+              <div class="multiselect-placeholder">Select word lists...</div>
+              <div id="hydrateSourcesList" class="multiselect-list" style="display: none;"></div>
+            </div>
+            <button id="toggleHydrateSources" class="icon-btn-small" onclick="toggleHydrateSources()" title="Select Hydrate Sources">+</button>
+          </div>
+          
+          <div class="tray-group tray-actions">
+            <button id="monacoToggle" onclick="toggleMonaco()" class="monaco-toggle-btn" title="Toggle Monaco Editor">Monaco</button>
+            <button id="searchBtn" onclick="handleSearchClick()" class="button-primary">Start Search</button>
+            <button onclick="shareLink()" class="icon-btn" title="Share Link"><i data-lucide="link"></i></button>
+            <button onclick="toggleColorMode()" class="icon-btn" title="Toggle Color Mode"><i data-lucide="palette"></i></button>
+            <button onclick="exportCsv()" class="icon-btn" title="Export CSV" style="background: var(--balatro-blue)"><i data-lucide="download"></i></button>
+          </div>
+        </div>
+        <div id="status" class="tray-status">Ready</div>
+      </div>
+    </div>
+
+    <!-- Horizontal Grab Bar - slides tray up/down -->
+    <div id="topGrabber" class="top-grabber" role="separator" aria-orientation="horizontal" tabindex="0">
+      <div class="grabber-line grabber-line-top"></div>
+      <div class="grabber-line grabber-line-bottom"></div>
+    </div>
+
+    <div class="side-by-side panel-shell">
+      <!-- Left Panel: Editor -->
+      <div class="left-panel">
+        <div id="leftEditor" class="panel-main">
+          <!-- Editor -->
+          <div id="monacoEditor" class="monaco-container"></div>
+          <textarea id="filterJaml" class="plain-editor" style="display:none;" placeholder="Enter JAML filter..." spellcheck="false"></textarea>
+        </div>
+      </div>
+
+      <!-- Vertical Splitter -->
+      <div id="panelSplitter1" class="panel-splitter" role="separator" aria-orientation="vertical" tabindex="0">
+        <div class="splitter-line splitter-line-left"></div>
+        <div class="splitter-line splitter-line-right"></div>
+      </div>
+
+      <!-- Right Panel: Results -->
+      <div class="right-panel">
+        <div id="rightResults" class="panel-main">
+          <div id="resultsGrid" class="results-container">
+            <div class="no-results">
+              <p>No results yet</p>
+              <p class="help-text">Start a search to see results</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hydrate Sources Modal (Multi-select) -->
+  <div id="hydrateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="hydrateModalTitle" onclick="handleBackdrop(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="hydrateModalTitle">Select Hydrate Sources</h3>
+        <button class="close-btn" aria-label="Close" onclick="closeHydrateModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text">Select word lists to hydrate search. Each will be searched sequentially.</p>
+        <div id="hydrateSourcesCheckboxes" class="checkbox-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="button-small" onclick="closeHydrateModal()">Cancel</button>
+        <button class="button-primary" onclick="applyHydrateSources()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Filter Modal -->
+  <div id="saveFilterModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="saveFilterTitle" onclick="handleBackdrop(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="saveFilterTitle">Save Filter</h3>
+        <button class="close-btn" aria-label="Close" onclick="closeSaveFilterModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text">Saving JAML file as:</p>
+        <div class="input-group" style="display: flex; align-items: center; gap: 8px;">
+          <input type="text" id="saveFilterFilename" class="modal-input" value="NewFilter.jaml" readonly style="flex: 1;" onkeydown="if(event.key==='Enter') confirmSaveFilter()">
+          <button id="editFilenameBtn" class="icon-btn" onclick="toggleFilenameEdit()" title="Edit filename"><i data-lucide="pencil"></i></button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="button-small" onclick="closeSaveFilterModal()">Cancel</button>
+        <button id="saveFilterConfirm" class="button-primary" onclick="confirmSaveFilter()">Save JAML Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+  <script>
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Lucide icons
+      lucide.createIcons({
+        attrs: {
+          'class': 'lucide-icon',
+          'width': '20',
+          'height': '20',
+          'stroke': 'currentColor',
+          'stroke-width': '2',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          'fill': 'none'
+        }
+      });
+
+      // Initialize Monaco editor
+      require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+      require(['vs/editor/editor.main'], function () {
+        const container = document.getElementById('monacoEditor');
+        window.jamlEditor = monaco.editor.create(container, {
+          value: '',
+          language: 'yaml',
+          theme: 'vs-dark',
+          automaticLayout: true,
+          minimap: { enabled: false },
+          fontSize: 18,
+          fontFamily: "'Consolas', 'Cascadia Code', 'JetBrains Mono', monospace",
+          lineHeight: 24,
+          tabSize: 2,
+          insertSpaces: true,
+          scrollBeyondLastLine: false,
+          wordWrap: 'on',
+          wrappingIndent: 'same',
+          renderLineHighlight: 'none',
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          scrollbar: {
+            vertical: 'auto',
+            horizontal: 'auto',
+            useShadows: true,
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
+            arrowSize: 0
+          }
+        });
+
+        // Add command for Shift+Tab (outdent)
+        window.jamlEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Tab, () => {
+          window.jamlEditor.trigger('keyboard', 'editor.action.outdentLines');
+        });
+        
+        window.jamlEditor.onDidChangeModelContent(() => {
+          document.getElementById('filterJaml').value = window.jamlEditor.getValue();
+        });
+        
+        // Handle resizing for mobile/desktop
+        const handleResize = () => {
+          if (window.jamlEditor) {
+            setTimeout(() => window.jamlEditor.layout(), 100);
+          }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', () => setTimeout(handleResize, 300));
+        
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', handleResize);
+          window.visualViewport.addEventListener('scroll', handleResize);
+        }
+        
+        // Initialize splitter grabbers after Monaco is ready
+        if (typeof window.onMonacoReady === 'function') {
+          window.onMonacoReady();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
