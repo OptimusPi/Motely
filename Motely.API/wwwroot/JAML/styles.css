@@ -30,7 +30,7 @@
 
 @font-face {
   font-family: 'm6x11';
-  src: url('fonts/m6x11plusplus.otf') format('opentype');
+  src: url('m6x11plusplus.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
 }
@@ -69,8 +69,183 @@ html, body {
   overflow: hidden;
 }
 
+/* Top Tray - Collapsible top bar */
+.top-tray {
+  flex: 0 0 auto;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+  min-height: 80px; /* Initial height */
+  max-height: 50vh; /* Max 50% of viewport */
+}
+
+.tray-content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tray-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tray-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tray-label {
+  font-size: 0.9rem;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.tray-select {
+  padding: 6px 12px;
+  background: var(--dark-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  min-width: 150px;
+}
+
+.tray-actions {
+  margin-left: auto;
+  gap: 8px;
+}
+
+.tray-status {
+  font-size: 0.85rem;
+  color: var(--light-grey);
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Hydrate Multi-select */
+.hydrate-multiselect {
+  position: relative;
+  min-width: 200px;
+}
+
+.multiselect-placeholder {
+  padding: 6px 12px;
+  background: var(--dark-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--light-grey);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.multiselect-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.hydrate-source-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  margin: 2px;
+  background: var(--balatro-blue);
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.icon-btn-small {
+  padding: 4px 8px;
+  background: var(--dark-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.icon-btn-small:hover {
+  background: var(--bg-color);
+}
+
+/* Top Grabber - Horizontal grab bar to slide tray up/down */
+.top-grabber {
+  height: 16px;
+  width: 100%;
+  background: var(--panel-bg);
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  min-height: 16px;
+}
+
+.top-grabber::after {
+  content: "";
+  position: absolute;
+  width: 5px; /* Bigger dots */
+  height: 5px; /* Bigger dots */
+  background: #1e2b2d; /* Darker grey */
+  border-radius: 50%;
+  /* Three dots HORIZONTALLY aligned - for horizontal grabber */
+  box-shadow: 8px 0 0 #1e2b2d, 16px 0 0 #1e2b2d;
+  opacity: 0.7;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+/* Full-length line for grabbers - shared by all grabbers */
+.grabber-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: #1e2b2d;
+  opacity: 0.4;
+}
+
+.grabber-line-top {
+  top: 0;
+}
+
+.grabber-line-bottom {
+  bottom: 0;
+}
+
+.top-grabber:hover {
+  background: var(--bg-color);
+}
+
+.top-grabber:hover::after {
+  opacity: 0.8;
+}
+
 /* Main Layout */
-.side-by-side { display:flex; flex:1; min-height:0; padding: 8px; gap: 8px; }
+.side-by-side { display:flex; flex:1; min-height:0; padding: 8px; gap: 0; }
 
 .panel-shell { 
   background: var(--panel-bg); 
@@ -82,32 +257,79 @@ html, body {
   flex: 1;
 }
 
-.left-panel, .right-panel { 
+.left-panel, .middle-panel, .right-panel { 
   flex:1; 
   min-width:0; 
   display:flex; 
   flex-direction:column; 
-  overflow-y:auto; 
-  overflow-x:hidden;
+  overflow: hidden;
   -webkit-overflow-scrolling: touch; 
   touch-action: pan-y;
+  position: relative;
 }
 
-/* Splitter */
+/* Splitter - VERTICAL (center between left/right panels) - SUBTLE */
 .panel-splitter { 
-  flex:0 0 10px; 
-  margin: 0; /* No margin */
-  background: var(--dark-bg); 
-  cursor:col-resize; 
-  position:relative; 
+  flex: 0 0 16px;
+  width: 16px;
+  margin: 0;
+  background: var(--panel-bg);
+  cursor: col-resize; 
+  position: relative; 
   display: flex; 
   align-items: center; 
   justify-content: center; 
-  border-radius: 0; /* Flush */
+  border-radius: 0; 
   border: none;
+  min-width: 16px;
 }
-.panel-splitter:hover { background: var(--balatro-blue); }
-.panel-splitter::after { content: '⋮'; color: var(--light-grey); font-size: 12px; line-height: 1; }
+.panel-splitter::after {
+  content: "";
+  position: absolute;
+  width: 5px; /* Bigger dots */
+  height: 5px; /* Bigger dots */
+  background: #1e2b2d; /* Darker grey */
+  border-radius: 50%;
+  /* Three dots VERTICALLY stacked - always vertical, never horizontal */
+  box-shadow: 0 8px 0 #1e2b2d, 0 16px 0 #1e2b2d;
+  opacity: 0.7;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+.splitter-line {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: #1e2b2d;
+  opacity: 0.4;
+}
+.splitter-line-left {
+  left: 0;
+}
+.splitter-line-right {
+  right: 0;
+}
+.panel-splitter:hover { 
+  background: var(--bg-color);
+}
+.panel-splitter:hover::after {
+  opacity: 0.8;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-color);
+}
+
+.panel-content {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+}
 
 /* Tabs */
 .tabs { display:flex; gap: 8px; margin-bottom: 8px; }
@@ -168,7 +390,7 @@ html, body {
 .dropdown-row { 
   display:flex; 
   gap: 8px; 
-  margin-bottom: 8px; 
+  margin-bottom: 0; 
   flex-wrap: wrap; /* Allow wrapping for narrow panels */
 }
 /* Target direct input groups to ensure they wrap properly */
@@ -230,8 +452,17 @@ button:active {
   border-radius: 4px;
 }
 
-.button-primary { background: var(--balatro-green); color: #fff; }
+.button-primary { 
+  background: var(--balatro-green); 
+  color: #fff; 
+}
 .button-primary:hover { background: var(--balatro-dark-green); }
+
+/* Override for Start Search button specifically */
+#searchBtn.button-primary {
+  font-size: 1.3rem; /* Larger font */
+  text-transform: none; /* "Start Search" not "START SEARCH" */
+}
 
 .button-small { background: var(--light-grey); color: #fff; }
 .button-small:hover { background: #888e99; }
@@ -297,13 +528,14 @@ button:active {
 .plain-editor { 
   flex: 1; 
   min-height: 0; /* Allow shrinking in flex container */
-  background: #f0f0f0; 
-  color: #222; 
+  background: var(--dark-bg); 
+  color: var(--text-color); 
   border: none; 
   border-radius: 8px; 
   padding: 12px; 
-  font-family: Consolas, monospace; 
-  font-size: 18px; 
+  font-family: 'Lucida Console', 'Consolas', 'Cascadia Code', 'JetBrains Mono', monospace !important; /* Soft monospaced font */
+  font-size: 14px; 
+  line-height: 1.5;
   box-shadow: inset 0 0 10px rgba(0,0,0,0.1); 
   resize: none; /* Prevent manual resize - let flex handle it */
 }
@@ -322,10 +554,153 @@ button:active {
   margin-top: 8px;
   font-size: 0.9rem;
   color: var(--balatro-green);
-  font-weight: bold;
+  font-weight: normal;
   text-align: center;
   min-height: 1.2rem;
   width: 100%;
+}
+
+/* Panel Controls and Grabbers */
+.panel-controls {
+  padding: 8px;
+  background: var(--panel-bg); /* Same as right side - no double panel */
+  border-radius: 6px;
+  margin-bottom: 0; /* No gap - grabber touches directly */
+  flex-shrink: 0; /* Prevent flexbox from shrinking */
+  overflow: auto; /* Allow scrolling if content exceeds height */
+}
+
+/* Horizontal Grabber - TIGHT, NO MARGINS, SUBTLE */
+.panel-grabber {
+  height: 16px;
+  width: 100%;
+  background: var(--panel-bg);
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.panel-grabber::after {
+  content: "";
+  position: absolute;
+  width: 5px; /* Bigger dots */
+  height: 5px; /* Bigger dots */
+  background: #1e2b2d; /* Darker grey */
+  border-radius: 50%;
+  box-shadow: 8px 0 0 #1e2b2d, 16px 0 0 #1e2b2d; /* Three dots horizontally */
+  opacity: 0.7;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+/* grabber-line definitions moved up - no duplicate */
+
+.panel-grabber:hover {
+  background: var(--bg-color);
+}
+
+.panel-grabber:hover::after {
+  opacity: 0.8;
+}
+
+.panel-grabber:focus-visible {
+  outline: 2px solid var(--balatro-blue);
+  outline-offset: -2px;
+}
+
+.panel-main {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0; /* No gap - grabber touches directly */
+  padding-top: 0; /* Ensure no padding creates gap */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: var(--dark-bg);
+  /* Editor fills all available space */
+}
+
+/* Monaco toggle button - now in top tray */
+.monaco-toggle-btn {
+  padding: 6px 12px;
+  background: var(--dark-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.monaco-toggle-btn:hover {
+  background: var(--bg-color);
+}
+
+.monaco-toggle-btn.active {
+  background: var(--balatro-blue);
+  color: #fff;
+  border-color: var(--balatro-blue);
+}
+
+/* Checkbox list for hydrate modal */
+.checkbox-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+  background: var(--dark-bg);
+}
+
+.checkbox-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.checkbox-list label:hover {
+  background: var(--panel-bg);
+}
+
+.checkbox-list input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* Ensure editor containers take full height */
+.monaco-container, .plain-editor {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: var(--dark-bg);
+  color: var(--text-color);
+  font-family: 'm6x11', "Segoe UI", Consolas, monospace;
+  font-size: 18px;
+  line-height: 1.4;
+  padding: 12px;
+  resize: none;
+}
+
+/* Make sure Monaco editor takes full height */
+.monaco-container {
+  padding: 0;
 }
 
 #resultsTitle { font-size: 1.2rem; color: #fff; margin: 0; display: none; /* Hide title to save space for buttons */ }
@@ -353,9 +728,13 @@ button:active {
   z-index: 1;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+  touch-action: manipulation; /* Prevents double-tap zoom on mobile */
   color: var(--text-color);
 }
 .results-table th:hover { background: var(--bg-color); color: var(--balatro-blue); }
+.results-table th:active { background: var(--balatro-blue); color: var(--text-color); }
 .results-table td { padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); font-family: Consolas, monospace; }
 .results-table tr:hover td { background: rgba(255,255,255,0.05); cursor: pointer; color: var(--balatro-blue); }
 
@@ -373,24 +752,22 @@ button:active {
 }
 .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom: 2px solid rgba(0,0,0,0.2); padding-bottom: 8px; }
 .modal-header h3 { margin: 0; color: var(--text-color); font-size: 1.5rem; }
-.close-btn { color: var(--light-grey); font-size: 24px; font-weight:bold; cursor:pointer; background:none; border:none; padding:0; line-height:1; box-shadow: none; }
+.close-btn { color: var(--light-grey); font-size: 24px; font-weight: normal; cursor:pointer; background:none; border:none; padding:0; line-height:1; box-shadow: none; }
 .close-btn:hover { color:#fff; }
 
 .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
 .button-action {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  padding: 12px;
-  /* background: var(--dark-bg); REMOVED DEFAULT */
+  padding: 12px 20px;
   border: none;
   border-radius: 6px;
-  color: #fff; cursor: pointer;
+  color: #fff; 
+  cursor: pointer;
   font-size: 1rem;
+  font-family: inherit;
+  font-weight: normal;
+  text-transform: uppercase;
   box-shadow: 0 4px 0 var(--button-shadow);
-  margin-bottom: 4px;
-}
-/* Default/Base if needed, but we prefer specific classes */
-.button-action:not(.blue):not(.orange):not(.red):not(.button-danger) {
-  background: var(--dark-bg);
+  transition: all 0.1s;
 }
 
 .button-action.blue { background: var(--balatro-blue); }
@@ -399,13 +776,15 @@ button:active {
 .button-action.orange { background: var(--balatro-orange); }
 .button-action.orange:hover { background: #e68a00; }
 
-/* Ensure danger overrides if mixed */
+.button-action.green { background: var(--balatro-green); }
+.button-action.green:hover { background: var(--balatro-dark-green); }
+
 .button-action.button-danger, .button-action.red { background: var(--balatro-red); }
 .button-action.button-danger:hover { background: var(--balatro-dark-red); }
 
-.button-action:hover { transform: translateY(-2px); }
+.button-action:hover { transform: translateY(-1px); }
 .button-action:active { transform: translateY(2px); box-shadow: none; }
-.button-action .icon { font-size: 1.5rem; }
+.button-action .icon { display: none; /* Hide icons - just text */ }
 
 .modal-footer { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; border-top: 2px solid rgba(0,0,0,0.2); padding-top: 12px; }
 
@@ -443,22 +822,26 @@ button:active {
   
   .panel-splitter { 
     width: 100%; 
-    height: 8px; 
+    height: 16px; 
     cursor: row-resize; 
-    margin: 2px 0; 
-    flex: 0 0 8px;
+    margin: 0; 
+    flex: 0 0 16px;
+    background: var(--panel-bg);
   }
-  .panel-splitter::after { 
-    content: '···'; 
-    transform: rotate(0deg); 
-    letter-spacing: 2px; 
+  .panel-splitter:hover {
+    background: var(--bg-color);
   }
   
-  /* Compact dropdowns - remove wasted space */
+  /* Compact dropdowns - keep side-by-side */
   .dropdown-row { 
-    flex-direction: column; 
+    flex-direction: row !important; /* Keep side-by-side on mobile */
     gap: 4px;
-    margin-bottom: 4px !important;
+    margin-bottom: 2px !important; /* Reduce bottom margin */
+  }
+  
+  .dropdown-row > .input-group {
+    flex: 1 1 140px !important;
+    margin-bottom: 0 !important;
   }
   
   .input-group {

@@ -25,4 +25,10 @@
     <EmbeddedResource Include="Jimbo.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\Motely.API\appsettings.json">
+      <Link>appsettings.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

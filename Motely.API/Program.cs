@@ -120,10 +120,35 @@ public static class MotelyApiFactory
         // Static files first (explicit file provider so it works when launched from Motely.TUI)
         if (Directory.Exists(webRoot))
         {
+            // Configure MIME types for WebAssembly files (required for Avalonia Browser/BSO)
+            var contentTypeProvider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+            contentTypeProvider.Mappings[".wasm"] = "application/wasm";
+            contentTypeProvider.Mappings[".dat"] = "application/octet-stream";
+            contentTypeProvider.Mappings[".blat"] = "application/octet-stream";
+            contentTypeProvider.Mappings[".dll"] = "application/octet-stream";
+            contentTypeProvider.Mappings[".pdb"] = "application/octet-stream";
+            
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(webRoot),
-                RequestPath = ""
+                RequestPath = "",
+                ContentTypeProvider = contentTypeProvider,
+                OnPrepareResponse = ctx =>
+                {
+                    var path = ctx.File.Name.ToLowerInvariant();
+                    // Don't cache HTML, JS, or CSS files - force fresh load
+                    if (path.EndsWith(".html") || path.EndsWith(".js") || path.EndsWith(".css"))
+                    {
+                        ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
+                        ctx.Context.Response.Headers.Append("Pragma", "no-cache");
+                        ctx.Context.Response.Headers.Append("Expires", "0");
+                    }
+                    // Allow caching for other assets (images, fonts, etc.) but with revalidation
+                    else
+                    {
+                        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, must-revalidate");
+                    }
+                }
             });
         }
         else
@@ -431,9 +456,15 @@ public static class MotelyApiFactory
                     var deck = "Red";
                     var stake = "White";
                     var columns = new List<string> { "seed", "score" };
+                    string? displayName = name; // Default to filename if we can't parse JAML
                     string? jamlErr;
                     if (global::Motely.JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var cfg, out jamlErr) && cfg != null)
                     {
+                        // Use actual filter name from JAML config (not normalized filename)
+                        if (!string.IsNullOrWhiteSpace(cfg.Name))
+                        {
+                            displayName = cfg.Name;
+                        }
                         if (!string.IsNullOrWhiteSpace(cfg.Deck)) deck = cfg.Deck;
                         if (!string.IsNullOrWhiteSpace(cfg.Stake)) stake = cfg.Stake;
 
@@ -451,7 +482,7 @@ public static class MotelyApiFactory
 
                     filters.Add(new
                     {
-                        name,
+                        name = displayName,
                         filterJaml,
                         filePath = Path.GetFileName(file),
                         searchId,
@@ -686,6 +717,9 @@ public static class MotelyApiFactory
             if (trimmed.Length == 0)
                 return string.Empty;
 
+            // Replace spaces with underscores (as per user requirement)
+            trimmed = trimmed.Replace(' ', '_');
+            
             var invalid = Path.GetInvalidFileNameChars();
             var chars = trimmed.Select(c => invalid.Contains(c) ? '-' : c).ToArray();
             var safe = new string(chars).Trim();
@@ -829,33 +863,68 @@ public static class MotelyApiFactory
                 var filterId = req?.FilterId ?? string.Empty;
                 var filterJaml = req?.FilterJaml ?? string.Empty;
 
-                if (string.IsNullOrWhiteSpace(filterId))
-                    return Results.BadRequest(new { error = "Missing filterId" });
-
-                var safeName = Path.GetFileName(filterId);
-                if (!string.Equals(safeName, filterId, StringComparison.Ordinal))
-                    return Results.BadRequest(new { error = "Invalid filterId" });
-
-                var ext = Path.GetExtension(safeName);
-                if (!string.Equals(ext, ".jaml", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(ext, ".yaml", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(ext, ".yml", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Results.BadRequest(new { error = "Invalid filter extension" });
-                }
+                if (string.IsNullOrWhiteSpace(filterJaml))
+                    return Results.BadRequest(new { error = "Missing filterJaml" });
 
                 var filtersPath = Path.Combine(motelyRoot, "JamlFilters");
                 Directory.CreateDirectory(filtersPath); // Ensure directory exists
-                var fullPath = Path.Combine(filtersPath, safeName);
 
-                // UPSERT: Create new or update existing filter
-                File.WriteAllText(fullPath, filterJaml);
+                // Extract name from JAML config
+                string? normalizedName = null;
+                if (global::Motely.JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var cfg, out var jamlErr) && cfg != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(cfg.Name))
+                    {
+                        normalizedName = SanitizeFilterFileStem(cfg.Name);
+                    }
+                }
+
+                // If we couldn't extract a name from JAML, fall back to filterId or generate one
+                if (string.IsNullOrWhiteSpace(normalizedName))
+                {
+                    if (!string.IsNullOrWhiteSpace(filterId))
+                    {
+                        normalizedName = Path.GetFileNameWithoutExtension(filterId);
+                    }
+                    else
+                    {
+                        normalizedName = "NewFilter";
+                    }
+                }
+
+                var ext = ".jaml";
+                var newFileName = normalizedName + ext;
+                var newFullPath = Path.Combine(filtersPath, newFileName);
+
+                // If filterId was provided and it's different from the new name, delete the old file
+                if (!string.IsNullOrWhiteSpace(filterId))
+                {
+                    var oldSafeName = Path.GetFileName(filterId);
+                    if (!string.IsNullOrWhiteSpace(oldSafeName) && !string.Equals(oldSafeName, newFileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var oldFullPath = Path.Combine(filtersPath, oldSafeName);
+                        if (File.Exists(oldFullPath) && string.Equals(Path.GetExtension(oldSafeName), ext, StringComparison.OrdinalIgnoreCase))
+                        {
+                            try
+                            {
+                                File.Delete(oldFullPath);
+                            }
+                            catch
+                            {
+                                // Ignore deletion errors - we'll overwrite anyway if it exists
+                            }
+                        }
+                    }
+                }
+
+                // Write the filter with the normalized name
+                File.WriteAllText(newFullPath, filterJaml);
 
                 ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
 
                 return Results.Ok(new
                 {
-                    filePath = safeName,
+                    filePath = newFileName,
                     filterJaml = filterJaml
                 });
             }
@@ -865,13 +934,10 @@ public static class MotelyApiFactory
             }
         });
 
-        // Convert endpoint (needs proper implementation)
-        app.MapPost("/convert", (object request) => 
-        {
-            // TODO: Implement actual JSON to JAML conversion
-            return Results.Ok(new { jaml = "converted jaml here" });
-        });
-
+        // BSO browser app route - serve index.html directly (static files middleware handles /BSO/index.html automatically)
+        app.MapGet("/BSO", () => Results.File(Path.Combine(webRoot, "BSO", "index.html"), "text/html"));
+        app.MapGet("/BSO/", () => Results.File(Path.Combine(webRoot, "BSO", "index.html"), "text/html"));
+        
         // Default route - serve the web UI
         app.MapGet("/", () => Results.File(Path.Combine(webRoot, "index.html"), "text/html"));
         
@@ -926,12 +992,34 @@ public sealed class WebSocketBroadcaster
         if (string.IsNullOrWhiteSpace(searchId))
             return;
 
-        _ = BroadcastToSearchAsync(searchId, json);
+        // Fire-and-forget is acceptable here for broadcasts, but we should handle exceptions
+        Task.Run(async () =>
+        {
+            try
+            {
+                await BroadcastToSearchAsync(searchId, json);
+            }
+            catch
+            {
+                // Silently ignore broadcast failures - client may have disconnected
+            }
+        });
     }
 
     public void Broadcast(string json)
     {
-        _ = BroadcastAsync(json);
+        // Fire-and-forget is acceptable here for broadcasts, but we should handle exceptions
+        Task.Run(async () =>
+        {
+            try
+            {
+                await BroadcastAsync(json);
+            }
+            catch
+            {
+                // Silently ignore broadcast failures - client may have disconnected
+            }
+        });
     }
 
     public async Task SendToAsync(Guid id, string json)

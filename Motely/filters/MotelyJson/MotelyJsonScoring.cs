@@ -1322,10 +1322,11 @@ public static class MotelyJsonScoring
         var stream = ctx.CreateErraticDeckPrngStream(isCached: false);
         int count = 0;
 
+        // Use the same method as the filter - GetNextErraticDeckCard
         for (int i = 0; i < 52; i++)
         {
-            var card = ctx.GetNextRandomElement(ref stream, MotelyEnum<MotelyPlayingCard>.Values);
-            if (card.GetRank() == rank)
+            var card = ctx.GetNextErraticDeckCard(ref stream);
+            if (card.PlayingCardRank == rank)
             {
                 count++;
             }
@@ -1345,10 +1346,11 @@ public static class MotelyJsonScoring
         var stream = ctx.CreateErraticDeckPrngStream(isCached: false);
         int count = 0;
 
+        // Use the same method as the filter - GetNextErraticDeckCard
         for (int i = 0; i < 52; i++)
         {
-            var card = ctx.GetNextRandomElement(ref stream, MotelyEnum<MotelyPlayingCard>.Values);
-            if (card.GetSuit() == suit)
+            var card = ctx.GetNextErraticDeckCard(ref stream);
+            if (card.PlayingCardSuit == suit)
             {
                 count++;
             }

@@ -110,9 +110,9 @@ public sealed class FertilizerDatabase : IDisposable
     /// <summary>
     /// Add seeds to the fertilizer pile (ignore duplicates)
     /// </summary>
-    public async Task AddSeedsAsync(IEnumerable<string> seeds)
+    public Task AddSeedsAsync(IEnumerable<string> seeds)
     {
-        if (_connection == null) return;
+        if (_connection == null) return Task.CompletedTask;
 
         try
         {
@@ -136,6 +136,7 @@ public sealed class FertilizerDatabase : IDisposable
         {
             Console.WriteLine($"Failed to add seeds to fertilizer pile: {ex.Message}");
         }
+        return Task.CompletedTask;
     }
 
     /// <summary>
