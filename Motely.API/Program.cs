@@ -6,9 +6,7 @@ using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using System.IO;
 using Microsoft.Extensions.FileProviders;
-using System.Net.WebSockets;
 using System.Text;
-using System.Collections.Concurrent;
 using System.Linq;
 using Microsoft.Extensions.Hosting;
 using System.Text.RegularExpressions;
@@ -102,14 +100,19 @@ public static class MotelyApiFactory
             });
         });
 
-        // Register Swagger services
+        // Add Swagger/OpenAPI
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
+        // Add SignalR
+        builder.Services.AddSignalR();
+
         var app = builder.Build();
 
-        var ws = new WebSocketBroadcaster();
-        SearchManager.Instance.SetBroadcaster(ws);
+        // Set up SignalR broadcaster after app is built
+        var hubContext = app.Services.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<SearchHub>>();
+        var broadcaster = new SignalRSearchBroadcaster(hubContext);
+        SearchManager.Instance.SetBroadcaster(broadcaster);
         // SearchManager still needs project root for JamlFilters/WordLists if they aren't copied
         // But for now, let's fallback to current directory for those if not found relative to bin
         var projectRoot = Directory.GetCurrentDirectory();
@@ -158,12 +161,15 @@ public static class MotelyApiFactory
             Console.WriteLine($"[Warning] wwwroot not found at {webRoot}");
         }
         
-        // Enable Swagger middleware
+        // Swagger/OpenAPI
         app.UseSwagger();
         app.UseSwaggerUI();
+        app.MapGet("/openapi/v1.json", () => Results.Redirect("/swagger/v1/swagger.json"));
 
         app.UseRouting();
-        app.UseWebSockets();
+        
+        // Map SignalR hub
+        app.MapHub<SearchHub>("/searchHub");
         
         // Health check
         app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
@@ -183,117 +189,7 @@ public static class MotelyApiFactory
             return Results.Ok(new { message = "Server shutting down..." });
         });
 
-        app.Map("/ws", async context =>
-        {
-            if (!context.WebSockets.IsWebSocketRequest)
-            {
-                context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                return;
-            }
-
-            using var socket = await context.WebSockets.AcceptWebSocketAsync();
-            var id = ws.Add(socket);
-            try
-            {
-                var buffer = new byte[4096];
-                while (socket.State == WebSocketState.Open && !context.RequestAborted.IsCancellationRequested)
-                {
-                    var sb = new StringBuilder();
-                    WebSocketReceiveResult result;
-                    do
-                    {
-                        result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), context.RequestAborted);
-                        if (result.MessageType == WebSocketMessageType.Close)
-                            break;
-
-                        if (result.MessageType == WebSocketMessageType.Text && result.Count > 0)
-                            sb.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
-                    }
-                    while (!result.EndOfMessage);
-
-                    if (result.MessageType == WebSocketMessageType.Close)
-                        break;
-
-                    if (result.MessageType != WebSocketMessageType.Text)
-                        continue;
-
-                    var payload = sb.ToString();
-                    if (string.IsNullOrWhiteSpace(payload))
-                        continue;
-
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(payload);
-                        if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                            continue;
-
-                        if (!doc.RootElement.TryGetProperty("type", out var typeEl))
-                            continue;
-
-                        var type = typeEl.GetString() ?? "";
-                        if (string.Equals(type, "subscribe", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (!doc.RootElement.TryGetProperty("searchId", out var searchIdEl))
-                                continue;
-                            var searchId = (searchIdEl.GetString() ?? string.Empty).Trim();
-                            if (string.IsNullOrWhiteSpace(searchId))
-                                continue;
-
-                            ws.SetSubscription(id, searchId);
-
-                            var (results, progressPercent) = SearchManager.Instance.GetSearchStatus(searchId);
-                            var isRunning = SearchManager.Instance.IsSearchRunning(searchId);
-                            SearchManager.Instance.TryGetRunningSearchFilterJaml(searchId, out var runningFilterJaml);
-                            SearchManager.Instance.TryGetSearchOverrides(searchId, out var _, out var cutoffOverride);
-                            SearchManager.Instance.TryGetLastError(searchId, out var lastError);
-                            SearchManager.Instance.TryGetSearchMetrics(
-                                searchId,
-                                out var currentBatch,
-                                out var totalBatches,
-                                out var seedsSearched,
-                                out var seedsPerSecond);
-
-                            var snapshotJson = JsonSerializer.Serialize(new
-                            {
-                                type = "snapshot",
-                                searchId = searchId,
-                                status = isRunning ? "running" : "stopped",
-                                searchStatus = isRunning ? "running" : "stopped",
-                                progressPercent = progressPercent,
-                                results = results,
-                                filterJaml = string.IsNullOrWhiteSpace(runningFilterJaml) ? (string?)null : runningFilterJaml,
-                                columns = SearchManager.Instance.GetColumnNames(searchId),
-                                isBackgroundRunning = isRunning,
-                                seedsFound = results?.Count ?? 0,
-                                currentBatch = currentBatch,
-                                totalBatches = totalBatches,
-                                seedsSearched = seedsSearched,
-                                seedsPerSecond = seedsPerSecond,
-                                cutoff = cutoffOverride,
-                                lastError = string.IsNullOrWhiteSpace(lastError) ? (string?)null : lastError
-                            }, CamelCaseOptions);
-
-                            await ws.SendToAsync(id, snapshotJson);
-                        }
-                        else if (string.Equals(type, "unsubscribe", StringComparison.OrdinalIgnoreCase))
-                        {
-                            ws.SetSubscription(id, null);
-                        }
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-            catch
-            {
-            }
-            finally
-            {
-                ws.Remove(id);
-                try { await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
-            }
-        });
+        // WebSocket endpoint removed - using SignalR instead
 
         // Search endpoints - use existing SearchManager
         app.MapPost("/search", async (HttpRequest request) => 
@@ -702,7 +598,7 @@ public static class MotelyApiFactory
 
                 File.Delete(fullPath);
 
-                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+                broadcaster.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
                 return Results.Ok(new { message = $"Filter {safeName} deleted" });
             }
             catch (Exception ex)
@@ -780,7 +676,7 @@ public static class MotelyApiFactory
                 var updated = UpsertNameField(content, Path.GetFileNameWithoutExtension(destPath));
                 File.WriteAllText(destPath, updated);
 
-                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+                broadcaster.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
 
                 return Results.Ok(new
                 {
@@ -840,7 +736,7 @@ public static class MotelyApiFactory
 
                 File.WriteAllText(destPath, updated);
 
-                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+                broadcaster.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
 
                 return Results.Ok(new
                 {
@@ -920,7 +816,7 @@ public static class MotelyApiFactory
                 // Write the filter with the normalized name
                 File.WriteAllText(newFullPath, filterJaml);
 
-                ws.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+                broadcaster.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
 
                 return Results.Ok(new
                 {
@@ -938,6 +834,9 @@ public static class MotelyApiFactory
         app.MapGet("/BSO", () => Results.File(Path.Combine(webRoot, "BSO", "index.html"), "text/html"));
         app.MapGet("/BSO/", () => Results.File(Path.Combine(webRoot, "BSO", "index.html"), "text/html"));
         
+        // JAML WebUI route - serve index.html directly
+        app.MapGet("/JAML/", () => Results.File(Path.Combine(webRoot, "JAML", "index.html"), "text/html"));
+        
         // Default route - serve the web UI
         app.MapGet("/", () => Results.File(Path.Combine(webRoot, "index.html"), "text/html"));
         
@@ -951,141 +850,3 @@ internal sealed record FilterCloneRequest(string? FilterId, string? NewName);
 internal sealed record FilterRenameRequest(string? FilterId, string? NewName);
 internal sealed record FilterUpdateRequest(string? FilterId, string? FilterJaml);
 internal sealed record WordListUpsertRequest(string? Text);
-
-public sealed class WebSocketBroadcaster
-{
-    private sealed class SocketInfo
-    {
-        public WebSocket Socket { get; }
-        public string? SearchId;
-
-        public SocketInfo(WebSocket socket)
-        {
-            Socket = socket;
-        }
-    }
-
-    private readonly ConcurrentDictionary<Guid, SocketInfo> _sockets = new();
-
-    public Guid Add(WebSocket socket)
-    {
-        var id = Guid.NewGuid();
-        _sockets[id] = new SocketInfo(socket);
-        return id;
-    }
-
-    public void Remove(Guid id)
-    {
-        _sockets.TryRemove(id, out _);
-    }
-
-    public void SetSubscription(Guid id, string? searchId)
-    {
-        if (_sockets.TryGetValue(id, out var info))
-        {
-            info.SearchId = string.IsNullOrWhiteSpace(searchId) ? null : searchId;
-        }
-    }
-
-    public void BroadcastToSearch(string searchId, string json)
-    {
-        if (string.IsNullOrWhiteSpace(searchId))
-            return;
-
-        // Fire-and-forget is acceptable here for broadcasts, but we should handle exceptions
-        Task.Run(async () =>
-        {
-            try
-            {
-                await BroadcastToSearchAsync(searchId, json);
-            }
-            catch
-            {
-                // Silently ignore broadcast failures - client may have disconnected
-            }
-        });
-    }
-
-    public void Broadcast(string json)
-    {
-        // Fire-and-forget is acceptable here for broadcasts, but we should handle exceptions
-        Task.Run(async () =>
-        {
-            try
-            {
-                await BroadcastAsync(json);
-            }
-            catch
-            {
-                // Silently ignore broadcast failures - client may have disconnected
-            }
-        });
-    }
-
-    public async Task SendToAsync(Guid id, string json)
-    {
-        if (!_sockets.TryGetValue(id, out var info))
-            return;
-
-        var socket = info.Socket;
-        if (socket.State != WebSocketState.Open)
-            return;
-
-        var payload = Encoding.UTF8.GetBytes(json);
-        var seg = new ArraySegment<byte>(payload);
-
-        try
-        {
-            await socket.SendAsync(seg, WebSocketMessageType.Text, true, CancellationToken.None);
-        }
-        catch
-        {
-        }
-    }
-
-    private async Task BroadcastAsync(string json)
-    {
-        var payload = Encoding.UTF8.GetBytes(json);
-        var seg = new ArraySegment<byte>(payload);
-
-        foreach (var kvp in _sockets)
-        {
-            var socket = kvp.Value.Socket;
-            if (socket.State != WebSocketState.Open)
-                continue;
-
-            try
-            {
-                await socket.SendAsync(seg, WebSocketMessageType.Text, true, CancellationToken.None);
-            }
-            catch
-            {
-            }
-        }
-    }
-
-    private async Task BroadcastToSearchAsync(string searchId, string json)
-    {
-        var payload = Encoding.UTF8.GetBytes(json);
-        var seg = new ArraySegment<byte>(payload);
-
-        foreach (var kvp in _sockets)
-        {
-            var info = kvp.Value;
-            if (!string.Equals(info.SearchId, searchId, StringComparison.Ordinal))
-                continue;
-
-            var socket = info.Socket;
-            if (socket.State != WebSocketState.Open)
-                continue;
-
-            try
-            {
-                await socket.SendAsync(seg, WebSocketMessageType.Text, true, CancellationToken.None);
-            }
-            catch
-            {
-            }
-        }
-    }
-}

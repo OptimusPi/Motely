@@ -42,9 +42,9 @@ public class SearchManager
     private int _configuredThreadBudget = Environment.ProcessorCount;
     private const int ReservedThreads = 1;
 
-    private WebSocketBroadcaster? _broadcaster;
+    private ISearchBroadcaster? _broadcaster;
 
-    internal void SetBroadcaster(WebSocketBroadcaster broadcaster)
+    internal void SetBroadcaster(ISearchBroadcaster broadcaster)
     {
         _broadcaster = broadcaster;
     }

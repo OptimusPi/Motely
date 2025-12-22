@@ -75,8 +75,8 @@ html, body {
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border-color);
   overflow: hidden;
-  min-height: 80px; /* Initial height */
-  max-height: 50vh; /* Max 50% of viewport */
+  min-height: 0; /* Allow collapsing completely */
+  max-height: none; /* No max height limit */
 }
 
 .tray-content {
@@ -200,6 +200,9 @@ html, body {
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
   min-height: 16px;
+  z-index: 10; /* Ensure it's above other elements */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .top-grabber::after {
@@ -282,6 +285,9 @@ html, body {
   border-radius: 0; 
   border: none;
   min-width: 16px;
+  z-index: 10; /* Ensure it's above other elements */
+  user-select: none;
+  -webkit-user-select: none;
 }
 .panel-splitter::after {
   content: "";
@@ -453,30 +459,56 @@ button:active {
 }
 
 .button-primary { 
-  background: var(--balatro-green); 
+  background: var(--balatro-blue); 
   color: #fff; 
 }
-.button-primary:hover { background: var(--balatro-dark-green); }
+.button-primary:hover { background: var(--balatro-dark-blue); }
 
 /* Override for Start Search button specifically */
 #searchBtn.button-primary {
   font-size: 1.3rem; /* Larger font */
   text-transform: none; /* "Start Search" not "START SEARCH" */
+  background: var(--balatro-blue);
+}
+#searchBtn.button-primary:hover {
+  background: var(--balatro-dark-blue);
 }
 
-.button-small { background: var(--light-grey); color: #fff; }
-.button-small:hover { background: #888e99; }
+.button-small { background: var(--balatro-red); color: #fff; }
+.button-small:hover { background: var(--balatro-dark-red); }
 
 .button-danger { background: var(--balatro-red); color: #fff; }
 .button-danger:hover { background: var(--balatro-dark-red); }
 
 .icon-btn {
-  background: var(--light-grey);
+  background: var(--balatro-blue);
   color: #fff;
   font-size: 1.2rem;
   min-width: 38px;
 }
-.icon-btn:hover { background: #888e99; }
+.icon-btn:hover { background: var(--balatro-dark-blue); }
+
+/* Specific icon buttons - Share Link gets blue, Color Mode gets red */
+button[onclick="shareLink()"] {
+  background: var(--balatro-blue) !important;
+}
+button[onclick="shareLink()"]:hover {
+  background: var(--balatro-dark-blue) !important;
+}
+
+button[onclick="toggleColorMode()"] {
+  background: var(--balatro-red) !important;
+}
+button[onclick="toggleColorMode()"]:hover {
+  background: var(--balatro-dark-red) !important;
+}
+
+button[onclick="exportCsv()"] {
+  background: var(--balatro-blue) !important;
+}
+button[onclick="exportCsv()"]:hover {
+  background: var(--balatro-dark-blue) !important;
+}
 
 /* Cell Color Mode Classes */
 .color-mode-0 { background-color: #1a0a1a !important; color: white !important; }
@@ -553,7 +585,7 @@ button:active {
 #status {
   margin-top: 8px;
   font-size: 0.9rem;
-  color: var(--balatro-green);
+  color: var(--balatro-blue);
   font-weight: normal;
   text-align: center;
   min-height: 1.2rem;

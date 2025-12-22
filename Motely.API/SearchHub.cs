@@ -22,7 +22,7 @@ public class SearchHub : Hub
 /// <summary>
 /// SignalR broadcaster adapter for SearchManager
 /// </summary>
-public class SignalRSearchBroadcaster
+public class SignalRSearchBroadcaster : ISearchBroadcaster
 {
     private readonly IHubContext<SearchHub> _hubContext;
 
@@ -31,9 +31,24 @@ public class SignalRSearchBroadcaster
         _hubContext = hubContext;
     }
 
+    public void Broadcast(string message)
+    {
+        _hubContext.Clients.All.SendAsync("Broadcast", message).ConfigureAwait(false);
+    }
+
+    public void BroadcastToSearch(string searchId, string json)
+    {
+        if (string.IsNullOrWhiteSpace(searchId) || string.IsNullOrWhiteSpace(json))
+            return;
+
+        _hubContext.Clients.Group(searchId).SendAsync("Result", json).ConfigureAwait(false);
+    }
+
     public void BroadcastToSearch(string searchId, object message)
     {
-        var json = JsonSerializer.Serialize(message);
+        if (string.IsNullOrWhiteSpace(searchId))
+            return;
+
         _hubContext.Clients.Group(searchId).SendAsync("Result", message).ConfigureAwait(false);
     }
 }
