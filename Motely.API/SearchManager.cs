@@ -207,8 +207,9 @@ public class SearchManager
                     results = search.Database.GetTopResults(1000);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error getting search status from database for {searchId}: {ex.Message}");
                 results = new List<SearchResult>();
             }
 
@@ -310,9 +311,12 @@ public class SearchManager
                 filterJaml = File.ReadAllText(jamlPath);
                 return !string.IsNullOrWhiteSpace(filterJaml);
             }
-            catch
+            catch (Exception ex)
             {
-                // File read failed, return false
+                // Log the error instead of silently swallowing it
+                Console.WriteLine($"Failed to read JAML metadata file {jamlPath}: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return false;
             }
         }
         
@@ -359,8 +363,9 @@ public class SearchManager
 
             return cols.Count > 0 ? cols : new List<string> { "seed", "score" };
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error reading column names from database {dbPath}: {ex.Message}");
             return new List<string> { "seed", "score" };
         }
     }
@@ -445,8 +450,9 @@ public class SearchManager
                     {
                         File.Delete(file);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Console.WriteLine($"Error deleting old search file {file}: {ex.Message}");
                         // Ignore file deletion errors
                     }
                 }
@@ -471,13 +477,19 @@ public class SearchManager
         {
             search.Executor?.Cancel();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error canceling executor for search {search.SearchId}: {ex.Message}");
+        }
 
         try
         {
             search.CancellationToken?.Cancel();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error canceling cancellation token for search {search.SearchId}: {ex.Message}");
+        }
 
         var timeout = TimeSpan.FromSeconds(1);
         var completed = true;
@@ -488,8 +500,9 @@ public class SearchManager
                 var finished = await Task.WhenAny(search.SearchTask, Task.Delay(timeout));
                 completed = ReferenceEquals(finished, search.SearchTask);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error waiting for search task to complete for {search.SearchId}: {ex.Message}");
                 completed = false;
             }
         }
@@ -505,8 +518,9 @@ public class SearchManager
                              ?? Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
                 await ExportTopResultsToFertilizerAsync(dbPath, limit: 1000);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error exporting results to fertilizer for {search.SearchId}: {ex.Message}");
             }
         }
 
@@ -517,13 +531,19 @@ public class SearchManager
         {
             search.Database?.Checkpoint();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checkpointing database for search {search.SearchId}: {ex.Message}");
+        }
 
         try
         {
             search.Database?.Dispose();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error disposing database for search {search.SearchId}: {ex.Message}");
+        }
 
         return true;
     }
@@ -565,8 +585,9 @@ public class SearchManager
             if (lastBatchSize.HasValue)
                 batchSize = lastBatchSize.Value;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error reading resume cursor from {dbPath}: {ex.Message}");
             startBatch = 0;
             batchSize = 0;
         }
@@ -727,8 +748,9 @@ public class SearchManager
                     var absoluteBatch = (long)searchParams.StartBatch + completedBatches;
                     search.Database?.SaveBatchPosition(absoluteBatch, searchParams.BatchSize);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"Error saving batch position for search {search.SearchId}: {ex.Message}");
                 }
 
                 // Check if search is complete (all batches done)
@@ -807,24 +829,27 @@ public class SearchManager
                                  ?? Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
                     await ExportTopResultsToFertilizerAsync(dbPath, limit: 1000);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"Error exporting results to fertilizer for {search.SearchId}: {ex.Message}");
                 }
 
                 try
                 {
                     search.Database?.Checkpoint();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"Error checkpointing database for search {search.SearchId}: {ex.Message}");
                 }
 
                 try
                 {
                     search.Database?.Dispose();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"Error disposing database for search {search.SearchId}: {ex.Message}");
                 }
 
                 _activeSearches.TryRemove(search.SearchId, out _);
@@ -1003,7 +1028,10 @@ public class SearchManager
                 return nameLine.Substring(5).Trim().Trim('"');
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing filter name from JAML: {ex.Message}");
+        }
         
         return "UnknownFilter";
     }
@@ -1054,9 +1082,10 @@ public class SearchManager
                 _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently fail - saving to ecosystem is nice-to-have, not critical
+            // Log but don't throw - saving to ecosystem is nice-to-have, not critical
+            Console.WriteLine($"Warning: Failed to save filter to ecosystem: {ex.Message}");
         }
     }
 
