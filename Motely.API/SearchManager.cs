@@ -35,6 +35,8 @@ public class SearchManager
     private readonly ConcurrentDictionary<string, ActiveSearch> _activeSearches = new();
     private readonly ConcurrentDictionary<string, string> _lastErrors = new(StringComparer.OrdinalIgnoreCase);
     private static readonly string _searchResultsDir = "SearchResults";
+    
+    public string GetSearchResultsDir() => _searchResultsDir;
 
     private string? _motelyRoot;
 
@@ -74,6 +76,7 @@ public class SearchManager
         public string Deck { get; set; } = "";
         public string Stake { get; set; } = "";
         public string? SeedSource { get; set; }
+        public List<string>? SeedList { get; set; }
         public JsonSearchExecutor? Executor { get; set; }
         public CancellationTokenSource? CancellationToken { get; set; }
         public MotelySearchDatabase? Database { get; set; }
@@ -103,7 +106,8 @@ public class SearchManager
         int seedCount,
         long? startBatchOverride = null,
         int? cutoffOverride = null,
-        string? seedSource = null)
+        string? seedSource = null,
+        List<string>? seedList = null)
     {
         await _lifecycleGate.WaitAsync();
         try
@@ -144,6 +148,7 @@ public class SearchManager
                 Deck = deck,
                 Stake = stake,
                 SeedSource = seedSource,
+                SeedList = seedList,
                 CancellationToken = new CancellationTokenSource(),
                 ColumnNames = columnNames,
                 BatchSize = 3,
@@ -162,6 +167,13 @@ public class SearchManager
 
             // (Re)open DB for active writes
             search.Database = new MotelySearchDatabase(dbPath, columnNames);
+
+            // Save JAML metadata file so it can be retrieved even after search stops
+            var jamlPath = Path.Combine(_searchResultsDir, $"{searchId}.jaml");
+            File.WriteAllText(jamlPath, filterJaml);
+
+            // Automatically save filter to JamlFilters ecosystem
+            SaveFilterToEcosystem(filterJaml);
 
             _activeSearches[searchId] = search;
 
@@ -219,6 +231,19 @@ public class SearchManager
         return _activeSearches.ContainsKey(searchId);
     }
 
+    public bool TryGetSearchProgress(string searchId, out long currentBatch, out long totalBatches)
+    {
+        currentBatch = 0;
+        totalBatches = 0;
+
+        if (!_activeSearches.TryGetValue(searchId, out var search))
+            return false;
+
+        currentBatch = search.CompletedBatches;
+        totalBatches = search.TotalBatches;
+        return true;
+    }
+
     public bool TryGetSearchMetrics(
         string searchId,
         out long currentBatch,
@@ -267,10 +292,31 @@ public class SearchManager
     public bool TryGetRunningSearchFilterJaml(string searchId, out string filterJaml)
     {
         filterJaml = "";
-        if (!_activeSearches.TryGetValue(searchId, out var search))
-            return false;
-        filterJaml = search.FilterJaml;
-        return !string.IsNullOrWhiteSpace(filterJaml);
+        
+        // First check active searches
+        if (_activeSearches.TryGetValue(searchId, out var search))
+        {
+            filterJaml = search.FilterJaml;
+            if (!string.IsNullOrWhiteSpace(filterJaml))
+                return true;
+        }
+        
+        // If not in active searches, try to load from saved metadata file
+        var jamlPath = Path.Combine(_searchResultsDir, $"{searchId}.jaml");
+        if (File.Exists(jamlPath))
+        {
+            try
+            {
+                filterJaml = File.ReadAllText(jamlPath);
+                return !string.IsNullOrWhiteSpace(filterJaml);
+            }
+            catch
+            {
+                // File read failed, return false
+            }
+        }
+        
+        return false;
     }
 
     public bool TryGetSearchOverrides(string searchId, out long? startBatchOverride, out int? cutoffOverride)
@@ -558,6 +604,49 @@ public class SearchManager
             return;
         }
 
+        if (s.StartsWith("csv:", StringComparison.OrdinalIgnoreCase))
+        {
+            var file = s.Substring("csv:".Length).Trim();
+            if (file.Length == 0) return;
+            
+            var safeName = Path.GetFileName(file);
+            string? csvPath = null;
+            
+            if (!string.IsNullOrWhiteSpace(_motelyRoot))
+            {
+                var p1 = Path.Combine(_motelyRoot, "WordLists", safeName);
+                if (File.Exists(p1))
+                {
+                    csvPath = p1;
+                }
+                else
+                {
+                    var p2 = Path.Combine(_motelyRoot, "wordlists", safeName);
+                    if (File.Exists(p2))
+                    {
+                        csvPath = p2;
+                    }
+                }
+            }
+            
+            if (csvPath == null && File.Exists(file))
+            {
+                csvPath = file;
+            }
+            
+            if (csvPath != null && File.Exists(csvPath))
+            {
+                // Parse CSV and validate seeds
+                var csvContent = File.ReadAllText(csvPath);
+                var seeds = SeedSourceHelper.ParseCsvSeeds(csvContent);
+                if (seeds.Count > 0)
+                {
+                    searchParams.SeedList = seeds;
+                }
+            }
+            return;
+        }
+
         if (s.StartsWith("db:", StringComparison.OrdinalIgnoreCase))
         {
             var file = s.Substring("db:".Length).Trim();
@@ -616,7 +705,15 @@ public class SearchManager
                 Quiet = false
             };
 
-            ApplySeedSource(searchParams, search.SeedSource);
+            // If SeedList is provided, use it directly; otherwise apply seed source
+            if (search.SeedList != null && search.SeedList.Count > 0)
+            {
+                searchParams.SeedList = search.SeedList;
+            }
+            else
+            {
+                ApplySeedSource(searchParams, search.SeedSource);
+            }
 
             searchParams.ProgressCallback = (completedBatches, totalBatches, seedsSearched, seedsPerMs) =>
             {
@@ -634,9 +731,12 @@ public class SearchManager
                 {
                 }
 
+                // Check if search is complete (all batches done)
+                bool isComplete = totalBatches > 0 && completedBatches >= totalBatches;
+
                 _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
                 {
-                    type = "progress",
+                    type = isComplete ? "search_completed" : "progress",
                     searchId = search.SearchId,
                     currentBatch = search.CompletedBatches,
                     totalBatches = search.TotalBatches,
@@ -644,7 +744,8 @@ public class SearchManager
                     seedsPerSecond = search.SeedsPerSecond,
                     seedsFound = search.TotalResults,
                     columns = search.ColumnNames,
-                    threadsInUse = search.AssignedThreads
+                    threadsInUse = search.AssignedThreads,
+                    completed = isComplete
                 }));
             };
 
@@ -690,6 +791,16 @@ public class SearchManager
         {
             if (search.StopReason == null && search.RunInstanceId == runId)
             {
+                // Broadcast search completion if it finished naturally (not cancelled)
+                _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+                {
+                    type = "search_completed",
+                    searchId = search.SearchId,
+                    seedsFound = search.TotalResults,
+                    seedsSearched = search.SeedsSearched,
+                    columns = search.ColumnNames
+                }));
+
                 try
                 {
                     var dbPath = search.Database?.DatabasePath
@@ -797,7 +908,7 @@ public class SearchManager
         await FertilizerDatabase.Instance.AddSeedsAsync(topSeeds);
     }
 
-    private List<string> GetTopSeedsOnlyFromDb(string dbPath, int limit)
+    public List<string> GetTopSeedsOnlyFromDb(string dbPath, int limit)
     {
         if (!File.Exists(dbPath)) return new List<string>();
 
@@ -900,6 +1011,69 @@ public class SearchManager
     internal string GetFilterNameForId(string filterJaml)
     {
         return GetFilterName(filterJaml);
+    }
+
+    private void SaveFilterToEcosystem(string filterJaml)
+    {
+        if (string.IsNullOrWhiteSpace(_motelyRoot) || string.IsNullOrWhiteSpace(filterJaml))
+            return;
+
+        try
+        {
+            var filtersPath = Path.Combine(_motelyRoot, "JamlFilters");
+            Directory.CreateDirectory(filtersPath);
+
+            // Extract name from JAML config
+            string? normalizedName = null;
+            if (JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var cfg, out _) && cfg != null)
+            {
+                if (!string.IsNullOrWhiteSpace(cfg.Name))
+                {
+                    normalizedName = SanitizeFilterFileStem(cfg.Name);
+                }
+            }
+
+            // If we couldn't extract a name, generate one from the filter content
+            if (string.IsNullOrWhiteSpace(normalizedName))
+            {
+                normalizedName = GetFilterName(filterJaml);
+                if (string.IsNullOrWhiteSpace(normalizedName) || normalizedName == "UnknownFilter")
+                {
+                    normalizedName = $"Filter_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+                }
+                normalizedName = SanitizeFilterFileStem(normalizedName);
+            }
+
+            var fileName = normalizedName + ".jaml";
+            var fullPath = Path.Combine(filtersPath, fileName);
+
+            // Only save if it doesn't already exist (don't overwrite user's saved filters)
+            if (!File.Exists(fullPath))
+            {
+                File.WriteAllText(fullPath, filterJaml);
+                _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+            }
+        }
+        catch
+        {
+            // Silently fail - saving to ecosystem is nice-to-have, not critical
+        }
+    }
+
+    private static string SanitizeFilterFileStem(string name)
+    {
+        var trimmed = (name ?? string.Empty).Trim();
+        if (trimmed.Length == 0)
+            return string.Empty;
+
+        // Replace spaces with underscores
+        trimmed = trimmed.Replace(' ', '_');
+        
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = trimmed.Select(c => invalid.Contains(c) ? '-' : c).ToArray();
+        var safe = new string(chars).Trim();
+        safe = safe.Replace(Path.DirectorySeparatorChar, '-').Replace(Path.AltDirectorySeparatorChar, '-');
+        return safe;
     }
 }
 
