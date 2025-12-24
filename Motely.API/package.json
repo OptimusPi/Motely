@@ -1,0 +1,37 @@
+{
+  "name": "balatro-seed-oracle-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for searching Balatro seeds using natural language",
+  "main": "index.js",
+  "bin": {
+    "balatro-seed-oracle-mcp": "./bin/mcp-server.js"
+  },
+  "scripts": {
+    "install": "node scripts/install.js",
+    "start": "node bin/mcp-server.js",
+    "docker:build": "docker build -f Dockerfile -t balatro-seed-oracle-mcp:latest .",
+    "docker:run": "docker run -i balatro-seed-oracle-mcp:latest"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "balatro",
+    "seed",
+    "jaml",
+    "claude",
+    "cursor",
+    "ai"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/balatro-seed-oracle-mcp.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
+

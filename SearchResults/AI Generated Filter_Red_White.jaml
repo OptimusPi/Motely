@@ -1,0 +1,12 @@
+dateCreated: 2025-12-24
+name: AI Generated Filter
+author: JamlGenie MCP
+
+name: Two Blueprints
+deck: Red
+stake: White
+must:
+  - joker: Blueprint
+    count: 2
+should: []
+mustNot: []

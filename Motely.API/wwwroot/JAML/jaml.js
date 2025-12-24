@@ -1,9 +1,921 @@
+// JAML UI v2.0 - Docking System (2024-12-24)
+console.log('🎄 JAML UI v2.0 - Docking System loaded');
+
 // Global state
 let colorModeActive = false;
+let currentLeftTab = 'jaml'; // Track which left panel tab is active
 
-// Status helper
-const statusEl = document.getElementById('status');
-function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+// Go home - navigate to landing page
+function goHome() {
+  window.location.href = '/';
+}
+
+// Status helper - wait for DOM to be ready
+let statusEl = null;
+function initStatus() {
+  statusEl = document.getElementById('status') || document.querySelector('.results-status');
+}
+function setStatus(msg) { 
+  if (!statusEl) initStatus();
+  if (statusEl) statusEl.textContent = msg; 
+}
+
+// ==========================================
+// Left Panel Tab Switching
+// ==========================================
+function switchLeftTab(tabId) {
+  currentLeftTab = tabId;
+  
+  // Update tab buttons
+  document.querySelectorAll('.left-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  });
+  
+  // Update tab content
+  document.querySelectorAll('.left-tab-content').forEach(content => {
+    const isActive = content.id === `tab${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`;
+    content.classList.toggle('active', isActive);
+    content.style.display = isActive ? 'flex' : 'none';
+  });
+  
+  // If switching to JAML tab and Monaco is active, relayout
+  if (tabId === 'jaml' && monacoMode && window.jamlEditor) {
+    setTimeout(() => window.jamlEditor.layout(), 100);
+  }
+  
+  setStatus(`Switched to ${tabId === 'jaml' ? 'JAML Editor' : 'Blueprint Analyzer'}`);
+}
+
+function analyzeSeedInBlueprint() {
+  const seedInput = document.getElementById('blueprintSeedInput');
+  const iframe = document.getElementById('blueprintFrame');
+  
+  if (!seedInput || !iframe) return;
+  
+  const seed = seedInput.value.trim();
+  if (!seed) {
+    setStatus('Enter a seed to analyze');
+    return;
+  }
+  
+  // Blueprint uses hash-based routing: https://miaklwalker.github.io/Blueprint/#/seed/SEEDVALUE
+  iframe.src = `https://miaklwalker.github.io/Blueprint/#/seed/${encodeURIComponent(seed)}`;
+  setStatus(`Analyzing seed: ${seed}`);
+}
+
+function openBlueprintExternal() {
+  const seedInput = document.getElementById('blueprintSeedInput');
+  const seed = seedInput?.value.trim();
+  
+  if (seed) {
+    window.open(`https://miaklwalker.github.io/Blueprint/#/seed/${encodeURIComponent(seed)}`, '_blank');
+  } else {
+    window.open('https://miaklwalker.github.io/Blueprint/', '_blank');
+  }
+}
+
+// ==========================================
+// Collapsible Panel System
+// ==========================================
+const collapsibleState = new Map(); // Track state per grabber ID
+
+function initCollapsibleGrabber(grabberId, contentId, options = {}) {
+  // This function now only initializes state - drag is handled by initDockingSystem
+  const grabber = document.getElementById(grabberId);
+  const content = document.getElementById(contentId);
+  
+  if (!grabber || !content) {
+    console.warn(`Collapsible grabber: ${grabberId} or content: ${contentId} not found`);
+    return;
+  }
+  
+  // Initialize state for collapse tracking
+  collapsibleState.set(grabberId, {
+    collapsed: false,
+    savedHeight: content.offsetHeight || 200
+  });
+  
+}
+
+function toggleCollapse(grabberId, contentId) {
+  const grabber = document.getElementById(grabberId);
+  const content = document.getElementById(contentId);
+  const state = collapsibleState.get(grabberId);
+  
+  if (!grabber || !content || !state) return;
+  
+  state.collapsed = !state.collapsed;
+  
+  if (state.collapsed) {
+    // Save current height before collapsing
+    state.savedHeight = content.offsetHeight;
+    content.style.flex = '0 0 0px';
+    content.style.minHeight = '0';
+    content.style.overflow = 'hidden';
+    content.classList.add('collapsed');
+    grabber.classList.add('collapsed');
+  } else {
+    // Restore height
+    content.style.flex = `0 0 ${state.savedHeight || 200}px`;
+    content.style.minHeight = '';
+    content.style.overflow = '';
+    content.classList.remove('collapsed');
+    grabber.classList.remove('collapsed');
+    
+    // Lazy-load Blueprint iframe when expanded
+    if (contentId === 'blueprintSection') {
+      loadBlueprintIfNeeded();
+    }
+  }
+  
+  // Relayout Monaco if needed
+  if (window.jamlEditor) {
+    setTimeout(() => window.jamlEditor.layout(), 100);
+  }
+}
+
+// Toggle section by section ID (called from tab clicks)
+// The tab is on the grab-bar BEFORE the section, clicking it collapses the section BELOW
+function toggleSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/0f8c8e54-800c-41d4-af5e-2f54bfd2e135',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H2',location:'jaml.js:toggleSection',message:'toggleSection called',data:{sectionId,collapsed:section.classList.contains('collapsed')},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  
+  // Find the grabber BEFORE this section
+  let grabberId = null;
+  
+  // Map sections to their grabbers (grabber comes BEFORE the section)
+  // Filter section uses section-tab, not grab-bar
+  const sectionToGrabber = {
+    'jamlEditorSection': null, // Uses section-tab, not grab-bar
+    'blueprintSection': 'blueprintGrabber',
+    'resultsSection': 'resultsGrabber'
+  };
+  
+  // Special handling for Filter section with section-tab
+  if (sectionId === 'jamlEditorSection') {
+    const section = document.getElementById('jamlEditorSection');
+    if (!section) return;
+    
+    // Initialize state if needed
+    if (!collapsibleState.has('jamlEditorSection')) {
+      collapsibleState.set('jamlEditorSection', {
+        collapsed: false,
+        savedHeight: section.offsetHeight || 200
+      });
+    }
+    
+    const state = collapsibleState.get('jamlEditorSection');
+    state.collapsed = !state.collapsed;
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/0f8c8e54-800c-41d4-af5e-2f54bfd2e135',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run1',hypothesisId:'H2',location:'jaml.js:toggleSection:jamlEditorSection',message:'toggled jamlEditorSection',data:{collapsed:state.collapsed,savedHeight:state.savedHeight},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    
+    if (state.collapsed) {
+      state.savedHeight = section.offsetHeight;
+      section.style.flex = '0 0 0px';
+      section.style.minHeight = '0';
+      section.style.overflow = 'hidden';
+      section.classList.add('collapsed');
+    } else {
+      section.style.flex = `0 0 ${state.savedHeight || 200}px`;
+      section.style.minHeight = '';
+      section.style.overflow = '';
+      section.classList.remove('collapsed');
+    }
+    
+    if (window.jamlEditor) {
+      setTimeout(() => window.jamlEditor.layout(), 100);
+    }
+    return;
+  }
+  
+  grabberId = sectionToGrabber[sectionId];
+  if (!grabberId) return;
+  
+  // Use existing toggleCollapse logic - but we need to find the section ABOVE the grabber
+  const grabber = document.getElementById(grabberId);
+  if (!grabber) return;
+  
+  // For collapse, we collapse the section BELOW the grabber (the one the tab is named after)
+  // But toggleCollapse expects (grabberId, contentId) where contentId is the section to collapse
+  // Initialize state if needed
+  if (!collapsibleState.has(grabberId)) {
+    collapsibleState.set(grabberId, {
+      collapsed: false,
+      savedHeight: section.offsetHeight || 200
+    });
+  }
+  
+  toggleCollapse(grabberId, sectionId);
+}
+
+// [REMOVED] initCollapsibleDrag - replaced by initDockingSystem
+
+// Lazy-load Blueprint iframe when section is expanded
+function loadBlueprintIfNeeded() {
+  const iframe = document.getElementById('blueprintFrame');
+  if (iframe && iframe.dataset.src && !iframe.src.includes('miaklwalker')) {
+    iframe.src = iframe.dataset.src;
+  }
+}
+
+// ==========================================
+// DOCKING SYSTEM - Drag tabs to resize, detach, and dock panels
+// ==========================================
+const dockingState = {
+  isDragging: false,
+  dragStartX: 0,
+  dragStartY: 0,
+  activeTab: null,
+  activeSection: null,
+  activeWrapper: null,
+  dropZones: [],
+  dragHint: null,
+  hideBasket: null,
+  rightColumnCollapsed: false,
+  poppedPanels: [],
+  hiddenPanels: [] // Panels hidden in the basket
+};
+
+// Create drop zone elements
+function createDropZones() {
+  // Remove existing drop zones
+  document.querySelectorAll('.drop-zone').forEach(el => el.remove());
+  
+  const appLayout = document.querySelector('.app-layout');
+  if (!appLayout) return;
+  
+  // Right-side drop zone (for revealing 2-column layout from left)
+  const rightZone = document.createElement('div');
+  rightZone.className = 'drop-zone drop-zone-right';
+  rightZone.id = 'dropZoneRight';
+  rightZone.dataset.position = 'right';
+  appLayout.appendChild(rightZone);
+  
+  // Left-side drop zone (for moving from right column to left)
+  const leftZone = document.createElement('div');
+  leftZone.className = 'drop-zone drop-zone-left';
+  leftZone.id = 'dropZoneLeft';
+  leftZone.dataset.position = 'left';
+  appLayout.appendChild(leftZone);
+  
+  // Bottom drop zone for each column
+  const leftHalf = document.querySelector('.left-half .half-content');
+  const rightHalf = document.querySelector('.right-half .half-content');
+  
+  if (leftHalf) {
+    const leftBottomZone = document.createElement('div');
+    leftBottomZone.className = 'drop-zone drop-zone-bottom';
+    leftBottomZone.id = 'dropZoneLeftBottom';
+    leftBottomZone.dataset.position = 'left-bottom';
+    leftHalf.appendChild(leftBottomZone);
+  }
+  
+  if (rightHalf) {
+    const rightBottomZone = document.createElement('div');
+    rightBottomZone.className = 'drop-zone drop-zone-bottom';
+    rightBottomZone.id = 'dropZoneRightBottom';
+    rightBottomZone.dataset.position = 'right-bottom';
+    rightHalf.appendChild(rightBottomZone);
+  }
+  
+  dockingState.dropZones = document.querySelectorAll('.drop-zone');
+}
+
+// Create drag hint element
+function createDragHint() {
+  if (dockingState.dragHint) return;
+  
+  const hint = document.createElement('div');
+  hint.className = 'drag-hint';
+  hint.innerHTML = '<span class="drag-hint-arrow">→→</span> PULL to DETACH <span class="drag-hint-arrow">→→</span>';
+  document.body.appendChild(hint);
+  dockingState.dragHint = hint;
+}
+
+// Create hide basket element (drops down from settings gear)
+function createHideBasket() {
+  if (dockingState.hideBasket) return;
+  
+  const basket = document.createElement('div');
+  basket.className = 'hide-basket';
+  basket.id = 'hideBasket';
+  basket.innerHTML = `
+    <div class="hide-basket-icon">📥</div>
+    <div class="hide-basket-label">Hide for later</div>
+    <div class="hide-basket-count" id="hideBasketCount">0</div>
+  `;
+  document.body.appendChild(basket);
+  dockingState.hideBasket = basket;
+  
+  // Click to show hidden panels menu
+  basket.addEventListener('click', toggleHiddenPanelsMenu);
+}
+
+// Toggle hidden panels menu
+function toggleHiddenPanelsMenu() {
+  let menu = document.getElementById('hiddenPanelsMenu');
+  
+  if (menu) {
+    menu.remove();
+    return;
+  }
+  
+  if (dockingState.hiddenPanels.length === 0) {
+    setStatus('No hidden panels');
+    return;
+  }
+  
+  menu = document.createElement('div');
+  menu.className = 'hidden-panels-menu';
+  menu.id = 'hiddenPanelsMenu';
+  
+  dockingState.hiddenPanels.forEach((panel, i) => {
+    const item = document.createElement('div');
+    item.className = 'hidden-panel-item';
+    item.innerHTML = `
+      <span class="hidden-panel-color" style="background: ${panel.color}"></span>
+      <span class="hidden-panel-name">${panel.name}</span>
+      <button class="hidden-panel-restore" data-index="${i}">↩ Restore</button>
+    `;
+    item.querySelector('.hidden-panel-restore').onclick = (e) => {
+      e.stopPropagation();
+      restoreHiddenPanel(i);
+      menu.remove();
+    };
+    menu.appendChild(item);
+  });
+  
+  document.body.appendChild(menu);
+  
+  // Position below settings gear
+  const topTab = document.querySelector('.top-center-tab');
+  if (topTab) {
+    const rect = topTab.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + 8}px`;
+    menu.style.right = '20px';
+  }
+  
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function closeMenu(e) {
+      if (!menu.contains(e.target)) {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      }
+    });
+  }, 100);
+}
+
+// Hide a panel in the basket
+function hidePanel(wrapper, section) {
+  const tab = wrapper.querySelector('.section-tab');
+  const tabText = tab?.textContent?.trim() || 'Panel';
+  const tabColor = tab?.classList.contains('section-tab-purple') ? 'var(--balatro-purple)' :
+                   tab?.classList.contains('section-tab-blue') ? 'var(--balatro-blue)' :
+                   tab?.classList.contains('section-tab-red') ? 'var(--balatro-red)' :
+                   tab?.classList.contains('section-tab-green') ? 'var(--balatro-green)' :
+                   'var(--panel-bg)';
+  
+  dockingState.hiddenPanels.push({
+    element: wrapper,
+    sectionId: section.id,
+    name: tabText,
+    color: tabColor,
+    parentColumn: wrapper.closest('.left-half') ? 'left' : 'right'
+  });
+  
+  wrapper.style.display = 'none';
+  updateHideBasketCount();
+  setStatus(`Hidden: ${tabText}`);
+  
+  if (window.jamlEditor) {
+    setTimeout(() => window.jamlEditor.layout(), 100);
+  }
+}
+
+// Restore a hidden panel
+function restoreHiddenPanel(index) {
+  const panel = dockingState.hiddenPanels[index];
+  if (!panel) return;
+  
+  // Find target column
+  const targetColumn = panel.parentColumn === 'left' 
+    ? document.querySelector('.left-half .half-content')
+    : document.querySelector('.right-half .half-content');
+  
+  if (targetColumn && panel.element) {
+    panel.element.style.display = '';
+    targetColumn.appendChild(panel.element);
+    
+    // Re-init docking
+    setTimeout(() => initPanelDocking(panel.sectionId), 100);
+  }
+  
+  dockingState.hiddenPanels.splice(index, 1);
+  updateHideBasketCount();
+  setStatus(`Restored: ${panel.name}`);
+  
+  if (window.jamlEditor) {
+    setTimeout(() => window.jamlEditor.layout(), 100);
+  }
+}
+
+// Update hide basket count badge
+function updateHideBasketCount() {
+  const countEl = document.getElementById('hideBasketCount');
+  if (countEl) {
+    countEl.textContent = dockingState.hiddenPanels.length;
+    countEl.style.display = dockingState.hiddenPanels.length > 0 ? 'flex' : 'none';
+  }
+}
+
+// Position drag hint relative to touch/mouse, offset based on column
+function positionDragHint(x, y, isRightColumn = false) {
+  if (!dockingState.dragHint) return;
+  
+  if (isRightColumn) {
+    // Left column tabs: hint to the left and up
+    dockingState.dragHint.style.left = `${x - 160}px`;
+    dockingState.dragHint.innerHTML = '<span class="drag-hint-arrow">←←</span> PULL to MOVE <span class="drag-hint-arrow">←←</span>';
+  } else {
+    // Right column tabs: hint to the right and up  
+    dockingState.dragHint.style.left = `${x + 16}px`;
+    dockingState.dragHint.innerHTML = '<span class="drag-hint-arrow">→→</span> PULL to DETACH <span class="drag-hint-arrow">→→</span>';
+  }
+  dockingState.dragHint.style.top = `${y - 32}px`;
+}
+
+// Show/hide the hide basket during drag
+function showHideBasket(show) {
+  if (!dockingState.hideBasket) createHideBasket();
+  dockingState.hideBasket.classList.toggle('visible', show);
+}
+
+// Check if over hide basket
+function isOverHideBasket(x, y) {
+  if (!dockingState.hideBasket) return false;
+  const rect = dockingState.hideBasket.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+// Show/hide drop zones based on drag position
+function updateDropZones(dragX, tabRect, halfContent, isRightColumn = false) {
+  if (!halfContent) return;
+  
+  const screenCenter = window.innerWidth / 2;
+  
+  if (isRightColumn) {
+    // Right column: dragging LEFT reveals left drop zone
+    const threshold = screenCenter - (screenCenter - tabRect.left) / 2;
+    const pastThreshold = dragX < threshold;
+    
+    const leftZone = document.getElementById('dropZoneLeft');
+    if (leftZone) {
+      if (pastThreshold) {
+        leftZone.classList.add('visible');
+        halfContent.classList.add('squeeze-right');
+      } else {
+        leftZone.classList.remove('visible');
+        halfContent.classList.remove('squeeze-right');
+      }
+    }
+  } else {
+    // Left column: dragging RIGHT reveals right drop zone
+    const threshold = (tabRect.left + screenCenter) / 2;
+    const pastThreshold = dragX > threshold;
+    
+    const rightZone = document.getElementById('dropZoneRight');
+    if (rightZone) {
+      if (pastThreshold && !dockingState.rightColumnCollapsed) {
+        rightZone.classList.add('visible');
+        halfContent.classList.add('squeeze-left');
+      } else {
+        rightZone.classList.remove('visible');
+        halfContent.classList.remove('squeeze-left');
+      }
+    }
+  }
+  
+  // Always show bottom drop zones when dragging
+  const leftBottomZone = document.getElementById('dropZoneLeftBottom');
+  const rightBottomZone = document.getElementById('dropZoneRightBottom');
+  if (leftBottomZone) leftBottomZone.classList.add('visible');
+  if (rightBottomZone && !dockingState.rightColumnCollapsed) rightBottomZone.classList.add('visible');
+}
+
+// Check if position is over a drop zone
+function getDropZoneAt(x, y) {
+  for (const zone of dockingState.dropZones) {
+    if (!zone.classList.contains('visible')) continue;
+    const rect = zone.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return zone;
+    }
+  }
+  return null;
+}
+
+// Handle drop on a zone
+function handleDrop(zone, section, wrapper) {
+  const position = zone.dataset.position;
+  
+  if (position === 'right') {
+    // Move panel to right column
+    const rightHalf = document.querySelector('.right-half .half-content');
+    if (rightHalf && wrapper) {
+      rightHalf.appendChild(wrapper);
+      // Re-initialize drag for moved panel
+      setTimeout(() => initPanelDocking(section.id), 100);
+      setStatus(`Moved to right column`);
+    }
+  } else if (position === 'left') {
+    // Move panel to left column
+    const leftHalf = document.querySelector('.left-half .half-content');
+    if (leftHalf && wrapper) {
+      leftHalf.appendChild(wrapper);
+      setTimeout(() => initPanelDocking(section.id), 100);
+      setStatus(`Moved to left column`);
+    }
+  } else if (position === 'left-bottom' || position === 'right-bottom') {
+    // Move panel to bottom of respective column
+    const targetHalf = position.startsWith('left') 
+      ? document.querySelector('.left-half .half-content')
+      : document.querySelector('.right-half .half-content');
+    if (targetHalf && wrapper) {
+      targetHalf.appendChild(wrapper);
+      setTimeout(() => initPanelDocking(section.id), 100);
+      setStatus(`Moved to ${position.startsWith('left') ? 'left' : 'right'} column bottom`);
+    }
+  }
+  
+  // Clean up
+  hideAllDropZones();
+  showHideBasket(false);
+  if (window.jamlEditor) {
+    setTimeout(() => window.jamlEditor.layout(), 100);
+  }
+}
+
+// Hide all drop zones
+function hideAllDropZones() {
+  dockingState.dropZones.forEach(zone => {
+    zone.classList.remove('visible', 'hover');
+  });
+  document.querySelectorAll('.half-content').forEach(el => {
+    el.classList.remove('squeeze-left', 'squeeze-right');
+  });
+  if (dockingState.dragHint) {
+    dockingState.dragHint.classList.remove('visible');
+  }
+  if (dockingState.hideBasket) {
+    dockingState.hideBasket.classList.remove('hover');
+  }
+}
+
+// Initialize docking for a specific panel
+function initPanelDocking(sectionId) {
+  const section = document.getElementById(sectionId);
+  const wrapper = section?.closest('.section-with-tab');
+  const tab = wrapper?.querySelector('.section-tab');
+  if (!section || !tab) return;
+  
+  // Use Interact.js for smooth drag/resize
+  if (typeof interact === 'undefined') {
+    console.warn('Interact.js not loaded');
+    return;
+  }
+  
+  const topTabHeight = 48;
+  const halfContent = wrapper.closest('.half-content');
+  
+  // Detect which column this panel is in
+  const isRightColumn = !!wrapper.closest('.right-half');
+  
+  // Track cumulative horizontal movement
+  let cumulativeX = 0;
+  let startTabRect = null;
+  let detachThresholdMet = false;
+  
+  interact(tab)
+    .draggable({
+      // Allow both X and Y movement
+      listeners: {
+        start(event) {
+          tab.classList.add('dragging');
+          dockingState.isDragging = true;
+          dockingState.activeTab = tab;
+          dockingState.activeSection = section;
+          dockingState.activeWrapper = wrapper;
+          dockingState.dragStartX = event.clientX;
+          dockingState.dragStartY = event.clientY;
+          cumulativeX = 0;
+          detachThresholdMet = false;
+          startTabRect = tab.getBoundingClientRect();
+          
+          wrapper.style.transition = 'none';
+          
+          // Show drag hint with correct direction
+          createDragHint();
+          positionDragHint(event.clientX, event.clientY, isRightColumn);
+          dockingState.dragHint.classList.add('visible');
+          
+          // Show hide basket
+          showHideBasket(true);
+        },
+        move(event) {
+          const deltaY = event.dy;
+          const deltaX = event.dx;
+          cumulativeX += deltaX;
+          
+          // Update drag hint position with column awareness
+          positionDragHint(event.clientX, event.clientY, isRightColumn);
+          
+          // Vertical resize (existing behavior)
+          const currentHeight = section.offsetHeight;
+          const currentTop = parseInt(wrapper.style.top) || 0;
+          
+          let newHeight = currentHeight - deltaY;
+          newHeight = Math.max(100, newHeight);
+          
+          let newTop = currentTop - deltaY;
+          const maxTop = 0;
+          const minTop = -topTabHeight;
+          newTop = Math.max(minTop, Math.min(maxTop, newTop));
+          
+          // Apply vertical changes
+          wrapper.style.top = `${newTop}px`;
+          wrapper.style.position = newTop < 0 ? 'relative' : '';
+          wrapper.style.zIndex = newTop < 0 ? '1001' : '';
+          
+          section.style.height = `${newHeight}px`;
+          section.style.flex = `0 0 ${newHeight}px`;
+          
+          // Add drag-up indicator
+          if (deltaY < 0) {
+            tab.classList.add('drag-up');
+          } else {
+            tab.classList.remove('drag-up');
+          }
+          
+          // Check for detach threshold based on column
+          const detachThreshold = 40; // pixels to drag before detach hint changes
+          if (isRightColumn) {
+            // Right column: drag LEFT to detach
+            detachThresholdMet = cumulativeX < -detachThreshold;
+          } else {
+            // Left column: drag RIGHT to detach
+            detachThresholdMet = cumulativeX > detachThreshold;
+          }
+          
+          // Horizontal: check for drop zone reveal
+          if (startTabRect && Math.abs(cumulativeX) > 20) {
+            updateDropZones(event.clientX, startTabRect, halfContent, isRightColumn);
+            
+            // Check if over drop zone
+            const zone = getDropZoneAt(event.clientX, event.clientY);
+            dockingState.dropZones.forEach(z => z.classList.remove('hover'));
+            if (zone) {
+              zone.classList.add('hover');
+            }
+            
+            // Check if over hide basket
+            if (isOverHideBasket(event.clientX, event.clientY)) {
+              dockingState.hideBasket.classList.add('hover');
+            } else {
+              dockingState.hideBasket?.classList.remove('hover');
+            }
+          }
+          
+          // Throttle Monaco layout updates
+          if (window.jamlEditor && !window.jamlLayoutTimeout) {
+            window.jamlLayoutTimeout = setTimeout(() => {
+              window.jamlEditor.layout();
+              window.jamlLayoutTimeout = null;
+            }, 100);
+          }
+        },
+        end(event) {
+          tab.classList.remove('dragging', 'drag-up');
+          dockingState.isDragging = false;
+          wrapper.style.transition = '';
+          
+          // Check if dropped on hide basket
+          if (isOverHideBasket(event.clientX, event.clientY)) {
+            hidePanel(wrapper, section);
+            hideAllDropZones();
+            showHideBasket(false);
+            return;
+          }
+          
+          // Check if dropped on a zone
+          const zone = getDropZoneAt(event.clientX, event.clientY);
+          if (zone && zone.classList.contains('visible')) {
+            handleDrop(zone, section, wrapper);
+          }
+          
+          showHideBasket(false);
+          
+          hideAllDropZones();
+          
+          // Final layout update
+          if (window.jamlEditor) {
+            setTimeout(() => window.jamlEditor.layout(), 50);
+          }
+        }
+      }
+    });
+  
+  console.log(`initPanelDocking: Initialized for ${sectionId}`);
+}
+
+// Initialize splitter to allow collapsing right column
+function initSplitterCollapse() {
+  const splitter = document.getElementById('panelSplitter1');
+  const topTab = document.querySelector('.top-center-tab');
+  const rightHalf = document.querySelector('.right-half');
+  const leftHalf = document.querySelector('.left-half');
+  const container = document.querySelector('.full-split');
+  
+  if (!splitter || !topTab || !rightHalf || !container) return;
+  
+  if (typeof interact === 'undefined') return;
+  
+  // Enhance existing splitter behavior
+  interact(topTab)
+    .draggable({
+      axis: 'x',
+      ignoreFrom: '.tab-icon-btn',
+      listeners: {
+        start(event) {
+          if (event.target.classList.contains('tab-icon-btn') || 
+              event.target.closest('button.tab-icon-btn')) {
+            event.stopImmediatePropagation();
+            return;
+          }
+          topTab.classList.add('dragging');
+          document.body.style.cursor = 'ew-resize';
+        },
+        move(event) {
+          const containerRect = container.getBoundingClientRect();
+          const currentWidth = leftHalf.offsetWidth;
+          let newWidth = currentWidth + event.dx;
+          
+          const maxWidth = containerRect.width - 8; // 8px from right edge
+          const minWidth = 200;
+          
+          newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+          
+          // Check if near right edge (within 8px)
+          const distanceFromRight = containerRect.width - newWidth;
+          
+          if (distanceFromRight <= 8) {
+            // Collapse right column
+            leftHalf.style.flex = '1';
+            rightHalf.classList.add('collapsed-to-edge');
+            splitter.classList.add('at-edge');
+            topTab.classList.add('single-column');
+            dockingState.rightColumnCollapsed = true;
+            
+            // Pop panels to bottom
+            popPanelsToBottom();
+          } else {
+            // Normal resize
+            const pct = (newWidth / containerRect.width) * 100;
+            leftHalf.style.flex = `0 0 ${pct}%`;
+            
+            if (dockingState.rightColumnCollapsed) {
+              rightHalf.classList.remove('collapsed-to-edge');
+              splitter.classList.remove('at-edge');
+              topTab.classList.remove('single-column');
+              dockingState.rightColumnCollapsed = false;
+              restorePoppedPanels();
+            }
+          }
+          
+          if (window.jamlEditor) {
+            window.jamlEditor.layout();
+          }
+        },
+        end(event) {
+          topTab.classList.remove('dragging');
+          document.body.style.cursor = '';
+          
+          if (window.jamlEditor) {
+            setTimeout(() => window.jamlEditor.layout(), 50);
+          }
+        }
+      }
+    });
+}
+
+// Pop right-side panels to bottom tabs when column collapses
+function popPanelsToBottom() {
+  const rightContent = document.querySelector('.right-half .half-content');
+  if (!rightContent) return;
+  
+  // Store panel references
+  const panels = rightContent.querySelectorAll('.section-with-tab');
+  dockingState.poppedPanels = Array.from(panels).map(p => ({
+    element: p,
+    sectionId: p.querySelector('.panel-section')?.id
+  }));
+  
+  // Create popped panels bar if doesn't exist
+  let poppedBar = document.querySelector('.popped-panels');
+  if (!poppedBar) {
+    poppedBar = document.createElement('div');
+    poppedBar.className = 'popped-panels';
+    document.body.appendChild(poppedBar);
+  }
+  
+  // Add tabs for each popped panel
+  poppedBar.innerHTML = '';
+  dockingState.poppedPanels.forEach((p, i) => {
+    const tab = p.element.querySelector('.section-tab');
+    const tabText = tab?.textContent?.trim() || `Panel ${i + 1}`;
+    const tabColor = tab?.classList.contains('section-tab-purple') ? 'var(--balatro-purple)' :
+                     tab?.classList.contains('section-tab-blue') ? 'var(--balatro-blue)' :
+                     tab?.classList.contains('section-tab-red') ? 'var(--balatro-red)' :
+                     tab?.classList.contains('section-tab-green') ? 'var(--balatro-green)' :
+                     'var(--panel-bg)';
+    
+    const poppedTab = document.createElement('div');
+    poppedTab.className = 'popped-panel-tab';
+    poppedTab.style.borderTopColor = tabColor;
+    poppedTab.textContent = tabText;
+    poppedTab.dataset.index = i;
+    poppedTab.onclick = () => expandPoppedPanel(i);
+    poppedBar.appendChild(poppedTab);
+    
+    // Hide original panel
+    p.element.style.display = 'none';
+  });
+}
+
+// Restore popped panels when column expands
+function restorePoppedPanels() {
+  dockingState.poppedPanels.forEach(p => {
+    p.element.style.display = '';
+  });
+  
+  // Remove popped panels bar
+  const poppedBar = document.querySelector('.popped-panels');
+  if (poppedBar) poppedBar.remove();
+  
+  dockingState.poppedPanels = [];
+}
+
+// Expand a popped panel (show it temporarily)
+function expandPoppedPanel(index) {
+  const panel = dockingState.poppedPanels[index];
+  if (!panel) return;
+  
+  // Toggle active state
+  document.querySelectorAll('.popped-panel-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === index);
+  });
+  
+  // Show/hide panels
+  dockingState.poppedPanels.forEach((p, i) => {
+    if (i === index) {
+      p.element.style.display = '';
+      p.element.style.position = 'fixed';
+      p.element.style.bottom = '60px';
+      p.element.style.right = '0';
+      p.element.style.width = '400px';
+      p.element.style.maxHeight = '50vh';
+      p.element.style.zIndex = '1000';
+      p.element.style.boxShadow = '0 -4px 16px rgba(0,0,0,0.4)';
+    } else {
+      p.element.style.display = 'none';
+    }
+  });
+}
+
+// Main initialization for docking system
+function initDockingSystem() {
+  createDropZones();
+  createDragHint();
+  
+  // Initialize docking for all panels
+  initPanelDocking('jamlEditorSection');
+  initPanelDocking('blueprintSection');
+  initPanelDocking('resultsSection');
+  
+  // Initialize splitter collapse behavior
+  initSplitterCollapse();
+  
+  console.log('Docking system initialized');
+}
+
+// Legacy function name for compatibility
+function initFilterSectionDrag() {
+  // Now handled by initDockingSystem
+}
 
 // Editor helpers
 let monacoMode = false; // Track current editor mode
@@ -11,6 +923,7 @@ let monacoMode = false; // Track current editor mode
 function toggleMonaco() {
   const mono = document.getElementById('monacoEditor');
   const plain = document.getElementById('filterJaml');
+  const visual = document.getElementById('visualBuilder');
   const toggleBtn = document.getElementById('monacoToggle');
   
   if (!mono || !plain) {
@@ -21,7 +934,8 @@ function toggleMonaco() {
   monacoMode = !monacoMode;
   
   if (monacoMode) {
-    // Switch to Monaco
+    // Switch to Monaco - hide visual builder
+    if (visual) visual.style.display = 'none';
     // Ensure Monaco editor is initialized
     if (!window.jamlEditor) {
       setStatus('Initializing Monaco editor...');
@@ -284,72 +1198,70 @@ function switchTab(name, btn) {
   if (btn) btn.classList.add('active');
 }
 
-// Splitter
+// Splitter - Full height vertical divider
 function initSplitter() {
-  const splitter = document.getElementById('panelSplitter1') || document.getElementById('panelSplitter');
-  const left = document.querySelector('.left-panel');
-  const container = document.querySelector('.side-by-side');
+  const splitter = document.getElementById('panelSplitter1');
+  const left = document.querySelector('.left-half');
+  const container = document.querySelector('.full-split');
+  
   if (!splitter || !left || !container) {
     console.warn('initSplitter: Missing elements', { splitter: !!splitter, left: !!left, container: !!container });
     return;
   }
+  
+  console.log('initSplitter: Initialized');
   let dragging = false;
 
-  const isStacked = () => getComputedStyle(container).flexDirection === 'column';
-
-  const startDrag = (e) => {
-    dragging = true;
-    document.body.style.cursor = isStacked() ? 'row-resize' : 'col-resize';
-    if (e.type === 'touchstart') e.preventDefault(); // Prevent scroll start
-  };
 
   const endDrag = () => {
+    if (!dragging) return;
     dragging = false;
+    splitter.classList.remove('dragging');
     document.body.style.cursor = '';
+    document.body.style.userSelect = '';
     if (window.jamlEditor) window.jamlEditor.layout();
   };
 
   const onDrag = (e) => {
     if (!dragging) return;
     
-    let clientX, clientY;
-    if (e.type.startsWith('touch')) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-      e.preventDefault(); // Prevent scrolling
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    if (isStacked()) {
-      const rect = left.getBoundingClientRect();
-      // Reset flex/width from landscape mode if present
-      left.style.flex = 'none';
-      
-      const newH = Math.max(150, Math.min(window.innerHeight - 150, clientY - rect.top));
-      left.style.height = `${newH}px`; 
-    } else {
-      const rect = container.getBoundingClientRect();
-      // Reset height from portrait mode if present
-      left.style.height = ''; 
-      
-      const w = rect.width; 
-      let newW = clientX - rect.left;
-      // Allow sliding all the way - no constraints
-      newW = Math.max(0, Math.min(w, newW));
-      left.style.flex = `0 0 ${(newW / w) * 100}%`;
-    }
+    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const rect = container.getBoundingClientRect();
+    const splitterWidth = splitter.offsetWidth;
+    
+    // Calculate delta from start position
+    const deltaX = clientX - startX;
+    let newW = startLeftWidth + deltaX;
+    const maxW = rect.width - splitterWidth;
+    
+    // Snap to edge if within 10px
+    if (newW < 10) newW = 10;
+    if (newW > maxW - 10) newW = maxW - 10;
+    
+    // Clamp
+    newW = Math.max(10, Math.min(maxW - 10, newW));
+    
+    // Apply using flex-basis
+    const pct = (newW / rect.width) * 100;
+    left.style.flex = `0 0 ${pct}%`;
+    
+    if (e.type.startsWith('touch')) e.preventDefault();
   };
-
-  if (!splitter) {
-    console.error('initSplitter: splitter is null, cannot add event listeners');
-    return;
-  }
+  
+  const startDrag = (e) => {
+    dragging = true;
+    splitter.classList.add('dragging');
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+    
+    // Store starting width
+    startLeftWidth = left.offsetWidth;
+    
+    if (e.type === 'touchstart') e.preventDefault();
+  };
 
   splitter.addEventListener('mousedown', startDrag);
   splitter.addEventListener('touchstart', startDrag, { passive: false });
-
   document.addEventListener('mouseup', endDrag);
   document.addEventListener('touchend', endDrag);
   document.addEventListener('touchcancel', endDrag);
@@ -368,76 +1280,103 @@ function initTopGrabber() {
   }
   console.log('initTopGrabber: Initialized');
   
-  // Set initial height if not set
-  const initialHeight = topTray.getBoundingClientRect().height || 80;
-  topTray.style.flex = `0 0 ${initialHeight}px`;
-  topTray.style.height = `${initialHeight}px`;
-  
   let isDragging = false;
   let startY = 0;
   let startHeight = 0;
   
-  const startDrag = (e) => {
+  topGrabber.addEventListener('mousedown', (e) => {
     isDragging = true;
-    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-    const trayRect = topTray.getBoundingClientRect();
-    startHeight = trayRect.height;
-    startY = clientY;
-    
-    document.body.style.cursor = 'row-resize';
+    startY = e.clientY;
+    startHeight = topTray.offsetHeight;
+    document.body.style.cursor = 'ns-resize';
     document.body.style.userSelect = 'none';
+    topGrabber.classList.add('dragging');
     e.preventDefault();
-    e.stopPropagation();
-  };
+  });
   
-  const onDrag = (e) => {
-    if (!isDragging) return;
-    
-    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-    const deltaY = clientY - startY;
-    let newHeight = startHeight + deltaY;
-    
-    // Constrain height - allow sliding all the way up (min 0) or down
-    const minHeight = 0;
-    const maxHeight = window.innerHeight; // Allow sliding all the way
-    newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
-    
-    // Apply height using flex-basis for proper flex behavior
-    topTray.style.flex = `0 0 ${newHeight}px`;
-    topTray.style.height = `${newHeight}px`;
-    topTray.style.minHeight = `${newHeight}px`;
-    topTray.style.maxHeight = `${newHeight}px`;
-    
-    // Hide content if collapsed
-    if (newHeight < 50) {
-      topTray.style.overflow = 'hidden';
-      topTray.style.opacity = '0.3';
-    } else {
-      topTray.style.overflow = '';
-      topTray.style.opacity = '1';
-    }
-    
+  topGrabber.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    startY = e.touches[0].clientY;
+    startHeight = topTray.offsetHeight;
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    topGrabber.classList.add('dragging');
     e.preventDefault();
-    e.stopPropagation();
-  };
+  }, { passive: false });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const deltaY = e.clientY - startY;
+    const newH = Math.max(0, Math.min(window.innerHeight * 0.6, startHeight + deltaY));
+    topTray.style.cssText = `flex: 0 0 ${newH}px !important; height: ${newH}px !important; overflow: ${newH < 30 ? 'hidden' : 'visible'} !important; opacity: ${newH < 30 ? '0.3' : '1'} !important;`;
+  });
+  
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const deltaY = e.touches[0].clientY - startY;
+    const newH = Math.max(0, Math.min(window.innerHeight * 0.6, startHeight + deltaY));
+    topTray.style.cssText = `flex: 0 0 ${newH}px !important; height: ${newH}px !important; overflow: ${newH < 30 ? 'hidden' : 'visible'} !important; opacity: ${newH < 30 ? '0.3' : '1'} !important;`;
+    e.preventDefault();
+  }, { passive: false });
   
   const endDrag = () => {
     if (!isDragging) return;
     isDragging = false;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
+    topGrabber.classList.remove('dragging');
   };
   
-  // Add event listeners
-  topGrabber.addEventListener('mousedown', startDrag);
-  topGrabber.addEventListener('touchstart', startDrag, { passive: false });
-  topGrabber.addEventListener('click', (e) => console.log('Top grabber clicked', e));
-  document.addEventListener('mousemove', onDrag);
-  document.addEventListener('touchmove', onDrag, { passive: false });
   document.addEventListener('mouseup', endDrag);
   document.addEventListener('touchend', endDrag);
   document.addEventListener('touchcancel', endDrag);
-  document.addEventListener('mouseleave', endDrag);
+  
+  // Toggle collapse on click (one-click collapse)
+  let isCollapsed = false;
+  const toggleCollapse = (e) => {
+    // Only toggle on click, not during drag
+    if (isDragging) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    isCollapsed = !isCollapsed;
+    
+    if (isCollapsed) {
+      // Collapse: hide content, show only status
+      const trayContent = topTray.querySelector('.tray-content');
+      const statusBar = topTray.querySelector('.tray-status');
+      const controls = topTray.querySelector('.tray-row');
+      
+      if (controls) controls.style.display = 'none';
+      if (statusBar) {
+        statusBar.style.borderTop = 'none';
+        statusBar.style.paddingTop = '8px';
+      }
+      
+      topTray.style.flex = '0 0 40px';
+      topTray.style.height = '40px';
+      topTray.style.minHeight = '40px';
+      topTray.style.maxHeight = '40px';
+      topTray.style.overflow = 'hidden';
+    } else {
+      // Expand: show everything
+      const controls = topTray.querySelector('.tray-row');
+      const statusBar = topTray.querySelector('.tray-status');
+      
+      if (controls) controls.style.display = 'flex';
+      if (statusBar) {
+        statusBar.style.borderTop = '1px solid var(--border-color)';
+        statusBar.style.paddingTop = '4px';
+      }
+      
+      topTray.style.flex = '';
+      topTray.style.height = '';
+      topTray.style.minHeight = '';
+      topTray.style.maxHeight = '';
+      topTray.style.overflow = '';
+    }
+  };
   
   console.log('Top grabber initialized');
 }
@@ -446,18 +1385,21 @@ function initTopGrabber() {
 let savedFilters = [];
 let seedSources = [];
 let currentSearchId = null;
+let currentFilterId = null; // Track currently selected filter for URL/sharing
 let signalRConnection = null;
 let columns = ['seed','score'];
 let results = [];
 let sortCol = 'score';
 let sortAsc = false;
+let resultsTable = null; // Tabulator instance
 let searchState = 'START'; // START | RUNNING
 let isSettingDropdownProgrammatically = false; // Flag to prevent onchange from firing when setting dropdown programmatically
-let statusPollInterval = null; // Interval for polling search status
+// Polling removed - using SignalR for real-time updates
 let lastValidFilterHash = null; // Hash of last valid filter structure
 let isFilterInvalidated = false; // Flag indicating filter structure changed
 let lastColumnStructure = []; // Array of column names from last valid filter
 let isFormatting = false; // Flag to track when format button is used
+let allSearches = new Map(); // Track all searches: searchId -> { status, progress, speed, searched, found }
 
 async function loadHealth() {
   try {
@@ -468,12 +1410,25 @@ async function loadHealth() {
   } catch { setStatus('Offline'); return false; }
 }
 
+// Helper function to normalize filter name to filter ID (matches backend SanitizeFilterFileStem)
+function normalizeToFilterId(name) {
+  if (!name) return '';
+  // Replace spaces with underscores
+  let normalized = name.trim().replace(/\s+/g, '_');
+  // Replace incompatible filename characters with underscores
+  // Invalid chars: < > : " / \ | ? * and control chars
+  normalized = normalized.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+  return normalized;
+}
+
 async function loadFilters(autoSelect = true) {
   const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
   if (!dd) {
     console.error('loadFilters: filterSelect or filtersDropdown element not found');
     return;
   }
+  // Preserve current selection before rebuilding dropdown (using filterId now)
+  const currentFilterId = dd.value;
   dd.innerHTML = '<option>Loading...</option>';
   try {
     const r = await fetch('/filters');
@@ -487,19 +1442,87 @@ async function loadFilters(autoSelect = true) {
     }
 
     dd.innerHTML = '';
-    savedFilters.forEach((f, i) => {
-      const opt = document.createElement('option'); opt.value = i.toString(); opt.textContent = f.name || f.searchId || `Filter ${i}`;
-      dd.appendChild(opt);
+    
+    // Group filters by author
+    const grouped = {};
+    savedFilters.forEach((f) => {
+      const author = f.author || 'Default';
+      if (!grouped[author]) grouped[author] = [];
+      grouped[author].push(f);
     });
+    
+    // Track hidden authors
+    const hiddenAuthors = JSON.parse(localStorage.getItem('hiddenFilterAuthors') || '[]');
+    
+    // Sort authors: Default first, then alphabetically, hidden at end
+    const sortedAuthors = Object.keys(grouped).sort((a, b) => {
+      const aHidden = hiddenAuthors.includes(a);
+      const bHidden = hiddenAuthors.includes(b);
+      if (aHidden && !bHidden) return 1;
+      if (!aHidden && bHidden) return -1;
+      if (a === 'Default') return -1;
+      if (b === 'Default') return 1;
+      return a.localeCompare(b);
+    });
+    
+    // Create optgroups with eye emoji (will replace with lucide icons in custom dropdown later)
+    sortedAuthors.forEach(author => {
+      const isHidden = hiddenAuthors.includes(author);
+      const group = document.createElement('optgroup');
+      const authorLabel = author === 'Default' ? '(Default)' : `author: ${author}`;
+      group.label = isHidden ? `👁️‍🗨️ ${authorLabel}` : `👁️ ${authorLabel}`;
+      group.dataset.author = author;
+      group.dataset.hidden = isHidden ? 'true' : 'false';
+      
+      // Sort filters within group by name
+      grouped[author].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      
+      grouped[author].forEach((f) => {
+        const filterId = f.filterId || (f.filePath ? normalizeToFilterId(f.filePath.replace(/\.(jaml|yaml|yml)$/i, '')) : '');
+        const displayName = f.name || filterId || 'Unnamed';
+        const fileName = f.filePath ? f.filePath.replace(/\.(jaml|yaml|yml)$/i, '') : '';
+        
+        const opt = document.createElement('option');
+        opt.value = filterId;
+        opt.textContent = (displayName !== fileName && fileName) ? `${displayName} (${fileName})` : displayName;
+        group.appendChild(opt);
+      });
+      
+      dd.appendChild(group);
+    });
+    
+    // Add toggle function for author visibility (will be used by custom dropdown)
+    window.toggleAuthorVisibility = function(author) {
+      const hidden = JSON.parse(localStorage.getItem('hiddenFilterAuthors') || '[]');
+      const idx = hidden.indexOf(author);
+      if (idx >= 0) {
+        hidden.splice(idx, 1);
+      } else {
+        hidden.push(author);
+      }
+      localStorage.setItem('hiddenFilterAuthors', JSON.stringify(hidden));
+      loadFilters(false); // Reload without auto-select
+    };
     dd.onchange = async () => {
       // Don't trigger if we're setting the dropdown programmatically
       if (isSettingDropdownProgrammatically) return;
-      const idx = parseInt(dd.value);
-      await selectFilterAndRun(idx);
+      const filterId = dd.value;
+      // Load filter but DON'T auto-start search - only Start Search button should start searches
+      await selectFilterByFilterId(filterId, false);
     };
-    // If first filter exists, select and load (but don't auto-start search on initial load)
-    if (autoSelect && savedFilters.length > 0) { 
-      await selectFilter(0, false); 
+    
+    // Restore previous selection if it's still valid, otherwise auto-select first
+    if (currentFilterId && savedFilters.some(f => (f.filterId || '') === currentFilterId)) {
+      // Restore the previous selection without triggering onchange
+      isSettingDropdownProgrammatically = true;
+      dd.value = currentFilterId;
+      Promise.resolve().then(() => { isSettingDropdownProgrammatically = false; });
+    } else if (autoSelect && savedFilters.length > 0) {
+      // If first filter exists, select and load (but don't auto-start search on initial load)
+      const firstFilterId = savedFilters[0].filterId || (savedFilters[0].filePath ? normalizeToFilterId(savedFilters[0].filePath.replace(/\.(jaml|yaml|yml)$/i, '')) : '');
+      if (firstFilterId) {
+        await selectFilterByFilterId(firstFilterId, false);
+      }
     }
   } catch (e) {
     dd.innerHTML = '<option>Offline / Error</option>';
@@ -507,20 +1530,65 @@ async function loadFilters(autoSelect = true) {
   }
 }
 
-async function selectFilter(idx, autoStart = true) {
-  const f = savedFilters[idx];
-  if (!f) return;
+// Select filter by filterId (preferred method)
+async function selectFilterByFilterId(filterId, autoStart = true) {
+  const f = savedFilters.find(f => (f.filterId || '') === filterId);
+  if (!f) {
+    console.warn(`Filter with filterId "${filterId}" not found`);
+    return;
+  }
 
   const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
   // Set flag to prevent onchange from firing when we set the value programmatically
   isSettingDropdownProgrammatically = true;
   try {
-    if (dd.value !== idx.toString()) dd.value = idx.toString();
+    if (dd.value !== filterId) dd.value = filterId;
   } finally {
     // Reset flag after a microtask to ensure the value is set before onchange could fire
     Promise.resolve().then(() => { isSettingDropdownProgrammatically = false; });
   }
+  
+  // Track current filter and update URL
+  currentFilterId = filterId;
+  updateUrlWithFilter(filterId);
+  
+  await loadFilterContent(f, autoStart);
+}
 
+// Update URL with current filter (without reloading page)
+function updateUrlWithFilter(filterId) {
+  if (!filterId) return;
+  const url = new URL(window.location.href);
+  url.search = ''; // Clear existing params
+  url.searchParams.set('filter', filterId);
+  window.history.replaceState({}, '', url.toString());
+}
+
+// Legacy function for backward compatibility (uses index)
+async function selectFilter(idx, autoStart = true) {
+  const f = savedFilters[idx];
+  if (!f) return;
+  
+  const filterId = f.filterId || (f.filePath ? normalizeToFilterId(f.filePath.replace(/\.(jaml|yaml|yml)$/i, '')) : '');
+  if (filterId) {
+    await selectFilterByFilterId(filterId, autoStart);
+    return;
+  }
+  
+  // Fallback to old behavior if no filterId
+  const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
+  isSettingDropdownProgrammatically = true;
+  try {
+    if (dd.value !== idx.toString()) dd.value = idx.toString();
+  } finally {
+    Promise.resolve().then(() => { isSettingDropdownProgrammatically = false; });
+  }
+  
+  await loadFilterContent(f, autoStart);
+}
+
+// Shared logic for loading filter content
+async function loadFilterContent(f, autoStart = true) {
   if (f.filterJaml) {
     setJamlValue(f.filterJaml);
     // Reset invalidation when loading a filter
@@ -572,12 +1640,12 @@ async function selectFilter(idx, autoStart = true) {
           document.getElementById('searchBtn').textContent = 'Stop Search';
           document.getElementById('searchBtn').classList.add('button-danger');
           ensureWs();
-          startStatusPolling(); // Start polling to keep state in sync
+          // SignalR handles real-time updates
         } else {
           searchState = 'START';
           document.getElementById('searchBtn').textContent = 'Start Search';
           document.getElementById('searchBtn').classList.remove('button-danger');
-          stopStatusPolling(); // Stop polling if not running
+          // SignalR handles real-time updates
         }
       }
     } catch (e) {
@@ -602,6 +1670,8 @@ async function loadSeedSources() {
     console.error('loadSeedSources: seedSourceDropdown element not found');
     return;
   }
+  // Preserve current selection before rebuilding dropdown
+  const currentValue = dd.value || 'all';
   dd.innerHTML = '<option>Loading...</option>';
   try {
     const r = await fetch('/seed-sources');
@@ -611,6 +1681,7 @@ async function loadSeedSources() {
     
     if (seedSources.length === 0) {
         dd.innerHTML = '<option value="all">All Seeds (Default)</option>';
+        dd.value = currentValue === 'all' ? 'all' : 'all'; // Default to 'all' if no sources
         return;
     }
 
@@ -618,9 +1689,15 @@ async function loadSeedSources() {
     seedSources.forEach(src => {
       const opt = document.createElement('option'); opt.value = src.key; opt.textContent = src.label; dd.appendChild(opt);
     });
-    dd.value = 'all';
+    // Restore previous selection if it exists in the new list, otherwise default to 'all'
+    if (currentValue && Array.from(dd.options).some(opt => opt.value === currentValue)) {
+      dd.value = currentValue;
+    } else {
+      dd.value = 'all';
+    }
   } catch (e) {
     dd.innerHTML = '<option value="all">Offline (Default)</option>';
+    dd.value = currentValue === 'all' ? 'all' : 'all'; // Default to 'all' on error
     setStatus('Failed to load sources: ' + e.message);
   }
 }
@@ -669,35 +1746,69 @@ function ensureWs() {
         columns = resultData.columns || columns;
         renderResults();
       } else if (resultData.type === 'progress') {
-        // Progress update - show stats
-        if (resultData.searchId === currentSearchId) {
+        // Progress update - update table for ANY search (not just current)
+        const searchId = resultData.searchId;
+        if (searchId) {
           const seedsPerSec = resultData.seedsPerSecond || 0;
           const seedsSearched = resultData.seedsSearched || 0;
-          const seedsFound = resultData.seedsFound || results.length;
+          const seedsFound = resultData.seedsFound || 0;
           const progress = resultData.totalBatches > 0 
             ? Math.round((resultData.currentBatch / resultData.totalBatches) * 100)
             : 0;
           
-          setStatus(`Searching... ${seedsSearched.toLocaleString()} seeds | ${seedsPerSec.toFixed(0)} seeds/sec | Found: ${seedsFound} | ${progress}%`);
+          // Update progress table for this search
+          updateProgressTable(searchId, {
+            status: 'Running',
+            progress: `${progress}%`,
+            speed: seedsPerSec > 0 ? `${seedsPerSec.toFixed(0)} seeds/sec` : '0 seeds/sec',
+            searched: seedsSearched.toLocaleString(),
+            found: seedsFound.toString()
+          });
+          
+          // Update status bar if this is the current search
+          if (searchId === currentSearchId) {
+            const statusText = `${progress}% | ${seedsPerSec.toFixed(0)} seeds/sec | ${seedsSearched.toLocaleString()} searched | ${seedsFound} found`;
+            setStatus(statusText);
+          }
         }
       } else if (resultData.type === 'search_completed') {
-        // Search finished naturally
-        if (resultData.searchId === currentSearchId) {
-          stopStatusPolling(); // Stop polling since search is done
-          searchState = 'START';
-          const btn = document.getElementById('searchBtn');
-          btn.textContent = 'Start Search';
-          btn.classList.remove('button-danger');
-          btn.disabled = false;
-          
-          const seedsFound = resultData.seedsFound || results.length;
+        // Search finished naturally - update table for this search
+        const searchId = resultData.searchId;
+        if (searchId) {
+          const seedsFound = resultData.seedsFound || 0;
           const seedsSearched = resultData.seedsSearched || 0;
-          setStatus(`Search completed! Found ${seedsFound} seeds from ${seedsSearched.toLocaleString()} searched`);
+          const seedsPerSec = resultData.seedsPerSecond || 0;
+          
+          // Update progress table with final stats
+          updateProgressTable(searchId, {
+            status: 'Completed',
+            progress: '100%',
+            speed: seedsPerSec > 0 ? `${seedsPerSec.toFixed(0)} seeds/sec` : '0 seeds/sec',
+            searched: seedsSearched.toLocaleString(),
+            found: seedsFound.toString()
+          });
+          
+          // Remove from table after 5 seconds
+          setTimeout(() => {
+            allSearches.delete(searchId);
+            updateProgressTable(searchId, { status: '', progress: '', speed: '', searched: '', found: '' });
+          }, 5000);
+          
+          // Update UI if this is the current search
+          if (searchId === currentSearchId) {
+            // SignalR handles updates
+            searchState = 'START';
+            const btn = document.getElementById('searchBtn');
+            btn.textContent = 'Start Search';
+            btn.classList.remove('button-danger');
+            btn.disabled = false;
+            setStatus(`Search completed! Found ${seedsFound} seeds from ${seedsSearched.toLocaleString()} searched`);
+          }
         }
       } else if (resultData.type === 'search_failed') {
         // Search failed
         if (resultData.searchId === currentSearchId) {
-          stopStatusPolling(); // Stop polling since search is done
+          // SignalR handles updates
           searchState = 'START';
           const btn = document.getElementById('searchBtn');
           btn.textContent = 'Start Search';
@@ -708,7 +1819,7 @@ function ensureWs() {
       } else if (resultData.type === 'search_halted') {
         // Search was stopped
         if (resultData.searchId === currentSearchId) {
-          stopStatusPolling(); // Stop polling since search is done
+          // SignalR handles updates
           searchState = 'START';
           const btn = document.getElementById('searchBtn');
           btn.textContent = 'Start Search';
@@ -741,6 +1852,8 @@ function ensureWs() {
   }
   signalRConnection.start()
     .then(() => {
+      // Load all running searches and join their groups
+      loadAllSearches();
       if (currentSearchId) {
         signalRConnection.invoke('JoinSearchGroup', currentSearchId);
       }
@@ -774,120 +1887,83 @@ function getValueFromResult(result, col, colIndex) {
 
 function renderResults() {
   const container = document.getElementById('resultsGrid');
-  if (!results || results.length === 0) {
-    // Show empty table with headers instead of "No results yet"
-    // Columns should already be set from filter config (seed, score, + should clause columns)
-    if (!columns || columns.length === 0) {
-      // Fallback to default columns if none set
-      columns = ['seed', 'score'];
-    }
-    
-    // Wrap table in container for overlay positioning
-    let html = '<div class="table-wrapper">';
-    html += '<table class="results-table"><thead><tr>';
-    columns.forEach((c, idx) => { 
-      const arrow = sortCol === c ? (sortAsc ? ' ▲' : ' ▼') : '';
-      const safeCol = c.replace(/'/g, "\\'");
-      const safeColHtml = c.replace(/"/g, '&quot;');
-      // Add right-click context menu for editing (except seed/score)
-      const canEdit = idx >= 2; // Only should clause columns can be edited
-      const contextMenu = canEdit ? `oncontextmenu="event.preventDefault(); editColumnLabel(${idx}, '${safeColHtml}'); return false;"` : '';
-      html += `<th ${contextMenu} onclick="toggleSort('${safeCol}')" title="${canEdit ? 'Right-click to edit label' : ''}">${c}${arrow}</th>`; 
-    });
-    // Add + button column
-    html += `<th class="add-column-btn" onclick="addColumn()" title="Add new column">+</th>`;
-    html += '</tr></thead><tbody></tbody></table>';
-    html += '</div>';
-    container.innerHTML = html;
-    return;
+  if (!columns || columns.length === 0) {
+    columns = ['seed', 'score'];
   }
   
-  // Find the column index for sorting
-  const sortColIndex = columns.indexOf(sortCol);
-  
-  // Sort results
-  const sorted = [...results].sort((a, b) => {
-    let valA = getValueFromResult(a, sortCol, sortColIndex);
-    let valB = getValueFromResult(b, sortCol, sortColIndex);
-    
-    // Handle numeric strings (for seed column)
-    if (sortCol === 'seed') {
-      // String comparison for seeds
-      if (valA < valB) return sortAsc ? -1 : 1;
-      if (valA > valB) return sortAsc ? 1 : -1;
-      return 0;
-    }
-    
-    // Numeric comparison for score and tallies
-    // Ensure we're comparing numbers
-    if (typeof valA === 'string' && !isNaN(valA)) valA = parseFloat(valA);
-    if (typeof valB === 'string' && !isNaN(valB)) valB = parseFloat(valB);
-    
-    // Handle null/undefined
-    if (valA == null) valA = 0;
-    if (valB == null) valB = 0;
-    
-    if (valA < valB) return sortAsc ? -1 : 1;
-    if (valA > valB) return sortAsc ? 1 : -1;
-    return 0;
-  });
-
-  // Wrap table in container for overlay positioning
-  const hasOverlay = isFilterInvalidated && results.length > 0;
-  
-  let html = '<div class="table-wrapper">';
-  html += '<table class="results-table"><thead><tr>';
-  columns.forEach((c, idx) => { 
-    const arrow = sortCol === c ? (sortAsc ? ' ▲' : ' ▼') : '';
-    // Escape quotes in column name for onclick attribute
-    const safeCol = c.replace(/'/g, "\\'");
-    const safeColHtml = c.replace(/"/g, '&quot;');
-    // Add right-click context menu for editing (except seed/score)
-    const canEdit = idx >= 2; // Only should clause columns can be edited
-    const contextMenu = canEdit ? `oncontextmenu="event.preventDefault(); editColumnLabel(${idx}, '${safeColHtml}'); return false;"` : '';
-    html += `<th ${contextMenu} onclick="toggleSort('${safeCol}')" title="${canEdit ? 'Right-click to edit label' : ''}">${c}${arrow}</th>`; 
-  });
-  // Add + button column
-  html += `<th class="add-column-btn" onclick="addColumn()" title="Add new column">+</th>`;
-  html += '</tr></thead><tbody>';
-  sorted.forEach(r => {
-    html += `<tr onclick="analyzeSeed('${r.seed}')">`;
+  // Prepare data for Tabulator
+  const tableData = (results || []).map(r => {
+    const row = { _seed: r.seed }; // Store seed for click handler
     columns.forEach((col, idx) => {
-      // Use getValueFromResult helper to properly extract values
       let val = getValueFromResult(r, col, idx);
-      
-      // Ensure val is never undefined or null
       if (val === undefined || val === null || val === 'undefined') {
         val = col === 'seed' ? '' : 0;
       }
-      
-      // Special case for seeds column
-      if (col === 'seed') {
-        html += `<td><code>${val || ''}</code></td>`;
-        return;
-      }
-
-      let cls = '';
-      if (colorModeActive) {
-        cls = getColorClass(val);
-      }
-      html += `<td class="${cls}">${val}</td>`;
+      row[col] = val;
     });
-    html += '</tr>';
+    return row;
   });
-  html += '</tbody></table>';
   
-  // Add overlay if filter is invalidated (covers tbody only, not thead)
-  if (hasOverlay) {
-    html += `<div class="results-overlay">
-      <div class="overlay-message">
-        Results may be outdated - filter structure changed. Save to restart search.
-      </div>
-    </div>`;
+  // Define columns for Tabulator
+  const tableColumns = columns.map((col, idx) => {
+    const canEdit = idx >= 2; // Only should clause columns can be edited
+    return {
+      title: col,
+      field: col,
+      sorter: col === 'seed' ? 'string' : 'number',
+      headerSort: true,
+      headerContextMenu: canEdit ? (e, column) => {
+        e.preventDefault();
+        editColumnLabel(idx, col);
+      } : undefined,
+      formatter: (cell, formatterParams) => {
+        const val = cell.getValue();
+        if (col === 'seed') {
+          return `<code>${val || ''}</code>`;
+        }
+        if (colorModeActive) {
+          const cls = getColorClass(val);
+          return `<span class="${cls}">${val}</span>`;
+        }
+        return val;
+      },
+      cssClass: col === 'seed' ? 'seed-column' : ''
+    };
+  });
+  
+  // Add + button column
+  tableColumns.push({
+    title: '+',
+    field: '_add',
+    formatter: () => '<button class="add-column-btn" onclick="addColumn()" title="Add new column">+</button>',
+    headerSort: false,
+    width: 40,
+    cssClass: 'add-column-header'
+  });
+  
+  // Destroy existing table if it exists
+  if (resultsTable) {
+    resultsTable.destroy();
   }
   
-  html += '</div>';
-  container.innerHTML = html;
+  // Create Tabulator instance
+  resultsTable = new Tabulator(container, {
+    data: tableData,
+    columns: tableColumns,
+    layout: 'fitColumns',
+    initialSort: [{ column: sortCol, dir: sortAsc ? 'asc' : 'desc' }],
+    rowClick: (e, row) => {
+      const seed = row.getData()._seed;
+      if (seed) analyzeSeed(seed);
+    },
+    cssClass: 'results-table-tabulator'
+  });
+  
+  // Update sort when user clicks header
+  resultsTable.on('columnSorted', (column) => {
+    sortCol = column.getField();
+    sortAsc = column.getSortDirection() === 'asc';
+  });
 }
 
 function toggleColorMode() {
@@ -921,13 +1997,102 @@ function toggleSort(col) {
     sortCol = col;
     sortAsc = false; // Default desc for new col
   }
-  renderResults();
+  if (resultsTable) {
+    resultsTable.setSort(sortCol, sortAsc ? 'asc' : 'desc');
+  } else {
+    renderResults();
+  }
 }
 
 function analyzeSeed(seed) {
   switchTab('analyze', document.querySelectorAll('.tab')[1]);
   document.getElementById('analyzeContainer').innerHTML =
     `<iframe src="https://miaklwalker.github.io/Blueprint/?seed=${seed}" style="width: 100%; height: 600px; border: none;"></iframe>`;
+}
+
+// Update progress table with real-time data for ALL searches
+function updateProgressTable(searchId, data) {
+  // Update settings popup table
+  const settingsContainer = document.getElementById('settingsProgressTableContainer');
+  const settingsTbody = document.getElementById('settingsProgressTableBody');
+  const noSearchesMsg = document.getElementById('noActiveSearchesInSettings');
+  
+  if (!settingsTbody) return;
+  
+  // If data is empty, remove the search
+  if (!data.status && !data.progress && !data.speed && !data.searched && !data.found) {
+    allSearches.delete(searchId);
+  } else {
+    // Store search data
+    allSearches.set(searchId, {
+      status: data.status || '-',
+      progress: data.progress || '0%',
+      speed: data.speed || '0 seeds/sec',
+      searched: data.searched || '0',
+      found: data.found || '0'
+    });
+  }
+  
+  // Rebuild table with all searches
+  settingsTbody.innerHTML = '';
+  allSearches.forEach((searchData, id) => {
+    const row = document.createElement('tr');
+    const shortId = id.length > 20 ? id.substring(0, 20) + '...' : id;
+    row.innerHTML = `
+      <td title="${id}">${shortId}</td>
+      <td>${searchData.status}</td>
+      <td>${searchData.progress}</td>
+      <td>${searchData.speed}</td>
+      <td>${searchData.searched}</td>
+      <td>${searchData.found}</td>
+      <td><button onclick="stopSearch('${id}')" class="tool-btn" style="padding: 2px 6px; font-size: 11px;">Stop</button></td>
+    `;
+    settingsTbody.appendChild(row);
+  });
+  
+  // Show table if we have any searches
+  if (allSearches.size > 0) {
+    if (settingsContainer) settingsContainer.style.display = 'block';
+    if (noSearchesMsg) noSearchesMsg.style.display = 'none';
+  } else {
+    if (settingsContainer) settingsContainer.style.display = 'none';
+    if (noSearchesMsg) noSearchesMsg.style.display = 'block';
+  }
+}
+
+// Load all running searches on page load
+async function loadAllSearches() {
+  try {
+    const r = await fetch('/search/all');
+    if (r.ok) {
+      const data = await r.json();
+      const runningIds = data.runningSearchIds || [];
+      
+      // Join all search groups and load their status
+      if (signalRConnection && signalRConnection.state === signalR.HubConnectionState.Connected) {
+        runningIds.forEach(id => {
+          signalRConnection.invoke('JoinSearchGroup', id);
+          // Load initial status
+          fetch(`/search?id=${encodeURIComponent(id)}`)
+            .then(res => res.json())
+            .then(searchData => {
+              if (searchData.status === 'running') {
+                updateProgressTable(id, {
+                  status: 'Running',
+                  progress: `${searchData.progressPercent || 0}%`,
+                  speed: `${(searchData.seedsPerSecond || 0).toFixed(0)} seeds/sec`,
+                  searched: (searchData.seedsSearched || 0).toLocaleString(),
+                  found: (searchData.seedsFound || 0).toString()
+                });
+              }
+            })
+            .catch(e => console.warn('Failed to load search status:', e));
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load all searches:', e);
+  }
 }
 
 function handleSearchClick() {
@@ -992,13 +2157,24 @@ async function startSearch() {
     if (signalRConnection && signalRConnection.state === signalR.HubConnectionState.Connected) {
       signalRConnection.invoke('JoinSearchGroup', currentSearchId);
     }
+    
+    // Load all running searches to show in table
+    loadAllSearches();
     searchState = 'RUNNING';
     document.getElementById('searchBtn').textContent = 'Stop Search';
     document.getElementById('searchBtn').classList.add('button-danger');
     setStatus(`Running...`);
     
-    // Start polling search status to keep button state in sync
-    startStatusPolling();
+    // Show progress table and add this search
+    updateProgressTable(currentSearchId, {
+      status: 'Starting...',
+      progress: '0%',
+      speed: '0 seeds/sec',
+      searched: '0',
+      found: '0'
+    });
+    
+    // SignalR handles real-time updates
     
     // Reload filters to pick up the newly saved filter (if it was auto-saved)
     setTimeout(() => {
@@ -1010,13 +2186,41 @@ async function startSearch() {
 }
 
 async function stopAll() {
-  // Stop status polling
-  stopStatusPolling();
+  // Immediate UI feedback
+  setStatus('Stopping search...');
+  if (currentSearchId) {
+    updateProgressTable(currentSearchId, {
+      status: 'Stopping...',
+      progress: '-',
+      speed: '-',
+      searched: '-',
+      found: '-'
+    });
+  }
   
-  // UI already updated in toggleSearch for immediate feedback
+  // SignalR handles updates
+  
   try {
     const r = await fetch('/search/stop-all', { method: 'POST' });
-    if (r.ok) setStatus('Stopped');
+    if (r.ok) {
+      setStatus('Search stopped');
+      if (currentSearchId) {
+        updateProgressTable(currentSearchId, {
+          status: 'Stopped',
+          progress: '-',
+          speed: '-',
+          searched: '-',
+          found: '-'
+        });
+        // Remove from table after a moment
+        setTimeout(() => {
+          allSearches.delete(currentSearchId);
+          updateProgressTable(currentSearchId, { status: '', progress: '', speed: '', searched: '', found: '' });
+        }, 2000);
+      }
+    } else {
+      setStatus('Error: Failed to stop search');
+    }
   } catch (e) {
     setStatus(`Error stopping: ${e.message}`);
   }
@@ -1030,57 +2234,13 @@ async function stopAll() {
   btn.disabled = false;
 }
 
+// Polling removed - SignalR handles all real-time updates via websocket
 function startStatusPolling() {
-  // Clear any existing interval
-  stopStatusPolling();
-  
-  // Poll search status every 2 seconds to keep button state in sync
-  statusPollInterval = setInterval(async () => {
-    if (!currentSearchId || searchState !== 'RUNNING') {
-      stopStatusPolling();
-      return;
-    }
-    
-    try {
-      const r = await fetch(`/search?id=${encodeURIComponent(currentSearchId)}`);
-      if (r.ok) {
-        const data = await r.json();
-        
-        // Update button state based on server status
-        if (data.status === 'running') {
-          // Still running - update stats
-          if (data.seedsPerSecond !== undefined) {
-            const seedsSearched = data.seedsSearched || 0;
-            const seedsFound = data.seedsFound || results.length;
-            const progress = data.progressPercent || 0;
-            setStatus(`Searching... ${seedsSearched.toLocaleString()} seeds | ${data.seedsPerSecond.toFixed(0)} seeds/sec | Found: ${seedsFound} | ${progress}%`);
-          }
-        } else {
-          // Search completed or stopped
-          searchState = 'START';
-          const btn = document.getElementById('searchBtn');
-          btn.textContent = 'Start Search';
-          btn.classList.remove('button-danger');
-          btn.disabled = false;
-          
-          const seedsFound = data.seedsFound || results.length;
-          const seedsSearched = data.seedsSearched || 0;
-          setStatus(`Search completed! Found ${seedsFound} seeds from ${seedsSearched.toLocaleString()} searched`);
-          
-          stopStatusPolling();
-        }
-      }
-    } catch (e) {
-      console.warn('Status poll error:', e);
-    }
-  }, 2000); // Poll every 2 seconds
+  // No-op - SignalR handles all real-time updates
 }
 
 function stopStatusPolling() {
-  if (statusPollInterval) {
-    clearInterval(statusPollInterval);
-    statusPollInterval = null;
-  }
+  // No-op - SignalR handles all real-time updates
 }
 
 async function clearResults() {
@@ -1119,15 +2279,34 @@ async function clearResults() {
   
   try {
     setStatus('Clearing results...');
+    // Save searchId before clearing it (needed for SignalR leave and API call)
+    const searchIdToClear = currentSearchId;
     // Call API to delete the database file
-    const r = await fetch(`/search/${encodeURIComponent(currentSearchId)}/results`, {
+    const r = await fetch(`/search/${encodeURIComponent(searchIdToClear)}/results`, {
       method: 'DELETE'
     });
     
     if (r.ok) {
+      // Leave SignalR group if connected (before clearing currentSearchId)
+      if (signalRConnection && signalRConnection.state === signalR.HubConnectionState.Connected && searchIdToClear) {
+        signalRConnection.invoke('LeaveSearchGroup', searchIdToClear).catch(e => console.warn('Failed to leave search group:', e));
+      }
       // Clear UI results
       results = [];
       isFilterInvalidated = false;
+      // CRITICAL: Clear currentSearchId so phantom seeds don't come back
+      // This ensures a new search will create a fresh searchId instead of reusing the old one
+      currentSearchId = null;
+      // Reset search state
+      searchState = 'START';
+      // SignalR handles updates
+      // Update button state
+      const btn = document.getElementById('searchBtn');
+      if (btn) {
+        btn.textContent = 'Start Search';
+        btn.classList.remove('button-danger');
+        btn.disabled = false;
+      }
       renderResults();
       setStatus('Results cleared from database');
     } else {
@@ -1139,6 +2318,16 @@ async function clearResults() {
     // Still clear UI even if API call fails
     results = [];
     isFilterInvalidated = false;
+    // Clear currentSearchId even on error to prevent phantom seeds
+    currentSearchId = null;
+    searchState = 'START';
+    stopStatusPolling();
+    const btn = document.getElementById('searchBtn');
+    if (btn) {
+      btn.textContent = 'Start Search';
+      btn.classList.remove('button-danger');
+      btn.disabled = false;
+    }
     renderResults();
   }
   
@@ -1160,33 +2349,6 @@ function exportCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = `results_${Date.now()}.csv`; a.click();
   URL.revokeObjectURL(url);
-}
-
-function formatJaml() {
-  try {
-    const jaml = getJamlValue();
-    const obj = jsyaml.load(jaml);
-    if (!obj) return;
-    
-    // Dump with default block style
-    let formatted = jsyaml.dump(obj, { indent: 2, lineWidth: -1, noRefs: true, sortKeys: false });
-
-    // Post-process to collapse specific numeric/scalar arrays
-    const targetKeys = ['antes', 'shop_slots', 'rolls', 'stakes', 'decks', 'versions'];
-    targetKeys.forEach(k => {
-      const regex = new RegExp(`(\\n\\s*${k}:)\\s*\\n((?:\\s+-\\s+[\\w\\d.\\"\\']+\\s*(?:\\n|$))+)`, 'g');
-      formatted = formatted.replace(regex, (m, keyPart, valPart) => {
-        const lines = valPart.split('\n').filter(l => l.trim().length > 0);
-        const items = lines.map(l => l.trim().replace(/^-\s+/, ''));
-        return `${keyPart} [${items.join(', ')}]\n`;
-      });
-    });
-
-    setJamlValue(formatted);
-  } catch (e) {
-    console.error(e);
-    setStatus('Format error: ' + e.message);
-  }
 }
 
 async function saveFilter() {
@@ -1232,8 +2394,8 @@ async function saveFilterInternal() {
   if (!jaml) { setStatus('Nothing to save'); return; }
 
   const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
-  const idx = parseInt(dd.value);
-  const filter = savedFilters[idx];
+  const filterId = dd.value;
+  const filter = savedFilters.find(f => (f.filterId || '') === filterId);
 
   let filename = filter?.filePath;
 
@@ -1273,14 +2435,21 @@ async function performSave(filename, jaml) {
     
     // Update dropdown to select the saved filter, but DON'T reload the editor content
     // (keep current edits - the file was already saved with them)
-    const newIdx = savedFilters.findIndex(f => f.filePath === data.filePath);
-    if (newIdx >= 0) {
+    const savedFilterId = normalizeToFilterId(data.filePath.replace(/\.(jaml|yaml|yml)$/i, ''));
+    const savedFilter = savedFilters.find(f => (f.filterId || '') === savedFilterId || f.filePath === data.filePath);
+    if (savedFilter) {
       const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
-      dd.value = newIdx.toString();
+      const filterId = savedFilter.filterId || savedFilterId;
+      if (filterId) {
+        isSettingDropdownProgrammatically = true;
+        dd.value = filterId;
+        Promise.resolve().then(() => { isSettingDropdownProgrammatically = false; });
+      }
       // Update the savedFilters entry with current jaml so it matches what's saved
-      if (savedFilters[newIdx]) {
-        savedFilters[newIdx].filterJaml = jaml;
-        savedFilters[newIdx].filePath = data.filePath;
+      savedFilter.filterJaml = jaml;
+      savedFilter.filePath = data.filePath;
+      if (!savedFilter.filterId) {
+        savedFilter.filterId = savedFilterId;
       }
       
       // Reset invalidation state after save
@@ -1295,12 +2464,15 @@ async function performSave(filename, jaml) {
 }
 
 function shareLink() {
-  if (!currentSearchId) { setStatus('No search ID'); return; }
+  if (!currentFilterId) { 
+    setStatus('Save filter first to share'); 
+    return; 
+  }
   const url = new URL(window.location.href);
   url.search = '';
-  url.searchParams.set('search', currentSearchId);
+  url.searchParams.set('filter', currentFilterId);
   navigator.clipboard.writeText(url.toString());
-  setStatus('Link copied');
+  setStatus('Filter link copied!');
 }
 
 // Input Modal
@@ -1397,25 +2569,27 @@ function handleBackdrop(e) {
 
 async function renameFilter() {
   const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
-  const idx = parseInt(dd.value);
-  const filter = savedFilters[idx];
-  if (!filter || !filter.filePath) return;
+  const filterId = dd.value;
+  const filter = savedFilters.find(f => (f.filterId || '') === filterId);
+  if (!filter || !filter.filterId) return;
 
   showInputModal('Rename Filter', filter.name, async (newName) => {
     if (!newName || newName === filter.name) return;
 
     try {
+      // Use filterId (normalized filename) for the API call
       const r = await fetch('/filters/rename', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filterId: filter.filePath, newName })
+        body: JSON.stringify({ filterId: filter.filterId, newName })
       });
       if (!r.ok) throw new Error('Rename failed');
       setStatus(`Renamed to ${newName}`);
       await loadFilters(false);
-      // Try to select the renamed one (don't auto-start)
-      const newIdx = savedFilters.findIndex(f => f.name === newName);
-      if (newIdx >= 0) await selectFilter(newIdx, false);
+      // Try to select the renamed one by finding the new filterId (normalized new name)
+      const newFilterId = normalizeToFilterId(newName);
+      const renamedFilter = savedFilters.find(f => (f.filterId || '') === newFilterId);
+      if (renamedFilter) await selectFilterByFilterId(newFilterId, false);
       closeSettings();
     } catch (e) { setStatus(e.message); }
   });
@@ -1423,55 +2597,266 @@ async function renameFilter() {
 
 async function cloneFilter() {
   const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
-  const idx = parseInt(dd.value);
-  const filter = savedFilters[idx];
-  if (!filter || !filter.filePath) return;
+  const filterId = dd.value;
+  const filter = savedFilters.find(f => (f.filterId || '') === filterId);
+  if (!filter || !filter.filterId) return;
 
   showInputModal('Clone Filter', filter.name + ' Copy', async (newName) => {
     if (!newName) return;
 
     try {
+      // Use filterId (normalized filename) for the API call
       const r = await fetch('/filters/clone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filterId: filter.filePath, newName })
+        body: JSON.stringify({ filterId: filter.filterId, newName })
       });
       if (!r.ok) throw new Error('Clone failed');
       setStatus(`Cloned to ${newName}`);
       await loadFilters(false);
-      // Try to select the cloned one (don't auto-start)
-      const newIdx = savedFilters.findIndex(f => f.name === newName);
-      if (newIdx >= 0) await selectFilter(newIdx, false);
+      // Try to select the cloned one by finding the new filterId (normalized new name)
+      const newFilterId = normalizeToFilterId(newName);
+      const clonedFilter = savedFilters.find(f => (f.filterId || '') === newFilterId);
+      if (clonedFilter) await selectFilterByFilterId(newFilterId, false);
       closeSettings();
     } catch (e) { setStatus(e.message); }
   });
 }
 
-async function deleteFilter() {
-  const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
-  const idx = parseInt(dd.value);
-  const filter = savedFilters[idx];
-  if (!filter || !filter.filePath) return;
+async function deleteFilter(filterId = null) {
+  // If no filterId provided, use the currently selected filter
+  if (!filterId) {
+    const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
+    filterId = dd.value;
+  }
+  const filter = savedFilters.find(f => (f.filterId || '') === filterId);
+  if (!filter || !filter.filterId) return;
 
   if (!confirm(`Delete "${filter.name}"?`)) return;
 
   try {
-    const r = await fetch(`/filters/${encodeURIComponent(filter.filePath)}`, { method: 'DELETE' });
+    // Use filterId (normalized filename) for the API call
+    const r = await fetch(`/filters/${encodeURIComponent(filter.filterId)}`, { method: 'DELETE' });
     if (!r.ok) throw new Error('Delete failed');
     setStatus(`Deleted ${filter.name}`);
     await loadFilters();
-    closeSettings();
+    populateSettingsFilters(); // Refresh the settings list
   } catch (e) { setStatus(e.message); }
+}
+
+// Toggle widget settings popup
+window.toggleWidgetSettings = function() {
+  const popup = document.getElementById('widgetSettingsPopup');
+  if (!popup) return;
+  
+  const isOpen = popup.classList.contains('open');
+  if (isOpen) {
+    popup.classList.remove('open');
+  } else {
+    popup.classList.add('open');
+    populateSettingsFilters();
+    populateSettingsAuthors();
+    refreshActiveSearches(); // Refresh running searches
+  }
+};
+
+// Populate filters list in settings
+function populateSettingsFilters() {
+  const list = document.getElementById('filtersList');
+  if (!list) return;
+  
+  list.innerHTML = '';
+  
+  if (savedFilters.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'widget-item';
+    empty.style.cursor = 'default';
+    empty.innerHTML = '<span class="widget-item-name" style="opacity: 0.6;">No filters</span>';
+    list.appendChild(empty);
+    return;
+  }
+  
+  // Group by author
+  const grouped = {};
+  savedFilters.forEach(f => {
+    const author = f.author || 'Default';
+    if (!grouped[author]) grouped[author] = [];
+    grouped[author].push(f);
+  });
+  
+  // Sort authors
+  const authors = Object.keys(grouped).sort((a, b) => {
+    if (a === 'Default') return -1;
+    if (b === 'Default') return 1;
+    return a.localeCompare(b);
+  });
+  
+  authors.forEach(author => {
+    grouped[author].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    
+    grouped[author].forEach(filter => {
+      const item = document.createElement('div');
+      item.className = 'widget-item';
+      
+      const name = document.createElement('span');
+      name.className = 'widget-item-name';
+      name.textContent = filter.name || filter.filterId || 'Unnamed';
+      if (author !== 'Default') {
+        name.textContent += ` (${author})`;
+      }
+      
+      const actions = document.createElement('div');
+      actions.className = 'widget-item-actions';
+      
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'widget-delete-btn';
+      deleteBtn.textContent = '🗑️';
+      deleteBtn.title = 'Delete filter';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteFilter(filter.filterId);
+      };
+      
+      actions.appendChild(deleteBtn);
+      item.appendChild(name);
+      item.appendChild(actions);
+      list.appendChild(item);
+    });
+  });
+}
+
+// Populate authors list in settings
+function populateSettingsAuthors() {
+  const list = document.getElementById('authorsList');
+  if (!list) return;
+  
+  list.innerHTML = '';
+  
+  // Get all unique authors
+  const authors = new Set();
+  savedFilters.forEach(f => {
+    authors.add(f.author || 'Default');
+  });
+  
+  if (authors.size === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'widget-item';
+    empty.style.cursor = 'default';
+    empty.innerHTML = '<span class="widget-item-name" style="opacity: 0.6;">No authors</span>';
+    list.appendChild(empty);
+    return;
+  }
+  
+  const hiddenAuthors = JSON.parse(localStorage.getItem('hiddenFilterAuthors') || '[]');
+  const sortedAuthors = Array.from(authors).sort((a, b) => {
+    if (a === 'Default') return -1;
+    if (b === 'Default') return 1;
+    return a.localeCompare(b);
+  });
+  
+  sortedAuthors.forEach(author => {
+    const item = document.createElement('div');
+    item.className = 'widget-item';
+    
+    const name = document.createElement('span');
+    name.className = 'widget-item-name';
+    name.textContent = author === 'Default' ? '(Default)' : author;
+    
+    const actions = document.createElement('div');
+    actions.className = 'widget-item-actions';
+    
+    const eyeBtn = document.createElement('button');
+    eyeBtn.className = 'widget-eye-btn';
+    const isHidden = hiddenAuthors.includes(author);
+    if (isHidden) {
+      eyeBtn.classList.add('hidden');
+      eyeBtn.textContent = '👁️‍🗨️';
+      eyeBtn.title = 'Show author (click to unhide)';
+    } else {
+      eyeBtn.textContent = '👁️';
+      eyeBtn.title = 'Hide author (click to hide)';
+    }
+    eyeBtn.onclick = (e) => {
+      e.stopPropagation();
+      toggleAuthorVisibility(author);
+      populateSettingsAuthors(); // Refresh the list
+    };
+    
+    actions.appendChild(eyeBtn);
+    item.appendChild(name);
+    item.appendChild(actions);
+    list.appendChild(item);
+  });
 }
 
 window.onMonacoReady = async function () {
   // Wait a tick to ensure DOM is fully ready
   setTimeout(() => {
+    initStatus(); // Initialize status element
+    initTopCenterTab(); // Initialize top center tab drag
     initSplitter();
     initTopGrabber();
+    
+    // In portrait mode, position JAML editor at top (covering buttons) for mobile keyboard
+    // This maximizes code editing space when keyboard appears (~50% of screen)
+    const positionJamlAtTop = () => {
+      const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+      if (isPortrait) {
+        const jamlSection = document.getElementById('jamlEditorSection');
+        const jamlWrapper = jamlSection?.closest('.section-with-tab');
+        if (jamlSection && jamlWrapper) {
+          // Position to cover top buttons - tab at 0px, grab bar at 8px, section at 16px
+          const topTabHeight = 48;
+          jamlWrapper.style.top = `-${topTabHeight}px`;
+          jamlWrapper.style.position = 'relative';
+          jamlWrapper.style.zIndex = '1001';
+          
+          // Set initial height to fill available space plus the top tab area
+          const parent = jamlWrapper.parentElement;
+          if (parent) {
+            const availableHeight = parent.offsetHeight;
+            const totalHeight = availableHeight + topTabHeight;
+            jamlSection.style.flex = `0 0 ${totalHeight}px`;
+            jamlSection.style.height = `${totalHeight}px`;
+          }
+        }
+      }
+    };
+    
+    // Position on initial load
+    positionJamlAtTop();
+    
+    // Reposition on orientation change
+    window.addEventListener('orientationchange', () => {
+      setTimeout(positionJamlAtTop, 100);
+    });
+    
+    // Also check on resize (for responsive testing)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(positionJamlAtTop, 100);
+    });
+    
+    // Initialize collapsible section tabs
+    initCollapsibleSectionTabs();
+    
+    // Initialize the docking system (replaces old drag functions)
+    initDockingSystem();
+    
     // Ensure icons are rendered after DOM is ready
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
+    }
+    
+    // Set a simple default filter if empty - just find any seed
+    const filterJaml = document.getElementById('filterJaml');
+    if (filterJaml && !filterJaml.value.trim()) {
+      filterJaml.value = `name: Find Fun Seeds
+deck: Red
+stake: White
+should:
+  - joker: Any`;
     }
     // Ensure plain editor is visible by default (Monaco hidden)
     const mono = document.getElementById('monacoEditor');
@@ -1484,53 +2869,125 @@ window.onMonacoReady = async function () {
   }, 0);
   await loadHealth();
   await loadSeedSources();
+  
+  // Initial fetch only - SignalR handles updates
+  refreshActiveSearches();
 
-  // Check for shared search link
+  // Check for shared filter link
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedFilterId = urlParams.get('filter');
+
+  if (sharedFilterId) {
+    // Load filters first, then select the shared one
+    await loadFilters(false); // Don't auto-select first filter
+    
+    const filterExists = savedFilters.some(f => (f.filterId || '') === sharedFilterId);
+    if (filterExists) {
+      setStatus(`Loading filter: ${sharedFilterId}`);
+      await selectFilterByFilterId(sharedFilterId, false); // Don't auto-start
+      
+      // Check if there's an active search for this filter
+      // The searchId is derived from filter's deck/stake, so we check active searches
+      try {
+        const activeR = await fetch('/searches/active');
+        if (activeR.ok) {
+          const activeData = await activeR.json();
+          const searches = activeData.searches || [];
+          // Find a search that matches this filter
+          const matchingSearch = searches.find(s => 
+            s.searchId && s.searchId.startsWith(sharedFilterId + '_')
+          );
+          
+          if (matchingSearch) {
+            currentSearchId = matchingSearch.searchId;
+            searchState = 'RUNNING';
+            document.getElementById('searchBtn').textContent = 'Stop Search';
+            document.getElementById('searchBtn').classList.add('button-danger');
+            ensureWs();
+            // SignalR handles updates
+            
+            // Load existing results
+            const searchR = await fetch(`/search?id=${encodeURIComponent(matchingSearch.searchId)}`);
+            if (searchR.ok) {
+              const searchData = await searchR.json();
+              results = (searchData.results || []).map(r => {
+                const seed = (r.seed || r.Seed || '').toString();
+                const score = (typeof r.score === 'number' ? r.score : (typeof r.Score === 'number' ? r.Score : 0));
+                const tallies = Array.isArray(r.tallies) ? r.tallies : (Array.isArray(r.Tallies) ? r.Tallies : []);
+                return {
+                  seed: (seed && seed !== 'undefined' && seed !== 'null') ? seed : '',
+                  score: score,
+                  tallies: tallies
+                };
+              });
+              columns = searchData.columns || columns;
+              renderResults();
+              setStatus(`Connected to running search: ${matchingSearch.searchId}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to check for active searches:', e);
+      }
+    } else {
+      // Filter not found - clean URL
+      setStatus(`Filter "${sharedFilterId}" not found`);
+      window.history.replaceState({}, '', window.location.pathname);
+      await loadFilters(true); // Fall back to normal load
+    }
+  } else {
+    // No filter in URL - normal load
+    await loadFilters(true);
+  }
+};
+
+// Legacy handler for old ?search= links (redirect to filter if possible)
+async function handleLegacySearchLink() {
   const urlParams = new URLSearchParams(window.location.search);
   const sharedSearchId = urlParams.get('search');
-
-  if (sharedSearchId) {
-    try {
-      setStatus('Loading shared search...');
-      const r = await fetch(`/search?id=${encodeURIComponent(sharedSearchId)}`);
-      if (r.ok) {
-        const data = await r.json();
-        if (data.filterJaml) setJamlValue(data.filterJaml);
-        
-        currentSearchId = sharedSearchId;
-        // Normalize results to ensure they have tallies array
-        // Normalize results to ensure they have tallies array and no undefined values
-        results = (data.results || []).map(r => {
-          const seed = (r.seed || r.Seed || '').toString();
-          const score = (typeof r.score === 'number' ? r.score : (typeof r.Score === 'number' ? r.Score : 0));
-          const tallies = Array.isArray(r.tallies) ? r.tallies : (Array.isArray(r.Tallies) ? r.Tallies : []);
-          return {
-            seed: (seed && seed !== 'undefined' && seed !== 'null') ? seed : '',
-            score: score,
-            tallies: tallies
-          };
-        });
-        columns = data.columns || columns;
-        renderResults();
-        
-        if (data.status === 'running') {
-          searchState = 'RUNNING';
-          document.getElementById('searchBtn').textContent = 'Stop Search';
-          document.getElementById('searchBtn').classList.add('button-danger');
-          ensureWs();
-          startStatusPolling(); // Start polling to show performance stats
-        } else {
-          searchState = 'START';
-          document.getElementById('searchBtn').textContent = 'Start Search';
-          document.getElementById('searchBtn').classList.remove('button-danger');
-          stopStatusPolling();
-        }
-        
-        // Show performance stats if available
-        if (data.seedsPerSecond !== undefined || data.seedsSearched !== undefined) {
-          const seedsSearched = data.seedsSearched || 0;
-          const seedsPerSec = data.seedsPerSecond || 0;
-          const progress = data.progressPercent || 0;
+  
+  if (!sharedSearchId) return false;
+  
+  try {
+    setStatus('Loading search...');
+    const r = await fetch(`/search?id=${encodeURIComponent(sharedSearchId)}`);
+    if (r.ok) {
+      const data = await r.json();
+      if (data.filterJaml) setJamlValue(data.filterJaml);
+      
+      currentSearchId = sharedSearchId;
+      // Normalize results to ensure they have tallies array and no undefined values
+      results = (data.results || []).map(r => {
+        const seed = (r.seed || r.Seed || '').toString();
+        const score = (typeof r.score === 'number' ? r.score : (typeof r.Score === 'number' ? r.Score : 0));
+        const tallies = Array.isArray(r.tallies) ? r.tallies : (Array.isArray(r.Tallies) ? r.Tallies : []);
+        return {
+          seed: (seed && seed !== 'undefined' && seed !== 'null') ? seed : '',
+          score: score,
+          tallies: tallies
+        };
+      });
+      columns = data.columns || columns;
+      renderResults();
+      
+      if (data.status === 'running') {
+        searchState = 'RUNNING';
+        document.getElementById('searchBtn').textContent = 'Stop Search';
+        document.getElementById('searchBtn').classList.add('button-danger');
+        ensureWs();
+        // SignalR handles updates
+      } else {
+        searchState = 'START';
+        document.getElementById('searchBtn').textContent = 'Start Search';
+        document.getElementById('searchBtn').classList.remove('button-danger');
+        // SignalR handles updates
+      }
+      
+      // Show performance stats if available
+      if (data.seedsPerSecond !== undefined || data.seedsSearched !== undefined) {
+        const seedsSearched = data.seedsSearched || 0;
+        const seedsPerSec = data.seedsPerSecond || 0;
+        const progress = data.progressPercent || 0;
           const seedsFound = data.seedsFound || results.length;
           if (data.status === 'running') {
             setStatus(`Searching... ${seedsSearched.toLocaleString()} seeds | ${seedsPerSec.toFixed(0)} seeds/sec | Found: ${seedsFound} | ${progress}%`);
@@ -1545,37 +3002,30 @@ window.onMonacoReady = async function () {
         // Find and select the filter that matches the loaded JAML
         if (data.filterJaml) {
           const loadedJaml = data.filterJaml.trim();
-          const matchingIdx = savedFilters.findIndex(f => {
+          const matchingFilter = savedFilters.find(f => {
             const filterJaml = (f.filterJaml || '').trim();
             return filterJaml === loadedJaml;
           });
           
-          if (matchingIdx >= 0) {
-            // Select the matching filter in dropdown
+          if (matchingFilter) {
+            // Select the matching filter in dropdown using filterId (not index!)
+            const matchingFilterId = matchingFilter.filterId || '';
             const dd = document.getElementById('filterSelect') || document.getElementById('filtersDropdown');
-            if (dd) {
+            if (dd && matchingFilterId) {
               isSettingDropdownProgrammatically = true;
-              dd.value = matchingIdx.toString();
+              dd.value = matchingFilterId;
               Promise.resolve().then(() => { isSettingDropdownProgrammatically = false; });
             }
           }
         }
         
-        return;
+        return true;
       }
-    } catch (e) {
-      console.error('Failed to load shared search', e);
-    }
+  } catch (e) {
+    console.error('Failed to load search', e);
   }
-
-  // Normal flow - always load filters and seed sources
-  await loadFilters(true);
-  
-  // Update columns from current filter on page load
-  updateColumnsFromFilter();
-  
-  setStatus('Ready');
-};
+  return false;
+}
 
 // New Filter function
 function newFilter() {
@@ -1677,3 +3127,218 @@ async function addColumn() {
   // Trigger invalidation
   await invalidateFilter();
 }
+
+// ========== ACTIVE SEARCHES PANEL ==========
+// Polling removed - using SignalR
+
+// Fetch and render active searches
+async function refreshActiveSearches() {
+  try {
+    const r = await fetch('/searches/active');
+    if (!r.ok) return;
+    
+    const data = await r.json();
+    renderActiveSearches(data.searches || []);
+  } catch (e) {
+    console.warn('Failed to fetch active searches:', e);
+  }
+}
+
+function renderActiveSearches(searches) {
+  // Update each search in the progress table
+  searches.forEach(s => {
+    const progressPct = s.totalBatches > 0 
+      ? Math.min(100, Math.round((s.completedBatches / s.totalBatches) * 100))
+      : 0;
+    
+    const speedStr = s.seedsPerSecond > 1000000 
+      ? `${(s.seedsPerSecond / 1000000).toFixed(1)}M/s`
+      : s.seedsPerSecond > 1000 
+        ? `${(s.seedsPerSecond / 1000).toFixed(1)}K/s`
+        : `${Math.round(s.seedsPerSecond)}/s`;
+    
+    updateProgressTable(s.searchId, {
+      status: s.isFastLane ? '⚡ Running' : (s.inQueue ? '🔄 Queued' : '⏸️ Paused'),
+      progress: `${progressPct}%`,
+      speed: speedStr,
+      searched: s.seedsSearched > 1000000000
+        ? `${(s.seedsSearched / 1000000000).toFixed(2)}B`
+        : s.seedsSearched > 1000000
+          ? `${(s.seedsSearched / 1000000).toFixed(1)}M`
+          : s.seedsSearched > 1000
+            ? `${(s.seedsSearched / 1000).toFixed(0)}K`
+            : s.seedsSearched.toString(),
+      found: s.resultsFound.toString()
+    });
+  });
+}
+
+// Stop a search
+window.stopSearch = async function(searchId) {
+  try {
+    const r = await fetch(`/search/${encodeURIComponent(searchId)}/stop`, { method: 'POST' });
+    if (!r.ok) throw new Error('Stop failed');
+    setStatus(`Stopped search ${searchId.substring(0, 8)}...`);
+    updateProgressTable(searchId, { status: '', progress: '', speed: '', searched: '', found: '' });
+  } catch (e) {
+    setStatus(e.message);
+  }
+};
+
+// Panic stop a specific search
+async function panicStopSearch(searchId) {
+  if (!confirm(`Stop search "${searchId}"?`)) return;
+  
+  try {
+    setStatus(`Stopping ${searchId}...`);
+    const r = await fetch(`/search/${encodeURIComponent(searchId)}/panic-stop`, { method: 'POST' });
+    
+    if (r.ok) {
+      const data = await r.json();
+      setStatus(data.message || 'Search stopped');
+      refreshActiveSearches();
+    } else {
+      const err = await r.json();
+      setStatus(`Error: ${err.error || 'Failed to stop'}`);
+    }
+  } catch (e) {
+    setStatus(`Error: ${e.message}`);
+  }
+}
+
+// Polling removed - SignalR handles active searches updates
+function startActiveSearchesPolling() {
+  // Initial fetch only - SignalR will handle updates
+  refreshActiveSearches();
+}
+
+function stopActiveSearchesPolling() {
+  // No-op - SignalR handles updates
+}
+
+// ==========================================
+// Top Center Tab - Drag to resize left/right split
+// ==========================================
+function initTopCenterTab() {
+  const topTab = document.querySelector('.top-center-tab');
+  if (!topTab) {
+    console.warn('initTopCenterTab: top-center-tab not found');
+    return;
+  }
+  
+  const left = document.querySelector('.left-half');
+  const container = document.querySelector('.full-split');
+  
+  if (!left || !container) {
+    console.warn('initTopCenterTab: Missing left or container elements');
+    return;
+  }
+  
+  // Use Interact.js for smooth horizontal resize
+  if (typeof interact === 'undefined') {
+    console.warn('Interact.js not loaded, falling back to custom drag');
+    return;
+  }
+  
+  interact(topTab)
+    .draggable({
+      axis: 'x',
+      ignoreFrom: '.tab-icon-btn', // Don't drag when clicking buttons
+      listeners: {
+        start(event) {
+          // Only start if not clicking a button
+          if (event.target.classList.contains('tab-icon-btn') || 
+              event.target.closest('button.tab-icon-btn')) {
+            event.stopImmediatePropagation();
+            return;
+          }
+          topTab.classList.add('dragging');
+          document.body.style.cursor = 'ew-resize';
+        },
+        move(event) {
+          const rect = container.getBoundingClientRect();
+          const deltaX = event.dx;
+          const currentWidth = left.offsetWidth;
+          let newW = currentWidth + deltaX;
+          const maxW = rect.width - 200; // Leave 200px for right half
+          
+          // Clamp to min/max
+          newW = Math.max(200, Math.min(maxW, newW));
+          
+          // Apply using flex-basis percentage
+          const pct = (newW / rect.width) * 100;
+          left.style.flex = `0 0 ${pct}%`;
+          
+          // Update Monaco editor layout
+          if (window.jamlEditor) {
+            window.jamlEditor.layout();
+          }
+        },
+        end(event) {
+          topTab.classList.remove('dragging');
+          document.body.style.cursor = '';
+          
+          // Final layout update
+          if (window.jamlEditor) {
+            setTimeout(() => window.jamlEditor.layout(), 50);
+          }
+        }
+      }
+    });
+  
+  console.log('initTopCenterTab: Initialized with Interact.js');
+}
+
+// ==========================================
+// Collapsible Section Tabs
+// ==========================================
+// Section tabs are now DRAG HANDLES for docking system
+// Drag functionality is handled by initDockingSystem
+function initCollapsibleSectionTabs() {
+  const sectionTabs = document.querySelectorAll('.section-tab');
+  
+  // Tabs are now drag handles - drag up/down to resize, drag left/right to detach
+  // All drag functionality is handled by initDockingSystem
+  
+  // Initial position update (tabs stay in place, no teleporting)
+  updateSectionTabPositions();
+}
+
+function updateSectionTabPositions() {
+  // Tabs stay in their natural position - NO TELEPORTING, NO FLOATING
+  // They are positioned via CSS (top: -16px, absolute positioning relative to .section-with-tab)
+  // This function ENFORCES that tabs never become fixed or move
+  const sections = document.querySelectorAll('.section-with-tab, .panel-section');
+  sections.forEach(section => {
+    const tab = section.querySelector('.section-tab');
+    if (!tab) return;
+    
+    // FORCE tabs to stay absolute, never fixed - remove ALL inline positioning
+    tab.style.position = '';
+    tab.style.top = '';
+    tab.style.left = '';
+    tab.style.right = '';
+    tab.style.bottom = '';
+    tab.style.transform = '';
+    // Tabs are attached via CSS, not JavaScript
+  });
+}
+
+// Update positions on orientation/resize change (debounced)
+let sectionTabResizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(sectionTabResizeTimeout);
+  sectionTabResizeTimeout = setTimeout(() => {
+    if (typeof updateSectionTabPositions === 'function') {
+      updateSectionTabPositions();
+    }
+  }, 150);
+});
+
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    if (typeof updateSectionTabPositions === 'function') {
+      updateSectionTabPositions();
+    }
+  }, 300);
+});

@@ -7,96 +7,146 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JAML - New UI</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20241224-2004" />
   <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css">
 </head>
 <body>
   <div class="app-layout">
-    <!-- Top Tray: Filter selection, Hydrate sources, Controls -->
-    <div id="topTray" class="top-tray">
-      <div class="tray-content">
-        <div class="tray-row">
-          <div class="tray-group">
-            <label for="filterSelect" class="tray-label">Filter:</label>
-            <select id="filterSelect" class="tray-select"></select>
-          </div>
-          
-          <div class="tray-group">
-            <label for="seedSourceDropdown" class="tray-label">Seed Source:</label>
-            <select id="seedSourceDropdown" class="tray-select"></select>
-          </div>
-          
-          <div class="tray-group">
-            <label class="tray-label">Hydrate Sources:</label>
-            <div id="hydrateSources" class="hydrate-multiselect">
-              <div class="multiselect-placeholder">Select word lists...</div>
-              <div id="hydrateSourcesList" class="multiselect-list" style="display: none;"></div>
+    <!-- Top Center Tab - Drag indicator + Home/Settings -->
+    <div class="top-center-tab">
+      <button onclick="goHome()" class="tab-icon-btn" title="Home"><i data-lucide="home"></i></button>
+      <span class="tab-label">JAML</span>
+      <button onclick="toggleWidgetSettings()" class="tab-icon-btn" title="Widgets & Settings"><i data-lucide="settings"></i></button>
+    </div>
+    
+    <!-- FULL-HEIGHT SPLIT: Left (Filter) | Splitter | Right (Search) -->
+    <div class="full-split">
+      
+      <!-- LEFT HALF: Filter/Editor -->
+      <div class="left-half">
+        <div class="half-content">
+        <div class="section-with-tab">
+          <span class="section-tab section-tab-red">JAML</span>
+          <div id="jamlEditorSection" class="panel-section" style="flex: 1;">
+            <div id="leftEditor" class="panel-main">
+              <div id="monacoEditor" class="monaco-container" style="display:none;"></div>
+              <div id="visualBuilder" class="visual-builder" style="display:none;"></div>
+              <textarea id="filterJaml" class="plain-editor" placeholder="Enter JAML filter..." spellcheck="false"></textarea>
             </div>
-            <button id="toggleHydrateSources" class="icon-btn-small" onclick="toggleHydrateSources()" title="Select Hydrate Sources">+</button>
-          </div>
-          
-          <div class="tray-group tray-actions">
-            <button id="monacoToggle" onclick="toggleMonaco()" class="monaco-toggle-btn" title="Toggle Monaco Editor">Monaco</button>
-            <button id="searchBtn" onclick="handleSearchClick()" class="button-primary">Start Search</button>
-            <button onclick="shareLink()" class="icon-btn" title="Share Link"><i data-lucide="link"></i></button>
-            <button onclick="toggleColorMode()" class="icon-btn" title="Toggle Color Mode"><i data-lucide="palette"></i></button>
-            <button onclick="exportCsv()" class="icon-btn" title="Export CSV" style="background: var(--balatro-blue)"><i data-lucide="download"></i></button>
           </div>
         </div>
-        <div id="status" class="tray-status">Ready</div>
-      </div>
-    </div>
-
-    <!-- Horizontal Grab Bar - slides tray up/down -->
-    <div id="topGrabber" class="top-grabber" role="separator" aria-orientation="horizontal" tabindex="0">
-      <div class="grabber-line grabber-line-top"></div>
-      <div class="grabber-line grabber-line-bottom"></div>
-    </div>
-
-    <div class="side-by-side panel-shell">
-      <!-- Left Panel: Editor -->
-      <div class="left-panel">
-        <div id="leftEditor" class="panel-main">
-          <!-- Editor -->
-          <div id="monacoEditor" class="monaco-container"></div>
-          <textarea id="filterJaml" class="plain-editor" style="display:none;" placeholder="Enter JAML filter..." spellcheck="false"></textarea>
-        </div>
-      </div>
-
-      <!-- Vertical Splitter -->
-      <div id="panelSplitter1" class="panel-splitter" role="separator" aria-orientation="vertical" tabindex="0">
-        <div class="splitter-line splitter-line-left"></div>
-        <div class="splitter-line splitter-line-right"></div>
-      </div>
-
-      <!-- Right Panel: Results -->
-      <div class="right-panel">
-        <div id="rightResults" class="panel-main">
-          <div id="resultsGrid" class="results-container">
-            <div class="no-results">
-              <p>No results yet</p>
-              <p class="help-text">Start a search to see results</p>
+        <div class="section-with-tab">
+          <span class="section-tab section-tab-blue">Blueprint Analyzer</span>
+          <div id="blueprintSection" class="panel-section" style="flex: 0 0 180px;">
+            <div class="blueprint-container">
+              <div class="blueprint-toolbar">
+                <input type="text" id="blueprintSeedInput" class="blueprint-seed-input" placeholder="Seed..." />
+                <button onclick="analyzeSeedInBlueprint()" class="button-small">Go</button>
+              </div>
+              <iframe id="blueprintFrame" src="about:blank" data-src="https://miaklwalker.github.io/Blueprint/" class="blueprint-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy"></iframe>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- FULL-HEIGHT VERTICAL SPLITTER -->
+      <div id="panelSplitter1" class="full-splitter" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+      <!-- RIGHT HALF: Search/Results -->
+      <div class="right-half">
+        <div class="half-content">
+          <div class="section-with-tab">
+            <span class="section-tab section-tab-purple">Results <span id="activeSearchCount" class="grab-badge">0</span></span>
+            <div id="resultsSection" class="panel-section" style="flex: 1;">
+            <div class="results-header">
+              <div class="results-header-left">
+                <select id="seedSourceDropdown" class="tray-select"></select>
+                <button id="searchBtn" onclick="handleSearchClick()" class="tool-btn primary">▶ Start</button>
+                <button onclick="toggleColorMode()" class="tool-btn" title="Colors">🎨</button>
+              </div>
+              <div class="results-header-right">
+                <button onclick="clearResults()" class="tool-btn" id="clearResultsBtn">🗑️ Clear</button>
+                <button onclick="exportCsv()" class="tool-btn" title="Export">📥 Export</button>
+              </div>
+            </div>
+            <div id="status" class="results-status">Ready</div>
+            <div id="resultsGrid" class="results-container">
+              <div class="no-results">No results yet</div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- Hydrate Sources Modal (Multi-select) -->
-  <div id="hydrateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="hydrateModalTitle" onclick="handleBackdrop(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h3 id="hydrateModalTitle">Select Hydrate Sources</h3>
-        <button class="close-btn" aria-label="Close" onclick="closeHydrateModal()">&times;</button>
+  <!-- Widget Settings Popup -->
+  <div id="widgetSettingsPopup" class="widget-settings-popup">
+    <div class="widget-settings-header">
+      <h3>Widgets & Settings</h3>
+      <button class="widget-settings-close" onclick="toggleWidgetSettings()" aria-label="Close" title="Close">&times;</button>
+    </div>
+    <div class="widget-settings-body">
+      <div class="widget-section">
+        <div class="widget-section-title">Filter Controls</div>
+        <div class="filter-toolbar" style="flex-wrap: wrap; gap: 4px; padding: 8px; background: var(--dark-bg); border-radius: 4px;">
+          <div id="filterSelectWrapper" class="custom-select-wrapper" style="flex: 1; min-width: 120px;">
+            <select id="filterSelect" class="tray-select"></select>
+          </div>
+          <button onclick="newFilter()" class="icon-btn-small" title="New">+</button>
+          <button id="visualToggle" onclick="toggleVisualBuilder()" class="tool-btn">Visual</button>
+          <button id="monacoToggle" onclick="toggleMonaco()" class="tool-btn">Monaco</button>
+          <button id="formatBtn" onclick="formatJaml()" class="tool-btn">Format</button>
+          <button id="saveBtn" onclick="saveFilter()" class="tool-btn">💾</button>
+          <button onclick="shareLink()" class="tool-btn" title="Share">🔗</button>
+        </div>
       </div>
-      <div class="modal-body">
-        <p class="help-text">Select word lists to hydrate search. Each will be searched sequentially.</p>
-        <div id="hydrateSourcesCheckboxes" class="checkbox-list"></div>
+      <div class="widget-section">
+        <div class="widget-section-title">Running Searches</div>
+        <div id="settingsProgressTableContainer" style="display:none;">
+          <table class="progress-table">
+            <thead>
+              <tr>
+                <th>Search ID</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Speed</th>
+                <th>Searched</th>
+                <th>Found</th>
+                <th>Stop</th>
+              </tr>
+            </thead>
+            <tbody id="settingsProgressTableBody"></tbody>
+          </table>
+        </div>
+        <div id="noActiveSearchesInSettings" class="widget-item" style="cursor: default; opacity: 0.6;">
+          <span class="widget-item-name">No active searches</span>
+        </div>
       </div>
-      <div class="modal-footer">
-        <button class="button-small" onclick="closeHydrateModal()">Cancel</button>
-        <button class="button-primary" onclick="applyHydrateSources()">Apply</button>
+      <div class="widget-section">
+        <div class="widget-section-title">Filters</div>
+        <div class="widget-list" id="filtersList">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Authors</div>
+        <div class="widget-list" id="authorsList">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Add Widgets</div>
+        <div class="widget-list" id="availableWidgetsList">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Active Widgets</div>
+        <div class="widget-list" id="activeWidgetsList">
+          <!-- Populated by JavaScript -->
+        </div>
       </div>
     </div>
   </div>
@@ -125,7 +175,13 @@
   <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
   <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
-  <script src="jaml.js"></script>
+  <!-- Tabulator - Modern table library with proper sorting UI -->
+  <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator_bulma.min.css" rel="stylesheet">
+  <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+  <!-- Interact.js - Smooth drag/resize with snapping and push interactions -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.24/dist/interact.min.js"></script>
+  <script src="visual-builder.js"></script>
+  <script src="jaml.js?v=20241224-2004"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
   <script>
     // Wait for DOM to be fully loaded
@@ -143,7 +199,24 @@
           'fill': 'none'
         }
       });
+      
+      // Initialize top center tab (doesn't depend on Monaco)
+      if (typeof initTopCenterTab === 'function') {
+        initTopCenterTab();
+      }
 
+      // Add listener to plain text editor for column updates
+      const plainEditor = document.getElementById('filterJaml');
+      if (plainEditor) {
+        plainEditor.addEventListener('input', function() {
+          if (typeof updateColumnsFromFilter === 'function') {
+            // Debounce to avoid too many API calls
+            clearTimeout(window.columnUpdateTimeout);
+            window.columnUpdateTimeout = setTimeout(updateColumnsFromFilter, 500);
+          }
+        });
+      }
+      
       // Initialize Monaco editor
       require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
       require(['vs/editor/editor.main'], function () {
@@ -181,7 +254,15 @@
         });
         
         window.jamlEditor.onDidChangeModelContent(() => {
-          document.getElementById('filterJaml').value = window.jamlEditor.getValue();
+          // Sync Monaco content to plain editor
+          const plain = document.getElementById('filterJaml');
+          if (plain) {
+            plain.value = window.jamlEditor.getValue();
+          }
+          // Update columns when JAML changes (unless formatting)
+          if (typeof updateColumnsFromFilter === 'function' && typeof isFormatting !== 'undefined' && !isFormatting) {
+            updateColumnsFromFilter();
+          }
         });
         
         // Handle resizing for mobile/desktop
@@ -208,3 +289,4 @@
   </script>
 </body>
 </html>
+

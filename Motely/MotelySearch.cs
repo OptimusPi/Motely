@@ -118,80 +118,33 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     }
 }
 
-#if !BROWSER
 /// <summary>
 /// Streams seeds from a DuckDB database, sorted by length.
 /// Returns IEnumerable for use with WithListSearch(seeds, alreadySorted: true).
+/// Platform-specific implementations:
+/// - Desktop: DuckDBSeeds.Desktop.cs (DuckDB.NET.Data)
+/// - Browser: DuckDBSeeds.Browser.cs (DuckDB-WASM via JS interop)
+/// - Android: DuckDBSeeds.Android.cs (DuckDB.NET or native)
+/// - iOS: DuckDBSeeds.iOS.cs (DuckDB.NET or native)
 /// </summary>
-public static class DuckDBSeeds
+public static partial class DuckDBSeeds
 {
-    public static IEnumerable<string> Stream(string dbPath, string tableName = "seeds", string columnName = "seed")
-    {
-        using var connection = new DuckDB.NET.Data.DuckDBConnection($"Data Source={dbPath}");
-        connection.Open();
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText = $"SELECT {columnName} FROM {tableName} ORDER BY LENGTH({columnName})";
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-            yield return reader.GetString(0);
-    }
+    // Implementation provided by platform-specific files
 }
 
 /// <summary>
-/// Streams seeds from a DuckDB database table.
-/// Expects a table with a 'seed' VARCHAR column (e.g., fertilizer.db with 'seeds' table)
+/// Streams seeds from a DuckDB database table (in-memory database, backed by file).
+/// Queries DuckDB directly - no pre-loading into arrays!
+/// Platform-specific implementations:
+/// - Desktop: DuckDBSeedProvider.Desktop.cs (DuckDB.NET.Data with lock for thread-safety)
+/// - Browser: DuckDBSeedProvider.Browser.cs (DuckDB-WASM via JS interop)
+/// - Android: DuckDBSeedProvider.Android.cs (DuckDB.NET or native)
+/// - iOS: DuckDBSeedProvider.iOS.cs (DuckDB.NET or native)
 /// </summary>
-public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
+public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
 {
-    private readonly DuckDB.NET.Data.DuckDBConnection _connection;
-    private readonly string[] _seeds; // Pre-loaded and sorted for vectorization (DuckDB cursor not thread-safe)
-    private long _currentIndex = -1;
-
-    public int SeedCount { get; }
-
-    /// <summary>
-    /// Create provider from a DuckDB database file
-    /// </summary>
-    /// <param name="dbPath">Path to DuckDB file (e.g., fertilizer.db)</param>
-    /// <param name="tableName">Table containing seeds (default: "seeds")</param>
-    /// <param name="columnName">Column containing seed strings (default: "seed")</param>
-    public DuckDBSeedProvider(string dbPath, string tableName = "seeds", string columnName = "seed")
-    {
-        _connection = new DuckDB.NET.Data.DuckDBConnection($"Data Source={dbPath}");
-        _connection.Open();
-
-        // Get count first
-        using var countCmd = _connection.CreateCommand();
-        countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
-        SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
-
-        // Load seeds sorted by length in DuckDB (faster than C# LINQ sorting!)
-        // DuckDB readers aren't thread-safe for concurrent NextSeed() calls, so we pre-load
-        _seeds = new string[SeedCount];
-        using var cmd = _connection.CreateCommand();
-        cmd.CommandText = $"SELECT {columnName} FROM {tableName} ORDER BY LENGTH({columnName})";
-        using var reader = cmd.ExecuteReader();
-        int i = 0;
-        while (reader.Read() && i < SeedCount)
-        {
-            _seeds[i++] = reader.GetString(0);
-        }
-    }
-
-    public ReadOnlySpan<char> NextSeed()
-    {
-        long index = Interlocked.Increment(ref _currentIndex);
-        if (index >= _seeds.Length)
-            return ReadOnlySpan<char>.Empty;
-        return _seeds[index];
-    }
-
-    public void Dispose()
-    {
-        _connection?.Dispose();
-    }
+    // Implementation provided by platform-specific files
 }
-#endif
 
 public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySeedFilterDesc<TBaseFilter> baseFilterDesc
