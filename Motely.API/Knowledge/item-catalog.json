@@ -1,0 +1,226 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Complete catalog of all Balatro items searchable in JAML",
+    "lastUpdated": "2025-01-01"
+  },
+  "jokers": {
+    "common": [
+      "Joker", "GreedyJoker", "LustyJoker", "WrathfulJoker", "GluttonousJoker",
+      "JollyJoker", "ZanyJoker", "MadJoker", "CrazyJoker", "DrollJoker",
+      "SlyJoker", "WilyJoker", "CleverJoker", "DeviousJoker", "CraftyJoker",
+      "HalfJoker", "CreditCard", "Banner", "MysticSummit", "EightBall",
+      "Misprint", "RaisedFist", "ChaostheClown", "ScaryFace", "AbstractJoker",
+      "DelayedGratification", "GrosMichel", "EvenSteven", "OddTodd", "Scholar",
+      "BusinessCard", "Supernova", "RideTheBus", "Egg", "Runner",
+      "IceCream", "Splash", "BlueJoker", "FacelessJoker", "GreenJoker",
+      "Superposition", "ToDoList", "Cavendish", "RedCard", "SquareJoker",
+      "RiffRaff", "Photograph", "ReservedParking", "MailInRebate", "Hallucination",
+      "FortuneTeller", "Juggler", "Drunkard", "GoldenJoker", "Popcorn",
+      "WalkieTalkie", "SmileyFace", "GoldenTicket", "Swashbuckler", "HangingChad",
+      "ShootTheMoon"
+    ],
+    "uncommon": [
+      "JokerStencil", "FourFingers", "Mime", "CeremonialDagger", "MarbleJoker",
+      "LoyaltyCard", "Dusk", "Fibonacci", "SteelJoker", "Hack",
+      "Pareidolia", "SpaceJoker", "Burglar", "Blackboard", "SixthSense",
+      "Constellation", "Hiker", "CardSharp", "Madness", "Seance",
+      "Vampire", "Shortcut", "Hologram", "Cloud9", "Rocket",
+      "MidasMask", "Luchador", "GiftCard", "TurtleBean", "Erosion",
+      "ToTheMoon", "StoneJoker", "LuckyCat", "Bull", "DietCola",
+      "TradingCard", "FlashCard", "SpareTrousers", "Ramen", "Seltzer",
+      "Castle", "MrBones", "Acrobat", "SockAndBuskin", "Troubadour",
+      "Certificate", "SmearedJoker", "Throwback", "RoughGem", "Bloodstone",
+      "Arrowhead", "OnyxAgate", "GlassJoker", "Showman", "FlowerPot",
+      "MerryAndy", "OopsAll6s", "TheIdol", "SeeingDouble", "Matador",
+      "Satellite", "Cartomancer", "Astronomer", "Bootstraps"
+    ],
+    "rare": [
+      "DNA", "Vagabond", "Baron", "Obelisk", "BaseballCard",
+      "AncientJoker", "Campfire", "Blueprint", "WeeJoker", "HitTheRoad",
+      "TheDuo", "TheTrio", "TheFamily", "TheOrder", "TheTribe",
+      "Stuntman", "InvisibleJoker", "Brainstorm", "DriversLicense", "BurntJoker"
+    ],
+    "legendary": [
+      "Canio", "Triboulet", "Yorick", "Chicot", "Perkeo"
+    ],
+    "notable": {
+      "Blueprint": {
+        "rarity": "Rare",
+        "effect": "Copies ability of joker to the right",
+        "synergies": ["Brainstorm", "Showman", "Mime"],
+        "aliases": ["blueprint", "copy joker"]
+      },
+      "Brainstorm": {
+        "rarity": "Rare",
+        "effect": "Copies ability of joker to the left",
+        "synergies": ["Blueprint", "Showman"],
+        "aliases": ["brainstorm", "reverse copy"]
+      },
+      "Perkeo": {
+        "rarity": "Legendary",
+        "effect": "Creates negative copy of 1 random consumable",
+        "synergies": ["Telescope", "Observatory", "consumables"],
+        "aliases": ["perkeo", "soul perkeo"],
+        "note": "Often searched with Negative edition"
+      },
+      "Showman": {
+        "rarity": "Uncommon",
+        "effect": "Copies ability of random joker",
+        "synergies": ["Blueprint", "Brainstorm"],
+        "aliases": ["showman"]
+      },
+      "Baron": {
+        "rarity": "Rare",
+        "effect": "Gains +3 Mult per Gold Joker",
+        "synergies": ["GoldenJoker"],
+        "aliases": ["baron", "gold baron"]
+      },
+      "WeeJoker": {
+        "rarity": "Rare",
+        "effect": "Gains +4 Mult per Wee Card played",
+        "synergies": ["Erratic deck"],
+        "aliases": ["wee joker", "wee"]
+      },
+      "Telescope": {
+        "type": "voucher",
+        "effect": "Planet cards appear 1 ante earlier",
+        "synergies": ["Observatory", "planet cards"],
+        "aliases": ["telescope"]
+      },
+      "Observatory": {
+        "type": "voucher",
+        "effect": "Planet cards appear 2 antes earlier",
+        "synergies": ["Telescope", "planet cards"],
+        "aliases": ["observatory"]
+      }
+    }
+  },
+  "vouchers": [
+    "Overstock", "OverstockPlus", "ClearanceSale", "Liquidation",
+    "Hone", "GlowUp", "RerollSurplus", "RerollGlut",
+    "CrystalBall", "OmenGlobe", "Telescope", "Observatory",
+    "Grabber", "NachoTong", "Wasteful", "Recyclomancy",
+    "TarotMerchant", "TarotTycoon", "PlanetMerchant", "PlanetTycoon",
+    "SeedMoney", "MoneyTree", "Blank", "Antimatter",
+    "MagicTrick", "Illusion", "Hieroglyph", "Petroglyph",
+    "DirectorsCut", "Retcon", "PaintBrush", "Palette"
+  ],
+  "tarotCards": [
+    "TheFool", "TheMagician", "TheHighPriestess", "TheEmpress", "TheEmperor",
+    "TheHierophant", "TheLovers", "TheChariot", "Justice", "TheHermit",
+    "TheWheelOfFortune", "Strength", "TheHangedMan", "Death", "Temperance",
+    "TheDevil", "TheTower", "TheStar", "TheMoon", "TheSun",
+    "Judgement", "TheWorld"
+  ],
+  "planetCards": [
+    "Mercury", "Venus", "Earth", "Mars", "Jupiter",
+    "Saturn", "Uranus", "Neptune", "Pluto", "PlanetX",
+    "Ceres", "Eris"
+  ],
+  "spectralCards": [
+    "Familiar", "Grim", "Incantation", "Talisman", "Aura",
+    "Wraith", "Sigil", "Ouija", "Ectoplasm", "Immolate",
+    "Ankh", "DejaVu", "Hex", "Trance", "Medium",
+    "Cryptid", "Soul", "BlackHole"
+  ],
+  "bossBlinds": {
+    "normal": [
+      "TheArm", "TheClub", "TheEye", "TheFish", "TheFlint",
+      "TheGoad", "TheHead", "TheHook", "TheHouse", "TheManacle",
+      "TheMark", "TheMouth", "TheNeedle", "TheOx", "ThePillar",
+      "ThePlant", "ThePsychic", "TheSerpent", "TheTooth", "TheWall",
+      "TheWater", "TheWheel", "TheWindow"
+    ],
+    "finisher": [
+      "AmberAcorn", "CeruleanBell", "CrimsonHeart", "VerdantLeaf", "VioletVessel"
+    ],
+    "notable": {
+      "TheWall": {
+        "minAnte": 2,
+        "effect": "Boss blind that many players avoid",
+        "aliases": ["wall", "the wall"]
+      }
+    }
+  },
+  "tags": [
+    "UncommonTag", "RareTag", "NegativeTag", "FoilTag", "HolographicTag",
+    "PolychromeTag", "InvestmentTag", "VoucherTag", "BossTag", "StandardTag",
+    "CharmTag", "MeteorTag", "BuffoonTag", "HandyTag", "GarbageTag",
+    "EtherealTag", "CouponTag", "DoubleTag", "JuggleTag", "D6Tag",
+    "TopupTag", "SpeedTag", "OrbitalTag", "EconomyTag"
+  ],
+  "decks": [
+    "Red", "Blue", "Yellow", "Green", "Black",
+    "Magic", "Nebula", "Ghost", "Abandoned", "Checkered",
+    "Zodiac", "Painted", "Anaglyph", "Plasma", "Erratic",
+    "Challenge"
+  ],
+  "stakes": [
+    "White", "Red", "Green", "Black", "Blue", "Purple", "Orange", "Gold"
+  ],
+  "editions": [
+    "Foil", "Holo", "Polychrome", "Negative"
+  ],
+  "enhancements": [
+    "Bonus", "Mult", "Wild", "Glass", "Steel", "Stone", "Lucky", "Gold"
+  ],
+  "seals": [
+    "Red", "Blue", "Gold", "Purple"
+  ],
+  "ranks": [
+    "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"
+  ],
+  "suits": [
+    "Hearts", "Diamonds", "Clubs", "Spades"
+  ],
+  "aliases": {
+    "blueprint": "Blueprint",
+    "copy joker": "Blueprint",
+    "brainstorm": "Brainstorm",
+    "reverse copy": "Brainstorm",
+    "perkeo": "Perkeo",
+    "soul perkeo": "Perkeo",
+    "showman": "Showman",
+    "baron": "Baron",
+    "gold baron": "Baron",
+    "wee joker": "WeeJoker",
+    "wee": "WeeJoker",
+    "telescope": "Telescope",
+    "observatory": "Observatory",
+    "hieroglyph": "Hieroglyph",
+    "petroglyph": "Petroglyph",
+    "the wall": "TheWall",
+    "wall": "TheWall"
+  },
+  "commonCombos": {
+    "observatoryBuild": {
+      "description": "Telescope + Observatory for early planet cards",
+      "items": ["Telescope", "Observatory"],
+      "synergies": ["planet cards", "Perkeo"]
+    },
+    "copyBuild": {
+      "description": "Blueprint + Brainstorm + Showman for copying abilities",
+      "items": ["Blueprint", "Brainstorm", "Showman"],
+      "synergies": ["any powerful joker"]
+    },
+    "negativePerkeo": {
+      "description": "Negative Perkeo for consumable generation",
+      "items": ["Perkeo"],
+      "modifiers": ["edition: Negative"],
+      "synergies": ["Telescope", "Observatory", "consumables"]
+    },
+    "moneyBuild": {
+      "description": "Baron + Golden Joker for money generation",
+      "items": ["Baron", "GoldenJoker"],
+      "synergies": ["money-generating jokers"]
+    },
+    "steelBuild": {
+      "description": "Steel Joker + Mime for steel card generation",
+      "items": ["SteelJoker", "Mime"],
+      "synergies": ["steel enhancements"]
+    }
+  }
+}
+
+

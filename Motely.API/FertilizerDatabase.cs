@@ -8,23 +8,9 @@ namespace Motely.API;
 /// </summary>
 public sealed class FertilizerDatabase : IDisposable
 {
-    private static FertilizerDatabase? _instance;
-    private static readonly object _lock = new();
+    private static readonly Lazy<FertilizerDatabase> _lazyInstance = new(() => new FertilizerDatabase());
 
-    public static FertilizerDatabase Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                lock (_lock)
-                {
-                    _instance ??= new FertilizerDatabase();
-                }
-            }
-            return _instance;
-        }
-    }
+    public static FertilizerDatabase Instance => _lazyInstance.Value;
 
     private readonly string _dbPath;
     private readonly string _txtPath;
@@ -54,15 +40,6 @@ public sealed class FertilizerDatabase : IDisposable
                     seed VARCHAR PRIMARY KEY
                 )";
             cmd.ExecuteNonQuery();
-
-            using (var migrateCmd = _connection.CreateCommand())
-            {
-                migrateCmd.CommandText = @"
-                    INSERT INTO seeds (seed)
-                    SELECT seed FROM fertilizer_pile
-                    ON CONFLICT (seed) DO NOTHING";
-                try { migrateCmd.ExecuteNonQuery(); } catch { }
-            }
 
             // Migrate from fertilizer.txt if it exists
             MigrateFromTxtIfNeeded();
@@ -179,8 +156,9 @@ public sealed class FertilizerDatabase : IDisposable
             cmd.CommandText = "SELECT COUNT(*) FROM seeds";
             return (long)cmd.ExecuteScalar()!;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[FertilizerDatabase] Failed to get seed count: {ex.Message}");
             return 0;
         }
     }

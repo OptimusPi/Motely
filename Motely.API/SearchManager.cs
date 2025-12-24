@@ -14,23 +14,9 @@ namespace Motely.API;
 /// </summary>
 public class SearchManager
 {
-    private static SearchManager? _instance;
-    private static readonly object _lock = new();
+    private static readonly Lazy<SearchManager> _lazyInstance = new(() => new SearchManager());
     
-    public static SearchManager Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                lock (_lock)
-                {
-                    _instance ??= new SearchManager();
-                }
-            }
-            return _instance;
-        }
-    }
+    public static SearchManager Instance => _lazyInstance.Value;
 
     private readonly ConcurrentDictionary<string, ActiveSearch> _activeSearches = new();
     private readonly ConcurrentDictionary<string, string> _lastErrors = new(StringComparer.OrdinalIgnoreCase);
@@ -43,6 +29,21 @@ public class SearchManager
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private int _configuredThreadBudget = Environment.ProcessorCount;
     private const int ReservedThreads = 1;
+
+    // ========== CIRCULAR QUEUE SCHEDULER ==========
+    // Fair round-robin scheduling for multiple concurrent searches
+    private readonly Queue<string> _roundRobinQueue = new();
+    private readonly Queue<string> _fastLaneQueue = new();  // Word list/DB searches (complete quickly)
+    private readonly object _queueLock = new();
+    private Task? _schedulerTask;
+    private CancellationTokenSource? _schedulerCts;
+    private bool _schedulerRunning = false;
+    
+    /// <summary>Batches to run per search turn before rotating. BatchSize=3 means ~4.3M seeds per turn.</summary>
+    public int BatchesPerTurn { get; set; } = 100;
+    
+    /// <summary>Default batch size for new searches (3 = ~43K seeds per batch)</summary>
+    public int DefaultBatchSize { get; set; } = 3;
 
     private ISearchBroadcaster? _broadcaster;
 
@@ -119,7 +120,10 @@ public class SearchManager
 
             var columnNames = config.GetColumnNames();
 
-            var searchId = $"{GetFilterName(filterJaml)}_{deck}_{stake}";
+            // Get filter name and sanitize it for searchId (spaces -> underscores, remove invalid chars)
+            var filterName = GetFilterName(filterJaml);
+            var sanitizedName = SanitizeFilterFileStem(filterName);
+            var searchId = $"{sanitizedName}_{deck}_{stake}";
             var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
 
             _lastErrors.TryRemove(searchId, out _);
@@ -344,6 +348,376 @@ public class SearchManager
         _configuredThreadBudget = Math.Max(1, threadCount);
     }
 
+    // ========== CIRCULAR QUEUE SCHEDULER METHODS ==========
+    
+    /// <summary>
+    /// Start the scheduler if not already running.
+    /// Called automatically when first search is enqueued.
+    /// </summary>
+    public void StartScheduler()
+    {
+        lock (_queueLock)
+        {
+            if (_schedulerRunning) return;
+            _schedulerRunning = true;
+            _schedulerCts = new CancellationTokenSource();
+            _schedulerTask = Task.Run(() => SchedulerLoopAsync(_schedulerCts.Token));
+            Console.WriteLine("[Scheduler] Started circular queue scheduler");
+        }
+    }
+    
+    /// <summary>
+    /// Stop the scheduler gracefully.
+    /// </summary>
+    public async Task StopSchedulerAsync()
+    {
+        Task? taskToAwait;
+        lock (_queueLock)
+        {
+            if (!_schedulerRunning) return;
+            _schedulerCts?.Cancel();
+            taskToAwait = _schedulerTask;
+        }
+        
+        if (taskToAwait != null)
+        {
+            try { await taskToAwait; } catch (OperationCanceledException) { }
+        }
+        
+        lock (_queueLock)
+        {
+            _schedulerRunning = false;
+            _schedulerTask = null;
+            _schedulerCts?.Dispose();
+            _schedulerCts = null;
+            Console.WriteLine("[Scheduler] Stopped circular queue scheduler");
+        }
+    }
+    
+    /// <summary>
+    /// Main scheduler loop - fair round-robin with fast lane priority.
+    /// </summary>
+    private async Task SchedulerLoopAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            string? searchId = null;
+            bool isFastLane = false;
+            
+            lock (_queueLock)
+            {
+                // Fast lane first (word list/DB searches complete quickly)
+                if (_fastLaneQueue.Count > 0)
+                {
+                    searchId = _fastLaneQueue.Dequeue();
+                    isFastLane = true;
+                }
+                // Then round-robin for sequential searches
+                else if (_roundRobinQueue.Count > 0)
+                {
+                    searchId = _roundRobinQueue.Dequeue();
+                    isFastLane = false;
+                }
+            }
+            
+            if (searchId == null)
+            {
+                // No searches queued - wait a bit before checking again
+                try { await Task.Delay(100, ct); } catch (OperationCanceledException) { break; }
+                continue;
+            }
+            
+            // Run the search turn
+            bool searchComplete = await RunSearchTurnAsync(searchId, isFastLane, ct);
+            
+            // If not complete and not cancelled, re-enqueue for next turn
+            if (!searchComplete && !ct.IsCancellationRequested)
+            {
+                lock (_queueLock)
+                {
+                    if (_activeSearches.ContainsKey(searchId))
+                    {
+                        if (isFastLane)
+                            _fastLaneQueue.Enqueue(searchId);
+                        else
+                            _roundRobinQueue.Enqueue(searchId);
+                    }
+                }
+            }
+            
+            // Brief yield to allow other operations
+            await Task.Yield();
+        }
+    }
+    
+    /// <summary>
+    /// Run one turn of a search (N batches for round-robin, or to completion for fast lane).
+    /// Returns true if search is complete.
+    /// </summary>
+    private async Task<bool> RunSearchTurnAsync(string searchId, bool runToCompletion, CancellationToken ct)
+    {
+        if (!_activeSearches.TryGetValue(searchId, out var search))
+            return true; // Search was removed, consider it complete
+        
+        if (search.StopReason != null)
+            return true; // Search was stopped
+        
+        try
+        {
+            // Broadcast that this search is now active
+            _broadcaster?.BroadcastToSearch(searchId, JsonSerializer.Serialize(new
+            {
+                type = "search_turn_started",
+                searchId = searchId,
+                isFastLane = runToCompletion
+            }));
+            
+            var dbPath = Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
+            ReadResumeCursor(dbPath, search.ColumnNames, out var startBatch, out var batchSize);
+            
+            // For round-robin: limit to BatchesPerTurn batches
+            // For fast lane: run to completion (EndBatch = 0)
+            long endBatch = runToCompletion ? 0 : startBatch + BatchesPerTurn;
+            
+            // Use all available threads for this turn (no splitting)
+            int threads = GetWorkerThreadBudget();
+            
+            search.ResumeStartBatch = startBatch;
+            search.AssignedThreads = threads;
+            if (batchSize > 0) search.BatchSize = batchSize;
+            
+            // Open/reopen database for this turn
+            search.Database?.Dispose();
+            search.Database = new MotelySearchDatabase(dbPath, search.ColumnNames);
+            
+            var runId = Guid.NewGuid();
+            search.RunInstanceId = runId;
+            search.CancellationToken = new CancellationTokenSource();
+            
+            // Link to scheduler cancellation
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, search.CancellationToken.Token);
+            
+            // Run the search for this turn
+            bool completed = await RunSearchTurnInternalAsync(runId, search, startBatch, endBatch, linkedCts.Token);
+            
+            // Checkpoint database after turn
+            try { search.Database?.Checkpoint(); } 
+            catch (Exception ex) { Console.WriteLine($"[SearchManager] Checkpoint failed for {search.SearchId}: {ex.Message}"); }
+            
+            return completed;
+        }
+        catch (OperationCanceledException)
+        {
+            return false; // Will be re-enqueued if scheduler still running
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Scheduler] Error in search turn {searchId}: {ex.Message}");
+            _lastErrors[searchId] = ex.Message;
+            return true; // Consider it complete on error
+        }
+    }
+    
+    /// <summary>
+    /// Internal method to run search for specified batch range.
+    /// </summary>
+    private async Task<bool> RunSearchTurnInternalAsync(Guid runId, ActiveSearch search, long startBatch, long endBatch, CancellationToken ct)
+    {
+        if (!JamlConfigLoader.TryLoadFromJamlString(search.FilterJaml, out var config, out var parseError) || config == null)
+        {
+            _lastErrors[search.SearchId] = parseError ?? "Invalid filter";
+            return true; // Complete on error
+        }
+        
+        var searchParams = new JsonSearchParams
+        {
+            Threads = search.AssignedThreads,
+            BatchSize = search.BatchSize,
+            StartBatch = (ulong)Math.Max(0, startBatch),
+            EndBatch = (ulong)endBatch,
+            Cutoff = search.CutoffOverride ?? 0,
+            AutoCutoff = !search.CutoffOverride.HasValue || search.CutoffOverride.Value <= 0,
+            EnableDebug = false,
+            NoFancy = true,
+            Quiet = true
+        };
+        
+        // Apply seed source or seed list
+        if (search.SeedList != null && search.SeedList.Count > 0)
+            searchParams.SeedList = search.SeedList;
+        else
+            ApplySeedSource(searchParams, search.SeedSource);
+        
+        searchParams.ProgressCallback = (completedBatches, totalBatches, seedsSearched, seedsPerMs) =>
+        {
+            search.CompletedBatches = (long)searchParams.StartBatch + completedBatches;
+            search.TotalBatches = totalBatches > 0 ? (long)searchParams.StartBatch + totalBatches : 0;
+            search.SeedsSearched = seedsSearched;
+            search.SeedsPerSecond = seedsPerMs * 1000.0;
+            
+            // Save batch position
+            try { search.Database?.SaveBatchPosition(search.CompletedBatches, searchParams.BatchSize); } 
+            catch (Exception ex) { Console.WriteLine($"[SearchManager] SaveBatchPosition failed for {search.SearchId}: {ex.Message}"); }
+            
+            // Broadcast progress
+            _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+            {
+                type = "progress",
+                searchId = search.SearchId,
+                currentBatch = search.CompletedBatches,
+                totalBatches = search.TotalBatches,
+                seedsSearched = search.SeedsSearched,
+                seedsPerSecond = search.SeedsPerSecond,
+                seedsFound = search.TotalResults
+            }));
+        };
+        
+        var executor = new JsonSearchExecutor(config, searchParams, result =>
+        {
+            search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
+            search.TotalResults++;
+            
+            _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+            {
+                type = "result",
+                searchId = search.SearchId,
+                result = new { seed = result.Seed, score = result.Score, tallies = result.TallyColumns },
+                columns = search.ColumnNames
+            }));
+        });
+        
+        search.Executor = executor;
+        
+        try
+        {
+            await Task.Run(() => executor.Execute(), ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        
+        // Check if search naturally completed or just finished this turn's batches
+        bool naturallyComplete = search.TotalBatches > 0 && search.CompletedBatches >= search.TotalBatches;
+        
+        if (naturallyComplete)
+        {
+            _broadcaster?.BroadcastToSearch(search.SearchId, JsonSerializer.Serialize(new
+            {
+                type = "search_completed",
+                searchId = search.SearchId,
+                seedsFound = search.TotalResults,
+                seedsSearched = search.SeedsSearched
+            }));
+        }
+        
+        return naturallyComplete;
+    }
+    
+    /// <summary>
+    /// Determines if a search should use the fast lane (small word list/DB searches).
+    /// </summary>
+    private bool IsFastLaneSearch(string? seedSource, List<string>? seedList)
+    {
+        // Seed list provided directly = fast lane
+        if (seedList != null && seedList.Count > 0 && seedList.Count < 100000)
+            return true;
+        
+        // Word list or DB file source = fast lane
+        if (!string.IsNullOrWhiteSpace(seedSource))
+        {
+            if (seedSource.StartsWith("txt:", StringComparison.OrdinalIgnoreCase) ||
+                seedSource.StartsWith("csv:", StringComparison.OrdinalIgnoreCase) ||
+                seedSource.StartsWith("db:", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /// <summary>
+    /// Enqueue a search for the scheduler. Automatically determines fast lane vs round-robin.
+    /// </summary>
+    public void EnqueueSearch(string searchId)
+    {
+        if (!_activeSearches.TryGetValue(searchId, out var search))
+            return;
+        
+        bool fastLane = IsFastLaneSearch(search.SeedSource, search.SeedList);
+        
+        lock (_queueLock)
+        {
+            if (fastLane)
+                _fastLaneQueue.Enqueue(searchId);
+            else
+                _roundRobinQueue.Enqueue(searchId);
+        }
+        
+        Console.WriteLine($"[Scheduler] Enqueued search {searchId} ({(fastLane ? "fast lane" : "round-robin")})");
+        
+        // Start scheduler if not running
+        StartScheduler();
+    }
+    
+    /// <summary>
+    /// Get status of all active searches for UI display.
+    /// </summary>
+    public List<ActiveSearchStatus> GetActiveSearchesStatus()
+    {
+        var result = new List<ActiveSearchStatus>();
+        
+        foreach (var kvp in _activeSearches)
+        {
+            var search = kvp.Value;
+            bool inQueue;
+            bool isFastLane;
+            
+            lock (_queueLock)
+            {
+                isFastLane = _fastLaneQueue.Contains(search.SearchId);
+                inQueue = isFastLane || _roundRobinQueue.Contains(search.SearchId);
+            }
+            
+            result.Add(new ActiveSearchStatus
+            {
+                SearchId = search.SearchId,
+                FilterName = GetFilterName(search.FilterJaml),
+                Deck = search.Deck,
+                Stake = search.Stake,
+                CompletedBatches = search.CompletedBatches,
+                TotalBatches = search.TotalBatches,
+                SeedsSearched = search.SeedsSearched,
+                SeedsPerSecond = search.SeedsPerSecond,
+                ResultsFound = search.TotalResults,
+                IsRunning = search.SearchTask != null && !search.SearchTask.IsCompleted,
+                IsFastLane = isFastLane,
+                InQueue = inQueue,
+                StopReason = search.StopReason
+            });
+        }
+        
+        return result.OrderBy(s => s.SearchId).ToList();
+    }
+    
+    public class ActiveSearchStatus
+    {
+        public string SearchId { get; set; } = "";
+        public string FilterName { get; set; } = "";
+        public string Deck { get; set; } = "";
+        public string Stake { get; set; } = "";
+        public long CompletedBatches { get; set; }
+        public long TotalBatches { get; set; }
+        public long SeedsSearched { get; set; }
+        public double SeedsPerSecond { get; set; }
+        public int ResultsFound { get; set; }
+        public bool IsRunning { get; set; }
+        public bool IsFastLane { get; set; }
+        public bool InQueue { get; set; }
+        public string? StopReason { get; set; }
+    }
+
     private List<string> GetColumnNamesFromDb(string dbPath)
     {
         if (!File.Exists(dbPath)) return new List<string> { "seed", "score" };
@@ -490,6 +864,13 @@ public class SearchManager
         {
             Console.WriteLine($"Error canceling cancellation token for search {search.SearchId}: {ex.Message}");
         }
+
+        try
+        {
+            search.CancellationToken?.Dispose();
+            search.CancellationToken = null;
+        }
+        catch { }
 
         var timeout = TimeSpan.FromSeconds(1);
         var completed = true;
@@ -795,6 +1176,8 @@ public class SearchManager
         }
         catch (OperationCanceledException)
         {
+            // Search was cancelled - this is expected, log it
+            Console.WriteLine($"[SearchManager] Search {search.SearchId} was cancelled");
         }
         catch (Exception ex)
         {
@@ -1075,12 +1458,18 @@ public class SearchManager
             var fileName = normalizedName + ".jaml";
             var fullPath = Path.Combine(filtersPath, fileName);
 
-            // Only save if it doesn't already exist (don't overwrite user's saved filters)
-            if (!File.Exists(fullPath))
+            // Always save filter - if file exists, add timestamp to create new file
+            if (File.Exists(fullPath))
             {
-                File.WriteAllText(fullPath, filterJaml);
-                _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+                // Add timestamp to make it unique (creates new filter instead of overwriting)
+                var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+                var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                fileName = $"{nameWithoutExt}_{timestamp}.jaml";
+                fullPath = Path.Combine(filtersPath, fileName);
             }
+            
+            File.WriteAllText(fullPath, filterJaml);
+            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
         }
         catch (Exception ex)
         {
@@ -1089,7 +1478,7 @@ public class SearchManager
         }
     }
 
-    private static string SanitizeFilterFileStem(string name)
+    internal static string SanitizeFilterFileStem(string name)
     {
         var trimmed = (name ?? string.Empty).Trim();
         if (trimmed.Length == 0)
@@ -1098,11 +1487,28 @@ public class SearchManager
         // Replace spaces with underscores
         trimmed = trimmed.Replace(' ', '_');
         
+        // Replace incompatible symbols with underscores (not dashes) for consistency
         var invalid = Path.GetInvalidFileNameChars();
-        var chars = trimmed.Select(c => invalid.Contains(c) ? '-' : c).ToArray();
+        var chars = trimmed.Select(c => invalid.Contains(c) ? '_' : c).ToArray();
         var safe = new string(chars).Trim();
-        safe = safe.Replace(Path.DirectorySeparatorChar, '-').Replace(Path.AltDirectorySeparatorChar, '-');
+        safe = safe.Replace(Path.DirectorySeparatorChar, '_').Replace(Path.AltDirectorySeparatorChar, '_');
         return safe;
+    }
+
+    /// <summary>
+    /// Gets a filter ID from a filename. The filter ID is the normalized filename without extension.
+    /// This is consistent across frontend and backend - filter ID = normalized filename (spaces and incompatible symbols -> underscores).
+    /// </summary>
+    public static string GetFilterIdFromFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return string.Empty;
+        
+        // Get filename without extension
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+        
+        // Normalize it (spaces and incompatible symbols -> underscores)
+        return SanitizeFilterFileStem(nameWithoutExt);
     }
 }
 

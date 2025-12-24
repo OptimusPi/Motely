@@ -26,14 +26,30 @@ if (Test-Path $BSO_PROJECT_PATH) {
         Copy-Item -Recurse "$TEMP_PUBLISH\*" $OUTPUT_DIR -Force
 
         # ------------------------------------------------------------------
-        # PWA overlay: add manifest + service worker + icons so /BSO/ can be
-        # installed and run fullscreen (standalone display).
-        # NOTE: BSO publish output lives in "$OUTPUT_DIR\\wwwroot".
+        # Flatten structure: Move wwwroot/* contents up to BSO/ root
+        # Avalonia Browser publishes with wwwroot/, but we want flat structure
         # ------------------------------------------------------------------
         $BSO_WWWROOT = Join-Path $OUTPUT_DIR "wwwroot"
         if (Test-Path $BSO_WWWROOT) {
+            Write-Host "Flattening BSO structure (moving wwwroot/* to BSO/)..." -ForegroundColor Cyan
+            
+            # Move all contents from wwwroot/ up to BSO/
+            Get-ChildItem -Path $BSO_WWWROOT -Force | Move-Item -Destination $OUTPUT_DIR -Force
+            
+            # Remove empty wwwroot folder
+            Remove-Item -Path $BSO_WWWROOT -Force -ErrorAction SilentlyContinue
+            
+            Write-Host "Structure flattened successfully" -ForegroundColor Green
+        }
+
+        # ------------------------------------------------------------------
+        # PWA overlay: add manifest + service worker + icons so /BSO/ can be
+        # installed and run fullscreen (standalone display).
+        # Files are written directly to $OUTPUT_DIR (BSO/) after flattening.
+        # ------------------------------------------------------------------
+        if (Test-Path $OUTPUT_DIR) {
             # Ensure icons exist
-            $ICON_DIR = Join-Path $BSO_WWWROOT "icons"
+            $ICON_DIR = Join-Path $OUTPUT_DIR "icons"
             New-Item -ItemType Directory -Force -Path $ICON_DIR | Out-Null
 
             # Generate simple PNG icons (192 / 512) - avoids shipping binaries in git
@@ -97,7 +113,7 @@ if (Test-Path $BSO_PROJECT_PATH) {
     { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
-'@ | Set-Content -Path (Join-Path $BSO_WWWROOT "manifest.json") -Encoding UTF8
+'@ | Set-Content -Path (Join-Path $OUTPUT_DIR "manifest.json") -Encoding UTF8
 
             @'
 (function () {
@@ -122,7 +138,7 @@ if (Test-Path $BSO_PROJECT_PATH) {
       });
   });
 })();
-'@ | Set-Content -Path (Join-Path $BSO_WWWROOT "pwa-register.js") -Encoding UTF8
+'@ | Set-Content -Path (Join-Path $OUTPUT_DIR "pwa-register.js") -Encoding UTF8
 
             @'
 /* Balatro Seed Oracle PWA service worker (scope: /BSO/) */
@@ -220,14 +236,14 @@ self.addEventListener("fetch", (event) => {
     })()
   );
 });
-'@ | Set-Content -Path (Join-Path $BSO_WWWROOT "sw.js") -Encoding UTF8
+'@ | Set-Content -Path (Join-Path $OUTPUT_DIR "sw.js") -Encoding UTF8
 
             # Patch index.html (idempotent)
-            $INDEX_PATH = Join-Path $BSO_WWWROOT "index.html"
+            $INDEX_PATH = Join-Path $OUTPUT_DIR "index.html"
             if (Test-Path $INDEX_PATH) {
                 $html = Get-Content -Path $INDEX_PATH -Raw
 
-                if ($html -notmatch "rel=\\\"manifest\\\"") {
+                if ($html -notmatch 'rel="manifest"') {
                     $html = $html -replace '<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">', @'
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#202020">
@@ -242,8 +258,8 @@ self.addEventListener("fetch", (event) => {
 '@
                 }
 
-                if ($html -notmatch "pwa-register\\.js") {
-                    $html = $html -replace '(</script>\\s*)\\s*<!-- DuckDB-WASM interop module -->', @'
+                if ($html -notmatch 'pwa-register\.js') {
+                    $html = $html -replace '(</script>\s*)\s*<!-- DuckDB-WASM interop module -->', @'
 $1
     <!-- PWA Service Worker -->
     <script src="./pwa-register.js"></script>
@@ -256,7 +272,7 @@ $1
             }
         }
         else {
-            Write-Host "WARNING: BSO wwwroot not found at $BSO_WWWROOT" -ForegroundColor Yellow
+            Write-Host "WARNING: BSO output directory not found at $OUTPUT_DIR" -ForegroundColor Yellow
         }
         
         Write-Host "BSO files copied successfully!" -ForegroundColor Green

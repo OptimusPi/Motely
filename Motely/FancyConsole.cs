@@ -3,12 +3,17 @@ using System.Runtime.CompilerServices;
 namespace Motely;
 
 /// <summary>
-/// Desktop-specific console implementation with fancy bottom line support
+/// Console implementation with fancy bottom line support
+/// Platform-specific implementations:
+/// - Desktop: FancyConsole.Desktop.cs (full cursor positioning support)
+/// - Browser: FancyConsole.Browser.cs (simple console output)
+/// - Android: FancyConsole.Android.cs (simple console output)
+/// - iOS: FancyConsole.iOS.cs (simple console output)
 /// </summary>
-public class FancyConsoleImpl : IMotelyConsole
+public partial class FancyConsoleImpl : IMotelyConsole
 {
     public static bool IsEnabled { get; set; } = true;
-    private static string? _bottomLine;
+    protected static string? _bottomLine;
     private static readonly FancyConsoleImpl _instance = new();
 
     public static FancyConsoleImpl Instance => _instance;
@@ -21,35 +26,6 @@ public class FancyConsoleImpl : IMotelyConsole
     }
 
     private FancyConsoleImpl() { } // Private constructor for singleton
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    private void WriteBottomLine(string bottomLine)
-    {
-#if !BROWSER
-        (int oldLeft, int oldTop) = Console.GetCursorPosition();
-        Console.SetCursorPosition(0, Console.BufferHeight - 1);
-        Console.Write(new string(' ', Console.BufferWidth));
-        Console.SetCursorPosition(0, Console.BufferHeight - 1);
-        Console.Write(bottomLine);
-        Console.SetCursorPosition(oldLeft, oldTop);
-#else
-        // Browser platform - no fancy console operations
-        Console.WriteLine(bottomLine);
-#endif
-    }
-
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    private void ClearBottomLine()
-    {
-#if !BROWSER
-        (int oldLeft, int oldTop) = Console.GetCursorPosition();
-        Console.SetCursorPosition(0, Console.BufferHeight - 1);
-        Console.Write(new string(' ', Console.BufferWidth));
-        Console.SetCursorPosition(oldLeft, oldTop);
-#else
-        // Browser platform - no fancy console operations
-#endif
-    }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     public void SetBottomLine(string? bottomLine)
@@ -72,36 +48,7 @@ public class FancyConsoleImpl : IMotelyConsole
         WriteLine(message?.ToString() ?? null);
     }
 
-    [MethodImpl(MethodImplOptions.Synchronized)]
-    public void WriteLine(string? message)
-    {
-        try
-        {
-#if !BROWSER
-            (int oldLeft, int oldTop) = Console.GetCursorPosition();
-
-            if (oldTop == Console.BufferHeight - 1)
-            {
-                ClearBottomLine();
-            }
-
-            Console.WriteLine(message ?? "null");
-
-            if (oldTop == Console.BufferHeight - 1)
-            {
-                SetBottomLine(_bottomLine);
-            }
-#else
-            // Browser platform - simple console output
-            Console.WriteLine(message ?? "null");
-#endif
-        }
-        catch (System.IO.IOException)
-        {
-            // No console available (e.g., running in test environment) - just write to stdout
-            Console.WriteLine(message ?? "null");
-        }
-    }
+    // WriteBottomLine, ClearBottomLine, and WriteLine(string) are implemented in platform-specific partial files
 }
 
 /// <summary>
