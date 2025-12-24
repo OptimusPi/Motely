@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  balatro-seed-oracle-mcp:
+    build:
+      context: ..
+      dockerfile: Motely.API/Dockerfile
+    image: balatro-seed-oracle-mcp:latest
+    container_name: balatro-seed-oracle-mcp
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://0.0.0.0:3141
+    ports:
+      - "3141:3141"
+    volumes:
+      # Mount local directories for persistence
+      - ./JamlFilters:/app/JamlFilters
+      - ./WordLists:/app/WordLists
+      - ./SearchDatabases:/app/SearchDatabases
+      - ./appsettings.json:/app/appsettings.json:ro
+    restart: unless-stopped
+    # For stdio mode (MCP), use stdin_open and tty
+    stdin_open: true
+    tty: true
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3141/mcp"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+

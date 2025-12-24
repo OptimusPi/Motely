@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="Terminal.Gui" />
-    <PackageReference Include="System.Collections.Immutable" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

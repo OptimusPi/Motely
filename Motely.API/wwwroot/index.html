@@ -13,7 +13,9 @@
     section { margin-bottom:2rem; }
     h2 { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:1rem; }
     .local h2 { color:var(--green); }
-    .community h2 { color:var(--blue); }
+    .games h2 { color:var(--gold); }
+    .searchers h2 { color:var(--blue); }
+    .mobile h2 { color:var(--green); }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem; }
     .card { display:block; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1rem; text-decoration:none; color:var(--text); transition:all 0.2s; }
     .card:hover { border-color:var(--gold); transform:translateY(-2px); }
@@ -39,6 +41,7 @@
         <a href="/JamlGenie/" class="card"><h3>JamlGenie</h3><p>JAML filter generator and helper tool.</p></a>
       </div>
       <div class="api-links">
+        <a href="/swagger">Swagger UI</a>
         <a href="/openapi/v1.json">openapi.json</a>
         <a href="/health">/health</a>
         <a href="/filters">/filters</a>
@@ -46,19 +49,34 @@
       </div>
     </section>
 
-    <section class="community">
-      <h2>Community Tools</h2>
+    <section class="games">
+      <h2>Games</h2>
+      <div class="grid">
+        <a href="https://weejoker.app/" class="card" target="_blank"><h3>The Daily Wee</h3><p>Daily challenge on WeeJoker.app</p></a>
+        <a href="https://erraticdeck.app/" class="card" target="_blank"><h3>ErraticDeck</h3><p>Deck building and analysis.</p></a>
+      </div>
+    </section>
+
+    <section class="searchers">
+      <h2>Other Searchers</h2>
       <div class="grid">
         <a href="https://miaklwalker.github.io/Blueprint/" class="card" target="_blank"><h3>Blueprint</h3><p>Online seed analyzer by miaklwalker.</p></a>
-        <a href="https://weejoker.app/" class="card" target="_blank"><h3>WeeJoker</h3><p>Quick joker lookup and seed tools.</p></a>
-        <a href="https://erraticdeck.app/" class="card" target="_blank"><h3>ErraticDeck</h3><p>Deck building and analysis.</p></a>
+        <a href="https://exitatmosphere.github.io/TheEgg/" class="card" target="_blank"><h3>The Egg</h3><p>Balatro seed searcher by exitatmosphere.</p></a>
+        <a href="https://legendaryseeds.app/" class="card" target="_blank"><h3>Legendary Seeds</h3><p>Seed searcher powered by balatro4j.</p></a>
         <a href="https://github.com/tacodiva/motely" class="card" target="_blank"><h3>Motely by tacodiva</h3><p>Original fast CPU SIMD seed searcher.</p></a>
+      </div>
+    </section>
+
+    <section class="mobile">
+      <h2>Mobile</h2>
+      <div class="grid">
+        <a href="https://github.com/alex-cova/perkeoapp" class="card" target="_blank"><h3>Perkeo</h3><p>Balatro companion app for iOS by alex-cova.</p></a>
       </div>
     </section>
 
     <footer>
       <p>Not affiliated with LocalThunk or PlayStack. <a href="https://playbalatro.com/">BUY Balatro</a></p>
-      <p>Blueprint by miaklwalker | Motely engine by <a href="https://github.com/tacodiva">tacodiva</a></p>
+      <p>Made with ❤️ for the Balatro community.</p>
     </footer>
   </div>
 
