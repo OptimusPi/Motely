@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JamlGenie - Local Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="genie-box">
+            <div class="genie-icon">🧞</div>
+            <input 
+                id="promptInput" 
+                class="prompt-input" 
+                placeholder="I want 2 blueprints yo"
+                autofocus
+            />
+            <button id="generateBtn" class="genie-btn">✨</button>
+        </div>
+        
+        <div id="result" class="result hidden">
+            <pre id="jsonOutput"></pre>
+            <div class="result-actions">
+                <button id="copyBtn" class="action-btn">📋</button>
+                <button id="downloadBtn" class="action-btn">⬇️</button>
+                <button id="newBtn" class="action-btn">✨</button>
+            </div>
+        </div>
+
+        <div id="status" class="status hidden"></div>
+        
+        <div style="margin-top: 20px; padding: 12px; background: #16213e; border-radius: 8px; font-size: 0.9rem; color: #a0aec0;">
+            <strong>Local Test Mode</strong><br>
+            API: <span id="apiUrl"></span><br>
+            <small>Change API endpoint in app-local.js</small>
+        </div>
+    </div>
+
+    <div id="consentModal" class="modal hidden">
+        <div class="modal-content">
+            <p>🎤 Need mic access</p>
+            <div class="modal-buttons">
+                <button id="consentAllow" class="btn-allow">OK</button>
+                <button id="consentDeny" class="btn-deny">Skip</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app-local.js"></script>
+</body>
+</html>

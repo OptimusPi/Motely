@@ -26,3 +26,13 @@ Motely/tui.json
 /JamlFilters-old
 /Motely.API/wwwroot/BSO
 .cursor/debug.log
+/Motely.API/wwwroot/JamlUI3/assets
+/publish/api/wwwroot/BSO/_framework
+/publish/api/wwwroot/BSO/Assets
+*.br
+*.gz
+/publish/api/wwwroot/BSO
+/publish
+
+publish/bso-temp/
+publish/api/
