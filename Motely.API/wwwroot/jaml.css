@@ -38,27 +38,35 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html, body { 
-  height: 100%; 
+  height: 100dvh; /* Use dynamic viewport height on mobile for better keyboard handling */
+  height: 100%; /* Fallback for older browsers */
   background: var(--bg-color); 
   color: var(--text-color); 
   font-family: 'm6x11', "Segoe UI", Consolas, monospace; 
   font-weight: normal; 
   margin: 0; 
+  padding: 0;
   overflow: hidden; 
   touch-action: none;
   font-size: 16px;
   letter-spacing: 0.5px;
+  position: fixed; /* Prevent scroll bounce on mobile */
+  width: 100%;
+  top: 0;
+  left: 0;
 }
 
 .app-layout { 
-  display:flex; 
-  flex-direction:column; 
-  height:100%; 
+  display: flex; 
+  flex-direction: column; 
+  height: 100dvh; /* Use dynamic viewport height on mobile */
+  height: 100%; /* Fallback for older browsers */
   padding: 0; 
   width: 100%;
   position: absolute;
   top: 0;
   left: 0;
+  overflow: hidden;
 }
 
 /* Main Layout */
@@ -143,8 +151,18 @@ html, body {
   to { transform: translateY(-4px); }
 }
 
-.tab-content { display:none; flex:1; min-height:0; }
-.tab-content.active { display:flex; flex-direction:column; }
+.tab-content { 
+  display: none; 
+  flex: 1; 
+  min-height: 0; 
+  overflow: hidden; /* Prevent content from overflowing */
+}
+.tab-content.active { 
+  display: flex; 
+  flex-direction: column; 
+  flex: 1;
+  min-height: 0;
+}
 
 /* Controls & Inputs */
 .dropdown-row { 
@@ -267,9 +285,18 @@ button:active {
 .toggle-btn.active { background: var(--balatro-blue); color: #fff; box-shadow: 0 2px 0 var(--button-shadow); }
 .toggle-btn:active { transform: translateY(2px); box-shadow: none; }
 
-.monaco-container { flex:1; border: none; border-radius: 8px; overflow: hidden; background: var(--dark-bg); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+.monaco-container { 
+  flex: 1; 
+  min-height: 0; /* Allow shrinking in flex container */
+  border: none; 
+  border-radius: 8px; 
+  overflow: hidden; 
+  background: var(--dark-bg); 
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.5); 
+}
 .plain-editor { 
-  flex:1; 
+  flex: 1; 
+  min-height: 0; /* Allow shrinking in flex container */
   background: #f0f0f0; 
   color: #222; 
   border: none; 
@@ -278,6 +305,7 @@ button:active {
   font-family: Consolas, monospace; 
   font-size: 18px; 
   box-shadow: inset 0 0 10px rgba(0,0,0,0.1); 
+  resize: none; /* Prevent manual resize - let flex handle it */
 }
 
 .action-buttons { display:flex; gap: 8px; margin-top: 8px; align-items: center; }
@@ -396,11 +424,129 @@ button:active {
 }
 .modal-input:focus { outline: 2px solid var(--balatro-blue); }
 
-/* Responsive */
+/* Responsive - Mobile Optimizations */
 @media (max-width: 768px) and (orientation: portrait), (max-width: 600px) {
-  .side-by-side { flex-direction:column; padding: 4px; }
-  .panel-splitter { width:100%; height:12px; cursor:row-resize; margin: 2px 0; }
-  .panel-splitter::after { content: '···'; transform: rotate(0deg); letter-spacing: 2px; }
+  .side-by-side { 
+    flex-direction: column; 
+    padding: 4px; 
+    gap: 4px;
+    height: 100%;
+    min-height: 0;
+  }
   
-  .dropdown-row { flex-direction: column; }
+  .panel-shell {
+    padding: 4px;
+    gap: 4px;
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .panel-splitter { 
+    width: 100%; 
+    height: 8px; 
+    cursor: row-resize; 
+    margin: 2px 0; 
+    flex: 0 0 8px;
+  }
+  .panel-splitter::after { 
+    content: '···'; 
+    transform: rotate(0deg); 
+    letter-spacing: 2px; 
+  }
+  
+  /* Compact dropdowns - remove wasted space */
+  .dropdown-row { 
+    flex-direction: column; 
+    gap: 4px;
+    margin-bottom: 4px !important;
+  }
+  
+  .input-group {
+    margin-bottom: 0;
+  }
+  
+  /* Compact editor header - reduce margins */
+  .editor-header { 
+    margin-bottom: 4px !important;
+    gap: 4px;
+  }
+  
+  .editor-buttons {
+    gap: 4px;
+  }
+  
+  /* Make editor buttons smaller on mobile */
+  .button-small {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-height: 36px;
+  }
+  
+  .toggle-btn {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+  
+  /* CRITICAL: Make tab-content fill remaining space */
+  .tab-content.active {
+    flex: 1;
+    min-height: 0;
+    display: flex !important;
+    flex-direction: column;
+  }
+  
+  /* Make Monaco editor fill ALL available vertical space */
+  .monaco-container {
+    flex: 1 !important;
+    min-height: 200px;
+    max-height: none;
+    height: auto;
+  }
+  
+  .plain-editor {
+    flex: 1 !important;
+    min-height: 200px;
+    max-height: none;
+    height: auto;
+  }
+  
+  /* Ensure left/right panels can shrink and fill */
+  .left-panel, .right-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Compact tabs */
+  .tabs {
+    margin-bottom: 4px;
+    gap: 4px;
+  }
+  
+  .tab {
+    padding: 6px 10px;
+    font-size: 1rem;
+  }
+  
+  /* Compact results header */
+  .results-header {
+    padding: 6px;
+    margin-bottom: 4px;
+    gap: 4px;
+  }
+  
+  .results-header-top {
+    gap: 4px;
+  }
+  
+  .results-actions-left,
+  .results-actions-right {
+    gap: 4px;
+  }
+  
+  #status {
+    margin-top: 4px;
+    font-size: 0.85rem;
+  }
 }

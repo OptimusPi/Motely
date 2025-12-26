@@ -16,14 +16,20 @@ public class JimboView : View
     private readonly Color[,] _pixels;
     private readonly int _pixelWidth;
     private readonly int _pixelHeight;
+    private readonly double _scale;
 
-    public JimboView()
+    public JimboView(double scale = 0.65)
     {
+        _scale = scale;
         (_pixels, _pixelWidth, _pixelHeight) = LoadFromPng();
 
+        // Scale down dimensions
+        var scaledWidth = (int)(_pixelWidth * _scale);
+        var scaledHeight = (int)(_pixelHeight * _scale);
+        
         // Each character cell shows 2 vertical pixels using half-block
-        Width = _pixelWidth;
-        Height = (_pixelHeight + 1) / 2;
+        Width = scaledWidth;
+        Height = (scaledHeight + 1) / 2;
         CanFocus = false;
     }
 
@@ -67,16 +73,26 @@ public class JimboView : View
         var transparent = new Color(0, 0, 0, 0);
         var shader = MotelyTUI.ShaderBackground;
         var screenRect = ViewportToScreen(viewport);
+        
+        var scaledWidth = (int)(_pixelWidth * _scale);
+        var scaledHeight = (int)(_pixelHeight * _scale);
 
-        for (int charY = 0; charY < viewport.Height && charY * 2 < _pixelHeight; charY++)
+        for (int charY = 0; charY < viewport.Height && charY * 2 < scaledHeight; charY++)
         {
-            for (int charX = 0; charX < viewport.Width && charX < _pixelWidth; charX++)
+            for (int charX = 0; charX < viewport.Width && charX < scaledWidth; charX++)
             {
-                int topY = charY * 2;
-                int bottomY = topY + 1;
+                // Scale coordinates back to original pixel coordinates (nearest-neighbor sampling)
+                int srcX = (int)(charX / _scale);
+                int srcTopY = (int)((charY * 2) / _scale);
+                int srcBottomY = (int)((charY * 2 + 1) / _scale);
+                
+                // Clamp to valid pixel bounds
+                srcX = Math.Clamp(srcX, 0, _pixelWidth - 1);
+                srcTopY = Math.Clamp(srcTopY, 0, _pixelHeight - 1);
+                srcBottomY = Math.Clamp(srcBottomY, 0, _pixelHeight - 1);
 
-                var topColor = _pixels[charX, topY];
-                var bottomColor = bottomY < _pixelHeight ? _pixels[charX, bottomY] : transparent;
+                var topColor = _pixels[srcX, srcTopY];
+                var bottomColor = srcBottomY < _pixelHeight ? _pixels[srcX, srcBottomY] : transparent;
 
                 bool topTransparent = topColor.A == 0;
                 bool bottomTransparent = bottomColor.A == 0;
