@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>JAML - New UI</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="stylesheet" href="styles.css?v=20241224-2004" />
+  <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Center Tab - Drag indicator + Home/Settings -->
+    <div class="top-center-tab">
+      <button onclick="goHome()" class="tab-icon-btn" title="Home"><i data-lucide="home"></i></button>
+      <span class="tab-label">JAML</span>
+      <button onclick="toggleWidgetSettings()" class="tab-icon-btn" title="Widgets & Settings"><i data-lucide="settings"></i></button>
+    </div>
+    
+    <!-- FULL-HEIGHT SPLIT: Left (Filter) | Splitter | Right (Search) -->
+    <div class="full-split">
+      
+      <!-- LEFT HALF: Filter/Editor -->
+      <div class="left-half">
+        <div class="half-content">
+        <div class="section-with-tab">
+          <span class="section-tab section-tab-red">JAML</span>
+          <div id="jamlEditorSection" class="panel-section" style="flex: 1;">
+            <div id="leftEditor" class="panel-main">
+              <div id="monacoEditor" class="monaco-container" style="display:none;"></div>
+              <div id="visualBuilder" class="visual-builder" style="display:none;"></div>
+              <textarea id="filterJaml" class="plain-editor" placeholder="Enter JAML filter..." spellcheck="false"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="section-with-tab">
+          <span class="section-tab section-tab-blue">Blueprint Analyzer</span>
+          <div id="blueprintSection" class="panel-section" style="flex: 0 0 180px;">
+            <div class="blueprint-container">
+              <div class="blueprint-toolbar">
+                <input type="text" id="blueprintSeedInput" class="blueprint-seed-input" placeholder="Seed..." />
+                <button onclick="analyzeSeedInBlueprint()" class="button-small">Go</button>
+              </div>
+              <iframe id="blueprintFrame" src="about:blank" data-src="https://miaklwalker.github.io/Blueprint/" class="blueprint-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FULL-HEIGHT VERTICAL SPLITTER -->
+      <div id="panelSplitter1" class="full-splitter" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+      <!-- RIGHT HALF: Search/Results -->
+      <div class="right-half">
+        <div class="half-content">
+          <div class="section-with-tab">
+            <span class="section-tab section-tab-purple">Results <span id="activeSearchCount" class="grab-badge">0</span></span>
+            <div id="resultsSection" class="panel-section" style="flex: 1;">
+            <div class="results-header">
+              <div class="results-header-left">
+                <select id="seedSourceDropdown" class="tray-select"></select>
+                <button id="searchBtn" onclick="handleSearchClick()" class="tool-btn primary">▶ Start</button>
+                <button onclick="toggleColorMode()" class="tool-btn" title="Colors">🎨</button>
+              </div>
+              <div class="results-header-right">
+                <button onclick="clearResults()" class="tool-btn" id="clearResultsBtn">🗑️ Clear</button>
+                <button onclick="exportCsv()" class="tool-btn" title="Export">📥 Export</button>
+              </div>
+            </div>
+            <div id="status" class="results-status">Ready</div>
+            <div id="resultsGrid" class="results-container">
+              <div class="no-results">No results yet</div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Widget Settings Popup -->
+  <div id="widgetSettingsPopup" class="widget-settings-popup">
+    <div class="widget-settings-header">
+      <h3>Widgets & Settings</h3>
+      <button class="widget-settings-close" onclick="toggleWidgetSettings()" aria-label="Close" title="Close">&times;</button>
+    </div>
+    <div class="widget-settings-body">
+      <div class="widget-section">
+        <div class="widget-section-title">Filter Controls</div>
+        <div class="filter-toolbar" style="flex-wrap: wrap; gap: 4px; padding: 8px; background: var(--dark-bg); border-radius: 4px;">
+          <div id="filterSelectWrapper" class="custom-select-wrapper" style="flex: 1; min-width: 120px;">
+            <select id="filterSelect" class="tray-select"></select>
+          </div>
+          <button onclick="newFilter()" class="icon-btn-small" title="New">+</button>
+          <button id="visualToggle" onclick="toggleVisualBuilder()" class="tool-btn">Visual</button>
+          <button id="monacoToggle" onclick="toggleMonaco()" class="tool-btn">Monaco</button>
+          <button id="formatBtn" onclick="formatJaml()" class="tool-btn">Format</button>
+          <button id="saveBtn" onclick="saveFilter()" class="tool-btn">💾</button>
+          <button onclick="shareLink()" class="tool-btn" title="Share">🔗</button>
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Running Searches</div>
+        <div id="settingsProgressTableContainer" style="display:none;">
+          <table class="progress-table">
+            <thead>
+              <tr>
+                <th>Search ID</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Speed</th>
+                <th>Searched</th>
+                <th>Found</th>
+                <th>Stop</th>
+              </tr>
+            </thead>
+            <tbody id="settingsProgressTableBody"></tbody>
+          </table>
+        </div>
+        <div id="noActiveSearchesInSettings" class="widget-item" style="cursor: default; opacity: 0.6;">
+          <span class="widget-item-name">No active searches</span>
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Filters</div>
+        <div class="widget-list" id="filtersList">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Authors</div>
+        <div class="widget-list" id="authorsList">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Add Widgets</div>
+        <div class="widget-list" id="availableWidgetsList">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+      <div class="widget-section">
+        <div class="widget-section-title">Active Widgets</div>
+        <div class="widget-list" id="activeWidgetsList">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Filter Modal -->
+  <div id="saveFilterModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="saveFilterTitle" onclick="handleBackdrop(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="saveFilterTitle">Save Filter</h3>
+        <button class="close-btn" aria-label="Close" onclick="closeSaveFilterModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text">Saving JAML file as:</p>
+        <div class="input-group" style="display: flex; align-items: center; gap: 8px;">
+          <input type="text" id="saveFilterFilename" class="modal-input" value="NewFilter.jaml" readonly style="flex: 1;" onkeydown="if(event.key==='Enter') confirmSaveFilter()">
+          <button id="editFilenameBtn" class="icon-btn" onclick="toggleFilenameEdit()" title="Edit filename"><i data-lucide="pencil"></i></button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="button-small" onclick="closeSaveFilterModal()">Cancel</button>
+        <button id="saveFilterConfirm" class="button-primary" onclick="confirmSaveFilter()">Save JAML Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+  <!-- Tabulator - Modern table library with proper sorting UI -->
+  <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator_bulma.min.css" rel="stylesheet">
+  <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+  <!-- Interact.js - Smooth drag/resize with snapping and push interactions -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.24/dist/interact.min.js"></script>
+  <script src="visual-builder.js"></script>
+  <script src="jaml.js?v=20241224-2004"></script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+  <script>
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Lucide icons
+      lucide.createIcons({
+        attrs: {
+          'class': 'lucide-icon',
+          'width': '20',
+          'height': '20',
+          'stroke': 'currentColor',
+          'stroke-width': '2',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          'fill': 'none'
+        }
+      });
+      
+      // Initialize top center tab (doesn't depend on Monaco)
+      if (typeof initTopCenterTab === 'function') {
+        initTopCenterTab();
+      }
+
+      // Add listener to plain text editor for column updates
+      const plainEditor = document.getElementById('filterJaml');
+      if (plainEditor) {
+        plainEditor.addEventListener('input', function() {
+          if (typeof updateColumnsFromFilter === 'function') {
+            // Debounce to avoid too many API calls
+            clearTimeout(window.columnUpdateTimeout);
+            window.columnUpdateTimeout = setTimeout(updateColumnsFromFilter, 500);
+          }
+        });
+      }
+      
+      // Initialize Monaco editor
+      require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+      require(['vs/editor/editor.main'], function () {
+        const container = document.getElementById('monacoEditor');
+        window.jamlEditor = monaco.editor.create(container, {
+          value: '',
+          language: 'yaml',
+          theme: 'vs-dark',
+          automaticLayout: true,
+          minimap: { enabled: false },
+          fontSize: 18,
+          fontFamily: "'Consolas', 'Cascadia Code', 'JetBrains Mono', monospace",
+          lineHeight: 24,
+          tabSize: 2,
+          insertSpaces: true,
+          scrollBeyondLastLine: false,
+          wordWrap: 'on',
+          wrappingIndent: 'same',
+          renderLineHighlight: 'none',
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          scrollbar: {
+            vertical: 'auto',
+            horizontal: 'auto',
+            useShadows: true,
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
+            arrowSize: 0
+          }
+        });
+
+        // Add command for Shift+Tab (outdent)
+        window.jamlEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Tab, () => {
+          window.jamlEditor.trigger('keyboard', 'editor.action.outdentLines');
+        });
+        
+        window.jamlEditor.onDidChangeModelContent(() => {
+          // Sync Monaco content to plain editor
+          const plain = document.getElementById('filterJaml');
+          if (plain) {
+            plain.value = window.jamlEditor.getValue();
+          }
+          // Update columns when JAML changes (unless formatting)
+          if (typeof updateColumnsFromFilter === 'function' && typeof isFormatting !== 'undefined' && !isFormatting) {
+            updateColumnsFromFilter();
+          }
+        });
+        
+        // Handle resizing for mobile/desktop
+        const handleResize = () => {
+          if (window.jamlEditor) {
+            setTimeout(() => window.jamlEditor.layout(), 100);
+          }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', () => setTimeout(handleResize, 300));
+        
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', handleResize);
+          window.visualViewport.addEventListener('scroll', handleResize);
+        }
+        
+        // Initialize splitter grabbers after Monaco is ready
+        if (typeof window.onMonacoReady === 'function') {
+          window.onMonacoReady();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
