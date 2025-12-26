@@ -1,4 +1,5 @@
 using Terminal.Gui;
+using Motely.API;
 
 namespace Motely.TUI;
 
@@ -78,6 +79,39 @@ public static class MotelyTUI
             {
                 Console.Error.WriteLine($"Warning: Application.Shutdown() failed: {ex.Message}");
             }
+        }
+    }
+
+    /// <summary>
+    /// Run only the API server without TUI interface
+    /// Detects stdio mode for MCP server (Claude Desktop) and runs stdio handler instead of HTTP
+    /// </summary>
+    public static async Task<int> RunApiOnly(string host = "localhost", int port = 5123)
+    {
+        try
+        {
+            // Check if we should run in stdio mode (for MCP server)
+            if (McpStdioEntryPoint.ShouldRunStdioMode())
+            {
+                Console.Error.WriteLine("MCP Server: Detected stdio mode, starting MCP stdio server...");
+                await McpStdioEntryPoint.RunStdioModeAsync();
+                return 0;
+            }
+
+            Console.WriteLine($"Starting Motely API server on http://{host}:{port}");
+            
+            var args = new[] { "--urls", $"http://{host}:{port}" };
+            var app = MotelyApiFactory.CreateApi(args);
+            
+            Console.WriteLine("API server started successfully. Press Ctrl+C to stop.");
+            await app.RunAsync();
+            
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"API Error: {ex.Message}");
+            return 1;
         }
     }
 

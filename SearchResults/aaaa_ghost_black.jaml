@@ -1,0 +1,10 @@
+name: aaaa
+author: aaaa
+deck: ghost
+stake: black
+must: 
+- joker: Blueprint
+  antes: [1]
+  edition: Negative
+  sources:
+    judgement: [0]
