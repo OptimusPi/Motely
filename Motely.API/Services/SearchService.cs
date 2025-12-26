@@ -4,6 +4,7 @@ using Motely.Utils;
 using System.Collections.Concurrent;
 using Motely;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Motely.API.Hubs;
 
 namespace Motely.API.Services;
@@ -219,7 +220,7 @@ public class SearchService
                     });
                 };
 
-                scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, criteria.MinScore, false, scoreCallback);
+                scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, criteria.MinScore, ScoreCutoffMode.Manual, scoreCallback);
             }
 
             var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
