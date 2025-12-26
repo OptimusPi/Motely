@@ -503,24 +503,6 @@ public static class MotelyApiFactory
                     if (path.EndsWith(".html") || path.EndsWith(".htm"))
                     {
                         ctx.Context.Response.ContentType = "text/html; charset=utf-8";
-<<<<<<< Current (Your changes)
-=======
-                        ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
-                        ctx.Context.Response.Headers.Append("Pragma", "no-cache");
-                        ctx.Context.Response.Headers.Append("Expires", "0");
-                    }
-                    // Don't cache JS or CSS files - force fresh load
-                    else if (path.EndsWith(".js"))
-                    {
-                        ctx.Context.Response.ContentType = "text/javascript; charset=utf-8";
-                        ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
-                        ctx.Context.Response.Headers.Append("Pragma", "no-cache");
-                        ctx.Context.Response.Headers.Append("Expires", "0");
-                    }
-                    else if (path.EndsWith(".css"))
-                    {
-                        ctx.Context.Response.ContentType = "text/css; charset=utf-8";
->>>>>>> Incoming (Background Agent changes)
                         ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
                         ctx.Context.Response.Headers.Append("Pragma", "no-cache");
                         ctx.Context.Response.Headers.Append("Expires", "0");
