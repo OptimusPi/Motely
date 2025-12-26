@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net10.0-browser;net10.0-android;net10.0-ios</TargetFrameworks>
+    <TargetFrameworks>net9.0;net10.0;net10.0-browser;net10.0-android;net10.0-ios</TargetFrameworks>
     <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">21</SupportedOSPlatformVersion>
     <!-- <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks> -->
-    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0'">win-x64;linux-x64;osx-x64;osx-arm64;android-arm64;android-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0'">win-x64;linux-x64;osx-x64;osx-arm64;android-arm64;android-x64</RuntimeIdentifiers>
     <!-- Exclude Android from build matrix - Motely is a desktop CLI tool -->
     <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0-browser'">browser-wasm</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -26,7 +26,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <!-- Desktop performance settings (not applicable to browser) -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0' AND !$(RuntimeIdentifier.Contains('android'))">
+  <PropertyGroup Condition="('$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0') AND !$(RuntimeIdentifier.Contains('android'))">
     <TieredCompilation>true</TieredCompilation>
     <TieredPGO>true</TieredPGO>
     <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
@@ -69,7 +69,7 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
   <!-- Desktop-only packages (native dependencies that don't work in browser) -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="DuckDB.NET.Data.Full" />
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
@@ -105,13 +105,13 @@
     <!-- DuckDBSeedProvider removed - use DuckDBSeeds.Stream() with WithListSearch() instead -->
   </ItemGroup>
   <!-- Exclude browser stub from desktop build -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0'">
     <!-- API files are now in separate Motely.API project -->
     <Compile Remove="API\**\*.cs" />
     <!-- TUI files are now compiled by Motely.TUI project -->
     <Compile Remove="TUI\**\*.cs" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net10.0'">
     <Compile Remove="MotelySearch.Browser.cs" />
   </ItemGroup>
   <!-- Android-specific settings -->
