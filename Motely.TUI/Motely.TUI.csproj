@@ -5,6 +5,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <AssemblyName>MotelyTUI</AssemblyName>
+    <NoWarn>$(NoWarn);CS8032</NoWarn>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,4 +28,10 @@
     <EmbeddedResource Include="Jimbo.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\Motely.API\appsettings.json">
+      <Link>appsettings.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

@@ -373,9 +373,29 @@ public struct MotelyJsonSeedScoreDesc(
                                         break;
 
                                     case MotelyFilterItemType.ErraticRank:
+                                        // Need to verify minimum count requirement
+                                        if (clause.RankEnum.HasValue)
+                                        {
+                                            var count = MotelyJsonScoring.CountErraticRankOccurrences(ref singleCtx, clause.RankEnum.Value);
+                                            clauseSatisfied = count >= (clause.Min ?? 0);
+                                        }
+                                        else
+                                        {
+                                            clauseSatisfied = false;
+                                        }
+                                        break;
+
                                     case MotelyFilterItemType.ErraticSuit:
-                                        // Base filter already verified with 100% accurate SIMD - trust it!
-                                        clauseSatisfied = true;
+                                        // Need to verify minimum count requirement
+                                        if (clause.SuitEnum.HasValue)
+                                        {
+                                            var count = MotelyJsonScoring.CountErraticSuitOccurrences(ref singleCtx, clause.SuitEnum.Value);
+                                            clauseSatisfied = count >= (clause.Min ?? 0);
+                                        }
+                                        else
+                                        {
+                                            clauseSatisfied = false;
+                                        }
                                         break;
 
                                     default:
@@ -429,6 +449,9 @@ public struct MotelyJsonSeedScoreDesc(
                                     );
                                     int score = count * should.Score;
                                     totalScore += score;
+                                    
+                                    // DEBUG: Log what's being added
+                                    // System.Console.WriteLine($"[DEBUG] Adding tally for {should.Type}/{should.Value}: {count}"); // DISABLED FOR PERFORMANCE
                                     seedScore.AddTally(count);
                                 }
                                 break;

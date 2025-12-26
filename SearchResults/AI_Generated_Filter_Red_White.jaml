@@ -1,0 +1,16 @@
+dateCreated: 2025-12-24
+name: AI Generated Filter
+author: JamlGenie MCP
+
+name: Two Blueprints
+deck: Red
+stake: White
+must:
+  - joker: Showman
+    ante: 1
+  - joker: Blueprint
+    count: 2
+should:
+  - soulJoker: Any
+    edition: Negative
+mustNot: []

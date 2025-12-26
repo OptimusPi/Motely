@@ -124,7 +124,10 @@ public class MotelySearchDatabase : IDisposable
             if (_appender != null)
             {
                 try { _appender.Close(); }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close appender in GetTopResults: {ex.Message}");
+                }
                 _appender = null;
             }
 
@@ -166,7 +169,10 @@ public class MotelySearchDatabase : IDisposable
             if (_appender != null)
             {
                 try { _appender.Close(); }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close appender in GetTopResults: {ex.Message}");
+                }
                 _appender = null;
             }
 
@@ -213,7 +219,10 @@ public class MotelySearchDatabase : IDisposable
             if (_appender != null)
             {
                 try { _appender.Close(); }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close appender in GetTopResults: {ex.Message}");
+                }
                 _appender = null;
             }
 
@@ -234,7 +243,10 @@ public class MotelySearchDatabase : IDisposable
                 if (_appender != null)
                 {
                     try { _appender.Close(); }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close appender during Dispose: {ex.Message}");
+                    }
                     _appender = null;
                 }
 
@@ -242,14 +254,20 @@ public class MotelySearchDatabase : IDisposable
                 cmd.CommandText = "FORCE CHECKPOINT";
                 cmd.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logCallback?.Invoke($"[MotelySearchDatabase] Failed to checkpoint during Dispose: {ex.Message}");
+            }
 
             try
             {
                 _connection?.Close();
                 _connection?.Dispose();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close/dispose connection: {ex.Message}");
+            }
 
             _disposed = true;
         }
@@ -345,8 +363,11 @@ public class MotelySearchDatabase : IDisposable
                 _connection.Open();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            _logCallback?.Invoke($"[MotelySearchDatabase] Failed to validate/delete database: {ex.Message}");
+            // Re-throw to fail fast - database validation is critical
+            throw;
         }
     }
 
