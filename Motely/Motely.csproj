@@ -1,0 +1,143 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net10.0-browser;net10.0-android;net10.0-ios</TargetFrameworks>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">21</SupportedOSPlatformVersion>
+    <!-- <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks> -->
+    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0'">win-x64;linux-x64;osx-x64;osx-arm64;android-arm64;android-x64</RuntimeIdentifiers>
+    <!-- Exclude Android from build matrix - Motely is a desktop CLI tool -->
+    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0-browser'">browser-wasm</RuntimeIdentifiers>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <!-- Build as Exe by default (TUI mode), but Library when multi-targeting or in BSO_LIBRARY mode -->
+  <PropertyGroup>
+    <!-- Multi-targeting (net10.0 + browser) means building for BSO -> always Library -->
+    <OutputType Condition="$(TargetFrameworks.Contains(';'))">Library</OutputType>
+    <!-- Single-targeting: Exe by default, Library if BSO_LIBRARY config -->
+    <OutputType Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' == 'BSO_LIBRARY'">Library</OutputType>
+    <OutputType Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' != 'BSO_LIBRARY'">Exe</OutputType>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Performance optimizations -->
+    <Optimize>true</Optimize>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <!-- Desktop performance settings (not applicable to browser) -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0' AND !$(RuntimeIdentifier.Contains('android'))">
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <!-- Platform target removed to allow cross-platform builds -->
+    <!-- SIMD and CPU optimizations -->
+    <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
+    <EnableAVX2>true</EnableAVX2>
+    <EnableAVX512F>true</EnableAVX512F>
+    <EnableAVX512BW>true</EnableAVX512BW>
+    <EnableAVX512DQ>true</EnableAVX512DQ>
+    <EnableAVX512VL>true</EnableAVX512VL>
+    <EnableBMI1>true</EnableBMI1>
+    <EnableBMI2>true</EnableBMI2>
+    <EnableLZCNT>true</EnableLZCNT>
+    <EnablePOPCNT>true</EnablePOPCNT>
+    <EnableFMA>true</EnableFMA>
+    <!-- Additional performance settings -->
+    <DebugType>none</DebugType>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <EnableDynamicPGO>true</EnableDynamicPGO>
+    <!-- .NET 10 performance features -->
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <!-- Strip telemetry and tracing overhead -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <MetricsSupport>false</MetricsSupport>
+  </PropertyGroup>
+  <!-- Browser-specific settings -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
+  </PropertyGroup>
+  <!-- Publish settings for Release builds - only for Exe output type (not Library) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' AND '$(OutputType)' == 'Exe'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <SelfContained>true</SelfContained>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+  <!-- Desktop-only packages (native dependencies that don't work in browser) -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="DuckDB.NET.Data.Full" />
+    <PackageReference Include="Terminal.Gui" />
+  </ItemGroup>
+  <!-- Android/iOS packages - DuckDB.NET should work if native libs are bundled -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android' OR '$(TargetFramework)' == 'net10.0-ios'">
+    <PackageReference Include="DuckDB.NET.Data.Full" />
+  </ItemGroup>
+  <!-- Cross-platform packages -->
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <!-- System.Collections.Immutable removed - not used in code, only in comments -->
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- Exclude desktop-only files from browser build (Terminal.Gui TUI, CLI executors) -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <!-- TUI uses Terminal.Gui - definitely not browser compatible -->
+    <Compile Remove="TUI\**\*.cs" />
+    <!-- API server uses native HTTP listener - not browser compatible -->
+    <Compile Remove="API\**\*.cs" />
+    <!-- Executors are CLI-focused, exclude from browser -->
+    <Compile Remove="Executors\**\*.cs" />
+    <!-- Program.cs is the CLI entry point -->
+    <Compile Remove="Program.cs" />
+    <!-- MotelySearch.cs has DuckDB classes - use browser stub instead -->
+    <Compile Remove="MotelySearch.cs" />
+    <!-- DuckDB desktop implementation excluded - use DuckDBSeeds.Browser.cs instead -->
+    <!-- Note: DuckDBSeeds is partial, so DuckDBSeeds.Browser.cs provides the browser implementation -->
+    <!-- DuckDBSeedProvider removed - use DuckDBSeeds.Stream() with WithListSearch() instead -->
+  </ItemGroup>
+  <!-- Exclude browser stub from desktop build -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <!-- API files are now in separate Motely.API project -->
+    <Compile Remove="API\**\*.cs" />
+    <!-- TUI files are now compiled by Motely.TUI project -->
+    <Compile Remove="TUI\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Compile Remove="MotelySearch.Browser.cs" />
+  </ItemGroup>
+  <!-- Android-specific settings -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <AndroidSdkDirectory>$(LOCALAPPDATA)\Android\android-sdk</AndroidSdkDirectory>
+    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+  </PropertyGroup>
+  
+  <!-- Exclude desktop-only files from Android/iOS builds -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android' OR '$(TargetFramework)' == 'net10.0-ios'">
+    <!-- TUI uses Terminal.Gui - not mobile compatible -->
+    <Compile Remove="TUI\**\*.cs" />
+    <!-- API server uses native HTTP listener - not mobile compatible -->
+    <Compile Remove="API\**\*.cs" />
+    <!-- Executors are CLI-focused, exclude from mobile -->
+    <Compile Remove="Executors\**\*.cs" />
+    <!-- Program.cs is the CLI entry point -->
+    <Compile Remove="Program.cs" />
+    <!-- Browser stub not needed on mobile -->
+    <Compile Remove="MotelySearch.Browser.cs" />
+  </ItemGroup>
+  <!-- Define ANDROID/IOS constants for conditional compilation -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-ios'">
+    <DefineConstants>$(DefineConstants);IOS</DefineConstants>
+  </PropertyGroup>
+</Project>

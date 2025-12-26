@@ -1,0 +1,93 @@
+:root {
+  --bg: #2f3f44;
+  --panel: #35484d;
+  --border: #cdd6df;
+  --text: #f7f9fb;
+  --accent: #ff4c40;
+  --accent2: #0093ff;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+.top-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: var(--panel);
+  border-bottom: 4px solid var(--border); box-shadow: 0 2px 8px var(--shadow);
+  z-index: 10;
+}
+.top-bar .title { font-weight: 700; letter-spacing: 1px; }
+.icon-btn {
+  border: 2px solid var(--border); background: transparent; color: var(--text);
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 14px;
+}
+.icon-btn:hover { background: var(--border); color: #000; }
+.top-bar-left, .top-bar-right { display: flex; gap: 8px; align-items: center; }
+
+.app-shell { position: absolute; inset: 48px 0 0 0; }
+
+.main-split {
+  display: flex; width: 100%; height: 100%;
+}
+.stack {
+  flex: 1; display: flex; flex-direction: column; gap: 10px;
+  padding: 10px; overflow: hidden;
+}
+.splitter {
+  width: 10px; background: var(--border); cursor: ew-resize;
+  flex: 0 0 10px; position: relative;
+}
+
+.panel {
+  display: flex; flex-direction: column; min-height: 120px; background: var(--panel);
+  border: 2px solid var(--border); border-top-width: 4px; border-radius: 6px;
+  box-shadow: 0 4px 8px var(--shadow); overflow: hidden;
+}
+.panel-content { flex: 1; overflow: auto; padding: 10px; }
+.tab {
+  position: relative; align-self: flex-start;
+  margin: 0; padding: 6px 12px; min-width: 120px;
+  background: var(--accent); color: #fff; font-weight: 700;
+  border-radius: 0 0 6px 0; cursor: grab; user-select: none;
+  border: none;
+}
+.tab:active { cursor: grabbing; }
+.tab::before { content: '≡'; margin-right: 6px; opacity: 0.8; }
+
+.drop-overlay { position: absolute; inset: 0; pointer-events: none; display: none; }
+.drop-overlay.active { display: block; }
+.drop-zone {
+  position: absolute; top: 0; bottom: 0; width: 20%;
+  display: flex; align-items: center; justify-content: center;
+  border: 4px solid rgba(255,255,255,0.6);
+  border-radius: 8px; color: #fff; font-size: 32px;
+  background: rgba(255,255,255,0.08);
+  animation: pulse 1s ease-in-out infinite;
+}
+.drop-left { left: 0; }
+.drop-right { right: 0; }
+.drop-zone span { pointer-events: none; }
+
+.ghost {
+  position: absolute; pointer-events: none; opacity: 0.4;
+  border: 2px dashed var(--border); background: rgba(0,0,0,0.15);
+  border-radius: 6px; z-index: 9;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+@media (max-width: 900px) {
+  .splitter { width: 6px; flex: 0 0 6px; }
+  .tab { min-width: 100px; }
+}
+
