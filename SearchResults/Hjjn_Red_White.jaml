@@ -1,0 +1,15 @@
+dateCreated: 2025-12-25
+name: Hjjn
+author: JamlGenie
+
+name: Hjjn
+author: JamlGenie
+
+name: JAML Filter
+deck: Red
+stake: White
+must:
+  - joker: HangingChad
+    antes: [1]
+mustNot: []
+should: []

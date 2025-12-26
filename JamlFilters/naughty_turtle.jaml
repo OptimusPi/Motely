@@ -1,0 +1,11 @@
+name: naughty turtle
+deck: ghost
+stake: White
+author: pi
+description: nsfw
+must:
+  - joker: TurtleBean
+should: 
+  - spectralCard: Ectoplasm
+  - joker: TurtleBean
+

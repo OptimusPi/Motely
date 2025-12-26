@@ -1,0 +1,16 @@
+# Cloudflare Workers configuration for JamlGenie
+# This file is used by GitHub Actions to deploy
+
+name = "jamlgenie"
+main = "worker.js"
+compatibility_date = "2025-12-21"
+
+# Enable Workers AI
+# Make sure Workers AI is enabled in your Cloudflare dashboard
+[ai]
+binding = "AI"
+
+# Optional: Set a custom route/domain
+# routes = [
+#   { pattern = "jamlgenie.yourdomain.com", custom_domain = true }
+# ]
