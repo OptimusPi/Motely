@@ -1,0 +1,12 @@
+{
+  "name": "jamlgenie-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Workers AI for JamlGenie",
+  "main": "worker.js",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "keywords": ["cloudflare", "workers", "ai", "balatro"],
+  "author": "",
+  "license": "MIT"
+}

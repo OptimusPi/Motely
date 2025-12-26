@@ -1,0 +1,7 @@
+deck: Red
+stake: White
+filter:
+  must:
+    - type: score
+      op: ">"
+      value: 200000
