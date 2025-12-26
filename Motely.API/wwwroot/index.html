@@ -1,172 +1,84 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>JAML – New UI</title>
-  <link rel="stylesheet" href="jaml.css?v=3" />
-  <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css">
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balatro Seed Search Tools</title>
+  <style>
+    :root { --bg:#0a0a0f; --card:#12121a; --gold:#f4c430; --blue:#4cc9f0; --green:#06d6a0; --text:#f0f0f0; --muted:#8888aa; --border:#2a2a3a; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .container { max-width:900px; margin:0 auto; padding:2rem 1rem; }
+    h1 { font-size:2rem; color:var(--gold); text-align:center; margin-bottom:0.5rem; }
+    .subtitle { text-align:center; color:var(--muted); margin-bottom:2rem; }
+    section { margin-bottom:2rem; }
+    h2 { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:1rem; }
+    .local h2 { color:var(--green); }
+    .games h2 { color:var(--gold); }
+    .searchers h2 { color:var(--blue); }
+    .mobile h2 { color:var(--green); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem; }
+    .card { display:block; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1rem; text-decoration:none; color:var(--text); transition:all 0.2s; }
+    .card:hover { border-color:var(--gold); transform:translateY(-2px); }
+    .card h3 { font-size:1rem; margin-bottom:0.25rem; }
+    .card p { font-size:0.75rem; color:var(--muted); }
+    .api-links { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:1rem; }
+    .api-links a { font-size:0.7rem; padding:0.4rem 0.8rem; border:1px solid var(--border); border-radius:4px; color:var(--muted); text-decoration:none; }
+    .api-links a:hover { border-color:var(--gold); color:var(--gold); }
+    footer { margin-top:2rem; padding-top:1rem; border-top:1px solid var(--border); text-align:center; font-size:0.65rem; color:var(--muted); line-height:1.8; }
+    footer a { color:var(--gold); }
+  </style>
 </head>
 <body>
-  <div class="app-layout">
-    <!-- Header Removed per user request -->
+  <div class="container">
+    <h1>Balatro Seed Search Tools</h1>
+    <p class="subtitle">All Ways to Search for Balatro Seeds</p>
 
-    <div class="side-by-side panel-shell">
-      <div class="left-panel">
-        <div class="tabs">
-          <button class="tab active" onclick="switchTab('search', this)">
-             JAML Filter
-          </button>
-          <button class="tab" onclick="switchTab('analyze', this)">
-             Analyzer
-          </button>
-        </div>
-
-        <div id="search-tab" class="tab-content active">
-          <!-- Row 1: Dropdowns Side-by-Side -->
-          <div class="dropdown-row">
-            <div class="input-group" style="flex:1">
-              <select id="filtersDropdown"></select>
-            </div>
-            <div class="input-group" style="flex:1">
-              <select id="seedSourceDropdown"></select>
-            </div>
-          </div>
-
-          <!-- Row 2: Editor Controls & Settings -->
-          <div class="editor-header">
-            <div class="editor-toggle-group">
-              <button onclick="setEditorMode('monaco')" id="monacoBtn" class="toggle-btn active">Monaco Editor</button>
-              <button onclick="setEditorMode('plain')" id="plainBtn" class="toggle-btn">Plain Text</button>
-            </div>
-            
-            <div class="editor-buttons">
-              <button onclick="formatJaml()" class="button-small" title="Format Code">Format</button>
-              <button onclick="saveFilter()" class="button-small" title="Save Filter">Save</button>
-              <button id="settingsBtn" onclick="openSettings()" class="button-small" title="Manage Filter">Settings</button>
-            </div>
-          </div>
-
-          <!-- Row 3: Editor -->
-          <div id="monacoEditor" class="monaco-container"></div>
-          <textarea id="filterJaml" class="plain-editor" style="display:none"></textarea>
-          
-          <!-- Start Search Button moved to Results Header -->
-        </div>
-
-        <div id="analyze-tab" class="tab-content">
-          <div class="info-text">Click a seed in Results to analyze</div>
-          <div id="analyzeContainer" class="analyze-container"></div>
-        </div>
+    <section class="local">
+      <h2>Local Tools</h2>
+      <div class="grid">
+        <a href="/JAML/" class="card"><h3>JAML WebUI</h3><p>Commander control for JAML filters and live seed searches.</p></a>
+        <a href="/BSO/" class="card"><h3>BSO Browser</h3><p>Avalonia UI compiled to WebAssembly. Full oracle in browser.</p></a>
+        <a href="/JamlGenie/" class="card"><h3>JamlGenie</h3><p>JAML filter generator and helper tool.</p></a>
       </div>
-
-      <div id="panelSplitter" class="panel-splitter" role="separator" aria-orientation="vertical" tabindex="0"></div>
-
-      <div class="right-panel">
-        <div class="results-header">
-          <div class="results-header-top">
-            <div class="results-actions-left">
-              <button id="searchBtn" onclick="toggleSearch()" class="button-primary">Start Search</button>
-              <button onclick="shareLink()" class="icon-btn" title="Share Link">🔗</button>
-              <button onclick="toggleColorMode()" class="icon-btn" title="Toggle Color Mode">🎨</button>
-            </div>
-            
-            <div class="results-actions-right">
-              <button onclick="exportCsv()" class="icon-btn" title="Export CSV" style="background: var(--balatro-blue)">CSV 💾</button>
-              <button onclick="stopAll()" class="button-small button-danger">Stop All</button>
-            </div>
-          </div>
-          <div id="status"></div>
-        </div>
-        
-        <div id="resultsGrid" class="results-container">
-          <div class="no-results">
-            <p>No results yet</p>
-            <p class="help-text">Start a search to see results</p>
-          </div>
-        </div>
+      <div class="api-links">
+        <a href="/swagger">Swagger UI</a>
+        <a href="/openapi/v1.json">openapi.json</a>
+        <a href="/health">/health</a>
+        <a href="/filters">/filters</a>
+        <a href="/seed-sources">/seed-sources</a>
       </div>
-    </div>
+    </section>
 
-    <!-- Settings Modal (Simplified) -->
-    <div id="settingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" onclick="handleBackdrop(event)">
-      <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="modal-header">
-          <h3 id="settingsTitle">Manage Filter</h3>
-          <button class="close-btn" aria-label="Close" onclick="closeSettings()">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p class="help-text">Actions apply to the currently selected filter.</p>
-          <div class="action-grid">
-             <button class="button-action blue" onclick="renameFilter()">
-               <span class="icon" aria-hidden="true">✎</span> Rename
-             </button>
-             <button class="button-action orange" onclick="cloneFilter()">
-               <span class="icon" aria-hidden="true">⎘</span> Clone
-             </button>
-             <button class="button-action red" onclick="deleteFilter()">
-               <span class="icon" aria-hidden="true">🗑</span> Delete
-             </button>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="button-small" onclick="closeSettings()">Close</button>
-        </div>
+    <section class="games">
+      <h2>Games</h2>
+      <div class="grid">
+        <a href="https://weejoker.app/" class="card" target="_blank"><h3>The Daily Wee</h3><p>Daily challenge on WeeJoker.app</p></a>
+        <a href="https://erraticdeck.app/" class="card" target="_blank"><h3>ErraticDeck</h3><p>Deck building and analysis.</p></a>
       </div>
-    </div>
+    </section>
 
-    <!-- Generic Input Modal -->
-    <div id="inputModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="inputModalTitle" onclick="handleBackdrop(event)">
-      <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="modal-header">
-          <h3 id="inputModalTitle">Input</h3>
-          <button class="close-btn" aria-label="Close" onclick="closeInputModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p id="inputModalMessage" class="help-text" style="display:none"></p>
-          <div class="input-group">
-            <input type="text" id="inputModalValue" class="modal-input" placeholder="Enter value..." aria-invalid="false" onkeydown="handleInputKey(event)" oninput="clearInputError()">
-            <span id="inputErrorMsg" class="error-text" style="display:none; color: var(--balatro-red); font-size: 0.85rem; margin-top: 4px;"></span>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="button-small" onclick="closeInputModal()">Cancel</button>
-          <button id="inputModalConfirm" class="button-primary">Confirm</button>
-        </div>
+    <section class="searchers">
+      <h2>Other Searchers</h2>
+      <div class="grid">
+        <a href="https://miaklwalker.github.io/Blueprint/" class="card" target="_blank"><h3>Blueprint</h3><p>Online seed analyzer by miaklwalker.</p></a>
+        <a href="https://exitatmosphere.github.io/TheEgg/" class="card" target="_blank"><h3>The Egg</h3><p>Balatro seed searcher by exitatmosphere.</p></a>
+        <a href="https://legendaryseeds.app/" class="card" target="_blank"><h3>Legendary Seeds</h3><p>Seed searcher powered by balatro4j.</p></a>
+        <a href="https://github.com/tacodiva/motely" class="card" target="_blank"><h3>Motely by tacodiva</h3><p>Original fast CPU SIMD seed searcher.</p></a>
       </div>
-    </div>
+    </section>
+
+    <section class="mobile">
+      <h2>Mobile</h2>
+      <div class="grid">
+        <a href="https://github.com/alex-cova/perkeoapp" class="card" target="_blank"><h3>Perkeo</h3><p>Balatro companion app for iOS by alex-cova.</p></a>
+      </div>
+    </section>
+
+    <footer>
+      <p>Not affiliated with LocalThunk or PlayStack. <a href="https://playbalatro.com/">BUY Balatro</a></p>
+      <p>Made with ❤️ for the Balatro community.</p>
+    </footer>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
-  <script src="jaml.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
-  <script>
-    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
-    require(['vs/editor/editor.main'], function () {
-      const container = document.getElementById('monacoEditor');
-      const initialValue = document.getElementById('filterJaml')?.value || '';
-      window.jamlEditor = monaco.editor.create(container, {
-        value: initialValue,
-        language: 'yaml',
-        automaticLayout: true,
-        theme: 'vs-dark',
-        minimap: { enabled: false },
-        fontSize: 18,
-        fontFamily: "'Consolas', 'Cascadia Code', 'JetBrains Mono', monospace", /* Soft Normie Monospace */
-        lineNumbers: 'on',
-        scrollBeyondLastLine: false,
-        padding: { top: 10, bottom: 10 }
-      });
-      window.jamlEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Tab, () => {
-        window.jamlEditor.trigger('keyboard', 'editor.action.outdentLines');
-      });
-      window.jamlEditor.onDidChangeModelContent(() => {
-        document.getElementById('filterJaml').value = window.jamlEditor.getValue();
-      });
-      if (typeof window.onMonacoReady === 'function') window.onMonacoReady();
-    });
-  </script>
-</body>
-</html>
+
+</body></html>

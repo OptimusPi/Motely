@@ -1,0 +1,22 @@
+{
+	"name": "balatro-seed-oracle-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-03-07",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"vars": {
+		// Set this to your Motely.API backend URL
+		// Example: "MOTELY_API_URL": "https://your-api.com"
+		// Or use localhost for development: "http://localhost:3141"
+		"MOTELY_API_URL": "http://localhost:3141"
+	}
+	// Optional: Add API key for authentication
+	// "vars": {
+	//   "MOTELY_API_URL": "https://your-api.com",
+	//   "API_KEY": "your-secret-key"
+	// }
+}
+

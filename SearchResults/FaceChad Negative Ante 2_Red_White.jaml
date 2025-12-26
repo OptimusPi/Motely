@@ -1,0 +1,51 @@
+name: FaceChad Negative Ante 2
+deck: Red
+stake: White
+must:
+  # FaceChad = HangingChad + Photograph (both jokers)
+  # CRITICAL: Must be in shop slots [2, 3] (NOT 0, 1!)
+  # First 2 shop slots can't be turned negative because user hasn't skipped yet
+  # User skips small blind Ante 2 FIRST to get NegativeTag, then shop slots 2, 3 get negative
+  - joker: HangingChad
+    antes: [2]
+    sources:
+      shopSlots: [2, 3]  # Must be in shop slots 2 or 3 (after skip)
+  - joker: Photograph
+    antes: [2]
+    sources:
+      shopSlots: [2, 3]  # Must be in shop slots 2 or 3 (after skip)
+  
+  # NegativeTag in Ante 2 (small blind skip reward)
+  - tag: NegativeTag
+    antes: [2]
+
+should:
+  # Ways to get DoubleTag (doubles NegativeTag reward - 1 becomes 2!)
+  # All same score value - player chooses which method to use
+  # 1. Anaglyph deck (free DoubleTag every end of ante)
+  # Note: Deck is set to Red above, but Anaglyph would work here
+  
+  # 2. SmallBlindTag: DoubleTag in Ante 1
+  - smallBlindTag: DoubleTag
+    antes: [1]
+    score: 10
+  
+  # 3. BigBlindTag: DoubleTag in Ante 1
+  - bigBlindTag: DoubleTag
+    antes: [1]
+    score: 10
+  
+  # 4. DietCola joker - when SOLD, adds DoubleTag to player inventory
+  - joker: DietCola
+    antes: [1]
+    score: 10  # Player sells it to get DoubleTag
+  
+  # Natural negative as backup (if DoubleTag method doesn't work)
+  - joker: HangingChad
+    edition: Negative
+    antes: [2]
+    score: 5
+  - joker: Photograph
+    edition: Negative
+    antes: [2]
+    score: 5

@@ -1322,10 +1322,11 @@ public static class MotelyJsonScoring
         var stream = ctx.CreateErraticDeckPrngStream(isCached: false);
         int count = 0;
 
+        // Use the same method as the filter - GetNextErraticDeckCard
         for (int i = 0; i < 52; i++)
         {
-            var card = ctx.GetNextRandomElement(ref stream, MotelyEnum<MotelyPlayingCard>.Values);
-            if (card.GetRank() == rank)
+            var card = ctx.GetNextErraticDeckCard(ref stream);
+            if (card.PlayingCardRank == rank)
             {
                 count++;
             }
@@ -1345,10 +1346,11 @@ public static class MotelyJsonScoring
         var stream = ctx.CreateErraticDeckPrngStream(isCached: false);
         int count = 0;
 
+        // Use the same method as the filter - GetNextErraticDeckCard
         for (int i = 0; i < 52; i++)
         {
-            var card = ctx.GetNextRandomElement(ref stream, MotelyEnum<MotelyPlayingCard>.Values);
-            if (card.GetSuit() == suit)
+            var card = ctx.GetNextErraticDeckCard(ref stream);
+            if (card.PlayingCardSuit == suit)
             {
                 count++;
             }
@@ -1765,8 +1767,20 @@ public static class MotelyJsonScoring
 
         int totalCount = 0;
 
+        // ErraticRank and ErraticSuit are special - they count the starting deck composition (not per-ante)
+        // The erratic deck is determined at the start of the run and doesn't change per-ante
+        if (clause.ItemTypeEnum == MotelyFilterItemType.ErraticRank)
+        {
+            // Count only once for the starting deck, not per-ante
+            totalCount = CountErraticRankOccurrences(ref ctx, clause.RankEnum!.Value);
+        }
+        else if (clause.ItemTypeEnum == MotelyFilterItemType.ErraticSuit)
+        {
+            // Count only once for the starting deck, not per-ante
+            totalCount = CountErraticSuitOccurrences(ref ctx, clause.SuitEnum!.Value);
+        }
         // Soul jokers are special - they need to be counted across ALL antes with ONE stream
-        if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+        else if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
         {
             totalCount = CountSoulJokerOccurrencesForAllAntes(ref ctx, clause, ref runState);
         }
@@ -1824,8 +1838,6 @@ public static class MotelyJsonScoring
                     )
                         ? 1
                         : 0,
-                    MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, clause.RankEnum!.Value),
-                    MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, clause.SuitEnum!.Value),
                     _ => 0,
                 };
                 totalCount += anteCount;
