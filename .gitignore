@@ -19,3 +19,4 @@
 *.wal
 /Motely.TUI/SearchResults
 /Motely.API/cloudflare-worker-jamlgenie
+/.cursor
