@@ -1,0 +1,131 @@
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
+using Motely;
+using Motely.API.Models;
+using Motely.API.Services;
+
+namespace Motely.API;
+
+public static class Endpoints
+{
+    public static IResult GetFilters()
+    {
+        var filters = FilterService.LoadFiltersFromDisk("JamlFilters", cfg => false);
+        return Results.Ok(filters);
+    }
+    
+    public static IResult GetSeedSources()
+    {
+        var results = new List<object>
+        {
+            new { key = "all", label = "All Seeds", kind = "builtin" }
+        };
+        
+        if (Directory.Exists("WordLists"))
+        {
+            foreach (var file in Directory.GetFiles("WordLists", "*.*")
+                .Where(f => f.EndsWith(".db") || f.EndsWith(".txt") || f.EndsWith(".csv"))
+                .Select(Path.GetFileName)
+                .Where(f => f != null)
+                .Cast<string>())
+            {
+                var ext = Path.GetExtension(file).TrimStart('.').ToLowerInvariant();
+                var (category, displayName) = SeedSourceHelper.ParseCategoryFromFileName(file);
+                results.Add(new
+                {
+                    key = $"{ext}:{file}",
+                    label = displayName,
+                    kind = ext,
+                    fileName = file
+                });
+            }
+        }
+        
+        return Results.Ok(new { sources = results });
+    }
+    
+    public static IResult GetSearches()
+    {
+        var allSearches = SearchManager.Instance.GetActiveSearchesStatus();
+        var searches = allSearches.Select(s => new
+        {
+            id = s.SearchId,
+            searchId = s.SearchId,
+            filterName = s.FilterName,
+            deck = s.Deck,
+            stake = s.Stake,
+            completedBatches = s.CompletedBatches,
+            totalBatches = s.TotalBatches,
+            seedsSearched = s.SeedsSearched,
+            seedsPerSecond = s.SeedsPerSecond,
+            resultsFound = s.ResultsFound,
+            isRunning = s.IsRunning,
+            isFastLane = s.IsFastLane,
+            inQueue = s.InQueue,
+            stopReason = s.StopReason
+        }).ToList();
+        
+        return Results.Ok(new { searches });
+    }
+    
+    public static async Task<IResult> StartSearch(HttpRequest req)
+    {
+        var request = await req.ReadFromJsonAsync<SearchStartRequest>();
+        if (request?.FilterJaml == null) return Results.BadRequest();
+        
+        var (_, searchId) = await SearchManager.Instance.StartSearchAsync(
+            request.FilterJaml, "Red", "White", 
+            request.SeedCount ?? 0, 
+            request.StartBatch, request.Cutoff, request.SeedSource);
+        
+        return Results.Ok(new { searchId });
+    }
+    
+    public static IResult GetSearch(string id)
+    {
+        var (results, progress) = SearchManager.Instance.GetSearchStatus(id);
+        return Results.Ok(new { results, progress });
+    }
+    
+    public static async Task<IResult> StopSearch(string id)
+    {
+        await SearchManager.Instance.StopSearchAsync(id);
+        return Results.Ok();
+    }
+    
+    public static async Task<IResult> SaveFilter(string id, HttpRequest req)
+    {
+        var request = await req.ReadFromJsonAsync<FilterSaveRequest>();
+        if (request?.FilterJaml == null) return Results.BadRequest();
+        
+        Directory.CreateDirectory("JamlFilters");
+        
+        // Use id from route, or extract name from JAML
+        string? name = id;
+        if (JamlConfigLoader.TryLoadFromJamlString(request.FilterJaml, out var cfg, out _) && cfg != null)
+        {
+            name = cfg.Name ?? id;
+        }
+        
+        var fileName = $"{name}.jaml";
+        var fullPath = Path.Combine("JamlFilters", fileName);
+        File.WriteAllText(fullPath, request.FilterJaml);
+        
+        return Results.Ok(new { filePath = fileName });
+    }
+    
+    public static IResult DeleteFilter(string id)
+    {
+        var safeName = Path.GetFileName(id);
+        var fullPath = Path.Combine("JamlFilters", safeName);
+        
+        if (File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
+            return Results.Ok();
+        }
+        
+        return Results.NotFound();
+    }
+}
+

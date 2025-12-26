@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "*.jaml": "yaml"
+  },
+  "yaml.schemas": {
+    "https://balatrogenie.app/jaml.schema.json": "*.jaml"
+  },
+  "yaml.validate": true,
+  "yaml.completion": true
+}
