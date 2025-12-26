@@ -89,15 +89,14 @@ public static class ConfigFormatConverter
 
     /// <summary>
     /// Save config to JAML string (Joker Ante Markup Language)
+    /// Uses JamlFormatter for clean, idiomatic output:
+    /// - type-as-key format: "joker: Blueprint"
+    /// - compact numeric arrays: "antes: [1,2,3]"
+    /// - omits null/empty/default properties
     /// </summary>
     public static string SaveAsJaml(this MotelyJsonConfig config)
     {
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
-            .Build();
-
-        return serializer.Serialize(config);
+        return JamlFormatter.Format(config);
     }
 
     #endregion

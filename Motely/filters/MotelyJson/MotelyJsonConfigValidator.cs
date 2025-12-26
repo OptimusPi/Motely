@@ -648,6 +648,13 @@ namespace Motely.Filters
                                 $"{prefix}: erraticRank filter requires deck: Erratic (current deck: {deck ?? "not specified"}). This filter will never find seeds with other decks."
                             );
                         }
+                        // Validate minCount is reasonable (max 52 cards in deck, but realistically max is much lower)
+                        if (item.Min.HasValue && item.Min.Value > 52)
+                        {
+                            errors.Add(
+                                $"{prefix}: erraticRank minCount ({item.Min.Value}) cannot exceed 52 (total cards in deck). Maximum possible count for any rank is 52."
+                            );
+                        }
                         break;
 
                     case "erraticsuit":
@@ -656,6 +663,13 @@ namespace Motely.Filters
                         {
                             warnings.Add(
                                 $"{prefix}: erraticSuit filter requires deck: Erratic (current deck: {deck ?? "not specified"}). This filter will never find seeds with other decks."
+                            );
+                        }
+                        // Validate minCount is reasonable (max 52 cards in deck, but realistically max is much lower)
+                        if (item.Min.HasValue && item.Min.Value > 52)
+                        {
+                            errors.Add(
+                                $"{prefix}: erraticSuit minCount ({item.Min.Value}) cannot exceed 52 (total cards in deck). Maximum possible count for any suit is 52."
                             );
                         }
                         break;
