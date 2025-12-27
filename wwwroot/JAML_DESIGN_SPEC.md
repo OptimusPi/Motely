@@ -14,263 +14,362 @@ A web-based interface for creating, editing, and testing JAML filter configurati
 
 ## Layout Structure
 
-### Top Bar
+### Top Bar (JAML Logo/Splitter)
 - **Position**: Fixed at top center of viewport
 - **Height**: 48px
-- **Content**: 
-  - Home button (left)
-  - "JAML" label (center)
-  - Settings button (right)
-- **Behavior**: Draggable left/right to adjust vertical split between left and right panels
-- **Visual**: Tab-like appearance with border
-
-### Main Layout
-
-#### Landscape Mode (width > height)
-- **Structure**: Two-column layout
-  - **Left Column**: Contains JAML Editor and Blueprint Analyzer (stacked vertically)
-  - **Vertical Divider**: 4px wide, draggable, positioned between columns
-  - **Right Column**: Contains Results panel
-- **Responsive**: Columns resize proportionally, minimum 200px each
-
-#### Portrait Mode (height > width)
-- **Structure**: Single-column layout
-  - All sections stack vertically in order:
-    1. JAML Editor
-    2. Blueprint Analyzer
-    3. Results
-- **Vertical Divider**: Hidden/disabled
-
-## Sections
-
-### 1. JAML Editor Section
-- **Purpose**: Edit JAML filter configuration
-- **Visual Identity**: Red theme
-- **Tab Label**: "JAML"
 - **Content**:
-  - Text editor (supports plain text or syntax highlighting)
+  - Home button (left)
+  - **JAML Logo** (center) - Draggable splitter that controls layout mode
+  - Settings button (right)
+- **Behavior**: Drag left/right to switch between vertical stack and horizontal split layouts
+- **Layout Control**: 
+  - **Left position**: Forces vertical stack layout (all panels full width)
+  - **Center position**: Auto-detect based on screen size
+  - **Right position**: Forces horizontal split layout (panels side-by-side)
+- **Visual**: Clean bar with border, splitter shows orientation indicators
+
+### Main Layout (Xbox 360 Blades Style)
+
+#### Core Principles
+- **Panel Borders**: Colored borders always take full width of current layout container
+- **Anchored Borders**: Each panel's colored border naturally anchors to content above/below
+- **Modular Lego-Bricks**: Panels stack like building blocks with seamless connections
+- **Full-Width Borders**: Borders span entire width (single column) or full side (split layout)
+
+#### Vertical Stack Mode (Portrait/Mobile/Forced)
+- **Structure**: Single-column stack of full-width panels
+- **Panel Flow**: Each panel's colored border touches the one above/below
+- **No Splitter**: Top bar controls layout mode, not internal panel sizes
+- **Responsive**: All panels always visible, collapsible via tabs
+
+#### Horizontal Split Mode (Landscape/Forced)
+- **Structure**: Two-column layout with panels distributed left/right
+- **Panel Distribution**: User-assignable (drag panels between columns)
+- **Column Borders**: Each column's panels maintain full-width borders within column
+- **Splitter Control**: Top bar controls mode switching, not column widths
+
+## Panel Structure (Manilla Envelope Tabs)
+
+### Tab Design (Inspired by Office Supplies)
+- **Appearance**: Tab-like extensions like manilla envelope labels
+- **Height**: Same as grab bars (8px visible + 8px invisible space)
+- **Position**: Attached to top of panel's colored border
+- **Behavior**: Click to select panel, drag to move/reorder
+
+### Colored Border System
+- **Full Width**: Always spans entire width of current layout container
+- **Anchored**: Top border connects to content above, bottom to content below
+- **Color Coding**: Red (#ff4c40), Blue (#0093ff), Purple (#9b59b6)
+- **Grab Bars**: Built-in resize handles at top/bottom of colored border
+
+### Panel Collapse Behavior
+- **Trigger**: Double-click tab OR drag bottom edge all the way up
+- **Effect**: Panel collapses to tab-only, neighboring panels expand to fill space
+- **Tab Stacking**: Collapsed tabs arrange left-to-right without overlap
+- **Visual**: Seamless connection where colored borders meet
+
+### Grab Bar Rules
+- **Location**: Top/bottom edges of each panel's colored border
+- **Availability**: Only available when there's content above/below to resize against
+- **Top Panel**: No top grab bar (would be pointless)
+- **Bottom Panel**: No bottom grab bar (nothing below to resize)
+- **Collapsed Panels**: Grab bars disappear, only tabs remain
+
+## Panel Management
+
+### Drag & Drop
+- **Panel Movement**: Drag tabs to reorder panels within columns or move between columns
+- **Visual Feedback**: Highlight drop zones, show insertion points
+- **Column Assignment**: Drag panels between left/right columns in split mode
+- **Tab Stacking**: When multiple panels collapsed, tabs arrange horizontally
+
+### Layout Switching
+- **Top Bar Control**: Drag JAML logo to switch between stack/split modes
+- **Mode Persistence**: Layout preference saved to localStorage
+- **Smooth Transitions**: Animate between stack and split layouts
+- **Panel Preservation**: Panel order and collapse states maintained during mode switches
+
+## Visual Design (Blades Dashboard Inspired)
+
+### Color-Coded Panels
+- **JAML Editor**: Red borders and tabs
+- **Blueprint**: Blue borders and tabs  
+- **Results**: Purple borders and tabs
+- **Background**: Dark teal (#33464b)
+- **Content Areas**: Medium gray (#3a5055)
+
+### Border System
+- **Thickness**: 8px top border (creates tab space), 2px sides/bottom
+- **Color**: Section-specific color matching tab
+- **Connection**: Borders touch seamlessly between stacked panels
+- **Grab Integration**: Resize handles built into border edges
+
+### Tab Styling
+- **Shape**: Tab-like extensions protruding from panel borders
+- **Positioning**: Left-aligned in stack mode, side-appropriate in split mode
+- **Interaction**: Hover effects, drag feedback
+- **Typography**: Monospace font, clear labels
+
+## Interaction Model
+
+### Layout Philosophy
+- **Blades Style**: Clean, modular, stackable panels like Xbox 360 dashboard
+- **Manilla Envelope**: Tab design inspired by office organization
+- **Lego Bricks**: Modular building blocks that connect seamlessly
+- **Full-Width Borders**: Always utilize available horizontal space
+
+### Panel States
+- **Expanded**: Full content visible with colored border frame
+- **Collapsed**: Tab-only, content hidden, border collapsed
+- **Dragging**: Semi-transparent with visual feedback
+- **Resizing**: Live feedback with snap points and constraints
+
+### User Choice & Control
+- **Layout Mode**: Top bar splitter controls stack vs split
+- **Panel Order**: Drag tabs to reorder within/between columns
+- **Panel Visibility**: Double-click or drag to collapse/expand
+- **Column Assignment**: Drag panels between left/right in split mode
+
+### 1. JAML Editor Panel
+- **Purpose**: Edit JAML filter configuration
+- **Visual Identity**: Red colored border and tab
+- **Tab Label**: "JAML" with manilla envelope style
+- **Content**:
+  - Text editor (textarea with syntax highlighting)
   - Filter selection dropdown
   - Action buttons (Start Search, Stop Search)
   - Status indicators
-- **Resize Behavior**:
-  - Tab can be dragged up/down to adjust section height
-  - Minimum height: 100px
-  - Can expand to cover top bar (for mobile keyboard access)
-  - Stops 8px from viewport top when dragged up
+- **Border Behavior**:
+  - Full-width red border in stack mode
+  - Full-column-width red border in split mode
+  - Anchors to content above/below seamlessly
+- **Grab Bars**: Bottom grab bar available (for resizing against panels below)
 
-### 2. Blueprint Analyzer Section
+### 2. Blueprint Analyzer Panel
 - **Purpose**: Analyze seeds using Blueprint tool
-- **Visual Identity**: Blue theme
-- **Tab Label**: "Blueprint Analyzer"
+- **Visual Identity**: Blue colored border and tab
+- **Tab Label**: "Blueprint Analyzer" with manilla envelope style
 - **Content**:
   - Seed input field
   - Embedded iframe showing Blueprint tool
-  - External link button
-- **Resize Behavior**:
-  - Tab can be dragged up/down to adjust section height
-  - Default height: 180px
-  - Minimum height: 100px
-  - Stops 8px from viewport top when dragged up
+  - Analyze button
+- **Border Behavior**:
+  - Full-width blue border in stack mode
+  - Full-column-width blue border in split mode
+  - Anchors to content above/below seamlessly
+- **Grab Bars**: Top and bottom grab bars (can resize against neighboring panels)
 
-### 3. Results Section
+### 3. Results Panel
 - **Purpose**: Display search results and controls
-- **Visual Identity**: Purple theme
-- **Tab Label**: "Results" (with count badge)
+- **Visual Identity**: Purple colored border and tab
+- **Tab Label**: "Results" with count badge, manilla envelope style
 - **Content**:
   - Search controls (seed source, batch settings)
   - Results table (sortable columns)
   - Export button
   - Clear button
   - Progress indicators
-- **Resize Behavior**:
-  - Tab can be dragged up/down to adjust section height
-  - Takes remaining space by default (flex: 1)
-  - Minimum height: 100px
-  - Stops 8px from viewport top when dragged up
+- **Border Behavior**:
+  - Full-width purple border in stack mode
+  - Full-column-width purple border in split mode
+  - Anchors to content above/below seamlessly
+- **Grab Bars**: Top grab bar available (for resizing against panels above)
 
-## Section Tabs
+## Panel Headers
 
-### Visual Design
-- **Total Height**: 16px
-  - 8px visible tab area
-  - 8px invisible space above (for stacking when collapsed)
-- **Position**: Attached to top of section (absolute positioning)
-- **Content**: 
-  - Three-line icon (≡) on left
-  - Section label text
-- **Styling**: Colored background matching section theme, no borders
-- **Font**: Monospace, bold, 12px
+### Tab Design (Manilla Envelope Style)
+- **Shape**: Tab-like protrusion from top border, like office envelope labels
+- **Dimensions**: 8px visible height + 8px invisible space above
+- **Position**: Attached to top of panel's colored border
+- **Content**: Section label + visual grab indicator
+- **Behavior**: Click to select, drag to move/reorder panels
+
+### Colored Border System (Full-Width)
+- **Width**: Always spans full width of layout container
+- **Thickness**: 8px top (tab space), 2px sides, 2px bottom
+- **Color**: Section-specific (Red/Blue/Purple)
+- **Anchoring**: Top connects to content above, bottom to content below
+- **Grab Integration**: Resize handles built into top/bottom edges
 
 ### Interaction Behavior
-- **Vertical Drag**: Resize section height (up/down)
-- **Double-Click**: Collapse/expand section
-- **Constraints**:
-  - Minimum section height: 100px
-  - Maximum: No limit (can fill viewport)
-  - Top constraint: 8px from viewport top
-- **Update Rate**: Smooth real-time updates during drag
+- **Tab Click**: Select panel, bring to front if needed
+- **Tab Drag**: Move panel within column or between columns
+- **Border Grab**: Resize panel height against neighbors
+- **Double-Click Tab**: Collapse/expand panel
 
-## Visual Design
+## Panel Drag & Rearrange
+
+### Visual Feedback (Xbox 360 Blades Style)
+- **Dragging State**: Panel becomes semi-transparent with slight rotation
+- **Drop Indicators**: Blue line shows insertion point between panels
+- **Column Boundaries**: Visual feedback when crossing between columns
+- **Tab Stacking Preview**: Shows how collapsed tabs will arrange
+
+### Drag Rules (Modular Lego-Brick System)
+- **Within Column**: Drag tabs to reorder panels vertically
+- **Between Columns**: Drag across column boundary to move panels
+- **Full-Width Constraint**: Panels always maintain full width of their column
+- **Seamless Connection**: Borders snap together when reordering
+- **Persistence**: Panel order and column assignment saved to localStorage
+
+## Top Bar Splitter (Layout Mode Control)
+
+### Visual Design
+- **Center Logo**: "JAML" text with grab handles
+- **Position Indicators**: 
+  - Left: ⋮⋮⋮ (stack mode)
+  - Center: JAML (auto mode)  
+  - Right: ⋮⋮⋮ (split mode)
+- **Grab Feedback**: Shows orientation when dragging to edges
+
+### Interaction Behavior
+- **Drag Range**: Snaps to left/center/right positions
+- **Left Snap**: Forces vertical stack layout
+- **Center Snap**: Auto-detect based on screen dimensions
+- **Right Snap**: Forces horizontal split layout
+- **Smooth Transition**: Animate between layout modes
+- **State Persistence**: Layout preference saved to localStorage
+
+## Layout Mode Switching
+
+### Stack Mode (Vertical)
+- **Trigger**: Top bar dragged left OR auto-detect portrait/mobile
+- **Panel Layout**: Single column, full-width panels
+- **Tab Position**: Left-aligned tabs
+- **Border Behavior**: Full viewport width, seamless vertical stacking
+- **Grab Bars**: Available between panels for height adjustment
+
+### Split Mode (Horizontal)
+- **Trigger**: Top bar dragged right OR auto-detect landscape
+- **Panel Layout**: Two columns with user-assignable panels
+- **Tab Position**: Left column tabs left-aligned, right column tabs right-aligned
+- **Border Behavior**: Full column width within each side
+- **Column Management**: Drag panels between left/right columns
+
+### Mode Transitions
+- **Animation**: Smooth morphing between stack and split layouts
+- **Panel Preservation**: Order and collapse states maintained
+- **Responsive**: Auto-switches based on screen size (unless user forced)
+- **Mobile**: Always stack mode for touch optimization
+
+## Visual Design (Blades Dashboard Inspired)
 
 ### Color Scheme
-- **JAML Editor**: Red (#ff4c40)
-- **Blueprint**: Blue (#0093ff)
-- **Results**: Purple (#9b59b6)
+- **JAML Editor**: Red (#ff4c40) - borders, tabs, accents
+- **Blueprint**: Blue (#0093ff) - borders, tabs, accents
+- **Results**: Purple (#9b59b6) - borders, tabs, accents
 - **Background**: Dark teal (#33464b)
-- **Panels**: Slightly lighter (#3a5055)
-- **Dark accents**: Darker variant (#1e2b2d)
+- **Panel Content**: Medium gray (#3a5055)
+- **Grab Bars**: Subtle dark gray with hover highlights
 
-### Borders
-- **Style**: Double border effect (2px total)
-  - Outer: 1px solid (section color)
-  - Inner: 1px (darker variant via shadow)
-- **Top Border**: 8px solid (creates space for tab)
-- **Spacing**: 4px margin between sections
-- **Corners**: Rounded (8px radius)
+### Border System (Lego-Brick Connection)
+- **Thickness**: 8px top (tab space), 2px sides/bottom
+- **Color Matching**: Tab and border share section color
+- **Seamless Joints**: Borders connect without visible gaps
+- **Grab Integration**: Resize handles at border edges
+- **Shadow Effects**: Subtle depth for layered appearance
+
+### Tab Styling (Manilla Envelope)
+- **Shape**: Tab protrusion from panel border
+- **Dimensions**: Compact but touch-friendly
+- **Typography**: Monospace, clear section labels
+- **Interaction States**: Hover, drag, selected highlights
+- **Positioning Logic**: Context-aware (left/right/center based on layout)
 
 ### Typography
-- **Primary Font**: Monospace (m6x11plus when available)
-- **Tab Labels**: 12px, bold
-- **Body Text**: System default, readable size
+- **Primary Font**: m6x11plus monospace (Balatro aesthetic)
+- **Tab Labels**: Bold, section-colored text
+- **Body Text**: System default, readable contrast
+- **Status Indicators**: Monospace for technical data
 
 ## Interaction Requirements
 
-### Drag & Resize Rules
+### Panel Management Rules
+- **Selection**: Click tab to select panel
+- **Movement**: Drag tab to reorder or move between columns
+- **Resizing**: Grab border edges to adjust panel heights
+- **Collapsing**: Double-click tab or drag bottom to top
+- **Expansion**: Click collapsed tab to restore
 
-#### Horizontal Resize (Top Bar / Vertical Splitter)
-- **Trigger**: Drag top bar left/right OR drag vertical divider
-- **Effect**: Adjusts left/right column widths proportionally
-- **Constraints**: 
-  - Minimum column width: 200px each
-  - Maximum: No limit
-- **Update**: Real-time, smooth
-- **Conflict Prevention**: Only one horizontal resize handler active at a time
+### Layout Control Philosophy
+- **User Choice**: Top bar splitter gives explicit control
+- **Responsive Defaults**: Auto-switch based on screen size
+- **Touch Friendly**: Large touch targets on mobile
+- **State Persistence**: All user choices remembered
 
-#### Vertical Resize (Section Tabs)
-- **Trigger**: Drag section tab up/down
-- **Effect**: Adjusts section height within its column
-- **Constraints**:
-  - Minimum: 100px per section
-  - Maximum: No limit
-  - Top: 8px from viewport top
-- **Update**: Throttled to ~10 FPS during drag
-- **Conflict Prevention**: Only one vertical resize handler active at a time
+### Drag & Resize Constraints
+- **Panel Order**: Maintain logical workflow order by default
+- **Minimum Heights**: 100px expanded, tab-only when collapsed
+- **Maximum Flexibility**: No arbitrary height limits
+- **Column Balance**: Encourage balanced left/right distribution
+- **Touch Prevention**: Disable text selection during drag operations
 
-### State Management
-- **Resize State**: Track which element is being resized (none, horizontal, or vertical)
-- **Prevent Conflicts**: When one resize starts, disable others
-- **Save State**: Persist resize positions to localStorage
-- **Restore State**: Load saved positions on page load
+## State Management
 
-## Functional Requirements
+### Layout State
+- **Mode**: stack/split/auto
+- **Panel Order**: Array of panel IDs in display order
+- **Column Assignment**: Which panels in left/right columns
+- **Collapse States**: Which panels are minimized
+- **Panel Heights**: Custom heights for expanded panels
 
-### JAML Editor
-- Load filter from dropdown
-- Edit filter text
-- Validate JAML syntax
-- Save filter to disk
-- Auto-save draft to localStorage
-- Support syntax highlighting (optional)
+### Persistence Strategy
+- **localStorage**: All layout state automatically saved
+- **Auto-Restore**: State restored on page load
+- **Migration**: Handle schema changes gracefully
+- **Performance**: Debounced saves to prevent spam
 
-### Search Execution
-- Start search with current filter
-- Stop running search
-- Display real-time progress
-- Show seeds searched, results found, speed
-- Handle errors gracefully
-- Support multiple concurrent searches (future)
-
-### Results Display
-- Show results in sortable table
-- Display columns: seed, score, tallies
-- Export to CSV
-- Clear results
-- Pagination or virtualization for large result sets
-- Real-time updates via SignalR
-
-### Blueprint Integration
-- Enter seed value
-- Load Blueprint tool in iframe
-- Navigate to seed analysis
-- Open in new tab
-- Handle iframe sandbox restrictions
-
-### Filter Management
-- List all available filters
-- Group by author
-- Search/filter list
-- Load filter into editor
-- Save current filter
-- Delete filter
-- Share filter via URL parameter (?filter=id)
-
-## Responsive Behavior
-
-### Breakpoints
-- **Landscape**: width > height → Two-column layout
-- **Portrait**: height > width → Single-column layout
-
-### Mobile Considerations
-- JAML editor can expand to cover top bar (for keyboard)
-- Touch-friendly drag targets (minimum 44px)
-- Prevent text selection during drag
-- Handle orientation changes gracefully
+### Responsive Behavior
+- **Breakpoint Detection**: width > height = landscape/split candidate
+- **Mobile Overrides**: Always stack on touch devices
+- **Orientation Changes**: Smooth adaptation to rotation
+- **Window Resize**: Live layout adjustments
 
 ## Performance Requirements
-- Smooth 60 FPS during drag operations
-- Throttle resize updates to ~10 FPS
-- Debounce save operations
-- Lazy load Monaco editor (if used)
-- Virtualize large result tables
+- **Smooth Dragging**: 60 FPS during all drag operations
+- **Layout Transitions**: Smooth animations between modes
+- **State Saves**: Debounced to prevent performance hits
+- **Memory Management**: Efficient DOM manipulation
+- **Touch Optimization**: Optimized for mobile performance
 
-## Accessibility
-- Keyboard navigation support
-- ARIA labels for drag handles
-- Focus management
-- Screen reader announcements for state changes
+## Accessibility (Blades-Style UX)
+- **Keyboard Navigation**: Tab through panels, enter to expand
+- **Screen Reader**: Proper ARIA labels for panels and controls
+- **Touch Targets**: Minimum 44px for mobile interaction
+- **Focus Management**: Logical tab order through interface
+- **High Contrast**: Sufficient color contrast ratios
 
 ## Browser Compatibility
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- Mobile browsers (iOS Safari, Chrome Mobile)
-- Graceful degradation for older browsers
+- **Modern Browsers**: Chrome, Firefox, Safari, Edge
+- **Mobile**: iOS Safari, Chrome Mobile, Samsung Internet
+- **Touch Support**: Full touch gesture support
+- **Responsive**: Adapts to any screen size/orientation
 
-## Data Flow
+## Implementation Notes
 
-### Filter Loading
-1. User selects filter from dropdown
-2. Fetch filter JAML from API
-3. Load into editor
-4. Update URL with filter ID
-5. Check for existing search results
-6. Display results if available
+### Framework Architecture
+- **Alpine.js**: Reactive state management for UI
+- **Vanilla JS**: Custom drag/drop and layout logic
+- **CSS Grid/Flexbox**: Modern layout system
+- **localStorage API**: State persistence
 
-### Search Execution
-1. User clicks "Start Search"
-2. Validate JAML syntax
-3. Send POST to /search endpoint
-4. Receive search ID
-5. Connect to SignalR hub
-6. Receive real-time updates
-7. Update results table
-8. Update progress indicators
+### Drag & Drop Implementation
+- **Native Events**: mousedown/mousemove/mouseup for precision
+- **Touch Events**: Pointer events for mobile compatibility
+- **Collision Detection**: Element position calculations
+- **Visual Feedback**: CSS transforms, opacity, shadows
 
-### State Persistence
-- Save editor content to localStorage (draft)
-- Save resize positions to localStorage
-- Save selected filter to localStorage
-- Restore on page load
+### Layout Algorithm
+- **Mode Detection**: Based on screen size and user preference
+- **Panel Distribution**: Smart defaults with user override
+- **Responsive Rules**: Breakpoint-based layout switching
+- **Animation System**: Smooth transitions between states
 
-## Error Handling
-- Invalid JAML: Show inline error, highlight syntax
-- Network errors: Show notification, allow retry
-- Search failures: Display error message, allow restart
-- Missing filters: Show placeholder, allow creation
-
-## Future Enhancements (Out of Scope for MVP)
-- Visual filter builder
-- Multiple search tabs
-- Search history
-- Filter templates
-- Advanced search options
-- Export formats beyond CSV
+## Future Enhancements
+- **Advanced Layouts**: Custom column configurations
+- **Panel Templates**: Save/load panel arrangements
+- **Touch Gestures**: Multi-touch panel manipulation
+- **Animation Presets**: Custom transition effects
+- **Accessibility Audit**: WCAG 2.1 AA compliance
+- **Performance Profiling**: Optimize for large panel sets
 
