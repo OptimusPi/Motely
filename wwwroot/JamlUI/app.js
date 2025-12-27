@@ -1,204 +1,317 @@
-// Minimal clean layout with Interact.js drag/dock
-
-const panels = [
-  { id: 'panel-jaml', title: 'JAML', content: 'JAML editor area', dock: 'left', order: 0 },
-  { id: 'panel-blueprint', title: 'Blueprint', content: 'Blueprint analyzer', dock: 'left', order: 1 },
-  { id: 'panel-results', title: 'Results', content: 'Results table', dock: 'right', order: 0 }
-];
-
-const state = {
-  splitterPct: 50,
-};
-
-const stackLeft = document.getElementById('stackLeft');
-const stackRight = document.getElementById('stackRight');
-const splitter = document.getElementById('splitter');
-const dropOverlay = document.getElementById('dropOverlay');
-const layoutFileInput = document.getElementById('layoutFileInput');
-
-function renderPanels() {
-  stackLeft.innerHTML = '';
-  stackRight.innerHTML = '';
-  const leftPanels = panels.filter(p => p.dock === 'left').sort((a,b)=>a.order-b.order);
-  const rightPanels = panels.filter(p => p.dock === 'right').sort((a,b)=>a.order-b.order);
-  leftPanels.forEach(p => stackLeft.appendChild(makePanelEl(p)));
-  rightPanels.forEach(p => stackRight.appendChild(makePanelEl(p)));
-  attachDrag();
-}
-
-function makePanelEl(panel) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'panel';
-  wrapper.id = panel.id;
-
-  const tab = document.createElement('button');
-  tab.className = 'tab';
-  tab.textContent = panel.title;
-  tab.dataset.panelId = panel.id;
-  wrapper.appendChild(tab);
-
-  const body = document.createElement('div');
-  body.className = 'panel-content';
-  body.textContent = panel.content;
-  wrapper.appendChild(body);
-
-  return wrapper;
-}
-
-function attachDrag() {
-  interact('.tab').unset();
-  interact('.tab').draggable({
-    listeners: {
-      start (event) {
-        dropOverlay.classList.add('active');
-        event.target.classList.add('dragging');
-      },
-      move (event) {
-        const panelEl = event.target.parentElement;
-        const dy = (parseFloat(panelEl.dataset.y) || 0) + event.dy;
-        // Vertical resize (simple height adjust)
-        const newHeight = Math.max(120, panelEl.offsetHeight + event.dy);
-        panelEl.style.height = `${newHeight}px`;
-        panelEl.dataset.y = dy;
-      },
-      end (event) {
-        dropOverlay.classList.remove('active');
-        event.target.classList.remove('dragging');
-        const drop = event.interactable && event.dropzone
-          ? event.dropzone
-          : null;
-      }
+class JAMLWorkspace {
+    constructor() {
+        this.panels = new Map();
+        this.panelIdCounter = 0;
+        this.draggedPanel = null;
+        this.init();
     }
-  });
 
-  // Dropzones
-  interact('.drop-zone').dropzone({
-    ondragenter (event) {
-      showGhost(event.relatedTarget.parentElement, event.target);
-    },
-    ondragleave () {
-      clearGhost();
-    },
-    ondrop (event) {
-      const panelId = event.relatedTarget.dataset.panelId;
-      const side = event.target.dataset.drop;
-      movePanel(panelId, side);
-      clearGhost();
+    init() {
+        this.setupEventListeners();
+        this.createDefaultPanels();
+        this.updateStatus();
     }
-  });
-}
 
-let ghostEl = null;
-function showGhost(panelEl, zoneEl) {
-  clearGhost();
-  ghostEl = panelEl.cloneNode(true);
-  ghostEl.classList.add('ghost');
-  const rect = zoneEl.getBoundingClientRect();
-  ghostEl.style.left = `${rect.left + 8}px`;
-  ghostEl.style.top = `${rect.top + 8}px`;
-  ghostEl.style.width = `${rect.width - 16}px`;
-  ghostEl.style.height = `${Math.min(panelEl.offsetHeight, rect.height - 16)}px`;
-  document.body.appendChild(ghostEl);
-}
-function clearGhost() {
-  if (ghostEl) {
-    ghostEl.remove();
-    ghostEl = null;
-  }
-}
-
-function movePanel(panelId, dock) {
-  const panel = panels.find(p => p.id === panelId);
-  if (!panel) return;
-  panel.dock = dock;
-  const siblings = panels.filter(p => p.dock === dock && p.id !== panelId);
-  panel.order = siblings.length ? Math.max(...siblings.map(p=>p.order))+1 : 0;
-  renderPanels();
-  saveLayoutLocal();
-}
-
-// Splitter drag (horizontal)
-interact(splitter).draggable({
-  axis: 'x',
-  listeners: {
-    move (event) {
-      const container = document.getElementById('mainSplit');
-      const rect = container.getBoundingClientRect();
-      const deltaPct = (event.dx / rect.width) * 100;
-      state.splitterPct = Math.min(85, Math.max(15, state.splitterPct + deltaPct));
-      applySplitter();
+    setupEventListeners() {
+        const addPanelBtn = document.getElementById('add-panel');
+        if (addPanelBtn) {
+            addPanelBtn.addEventListener('click', () => this.showAddPanelDialog());
+        }
+        
+        const resetLayoutBtn = document.getElementById('reset-layout');
+        if (resetLayoutBtn) {
+            resetLayoutBtn.addEventListener('click', () => this.resetLayout());
+        }
+        
+        const panelsContainer = document.getElementById('panels');
+        if (panelsContainer) {
+            panelsContainer.addEventListener('dragover', this.handleDragOver.bind(this));
+            panelsContainer.addEventListener('drop', this.handleDrop.bind(this));
+        }
     }
-  }
-});
 
-function applySplitter() {
-  stackLeft.style.flex = `0 0 ${state.splitterPct}%`;
-  stackRight.style.flex = `1`;
-}
-
-function saveLayoutLocal() {
-  const data = { panels, splitterPct: state.splitterPct };
-  localStorage.setItem('jamlui-layout', JSON.stringify(data));
-}
-function loadLayoutLocal() {
-  try {
-    const raw = localStorage.getItem('jamlui-layout');
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (data.panels) {
-      data.panels.forEach(dp => {
-        const p = panels.find(x => x.id === dp.id);
-        if (p) Object.assign(p, dp);
-      });
+    createDefaultPanels() {
+        this.createPanel('editor', 'JAML Editor');
+        this.createPanel('preview', 'Preview');
+        this.createPanel('properties', 'Properties');
     }
-    if (data.splitterPct) state.splitterPct = data.splitterPct;
-  } catch {}
-}
 
-// Save/Load buttons
-document.getElementById('saveLayoutBtn').onclick = () => {
-  const blob = new Blob([JSON.stringify({ panels, splitterPct: state.splitterPct }, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'jamlui-layout.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  saveLayoutLocal();
-};
-document.getElementById('loadLayoutBtn').onclick = () => layoutFileInput.click();
-layoutFileInput.onchange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    try {
-      const data = JSON.parse(evt.target.result);
-      if (data.panels) {
-        data.panels.forEach(dp => {
-          const p = panels.find(x => x.id === dp.id);
-          if (p) Object.assign(p, dp);
+    createPanel(type, title) {
+        const panelId = `panel-${this.panelIdCounter++}`;
+        const panel = this.createPanelElement(panelId, type, title);
+        
+        this.panels.set(panelId, {
+            id: panelId,
+            type: type,
+            title: title,
+            element: panel,
+            minimized: false,
+            maximized: false
         });
-      }
-      if (data.splitterPct) state.splitterPct = data.splitterPct;
-      renderPanels();
-      applySplitter();
-      saveLayoutLocal();
-    } catch (err) { console.error('Invalid layout', err); }
-  };
-  reader.readAsText(file);
-};
-document.getElementById('resetLayoutBtn').onclick = () => {
-  panels.forEach(p => { p.dock = p.id === 'panel-results' ? 'right' : 'left'; p.order = 0; });
-  state.splitterPct = 50;
-  renderPanels();
-  applySplitter();
-  saveLayoutLocal();
-};
 
-function init() {
-  loadLayoutLocal();
-  renderPanels();
-  applySplitter();
+        document.getElementById('panels').appendChild(panel);
+        this.setupPanelDragAndDrop(panel);
+        this.updatePanelCount();
+        return panelId;
+    }
+
+    createPanelElement(panelId, type, title) {
+        const panel = document.createElement('div');
+        panel.className = `panel ${type}`;
+        panel.id = panelId;
+        panel.draggable = true;
+        
+        panel.innerHTML = `
+            <div class="panel-header">
+                <span class="panel-title">${title}</span>
+                <div class="panel-controls">
+                    <button class="panel-btn minimize" title="Minimize">−</button>
+                    <button class="panel-btn maximize" title="Maximize">□</button>
+                    <button class="panel-btn close" title="Close">×</button>
+                </div>
+            </div>
+            <div class="panel-content" id="${panelId}-content">
+                ${this.getPanelContent(type)}
+            </div>
+        `;
+
+        // Add event listeners to panel controls
+        const header = panel.querySelector('.panel-header');
+        const minimizeBtn = panel.querySelector('.minimize');
+        const maximizeBtn = panel.querySelector('.maximize');
+        const closeBtn = panel.querySelector('.close');
+
+        minimizeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleMinimize(panelId);
+        });
+
+        maximizeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleMaximize(panelId);
+        });
+
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.removePanel(panelId);
+        });
+
+        // Make header draggable
+        header.addEventListener('mousedown', (e) => {
+            if (e.target === header || header.contains(e.target)) {
+                this.startDrag(panelId, e);
+            }
+        });
+
+        return panel;
+    }
+
+    getPanelContent(type) {
+        switch(type) {
+            case 'editor':
+                return '<textarea class="code-editor" placeholder="Enter JAML code here..."></textarea>';
+            case 'preview':
+                return '<div class="preview-content"></div>';
+            case 'properties':
+                return `
+                    <div class="property-group">
+                        <label>Property 1</label>
+                        <input type="text" class="property-input">
+                    </div>
+                    <div class="property-group">
+                        <label>Property 2</label>
+                        <select class="property-select">
+                            <option>Option 1</option>
+                            <option>Option 2</option>
+                        </select>
+                    </div>
+                `;
+            default:
+                return '<div class="panel-message">Panel content</div>';
+        }
+    }
+
+    setupPanelDragAndDrop(panel) {
+        panel.addEventListener('dragstart', (e) => {
+            this.draggedPanel = panel;
+            setTimeout(() => {
+                panel.classList.add('dragging');
+            }, 0);
+        });
+
+        panel.addEventListener('dragend', () => {
+            this.draggedPanel = null;
+            panel.classList.remove('dragging');
+        });
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        const afterElement = this.getDragAfterElement(e.clientY);
+        const panelsContainer = document.getElementById('panels');
+        
+        if (afterElement == null) {
+            panelsContainer.appendChild(this.draggedPanel);
+        } else {
+            panelsContainer.insertBefore(this.draggedPanel, afterElement);
+        }
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+    }
+
+    getDragAfterElement(y) {
+        const panels = [...document.querySelectorAll('.panel:not(.dragging)')];
+        
+        return panels.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    toggleMinimize(panelId) {
+        const panel = this.panels.get(panelId);
+        if (!panel) return;
+
+        panel.minimized = !panel.minimized;
+        panel.element.classList.toggle('minimized', panel.minimized);
+        
+        // If maximizing, ensure it's not minimized
+        if (panel.maximized && panel.minimized) {
+            panel.maximized = false;
+            panel.element.classList.remove('maximized');
+        }
+    }
+
+    toggleMaximize(panelId) {
+        const panel = this.panels.get(panelId);
+        if (!panel) return;
+
+        panel.maximized = !panel.maximized;
+        panel.element.classList.toggle('maximized', panel.maximized);
+        
+        // If maximizing, ensure it's not minimized
+        if (panel.maximized && panel.minimized) {
+            panel.minimized = false;
+            panel.element.classList.remove('minimized');
+        }
+    }
+
+    removePanel(panelId) {
+        const panel = this.panels.get(panelId);
+        if (!panel) return;
+
+        panel.element.remove();
+        this.panels.delete(panelId);
+        this.updatePanelCount();
+    }
+
+    showAddPanelDialog() {
+        const panelTypes = [
+            { id: 'editor', name: 'JAML Editor' },
+            { id: 'preview', name: 'Preview' },
+            { id: 'properties', name: 'Properties' },
+            { id: 'console', name: 'Console' },
+            { id: 'explorer', name: 'File Explorer' }
+        ];
+
+        const dialog = document.createElement('div');
+        dialog.className = 'dialog-overlay';
+        dialog.innerHTML = `
+            <div class="dialog">
+                <h3>Add New Panel</h3>
+                <div class="dialog-content">
+                    ${panelTypes.map(type => `
+                        <div class="panel-type" data-type="${type.id}">
+                            <strong>${type.name}</strong>
+                            <span>${type.id}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="dialog-actions">
+                    <button id="cancel-dialog">Cancel</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+
+        // Add event listeners
+        dialog.querySelectorAll('.panel-type').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const type = e.currentTarget.dataset.type;
+                const name = panelTypes.find(t => t.id === type)?.name || type;
+                this.createPanel(type, name);
+                dialog.remove();
+            });
+        });
+
+        dialog.querySelector('#cancel-dialog').addEventListener('click', () => {
+            dialog.remove();
+        });
+    }
+
+    resetLayout() {
+        if (confirm('Are you sure you want to reset the layout to default?')) {
+            this.panels.forEach((panel, id) => {
+                panel.element.remove();
+                this.panels.delete(id);
+            });
+            this.createDefaultPanels();
+            this.updateStatus('Layout has been reset');
+        }
+    }
+
+    updateStatus(message) {
+        const status = document.getElementById('status');
+        if (message) {
+            status.textContent = message;
+            setTimeout(() => {
+                status.textContent = 'Ready';
+            }, 3000);
+        }
+    }
+
+    updatePanelCount() {
+        document.getElementById('panel-count').textContent = `${this.panels.size} panels`;
+    }
+
+    startDrag(panelId, e) {
+        const panel = this.panels.get(panelId);
+        if (!panel) return;
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startLeft = panel.element.offsetLeft;
+        const startTop = panel.element.offsetTop;
+
+        function onMouseMove(e) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            panel.element.style.left = `${startLeft + dx}px`;
+            panel.element.style.top = `${startTop + dy}px`;
+            panel.element.style.position = 'absolute';
+        }
+
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
 }
-init();
 
+// Initialize the workspace when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.workspace = new JAMLWorkspace();
+});

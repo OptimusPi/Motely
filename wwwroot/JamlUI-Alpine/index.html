@@ -2,52 +2,158 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=5.0, user-scalable=yes">
-  <title>CURSOR IZ DUM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JAML Editor</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
 </head>
-<body x-data="app()" x-init="init()">
-  <div class="app-layout">
-    <header class="top-bar">
-      <h1>CURSOR IZ DUM</h1>
-      <div class="top-bar-actions">
-        <span x-show="connection && connection.state === window.signalR?.HubConnectionState?.Connected" class="status-indicator" title="Connected">🟢</span>
-        <span x-show="!connection || connection.state !== window.signalR?.HubConnectionState?.Connected" class="status-indicator" title="Disconnected">🔴</span>
-      </div>
-    </header>
+<body x-data="app()" x-init="init()" x-cloak>
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <button class="top-btn" @click="goHome()">🏠</button>
 
-    <div class="split-container">
-      <section class="left-panel">
-        <div class="panel-header">
-          <span class="panel-tab panel-tab-red">JAML</span>
+    <!-- Vertical Splitter -->
+    <div class="vertical-splitter" id="verticalSplitter" :class="{ 'edge-left': splitterPosition <= 10, 'edge-right': splitterPosition >= 90 }">
+      <div class="splitter-left">⋮⋮⋮</div>
+      <div class="splitter-center">JAML</div>
+      <div class="splitter-right">⋮⋮⋮</div>
+    </div>
+
+    <button class="top-btn" @click="toggleSettings()">⚙️</button>
+  </div>
+
+  <!-- Main Workspace -->
+  <div class="workspace" id="workspace">
+    <!-- Panel Container -->
+    <div class="panels-container" id="panelsContainer">
+
+      <!-- JAML Panel -->
+      <div class="panel jaml-panel" id="jamlPanel">
+        <div class="panel-header panel-header-red">
+          <div class="panel-drag-handle" id="jamlDragHandle">
+            <span class="panel-icon">⋮⋮</span>
+            <span class="panel-title">JAML</span>
+          </div>
+          <div class="panel-controls">
+            <button class="panel-btn" @click="togglePanel('jaml')">−</button>
+          </div>
         </div>
-        <div class="panel-content">
+        <div class="panel-content" id="jamlContent">
           <textarea class="jaml-editor" x-model="filterJaml" placeholder="Enter your JAML filter configuration..." spellcheck="false"></textarea>
 
           <div class="controls">
             <label class="control-row">
-              <span>Seed Source:</span>
-              <select x-model="seedSource">
-                <template x-for="s in seedSources" :key="s.key">
-                  <option :value="s.key" x-text="s.label || s.displayName || s.key"></option>
+              <span>Filter:</span>
+              <select x-model="selectedFilter || ''">
+                <option value="">Select Filter...</option>
+                <template x-for="filter in availableFilters || []" :key="filter.id">
+                  <option :value="filter.id" x-text="filter.name"></option>
                 </template>
               </select>
             </label>
+
+            <label class="control-row">
+              <span>Source:</span>
+              <select x-model="seedSource">
+                <option value="all">All Sources</option>
+                <option value="balanced">Balanced</option>
+                <option value="unbalanced">Unbalanced</option>
+              </select>
+            </label>
+
             <label class="control-row">
               <span>Max Seeds:</span>
               <input type="number" x-model.number="seedCount" min="0" placeholder="All">
             </label>
-            <label class="control-row">
-              <span>Start Batch:</span>
-              <input type="number" x-model.number="startBatch" min="0" placeholder="0">
-            </label>
-            <label class="control-row">
-              <span>Cutoff:</span>
-              <input type="number" x-model.number="cutoff" min="0" placeholder="0">
-            </label>
+
+            <div class="action-buttons">
+              <button @click="startSearch()" :disabled="isSearching || !filterJaml.trim()" class="btn primary">
+                <span x-show="!isSearching">▶ Start</span>
+                <span x-show="isSearching">⏸ Searching...</span>
+              </button>
+              <button @click="stopSearch()" x-show="isSearching" class="btn danger">⏹ Stop</button>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Blueprint Panel -->
+      <div class="panel blueprint-panel" id="blueprintPanel">
+        <div class="panel-header panel-header-blue">
+          <div class="panel-drag-handle" id="blueprintDragHandle">
+            <span class="panel-icon">⋮⋮</span>
+            <span class="panel-title">Blueprint</span>
+          </div>
+          <div class="panel-controls">
+            <button class="panel-btn" @click="togglePanel('blueprint')">−</button>
+          </div>
+        </div>
+        <div class="panel-content" id="blueprintContent">
+          <div class="blueprint-toolbar">
+            <input type="text" x-model="blueprintSeed || ''" class="blueprint-input" placeholder="Enter seed..." />
+            <button @click="analyzeBlueprint()" class="btn small">Analyze</button>
+          </div>
+          <iframe x-ref="blueprintFrame" src="about:blank" data-src="https://miaklwalker.github.io/Blueprint/" class="blueprint-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy"></iframe>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="panel results-panel" id="resultsPanel">
+        <div class="panel-header panel-header-purple">
+          <div class="panel-drag-handle" id="resultsDragHandle">
+            <span class="panel-icon">⋮⋮</span>
+            <span class="panel-title">Results</span>
+          <span class="panel-badge" x-show="(searchResults || []).length > 0" x-text="(searchResults || []).length"></span>
+          </div>
+          <div class="panel-controls">
+            <button class="panel-btn" @click="togglePanel('results')">−</button>
+          </div>
+        </div>
+        <div class="panel-content" id="resultsContent">
+          <div class="results-controls" x-show="(searchResults || []).length > 0">
+            <div class="results-info">
+              <span>Found: <strong x-text="(searchResults || []).length"></strong> seeds</span>
+              <span x-show="progressPercent > 0">Progress: <strong x-text="Math.round(progressPercent || 0)"></strong>%</span>
+            </div>
+            <div class="results-actions">
+              <button @click="exportResults()" class="btn small">📊 Export</button>
+              <button @click="clearResults()" class="btn small danger">🗑️ Clear</button>
+            </div>
+          </div>
+
+          <div class="results-table-container" x-show="(searchResults || []).length > 0">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th x-for="col in columns || []" :key="col" x-text="col" @click="sortBy(col)" :class="{ 'sorted': sortColumn === col, 'desc': sortDirection === 'desc' }"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr x-for="result in paginatedResults || []" :key="result.id || Math.random()">
+                  <td x-for="col in columns || []" :key="col" x-text="result[col] || ''"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="empty-state" x-show="(searchResults || []).length === 0">
+            <div class="empty-icon">📊</div>
+            <div class="empty-text">No search results yet</div>
+            <div class="empty-subtext">Configure a filter and click "Start Search" to begin</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
 
           <div class="buttons">
             <button class="btn primary" :disabled="isSearching || !filterJaml.trim()" @click="startSearch">
