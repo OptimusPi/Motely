@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Motely.API;
 
 namespace Motely.TUI;
@@ -210,28 +212,9 @@ public class ApiServerWindow : Window
         };
 
         // Start server automatically
-        _serverTask = Task.Run(() => StartServerAsync(host, port));
+        _serverTask = StartServerAsync(host, port);
     }
 
-    private string FindSolutionRoot()
-    {
-        var currentDir = Directory.GetCurrentDirectory();
-        var dir = new DirectoryInfo(currentDir);
-        
-        // Look for .sln file by going up directories
-        while (dir != null)
-        {
-            var slnFiles = dir.GetFiles("*.sln");
-            if (slnFiles.Length > 0)
-            {
-                return dir.FullName;
-            }
-            dir = dir.Parent;
-        }
-        
-        // Fallback: go up to BalatroSeedOracle root
-        return Path.Combine(currentDir, "..", "..", "..");
-    }
 
     private async Task StartServerAsync(string host, int port)
     {
@@ -247,9 +230,9 @@ public class ApiServerWindow : Window
             Console.SetOut(logWriter);
             Console.SetError(logWriter);
 
-            // Create the API using the factory
+            // Create the API using the API Program
             var args = new[] { "--urls", $"http://{host}:{port}" };
-            _server = MotelyApiFactory.CreateApi(args);
+            _server = MotelyApiHost.CreateHost(args);
 
             // Apply TUI thread budget to API search manager (multi-search allocator uses this budget)
             SearchManager.Instance.SetThreadBudget(TuiSettings.ThreadCount);
@@ -586,6 +569,64 @@ public class ApiServerWindow : Window
         });
     }
 
+    private void CopyToClipboard(string text)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "cmd",
+                    Arguments = $"/c echo {text} | clip",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                };
+                Process.Start(psi)?.WaitForExit();
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "pbcopy",
+                    Arguments = text,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                Process.Start(psi)?.WaitForExit();
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "xclip",
+                    Arguments = "-selection clipboard " + text,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                try
+                {
+                    Process.Start(psi)?.WaitForExit();
+                }
+                catch
+                {
+                    // Fallback if xclip not available
+                    LogMessage("[CLIPBOARD] xclip not available for Linux clipboard copy");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"[CLIPBOARD] Failed to copy: {ex.Message}");
+        }
+    }
+
+    private void OpenInBrowser(string url)
+    {
+        OpenUrl(url);
+    }
+
     private void LogMessage(string message)
     {
         try
@@ -594,7 +635,7 @@ public class ApiServerWindow : Window
             {
                 if (_logView != null)
                 {
-                    _logView.Text += message + "\n";
+                    _logView.Text += message;
                     _logView.MoveEnd();
                 }
             });
@@ -605,49 +646,10 @@ public class ApiServerWindow : Window
         }
     }
 
-    private void CopyToClipboard(string text)
+    private void OpenUrl(string url)
     {
         try
         {
-            // Use platform-specific commands directly (Terminal.Gui clipboard may truncate)
-            if (OperatingSystem.IsWindows())
-            {
-                var psi = new System.Diagnostics.ProcessStartInfo("clip")
-                {
-                    RedirectStandardInput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-                var proc = System.Diagnostics.Process.Start(psi);
-                proc?.StandardInput.Write(text);
-                proc?.StandardInput.Close();
-                proc?.WaitForExit();
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                var psi = new System.Diagnostics.ProcessStartInfo("pbcopy")
-                {
-                    RedirectStandardInput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-                var proc = System.Diagnostics.Process.Start(psi);
-                proc?.StandardInput.Write(text);
-                proc?.StandardInput.Close();
-                proc?.WaitForExit();
-            }
-        }
-        catch
-        {
-            // Ignore clipboard errors
-        }
-    }
-
-    private void OpenInBrowser(string url)
-    {
-        try
-        {
-            LogMessage($"[BROWSER] Opening {url}");
             if (OperatingSystem.IsWindows())
             {
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
