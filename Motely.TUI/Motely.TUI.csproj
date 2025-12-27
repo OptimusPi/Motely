@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Terminal.Gui" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

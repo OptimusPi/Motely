@@ -71,11 +71,16 @@ public static class Endpoints
     public static async Task<IResult> StartSearch(HttpRequest req)
     {
         var request = await req.ReadFromJsonAsync<SearchStartRequest>();
-        if (request?.FilterJaml == null) return Results.BadRequest();
+        if (request?.FilterId == null) return Results.BadRequest();
         
-        var (_, searchId) = await SearchManager.Instance.StartSearchAsync(
-            request.FilterJaml, "Red", "White", 
-            request.SeedCount ?? 0, 
+        // Get filter JAML from filterId
+        var filterJaml = FilterService.GetFilterJaml(request.FilterId);
+        if (string.IsNullOrEmpty(filterJaml))
+            return Results.BadRequest("Filter not found");
+        
+        var (immediateResults, searchId) = await SearchManager.Instance.StartSearchAsync(
+            filterJaml, request.Deck ?? "Red", request.Stake ?? "White", 
+            (int)(request.SeedCount ?? 0), 
             request.StartBatch, request.Cutoff, request.SeedSource);
         
         return Results.Ok(new { searchId });
