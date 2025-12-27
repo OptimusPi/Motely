@@ -5,6 +5,19 @@ namespace Motely.API.Services;
 
 public static class FilterService
 {
+    public static string GetFilterJaml(string? filterId)
+    {
+        if (string.IsNullOrEmpty(filterId))
+            return string.Empty;
+            
+        var filtersPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Filters");
+        var filterPath = Path.Combine(filtersPath, $"{filterId}.jaml");
+        if (!File.Exists(filterPath))
+            return string.Empty;
+            
+        return File.ReadAllText(filterPath);
+    }
+
     public static List<object> LoadFiltersFromDisk(string filtersPath, Func<global::Motely.Filters.MotelyJsonConfig?, bool> hasErraticFilters)
     {
         var filters = new List<object>();
@@ -58,7 +71,7 @@ public static class FilterService
             }
 
             var filterName = displayName ?? "UnknownFilter";
-            var searchId = SearchManager.CreateSearchId(filterName, deck, stake);
+            var searchId = $"{SearchManager.SanitizeFilterFileStem(filterName)}_{deck}_{stake}";
             var fileName = Path.GetFileName(file);
             var filterId = Path.GetFileNameWithoutExtension(fileName);
 

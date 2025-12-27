@@ -101,11 +101,8 @@ public static class MotelyTUI
             Console.WriteLine($"Starting Motely API server on http://{host}:{port}");
             
             var args = new[] { "--urls", $"http://{host}:{port}" };
-            var app = MotelyApiFactory.CreateApi(args);
-            
-            Console.WriteLine("API server started successfully. Press Ctrl+C to stop.");
-            await app.RunAsync();
-            
+            var app = MotelyApiHost.CreateHost(args);
+            app.Run();
             return 0;
         }
         catch (Exception ex)
