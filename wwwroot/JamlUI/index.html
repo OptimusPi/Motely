@@ -1,41 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>JamlUI (Clean)</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.24/dist/interact.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAML Modular UI</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="top-bar">
-    <div class="top-bar-left">
-      <button class="icon-btn" id="homeBtn" title="Home">🏠</button>
-      <span class="title">JAML</span>
+    <div class="app-container">
+        <header class="header">
+            <h1>JAML Editor</h1>
+            <div class="controls">
+                <button id="add-panel">Add Panel</button>
+                <button id="reset-layout">Reset Layout</button>
+            </div>
+        </header>
+        
+        <main class="workspace">
+            <div class="panels-container" id="panels">
+                <!-- Panels will be dynamically added here -->
+            </div>
+        </main>
+        
+        <footer class="status-bar">
+            <span id="status">Ready</span>
+            <span id="panel-count">0 panels</span>
+        </footer>
     </div>
-    <div class="top-bar-right">
-      <button class="icon-btn" id="saveLayoutBtn" title="Save layout">💾</button>
-      <button class="icon-btn" id="loadLayoutBtn" title="Load layout">📂</button>
-      <button class="icon-btn" id="resetLayoutBtn" title="Reset layout">↺</button>
-      <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
-    </div>
-  </div>
-
-  <div class="app-shell">
-    <div class="drop-overlay" id="dropOverlay">
-      <div class="drop-zone drop-left" data-drop="left"><span>＋</span></div>
-      <div class="drop-zone drop-right" data-drop="right"><span>＋</span></div>
-    </div>
-
-    <div class="main-split" id="mainSplit">
-      <div class="stack stack-left" id="stackLeft"></div>
-      <div class="splitter" id="splitter" title="Drag to resize"></div>
-      <div class="stack stack-right" id="stackRight"></div>
-    </div>
-  </div>
-
-  <input type="file" id="layoutFileInput" accept="application/json" style="display:none" />
-  <script src="app.js"></script>
+    
+    <script src="app.js"></script>
 </body>
 </html>
 
