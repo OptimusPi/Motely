@@ -14,6 +14,9 @@ public class SearchService
     private readonly ConcurrentDictionary<string, SearchState> _searches = new();
     private readonly ILogger<SearchService> _logger;
     private readonly IHubContext<SearchHub>? _hubContext;
+    // Events for queue service
+    public event Action<string>? SearchCompleted;
+    public event Action<string, string>? SearchError;
 
     public SearchService(ILogger<SearchService> logger, IHubContext<SearchHub>? hubContext = null)
     {
@@ -24,21 +27,68 @@ public class SearchService
     public async Task<string> StartSearchAsync(MotelyJsonConfig config, SearchCriteriaDto? criteria)
     {
         var searchId = Guid.NewGuid().ToString();
-        var state = new SearchState
+        var jamlJson = System.Text.Json.JsonSerializer.Serialize(config);
+
+        // Validate criteria to prevent unlimited writes
+        if (criteria == null)
         {
-            SearchId = searchId,
-            Config = config,
-            Status = "running",
-            FilterName = config.Name ?? "Unnamed Filter",
-            CancellationTokenSource = new CancellationTokenSource()
-        };
+            throw new ArgumentNullException(nameof(criteria), "Search criteria must be provided to prevent unlimited seed generation.");
+        }
 
-        _searches[searchId] = state;
+        // Detect burst mode: single-seed/wordlist/dblist sources
+        var isBurst = criteria.SourceType == "single" || criteria.SourceType == "wordlist" || criteria.SourceType == "dblist";
 
-        // Start search in background
-        _ = Task.Run(async () => await RunSearchAsync(state, criteria ?? new SearchCriteriaDto()));
+        if (isBurst)
+        {
+            // Burst path: run immediately, bypass queue
+            var state = new SearchState
+            {
+                SearchId = searchId,
+                Config = config,
+                Status = "running",
+                FilterName = config.Name ?? "Burst Filter",
+                CancellationTokenSource = new CancellationTokenSource()
+            };
 
-        return searchId;
+            _searches[searchId] = state;
+
+            try
+            {
+                await RunSearchAsync(state, criteria);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Burst search failed for {SearchId}", searchId);
+                state.Status = "error";
+                state.ErrorMessage = ex.Message;
+            }
+
+            return searchId;
+        }
+        else
+        {
+            // Enqueue for background processing
+            var threadCount = criteria.ThreadCount > 0 ? criteria.ThreadCount : 1;
+            // TODO: Add to queue service when API endpoint exists
+
+            // Emit WebSocket QUEUED with blue dot
+            await EmitQueuedAsync(searchId, config.Name ?? "Queued Filter");
+
+            return searchId;
+        }
+    }
+
+    private async Task EmitQueuedAsync(string searchId, string filterName)
+    {
+        if (_hubContext != null)
+        {
+            await _hubContext.Clients.Group($"search_{searchId}").SendAsync("SearchQueued", new
+            {
+                searchId = searchId,
+                status = "queued",
+                filterName = filterName
+            });
+        }
     }
 
     private async Task RunSearchAsync(SearchState state, SearchCriteriaDto criteria)
@@ -73,6 +123,19 @@ public class SearchService
                 // Update progress from search object
                 state.SeedsSearched = search.TotalSeedsSearched;
                 state.ResultsFound = (int)search.MatchingSeeds;
+
+                // Send progress update via WebSocket
+                if (_hubContext != null)
+                {
+                    await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("SearchProgress", new
+                    {
+                        searchId = state.SearchId,
+                        seedsSearched = state.SeedsSearched,
+                        resultsFound = state.ResultsFound,
+                        status = state.Status
+                    });
+                }
+
             }
 
             // Cleanup
@@ -112,6 +175,7 @@ public class SearchService
             _logger.LogError(ex, "Search failed: {SearchId}", state.SearchId);
             state.Status = "error";
             state.ErrorMessage = ex.Message;
+            SearchError?.Invoke(state.SearchId, ex.Message);
         }
     }
 
@@ -194,28 +258,35 @@ public class SearchService
                     state.Results.Add(seedResult);
 
                     // Send via SignalR for JAML UI
-                    _ = Task.Run(async () =>
+                    Task.Run(async () =>
                     {
-                        if (_hubContext != null)
+                        try
                         {
-                            var tallies = result.TallyColumns?.ToArray() ?? Array.Empty<int>();
-                            // Build columns array: seed, score, then tally labels if available
-                            var columns = new List<string> { "seed", "score" };
-                            if (result.TallyColumns != null && result.TallyColumns.Count > 0)
+                            if (_hubContext != null)
                             {
-                                // Use actual tally labels if available, otherwise generic names
-                                for (int i = 0; i < result.TallyColumns.Count; i++)
+                                var tallies = result.TallyColumns?.ToArray() ?? Array.Empty<int>();
+                                // Build columns array: seed, score, then tally labels if available
+                                var columns = new List<string> { "seed", "score" };
+                                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
                                 {
-                                    columns.Add($"tally{i + 1}");
+                                    // Use actual tally labels if available, otherwise generic names
+                                    for (int i = 0; i < result.TallyColumns.Count; i++)
+                                    {
+                                        columns.Add($"tally{i + 1}");
+                                    }
                                 }
+                                
+                                await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("Result", new
+                                {
+                                    seed = result.Seed,
+                                    score = result.Score,
+                                    tallies = tallies
+                                }, columns.ToArray());
                             }
-                            
-                            await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("Result", new
-                            {
-                                seed = result.Seed,
-                                score = result.Score,
-                                tallies = tallies
-                            }, columns.ToArray());
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to send result for {SearchId}", state.SearchId);
                         }
                     });
                 };
@@ -263,17 +334,24 @@ public class SearchService
                 state.ProgressPercent = progress;
 
                 // Send WebSocket update
-                _ = Task.Run(async () =>
+                Task.Run(async () =>
                 {
-                    if (_hubContext != null)
+                    try
                     {
-                        await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("ProgressUpdate", new
+                        if (_hubContext != null)
                         {
-                            searchId = state.SearchId,
-                            seedsSearched = seedsSearched,
-                            resultsFound = resultsFound,
-                            progressPercent = progress
-                        });
+                            await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("ProgressUpdate", new
+                            {
+                                searchId = state.SearchId,
+                                seedsSearched = seedsSearched,
+                                resultsFound = resultsFound,
+                                progressPercent = progress
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send progress for {SearchId}", state.SearchId);
                     }
                 });
             });
@@ -312,6 +390,105 @@ public class SearchService
 
         state.CancellationTokenSource?.Cancel();
         return true;
+    }
+
+    public async Task RunQueuedSearchAsync(MotelyJsonConfig config, SearchQueueEntry entry, CancellationToken ct)
+    {
+        var state = new SearchState
+        {
+            SearchId = entry.SearchId,
+            Config = config,
+            Status = "running",
+            FilterName = config.Name ?? "Queued Filter",
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct)
+        };
+
+        _searches[entry.SearchId] = state;
+
+        try
+        {
+            _logger.LogInformation("Starting queued search: {SearchId}", entry.SearchId);
+
+            // Create search using JsonSearchExecutor pattern
+            var search = CreateSearch(state.Config, new SearchCriteriaDto(), state);
+
+            if (search == null)
+            {
+                state.Status = "error";
+                state.ErrorMessage = "Failed to create search";
+                SearchError?.Invoke(entry.SearchId, state.ErrorMessage);
+                return;
+            }
+
+            // Start search
+            search.Start();
+
+            // Wait for completion or cancellation
+            while (search.Status != MotelySearchStatus.Completed &&
+                   search.Status != MotelySearchStatus.Disposed &&
+                   !state.CancellationTokenSource.Token.IsCancellationRequested)
+            {
+                await Task.Delay(100, state.CancellationTokenSource.Token);
+
+                // Update progress from search object
+                state.SeedsSearched = search.TotalSeedsSearched;
+                state.ResultsFound = (int)search.MatchingSeeds;
+
+                // Send progress update via WebSocket
+                if (_hubContext != null)
+                {
+                    await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("SearchProgress", new
+                    {
+                        searchId = state.SearchId,
+                        seedsSearched = state.SeedsSearched,
+                        resultsFound = state.ResultsFound,
+                        status = state.Status
+                    }, state.CancellationTokenSource.Token);
+                }
+            }
+
+            // Cleanup
+            if (state.CancellationTokenSource.Token.IsCancellationRequested)
+            {
+                search.Dispose();
+                state.Status = "cancelled";
+                SearchError?.Invoke(state.SearchId, "Cancelled");
+            }
+            else if (search.Status == MotelySearchStatus.Completed)
+            {
+                state.Status = "completed";
+                state.ResultsFound = (int)search.MatchingSeeds;
+                state.SeedsSearched = search.TotalSeedsSearched;
+                SearchCompleted?.Invoke(state.SearchId);
+            }
+            else
+            {
+                state.Status = "error";
+                state.ErrorMessage = "Search ended unexpectedly";
+                SearchError?.Invoke(state.SearchId, state.ErrorMessage);
+            }
+
+            // Send completion WebSocket update
+            if (_hubContext != null)
+            {
+                await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("SearchCompleted", new
+                {
+                    searchId = state.SearchId,
+                    status = state.Status,
+                    resultsFound = state.ResultsFound,
+                    errorMessage = state.ErrorMessage
+                }, state.CancellationTokenSource.Token);
+            }
+
+            search.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Queued search failed: {SearchId}", state.SearchId);
+            state.Status = "error";
+            state.ErrorMessage = ex.Message;
+            SearchError?.Invoke(state.SearchId, ex.Message);
+        }
     }
 
     public IEnumerable<SearchStatusResponse> ListSearches()

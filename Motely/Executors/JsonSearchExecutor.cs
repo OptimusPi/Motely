@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.IO;
 using Motely.Filters;
 using Motely.Utils;
 
@@ -228,19 +230,7 @@ namespace Motely.Executors
 
             if (!string.IsNullOrEmpty(_params.Wordlist))
             {
-                string wordlistPath = Path.Combine("wordlists", _params.Wordlist + ".txt");
-                if (!File.Exists(wordlistPath))
-                {
-                    var altPath = Path.Combine("WordLists", _params.Wordlist + ".txt");
-                    if (File.Exists(altPath))
-                    {
-                        wordlistPath = altPath;
-                    }
-                    else
-                    {
-                        throw new FileNotFoundException($"Wordlist not found: {wordlistPath}");
-                    }
-                }
+                string wordlistPath = ResolveWordlistPath(_params.Wordlist);
 
                 List<string> seeds =
                 [
@@ -274,6 +264,58 @@ namespace Motely.Executors
             }
 
             return (null, false); // Sequential search
+        }
+
+        private static string ResolveWordlistPath(string wordlistInput)
+        {
+            string pathWithExtension = Path.HasExtension(wordlistInput)
+                ? wordlistInput
+                : wordlistInput + ".txt";
+
+            if (Path.IsPathRooted(pathWithExtension))
+            {
+                if (File.Exists(pathWithExtension))
+                {
+                    return pathWithExtension;
+                }
+                throw new FileNotFoundException($"Wordlist not found: {pathWithExtension}");
+            }
+
+            foreach (var directory in EnumerateDirectoriesUpwards(Directory.GetCurrentDirectory()))
+            {
+                foreach (var folder in new[] { "WordLists", "wordlists" })
+                {
+                    var candidate = Path.Combine(directory, folder, pathWithExtension);
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            var relativeCandidate = Path.Combine(Directory.GetCurrentDirectory(), pathWithExtension);
+            if (File.Exists(relativeCandidate))
+            {
+                return relativeCandidate;
+            }
+
+            throw new FileNotFoundException($"Wordlist not found: {pathWithExtension}");
+        }
+
+        private static IEnumerable<string> EnumerateDirectoriesUpwards(string startDirectory)
+        {
+            var current = startDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                yield return current;
+
+                var parent = Directory.GetParent(current);
+                if (parent == null)
+                {
+                    break;
+                }
+                current = parent.FullName;
+            }
         }
 
         private MotelyJsonConfig LoadConfig()
