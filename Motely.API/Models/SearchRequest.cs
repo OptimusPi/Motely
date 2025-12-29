@@ -59,6 +59,11 @@ public class SearchCriteriaDto
     /// Ending batch index (ulong.MaxValue = infinite)
     /// </summary>
     public ulong EndBatch { get; set; } = ulong.MaxValue;
+
+    /// <summary>
+    /// Source type for burst-mode detection (single, wordlist, dblist, etc.)
+    /// </summary>
+    public string? SourceType { get; set; }
 }
 
 public class SearchResponse

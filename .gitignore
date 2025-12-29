@@ -56,3 +56,5 @@ Motely/tui.json
 /Motely.API/wwwroot/JamlUI3/node_modules
 /publish/api/wwwroot/JamlUI3/dist
 /publish
+/wwwroot/assets
+/wwwroot
