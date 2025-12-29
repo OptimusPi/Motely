@@ -9,6 +9,7 @@ using System.Text.Json;
 using Motely;
 using Motely.API.Services;
 using Motely.API;
+using Motely.API.Hubs;
 
 // Request records
 public record SearchStartRequest(string? FilterId, string? Deck, string? Stake, long? SeedCount, long? StartBatch, int? Cutoff, string? SeedSource);
@@ -38,10 +39,21 @@ public static class MotelyApiHost
             options.FormatterName = "Simple";
         });
 
+        // Register search queue services
+        builder.Services.AddSingleton<SearchQueueService>();
+        builder.Services.AddHostedService<SearchQueueHostedService>();
+        builder.Services.AddSingleton<SearchService>();
+        
+        // Add SignalR
+        builder.Services.AddSignalR();
+
         var app = builder.Build();
 
         // Configure middleware
         app.UseCors("AllowAll");
+        
+        // Add SignalR
+        app.MapHub<SearchHub>("/searchHub");
         
         // Add static files
         app.UseDefaultFiles();
@@ -49,6 +61,28 @@ public static class MotelyApiHost
 
         // Basic endpoints
         app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
+        app.MapGet("/routes", () => new { 
+            homepage = "/",
+            health = "/health", 
+            routes = "/routes",
+            filters = "/filters",
+            seed_sources = "/seed-sources",
+            searches = "/searches",
+            search_start = "POST /search",
+            search_status = "GET /search/{id}",
+            search_stop = "POST /search/stop"
+        });
+
+        // Filter endpoints
+        app.MapGet("/filters", Endpoints.GetFilters);
+        app.MapPost("/filters/update", Endpoints.SaveFilter);
+        app.MapDelete("/filters/{id}", Endpoints.DeleteFilter);
+
+        // Seed sources endpoint
+        app.MapGet("/seed-sources", Endpoints.GetSeedSources);
+
+        // Searches endpoint
+        app.MapGet("/searches", Endpoints.GetSearches);
 
         // Search endpoints
         app.MapPost("/search", async (HttpRequest request) => 

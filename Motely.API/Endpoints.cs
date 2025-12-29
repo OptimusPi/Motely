@@ -10,8 +10,16 @@ public static class Endpoints
 {
     public static IResult GetFilters()
     {
-        var filters = FilterService.LoadFiltersFromDisk("JamlFilters", cfg => false);
-        return Results.Ok(filters);
+        try
+        {
+            var fullPath = "JamlFilters";
+            var filters = FilterService.LoadFiltersFromDisk(fullPath, cfg => false);
+            return Results.Ok(filters);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem($"Error loading filters: {ex.Message}");
+        }
     }
     
     public static IResult GetSeedSources()

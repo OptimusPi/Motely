@@ -553,6 +553,9 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 // Report progress
                 PrintReport();
 
+                // Ensure any partially filled filter batches advance to the next filter
+                unsafe { ProcessPendingFilterBatches(); }
+
                 // Time-Slicing: Yield to UI thread every ~16ms (60fps)
                 // We check elapsed time of the stopwatch to see if we should yield
                 // Note: We don't reset stopwatch, just check if enough time passed since last yield?
@@ -573,6 +576,7 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         catch (TaskCanceledException)
         {
             // Expected on Pause/Stop
+            unsafe { ProcessPendingFilterBatches(); }
         }
         catch (Exception ex)
         {
@@ -829,9 +833,13 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     ((double*)&batch->SeedCharacters)[i * Vector512<double>.Count + idx] = 
                         ((double*)paramsIn.SeedLastCharacters)[i * Vector512<double>.Count + lane];
                 
-                for (int i = 0; i < paramsIn.SeedLength; i++)
-                    ((double*)&batch->SeedCharacters)[i * Vector512<double>.Count + idx] = 
-                        paramsIn.SeedFirstCharacters[i - paramsIn.SeedLastCharactersLength];
+                for (int firstCharIndex = 0;
+                    firstCharIndex < paramsIn.SeedFirstCharactersLength;
+                    firstCharIndex++)
+                    ((double*)&batch->SeedCharacters)[
+                        (paramsIn.SeedLastCharactersLength + firstCharIndex) * Vector512<double>.Count
+                            + idx
+                    ] = paramsIn.SeedFirstCharacters[firstCharIndex];
 
                 // Copy hashes
                 for (int i = 0; i < _pseudoHashKeyLengthCount; i++)
