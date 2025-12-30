@@ -3,7 +3,7 @@
     <section class="hero">
       <p class="eyebrow">Balatro Seed Search Tools</p>
       <h1>One home for every experiment</h1>
-      <p class="subtitle">Launch the new JAML grid or jump into any legacy UI, games, or searchers.</p>
+      <p class="subtitle">Launch the new JAML grid or jump into other UIs, games, or searchers.</p>
     </section>
 
     <section class="local">
@@ -13,11 +13,11 @@
           <h3>JAML Grid (Vue 3)</h3>
           <p>Modular panel system with manilla tabs, drag layouts, and Vue state.</p>
         </RouterLink>
-        <a class="card" :href="legacyTools[0].href" target="_blank" rel="noreferrer">
+        <a class="card" :href="localTools[0].href" target="_blank" rel="noreferrer">
           <h3>JAML WebUI</h3>
           <p>Commander control for JAML filters and live seed searches.</p>
         </a>
-        <a v-for="tool in legacyTools.slice(1)" :key="tool.href" class="card" :href="tool.href">
+        <a v-for="tool in localTools.slice(1)" :key="tool.href" class="card" :href="tool.href">
           <h3>{{ tool.label }}</h3>
           <p>{{ tool.description }}</p>
         </a>
@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-const legacyTools = [
+const localTools = [
   { label: 'JAML WebUI', description: 'Commander control for JAML filters and live seed searches.', href: 'http://localhost:8080/JAML/' },
   { label: 'BSO Browser', description: 'Avalonia UI compiled to WebAssembly. Full oracle in browser.', href: 'http://localhost:8080/BSO/' },
   { label: 'JamlGenie (Legacy)', description: 'Prototype JAML filter generator and helper tool.', href: 'http://localhost:8080/JamlGenie/' },

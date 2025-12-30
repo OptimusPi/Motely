@@ -1,10 +1,31 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import { readFileSync } from 'node:fs'
+
+function jamlSchemaDevPlugin() {
+  const schemaPath = resolve(__dirname, '../jaml.schema.json')
+  return {
+    name: 'jaml-schema-dev',
+    configureServer(server) {
+      server.middlewares.use('/jaml.schema.json', (_req, res, next) => {
+        try {
+          const schemaJson = readFileSync(schemaPath, 'utf8')
+          res.statusCode = 200
+          res.setHeader('Content-Type', 'application/json; charset=utf-8')
+          res.end(schemaJson)
+        } catch (e) {
+          server.config.logger.warn(`Failed to serve JAML schema from ${schemaPath}: ${e}`)
+          next()
+        }
+      })
+    }
+  }
+}
 
 export default defineConfig(({ mode }) => ({
   base: mode === 'production' ? '/JAML/' : '/',
-  plugins: [vue()],
+  plugins: [vue(), jamlSchemaDevPlugin()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')

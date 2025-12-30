@@ -15,6 +15,16 @@ try {
   copyFileSync(source, target);
 
   console.log('Font copied successfully');
+
+  // Copy JAML schema into the deployed site output (served under /JAML/)
+  const jamlOutDir = join(__dirname, '../wwwroot/JAML');
+  mkdirSync(jamlOutDir, { recursive: true });
+
+  const schemaSource = join(__dirname, '../jaml.schema.json');
+  const schemaTarget = join(jamlOutDir, 'jaml.schema.json');
+  copyFileSync(schemaSource, schemaTarget);
+
+  console.log('Schema copied successfully');
 } catch (error) {
   console.error('Failed to copy font:', error);
   process.exit(1);
