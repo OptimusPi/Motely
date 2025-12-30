@@ -45,16 +45,13 @@ defineProps({
 defineEmits(['stop-search'])
 
 const formatSpeed = (speed) => {
-  if (speed > 1000000) return `${(speed / 1000000).toFixed(1)}M/s`
-  if (speed > 1000) return `${(speed / 1000).toFixed(1)}K/s`
-  return `${Math.round(speed)}/s`
+  if (speed == null) return '0/s'
+  return `${Number(speed).toLocaleString()}/s`
 }
 
 const formatNumber = (num) => {
-  if (num > 1000000000) return `${(num / 1000000000).toFixed(2)}B`
-  if (num > 1000000) return `${(num / 1000000).toFixed(1)}M`
-  if (num > 1000) return `${(num / 1000).toFixed(0)}K`
-  return num.toString()
+  if (num == null) return '0'
+  return Number(num).toLocaleString()
 }
 </script>
 

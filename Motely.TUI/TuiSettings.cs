@@ -8,7 +8,7 @@ namespace Motely.TUI;
 /// </summary>
 public static class TuiSettings
 {
-    private const string SettingsFileName = "tui.json";
+    private static readonly SettingsService _settingsService = new SettingsService("tui.json");
 
     // Thread settings
     public static int ThreadCount { get; set; } = Environment.ProcessorCount;
@@ -26,58 +26,12 @@ public static class TuiSettings
     /// <summary>
     /// Load settings from tui.json (if exists)
     /// </summary>
-    public static void Load()
-    {
-        try
-        {
-            if (!File.Exists(SettingsFileName))
-                return;
-
-            var json = File.ReadAllText(SettingsFileName);
-            var settings = JsonSerializer.Deserialize<PersistedSettings>(json);
-
-            if (settings != null)
-            {
-                ThreadCount = settings.ThreadCount ?? Environment.ProcessorCount;
-                BatchCharacterCount = settings.BatchCharacterCount ?? 2;
-                ApiServerHost = settings.ApiServerHost ?? "localhost";
-                ApiServerPort = settings.ApiServerPort ?? 3141;
-            }
-        }
-        catch
-        {
-            // If load fails, just use defaults
-        }
-    }
+    public static void Load() => _settingsService.LoadSettings();
 
     /// <summary>
     /// Save settings to tui.json
     /// </summary>
-    public static void Save()
-    {
-        try
-        {
-            var settings = new PersistedSettings
-            {
-                ThreadCount = ThreadCount,
-                BatchCharacterCount = BatchCharacterCount,
-                ApiServerHost = ApiServerHost,
-                ApiServerPort = ApiServerPort,
-            };
-
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-            };
-
-            var json = JsonSerializer.Serialize(settings, options);
-            File.WriteAllText(SettingsFileName, json);
-        }
-        catch
-        {
-            // Silently fail if save fails
-        }
-    }
+    public static void Save() => _settingsService.SaveSettings();
 
     /// <summary>
     /// Reset all settings to defaults
@@ -90,19 +44,72 @@ public static class TuiSettings
         ApiServerPort = 3141;
         Save();
     }
+}
+
+public class SettingsService
+{
+    private readonly string _fileName;
+
+    public SettingsService(string fileName)
+    {
+        _fileName = fileName;
+    }
+
+    public void LoadSettings()
+    {
+        try
+        {
+            if (!File.Exists(_fileName))
+                return;
+
+            var json = File.ReadAllText(_fileName);
+            var settings = JsonSerializer.Deserialize<PersistedSettings>(json);
+
+            if (settings != null)
+            {
+                TuiSettings.ThreadCount = settings.ThreadCount ?? Environment.ProcessorCount;
+                TuiSettings.BatchCharacterCount = settings.BatchCharacterCount ?? 2;
+                TuiSettings.ApiServerHost = settings.ApiServerHost ?? "localhost";
+                TuiSettings.ApiServerPort = settings.ApiServerPort ?? 3141;
+            }
+        }
+        catch
+        {
+            // If load fails, just use defaults
+        }
+    }
+
+    public void SaveSettings()
+    {
+        try
+        {
+            var settings = new PersistedSettings
+            {
+                ThreadCount = TuiSettings.ThreadCount,
+                BatchCharacterCount = TuiSettings.BatchCharacterCount,
+                ApiServerHost = TuiSettings.ApiServerHost,
+                ApiServerPort = TuiSettings.ApiServerPort,
+            };
+
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            };
+
+            var json = JsonSerializer.Serialize(settings, options);
+            File.WriteAllText(_fileName, json);
+        }
+        catch
+        {
+            // Silently fail if save fails
+        }
+    }
 
     private class PersistedSettings
     {
-        [JsonPropertyName("threadCount")]
         public int? ThreadCount { get; set; }
-
-        [JsonPropertyName("batchCharacterCount")]
         public int? BatchCharacterCount { get; set; }
-
-        [JsonPropertyName("apiServerHost")]
         public string? ApiServerHost { get; set; }
-
-        [JsonPropertyName("apiServerPort")]
         public int? ApiServerPort { get; set; }
     }
 }

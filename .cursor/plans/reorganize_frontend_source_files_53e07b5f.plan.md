@@ -82,7 +82,7 @@ todos: []
 
 Create `Motely.API/frontend/` directory to hold source files for projects that require builds.
 
-```javascript
+````javascript
 Motely.API/
 ├── frontend/                    # NEW: Source files only
 │   └── JamlUI3/                 # Vue 3 project source
@@ -180,4 +180,5 @@ After successful build:
 
 ## Future Considerations
 
-If other sites later need builds (e.g., UnderConstruction7 gets a React+Vite setup):
+
+````

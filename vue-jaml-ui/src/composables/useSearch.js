@@ -17,7 +17,13 @@ export function useSearch() {
     error.value = null
     try {
       const data = await get('/searches')
-      activeSearches.value = data.searches || data || []
+      if (data?._fallback) {
+        // Dev fallback when API is down
+        activeSearches.value = []
+        console.warn('Using fallback active searches (API down)')
+      } else {
+        activeSearches.value = data.searches || data || []
+      }
     } catch (e) {
       console.error('Failed to load active searches:', e)
       error.value = 'Failed to load searches'

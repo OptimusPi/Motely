@@ -168,17 +168,7 @@
             "Boss",
             "BossBlind",
             "PlayingCard",
-            "StandardCard",
-            "LuckyMoney",
-            "LuckyMult",
-            "PurpleSeal",
-            "EightBall",
-            "RiffRaff",
-            "Seance",
-            "SixthSense",
-            "JokerRiffRaff",
-            "PurpleSealOrEightBall",
-            "SpectralSource"
+            "StandardCard"
           ],
           "description": "Type of item to search for"
         },
@@ -269,55 +259,17 @@
           "description": "Card suit for playing cards"
         },
         "sources": {
-          "type": "object",
-          "properties": {
-            "shopSlots": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "Shop slot indices (0-based)"
-            },
-            "packSlots": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "Pack slot indices (0-based)"
-            },
-            "judgement": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "Judgement tarot joker roll indices (e.g. [0, 1] for first two uses)"
-            },
-            "rareTag": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "Rare tag joker roll indices (e.g. [0] for first rare tag)"
-            },
-            "uncommonTag": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "Uncommon tag joker roll indices (e.g. [0] for first uncommon tag)"
-            },
-            "riffRaff": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "RiffRaff joker roll indices (e.g. [0, 1] for first two RiffRaff jokers - RiffRaff creates 2 jokers)"
-            },
-            "purpleSealOrEightBall": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "Purple Seal / 8Ball tarot card roll indices (e.g. [0] for first tarot from Purple Seal or 8Ball - both use same PRNG key)"
-            },
-            "sixthSense": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "SixthSense spectral card roll indices (e.g. [0] for first spectral card from SixthSense joker)"
-            },
-            "seance": {
-              "type": "array",
-              "items": { "type": "integer" },
-              "description": "Seance spectral card roll indices (e.g. [0, 1] for first two spectral cards from Seance joker)"
-            }
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "pack",
+              "tag",
+              "voucher"
+            ]
           },
-          "description": "Where the item can be found - object with source-specific roll indices"
+          "description": "Where the item can be found"
         },
         "and": {
           "type": "array",

@@ -14,6 +14,7 @@
   
   --bg: #33464b;
   --panel: #3a5055;
+  --panel-dark: #2c3e50;
   --dark: #1e2b2d;
   --border: #b9c2d2;
   --text: #ffffff;
@@ -51,6 +52,9 @@ html, body {
 
 /* Top Bar */
 .top-bar {
+  position: fixed;
+  top: 0;
+  width: 100%;
   height: 48px;
   background: var(--panel);
   border-bottom: 2px solid var(--border);
@@ -59,7 +63,6 @@ html, body {
   justify-content: center;
   gap: 12px;
   padding: 0 16px;
-  position: relative;
   z-index: 1000;
 }
 
@@ -80,7 +83,7 @@ html, body {
 
 .top-bar-title {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: normal;
   letter-spacing: 1px;
 }
 
@@ -145,6 +148,9 @@ html, body {
   width: 8px;
   cursor: col-resize;
   min-width: 8px;
+  margin: 0; /* Ensure no gap between panels */
+  border-left: 1px solid var(--panel-border-color);
+  border-right: 1px solid var(--panel-border-color);
 }
 
 .splitter-horizontal {
@@ -161,9 +167,18 @@ html, body {
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--panel);
-  margin: 4px;
-  border-radius: 4px;
+  margin: 0;
+  border-radius: 0;
   position: relative;
+}
+
+.panel-section + .panel-section {
+  border-top: none;
+}
+
+.panel-section::after {
+  content: '';
+  display: none;
 }
 
 .panel-tab {
@@ -173,11 +188,15 @@ html, body {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  font-weight: bold;
-  cursor: ns-resize;
+  font-weight: normal;
+  cursor: grab;
   user-select: none;
   position: relative;
   z-index: 10;
+}
+
+.panel-tab:active {
+  cursor: grabbing;
 }
 
 .panel-tab-red { background: var(--red); }
@@ -190,7 +209,7 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--dark);
+  background: var(--panel-dark);
 }
 
 /* Editor */
@@ -385,7 +404,7 @@ html, body {
 
 .modal-title {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: normal;
 }
 
 .modal-close {
@@ -410,9 +429,25 @@ html, body {
   color: var(--dark);
   border-radius: 12px;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: normal;
   min-width: 20px;
   text-align: center;
+}
+
+/* Divider Grabber */
+.divider-grabber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--dark-orange);
+  font-size: 16px;
+  font-family: 'm6x11', monospace;
+  cursor: grab;
+}
+
+.divider-grabber:active {
+  cursor: grabbing;
 }
 
 /* Responsive */
@@ -434,6 +469,6 @@ html, body {
 }
 
 /* Smooth transitions */
-* {
-  transition: background-color 0.2s, border-color 0.2s;
+.btn, .nav-link button, .top-bar button, .chip, .pill {
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
 }

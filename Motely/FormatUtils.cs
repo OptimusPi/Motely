@@ -143,7 +143,6 @@ public static class FormatUtils
             { "TheMoon", "The Moon" },
             { "TheSun", "The Sun" },
             { "Judgement", "Judgement" },
-            { "TheJudgement", "Judgement" },
             { "TheWorld", "The World" },
             { "Strength", "Strength" },
         };

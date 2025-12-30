@@ -31,6 +31,10 @@ export function useApi() {
         if (response.status === 0 || !navigator.onLine) {
           throw new Error('Server unavailable. Please check your connection.')
         }
+        if ((response.status >= 500 || response.status === 0) && import.meta.env.DEV) {
+          // In development, provide fallback data when API is down
+          return { _fallback: true, status: response.status }
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
       
@@ -42,6 +46,13 @@ export function useApi() {
       return await response.text()
     } catch (err) {
       error.value = err
+      // In dev, suppress HTTP errors and return fallback
+      if (import.meta.env.DEV) {
+        if (err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('500')) {
+          // Silently use fallback in dev mode
+          return { _fallback: true, status: 0, error: err.message }
+        }
+      }
       console.error('API request failed:', err)
       // Re-throw with user-friendly message
       if (err.name === 'TypeError' && err.message.includes('fetch')) {

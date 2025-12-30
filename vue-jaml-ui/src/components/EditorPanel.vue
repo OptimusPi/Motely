@@ -75,6 +75,8 @@ const showBuilder = ref(true)
 const selectedFilter = ref('')
 const localJaml = ref(props.jaml)
 const filterGroups = ref([])
+const loading = ref(false)
+const error = ref(null)
 
 const { createEditor, init: initMonaco } = useMonaco()
 const { get } = useApi()
@@ -179,18 +181,28 @@ const initMonacoEditor = async () => {
 }
 
 const loadFilters = async () => {
+  loading.value = true
+  error.value = null
   try {
     const data = await get('/filters')
-    const filters = data.filters || data || []
+    let filters = data.filters || data || []
+    
+    if (data?._fallback) {
+      // Dev fallback when API is down
+      filters = []
+      console.warn('API unavailable: no filters loaded')
+    }
     
     const groups = {}
-    filters.forEach((f) => {
-      const author = f.author || 'Default'
-      if (!groups[author]) {
-        groups[author] = []
-      }
-      groups[author].push(f)
-    })
+    if (Array.isArray(filters)) {
+      filters.forEach((f) => {
+        const author = f.author || 'Default'
+        if (!groups[author]) {
+          groups[author] = []
+        }
+        groups[author].push(f)
+      })
+    }
     
     filterGroups.value = Object.keys(groups).map((author) => ({
       author,
@@ -199,6 +211,9 @@ const loadFilters = async () => {
     }))
   } catch (err) {
     console.error('Failed to load filters:', err)
+    filterGroups.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -279,7 +294,7 @@ onUnmounted(() => {
 }
 
 .code-header span {
-  font-weight: 600;
+  font-weight: normal;
 }
 
 .code-header small {

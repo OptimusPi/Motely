@@ -250,17 +250,19 @@ namespace Motely.Executors
             // DuckDBSeeds.Stream() returns IEnumerable that streams from DuckDB, already sorted by LENGTH
             if (!string.IsNullOrEmpty(_params.DbList))
             {
-                if (!File.Exists(_params.DbList))
+                string dbPath = ResolveDbPath(_params.DbList);
+                
+                if (!File.Exists(dbPath))
                 {
-                    throw new FileNotFoundException($"DuckDB file not found: {_params.DbList}");
+                    throw new FileNotFoundException($"DuckDB file not found: {dbPath}");
                 }
 
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"✅ Streaming seeds from DuckDB: {_params.DbList}");
+                    Console.WriteLine($"✅ Streaming seeds from DuckDB: {dbPath}");
                 }
                 // Return streaming IEnumerable - NO list materialization, already sorted by LENGTH!
-                return (DuckDBSeeds.Stream(_params.DbList), true);
+                return (DuckDBSeeds.Stream(dbPath), true);
             }
 
             return (null, false); // Sequential search
@@ -302,6 +304,75 @@ namespace Motely.Executors
             throw new FileNotFoundException($"Wordlist not found: {pathWithExtension}");
         }
 
+        private static string ResolveDbPath(string dbInput)
+        {
+            string pathWithExtension = Path.HasExtension(dbInput)
+                ? dbInput
+                : dbInput + ".db";
+
+            if (Path.IsPathRooted(pathWithExtension))
+            {
+                if (File.Exists(pathWithExtension))
+                {
+                    return pathWithExtension;
+                }
+                throw new FileNotFoundException($"Database file not found: {pathWithExtension}");
+            }
+
+            foreach (var directory in EnumerateDirectoriesUpwards(Directory.GetCurrentDirectory()))
+            {
+                foreach (var folder in new[] { "WordLists", "wordlists" })
+                {
+                    var candidate = Path.Combine(directory, folder, pathWithExtension);
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            var relativeCandidate = Path.Combine(Directory.GetCurrentDirectory(), pathWithExtension);
+            if (File.Exists(relativeCandidate))
+            {
+                return relativeCandidate;
+            }
+
+            throw new FileNotFoundException($"Database file not found: {pathWithExtension}");
+        }
+
+        private static string ResolveConfigPath(string configName, string filterDir, string extension)
+        {
+            string pathWithExtension = Path.HasExtension(configName)
+                ? configName
+                : configName + extension;
+
+            if (Path.IsPathRooted(pathWithExtension))
+            {
+                if (File.Exists(pathWithExtension))
+                {
+                    return pathWithExtension;
+                }
+                throw new FileNotFoundException($"Config file not found: {pathWithExtension}");
+            }
+
+            foreach (var directory in EnumerateDirectoriesUpwards(Directory.GetCurrentDirectory()))
+            {
+                var candidate = Path.Combine(directory, filterDir, pathWithExtension);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            var relativeCandidate = Path.Combine(Directory.GetCurrentDirectory(), filterDir, pathWithExtension);
+            if (File.Exists(relativeCandidate))
+            {
+                return relativeCandidate;
+            }
+
+            throw new FileNotFoundException($"Config file not found: {pathWithExtension}");
+        }
+
         private static IEnumerable<string> EnumerateDirectoriesUpwards(string startDirectory)
         {
             var current = startDirectory;
@@ -340,7 +411,7 @@ namespace Motely.Executors
             }
             else
             {
-                configPath = Path.Combine(filterDir, _configPath + extension);
+                configPath = ResolveConfigPath(_configPath, filterDir, extension);
             }
 
             if (!File.Exists(configPath))

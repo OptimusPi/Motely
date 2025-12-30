@@ -1,72 +1,40 @@
 <template>
   <div class="jaml-ui">
-    <!-- Top Bar -->
-    <div class="top-bar">
-      <div
-        class="top-bar-center"
-        :class="[edgeStateClass, { dragging: isDraggingLayout }]"
-        :style="[topBarCenterStyles, { width: `${topPillWidth}px` }]"
-      >
-        <div class="layout-controls" @pointerdown="startLayoutDrag">
-          <button class="slider-icon" title="Home" @pointerdown.stop="goHome">🏠</button>
-          <span class="layout-indicator" :class="`layout-${layoutMode}`">
-            {{ layoutIndicatorLabel }}
-          </span>
-          <span class="top-bar-title">JAML:</span>
-          <button class="slider-icon" title="Settings" @pointerdown.stop="toggleSettings">⚙️</button>
+    <!-- Panel tabs at top edge -->
+    <div class="tab-overflow-row">
+      <template v-for="(panel, index) in topVisiblePanels" :key="panel.id">
+        <div
+          class="panel-tab-inline"
+          :class="`panel-tab-${panel.color}`"
+        >
+          <span class="tab-label">{{ panel.label }}</span>
+          <span v-if="panel.badge" class="tab-badge">{{ panel.badge }}</span>
         </div>
-      </div>
-      <router-link to="/genie" class="nav-link">
-        <button title="Genie">🧞‍♂️</button>
-      </router-link>
+      </template>
     </div>
 
     <!-- Panels -->
-    <div class="main-layout" :class="`layout-${layoutMode}`">
-      <div v-if="layoutMode === 'stack'" class="layout-stack">
-        <PanelSection
-          v-for="panel in panels"
-          :key="panel.id"
-          :color="panel.color"
-          :label="panel.label"
-          :badge="panel.badge"
-          :min-height="panel.minHeight"
-          :default-height="panel.defaultHeight"
-          :layout-mode="layoutMode"
-          @resize="onPanelResize(panel.id, $event)"
-          @collapse="onPanelCollapse(panel.id, $event)"
-        >
-          <component
-            :is="panel.component"
-            v-bind="panel.props || {}"
-            :jaml="panel.id === 'jaml-editor' ? jamlContent : undefined"
-            :results="panel.id === 'results' ? results : undefined"
-            :columns="panel.id === 'results' ? columns : undefined"
-            :status="panel.id === 'results' ? searchStatus : undefined"
-            :is-searching="panel.id === 'results' ? isSearching : undefined"
-            :searches="panel.id === 'active-searches' ? activeSearches : undefined"
-            @save="handleSaveFilter"
-            @start="handleStartSearch"
-            @stop="handleStopSearch"
-            @clear="clearResults"
-            @export="exportResults"
-            @stop-search="handleStopSpecificSearch"
-            @update:jaml="updateJamlContent"
-          />
-        </PanelSection>
-      </div>
+    <div 
+      class="main-layout" 
+      :class="`layout-${layoutMode}`"
+    >
+      <div v-if="layoutMode === 'stack'" ref="stackContainer" class="layout-stack">
+        <template v-for="(panel, index) in panels" :key="panel.id">
+          <div
+            v-if="index > 0"
+            class="stack-divider"
+            @pointerdown="startStackResize(index - 1, $event)"
+          ></div>
 
-      <div v-else class="layout-split" ref="splitLayoutRef">
-        <div class="split-column split-left" :style="{ flex: `0 0 ${splitPercent}%` }">
           <PanelSection
-            v-for="panel in leftPanels"
-            :key="panel.id"
             :color="panel.color"
             :label="panel.label"
             :badge="panel.badge"
             :min-height="panel.minHeight"
             :default-height="panel.defaultHeight"
             :layout-mode="layoutMode"
+            :fill-remaining="index === panels.length - 1"
+            :show-top-grab="false"
             @resize="onPanelResize(panel.id, $event)"
             @collapse="onPanelCollapse(panel.id, $event)"
           >
@@ -74,44 +42,104 @@
               :is="panel.component"
               v-bind="panel.props || {}"
               :jaml="panel.id === 'jaml-editor' ? jamlContent : undefined"
-              @save="handleSaveFilter"
-              @update:jaml="updateJamlContent"
-            />
-          </PanelSection>
-        </div>
-
-        <div class="split-divider" :style="{ left: `calc(${splitPercent}% - 4px)` }" @pointerdown="startSplitDrag">
-          <div class="divider-handle"></div>
-        </div>
-
-        <div class="split-column split-right" :style="{ flex: `0 0 ${100 - splitPercent}%` }">
-          <PanelSection
-            v-for="panel in rightPanels"
-            :key="panel.id"
-            :color="panel.color"
-            :label="panel.label"
-            :badge="panel.badge"
-            :min-height="panel.minHeight"
-            :default-height="panel.defaultHeight"
-            :layout-mode="layoutMode"
-            @resize="onPanelResize(panel.id, $event)"
-            @collapse="onPanelCollapse(panel.id, $event)"
-          >
-            <component
-              :is="panel.component"
-              v-bind="panel.props || {}"
               :results="panel.id === 'results' ? results : undefined"
               :columns="panel.id === 'results' ? columns : undefined"
               :status="panel.id === 'results' ? searchStatus : undefined"
               :is-searching="panel.id === 'results' ? isSearching : undefined"
               :searches="panel.id === 'active-searches' ? activeSearches : undefined"
+              @save="handleSaveFilter"
               @start="handleStartSearch"
               @stop="handleStopSearch"
               @clear="clearResults"
               @export="exportResults"
               @stop-search="handleStopSpecificSearch"
+              @update:jaml="updateJamlContent"
             />
           </PanelSection>
+        </template>
+      </div>
+
+      <div v-else ref="splitContainer" class="layout-split">
+        <div ref="leftColumnContainer" class="split-column split-left" :style="{ width: splitLeftWidth + '%' }">
+          <template v-for="(panel, index) in leftPanels" :key="panel.id">
+            <div
+              v-if="index > 0"
+              class="stack-divider"
+              @pointerdown="startColumnResize('left', index - 1, $event)"
+            ></div>
+
+            <PanelSection
+              :color="panel.color"
+              :label="panel.label"
+              :badge="panel.badge"
+              :min-height="panel.minHeight"
+              :default-height="panel.defaultHeight"
+              :layout-mode="'stack'"
+              :fill-remaining="index === leftPanels.length - 1"
+              :show-top-grab="false"
+              @resize="onPanelResize(panel.id, $event)"
+              @collapse="onPanelCollapse(panel.id, $event)"
+            >
+              <component
+                :is="panel.component"
+                v-bind="panel.props || {}"
+                :jaml="panel.id === 'jaml-editor' ? jamlContent : undefined"
+                @save="handleSaveFilter"
+                @update:jaml="updateJamlContent"
+              />
+            </PanelSection>
+          </template>
+        </div>
+
+        <div class="split-divider" @pointerdown="startSplitResize">
+          <div 
+            class="jaml-badge"
+            :class="badgeSnapClass"
+          >
+            <GripVertical v-if="badgeSnapState !== 'left'" :size="16" />
+            <Home :size="16" @click.stop="goHome" class="icon-btn" />
+            <span class="logo">JAML</span>
+            <Settings :size="16" @click.stop="toggleSettings" class="icon-btn" />
+            <GripVertical v-if="badgeSnapState !== 'right'" :size="16" />
+          </div>
+        </div>
+
+        <div ref="rightColumnContainer" class="split-column split-right" :style="{ width: (100 - splitLeftWidth) + '%' }">
+          <template v-for="(panel, index) in rightPanels" :key="panel.id">
+            <div
+              v-if="index > 0"
+              class="stack-divider"
+              @pointerdown="startColumnResize('right', index - 1, $event)"
+            ></div>
+
+            <PanelSection
+              :color="panel.color"
+              :label="panel.label"
+              :badge="panel.badge"
+              :min-height="panel.minHeight"
+              :default-height="panel.defaultHeight"
+              :layout-mode="'split'"
+              :fill-remaining="index === rightPanels.length - 1"
+              :show-top-grab="false"
+              @resize="onPanelResize(panel.id, $event)"
+              @collapse="onPanelCollapse(panel.id, $event)"
+            >
+              <component
+                :is="panel.component"
+                v-bind="panel.props || {}"
+                :results="panel.id === 'results' ? results : undefined"
+                :columns="panel.id === 'results' ? columns : undefined"
+                :status="panel.id === 'results' ? searchStatus : undefined"
+                :is-searching="panel.id === 'results' ? isSearching : undefined"
+                :searches="panel.id === 'active-searches' ? activeSearches : undefined"
+                @start="handleStartSearch"
+                @stop="handleStopSearch"
+                @clear="clearResults"
+                @export="exportResults"
+                @stop-search="handleStopSpecificSearch"
+              />
+            </PanelSection>
+          </template>
         </div>
       </div>
     </div>
@@ -133,7 +161,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, reactive, markRaw } from 'vue'
+import { Home, Settings, GripVertical } from 'lucide-vue-next'
 import PanelSection from '../components/PanelSection.vue'
 import EditorPanel from '../components/EditorPanel.vue'
 import BlueprintPanel from '../components/BlueprintPanel.vue'
@@ -154,7 +183,7 @@ const panels = reactive([
     label: 'JAML Editor',
     minHeight: 220,
     defaultHeight: 320,
-    component: EditorPanel
+    component: markRaw(EditorPanel)
   },
   {
     id: 'blueprint',
@@ -162,7 +191,7 @@ const panels = reactive([
     label: 'Blueprint Analyzer',
     minHeight: 220,
     defaultHeight: 320,
-    component: BlueprintPanel
+    component: markRaw(BlueprintPanel)
   },
   {
     id: 'active-searches',
@@ -170,7 +199,7 @@ const panels = reactive([
     label: 'Active Searches',
     minHeight: 200,
     defaultHeight: 240,
-    component: ActiveSearchesPanel
+    component: markRaw(ActiveSearchesPanel)
   },
   {
     id: 'results',
@@ -178,196 +207,175 @@ const panels = reactive([
     label: 'Results',
     minHeight: 260,
     defaultHeight: 360,
-    component: ResultsPanel
+    component: markRaw(ResultsPanel)
   }
 ])
 
 const leftPanels = computed(() => panels.slice(0, 2))
 const rightPanels = computed(() => panels.slice(2))
+const topVisiblePanels = computed(() => {
+  // For split layout, show tabs from left column's first panel
+  // For stack layout, show tab from first panel
+  if (layoutMode.value === 'split') {
+    return leftPanels.value.slice(0, 1)
+  }
+  return panels.slice(0, 1)
+})
 
 const showSettings = ref(false)
+const splitLeftWidth = ref(50)
 
-// Layout mode
-const layoutMode = ref('stack')
+// Badge positioning state
+const badgeSnapState = ref('center') // 'left', 'center', 'right'
+const badgeSnapClass = computed(() => `badge-snap-${badgeSnapState.value}`)
 
-const updateLayoutMode = () => {
-  layoutMode.value = window.innerWidth > window.innerHeight ? 'split' : 'stack'
-}
+const SNAP_THRESHOLD = 100
 
-// Dragging state
-const isDraggingLayout = ref(false)
-const isDraggingSplit = ref(false)
-const splitPercent = ref(50)
+const stackContainer = ref(null)
+const splitContainer = ref(null)
+const leftColumnContainer = ref(null)
+const rightColumnContainer = ref(null)
 
-const splitLayoutRef = ref(null)
-const splitControlWidth = 220
-const edgeThresholdPercent = 10
-const getSplitBounds = () => {
-  const container = splitLayoutRef.value
-  if (!container) {
-    return {
-      left: 0,
-      width: window.innerWidth
-    }
+const STACK_DIVIDER_HEIGHT_PX = 4
+
+const layoutMode = computed(() => {
+  // Force single column when snapped left or right
+  if (badgeSnapState.value === 'left' || badgeSnapState.value === 'right') {
+    return 'stack'
   }
-  return container.getBoundingClientRect()
-}
-
-const splitPercentMin = 1
-const splitPercentMax = 99
-const snapThresholdPercent = 0.5
-const stackSnapActive = ref(false)
-
-const clampSplitPercent = (value) => {
-  const target = Number.isFinite(value) ? value : splitPercent.value
-  return Math.max(splitPercentMin, Math.min(splitPercentMax, target))
-}
-
-const updateSplitFromClientX = (clientX) => {
-  const { left, width } = getSplitBounds()
-  const relative = (clientX - left) / (width || window.innerWidth)
-  splitPercent.value = clampSplitPercent(relative * 100)
-}
-
-const edgeStateClass = computed(() => {
-  if (layoutMode.value !== 'split') return ''
-  if (splitPercent.value <= edgeThresholdPercent) return 'edge-left'
-  if (splitPercent.value >= 100 - edgeThresholdPercent) return 'edge-right'
-  return ''
+  return 'split'
 })
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
-const layoutIndicatorLabel = computed(() => {
-  if (stackSnapActive.value) return 'SNAPPED'
-  return layoutMode.value === 'stack' ? 'STACK' : 'SPLIT'
-})
+const startSplitResize = (event) => {
+  if (event.button !== 0) return
+  event.preventDefault()
 
-const topPillWidth = computed(() => (stackSnapActive.value ? 160 : splitControlWidth))
-const topBarHalf = computed(() => topPillWidth.value / 2)
+  const dividerEl = event.currentTarget
+  dividerEl?.setPointerCapture?.(event.pointerId)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
 
-const topBarCenterStyles = computed(() => {
-  if (layoutMode.value !== 'split') {
-    return { left: `calc(50% - ${topBarHalf.value}px)` }
+  const updateFromPointer = (clientX) => {
+    const rect = splitContainer.value?.getBoundingClientRect?.()
+    if (!rect || rect.width <= 0) return
+    const percent = ((clientX - rect.left) / rect.width) * 100
+    splitLeftWidth.value = clamp(percent, 0, 100)
   }
 
-  if (splitPercent.value <= edgeThresholdPercent) {
-    return { left: '0px', right: 'auto' }
+  const onMove = (moveEvent) => {
+    updateFromPointer(moveEvent.clientX)
   }
 
-  if (splitPercent.value >= 100 - edgeThresholdPercent) {
-    return { right: '0px', left: 'auto' }
+  const onUp = () => {
+    dividerEl?.releasePointerCapture?.(event.pointerId)
+    dividerEl?.removeEventListener?.('pointermove', onMove)
+    dividerEl?.removeEventListener?.('pointerup', onUp)
+    dividerEl?.removeEventListener?.('pointercancel', onUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+
+    // Snap logic on release
+    if (splitLeftWidth.value < 10) {
+      badgeSnapState.value = 'left'
+      splitLeftWidth.value = 0
+    } else if (splitLeftWidth.value > 90) {
+      badgeSnapState.value = 'right'
+      splitLeftWidth.value = 100
+    } else {
+      badgeSnapState.value = 'center'
+    }
   }
 
-  return { left: `calc(${splitPercent.value}% - ${topBarHalf.value}px)` }
-})
-
-const startLayoutDrag = (event) => {
-  isDraggingLayout.value = true
-  const startX = event.clientX
-  let animationFrame = null
-
-  if (layoutMode.value === 'split') {
-    updateSplitFromClientX(event.clientX)
-    // Adjust splitPercent
-    const handlePointerMove = (moveEvent) => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame)
-      }
-      animationFrame = requestAnimationFrame(() => {
-        updateSplitFromClientX(moveEvent.clientX)
-      })
-    }
-
-    const handlePointerUp = () => {
-      isDraggingLayout.value = false
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame)
-      }
-      document.removeEventListener('pointermove', handlePointerMove)
-      document.removeEventListener('pointerup', handlePointerUp)
-      maybeSnapToStack(splitPercent.value)
-    }
-
-    document.addEventListener('pointermove', handlePointerMove)
-    document.addEventListener('pointerup', handlePointerUp)
-  } else {
-    // Switch mode
-    const startMode = layoutMode.value
-
-    const handlePointerMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX
-      const threshold = 100
-
-      if (Math.abs(deltaX) > threshold) {
-        layoutMode.value = deltaX > 0 && startMode === 'stack' ? 'split' : deltaX < 0 && startMode === 'split' ? 'stack' : startMode
-      }
-    }
-
-    const handlePointerUp = () => {
-      isDraggingLayout.value = false
-      document.removeEventListener('pointermove', handlePointerMove)
-      document.removeEventListener('pointerup', handlePointerUp)
-    }
-
-    document.addEventListener('pointermove', handlePointerMove)
-    document.addEventListener('pointerup', handlePointerUp)
-  }
+  dividerEl?.addEventListener?.('pointermove', onMove)
+  dividerEl?.addEventListener?.('pointerup', onUp)
+  dividerEl?.addEventListener?.('pointercancel', onUp)
+  updateFromPointer(event.clientX)
 }
 
-// Split drag handling
-const startSplitDrag = (event) => {
-  isDraggingSplit.value = true
-  const startX = event.clientX
-  let animationFrame = null
-
-  const handleMouseMove = (moveEvent) => {
-    if (animationFrame) {
-      cancelAnimationFrame(animationFrame)
-    }
-    animationFrame = requestAnimationFrame(() => {
-      updateSplitFromClientX(moveEvent.clientX)
-    })
+const computeMaxHeightForIndex = (stackPanels, resizeIndex, containerHeight) => {
+  let minBelow = 0
+  for (let i = resizeIndex + 1; i < stackPanels.length; i++) {
+    minBelow += stackPanels[i].minHeight
   }
-
-  const handleMouseUp = () => {
-    isDraggingSplit.value = false
-    if (animationFrame) {
-      cancelAnimationFrame(animationFrame)
-    }
-    document.removeEventListener('mousemove', handleMouseMove)
-    document.removeEventListener('mouseup', handleMouseUp)
-    maybeSnapToStack(splitPercent.value)
-  }
-
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseup', handleMouseUp)
+  const dividerCountBelow = stackPanels.length - 1 - resizeIndex
+  const dividerSpace = dividerCountBelow * STACK_DIVIDER_HEIGHT_PX
+  return containerHeight - minBelow - dividerSpace
 }
 
-const maybeSnapToStack = (percent) => {
-  const nearEdge = percent <= snapThresholdPercent || percent >= 100 - snapThresholdPercent
-  if (nearEdge) {
-    stackSnapActive.value = true
-    layoutMode.value = 'stack'
-  } else if (stackSnapActive.value && layoutMode.value === 'stack') {
-    stackSnapActive.value = false
-    layoutMode.value = 'split'
+const startStackResize = (resizeIndex, event) => {
+  if (event.button !== 0) return
+  event.preventDefault()
+
+  const dividerEl = event.currentTarget
+  dividerEl?.setPointerCapture?.(event.pointerId)
+  dividerEl?.classList?.add?.('is-dragging')
+  document.body.style.cursor = 'row-resize'
+  document.body.style.userSelect = 'none'
+
+  const stackPanels = panels
+  const containerHeight = stackContainer.value?.getBoundingClientRect?.().height
+  if (!containerHeight) return
+
+  const startY = event.clientY
+  const startHeight = stackPanels[resizeIndex].defaultHeight
+
+  const onMove = (moveEvent) => {
+    const desired = startHeight + (moveEvent.clientY - startY)
+    stackPanels[resizeIndex].defaultHeight = desired
   }
+
+  const onUp = () => {
+    dividerEl?.releasePointerCapture?.(event.pointerId)
+    dividerEl?.classList?.remove?.('is-dragging')
+    dividerEl?.removeEventListener?.('pointermove', onMove)
+    dividerEl?.removeEventListener?.('pointerup', onUp)
+    dividerEl?.removeEventListener?.('pointercancel', onUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+
+  dividerEl?.addEventListener?.('pointermove', onMove)
+  dividerEl?.addEventListener?.('pointerup', onUp)
+  dividerEl?.addEventListener?.('pointercancel', onUp)
 }
 
-watch(layoutMode, (mode) => {
-  if (mode === 'split') {
-    stackSnapActive.value = false
+const startColumnResize = (side, resizeIndex, event) => {
+  if (event.button !== 0) return
+  event.preventDefault()
+
+  const dividerEl = event.currentTarget
+  dividerEl?.setPointerCapture?.(event.pointerId)
+  dividerEl?.classList?.add?.('is-dragging')
+  document.body.style.cursor = 'row-resize'
+  document.body.style.userSelect = 'none'
+
+  const columnPanels = side === 'left' ? leftPanels.value : rightPanels.value
+  const containerEl = side === 'left' ? leftColumnContainer.value : rightColumnContainer.value
+  const containerHeight = containerEl?.getBoundingClientRect?.().height
+  if (!containerHeight) return
+
+  const startY = event.clientY
+  const startHeight = columnPanels[resizeIndex].defaultHeight
+
+  const onMove = (moveEvent) => {
+    const desired = startHeight + (moveEvent.clientY - startY)
+    columnPanels[resizeIndex].defaultHeight = desired
   }
-})
 
-// Panel management
-const onPanelResize = (panelId, newHeight) => {
-  const panel = panels.find(p => p.id === panelId)
-  if (panel) panel.defaultHeight = newHeight
-}
+  const onUp = () => {
+    dividerEl?.releasePointerCapture?.(event.pointerId)
+    dividerEl?.classList?.remove?.('is-dragging')
+    dividerEl?.removeEventListener?.('pointermove', onMove)
+    dividerEl?.removeEventListener?.('pointerup', onUp)
+    dividerEl?.removeEventListener?.('pointercancel', onUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
 
-const onPanelCollapse = (panelId, collapsed) => {
-  const panel = panels.find(p => p.id === panelId)
-  if (panel) panel.collapsed = collapsed
+  dividerEl?.addEventListener?.('pointermove', onMove)
+  dividerEl?.addEventListener?.('pointerup', onUp)
+  dividerEl?.addEventListener?.('pointercancel', onUp)
 }
 
 // Composables
@@ -432,16 +440,18 @@ const updateJamlContent = (newJaml) => {
   jamlContent.value = newJaml
 }
 
+const onPanelResize = (panelId, newHeight) => {
+  // Panel resize handled internally by PanelSection
+  // This handler can be used for future analytics/persistence
+}
+
+const onPanelCollapse = (panelId, isCollapsed) => {
+  // Panel collapse handled internally by PanelSection
+  // This handler can be used for future analytics/persistence
+}
+
 // Lifecycle
 onMounted(async () => {
-  const saved = localStorage.getItem('jaml-layout-mode')
-  if (saved === 'stack' || saved === 'split') {
-    layoutMode.value = saved
-  } else {
-    updateLayoutMode()
-  }
-  window.addEventListener('resize', updateLayoutMode)
-
   // Load data with timeout to prevent hanging
   const loadWithTimeout = async (fn, timeout = 3000) => {
     return Promise.race([
@@ -466,245 +476,254 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updateLayoutMode)
-  localStorage.setItem('jaml-layout-mode', layoutMode.value)
   disconnect()
 })
 </script>
 
 <style scoped>
-:global(body) {
-  position: relative;
-  min-height: 100vh;
-  background: radial-gradient(circle at 20% 20%, rgba(234, 186, 68, 0.25), transparent 45%),
-    radial-gradient(circle at 80% 0%, rgba(79, 115, 255, 0.18), transparent 35%),
-    var(--bg);
-  color: var(--text);
-  font-family: 'm6x11plus', 'Courier New', monospace;
-  overflow-y: auto;
+:global(html, body) {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
-:global(body)::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(30, 46, 63, 0.25), rgba(7, 9, 14, 0.6));
-  pointer-events: none;
-  mix-blend-mode: screen;
-  z-index: -1;
+:global(body) {
+  position: relative;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'm6x11plus', 'Courier New', monospace;
+}
+
+:global(:root) {
+  --balatro-red: #ff4c40;
+  --balatro-blue: #0093ff;
+  --balatro-green: #429f79;
+  --balatro-purple: #9b59b6;
+  --balatro-gold: #eaba44;
 }
 
 .jaml-ui {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
-  padding-top: 32px;
   position: relative;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 30px 60px rgba(0, 0, 0, 0.45);
 }
-/* Navigation links */
-.nav-link {
-  text-decoration: none;
-  color: inherit;
-}
 
-.nav-link button {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.nav-link button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Top bar styles */
-.top-bar {
+.tab-overflow-row {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 38px;
-  background: linear-gradient(90deg, rgba(46, 55, 68, 0.85), rgba(21, 30, 39, 0.85));
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  z-index: 1000;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
-}
-
-.top-bar-center {
-  position: absolute;
-  top: 4px;
-  height: 24px;
-  background: linear-gradient(120deg, rgba(60, 74, 93, 0.95), rgba(20, 26, 33, 0.9));
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 1px solid rgba(234, 186, 68, 0.4);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  cursor: ew-resize;
-  user-select: none;
-  z-index: 100;
-  box-shadow: 0 4px 25px rgba(234, 186, 68, 0.35);
-}
-
-.top-bar-center::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: calc(50% - 1px);
-  width: 2px;
-  height: 4px;
-  background: rgba(185, 194, 210, 0.4);
-}
-
-.top-bar-center:hover {
-  background: rgba(42, 45, 58, 0.95);
-  border-color: rgba(185, 194, 210, 0.3);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.top-bar-center.dragging {
-  background: rgba(42, 45, 58, 1);
-  border-color: rgba(255, 75, 64, 0.5);
-  box-shadow: 0 2px 8px rgba(255, 75, 64, 0.3);
-}
-
-.top-bar-center.edge-left {
-  border-radius: 999px 0 0 999px;
-}
-
-.top-bar-center.edge-right {
-  border-radius: 0 999px 999px 0;
-}
-
-.layout-controls {
-  display: flex;
-  align-items: center;
-  cursor: ew-resize;
-  user-select: none;
-  gap: 6px;
-}
-
-.layout-controls.dragging {
-  opacity: 0.85;
-}
-
-.layout-indicator {
-  font-size: 12px;
-  opacity: 0.7;
-  color: var(--text-color, white);
-  padding: 0 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(234, 186, 68, 0.5);
-  background: rgba(234, 186, 68, 0.08);
-}
-
-.top-bar-title {
-  font-family: 'm6x11plus', monospace;
-  font-size: 14px;
-  font-weight: normal;
-  color: white;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-  margin: 0 6px;
-}
-
-.slider-icon {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 12px;
-  cursor: grab;
-  padding: 0;
-  opacity: 0.8;
-  transition: opacity 0.2s ease;
-}
-
-.slider-icon:hover {
-  opacity: 1;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 0 4px;
+  background: transparent;
+  height: 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  z-index: 1199;
+  pointer-events: none;
 }
 
 .main-layout {
-  flex: 1;
   display: flex;
-  overflow: hidden;
   position: relative;
-  transition: flex-direction 0.3s ease;
-}
-
-.split-pane {
-  display: flex;
-  height: 100%;
-  position: relative;
-}
-
-.split-pane-vertical {
-  flex-direction: row;
-}
-
-.split-pane-horizontal {
-  flex-direction: column;
-}
-
-.split-pane-left,
-.split-pane-right {
+  padding: 28px 0 0 0;
+  box-sizing: border-box;
+  height: 100vh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.split-pane-left {
-  flex: 0 0 50%;
+  margin-top: 0;
 }
 
 .layout-stack {
+  display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.stack-divider {
+  height: 4px;
+  min-height: 4px;
+  cursor: ns-resize;
+  background: transparent;
+  flex-shrink: 0;
+  touch-action: none;
+  user-select: none;
+}
+
+.stack-divider:hover,
+.stack-divider.is-dragging {
+  background: rgba(234, 186, 68, 0.65);
+}
+
+.layout-split {
+  display: flex;
+  width: 100%;
 }
 
 .split-column {
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
   display: flex;
   flex-direction: column;
+  height: 100%;
   overflow: hidden;
-  padding: 0 6px;
-  position: relative;
-  border-radius: 0 0 12px 12px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.35));
-  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.35);
-  transition: flex 0.15s ease-out;
 }
 
 .split-divider {
-  position: absolute;
-  top: 34px;
-  height: calc(100vh - 34px);
-  width: 8px;
+  width: 12px;
+  min-width: 12px;
   cursor: ew-resize;
-  border-radius: 4px;
-  background: var(--gold);
-  box-shadow: var(--shadow);
-  transition: width 0.2s ease, background-color 0.2s ease;
-  will-change: width;
+  background: #d4851f;
+  flex-shrink: 0;
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 0;
 }
 
 .split-divider:hover {
-  width: 10px;
   background: var(--balatro-gold);
 }
 
-.divider-handle {
-  display: none;
+.jaml-badge {
+  position: sticky;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'm6x11plus', monospace;
+  font-size: 14px;
+  font-weight: normal;
+  padding: 4px 10px;
+  background: rgba(50, 60, 70, 0.95);
+  color: #fff;
+  height: 28px;
+  box-sizing: border-box;
+  user-select: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.jaml-badge.badge-snap-left {
+  border-radius: 0 0 8px 0;
+}
+
+.jaml-badge.badge-snap-right {
+  border-radius: 0 0 0 8px;
+}
+
+.jaml-badge.badge-snap-center {
+  border-radius: 0 0 8px 8px;
+}
+
+.jaml-badge .logo {
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.jaml-badge .icon-btn {
+  cursor: pointer;
+  opacity: 0.8;
+  pointer-events: auto;
+}
+
+.jaml-badge .icon-btn:hover {
+  opacity: 1;
+}
+
+.logo-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px;
+  opacity: 0.8;
+  color: white;
+}
+
+.logo-btn:hover {
+  opacity: 1;
+}
+
+.tab-overflow-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 0 4px;
+  background: transparent;
+  height: 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  pointer-events: none;
+}
+
+.panel-tab-inline {
+  height: 28px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-color);
+  border-radius: 4px 4px 0 0;
+  color: #fff;
+  font-family: 'm6x11plus', monospace;
+  font-size: 14px;
+  font-weight: normal;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.panel-tab-inline:hover {
+  filter: brightness(1.1);
+}
+
+.panel-tab-inline .tab-label {
+  display: inline;
+}
+
+.panel-tab-inline .tab-badge {
+  margin-left: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.panel-tab-red {
+  background: var(--balatro-red);
+  --panel-color: var(--balatro-red);
+}
+
+.panel-tab-blue {
+  background: var(--balatro-blue);
+  --panel-color: var(--balatro-blue);
+}
+
+.panel-tab-green {
+  background: var(--balatro-green);
+  --panel-color: var(--balatro-green);
+}
+
+.panel-tab-purple {
+  background: var(--balatro-purple);
+  --panel-color: var(--balatro-purple);
 }
 </style>

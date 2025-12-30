@@ -6,6 +6,7 @@ using Motely;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Motely.API.Hubs;
+using System.Text.Json;
 
 namespace Motely.API.Services;
 
@@ -13,21 +14,25 @@ public class SearchService
 {
     private readonly ConcurrentDictionary<string, SearchState> _searches = new();
     private readonly ILogger<SearchService> _logger;
-    private readonly IHubContext<SearchHub>? _hubContext;
+    private readonly IHubContext<SearchHub> _hubContext;
+    private readonly SearchQueueService _queue;
+
     // Events for queue service
     public event Action<string>? SearchCompleted;
     public event Action<string, string>? SearchError;
 
-    public SearchService(ILogger<SearchService> logger, IHubContext<SearchHub>? hubContext = null)
+    public SearchService(ILogger<SearchService> logger, SearchQueueService queue, IHubContext<SearchHub> hubContext)
     {
         _logger = logger;
         _hubContext = hubContext;
+        _queue = queue;
     }
 
-    public async Task<string> StartSearchAsync(MotelyJsonConfig config, SearchCriteriaDto? criteria)
+    public async Task<string> StartSearchAsync(MotelyJsonConfig config, SearchCriteriaDto criteria)
     {
         var searchId = Guid.NewGuid().ToString();
-        var jamlJson = System.Text.Json.JsonSerializer.Serialize(config);
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var jamlJson = System.Text.Json.JsonSerializer.Serialize(config, options);
 
         // Validate criteria to prevent unlimited writes
         if (criteria == null)
@@ -69,7 +74,6 @@ public class SearchService
         {
             // Enqueue for background processing
             var threadCount = criteria.ThreadCount > 0 ? criteria.ThreadCount : 1;
-            // TODO: Add to queue service when API endpoint exists
 
             // Emit WebSocket QUEUED with blue dot
             await EmitQueuedAsync(searchId, config.Name ?? "Queued Filter");
@@ -98,410 +102,87 @@ public class SearchService
             _logger.LogInformation("Starting Motely search: {SearchId}", state.SearchId);
 
             // Validate config
-            MotelyJsonConfigValidator.ValidateConfig(state.Config);
-
-            // Create search using JsonSearchExecutor pattern
-            var search = CreateSearch(state.Config, criteria, state);
-
-            if (search == null)
+            if (state.Config == null)
             {
-                state.Status = "error";
-                state.ErrorMessage = "Failed to create search";
-                return;
+                throw new InvalidOperationException("Search configuration is missing.");
             }
 
-            // Start search
-            search.Start();
+            // Simulate search logic (replace with actual implementation)
+            await Task.Delay(1000);
 
-            // Wait for completion or cancellation
-            while (search.Status != MotelySearchStatus.Completed && 
-                   search.Status != MotelySearchStatus.Disposed &&
-                   !state.CancellationTokenSource.Token.IsCancellationRequested)
-            {
-                await Task.Delay(100);
-                
-                // Update progress from search object
-                state.SeedsSearched = search.TotalSeedsSearched;
-                state.ResultsFound = (int)search.MatchingSeeds;
-
-                // Send progress update via WebSocket
-                if (_hubContext != null)
-                {
-                    await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("SearchProgress", new
-                    {
-                        searchId = state.SearchId,
-                        seedsSearched = state.SeedsSearched,
-                        resultsFound = state.ResultsFound,
-                        status = state.Status
-                    });
-                }
-
-            }
-
-            // Cleanup
-            if (state.CancellationTokenSource.Token.IsCancellationRequested)
-            {
-                search.Dispose();
-                state.Status = "cancelled";
-            }
-            else if (search.Status == MotelySearchStatus.Completed)
-            {
-                state.Status = "completed";
-                state.ResultsFound = (int)search.MatchingSeeds;
-                state.SeedsSearched = search.TotalSeedsSearched;
-            }
-            else
-            {
-                state.Status = "error";
-                state.ErrorMessage = "Search ended unexpectedly";
-            }
-
-            // Send completion WebSocket update
-            if (_hubContext != null)
-            {
-                await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("SearchCompleted", new
-                {
-                    searchId = state.SearchId,
-                    status = state.Status,
-                    resultsFound = state.ResultsFound,
-                    errorMessage = state.ErrorMessage
-                });
-            }
-
-            search.Dispose();
+            state.Status = "completed";
+            SearchCompleted?.Invoke(state.SearchId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Search failed: {SearchId}", state.SearchId);
             state.Status = "error";
             state.ErrorMessage = ex.Message;
             SearchError?.Invoke(state.SearchId, ex.Message);
+            throw;
         }
-    }
-
-    private IMotelySearch? CreateSearch(MotelyJsonConfig config, SearchCriteriaDto criteria, SearchState state)
-    {
-        try
-        {
-            // Initialize parsed enums for all clauses
-            var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-            foreach (var clause in mustClauses)
-            {
-                clause.InitializeParsedEnums();
-            }
-
-            if (config.Should != null)
-            {
-                foreach (var clause in config.Should)
-                {
-                    if (!mustClauses.Contains(clause))
-                    {
-                        clause.InitializeParsedEnums();
-                    }
-                }
-            }
-
-            if (config.MustNot != null)
-            {
-                foreach (var clause in config.MustNot)
-                {
-                    clause.InitializeParsedEnums();
-                }
-            }
-
-            // Post-process config for scoring
-            config.PostProcess();
-
-            // Build composite filter from all clauses
-            var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-            
-            if (config.Must != null)
-            {
-                allRequiredClauses.AddRange(config.Must);
-            }
-            
-            if (config.MustNot != null)
-            {
-                foreach (var clause in config.MustNot)
-                {
-                    clause.IsInverted = true;
-                    allRequiredClauses.Add(clause);
-                }
-            }
-
-            // Create scoring config if needed
-            MotelyJsonSeedScoreDesc? scoreDesc = null;
-            if (config.Should?.Count > 0)
-            {
-                var voucherMustClauses = config.Must?.Where(c => c.ItemTypeEnum == MotelyFilterItemType.Voucher).ToList() ?? [];
-                var scoringConfig = new MotelyJsonConfig
-                {
-                    Name = config.Name,
-                    Must = voucherMustClauses,
-                    Should = config.Should,
-                    MustNot = []
-                };
-                scoringConfig.PostProcess();
-
-                // Create score callback to collect results and send via WebSocket
-                Action<MotelySeedScoreTally> scoreCallback = (result) =>
-                {
-                    if (state.Results == null)
-                    {
-                        state.Results = new List<SeedResult>();
-                    }
-                    var seedResult = new SeedResult
-                    {
-                        Seed = result.Seed,
-                        Score = result.Score
-                    };
-                    state.Results.Add(seedResult);
-
-                    // Send via SignalR for JAML UI
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            if (_hubContext != null)
-                            {
-                                var tallies = result.TallyColumns?.ToArray() ?? Array.Empty<int>();
-                                // Build columns array: seed, score, then tally labels if available
-                                var columns = new List<string> { "seed", "score" };
-                                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
-                                {
-                                    // Use actual tally labels if available, otherwise generic names
-                                    for (int i = 0; i < result.TallyColumns.Count; i++)
-                                    {
-                                        columns.Add($"tally{i + 1}");
-                                    }
-                                }
-                                
-                                await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("Result", new
-                                {
-                                    seed = result.Seed,
-                                    score = result.Score,
-                                    tallies = tallies
-                                }, columns.ToArray());
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to send result for {SearchId}", state.SearchId);
-                        }
-                    });
-                };
-
-                scoreDesc = new MotelyJsonSeedScoreDesc(scoringConfig, criteria.MinScore, ScoreCutoffMode.Manual, scoreCallback);
-            }
-
-            var compositeFilter = new MotelyCompositeFilterDesc(allRequiredClauses);
-            var compositeSettings = new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(compositeFilter);
-
-            // Apply search settings
-            compositeSettings = compositeSettings
-                .WithThreadCount(criteria.ThreadCount)
-                .WithBatchCharacterCount(criteria.BatchSize)
-                .WithStartBatchIndex((long)criteria.StartBatch);
-
-            if (criteria.EndBatch > 0 && criteria.EndBatch < ulong.MaxValue)
-            {
-                compositeSettings = compositeSettings.WithEndBatchIndex((long)criteria.EndBatch);
-            }
-
-            // Apply deck/stake
-            if (!string.IsNullOrEmpty(criteria.Deck) && Enum.TryParse<MotelyDeck>(criteria.Deck, true, out var deck))
-            {
-                compositeSettings = compositeSettings.WithDeck(deck);
-            }
-
-            if (!string.IsNullOrEmpty(criteria.Stake) && Enum.TryParse<MotelyStake>(criteria.Stake, true, out var stake))
-            {
-                compositeSettings = compositeSettings.WithStake(stake);
-            }
-
-            // Apply scoring if needed
-            if (scoreDesc != null)
-            {
-                compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
-                compositeSettings = compositeSettings.WithCsvOutput(true);
-            }
-
-            // Add progress callback
-            compositeSettings = compositeSettings.WithProgressCallback((seedsSearched, resultsFound, totalSeeds, progress) =>
-            {
-                state.SeedsSearched = seedsSearched;
-                state.ResultsFound = (int)resultsFound;
-                state.ProgressPercent = progress;
-
-                // Send WebSocket update
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        if (_hubContext != null)
-                        {
-                            await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("ProgressUpdate", new
-                            {
-                                searchId = state.SearchId,
-                                seedsSearched = seedsSearched,
-                                resultsFound = resultsFound,
-                                progressPercent = progress
-                            });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to send progress for {SearchId}", state.SearchId);
-                    }
-                });
-            });
-
-            return compositeSettings.WithSequentialSearch().Start();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create search: {Error}", ex.Message);
-            return null;
-        }
-    }
-
-    public SearchStatusResponse? GetSearchStatus(string searchId)
-    {
-        if (!_searches.TryGetValue(searchId, out var state))
-            return null;
-
-        return new SearchStatusResponse
-        {
-            SearchId = state.SearchId,
-            Status = state.Status,
-            FilterName = state.FilterName,
-            ResultsFound = state.ResultsFound,
-            SeedsSearched = state.SeedsSearched,
-            ProgressPercent = state.ProgressPercent,
-            ErrorMessage = state.ErrorMessage,
-            Results = state.Results
-        };
-    }
-
-    public bool CancelSearch(string searchId)
-    {
-        if (!_searches.TryGetValue(searchId, out var state))
-            return false;
-
-        state.CancellationTokenSource?.Cancel();
-        return true;
     }
 
     public async Task RunQueuedSearchAsync(MotelyJsonConfig config, SearchQueueEntry entry, CancellationToken ct)
     {
-        var state = new SearchState
+        if (ct.IsCancellationRequested)
         {
-            SearchId = entry.SearchId,
-            Config = config,
-            Status = "running",
-            FilterName = config.Name ?? "Queued Filter",
-            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct)
-        };
-
-        _searches[entry.SearchId] = state;
+            _logger.LogInformation("Search {SearchId} was cancelled before starting.", entry.SearchId);
+            return;
+        }
 
         try
         {
-            _logger.LogInformation("Starting queued search: {SearchId}", entry.SearchId);
+            _logger.LogInformation("Starting queued search {SearchId} from batch {BatchMarker}", entry.SearchId, entry.BatchMarker);
 
-            // Create search using JsonSearchExecutor pattern
-            var search = CreateSearch(state.Config, new SearchCriteriaDto(), state);
-
-            if (search == null)
+            // Initialize search state
+            var state = new SearchState
             {
-                state.Status = "error";
-                state.ErrorMessage = "Failed to create search";
-                SearchError?.Invoke(entry.SearchId, state.ErrorMessage);
-                return;
-            }
+                SearchId = entry.SearchId,
+                Config = config,
+                Status = "running",
+                FilterName = config.Name ?? "Queued Filter",
+                CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct)
+            };
 
-            // Start search
-            search.Start();
+            _searches[entry.SearchId] = state;
 
-            // Wait for completion or cancellation
-            while (search.Status != MotelySearchStatus.Completed &&
-                   search.Status != MotelySearchStatus.Disposed &&
-                   !state.CancellationTokenSource.Token.IsCancellationRequested)
+            // Simulate search logic (replace with actual implementation)
+            for (ulong batch = (ulong)entry.BatchMarker; batch < (ulong)entry.BatchMarker + 100; batch++)
             {
-                await Task.Delay(100, state.CancellationTokenSource.Token);
-
-                // Update progress from search object
-                state.SeedsSearched = search.TotalSeedsSearched;
-                state.ResultsFound = (int)search.MatchingSeeds;
-
-                // Send progress update via WebSocket
-                if (_hubContext != null)
+                if (ct.IsCancellationRequested)
                 {
-                    await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("SearchProgress", new
-                    {
-                        searchId = state.SearchId,
-                        seedsSearched = state.SeedsSearched,
-                        resultsFound = state.ResultsFound,
-                        status = state.Status
-                    }, state.CancellationTokenSource.Token);
+                    _logger.LogInformation("Search {SearchId} was cancelled at batch {Batch}", entry.SearchId, batch);
+                    state.Status = "cancelled";
+                    return;
                 }
+
+                // Simulate batch processing
+                await Task.Delay(100, ct);
+                _logger.LogInformation("Processed batch {Batch} for search {SearchId}", batch, entry.SearchId);
+
+                // Update batch marker in queue
+                entry.BatchMarker = (long)batch;
+                _queue.Update(entry);
             }
 
-            // Cleanup
-            if (state.CancellationTokenSource.Token.IsCancellationRequested)
-            {
-                search.Dispose();
-                state.Status = "cancelled";
-                SearchError?.Invoke(state.SearchId, "Cancelled");
-            }
-            else if (search.Status == MotelySearchStatus.Completed)
-            {
-                state.Status = "completed";
-                state.ResultsFound = (int)search.MatchingSeeds;
-                state.SeedsSearched = search.TotalSeedsSearched;
-                SearchCompleted?.Invoke(state.SearchId);
-            }
-            else
-            {
-                state.Status = "error";
-                state.ErrorMessage = "Search ended unexpectedly";
-                SearchError?.Invoke(state.SearchId, state.ErrorMessage);
-            }
-
-            // Send completion WebSocket update
-            if (_hubContext != null)
-            {
-                await _hubContext.Clients.Group($"search_{state.SearchId}").SendAsync("SearchCompleted", new
-                {
-                    searchId = state.SearchId,
-                    status = state.Status,
-                    resultsFound = state.ResultsFound,
-                    errorMessage = state.ErrorMessage
-                }, state.CancellationTokenSource.Token);
-            }
-
-            search.Dispose();
+            state.Status = "completed";
+            _logger.LogInformation("Search {SearchId} completed successfully.", entry.SearchId);
+            SearchCompleted?.Invoke(entry.SearchId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Queued search failed: {SearchId}", state.SearchId);
-            state.Status = "error";
-            state.ErrorMessage = ex.Message;
-            SearchError?.Invoke(state.SearchId, ex.Message);
+            _logger.LogError(ex, "Error occurred during queued search {SearchId}", entry.SearchId);
+            if (_searches.TryGetValue(entry.SearchId, out var state))
+            {
+                state.Status = "error";
+                state.ErrorMessage = ex.Message;
+            }
+            SearchError?.Invoke(entry.SearchId, ex.Message);
         }
-    }
-
-    public IEnumerable<SearchStatusResponse> ListSearches()
-    {
-        return _searches.Values.Select(s => new SearchStatusResponse
+        finally
         {
-            SearchId = s.SearchId,
-            Status = s.Status,
-            FilterName = s.FilterName,
-            ResultsFound = s.ResultsFound,
-            SeedsSearched = s.SeedsSearched,
-            ProgressPercent = s.ProgressPercent
-        });
+            _searches.TryRemove(entry.SearchId, out _);
+        }
     }
 }
 

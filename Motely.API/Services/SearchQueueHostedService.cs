@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Motely.API.Models;
 using Motely.Filters;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace Motely.API.Services;
 
@@ -82,7 +83,8 @@ public class SearchQueueHostedService : BackgroundService
         var task = Task.Run(async () =>
         {
             // Parse JAML filter (assume valid - validated at enqueue time)
-            var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(entry.JamlFilter);
+            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(entry.JamlFilter, options);
 
             // Create criteria with batch limit (100 batches max)
             var criteria = new SearchCriteriaDto

@@ -268,6 +268,7 @@
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import yaml from 'js-yaml'
+import { preProcessJaml, postProcessJaml } from '../utils/jamlUtils'
 import ClauseBucket from './ClauseBucket.vue'
 import {
   anteOptions,
@@ -402,7 +403,8 @@ let suppressEmit = false
 const applyJamlToForm = (text) => {
   if (!text) return
   try {
-    const parsed = yaml.load(text) || {}
+    const preProcessed = preProcessJaml(text)
+    const parsed = yaml.load(preProcessed) || {}
     const sanitized = sanitizeFilter(parsed)
     applyingFromYaml = true
     Object.assign(formState, sanitized)
@@ -425,7 +427,9 @@ const emitJaml = () => {
     mustNot: JSON.parse(JSON.stringify(formState.mustNot))
   }
   suppressEmit = true
-  emit('update:jaml', yaml.dump(output, { indent: 2 }))
+  const rawYaml = yaml.dump(output, { indent: 2 })
+  const formattedJaml = postProcessJaml(rawYaml)
+  emit('update:jaml', formattedJaml)
   Promise.resolve().then(() => {
     suppressEmit = false
   })

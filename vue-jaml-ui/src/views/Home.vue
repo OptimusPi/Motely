@@ -9,11 +9,15 @@
     <section class="local">
       <h2>Local Tools</h2>
       <div class="grid">
-        <RouterLink class="card card-primary" to="/jaml">
+        <RouterLink class="card card-primary" to="/">
           <h3>JAML Grid (Vue 3)</h3>
           <p>Modular panel system with manilla tabs, drag layouts, and Vue state.</p>
         </RouterLink>
-        <a v-for="tool in legacyTools" :key="tool.href" class="card" :href="tool.href">
+        <a class="card" :href="legacyTools[0].href" target="_blank" rel="noreferrer">
+          <h3>JAML WebUI</h3>
+          <p>Commander control for JAML filters and live seed searches.</p>
+        </a>
+        <a v-for="tool in legacyTools.slice(1)" :key="tool.href" class="card" :href="tool.href">
           <h3>{{ tool.label }}</h3>
           <p>{{ tool.description }}</p>
         </a>
