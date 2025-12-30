@@ -71,7 +71,9 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
 
                 bool hasShop = HasShopSlots(clause.WantedShopSlots);
                 bool hasPack = HasPackSlots(clause.WantedPackSlots);
-                bool useDefaults = !hasShop && !hasPack;
+                bool hasTarotStreamSources =
+                    clause.Sources?.PurpleSealOrEightBall is { Length: > 0 };
+                bool useDefaults = !hasShop && !hasPack && !hasTarotStreamSources;
 
                 int maxShopSlots = 0;
                 int maxPackSlots = 0;
@@ -121,6 +123,60 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                 if (maxPackSlots > 0)
                 {
                     clauseMask |= CheckPacksVectorized(clause, ctx, ante);
+                }
+
+                // Check Purple Seal / 8Ball tarot sources
+                if (clause.Sources?.PurpleSealOrEightBall != null && clause.Sources.PurpleSealOrEightBall.Length > 0)
+                {
+                    var purpleSealStream = ctx.CreatePurpleSealTarotStream(ante);
+                    var rollIndices = clause.Sources.PurpleSealOrEightBall;
+
+                    // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                    int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                    int pos = 0;
+                    int nextWanted = rollIndices[0];
+                    var excludedValue = Vector256.Create((int)MotelyItemType.TarotExcludedByStream);
+
+                    for (int r = 0; r <= maxRollIndex; r++)
+                    {
+                        var tarotItem = ctx.GetNextTarot(ref purpleSealStream);
+                        if (r != nextWanted)
+                            continue;
+
+                        var isNotExcluded = ~Vector256.Equals(tarotItem.Value, excludedValue);
+                        VectorMask isActualTarot = isNotExcluded;
+
+                        if (!isActualTarot.IsAllFalse())
+                        {
+                            // Check type match
+                            VectorMask typeMatches = VectorMask.AllBitsSet;
+                            if (clause.TarotType.HasValue)
+                            {
+                                var targetTarotType = (MotelyItemType)(
+                                    (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                                );
+                                typeMatches = VectorEnum256.Equals(tarotItem.Type, targetTarotType);
+                            }
+
+                            // Check edition match
+                            VectorMask editionMatches = VectorMask.AllBitsSet;
+                            if (clause.EditionEnum.HasValue)
+                            {
+                                editionMatches = VectorEnum256.Equals(
+                                    tarotItem.Edition,
+                                    clause.EditionEnum.Value
+                                );
+                            }
+
+                            VectorMask matches = isActualTarot & typeMatches & editionMatches;
+                            clauseMask |= matches;
+                        }
+
+                        pos++;
+                        if (pos >= rollIndices.Length)
+                            break;
+                        nextWanted = rollIndices[pos];
+                    }
                 }
             }
 

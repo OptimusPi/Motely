@@ -811,6 +811,37 @@ namespace Motely.Filters
             }
         }
 
+        private static int[]? NormalizeRollIndices(
+            int[]? rollIndices,
+            string fieldPath,
+            List<string> errors,
+            List<string> warnings
+        )
+        {
+            if (rollIndices == null)
+                return null;
+
+            if (rollIndices.Length == 0)
+                return Array.Empty<int>();
+
+            var unique = new HashSet<int>();
+            foreach (var idx in rollIndices)
+            {
+                if (idx < 0)
+                {
+                    errors.Add($"{fieldPath}: Invalid roll index {idx} (must be >= 0)");
+                    continue;
+                }
+
+                if (!unique.Add(idx))
+                {
+                    warnings.Add($"{fieldPath}: Duplicate roll index {idx}");
+                }
+            }
+
+            return unique.OrderBy(x => x).ToArray();
+        }
+
         /// <summary>
         /// Normalizes Sources at CONFIG LOAD TIME.
         /// NO AMBIGUITY IN THE HOT PATH!
@@ -997,6 +1028,51 @@ namespace Motely.Filters
                         errors.Add($"{prefix}: 'requireMega' is true but no pack slots specified");
                     }
                 }
+
+                // Normalize stream-based roll indices for special sources (sorted, unique, non-negative).
+                // This ensures the SIMD hot path can assume clean inputs.
+                item.Sources.Judgement = NormalizeRollIndices(
+                    item.Sources.Judgement,
+                    $"{prefix}.sources.judgement",
+                    errors,
+                    warnings
+                );
+                item.Sources.RareTag = NormalizeRollIndices(
+                    item.Sources.RareTag,
+                    $"{prefix}.sources.rareTag",
+                    errors,
+                    warnings
+                );
+                item.Sources.UncommonTag = NormalizeRollIndices(
+                    item.Sources.UncommonTag,
+                    $"{prefix}.sources.uncommonTag",
+                    errors,
+                    warnings
+                );
+                item.Sources.RiffRaff = NormalizeRollIndices(
+                    item.Sources.RiffRaff,
+                    $"{prefix}.sources.riffRaff",
+                    errors,
+                    warnings
+                );
+                item.Sources.PurpleSealOrEightBall = NormalizeRollIndices(
+                    item.Sources.PurpleSealOrEightBall,
+                    $"{prefix}.sources.purpleSealOrEightBall",
+                    errors,
+                    warnings
+                );
+                item.Sources.SixthSense = NormalizeRollIndices(
+                    item.Sources.SixthSense,
+                    $"{prefix}.sources.sixthSense",
+                    errors,
+                    warnings
+                );
+                item.Sources.Seance = NormalizeRollIndices(
+                    item.Sources.Seance,
+                    $"{prefix}.sources.seance",
+                    errors,
+                    warnings
+                );
             }
 
             // Now compute the bitmasks ONCE at config load time!

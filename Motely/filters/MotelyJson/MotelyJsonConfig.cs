@@ -825,6 +825,22 @@ public class MotelyJsonConfig
         /// <summary>Uncommon tag joker roll indices (e.g. [0] for first uncommon tag)</summary>
         [JsonPropertyName("uncommonTag")]
         public int[]? UncommonTag { get; set; }
+
+        /// <summary>RiffRaff joker roll indices (e.g. [0, 1] for first two RiffRaff jokers - RiffRaff creates 2 jokers)</summary>
+        [JsonPropertyName("riffRaff")]
+        public int[]? RiffRaff { get; set; }
+
+        /// <summary>Purple Seal / 8Ball tarot card roll indices (e.g. [0] for first tarot from Purple Seal or 8Ball - both use same PRNG key "8ba")</summary>
+        [JsonPropertyName("purpleSealOrEightBall")]
+        public int[]? PurpleSealOrEightBall { get; set; }
+
+        /// <summary>SixthSense spectral card roll indices (e.g. [0] for first spectral card from SixthSense joker)</summary>
+        [JsonPropertyName("sixthSense")]
+        public int[]? SixthSense { get; set; }
+
+        /// <summary>Seance spectral card roll indices (e.g. [0, 1] for first two spectral cards from Seance joker)</summary>
+        [JsonPropertyName("seance")]
+        public int[]? Seance { get; set; }
     }
 
     /// <summary>

@@ -71,7 +71,10 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
 
                 bool hasShop = HasShopSlots(clause.WantedShopSlots);
                 bool hasPack = HasPackSlots(clause.WantedPackSlots);
-                bool useDefaults = !hasShop && !hasPack;
+                bool hasSpectralStreamSources =
+                    clause.Sources?.SixthSense is { Length: > 0 }
+                    || clause.Sources?.Seance is { Length: > 0 };
+                bool useDefaults = !hasShop && !hasPack && !hasSpectralStreamSources;
 
                 int maxShopSlots = 0;
                 int maxPackSlots = 0;
@@ -172,6 +175,130 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                 if (maxPackSlots > 0)
                 {
                     clauseMask |= CheckPacksVectorized(clause, ctx, ante);
+                }
+
+                // Check SixthSense spectral sources
+                if (clause.Sources?.SixthSense != null && clause.Sources.SixthSense.Length > 0)
+                {
+                    var sixthSenseStream = ctx.CreateSixthSenseSpectralStream(ante);
+                    var rollIndices = clause.Sources.SixthSense;
+
+                    // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                    int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                    int pos = 0;
+                    int nextWanted = rollIndices[0];
+                    var excludedValue = Vector256.Create((int)MotelyItemType.SpectralExcludedByStream);
+
+                    for (int r = 0; r <= maxRollIndex; r++)
+                    {
+                        var spectralItem = ctx.GetNextSpectral(ref sixthSenseStream);
+                        if (r != nextWanted)
+                            continue;
+
+                        var isNotExcluded = ~Vector256.Equals(spectralItem.Value, excludedValue);
+                        VectorMask isActualSpectral = isNotExcluded;
+
+                        if (!isActualSpectral.IsAllFalse())
+                        {
+                            // Check type match
+                            VectorMask typeMatches = VectorMask.AllBitsSet;
+                            if (clause.SpectralType.HasValue)
+                            {
+                                var targetType = (MotelyItemType)(
+                                    (int)MotelyItemTypeCategory.SpectralCard | (int)clause.SpectralType.Value
+                                );
+                                typeMatches = VectorEnum256.Equals(spectralItem.Type, targetType);
+                            }
+                            else
+                            {
+                                // Wildcard - match any spectral card
+                                typeMatches = VectorEnum256.Equals(
+                                    spectralItem.TypeCategory,
+                                    MotelyItemTypeCategory.SpectralCard
+                                );
+                            }
+
+                            // Check edition match
+                            VectorMask editionMatches = VectorMask.AllBitsSet;
+                            if (clause.EditionEnum.HasValue)
+                            {
+                                editionMatches = VectorEnum256.Equals(
+                                    spectralItem.Edition,
+                                    clause.EditionEnum.Value
+                                );
+                            }
+
+                            VectorMask matches = isActualSpectral & typeMatches & editionMatches;
+                            clauseMask |= matches;
+                        }
+
+                        pos++;
+                        if (pos >= rollIndices.Length)
+                            break;
+                        nextWanted = rollIndices[pos];
+                    }
+                }
+
+                // Check Seance spectral sources
+                if (clause.Sources?.Seance != null && clause.Sources.Seance.Length > 0)
+                {
+                    var seanceStream = ctx.CreateSeanceSpectralStream(ante);
+                    var rollIndices = clause.Sources.Seance;
+
+                    // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                    int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                    int pos = 0;
+                    int nextWanted = rollIndices[0];
+                    var excludedValue = Vector256.Create((int)MotelyItemType.SpectralExcludedByStream);
+
+                    for (int r = 0; r <= maxRollIndex; r++)
+                    {
+                        var spectralItem = ctx.GetNextSpectral(ref seanceStream);
+                        if (r != nextWanted)
+                            continue;
+
+                        var isNotExcluded = ~Vector256.Equals(spectralItem.Value, excludedValue);
+                        VectorMask isActualSpectral = isNotExcluded;
+
+                        if (!isActualSpectral.IsAllFalse())
+                        {
+                            // Check type match
+                            VectorMask typeMatches = VectorMask.AllBitsSet;
+                            if (clause.SpectralType.HasValue)
+                            {
+                                var targetType = (MotelyItemType)(
+                                    (int)MotelyItemTypeCategory.SpectralCard | (int)clause.SpectralType.Value
+                                );
+                                typeMatches = VectorEnum256.Equals(spectralItem.Type, targetType);
+                            }
+                            else
+                            {
+                                // Wildcard - match any spectral card
+                                typeMatches = VectorEnum256.Equals(
+                                    spectralItem.TypeCategory,
+                                    MotelyItemTypeCategory.SpectralCard
+                                );
+                            }
+
+                            // Check edition match
+                            VectorMask editionMatches = VectorMask.AllBitsSet;
+                            if (clause.EditionEnum.HasValue)
+                            {
+                                editionMatches = VectorEnum256.Equals(
+                                    spectralItem.Edition,
+                                    clause.EditionEnum.Value
+                                );
+                            }
+
+                            VectorMask matches = isActualSpectral & typeMatches & editionMatches;
+                            clauseMask |= matches;
+                        }
+
+                        pos++;
+                        if (pos >= rollIndices.Length)
+                            break;
+                        nextWanted = rollIndices[pos];
+                    }
                 }
             }
 
