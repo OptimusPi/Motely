@@ -94,7 +94,7 @@ defineEmits(['close', 'select-filter', 'delete-filter'])
 }
 
 .filter-name {
-  font-weight: 600;
+  font-weight: normal;
 }
 
 .filter-meta {

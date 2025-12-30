@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Motely;
+using Motely.Analysis;
 using Motely.API.Services;
 using Motely.API;
 using Motely.API.Hubs;
@@ -65,12 +66,45 @@ public static class MotelyApiHost
             homepage = "/",
             health = "/health", 
             routes = "/routes",
+            analyze = "/analyze?seed=SEED[&deck=Red][&stake=White]",
             filters = "/filters",
             seed_sources = "/seed-sources",
             searches = "/searches",
             search_start = "POST /search",
             search_status = "GET /search/{id}",
             search_stop = "POST /search/stop"
+        });
+
+        // Analyze endpoint (quick seed analyzer)
+        // Example: GET /analyze?seed=MO4E11BR&deck=Ghost&stake=White
+        app.MapGet("/analyze", (HttpRequest req) =>
+        {
+            var seed = req.Query["seed"].ToString();
+            if (string.IsNullOrWhiteSpace(seed))
+                return Results.BadRequest(new { error = "Missing required query parameter: seed" });
+
+            var deckStr = req.Query["deck"].ToString();
+            if (string.IsNullOrWhiteSpace(deckStr)) deckStr = "Red";
+
+            var stakeStr = req.Query["stake"].ToString();
+            if (string.IsNullOrWhiteSpace(stakeStr)) stakeStr = "White";
+
+            if (!Enum.TryParse<MotelyDeck>(deckStr, true, out var deck))
+                return Results.BadRequest(new { error = $"Invalid deck: {deckStr}" });
+
+            if (!Enum.TryParse<MotelyStake>(stakeStr, true, out var stake))
+                return Results.BadRequest(new { error = $"Invalid stake: {stakeStr}" });
+
+            try
+            {
+                var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
+                // Return as text (fast + easy to view/copy). Frontends can call /analyze/json if desired later.
+                return Results.Text(analysis.ToString(), "text/plain; charset=utf-8");
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
         });
 
         // Filter endpoints

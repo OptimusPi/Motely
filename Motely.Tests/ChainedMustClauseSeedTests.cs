@@ -1,4 +1,5 @@
 using Motely.Filters;
+using Xunit;
 
 namespace Motely.Tests;
 

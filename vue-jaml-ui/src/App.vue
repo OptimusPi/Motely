@@ -1,7 +1,11 @@
 <template>
-  <ErrorBoundary>
-    <router-view />
-  </ErrorBoundary>
+  <div class="app">
+    <ErrorBoundary>
+      <main class="app-main">
+        <router-view />
+      </main>
+    </ErrorBoundary>
+  </div>
 </template>
 
 <script setup>
@@ -21,6 +25,18 @@ import ErrorBoundary from './components/ErrorBoundary.vue'
   --balatro-dark-purple: #5D3570;
   --balatro-green: #429f79;
   --balatro-dark-green: #215f46;
+  --balatro-gold: #eaba44;
+
+  /* Additional UI Colors */
+  --muted: var(--light-grey);
+  --gold: #ffd700;
+  --border: var(--border-color);
+  --text: var(--text-color);
+  --blue: var(--balatro-blue);
+  --green: var(--balatro-green);
+  --green-dark: var(--balatro-dark-green);
+  --bg: var(--bg-color);
+  --panel: var(--panel-bg);
 
   /* UI Colors */
   --bg-color: #33464b;

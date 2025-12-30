@@ -415,6 +415,8 @@ public class MotelyJsonConfig
 
         public void InitializeParsedEnums()
         {
+            Console.WriteLine($"Initializing parsed enums for Type={Type}, EventType={EventType}"); // Debugging log
+
             // PERFORMANCE FIX: Use pre-computed dictionary instead of ToLowerInvariant() + switch
             ItemTypeEnum = MotelyJsonPerformanceUtils.ParseItemType(Type);
 
@@ -439,7 +441,7 @@ public class MotelyJsonConfig
                                 JokerEnum = regularJoker;
 
                                 // Helpful error for common mistake: using "Perkeo" with regular Joker type
-                                if (regularJoker == MotelyJoker.Perkeo)
+                                if (regularJoker == MotelyJoker.Perkeo )
                                 {
                                     throw new ArgumentException(
                                         $"'{Value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker."
@@ -478,14 +480,6 @@ public class MotelyJsonConfig
                         case MotelyFilterItemType.Boss:
                             if (Enum.TryParse<MotelyBossBlind>(Value, true, out var boss))
                                 BossEnum = boss;
-                            break;
-                        case MotelyFilterItemType.Event:
-                            // Event type uses eventType property, not value
-                            if (!string.IsNullOrEmpty(EventType))
-                            {
-                                if (Enum.TryParse<MotelyEventType>(EventType, true, out var eventType))
-                                    EventTypeEnum = eventType;
-                            }
                             break;
                         case MotelyFilterItemType.ErraticRank:
                             // Parse rank from Value
@@ -1459,5 +1453,27 @@ public class MotelyJsonConfig
             safeName = safeName.Substring(0, 63);
 
         return safeName;
+    }
+
+    /// <summary>
+    /// Parse shorthand syntax like `event: luckyMoney` into filter clause
+    /// </summary>
+    public static MotleyJsonFilterClause ParseShorthand(string shorthand)
+    {
+        Console.WriteLine($"Parsing shorthand: {shorthand}"); // Debugging log
+
+        if (shorthand.StartsWith("event:", StringComparison.OrdinalIgnoreCase))
+        {
+            var clause = new MotleyJsonFilterClause
+            {
+                Type = "LuckyMoney",
+                Value = shorthand.Substring("event:".Length).Trim()
+            };
+
+            Console.WriteLine($"Parsed clause: Type={clause.Type}, Value={clause.Value}"); // Debugging log
+            return clause;
+        }
+
+        throw new ArgumentException("Invalid shorthand syntax", nameof(shorthand));
     }
 }

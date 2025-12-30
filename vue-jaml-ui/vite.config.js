@@ -1,12 +1,9 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
 
-export default defineConfig({
-  base: '/',
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/JAML/' : '/',
   plugins: [vue()],
   resolve: {
     alias: {
@@ -55,5 +52,5 @@ export default defineConfig({
       }
     }
   }
-})
+}))
 

@@ -8,7 +8,8 @@ import {
 // Singleton: Load Monaco once, reuse everywhere
 let monacoPromise = null
 let monacoInstance = null
-let completionRegistered = false
+let providersRegistered = false
+let jamlSchema = null
 
 const loadMonaco = async () => {
   if (monacoInstance) return monacoInstance
@@ -23,19 +24,27 @@ const loadMonaco = async () => {
   return monacoPromise
 }
 
-const registerYamlCompletions = (monaco) => {
-  if (completionRegistered || !monaco) return
+const fetchSchema = async () => {
+  if (jamlSchema) return jamlSchema
+  try {
+    const response = await fetch('/jaml.schema.json')
+    jamlSchema = await response.json()
+    return jamlSchema
+  } catch (e) {
+    console.warn('Failed to fetch JAML schema for Monaco:', e)
+    return null
+  }
+}
 
-  const topLevelKeys = [
-    'name',
-    'description',
-    'author',
-    'deck',
-    'stake',
-    'defaults',
-    'must',
-    'should',
-    'mustNot'
+const registerYamlProviders = (monaco, schema) => {
+  if (providersRegistered || !monaco) return
+
+  const topLevelKeys = schema?.properties ? Object.keys(schema.properties) : [
+    'name', 'description', 'author', 'deck', 'stake', 'defaults', 'must', 'should', 'mustNot'
+  ]
+
+  const clauseKeys = schema?.definitions?.clause?.properties ? Object.keys(schema.definitions.clause.properties) : [
+    'type', 'value', 'antes', 'score', 'label', 'edition', 'seal', 'enhancement', 'rank', 'suit', 'sources'
   ]
 
   const valueSuggestions = [
@@ -44,6 +53,7 @@ const registerYamlCompletions = (monaco) => {
     ...clauseTypeOptions
   ]
 
+  // Completion Provider
   monaco.languages.registerCompletionItemProvider('yaml', {
     provideCompletionItems: (model, position) => {
       const word = model.getWordUntilPosition(position)
@@ -54,12 +64,23 @@ const registerYamlCompletions = (monaco) => {
         endColumn: word.endColumn
       }
 
-      const keywordSuggestions = topLevelKeys.map((label) => ({
-        label,
-        kind: monaco.languages.CompletionItemKind.Keyword,
-        insertText: `${label}: `,
-        range
-      }))
+      // Context-aware suggestions (very basic check for indentation)
+      const lineContent = model.getLineContent(position.lineNumber)
+      const isIndented = lineContent.startsWith('  ')
+
+      const keys = isIndented ? clauseKeys : topLevelKeys
+      
+      const keywordSuggestions = keys.map((label) => {
+        const prop = (isIndented ? schema?.definitions?.clause?.properties?.[label] : schema?.properties?.[label]) || {}
+        return {
+          label,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: `${label}: `,
+          detail: prop.description || 'JAML Property',
+          documentation: prop.enum ? `Options: ${prop.enum.join(', ')}` : undefined,
+          range
+        }
+      })
 
       const valueItems = valueSuggestions.map((label) => ({
         label,
@@ -74,7 +95,30 @@ const registerYamlCompletions = (monaco) => {
     }
   })
 
-  completionRegistered = true
+  // Hover Provider
+  monaco.languages.registerHoverProvider('yaml', {
+    provideHover: (model, position) => {
+      const word = model.getWordAtPosition(position)
+      if (!word || !schema) return null
+
+      const prop = schema.properties?.[word.word] || 
+                   schema.definitions?.clause?.properties?.[word.word]
+      
+      if (prop && prop.description) {
+        return {
+          range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
+          contents: [
+            { value: `**${word.word}**` },
+            { value: prop.description },
+            prop.enum ? { value: `*Options:* ${prop.enum.join(', ')}` } : null
+          ].filter(Boolean)
+        }
+      }
+      return null
+    }
+  })
+
+  providersRegistered = true
 }
 
 /**
@@ -88,8 +132,8 @@ export function useMonaco() {
   // Initialize Monaco
   const init = async () => {
     try {
-      const monaco = await loadMonaco()
-      registerYamlCompletions(monaco)
+      const [monaco, schema] = await Promise.all([loadMonaco(), fetchSchema()])
+      registerYamlProviders(monaco, schema)
       isReady.value = true
       error.value = null
     } catch (err) {

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML Editor</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #333;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.2rem;
+            color: #61dafb;
+        }
+        .btn {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .btn:hover {
+            background: #1177bb;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #444;
+        }
+        .panel:last-child {
+            border-right: none;
+        }
+        .panel-header {
+            background: #252526;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        #editor {
+            flex: 1;
+            width: 100%;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            tab-size: 2;
+        }
+        #output {
+            flex: 1;
+            padding: 15px;
+            overflow: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: #f44747;
+        }
+        .success {
+            color: #4ec9b0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>YAML Editor</h1>
+        <div>
+            <button class="btn" onclick="validateYAML()">Validate</button>
+            <button class="btn" onclick="formatYAML()">Format</button>
+            <button class="btn" onclick="clearEditor()">Clear</button>
+        </div>
+    </header>
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">YAML Input</div>
+            <textarea id="editor" spellcheck="false" placeholder="Enter your YAML here...">
+name: my-project
+version: 1.0.0
+description: A sample YAML configuration
+
+settings:
+  debug: true
+  timeout: 30
+  
+database:
+  host: localhost
+  port: 5432
+  name: mydb
+  
+features:
+  - authentication
+  - logging
+  - caching
+            </textarea>
+        </div>
+        <div class="panel">
+            <div class="panel-header">JSON Output</div>
+            <div id="output"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script>
+        const editor = document.getElementById('editor');
+        const output = document.getElementById('output');
+
+        function validateYAML() {
+            try {
+                const parsed = jsyaml.load(editor.value);
+                output.className = 'success';
+                output.textContent = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                output.className = 'error';
+                output.textContent = 'Error: ' + e.message;
+            }
+        }
+
+        function formatYAML() {
+            try {
+                const parsed = jsyaml.load(editor.value);
+                editor.value = jsyaml.dump(parsed, { indent: 2 });
+                validateYAML();
+            } catch (e) {
+                output.className = 'error';
+                output.textContent = 'Error: ' + e.message;
+            }
+        }
+
+        function clearEditor() {
+            editor.value = '';
+            output.textContent = '';
+            output.className = '';
+        }
+
+        editor.addEventListener('input', validateYAML);
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 2;
+            }
+        });
+
+        validateYAML();
+    </script>
+</body>
+</html>
