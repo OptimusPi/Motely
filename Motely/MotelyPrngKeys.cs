@@ -54,6 +54,8 @@ public static class MotelyPrngKeys
     public const string JokerCavendish = "cavendish";
     public const string JokerGrosMichel = "gros_michel";
     public const string JokerRiffRaff = "rif";
+    public const string JokerSixthSense = "sixth";
+    public const string JokerSeance = "sea";
 
     public const string CardLuckyMoney = "lucky_money";
     public const string CardLuckyMult = "lucky_mult";

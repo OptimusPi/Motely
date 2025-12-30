@@ -84,7 +84,8 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                 bool hasJokerStreamSources =
                     clause.Sources?.Judgement is { Length: > 0 }
                     || clause.Sources?.RareTag is { Length: > 0 }
-                    || clause.Sources?.UncommonTag is { Length: > 0 };
+                    || clause.Sources?.UncommonTag is { Length: > 0 }
+                    || clause.Sources?.RiffRaff is { Length: > 0 };
                 bool useDefaults = !hasShop && !hasPack && !hasJokerStreamSources;
 
                 int maxShopSlots = 0;
@@ -182,29 +183,33 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     if (clause.Sources.Judgement != null && clause.Sources.Judgement.Length > 0)
                     {
                         var judgementStream = ctx.CreateJudgementJokerStream(ante);
-                        foreach (var rollIndex in clause.Sources.Judgement)
+                        var rollIndices = clause.Sources.Judgement;
+
+                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+
+                        for (int r = 0; r <= maxRollIndex; r++)
                         {
-                            if (rollIndex < 0)
+                            var jokerItem = ctx.GetNextJoker(ref judgementStream);
+                            if (r != nextWanted)
                                 continue;
 
-                            // Advance stream to the desired roll index
-                            for (int r = 0; r <= rollIndex; r++)
+                            var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
+                            VectorMask isActualJoker = isNotExcluded;
+
+                            if (!isActualJoker.IsAllFalse())
                             {
-                                var jokerItem = ctx.GetNextJoker(ref judgementStream);
-
-                                if (r == rollIndex)
-                                {
-                                    var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
-                                    var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
-                                    VectorMask isActualJoker = isNotExcluded;
-
-                                    if (!isActualJoker.IsAllFalse())
-                                    {
-                                        VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                                        clauseMask |= (isActualJoker & matches);
-                                    }
-                                }
+                                VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                                clauseMask |= (isActualJoker & matches);
                             }
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
                         }
                     }
 
@@ -212,28 +217,33 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     if (clause.Sources.RareTag != null && clause.Sources.RareTag.Length > 0)
                     {
                         var rareTagStream = ctx.CreateRareTagJokerStream(ante);
-                        foreach (var rollIndex in clause.Sources.RareTag)
+                        var rollIndices = clause.Sources.RareTag;
+
+                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+
+                        for (int r = 0; r <= maxRollIndex; r++)
                         {
-                            if (rollIndex < 0)
+                            var jokerItem = ctx.GetNextJoker(ref rareTagStream);
+                            if (r != nextWanted)
                                 continue;
 
-                            for (int r = 0; r <= rollIndex; r++)
+                            var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
+                            VectorMask isActualJoker = isNotExcluded;
+
+                            if (!isActualJoker.IsAllFalse())
                             {
-                                var jokerItem = ctx.GetNextJoker(ref rareTagStream);
-
-                                if (r == rollIndex)
-                                {
-                                    var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
-                                    var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
-                                    VectorMask isActualJoker = isNotExcluded;
-
-                                    if (!isActualJoker.IsAllFalse())
-                                    {
-                                        VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                                        clauseMask |= (isActualJoker & matches);
-                                    }
-                                }
+                                VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                                clauseMask |= (isActualJoker & matches);
                             }
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
                         }
                     }
 
@@ -241,28 +251,67 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     if (clause.Sources.UncommonTag != null && clause.Sources.UncommonTag.Length > 0)
                     {
                         var uncommonTagStream = ctx.CreateUncommonTagJokerStream(ante);
-                        foreach (var rollIndex in clause.Sources.UncommonTag)
+                        var rollIndices = clause.Sources.UncommonTag;
+
+                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+
+                        for (int r = 0; r <= maxRollIndex; r++)
                         {
-                            if (rollIndex < 0)
+                            var jokerItem = ctx.GetNextJoker(ref uncommonTagStream);
+                            if (r != nextWanted)
                                 continue;
 
-                            for (int r = 0; r <= rollIndex; r++)
+                            var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
+                            VectorMask isActualJoker = isNotExcluded;
+
+                            if (!isActualJoker.IsAllFalse())
                             {
-                                var jokerItem = ctx.GetNextJoker(ref uncommonTagStream);
-
-                                if (r == rollIndex)
-                                {
-                                    var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
-                                    var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
-                                    VectorMask isActualJoker = isNotExcluded;
-
-                                    if (!isActualJoker.IsAllFalse())
-                                    {
-                                        VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                                        clauseMask |= (isActualJoker & matches);
-                                    }
-                                }
+                                VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                                clauseMask |= (isActualJoker & matches);
                             }
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
+                        }
+                    }
+
+                    // Check RiffRaff joker sources
+                    if (clause.Sources.RiffRaff != null && clause.Sources.RiffRaff.Length > 0)
+                    {
+                        var riffRaffStream = ctx.CreateRiffRaffJokerStream(ante);
+                        var rollIndices = clause.Sources.RiffRaff;
+
+                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+
+                        for (int r = 0; r <= maxRollIndex; r++)
+                        {
+                            var jokerItem = ctx.GetNextJoker(ref riffRaffStream);
+                            if (r != nextWanted)
+                                continue;
+
+                            var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
+                            VectorMask isActualJoker = isNotExcluded;
+
+                            if (!isActualJoker.IsAllFalse())
+                            {
+                                VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                                clauseMask |= (isActualJoker & matches);
+                            }
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
                         }
                     }
                 }

@@ -66,6 +66,18 @@ ref partial struct MotelyVectorSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
+    public MotelyVectorSpectralStream CreateSixthSenseSpectralStream(int ante, bool isCached = false) =>
+        CreateSpectralStream(MotelyPrngKeys.JokerSixthSense, ante, true, false, isCached);
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelyVectorSpectralStream CreateSeanceSpectralStream(int ante, bool isCached = false) =>
+        CreateSpectralStream(MotelyPrngKeys.JokerSeance, ante, true, false, isCached);
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     public MotelyItemVector GetNextSpectral(ref MotelyVectorSpectralStream stream)
     {
         return GetNextSpectral(ref stream, Vector512<double>.AllBitsSet);
