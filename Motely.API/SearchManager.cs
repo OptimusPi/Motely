@@ -183,7 +183,8 @@ public class SearchManager
 
             await RebalanceAndRestartAllSearchesAsync();
 
-            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }, options));
 
             return (immediateResults, searchId);
         }
@@ -765,7 +766,8 @@ public class SearchManager
 
             await RebalanceAndRestartAllSearchesAsync();
 
-            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }, options));
 
             var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
             return GetTopResultsFromDb(dbPath, 1000);

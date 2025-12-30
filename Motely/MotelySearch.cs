@@ -1072,9 +1072,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                         ((double*)filterBatch->SeedHashes)[
                             i * Vector512<double>.Count + seedBatchIndex
-                        ] = ((double*)searchParams.SeedHashCache->Cache[partialHashLength])[
-                            i * Vector512<double>.Count + lane
-                        ];
+                        ] = ((double*)searchParams.SeedHashCache->Cache[partialHashLength])[lane];
                     }
 
                     if (seedBatchIndex == Vector512<double>.Count - 1)

@@ -55,6 +55,8 @@ const emit = defineEmits(['start', 'stop', 'clear', 'export'])
 const tableContainer = ref(null)
 const seedSource = ref('all')
 const seedSources = ref([])
+const loading = ref(false)
+const error = ref(null)
 const { get } = useApi()
 let table = null
 
@@ -148,11 +150,23 @@ watch(() => props.columns, () => {
 })
 
 const loadSeedSources = async () => {
+  loading.value = true
+  error.value = null
   try {
     const data = await get('/seed-sources')
-    seedSources.value = data.sources || []
+    if (data?._fallback) {
+      // Dev fallback when API is down
+      seedSources.value = []
+      console.warn('API unavailable: no seed sources loaded')
+    } else {
+      seedSources.value = data.sources || data || []
+    }
   } catch (e) {
     console.error('Failed to load seed sources:', e)
+    error.value = 'Failed to load seed sources'
+    seedSources.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -195,7 +209,7 @@ onUnmounted(() => {
   background: var(--panel);
   border-right: 1px solid var(--border);
   color: var(--text);
-  font-weight: bold;
+  font-weight: normal;
 }
 
 :deep(.tabulator-body) {

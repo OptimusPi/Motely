@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Home from './views/Home.vue'
 import JamlUI from './views/JamlUI.vue'
 import JamlGenie from './views/JamlGenie.vue'
@@ -6,13 +6,13 @@ import JamlGenie from './views/JamlGenie.vue'
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: Home
-  },
-  {
-    path: '/jaml',
     name: 'JAML',
     component: JamlUI
+  },
+  {
+    path: '/home',
+    name: 'Home',
+    component: Home
   },
   {
     path: '/genie',
@@ -22,7 +22,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory('/'),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes
 })
 

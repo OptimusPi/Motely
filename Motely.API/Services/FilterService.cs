@@ -10,12 +10,48 @@ public static class FilterService
         if (string.IsNullOrEmpty(filterId))
             return string.Empty;
             
-        var filtersPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Filters");
-        var filterPath = Path.Combine(filtersPath, $"{filterId}.jaml");
-        if (!File.Exists(filterPath))
+        var filterPath = ResolveFilterPath($"{filterId}.jaml");
+        if (string.IsNullOrEmpty(filterPath) || !File.Exists(filterPath))
             return string.Empty;
             
         return File.ReadAllText(filterPath);
+    }
+
+    private static string? ResolveFilterPath(string fileName)
+    {
+        // Try AppDomain.BaseDirectory first (for deployed scenarios)
+        var basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Filters", fileName);
+        if (File.Exists(basePath))
+            return basePath;
+
+        // Search upward from current directory (for development)
+        foreach (var directory in EnumerateDirectoriesUpwards(Directory.GetCurrentDirectory()))
+        {
+            var candidate = Path.Combine(directory, "Filters", fileName);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        // Try relative to current directory
+        var relativePath = Path.Combine("Filters", fileName);
+        if (File.Exists(relativePath))
+            return relativePath;
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateDirectoriesUpwards(string startDirectory)
+    {
+        var current = startDirectory;
+        while (!string.IsNullOrEmpty(current))
+        {
+            yield return current;
+
+            var parent = Directory.GetParent(current);
+            if (parent == null)
+                break;
+            current = parent.FullName;
+        }
     }
 
     public static List<object> LoadFiltersFromDisk(string filtersPath, Func<global::Motely.Filters.MotelyJsonConfig?, bool> hasErraticFilters)

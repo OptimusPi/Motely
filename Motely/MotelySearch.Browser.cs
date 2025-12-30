@@ -846,7 +846,7 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 {
                     int pLen = _pseudoHashKeyLengths[i];
                     ((double*)batch->SeedHashes)[i * Vector512<double>.Count + idx] = 
-                        ((double*)paramsIn.SeedHashCache->Cache[pLen])[i * Vector512<double>.Count + lane];
+                        ((double*)paramsIn.SeedHashCache->Cache[pLen])[lane];
                 }
 
                 if (idx == Vector512<double>.Count - 1)

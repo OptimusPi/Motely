@@ -56,13 +56,19 @@ export function useSignalR(callbacks = {}) {
       })
     }
 
+    if (!connection.value) {
+      return Promise.reject(new Error('Failed to create SignalR connection'))
+    }
+
     startPromise.value = connection.value.start()
       .then(() => {
         isConnected.value = true
         connectionError.value = null
       })
       .catch(async (e) => {
-        console.error('SignalR connection failed:', e)
+        if (!import.meta.env.DEV) {
+          console.error('SignalR connection failed:', e)
+        }
         connectionError.value = e
         isConnected.value = false
 

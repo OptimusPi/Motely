@@ -210,6 +210,26 @@ public class SearchQueueService
         cmd.Parameters.Add(new DuckDBParameter(searchId));
         cmd.ExecuteNonQuery();
     }
+
+    public void Update(SearchQueueEntry entry)
+    {
+        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE SearchQueue
+            SET batchMarker = ?,
+                seedsSearched = ?,
+                resultsFound = ?,
+                lastAccessed = current_timestamp
+            WHERE searchId = ?;
+        ";
+        cmd.Parameters.Add(new DuckDBParameter(entry.BatchMarker));
+        cmd.Parameters.Add(new DuckDBParameter(entry.SeedsSearched));
+        cmd.Parameters.Add(new DuckDBParameter(entry.ResultsFound));
+        cmd.Parameters.Add(new DuckDBParameter(entry.SearchId));
+        cmd.ExecuteNonQuery();
+    }
 }
 
 public class SearchQueueEntry

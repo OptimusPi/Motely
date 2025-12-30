@@ -6,22 +6,36 @@
   "verifiedSeed": "TEST123",
   "deck": "Red",
   "stake": "Gold",
-  "mode": "Normal",
+  "mode": "sum",
   "scoreAggregationMode": "Sum",
   "must": [
     {
       "type": "Joker",
-      "values": ["Blueprint", "Brainstorm"],
+      "values": [
+        "Blueprint",
+        "Brainstorm"
+      ],
       "label": "Test Joker",
-      "antes": [1, 2, 3],
+      "antes": [
+        1,
+        2,
+        3
+      ],
       "score": 100,
       "mode": "Any",
       "min": 1,
       "filterOrder": 1,
       "edition": "Foil",
-      "stickers": ["Eternal", "Perishable"],
+      "stickers": [
+        "Eternal",
+        "Perishable"
+      ],
       "sources": {
-        "shopSlots": [0, 1, 2],
+        "shopSlots": [
+          0,
+          1,
+          2
+        ],
         "packSlots": [],
         "minShopSlot": 0,
         "maxShopSlot": 2
@@ -29,12 +43,23 @@
     },
     {
       "type": "Tag",
-      "values": ["NegativeTag", "DoubleTag"],
-      "antes": [2, 3, 4, 5]
+      "values": [
+        "NegativeTag",
+        "DoubleTag"
+      ],
+      "antes": [
+        2,
+        3,
+        4,
+        5
+      ]
     },
     {
       "type": "And",
-      "antes": [4, 5],
+      "antes": [
+        4,
+        5
+      ],
       "clauses": [
         {
           "type": "Voucher",
@@ -43,9 +68,12 @@
         },
         {
           "type": "TarotCard",
-          "value": "The Fool",
+          "value": "TheFool",
           "sources": {
-            "packSlots": [0, 1]
+            "packSlots": [
+              0,
+              1
+            ]
           }
         }
       ]
@@ -54,13 +82,17 @@
   "mustNot": [
     {
       "type": "Joker",
-      "value": "Jimbo",
-      "antes": [1]
+      "value": "Joker",
+      "antes": [
+        1
+      ]
     },
     {
       "type": "Boss",
-      "value": "The Plant",
-      "antes": [3]
+      "value": "ThePlant",
+      "antes": [
+        3
+      ]
     }
   ],
   "should": [

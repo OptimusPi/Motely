@@ -1,7 +1,7 @@
 <template>
   <div class="jaml-genie">
     <div class="genie-header">
-      <router-link to="/jaml" class="back-link">
+      <router-link to="/" class="back-link">
         <button title="Back to JAML">⬅️ JAML</button>
       </router-link>
       <h1 class="genie-title">🧞‍♂️ JAML Genie</h1>

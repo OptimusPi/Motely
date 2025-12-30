@@ -44,6 +44,13 @@ public static class ConfigFormatConverter
 
             var config = JsonSerializer.Deserialize<MotelyJsonConfig>(jsonContent, options);
             config?.PostProcess();
+            
+            // Validate config just like JAML loader does
+            if (config != null)
+            {
+                MotelyJsonConfigValidator.ValidateConfig(config);
+            }
+            
             return config;
         }
         catch (Exception ex)
@@ -58,21 +65,13 @@ public static class ConfigFormatConverter
     /// </summary>
     public static MotelyJsonConfig? LoadFromJamlString(string jamlContent)
     {
-        try
+        if (JamlConfigLoader.TryLoadFromJamlString(jamlContent, out var config, out var error))
         {
-            var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                .IgnoreUnmatchedProperties()
-                .Build();
-
-            var config = deserializer.Deserialize<MotelyJsonConfig>(jamlContent);
-            config?.PostProcess();
             return config;
         }
-        catch
-        {
-            return null;
-        }
+
+        Console.WriteLine($"LoadFromJamlString error: {error}");
+        return null;
     }
 
     #endregion

@@ -15,7 +15,13 @@ export function useFilters() {
     error.value = null
     try {
       const data = await get('/filters')
-      filters.value = data.filters || data || []
+      if (data?._fallback) {
+        // Dev fallback when API is down
+        filters.value = []
+        console.warn('API unavailable: no filters loaded')
+      } else {
+        filters.value = data.filters || data || []
+      }
     } catch (e) {
       console.error('Failed to load filters:', e)
       error.value = 'Failed to load filters'

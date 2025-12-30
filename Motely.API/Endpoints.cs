@@ -12,7 +12,7 @@ public static class Endpoints
     {
         try
         {
-            var fullPath = "JamlFilters";
+            var fullPath = @"X:\BalatroSeedOracle\external\Motely\JamlFilters";
             var filters = FilterService.LoadFiltersFromDisk(fullPath, cfg => false);
             return Results.Ok(filters);
         }
