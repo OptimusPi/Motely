@@ -14,10 +14,10 @@ public class GenieFeedbackService
     private readonly string _failuresFile;
     private readonly string _feedbackFile;
 
-    public GenieFeedbackService(ILogger<GenieFeedbackService> logger, string motelyRoot)
+    public GenieFeedbackService(ILogger<GenieFeedbackService> logger)
     {
         _logger = logger;
-        _feedbackDir = Path.Combine(motelyRoot, "GenieFeedback");
+        _feedbackDir = "GenieFeedback";
         Directory.CreateDirectory(_feedbackDir);
         _failuresFile = Path.Combine(_feedbackDir, "failures.jsonl");
         _feedbackFile = Path.Combine(_feedbackDir, "feedback.jsonl");

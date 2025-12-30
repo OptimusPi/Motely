@@ -896,8 +896,8 @@ Return JSON with success: true and jaml: ""<YAML string>"". The jaml value shoul
     {
         try
         {
-            var catalogPath = PathResolver.ResolveCatalogPath("item-catalog.json");
-            if (string.IsNullOrEmpty(catalogPath))
+            var catalogPath = Path.Combine("Knowledge", "item-catalog.json");
+            if (!File.Exists(catalogPath))
             {
                 _logger.LogWarning("item-catalog.json not found, using hardcoded catalog");
                 return GetHardcodedItemCatalog();
@@ -1444,49 +1444,6 @@ public class RefinementSteps
     public string? CleanedJaml { get; set; }
     public string? FinalJaml { get; set; }
     public string? ValidationError { get; set; }
-}
-
-/// <summary>
-/// Path resolution utilities for MCP server
-/// </summary>
-public static class PathResolver
-{
-    public static string? ResolveCatalogPath(string fileName)
-    {
-        // Try AppContext.BaseDirectory first (for deployed scenarios)
-        var basePath = Path.Combine(AppContext.BaseDirectory, "Knowledge", fileName);
-        if (File.Exists(basePath))
-            return basePath;
-
-        // Search upward from current directory (for development)
-        foreach (var directory in EnumerateDirectoriesUpwards(Directory.GetCurrentDirectory()))
-        {
-            var candidate = Path.Combine(directory, "Knowledge", fileName);
-            if (File.Exists(candidate))
-                return candidate;
-        }
-
-        // Try relative to current directory
-        var relativePath = Path.Combine("Knowledge", fileName);
-        if (File.Exists(relativePath))
-            return relativePath;
-
-        return null;
-    }
-
-    private static IEnumerable<string> EnumerateDirectoriesUpwards(string startDirectory)
-    {
-        var current = startDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            yield return current;
-
-            var parent = Directory.GetParent(current);
-            if (parent == null)
-                break;
-            current = parent.FullName;
-        }
-    }
 }
 
 /// <summary>

@@ -56,11 +56,10 @@ public static class McpStdioEntryPoint
         });
 
         // Configure services (minimal - just what MCP server needs)
-        var motelyRoot = Directory.GetCurrentDirectory();
         builder.Services.AddSingleton<GenieFeedbackService>(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<GenieFeedbackService>>();
-            return new GenieFeedbackService(logger, motelyRoot);
+            return new GenieFeedbackService(logger);
         });
 
         builder.Services.AddScoped<McpServer>(sp =>
@@ -77,7 +76,6 @@ public static class McpStdioEntryPoint
             var logger = sp.GetRequiredService<ILogger<McpProtocol.McpProtocolServer>>();
             var jamlGenieService = sp.GetRequiredService<McpServer>();
             var searchManager = SearchManager.Instance;
-            SearchManager.Instance.SetMotelyRoot(motelyRoot);
             return new McpProtocol.McpProtocolServer(logger, jamlGenieService, searchManager);
         });
 
