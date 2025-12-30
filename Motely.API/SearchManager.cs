@@ -1016,26 +1016,20 @@ public class SearchManager
             var safeName = Path.GetFileName(file);
             string? csvPath = null;
             
-            if (!string.IsNullOrWhiteSpace(_motelyRoot))
+            // Handle absolute paths vs relative paths
+            if (Path.IsPathRooted(file))
             {
-                var p1 = Path.Combine(_motelyRoot, "WordLists", safeName);
-                if (File.Exists(p1))
-                {
-                    csvPath = p1;
-                }
-                else
-                {
-                    var p2 = Path.Combine(_motelyRoot, "wordlists", safeName);
-                    if (File.Exists(p2))
-                    {
-                        csvPath = p2;
-                    }
-                }
-            }
-            
-            if (csvPath == null && File.Exists(file))
-            {
+                // Absolute path - use as-is
                 csvPath = file;
+            }
+            else
+            {
+                // Relative path - look in SeedSources folder
+                var relativePath = Path.Combine("SeedSources", safeName);
+                if (File.Exists(relativePath))
+                {
+                    csvPath = relativePath;
+                }
             }
             
             if (csvPath != null && File.Exists(csvPath))
@@ -1058,24 +1052,25 @@ public class SearchManager
 
             var safeName = Path.GetFileName(file);
 
-            if (!string.IsNullOrWhiteSpace(_motelyRoot))
+            // Handle absolute paths vs relative paths
+            if (Path.IsPathRooted(file))
             {
-                var p1 = Path.Combine(_motelyRoot, "WordLists", safeName);
-                if (File.Exists(p1))
+                // Absolute path - use as-is
+                searchParams.SeedSources = file;
+                return;
+            }
+            else
+            {
+                // Relative path - look in SeedSources folder
+                var relativePath = Path.Combine("SeedSources", safeName);
+                if (File.Exists(relativePath))
                 {
-                    searchParams.DbList = p1;
-                    return;
-                }
-
-                var p2 = Path.Combine(_motelyRoot, "wordlists", safeName);
-                if (File.Exists(p2))
-                {
-                    searchParams.DbList = p2;
+                    searchParams.SeedSources = relativePath;
                     return;
                 }
             }
 
-            searchParams.DbList = file;
+            searchParams.SeedSources = file;
             return;
         }
     }

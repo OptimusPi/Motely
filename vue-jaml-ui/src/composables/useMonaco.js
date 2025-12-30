@@ -27,7 +27,9 @@ const loadMonaco = async () => {
 const fetchSchema = async () => {
   if (jamlSchema) return jamlSchema
   try {
-    const response = await fetch('/jaml.schema.json')
+    // Respect Vite base (prod deploy is under /JAML/)
+    const schemaUrl = `${import.meta.env.BASE_URL}jaml.schema.json`
+    const response = await fetch(schemaUrl)
     jamlSchema = await response.json()
     return jamlSchema
   } catch (e) {

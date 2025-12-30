@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using YamlDotNet.Serialization;
+using System.Numerics;
 
 namespace Motely.Filters;
 
@@ -436,25 +437,20 @@ public class MotelyJsonConfig
                     switch (ItemTypeEnum)
                     {
                         case MotelyFilterItemType.Joker:
-                            if (Enum.TryParse<MotelyJoker>(Value, true, out var regularJoker))
+                            if (MotelyEnumParser.TryParseJoker(Value, out var joker))
                             {
-                                JokerEnum = regularJoker;
+                                JokerEnum = joker;
 
-                                // Helpful error for common mistake: using "Perkeo" with regular Joker type
-                                if (regularJoker == MotelyJoker.Perkeo )
-                                {
-                                    throw new ArgumentException(
-                                        $"'{Value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker."
-                                    );
-                                }
+                                // Example SIMD batch processing
+                                var jokerVector = MotelySimdUtils.MapJokersToVector(new[] { joker });
+                                var filterVector = new Vector<int>(new int[] { (int)MotelyJoker.Perkeo });
+                                var result = MotelySimdUtils.BatchProcessJokers(jokerVector, filterVector);
+
+                                Console.WriteLine($"SIMD Result: {result}");
                             }
-                            else if (
-                                string.Equals(Value, "Perkeo", StringComparison.OrdinalIgnoreCase)
-                            )
+                            else
                             {
-                                throw new ArgumentException(
-                                    $"'{Value}' is not a valid regular Joker. Did you mean to use 'SoulJoker' type instead of 'Joker'? Perkeo can only appear as a Soul Joker."
-                                );
+                                throw new ArgumentException($"'{Value}' is not a valid Joker value.");
                             }
                             break;
                         case MotelyFilterItemType.SoulJoker:
@@ -462,8 +458,14 @@ public class MotelyJsonConfig
                                 JokerEnum = soulJoker;
                             break;
                         case MotelyFilterItemType.Voucher:
-                            if (Enum.TryParse<MotelyVoucher>(Value, true, out var voucher))
+                            if (MotelyEnumParser.TryParseVoucher(Value, out var voucher))
+                            {
                                 VoucherEnum = voucher;
+                            }
+                            else
+                            {
+                                throw new ArgumentException($"'{Value}' is not a valid Voucher value.");
+                            }
                             break;
                         case MotelyFilterItemType.TarotCard:
                             if (Enum.TryParse<MotelyTarotCard>(Value, true, out var tarot))
@@ -1475,5 +1477,46 @@ public class MotelyJsonConfig
         }
 
         throw new ArgumentException("Invalid shorthand syntax", nameof(shorthand));
+    }
+
+    // Create a utility class for centralized parsing logic
+    public static class MotelyEnumParser
+    {
+        private static readonly Dictionary<string, MotelyJoker> JokerLookup = Enum.GetValues(typeof(MotelyJoker))
+            .Cast<MotelyJoker>()
+            .ToDictionary(j => j.ToString(), j => j, StringComparer.OrdinalIgnoreCase);
+
+        private static readonly Dictionary<string, MotelyVoucher> VoucherLookup = Enum.GetValues(typeof(MotelyVoucher))
+            .Cast<MotelyVoucher>()
+            .ToDictionary(v => v.ToString(), v => v, StringComparer.OrdinalIgnoreCase);
+
+        public static bool TryParseJoker(string value, out MotelyJoker joker)
+        {
+            return JokerLookup.TryGetValue(value, out joker);
+        }
+
+        public static bool TryParseVoucher(string value, out MotelyVoucher voucher)
+        {
+            return VoucherLookup.TryGetValue(value, out voucher);
+        }
+
+        // Add similar methods for other enums as needed
+    }
+
+    // Add SIMD-specific enhancements for batch processing
+    public static class MotelySimdUtils
+    {
+        public static Vector<int> BatchProcessJokers(Vector<int> jokerValues, Vector<int> filterValues)
+        {
+            // Example SIMD operation: Compare joker values with filter values
+            return Vector.Equals(jokerValues, filterValues);
+        }
+
+        public static Vector<int> MapJokersToVector(IEnumerable<MotelyJoker> jokers)
+        {
+            // Map joker enums to a SIMD-friendly vector representation
+            var jokerArray = jokers.Select(j => (int)j).ToArray();
+            return new Vector<int>(jokerArray);
+        }
     }
 }

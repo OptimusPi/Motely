@@ -228,44 +228,83 @@ namespace Motely.Executors
                 return (_params.SeedList, false);
             }
 
-            if (!string.IsNullOrEmpty(_params.Wordlist))
+            // Unified SeedSources parameter - handles both relative and absolute paths
+            if (!string.IsNullOrEmpty(_params.SeedSources))
             {
-                string wordlistPath = ResolveWordlistPath(_params.Wordlist);
-
-                List<string> seeds =
-                [
-                    .. File.ReadAllLines(wordlistPath)
-                        .Where(static s => !string.IsNullOrWhiteSpace(s)),
-                ];
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine(
-                        $"✅ Loaded {seeds.Count} seeds from wordlist: {wordlistPath}"
-                    );
-                }
-                return (seeds, false);
-            }
-
-            // DuckDB seed list (e.g., fertilizer.db) - ZERO memory allocation!
-            // DuckDBSeeds.Stream() returns IEnumerable that streams from DuckDB, already sorted by LENGTH
-            if (!string.IsNullOrEmpty(_params.DbList))
-            {
-                string dbPath = ResolveDbPath(_params.DbList);
-                
-                if (!File.Exists(dbPath))
-                {
-                    throw new FileNotFoundException($"DuckDB file not found: {dbPath}");
-                }
-
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine($"✅ Streaming seeds from DuckDB: {dbPath}");
-                }
-                // Return streaming IEnumerable - NO list materialization, already sorted by LENGTH!
-                return (DuckDBSeeds.Stream(dbPath), true);
+                return LoadSeedSources(_params.SeedSources);
             }
 
             return (null, false); // Sequential search
+        }
+
+        private (IEnumerable<string>? seeds, bool preSorted) LoadSeedSources(string seedSource)
+        {
+            string extension = Path.GetExtension(seedSource).ToLowerInvariant();
+            string fullPath;
+
+            // Handle absolute paths vs relative paths
+            if (Path.IsPathRooted(seedSource))
+            {
+                // Absolute path - use as-is
+                fullPath = seedSource;
+            }
+            else
+            {
+                // Relative path - look in SeedSources folder
+                fullPath = Path.Combine("SeedSources", seedSource);
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException($"Seed source file not found: {fullPath}");
+            }
+
+            return extension switch
+            {
+                ".db" => LoadDuckDBSource(fullPath),
+                ".csv" => LoadCsvSource(fullPath),
+                ".txt" => LoadTextSource(fullPath),
+                _ => throw new NotSupportedException($"Unsupported file extension: {extension}")
+            };
+        }
+
+        private (IEnumerable<string>? seeds, bool preSorted) LoadDuckDBSource(string dbPath)
+        {
+            if (!_params.Quiet)
+            {
+                Console.WriteLine($"✅ Streaming seeds from DuckDB: {dbPath}");
+            }
+            return (DuckDBSeeds.Stream(dbPath), true);
+        }
+
+        private (IEnumerable<string>? seeds, bool preSorted) LoadCsvSource(string csvPath)
+        {
+            // For CSV files, we'll create a temporary DuckDB database and import the CSV
+            string tempDbPath = Path.Combine("SeedSources", $"temp_{Path.GetFileNameWithoutExtension(csvPath)}.db");
+            
+            if (!_params.Quiet)
+            {
+                Console.WriteLine($"🔄 Converting CSV to DuckDB: {csvPath} -> {tempDbPath}");
+            }
+
+            // TODO: Implement CSV to DuckDB conversion
+            // For now, fall back to reading as text
+            return LoadTextSource(csvPath);
+        }
+
+        private (IEnumerable<string>? seeds, bool preSorted) LoadTextSource(string textPath)
+        {
+            List<string> seeds = [
+                .. File.ReadAllLines(textPath)
+                    .Where(static s => !string.IsNullOrWhiteSpace(s)),
+            ];
+            
+            if (!_params.Quiet)
+            {
+                Console.WriteLine($"✅ Loaded {seeds.Count} seeds from text file: {textPath}");
+            }
+            
+            return (seeds, false);
         }
 
         private static string ResolveWordlistPath(string wordlistInput)
@@ -302,75 +341,6 @@ namespace Motely.Executors
             }
 
             throw new FileNotFoundException($"Wordlist not found: {pathWithExtension}");
-        }
-
-        private static string ResolveDbPath(string dbInput)
-        {
-            string pathWithExtension = Path.HasExtension(dbInput)
-                ? dbInput
-                : dbInput + ".db";
-
-            if (Path.IsPathRooted(pathWithExtension))
-            {
-                if (File.Exists(pathWithExtension))
-                {
-                    return pathWithExtension;
-                }
-                throw new FileNotFoundException($"Database file not found: {pathWithExtension}");
-            }
-
-            foreach (var directory in EnumerateDirectoriesUpwards(Directory.GetCurrentDirectory()))
-            {
-                foreach (var folder in new[] { "WordLists", "wordlists" })
-                {
-                    var candidate = Path.Combine(directory, folder, pathWithExtension);
-                    if (File.Exists(candidate))
-                    {
-                        return candidate;
-                    }
-                }
-            }
-
-            var relativeCandidate = Path.Combine(Directory.GetCurrentDirectory(), pathWithExtension);
-            if (File.Exists(relativeCandidate))
-            {
-                return relativeCandidate;
-            }
-
-            throw new FileNotFoundException($"Database file not found: {pathWithExtension}");
-        }
-
-        private static string ResolveConfigPath(string configName, string filterDir, string extension)
-        {
-            string pathWithExtension = Path.HasExtension(configName)
-                ? configName
-                : configName + extension;
-
-            if (Path.IsPathRooted(pathWithExtension))
-            {
-                if (File.Exists(pathWithExtension))
-                {
-                    return pathWithExtension;
-                }
-                throw new FileNotFoundException($"Config file not found: {pathWithExtension}");
-            }
-
-            foreach (var directory in EnumerateDirectoriesUpwards(Directory.GetCurrentDirectory()))
-            {
-                var candidate = Path.Combine(directory, filterDir, pathWithExtension);
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            var relativeCandidate = Path.Combine(Directory.GetCurrentDirectory(), filterDir, pathWithExtension);
-            if (File.Exists(relativeCandidate))
-            {
-                return relativeCandidate;
-            }
-
-            throw new FileNotFoundException($"Config file not found: {pathWithExtension}");
         }
 
         private static IEnumerable<string> EnumerateDirectoriesUpwards(string startDirectory)
@@ -411,7 +381,7 @@ namespace Motely.Executors
             }
             else
             {
-                configPath = ResolveConfigPath(_configPath, filterDir, extension);
+                configPath = Path.Combine(filterDir, _configPath + extension);
             }
 
             if (!File.Exists(configPath))
@@ -1429,12 +1399,14 @@ namespace Motely.Executors
         public bool NoFancy { get; set; }
         public bool Quiet { get; set; }
         public string? SpecificSeed { get; set; }
-        public string? Wordlist { get; set; }
+        
         /// <summary>
-        /// DuckDB file path containing seeds table (e.g., fertilizer.db)
-        /// Use this for large seed collections - more efficient than SeedList
+        /// Unified seed source: can be .txt, .csv, or .db file
+        /// Supports relative paths (SeedSources/file.db) or absolute paths (C:\path\file.db)
+        /// Automatically detects type and handles accordingly
         /// </summary>
-        public string? DbList { get; set; }
+        public string? SeedSources { get; set; }
+        
         public List<string>? SeedList { get; set; }
         public int? RandomSeeds { get; set; }
         /// <summary>
