@@ -68,6 +68,18 @@ ref partial struct MotelySingleSearchContext
 #if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
+    public MotelySingleSpectralStream CreateSixthSenseSpectralStream(int ante, bool isCached = false) =>
+        CreateSpectralStream(MotelyPrngKeys.JokerSixthSense, ante, true, false, isCached);
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public MotelySingleSpectralStream CreateSeanceSpectralStream(int ante, bool isCached = false) =>
+        CreateSpectralStream(MotelyPrngKeys.JokerSeance, ante, true, false, isCached);
+
+#if !DEBUG
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
     public bool GetNextSpectralPackHasTheSoul(
         ref MotelySingleSpectralStream spectralStream,
         MotelyBoosterPackSize size

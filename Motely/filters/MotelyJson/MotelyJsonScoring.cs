@@ -155,6 +155,49 @@ public static class MotelyJsonScoring
             }
         }
 
+        // Check Purple Seal / 8Ball tarot sources if specified
+        if (clause.Sources?.PurpleSealOrEightBall != null && clause.Sources.PurpleSealOrEightBall.Length > 0)
+        {
+            var purpleSealStream = ctx.CreatePurpleSealTarotStream(ante);
+            foreach (var rollIndex in clause.Sources.PurpleSealOrEightBall)
+            {
+                if (rollIndex < 0)
+                    continue;
+
+                // Advance stream to the specified roll index
+                var tarotStream = purpleSealStream;
+                for (int i = 0; i < rollIndex; i++)
+                {
+                    ctx.GetNextTarot(ref tarotStream);
+                }
+
+                var item = ctx.GetNextTarot(ref tarotStream);
+                bool matches = false;
+
+                if (!clause.TarotType.HasValue)
+                {
+                    // Match any tarot card
+                    matches = item.TypeCategory == MotelyItemTypeCategory.TarotCard;
+                }
+                else if (
+                    item.Type
+                    == (MotelyItemType)(
+                        (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                    )
+                )
+                {
+                    matches = true;
+                }
+
+                if (matches && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value))
+                {
+                    tally++;
+                    if (earlyExit)
+                        return tally;
+                }
+            }
+        }
+
         return tally;
     }
 
@@ -315,7 +358,10 @@ public static class MotelyJsonScoring
         // USE PRE-COMPUTED FLAGS - NO LINQ!
         bool hasShopSlots = BoolArrayHasTrue(clause.WantedShopSlots);
         bool hasPackSlots = BoolArrayHasTrue(clause.WantedPackSlots);
-        bool useDefaults = !hasShopSlots && !hasPackSlots;
+        bool hasSpectralStreamSources =
+            clause.Sources?.SixthSense is { Length: > 0 }
+            || clause.Sources?.Seance is { Length: > 0 };
+        bool useDefaults = !hasShopSlots && !hasPackSlots && !hasSpectralStreamSources;
 
         // Check shop slots if any are wanted OR if using defaults
         if (hasShopSlots || useDefaults)
@@ -435,6 +481,94 @@ public static class MotelyJsonScoring
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Check SixthSense spectral sources if specified
+        if (clause.Sources?.SixthSense != null && clause.Sources.SixthSense.Length > 0)
+        {
+            var sixthSenseStream = ctx.CreateSixthSenseSpectralStream(ante);
+            foreach (var rollIndex in clause.Sources.SixthSense)
+            {
+                if (rollIndex < 0)
+                    continue;
+
+                // Advance stream to the specified roll index
+                var spectralStream = sixthSenseStream;
+                for (int i = 0; i < rollIndex; i++)
+                {
+                    ctx.GetNextSpectral(ref spectralStream);
+                }
+
+                var item = ctx.GetNextSpectral(ref spectralStream);
+                bool matches = false;
+
+                if (searchAnySpectral)
+                {
+                    matches = item.TypeCategory == MotelyItemTypeCategory.SpectralCard;
+                }
+                else if (
+                    clause.SpectralType.HasValue
+                    && item.Type
+                        == (MotelyItemType)(
+                            (int)MotelyItemTypeCategory.SpectralCard
+                            | (int)clause.SpectralType.Value
+                        )
+                )
+                {
+                    matches = true;
+                }
+
+                if (matches && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value))
+                {
+                    tally++;
+                    if (earlyExit)
+                        return tally;
+                }
+            }
+        }
+
+        // Check Seance spectral sources if specified
+        if (clause.Sources?.Seance != null && clause.Sources.Seance.Length > 0)
+        {
+            var seanceStream = ctx.CreateSeanceSpectralStream(ante);
+            foreach (var rollIndex in clause.Sources.Seance)
+            {
+                if (rollIndex < 0)
+                    continue;
+
+                // Advance stream to the specified roll index
+                var spectralStream = seanceStream;
+                for (int i = 0; i < rollIndex; i++)
+                {
+                    ctx.GetNextSpectral(ref spectralStream);
+                }
+
+                var item = ctx.GetNextSpectral(ref spectralStream);
+                bool matches = false;
+
+                if (searchAnySpectral)
+                {
+                    matches = item.TypeCategory == MotelyItemTypeCategory.SpectralCard;
+                }
+                else if (
+                    clause.SpectralType.HasValue
+                    && item.Type
+                        == (MotelyItemType)(
+                            (int)MotelyItemTypeCategory.SpectralCard
+                            | (int)clause.SpectralType.Value
+                        )
+                )
+                {
+                    matches = true;
+                }
+
+                if (matches && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value))
+                {
+                    tally++;
+                    if (earlyExit)
+                        return tally;
                 }
             }
         }
@@ -577,7 +711,8 @@ public static class MotelyJsonScoring
         bool hasJokerStreamSources =
             clause.Sources?.Judgement is { Length: > 0 }
             || clause.Sources?.RareTag is { Length: > 0 }
-            || clause.Sources?.UncommonTag is { Length: > 0 };
+            || clause.Sources?.UncommonTag is { Length: > 0 }
+            || clause.Sources?.RiffRaff is { Length: > 0 };
         bool useDefaults = !hasShopSlots && !hasPackSlots && !hasJokerStreamSources;
 
         // Check shop slots if any are wanted OR if using defaults
@@ -770,6 +905,9 @@ public static class MotelyJsonScoring
             var judgementStream = ctx.CreateJudgementJokerStream(ante);
             foreach (var rollIndex in clause.Sources.Judgement)
             {
+                if (rollIndex < 0)
+                    continue;
+
                 // Advance stream to the specified roll index
                 var jokerStream = judgementStream;
                 for (int i = 0; i < rollIndex; i++)
@@ -819,6 +957,9 @@ public static class MotelyJsonScoring
         {
             foreach (var rollIndex in clause.Sources.RareTag)
             {
+                if (rollIndex < 0)
+                    continue;
+
                 var rareTagStream = ctx.CreateRareTagJokerStream(ante);
                 for (int i = 0; i < rollIndex; i++)
                 {
@@ -867,6 +1008,9 @@ public static class MotelyJsonScoring
         {
             foreach (var rollIndex in clause.Sources.UncommonTag)
             {
+                if (rollIndex < 0)
+                    continue;
+
                 var uncommonTagStream = ctx.CreateUncommonTagJokerStream(ante);
                 for (int i = 0; i < rollIndex; i++)
                 {
@@ -874,6 +1018,59 @@ public static class MotelyJsonScoring
                 }
 
                 var item = ctx.GetNextJoker(ref uncommonTagStream);
+                bool matches = false;
+
+                if (!clause.IsWildcard)
+                {
+                    if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
+                    {
+                        foreach (var jokerType in clause.JokerTypes)
+                        {
+                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                            if (item.Type == targetType)
+                            {
+                                matches = true;
+                                break;
+                            }
+                        }
+                    }
+                    else if (clause.JokerType.HasValue)
+                    {
+                        matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                    }
+                }
+                else
+                {
+                    matches = CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                }
+
+                if (matches && CheckEditionAndStickers(item, clause))
+                {
+                    runState.AddOwnedJoker((MotelyJoker)item.Type);
+                    tally++;
+                    if (earlyExit)
+                        return tally;
+                }
+            }
+        }
+
+        // Check RiffRaff joker sources if specified
+        if (clause.Sources?.RiffRaff != null && clause.Sources.RiffRaff.Length > 0)
+        {
+            var riffRaffStream = ctx.CreateRiffRaffJokerStream(ante);
+            foreach (var rollIndex in clause.Sources.RiffRaff)
+            {
+                if (rollIndex < 0)
+                    continue;
+
+                // Advance stream to the specified roll index
+                var jokerStream = riffRaffStream;
+                for (int i = 0; i < rollIndex; i++)
+                {
+                    ctx.GetNextJoker(ref jokerStream);
+                }
+
+                var item = ctx.GetNextJoker(ref jokerStream);
                 bool matches = false;
 
                 if (!clause.IsWildcard)
