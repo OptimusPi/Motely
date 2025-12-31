@@ -37,21 +37,17 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
 
     public bool Deserialize(IParser reader, Type expectedType, Func<IParser, Type, object?> objectFactory, out object? value, ObjectDeserializer rootDeserializer)
     {
-        // Debug logging to see what types are being processed
-        // Console.WriteLine($"JamlTypeAsKeyNodeDeserializer called for type: {expectedType.FullName}");
-        
-        // Check if this is a type we should handle before consuming any parser events
+        // Check if this is a type we should handle
         var expectedTypeName = expectedType.FullName ?? "";
-        var isMotleyJsonFilterClause = expectedTypeName.Contains("MotleyJsonFilterClause");
+        var isMotleyJsonFilterClause = expectedTypeName.Contains("MotleyJsonFilterClause") && expectedType != typeof(MotelyJsonConfig);
         var isMotelyJsonFilterClause = expectedType == typeof(MotelyJsonFilterClause);
         
         if (!isMotleyJsonFilterClause && !isMotelyJsonFilterClause)
         {
-            // Console.WriteLine($"  Not a target type, returning false");
             value = null;
             return false;
         }
-        
+
         // Get the current node
         if (!reader.TryConsume<MappingStart>(out var mappingStart))
         {
@@ -60,15 +56,11 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
         }
 
         var entries = new Dictionary<string, object>();
-        var hasTypeAsKeyEntry = false;
         
-        // Peek ahead to see if this mapping contains type-as-key entries
-        var parserState = reader.Current as YamlDotNet.Core.Events.Scalar;
         while (!reader.TryConsume<MappingEnd>(out _))
         {
             if (!reader.TryConsume<Scalar>(out var keyScalar))
             {
-                // Reset parser state and let other deserializers handle this
                 value = null;
                 return false;
             }
@@ -77,38 +69,185 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
             
             if (TypeMappings.TryGetValue(key, out var mappedType))
             {
-                hasTypeAsKeyEntry = true;
-                // This is a type-as-key entry, convert it
-                if (!reader.TryConsume<Scalar>(out var valueScalar))
+                // Check what the next event is to handle both scalar and complex values
+                var nextEvent = reader.Current;
+                
+                if (nextEvent is Scalar)
+                {
+                    // This is a type-as-key entry with a scalar value, convert it
+                    if (!reader.TryConsume<Scalar>(out var valueScalar))
+                    {
+                        value = null;
+                        return false;
+                    }
+
+                    entries["type"] = mappedType;
+                    entries["value"] = valueScalar.Value;
+                }
+                else if (nextEvent is MappingStart || nextEvent is SequenceStart)
+                {
+                    // This is a type-as-key entry with a complex structure
+                    // For and/or, we need to deserialize sequences of MotleyJsonFilterClause items
+                    if (mappedType == "And" || mappedType == "Or" && nextEvent is SequenceStart)
+                    {
+                        // Use objectFactory to deserialize as a list of MotleyJsonFilterClause
+                        var complexValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>));
+                        entries["type"] = mappedType;
+                        entries["value"] = complexValue!;
+                    }
+                    else
+                    {
+                        // Use objectFactory to deserialize the complex value
+                        var complexValue = objectFactory(reader, typeof(object));
+                        entries["type"] = mappedType;
+                        entries["value"] = complexValue!;
+                    }
+                }
+                else
                 {
                     value = null;
                     return false;
                 }
-
-                entries["type"] = mappedType;
-                entries["value"] = valueScalar.Value;
             }
             else
             {
-                // Regular entry, just copy it
+                // Regular entry, just copy it using objectFactory
                 var nodeValue = objectFactory(reader, typeof(object));
                 entries[key] = nodeValue!;
             }
         }
 
-        // If we didn't find any type-as-key entries, let other deserializers handle this
-        if (!hasTypeAsKeyEntry)
+        // Check if this is an event type - handle it by creating a MotleyJsonFilterClause with event properties
+        if (entries.TryGetValue("type", out var typeValue))
         {
-            // Console.WriteLine($"  No type-as-key entries found, returning false");
-            value = null;
-            return false;
+            var typeStr = typeValue.ToString();
+            
+            if (typeStr == "Event")
+            {
+                // Create a MotleyJsonFilterClause (the nested class) and set event properties
+                var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
+                
+                // Set the type to event
+                clause.Type = "event";
+                
+                // Parse the event value and set it as the value
+                if (entries.TryGetValue("value", out var eventValue))
+                {
+                    clause.Value = eventValue.ToString();
+                }
+                
+                // Set other properties from entries
+                foreach (var entry in entries)
+                {
+                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || 
+                        entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                        
+                    var property = clause.GetType().GetProperty(entry.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (property != null && property.CanWrite)
+                    {
+                        if (property.PropertyType == typeof(string))
+                        {
+                            property.SetValue(clause, entry.Value?.ToString());
+                        }
+                        else if (property.PropertyType == typeof(int[]))
+                        {
+                            if (entry.Value is object[] array)
+                            {
+                                property.SetValue(clause, array.Cast<int>().ToArray());
+                            }
+                        }
+                        else if (property.PropertyType == typeof(int))
+                        {
+                            if (int.TryParse(entry.Value?.ToString(), out var intValue))
+                            {
+                                property.SetValue(clause, intValue);
+                            }
+                        }
+                    }
+                }
+                
+                value = clause;
+                return true;
+            }
+            else if (typeStr == "And" || typeStr == "Or")
+            {
+                // Create a MotleyJsonFilterClause (the nested class) and set logical operator properties
+                var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
+                
+                // Set the type to and/or
+                clause.Type = typeStr.ToLowerInvariant();
+                
+                // For and/or entries, the complex value should be stored in the 'clauses' property
+                if (entries.TryGetValue("value", out var complexValue))
+                {
+                    var clausesProperty = clause.GetType().GetProperty("clauses", System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (clausesProperty != null && clausesProperty.CanWrite)
+                    {
+                        // Convert the List<object> to List<MotleyJsonFilterClause>
+                        if (complexValue is System.Collections.IList list)
+                        {
+                            Console.WriteLine($"  Converting list with {list.Count} items");
+                            var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                            foreach (var item in list)
+                            {
+                                Console.WriteLine($"    Item type: {item?.GetType().Name}, value: {item}");
+                                if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
+                                {
+                                    convertedList.Add(filterClause);
+                                    Console.WriteLine($"    Added filter clause with Type='{filterClause.Type}'");
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"    WARNING: Item is not a MotleyJsonFilterClause");
+                                }
+                            }
+                            Console.WriteLine($"  Final converted list has {convertedList.Count} items");
+                            clausesProperty.SetValue(clause, convertedList);
+                        }
+                    }
+                }
+                
+                // Set other properties from entries
+                foreach (var entry in entries)
+                {
+                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || 
+                        entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                        
+                    var property = clause.GetType().GetProperty(entry.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (property != null && property.CanWrite)
+                    {
+                        if (property.PropertyType == typeof(string))
+                        {
+                            property.SetValue(clause, entry.Value?.ToString());
+                        }
+                        else if (property.PropertyType == typeof(int[]))
+                        {
+                            if (entry.Value is object[] array)
+                            {
+                                property.SetValue(clause, array.Cast<int>().ToArray());
+                            }
+                        }
+                        else if (property.PropertyType == typeof(int))
+                        {
+                            if (int.TryParse(entry.Value?.ToString(), out var intValue))
+                            {
+                                property.SetValue(clause, intValue);
+                            }
+                        }
+                    }
+                }
+                
+                value = clause;
+                return true;
+            }
         }
 
-        // Console.WriteLine($"  Found type-as-key entries, processing for type: {expectedType.FullName}");
-        
+        // Create the appropriate filter clause from the processed entries
         if (isMotleyJsonFilterClause)
         {
-            // Create a MotleyJsonFilterClause with the type and value properties set
+            // Create a MotleyJsonFilterClause (the nested class in MotelyJsonConfig)
             var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
             
             // Set all properties from entries
@@ -121,13 +260,6 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                     {
                         property.SetValue(clause, entry.Value?.ToString());
                     }
-                    else if (property.PropertyType == typeof(string[]))
-                    {
-                        if (entry.Value is object[] array)
-                        {
-                            property.SetValue(clause, array.Select(x => x?.ToString()).ToArray());
-                        }
-                    }
                     else if (property.PropertyType == typeof(int[]))
                     {
                         if (entry.Value is object[] array)
@@ -145,20 +277,37 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                 }
             }
             
-            // Console.WriteLine($"  Created MotleyJsonFilterClause with type: {entries["type"]}, value: {entries["value"]}");
             value = clause;
+            return true;
         }
-        else if (isMotelyJsonFilterClause)
+        else
         {
-            // For the abstract MotelyJsonFilterClause, create concrete implementation
-            var clause = CreateConcreteClause(entries["type"].ToString()!);
+            // Create the abstract MotelyJsonFilterClause concrete implementation
+            MotelyJsonFilterClause clause;
             
-            // Set all properties from entries
+            // Determine which concrete type to create based on the mapped type
+            if (entries.TryGetValue("type", out var clauseTypeValue))
+            {
+                var typeStr = clauseTypeValue.ToString()?.ToLowerInvariant();
+                clause = typeStr switch
+                {
+                    "joker" => new MotelyJsonJokerFilterClause(),
+                    "souljoker" => new MotelyJsonSoulJokerFilterClause(),
+                    "voucher" => new MotelyJsonVoucherFilterClause(),
+                    "tarotcard" => new MotelyJsonTarotFilterClause(),
+                    "spectralcard" => new MotelyJsonSpectralFilterClause(),
+                    "planetcard" => new MotelyJsonPlanetFilterClause(),
+                    _ => new MotelyJsonJokerFilterClause() // Default fallback
+                };
+            }
+            else
+            {
+                // No type found, use default
+                clause = new MotelyJsonJokerFilterClause();
+            }
+            
             foreach (var entry in entries)
             {
-                if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                    
                 var property = clause.GetType().GetProperty(entry.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                 if (property != null && property.CanWrite)
                 {
@@ -181,91 +330,10 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                         }
                     }
                 }
-                else if (entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Handle the special "value" field - map it to the appropriate property
-                    MapValueToClauseProperty(clause, entry.Value);
-                }
             }
 
-            // Console.WriteLine($"  Created concrete {clause.GetType().Name} with type: {entries["type"]}, value: {entries["value"]}");
             value = clause;
-        }
-        else
-        {
-            // Console.WriteLine($"  Unknown type, returning false");
-            value = null;
-            return false;
-        }
-        
-        return true;
-    }
-
-    private static MotelyJsonFilterClause CreateConcreteClause(string type)
-    {
-        return type.ToLowerInvariant() switch
-        {
-            "joker" => new MotelyJsonJokerFilterClause(),
-            "souljoker" => new MotelyJsonSoulJokerFilterClause(),
-            "voucher" => new MotelyJsonVoucherFilterClause(),
-            "tarotcard" => new MotelyJsonTarotFilterClause(),
-            "spectralcard" => new MotelyJsonSpectralFilterClause(),
-            "planetcard" => new MotelyJsonPlanetFilterClause(),
-            _ => new MotelyJsonJokerFilterClause() // Default fallback
-        };
-    }
-
-    private static void MapValueToClauseProperty(MotelyJsonFilterClause clause, object? value)
-    {
-        if (value == null) return;
-        
-        var valueStr = value.ToString()!;
-        
-        // Map based on clause type
-        switch (clause)
-        {
-            case MotelyJsonJokerFilterClause jokerClause:
-                // Try to parse as enum value
-                if (System.Enum.TryParse<MotelyJoker>(valueStr, true, out var jokerType))
-                {
-                    jokerClause.GetType().GetProperty("JokerType")?.SetValue(jokerClause, jokerType);
-                }
-                break;
-                
-            case MotelyJsonSoulJokerFilterClause soulJokerClause:
-                if (System.Enum.TryParse<MotelyJoker>(valueStr, true, out var soulJokerType))
-                {
-                    soulJokerClause.GetType().GetProperty("JokerType")?.SetValue(soulJokerClause, soulJokerType);
-                }
-                break;
-                
-            case MotelyJsonVoucherFilterClause voucherClause:
-                if (System.Enum.TryParse<MotelyVoucher>(valueStr, true, out var voucherType))
-                {
-                    voucherClause.GetType().GetProperty("VoucherType")?.SetValue(voucherClause, voucherType);
-                }
-                break;
-                
-            case MotelyJsonTarotFilterClause tarotClause:
-                if (System.Enum.TryParse<MotelyTarotCard>(valueStr, true, out var tarotType))
-                {
-                    tarotClause.GetType().GetProperty("TarotType")?.SetValue(tarotClause, tarotType);
-                }
-                break;
-                
-            case MotelyJsonSpectralFilterClause spectralClause:
-                if (System.Enum.TryParse<MotelySpectralCard>(valueStr, true, out var spectralType))
-                {
-                    spectralClause.GetType().GetProperty("SpectralType")?.SetValue(spectralClause, spectralType);
-                }
-                break;
-                
-            case MotelyJsonPlanetFilterClause planetClause:
-                if (System.Enum.TryParse<MotelyPlanetCard>(valueStr, true, out var planetType))
-                {
-                    planetClause.GetType().GetProperty("PlanetType")?.SetValue(planetClause, planetType);
-                }
-                break;
+            return true;
         }
     }
 }

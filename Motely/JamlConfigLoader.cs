@@ -60,11 +60,11 @@ public static class JamlConfigLoader
 
         try
         {
-            // Parse YAML with custom deserializer for type-as-key syntax
+            // Parse YAML with custom node deserializer for type-as-key syntax
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()
-                .WithNodeDeserializer(new JamlTypeAsKeyNodeDeserializer())
+                .WithNodeDeserializer(new JamlTypeAsKeyNodeDeserializer(), s => s.Before<YamlDotNet.Serialization.NodeDeserializers.ObjectNodeDeserializer>())
                 .Build();
 
             var deserializedConfig = deserializer.Deserialize<MotelyJsonConfig>(jamlContent);
