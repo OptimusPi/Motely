@@ -1,16 +1,32 @@
 <template>
   <div class="jaml-ui">
     <!-- Panel tabs at top edge -->
-    <div class="tab-overflow-row">
-      <template v-for="(panel, index) in topVisiblePanels" :key="panel.id">
-        <div
-          class="panel-tab-inline"
-          :class="`panel-tab-${panel.color}`"
-        >
-          <span class="tab-label">{{ panel.label }}</span>
-          <span v-if="panel.badge" class="tab-badge">{{ panel.badge }}</span>
-        </div>
-      </template>
+    <div ref="tabRow" class="tab-overflow-row">
+      <div class="tab-shelf tab-shelf-left">
+        <template v-for="panel in leftTabPanels" :key="panel.id">
+          <div
+            class="panel-tab-inline"
+            :class="`panel-tab-${panel.color}`"
+            :data-panel-id="panel.id"
+          >
+            <span class="tab-label">{{ panel.label }}</span>
+            <span v-if="panel.badge" class="tab-badge">{{ panel.badge }}</span>
+          </div>
+        </template>
+      </div>
+
+      <div class="tab-shelf tab-shelf-right">
+        <template v-for="panel in rightTabPanels" :key="panel.id">
+          <div
+            class="panel-tab-inline"
+            :class="`panel-tab-${panel.color}`"
+            :data-panel-id="panel.id"
+          >
+            <span class="tab-label">{{ panel.label }}</span>
+            <span v-if="panel.badge" class="tab-badge">{{ panel.badge }}</span>
+          </div>
+        </template>
+      </div>
     </div>
 
     <!-- Panels -->
@@ -97,6 +113,7 @@
             :class="badgeSnapClass"
             :style="badgeStyle"
             @pointerdown.stop="startSplitResizeFromBadge"
+            ref="badgeEl"
           >
             <GripVertical v-if="badgeSnapState !== 'left'" :size="16" />
             <Home :size="16" @click.stop="goHome" @pointerdown.stop class="icon-btn" />
@@ -163,7 +180,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, reactive, markRaw } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, reactive, markRaw, nextTick } from 'vue'
 import { Home, Settings, GripVertical } from 'lucide-vue-next'
 import PanelSection from '../components/PanelSection.vue'
 import EditorPanel from '../components/EditorPanel.vue'
@@ -227,21 +244,135 @@ const splitLeftWidth = ref(50)
 const badgeSnapState = ref('center') // 'left', 'center', 'right'
 const badgeSnapClass = computed(() => `badge-snap-${badgeSnapState.value}`)
 
-// Badge style - position at top but slide horizontally with divider
-// Since badge is position: fixed, we calculate its position based on viewport width
-// The split container is 100% width, so splitLeftWidth percentage directly maps to viewport
-const badgeStyle = computed(() => {
-  if (badgeSnapState.value === 'left') {
-    return { left: '0', transform: 'none' }
-  } else if (badgeSnapState.value === 'right') {
-    return { left: 'auto', right: '0', transform: 'none' }
-  } else {
-    // Center: position badge at the divider's horizontal position
-    // splitLeftWidth is percentage of split container, which is 100% of viewport
-    const leftPercent = splitLeftWidth.value
-    return { left: `${leftPercent}%`, transform: 'translateX(-50%)' }
+const TOP_TABS_PX = 28 // phone notch margin; tabs live at top: 28px and are 28px tall
+
+const tabRow = ref(null)
+const badgeEl = ref(null)
+const badgeForceSide = ref(null) // legacy (no longer used for positioning)
+const BADGE_EDGE_GAP_PX = 8
+
+let badgeRecalcPending = false
+const requestBadgeRecalc = () => {
+  if (badgeRecalcPending) return
+  badgeRecalcPending = true
+  requestAnimationFrame(() => {
+    badgeRecalcPending = false
+    recomputeBadgeForceSide()
+  })
+}
+
+const recomputeBadgeForceSide = () => {
+  // Only avoid overlap while centered; snapped modes should be stable.
+  if (badgeSnapState.value !== 'center') {
+    badgeForceSide.value = null
+    return
   }
+  if (!tabRow.value || !badgeEl.value || typeof window === 'undefined') {
+    badgeForceSide.value = null
+    return
+  }
+
+  const badgeRect = badgeEl.value.getBoundingClientRect?.()
+  const badgeWidth = badgeRect?.width || 120
+
+  // Theoretical centered badge bounds (avoid depending on forced-side rendering)
+  const centerX = (splitLeftWidth.value / 100) * window.innerWidth
+  const badgeLeft = centerX - badgeWidth / 2
+  const badgeRight = centerX + badgeWidth / 2
+
+  let overlapsAnyTab = false
+  const tabs = tabRow.value.querySelectorAll?.('.panel-tab-inline') || []
+  for (const tab of tabs) {
+    const r = tab.getBoundingClientRect?.()
+    if (!r || r.width <= 0) continue
+    // Tabs and badge share the same Y band, so horizontal overlap is the important part.
+    if (badgeRight > r.left && badgeLeft < r.right) {
+      overlapsAnyTab = true
+      break
+    }
+  }
+
+  if (!overlapsAnyTab) {
+    badgeForceSide.value = null
+    return
+  }
+
+  // Move to opposite side of the divider when it would cover a tab.
+  badgeForceSide.value = splitLeftWidth.value < 50 ? 'right' : 'left'
+}
+
+// Badge style - always attached to the divider (never teleports as an overlap avoidance mechanism).
+const badgeStyle = computed(() => {
+  const base = { top: `${TOP_TABS_PX}px` }
+
+  // Position by divider percentage
+  const leftPercent = splitLeftWidth.value
+  const anchored = { ...base, left: `${leftPercent}%` }
+
+  // Flagpole feel at extremes: keep badge visible/draggable when divider is at 0%/100%.
+  if (badgeSnapState.value === 'left') {
+    return { ...anchored, transform: `translateX(${BADGE_EDGE_GAP_PX}px)` }
+  }
+  if (badgeSnapState.value === 'right') {
+    return { ...anchored, transform: `translateX(calc(-100% - ${BADGE_EDGE_GAP_PX}px))` }
+  }
+
+  // Center: straddle the divider
+  return { ...anchored, transform: 'translateX(-50%)' }
 })
+
+// --- Tab fling state (two shelves) ---
+const tabSideById = reactive({}) // panelId -> 'left' | 'right'
+
+const ensureTabSides = () => {
+  for (const p of topVisiblePanels.value) {
+    if (!tabSideById[p.id]) tabSideById[p.id] = 'left'
+  }
+}
+
+const leftTabPanels = computed(() => {
+  return topVisiblePanels.value.filter(p => tabSideById[p.id] !== 'right')
+})
+
+const rightTabPanels = computed(() => {
+  return topVisiblePanels.value.filter(p => tabSideById[p.id] === 'right')
+})
+
+const TAB_HYSTERESIS_PX = 8
+
+let tabFlingPending = false
+const requestTabFlingRecalc = () => {
+  if (tabFlingPending) return
+  tabFlingPending = true
+  requestAnimationFrame(() => {
+    tabFlingPending = false
+    recomputeTabSides()
+  })
+}
+
+const recomputeTabSides = () => {
+  ensureTabSides()
+  if (!tabRow.value || typeof window === 'undefined') return
+
+  const dividerX = (splitLeftWidth.value / 100) * window.innerWidth
+
+  for (const p of topVisiblePanels.value) {
+    const el = tabRow.value.querySelector?.(`.panel-tab-inline[data-panel-id="${p.id}"]`)
+    if (!el) continue
+    const r = el.getBoundingClientRect?.()
+    if (!r || r.width <= 0) continue
+    const tabMidX = r.left + r.width / 2
+
+    const side = tabSideById[p.id] || 'left'
+    if (side === 'left') {
+      // Fire when divider crosses left of midpoint (with hysteresis)
+      if (dividerX < tabMidX - TAB_HYSTERESIS_PX) tabSideById[p.id] = 'right'
+    } else {
+      // Fire when divider crosses right of midpoint (with hysteresis)
+      if (dividerX > tabMidX + TAB_HYSTERESIS_PX) tabSideById[p.id] = 'left'
+    }
+  }
+}
 
 const SNAP_THRESHOLD = 100
 
@@ -250,7 +381,7 @@ const splitContainer = ref(null)
 const leftColumnContainer = ref(null)
 const rightColumnContainer = ref(null)
 
-const STACK_DIVIDER_HEIGHT_PX = 4
+const STACK_DIVIDER_HEIGHT_PX = 10
 
 const layoutMode = computed(() => {
   // Force single column when snapped left or right
@@ -279,6 +410,7 @@ const startSplitResize = (event) => {
 
   const onMove = (moveEvent) => {
     updateFromPointer(moveEvent.clientX)
+    requestTabFlingRecalc()
   }
 
   const onUp = () => {
@@ -305,6 +437,7 @@ const startSplitResize = (event) => {
   dividerEl?.addEventListener?.('pointerup', onUp)
   dividerEl?.addEventListener?.('pointercancel', onUp)
   updateFromPointer(event.clientX)
+  requestTabFlingRecalc()
 }
 
 // Separate handler for badge drag - uses document-level listeners for smooth dragging
@@ -325,6 +458,7 @@ const startSplitResizeFromBadge = (event) => {
 
   const onMove = (moveEvent) => {
     updateFromPointer(moveEvent.clientX)
+    requestTabFlingRecalc()
     moveEvent.preventDefault()
   }
 
@@ -354,6 +488,7 @@ const startSplitResizeFromBadge = (event) => {
   document.addEventListener('pointerup', onUp)
   document.addEventListener('pointercancel', onUp)
   updateFromPointer(event.clientX)
+  requestTabFlingRecalc()
 }
 
 const computeMaxHeightForIndex = (stackPanels, resizeIndex, containerHeight) => {
@@ -571,11 +706,27 @@ onMounted(async () => {
   connect().catch(err => {
     console.warn('SignalR connection failed (non-critical):', err?.message)
   })
+
+  // Badge should not cover tabs: recompute after initial layout and on resize.
+  await nextTick()
+  ensureTabSides()
+  requestTabFlingRecalc()
+  window.addEventListener('resize', requestTabFlingRecalc)
 })
 
 onUnmounted(() => {
   disconnect()
+  window.removeEventListener('resize', requestTabFlingRecalc)
 })
+
+watch(
+  () => [splitLeftWidth.value, badgeSnapState.value, topVisiblePanels.value?.length],
+  async () => {
+    await nextTick()
+    ensureTabSides()
+    requestTabFlingRecalc()
+  }
+)
 </script>
 
 <style scoped>
@@ -618,7 +769,7 @@ onUnmounted(() => {
   right: 0;
   display: flex;
   align-items: flex-start;
-  gap: 2px;
+  gap: 8px;
   padding: 0 4px;
   background: transparent;
   height: 28px;
@@ -626,6 +777,25 @@ onUnmounted(() => {
   overflow-y: hidden;
   z-index: 1199;
   pointer-events: none;
+}
+
+.tab-shelf {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.tab-shelf-left {
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tab-shelf-right {
+  justify-content: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .main-layout {
@@ -647,14 +817,17 @@ onUnmounted(() => {
 }
 
 .stack-divider {
-  height: 4px;
-  min-height: 4px;
+  height: 10px;
+  min-height: 10px;
   cursor: ns-resize;
-  background: transparent;
+  background: rgba(234, 186, 68, 0.28);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-position: center;
   flex-shrink: 0;
   touch-action: none;
   user-select: none;
-  margin-top: -4px; /* Pull divider up to overlap panel above, removing visual gap */
+  margin-top: -10px; /* Pull divider up to overlap panel above, removing visual gap */
   position: relative;
   z-index: 5; /* Above panel content so it can still be dragged */
 }
@@ -662,6 +835,7 @@ onUnmounted(() => {
 .stack-divider:hover,
 .stack-divider.is-dragging {
   background: rgba(234, 186, 68, 0.65);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.28) 1px, transparent 1px);
 }
 
 .layout-split {
@@ -677,8 +851,8 @@ onUnmounted(() => {
 }
 
 .split-divider {
-  width: 12px;
-  min-width: 12px;
+  width: 10px;
+  min-width: 10px;
   cursor: ew-resize;
   background: #d4851f;
   flex-shrink: 0;
@@ -698,7 +872,7 @@ onUnmounted(() => {
 
 .jaml-badge {
   position: fixed; /* Fixed to viewport top */
-  top: 0; /* At very top of screen */
+  /* top is set via badgeStyle to match the tabs Y */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -706,7 +880,10 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: normal;
   padding: 4px 10px;
-  background: rgba(50, 60, 70, 0.95);
+  background: rgba(50, 60, 70, 0.42);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: #fff;
   height: 28px;
   box-sizing: border-box;

@@ -21,31 +21,24 @@
             placeholder="Explain what this filter finds..."
           />
         </label>
-      </div>
 
-      <div class="pill-row">
-        <div class="pill-group">
-          <span class="pill-label">Deck</span>
-          <button
-            v-for="deck in deckOptions"
-            :key="deck"
-            :class="['pill', { active: formState.deck === deck }]"
-            @click="formState.deck = deck"
-          >
-            {{ deck }}
-          </button>
-        </div>
-        <div class="pill-group">
-          <span class="pill-label">Stake</span>
-          <button
-            v-for="stake in stakeOptions"
-            :key="stake"
-            :class="['pill', { active: formState.stake === stake }]"
-            @click="formState.stake = stake"
-          >
-            {{ stake }}
-          </button>
-        </div>
+        <label class="field">
+          <span>Deck</span>
+          <select v-model="formState.deck">
+            <option v-for="deck in deckOptions" :key="deck" :value="deck">
+              {{ deck }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Stake</span>
+          <select v-model="formState.stake">
+            <option v-for="stake in stakeOptions" :key="stake" :value="stake">
+              {{ stake }}
+            </option>
+          </select>
+        </label>
       </div>
     </section>
 
