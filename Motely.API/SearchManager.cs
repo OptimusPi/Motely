@@ -1004,7 +1004,7 @@ public class SearchManager
             if (file.Length == 0) return;
             var stem = Path.GetFileNameWithoutExtension(file);
             if (stem.Length == 0) return;
-            searchParams.Wordlist = stem;
+            searchParams.SeedSources = stem;
             return;
         }
 

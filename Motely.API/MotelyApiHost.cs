@@ -18,6 +18,27 @@ public record SearchStopRequest(string? SearchId);
 
 public static class MotelyApiHost
 {
+    private static string? FindMotelyRoot()
+    {
+        // Try to find the root by looking for JamlFilters directory
+        var currentDir = Directory.GetCurrentDirectory();
+        var dir = new DirectoryInfo(currentDir);
+        
+        // Walk up the directory tree looking for JamlFilters
+        while (dir != null)
+        {
+            var jamlFiltersPath = Path.Combine(dir.FullName, "JamlFilters");
+            if (Directory.Exists(jamlFiltersPath))
+            {
+                return dir.FullName;
+            }
+            dir = dir.Parent;
+        }
+        
+        // Fallback: use current directory if we can't find it
+        return currentDir;
+    }
+
     public static WebApplication CreateHost(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -49,6 +70,14 @@ public static class MotelyApiHost
         builder.Services.AddSignalR();
 
         var app = builder.Build();
+
+        // Initialize SearchManager with motely root path
+        // Find the root directory by looking for JamlFilters folder
+        var motelyRoot = FindMotelyRoot();
+        if (!string.IsNullOrEmpty(motelyRoot))
+        {
+            SearchManager.Instance.SetMotelyRoot(motelyRoot);
+        }
 
         // Configure middleware
         app.UseCors("AllowAll");

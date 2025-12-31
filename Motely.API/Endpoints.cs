@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Mvc;
+using Motely.API.Services;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 using Motely;
+using Motely.API;
 using Motely.API.Models;
-using Motely.API.Services;
 
 namespace Motely.API;
 
@@ -81,13 +83,12 @@ public static class Endpoints
         var request = await req.ReadFromJsonAsync<SearchStartRequest>();
         if (request?.FilterId == null) return Results.BadRequest();
         
-        // Get filter JAML from filterId
         var filterJaml = FilterService.GetFilterJaml(request.FilterId);
         if (string.IsNullOrEmpty(filterJaml))
             return Results.BadRequest("Filter not found");
         
-        var (immediateResults, searchId) = await SearchManager.Instance.StartSearchAsync(
-            filterJaml, request.Deck ?? "Red", request.Stake ?? "White", 
+        (List<SearchResult> immediateResults, string searchId) = await SearchManager.Instance.StartSearchAsync(
+            filterJaml, "Red", "White", 
             (int)(request.SeedCount ?? 0), 
             request.StartBatch, request.Cutoff, request.SeedSource);
         

@@ -1,6 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Motely.Filters;
+using Motely.Filters.MotelyJson;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using YamlDotNet.Serialization.NodeDeserializers;
 
 namespace Motely;
 
@@ -55,13 +60,11 @@ public static class JamlConfigLoader
 
         try
         {
-            // Pre-process JAML to support type-as-key syntax (but let YAML handle arrays naturally)
-            jamlContent = PreProcessJaml(jamlContent);
-
-            // Parse JAML (YAML-based) to object
+            // Parse YAML with custom deserializer for type-as-key syntax
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()
+                .WithNodeDeserializer(new JamlTypeAsKeyNodeDeserializer())
                 .Build();
 
             var deserializedConfig = deserializer.Deserialize<MotelyJsonConfig>(jamlContent);
@@ -90,169 +93,5 @@ public static class JamlConfigLoader
 
             return false;
         }
-    }
-
-    private static string PreProcessJaml(string jamlContent)
-    {
-        // Support clean type-as-key syntax: "joker: Blueprint" instead of "type: Joker, value: Blueprint"
-        // Support plural values arrays: "jokers: [Blueprint, Brainstorm]" expands to multiple clauses
-        // Singular type keys (case-insensitive matching handled via ToLowerInvariant)
-        var typeKeys = new[] {
-            "joker", "souljoker", "voucher",
-            "tarot", "tarotcard",
-            "planet", "planetcard",
-            "spectral", "spectralcard",
-            "playingcard", "standardcard",
-            "boss", "tag", "smallblindtag", "bigblindtag",
-            "erraticrank", "erraticsuit",
-            "event", "and", "or"
-        };
-
-        // Plural type keys for array syntax (case-insensitive)
-        var pluralTypeKeys = new[] {
-            "jokers", "souljokers", "vouchers",
-            "tarots", "tarotcards",
-            "planets", "planetcards",
-            "spectrals", "spectralcards",
-            "playingcards", "standardcards",
-            "bosses", "tags", "smallblindtags", "bigblindtags",
-            "erraticranks", "erraticsuits", "events"
-        };
-
-        var lines = jamlContent.Split('\n');
-        var result = new System.Text.StringBuilder();
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i];
-            var trimmed = line.TrimStart();
-            bool matched = false;
-
-            // Check if line has type-as-key pattern (e.g., "  - joker: Blueprint")
-            if (trimmed.StartsWith("- "))
-            {
-                // Handle plural arrays (jokers: [Blueprint, Brainstorm])
-                foreach (var pluralKey in pluralTypeKeys)
-                {
-                    var pattern = $"- {pluralKey}:";
-                    if (trimmed.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
-                    {
-                        var indent = line.Substring(0, line.IndexOf('-'));
-                        var singularType = GetSingularTypeName(pluralKey);
-                        var normalizedType = NormalizeTypeName(singularType);
-                        var arrayContent = trimmed.Substring(pattern.Length).Trim();
-                        
-                        // Convert jokers: [Blueprint, Brainstorm] to type: Joker + values: [Blueprint, Brainstorm]
-                        result.AppendLine($"{indent}- type: {normalizedType}");
-                        result.AppendLine($"{indent}  values: {arrayContent}");
-                        matched = true;
-                        break;
-                    }
-                }
-                
-                // Then check for singular type-as-key patterns
-                if (!matched)
-                {
-                    foreach (var typeKey in typeKeys)
-                    {
-                        var pattern = $"- {typeKey}:";
-                        if (trimmed.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
-                        {
-                            var indent = line.Substring(0, line.IndexOf('-'));
-                            var value = trimmed.Substring(pattern.Length).Trim();
-
-                            // Convert to standard format
-                            var normalizedType = NormalizeTypeName(typeKey);
-                            result.AppendLine($"{indent}- type: {normalizedType}");
-
-                            // Special handling for or/and - they use "clauses:" not "value:"
-                            // This allows shorthand: "- or:" followed by nested items
-                            // instead of requiring explicit "clauses:" keyword
-                            if (typeKey.Equals("or", StringComparison.OrdinalIgnoreCase) ||
-                                typeKey.Equals("and", StringComparison.OrdinalIgnoreCase))
-                            {
-                                // "null" comes from js-yaml formatter quirk - treat as empty
-                                // User already has explicit "clauses:" on next line, don't add another
-                                if (value.Equals("null", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    // Just emit type, user has explicit clauses: below
-                                }
-                                else if (string.IsNullOrEmpty(value))
-                                {
-                                    // Normal shorthand: "- or:" with nested items (no explicit clauses:)
-                                    // Add "clauses:" so nested items become the clauses array
-                                    result.AppendLine($"{indent}  clauses:");
-                                }
-                                else
-                                {
-                                    // User wrote "- or: something" which doesn't make sense
-                                    // Just pass it through and let the deserializer error
-                                    result.AppendLine($"{indent}  value: {value}");
-                                }
-                            }
-                            else
-                            {
-                                result.AppendLine($"{indent}  value: {value}");
-                            }
-                            matched = true;
-                            break; // Found match, stop checking other typeKeys
-                        }
-                    }
-                }
-            }
-
-            // Only append original line if no type-as-key pattern was found
-            if (!matched)
-            {
-                result.AppendLine(line);
-            }
-        }
-
-        return result.ToString();
-    }
-
-    private static string GetSingularTypeName(string pluralKey)
-    {
-        return pluralKey.ToLowerInvariant() switch
-        {
-            "jokers" => "joker",
-            "souljokers" => "soulJoker",
-            "vouchers" => "voucher",
-            "tarots" or "tarotcards" => "tarot",
-            "planets" or "planetcards" => "planet",
-            "spectrals" or "spectralcards" => "spectral",
-            "playingcards" or "standardcards" => "playingCard",
-            "bosses" => "boss",
-            "tags" => "tag",
-            "smallblindtags" => "smallBlindTag",
-            "bigblindtags" => "bigBlindTag",
-            "events" => "event",
-            "erraticranks" => "erraticRank",
-            "erraticsuits" => "erraticSuit",
-            _ => pluralKey.TrimEnd('s') // fallback: remove 's'
-        };
-    }
-
-    private static string NormalizeTypeName(string typeKey)
-    {
-        return typeKey.ToLowerInvariant() switch
-        {
-            "joker" => "Joker",
-            "souljoker" => "SoulJoker",
-            "voucher" => "Voucher",
-            "tarot" or "tarotcard" => "TarotCard",
-            "planet" or "planetcard" => "PlanetCard",
-            "spectral" or "spectralcard" => "SpectralCard",
-            "playingcard" or "standardcard" => "PlayingCard",
-            "boss" => "Boss",
-            "smallblindtag" => "SmallBlindTag",
-            "bigblindtag" => "BigBlindTag",
-            "event" => "Event",
-            "erraticrank" => "ErraticRank",
-            "erraticsuit" => "ErraticSuit",
-            "and" => "And",
-            "or" => "Or",
-            _ => typeKey
-        };
     }
 }
