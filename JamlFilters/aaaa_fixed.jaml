@@ -4,7 +4,7 @@ description: showmanthen oops skipper!
 deck: Ghost
 stake: Black
 Must:
-  - Event: LuckyMoney
+  - event: LuckyMoney
     Antes:
       - 1
     Rolls: [0]
