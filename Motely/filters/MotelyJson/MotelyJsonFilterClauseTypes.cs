@@ -1161,6 +1161,24 @@ public static partial class MotelyJsonFilterClauseExtensions
             throw new ArgumentException("Clauses cannot be null or empty");
 
         var eventClauses = new List<MotelyJsonEventFilterClause>();
+        
+        // Recursively collect all event clauses, including from And/Or nested structures
+        CollectEventClauses(clauses, eventClauses);
+
+        if (eventClauses.Count == 0)
+            throw new ArgumentException("No event clauses found");
+
+        return new MotelyJsonEventFilterCriteria { Clauses = eventClauses };
+    }
+
+    /// <summary>
+    /// Recursively collect event clauses from a list of clauses, handling And/Or nesting
+    /// </summary>
+    private static void CollectEventClauses(
+        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses,
+        List<MotelyJsonEventFilterClause> eventClauses
+    )
+    {
         foreach (var clause in clauses)
         {
             if (clause.EventTypeEnum.HasValue)
@@ -1181,12 +1199,12 @@ public static partial class MotelyJsonFilterClauseExtensions
                     }
                 );
             }
+            else if (clause.Clauses != null && clause.Clauses.Count > 0)
+            {
+                // Recursively process nested clauses in And/Or structures
+                CollectEventClauses(clause.Clauses, eventClauses);
+            }
         }
-
-        if (eventClauses.Count == 0)
-            throw new ArgumentException("No event clauses found");
-
-        return new MotelyJsonEventFilterCriteria { Clauses = eventClauses };
     }
 }
 

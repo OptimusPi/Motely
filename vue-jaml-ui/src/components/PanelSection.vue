@@ -179,7 +179,7 @@ watch(
   width: 100%;
   box-sizing: border-box;
   background: var(--panel-dark, #2c3e50);
-  border-top: 3px solid var(--panel-color);
+  border-top: 0;
   border-left: 3px solid var(--panel-color);
   border-right: 3px solid var(--panel-color);
   border-bottom: 3px solid var(--panel-color);
@@ -199,13 +199,17 @@ watch(
 
 .panel-resize-handle {
   position: absolute;
-  top: 0;
+  top: -3px; /* overlay/replace the old 3px top border */
   left: 0;
   right: 0;
-  height: 24px;
+  height: 10px;
   cursor: ns-resize;
   z-index: 10;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.03);
+  border-top: 3px solid var(--panel-color);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-position: center;
   touch-action: none;
   user-select: none;
 }

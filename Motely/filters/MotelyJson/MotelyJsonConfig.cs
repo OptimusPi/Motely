@@ -457,13 +457,6 @@ public class MotelyJsonConfig
                             if (MotelyEnumParser.TryParseJoker(Value, out var joker))
                             {
                                 JokerEnum = joker;
-
-                                // Example SIMD batch processing
-                                var jokerVector = MotelySimdUtils.MapJokersToVector(new[] { joker });
-                                var filterVector = new Vector<int>(new int[] { (int)MotelyJoker.Perkeo });
-                                var result = MotelySimdUtils.BatchProcessJokers(jokerVector, filterVector);
-
-                                Console.WriteLine($"SIMD Result: {result}");
                             }
                             else
                             {
@@ -1527,22 +1520,5 @@ public class MotelyJsonConfig
         }
 
         // Add similar methods for other enums as needed
-    }
-
-    // Add SIMD-specific enhancements for batch processing
-    public static class MotelySimdUtils
-    {
-        public static Vector<int> BatchProcessJokers(Vector<int> jokerValues, Vector<int> filterValues)
-        {
-            // Example SIMD operation: Compare joker values with filter values
-            return Vector.Equals(jokerValues, filterValues);
-        }
-
-        public static Vector<int> MapJokersToVector(IEnumerable<MotelyJoker> jokers)
-        {
-            // Map joker enums to a SIMD-friendly vector representation
-            var jokerArray = jokers.Select(j => (int)j).ToArray();
-            return new Vector<int>(jokerArray);
-        }
     }
 }
