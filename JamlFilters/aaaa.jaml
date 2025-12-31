@@ -3,6 +3,11 @@ author: pifreak
 description: showmanthen oops skipper!
 deck: Ghost
 stake: Black
+mustNot:
+  - event: LuckyMult
+    antes:
+      - 1
+    rolls: [0]
 must:
   - event: LuckyMoney
     antes:
@@ -12,33 +17,45 @@ should:
   - event: LuckyMoney
     antes:
       - 1
-    rolls: [0]
-
-  - voucher: Telescope
-    antes: [1,2]
-  - voucher: Observatory
-    antes: [2,3]
-  - soulJoker: Perkeo
-    antes: [1, 2, 3]
-  
+    rolls: [0,1]
   - event: LuckyMoney
-    rolls: [0]
-    antes: [1, 2, 3, 4]
+    antes:
+      - 2
+    rolls: [0,1]
+  - event: LuckyMoney
+    antes:
+      - 3
+    rolls: [0,1]
+  - event: LuckyMoney
+    antes:
+      - 4
+    rolls: [0,1]
+  - event: LuckyMoney
+    antes:
+      - 5
+    rolls: [0,1]
+  - event: LuckyMoney
+    antes:
+      - 6
+    rolls: [0,1]
+  - event: LuckyMoney
+    antes:
+      - 7
+    rolls: [0,1]
     
-
   - and:
       - smallBlindTag: NegativeTag
         antes: [2]
         score: 100
       - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [2]
-            shopSlots: [2, 3]
-            score: 100
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [2]
-            shopSlots: [4, 5]
-            score: 100
+        - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
+          antes: [2]
+          shopSlots: [2, 3]
+          score: 100
+        - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
+          antes: [2]
+          shopSlots: [4, 5]
+          score: 100
   - and:
       - smallBlindTag: NegativeTag
         antes: [3]

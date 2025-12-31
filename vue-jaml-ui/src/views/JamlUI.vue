@@ -95,11 +95,13 @@
           <div 
             class="jaml-badge"
             :class="badgeSnapClass"
+            :style="badgeStyle"
+            @pointerdown.stop="startSplitResizeFromBadge"
           >
             <GripVertical v-if="badgeSnapState !== 'left'" :size="16" />
-            <Home :size="16" @click.stop="goHome" class="icon-btn" />
+            <Home :size="16" @click.stop="goHome" @pointerdown.stop class="icon-btn" />
             <span class="logo">JAML</span>
-            <Settings :size="16" @click.stop="toggleSettings" class="icon-btn" />
+            <Settings :size="16" @click.stop="toggleSettings" @pointerdown.stop class="icon-btn" />
             <GripVertical v-if="badgeSnapState !== 'right'" :size="16" />
           </div>
         </div>
@@ -214,12 +216,8 @@ const panels = reactive([
 const leftPanels = computed(() => panels.slice(0, 2))
 const rightPanels = computed(() => panels.slice(2))
 const topVisiblePanels = computed(() => {
-  // For split layout, show tabs from left column's first panel
-  // For stack layout, show tab from first panel
-  if (layoutMode.value === 'split') {
-    return leftPanels.value.slice(0, 1)
-  }
-  return panels.slice(0, 1)
+  // Show all panels in tabs
+  return panels
 })
 
 const showSettings = ref(false)
@@ -228,6 +226,22 @@ const splitLeftWidth = ref(50)
 // Badge positioning state
 const badgeSnapState = ref('center') // 'left', 'center', 'right'
 const badgeSnapClass = computed(() => `badge-snap-${badgeSnapState.value}`)
+
+// Badge style - position at top but slide horizontally with divider
+// Since badge is position: fixed, we calculate its position based on viewport width
+// The split container is 100% width, so splitLeftWidth percentage directly maps to viewport
+const badgeStyle = computed(() => {
+  if (badgeSnapState.value === 'left') {
+    return { left: '0', transform: 'none' }
+  } else if (badgeSnapState.value === 'right') {
+    return { left: 'auto', right: '0', transform: 'none' }
+  } else {
+    // Center: position badge at the divider's horizontal position
+    // splitLeftWidth is percentage of split container, which is 100% of viewport
+    const leftPercent = splitLeftWidth.value
+    return { left: `${leftPercent}%`, transform: 'translateX(-50%)' }
+  }
+})
 
 const SNAP_THRESHOLD = 100
 
@@ -293,6 +307,55 @@ const startSplitResize = (event) => {
   updateFromPointer(event.clientX)
 }
 
+// Separate handler for badge drag - uses document-level listeners for smooth dragging
+const startSplitResizeFromBadge = (event) => {
+  if (event.button !== 0) return
+  event.preventDefault()
+  event.stopPropagation() // Don't trigger divider drag
+
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+
+  const updateFromPointer = (clientX) => {
+    const rect = splitContainer.value?.getBoundingClientRect?.()
+    if (!rect || rect.width <= 0) return
+    const percent = ((clientX - rect.left) / rect.width) * 100
+    splitLeftWidth.value = clamp(percent, 0, 100)
+  }
+
+  const onMove = (moveEvent) => {
+    updateFromPointer(moveEvent.clientX)
+    moveEvent.preventDefault()
+  }
+
+  const onUp = () => {
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+
+    // Snap logic on release
+    if (splitLeftWidth.value < 10) {
+      badgeSnapState.value = 'left'
+      splitLeftWidth.value = 0
+    } else if (splitLeftWidth.value > 90) {
+      badgeSnapState.value = 'right'
+      splitLeftWidth.value = 100
+    } else {
+      badgeSnapState.value = 'center'
+    }
+
+    // Remove document-level listeners
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onUp)
+    document.removeEventListener('pointercancel', onUp)
+  }
+
+  // Use document-level listeners for smooth dragging (like stack dividers)
+  document.addEventListener('pointermove', onMove)
+  document.addEventListener('pointerup', onUp)
+  document.addEventListener('pointercancel', onUp)
+  updateFromPointer(event.clientX)
+}
+
 const computeMaxHeightForIndex = (stackPanels, resizeIndex, containerHeight) => {
   let minBelow = 0
   for (let i = resizeIndex + 1; i < stackPanels.length; i++) {
@@ -303,41 +366,76 @@ const computeMaxHeightForIndex = (stackPanels, resizeIndex, containerHeight) => 
   return containerHeight - minBelow - dividerSpace
 }
 
+let isStackDragging = false
+let stackResizeIndex = -1
+let stackStartY = 0
+let stackStartHeight = 0
+
 const startStackResize = (resizeIndex, event) => {
-  if (event.button !== 0) return
+  if (event.button !== 0 && event.type !== 'touchstart') return
   event.preventDefault()
+  event.stopPropagation()
+
+  isStackDragging = true
+  stackResizeIndex = resizeIndex
+
+  const stackPanels = panels
+  if (!stackPanels[resizeIndex]) return
 
   const dividerEl = event.currentTarget
-  dividerEl?.setPointerCapture?.(event.pointerId)
   dividerEl?.classList?.add?.('is-dragging')
   document.body.style.cursor = 'row-resize'
   document.body.style.userSelect = 'none'
 
+  // Get starting position (works for both mouse and touch)
+  stackStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
+  stackStartHeight = stackPanels[resizeIndex].defaultHeight || stackPanels[resizeIndex].minHeight || 200
+
+  // Use document-level listeners for smooth dragging (like SplitPane)
+  document.addEventListener('mousemove', handleStackMove)
+  document.addEventListener('touchmove', handleStackMove, { passive: false })
+  document.addEventListener('mouseup', handleStackEnd)
+  document.addEventListener('touchend', handleStackEnd)
+  document.addEventListener('touchcancel', handleStackEnd)
+}
+
+const handleStackMove = (moveEvent) => {
+  if (!isStackDragging || stackResizeIndex < 0) return
+
   const stackPanels = panels
-  const containerHeight = stackContainer.value?.getBoundingClientRect?.().height
-  if (!containerHeight) return
+  if (!stackPanels[stackResizeIndex]) return
 
-  const startY = event.clientY
-  const startHeight = stackPanels[resizeIndex].defaultHeight
+  // Get current position (works for both mouse and touch)
+  const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0]?.clientY) || 0
+  const deltaY = currentY - stackStartY
 
-  const onMove = (moveEvent) => {
-    const desired = startHeight + (moveEvent.clientY - startY)
-    stackPanels[resizeIndex].defaultHeight = desired
-  }
+  // NO LIMITATIONS - let it drag freely!
+  const newHeight = stackStartHeight + deltaY
+  stackPanels[stackResizeIndex].defaultHeight = newHeight
 
-  const onUp = () => {
-    dividerEl?.releasePointerCapture?.(event.pointerId)
-    dividerEl?.classList?.remove?.('is-dragging')
-    dividerEl?.removeEventListener?.('pointermove', onMove)
-    dividerEl?.removeEventListener?.('pointerup', onUp)
-    dividerEl?.removeEventListener?.('pointercancel', onUp)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-  }
+  moveEvent.preventDefault()
+}
 
-  dividerEl?.addEventListener?.('pointermove', onMove)
-  dividerEl?.addEventListener?.('pointerup', onUp)
-  dividerEl?.addEventListener?.('pointercancel', onUp)
+const handleStackEnd = () => {
+  if (!isStackDragging) return
+
+  isStackDragging = false
+  stackResizeIndex = -1
+
+  // Remove all dragging classes
+  document.querySelectorAll('.stack-divider.is-dragging').forEach(el => {
+    el.classList.remove('is-dragging')
+  })
+
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+
+  // Remove document-level listeners
+  document.removeEventListener('mousemove', handleStackMove)
+  document.removeEventListener('touchmove', handleStackMove)
+  document.removeEventListener('mouseup', handleStackEnd)
+  document.removeEventListener('touchend', handleStackEnd)
+  document.removeEventListener('touchcancel', handleStackEnd)
 }
 
 const startColumnResize = (side, resizeIndex, event) => {
@@ -515,7 +613,7 @@ onUnmounted(() => {
 
 .tab-overflow-row {
   position: fixed;
-  top: 0;
+  top: 28px; /* Start below badge */
   left: 0;
   right: 0;
   display: flex;
@@ -533,7 +631,7 @@ onUnmounted(() => {
 .main-layout {
   display: flex;
   position: relative;
-  padding: 28px 0 0 0;
+  padding: 56px 0 0 0; /* Account for badge (28px) + tabs (28px) */
   box-sizing: border-box;
   height: 100vh;
   overflow: hidden;
@@ -556,6 +654,9 @@ onUnmounted(() => {
   flex-shrink: 0;
   touch-action: none;
   user-select: none;
+  margin-top: -4px; /* Pull divider up to overlap panel above, removing visual gap */
+  position: relative;
+  z-index: 5; /* Above panel content so it can still be dragged */
 }
 
 .stack-divider:hover,
@@ -588,6 +689,7 @@ onUnmounted(() => {
   align-items: flex-start;
   justify-content: center;
   padding-top: 0;
+  z-index: 2000; /* High z-index to be above panels, but below modals (10000) */
 }
 
 .split-divider:hover {
@@ -595,8 +697,8 @@ onUnmounted(() => {
 }
 
 .jaml-badge {
-  position: sticky;
-  top: 0;
+  position: fixed; /* Fixed to viewport top */
+  top: 0; /* At very top of screen */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -611,7 +713,9 @@ onUnmounted(() => {
   user-select: none;
   border-radius: 0 0 8px 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
+  pointer-events: auto; /* Allow dragging the badge */
+  cursor: ew-resize; /* Show resize cursor for dragging */
+  z-index: 2002; /* Above tabs (1199) */
 }
 
 .jaml-badge.badge-snap-left {
@@ -655,21 +759,6 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-.tab-overflow-row {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 0 4px;
-  background: transparent;
-  height: 28px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  pointer-events: none;
-}
 
 .panel-tab-inline {
   height: 28px;
