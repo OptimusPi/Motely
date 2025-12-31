@@ -40,8 +40,8 @@ public class SearchService
             throw new ArgumentNullException(nameof(criteria), "Search criteria must be provided to prevent unlimited seed generation.");
         }
 
-        // Detect burst mode: single-seed/wordlist/dblist sources
-        var isBurst = criteria.SourceType == "single" || criteria.SourceType == "wordlist" || criteria.SourceType == "dblist";
+        // Detect burst mode: single-seed/seedsources sources
+        var isBurst = criteria.SourceType == "single" || criteria.SourceType == "seedsources";
 
         if (isBurst)
         {

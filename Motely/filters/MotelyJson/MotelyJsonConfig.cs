@@ -169,12 +169,15 @@ public class MotelyJsonConfig
         MotelyScoreAggregationMode.Sum;
 
     [JsonPropertyName("must")]
+    [YamlMember(Alias = "must")]
     public List<MotleyJsonFilterClause> Must { get; set; } = new();
 
     [JsonPropertyName("should")]
+    [YamlMember(Alias = "should")]
     public List<MotleyJsonFilterClause> Should { get; set; } = new();
 
     [JsonPropertyName("mustNot")]
+    [YamlMember(Alias = "mustNot")]
     public List<MotleyJsonFilterClause> MustNot { get; set; } = new();
 
     // PERFORMANCE: Pre-partitioned clauses to avoid repeated iteration
@@ -197,22 +200,28 @@ public class MotelyJsonConfig
     public class MotleyJsonFilterClause
     {
         [JsonPropertyName("type")]
+        [YamlMember(Alias = "type")]
         public string Type { get; set; } = "";
 
         [JsonPropertyName("value")]
+        [YamlMember(Alias = "value")]
         public string? Value { get; set; }
 
         [JsonPropertyName("values")]
+        [YamlMember(Alias = "values")]
         public string[]? Values { get; set; }
 
         [JsonPropertyName("label")]
+        [YamlMember(Alias = "label")]
         public string? Label { get; set; }
 
         [JsonPropertyName("antes")]
+        [YamlMember(Alias = "antes")]
         public int[]? Antes { get; set; }
 
         // Nested clauses for And/Or grouping
         [JsonPropertyName("clauses")]
+        [YamlMember(Alias = "clauses")]
         public List<MotleyJsonFilterClause>? Clauses { get; set; }
 
         // Inversion flag for mustNot clauses (set internally, not from JSON)
@@ -227,21 +236,27 @@ public class MotelyJsonConfig
         public bool AntesWasExplicitlySet { get; set; } = false;
 
         [JsonPropertyName("score")]
+        [YamlMember(Alias = "score")]
         public int Score { get; set; } = 1;
 
         [JsonPropertyName("mode")]
+        [YamlMember(Alias = "mode")]
         public string? Mode { get; set; } // Per-clause scoring mode (for Or/And clauses)
 
         [JsonPropertyName("min")]
+        [YamlMember(Alias = "min")]
         public int? Min { get; set; }
 
         [JsonPropertyName("filterOrder")]
+        [YamlMember(Alias = "filterOrder")]
         public int? FilterOrder { get; set; } // Optional ordering for slice chain optimization
 
         [JsonPropertyName("edition")]
+        [YamlMember(Alias = "edition")]
         public string? Edition { get; set; }
 
         [JsonPropertyName("stickers")]
+        [YamlMember(Alias = "stickers")]
         public List<string>? Stickers { get; set; }
 
         // PlayingCard specific
@@ -276,9 +291,11 @@ public class MotelyJsonConfig
 
         // Event-specific properties
         [JsonPropertyName("eventType")]
+        [YamlMember(Alias = "eventType")]
         public string? EventType { get; set; }
 
         [JsonPropertyName("rolls")]
+        [YamlMember(Alias = "rolls")]
         public int[]? Rolls { get; set; }
 
         [JsonIgnore]
@@ -737,6 +754,15 @@ public class MotelyJsonConfig
                     && Enum.TryParse<MotelyItemEnhancement>(Enhancement, true, out var enhancement)
                 )
                     EnhancementEnum = enhancement;
+            }
+
+            // Parse EventType for Event filters
+            if (!string.IsNullOrEmpty(EventType))
+            {
+                if (Enum.TryParse<MotelyEventType>(EventType, true, out var eventType))
+                    EventTypeEnum = eventType;
+                else
+                    throw new ArgumentException($"'{EventType}' is not a valid EventType value.");
             }
         }
 

@@ -74,15 +74,14 @@ const panelStyle = computed(() => {
   if (props.fillRemaining) {
     return {
       flex: '1 1 0',
-      minHeight: props.minHeight + 'px',
       '--panel-color': `var(--balatro-${props.color})`
     };
   }
 
+  // NO LIMITATIONS - use whatever height the user drags to!
   return {
     flex: `0 0 ${height.value}px`,
     height: `${height.value}px`,
-    minHeight: props.minHeight + 'px',
     '--panel-color': `var(--balatro-${props.color})`
   };
 });
@@ -91,39 +90,58 @@ const toggleCollapse = () => {
   // Placeholder for future collapse/expand behavior
 };
 
+let isPanelDragging = false
+let panelStartY = 0
+let panelStartHeight = 0
+
 const startResize = (event) => {
-  if (event.button !== 0) return
+  if (event.button !== 0 && event.type !== 'touchstart') return
   event.preventDefault()
   event.stopPropagation()
 
-  const handle = event.currentTarget
-  handle?.setPointerCapture?.(event.pointerId)
+  isPanelDragging = true
+  panelStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
+  panelStartHeight = height.value
+
   document.body.style.cursor = 'ns-resize'
   document.body.style.userSelect = 'none'
 
-  const startY = event.clientY
-  const startHeight = height.value
+  // Use document-level listeners for smooth dragging (like SplitPane)
+  document.addEventListener('mousemove', handlePanelMove)
+  document.addEventListener('touchmove', handlePanelMove, { passive: false })
+  document.addEventListener('mouseup', handlePanelEnd)
+  document.addEventListener('touchend', handlePanelEnd)
+  document.addEventListener('touchcancel', handlePanelEnd)
+}
 
-  const onMove = (moveEvent) => {
-    const deltaY = moveEvent.clientY - startY
-    const newHeight = Math.max(props.minHeight, startHeight + deltaY)
-    height.value = newHeight
-    emit('resize', newHeight)
-  }
+const handlePanelMove = (moveEvent) => {
+  if (!isPanelDragging) return
 
-  const onUp = () => {
-    handle?.releasePointerCapture?.(event.pointerId)
-    handle?.removeEventListener?.('pointermove', onMove)
-    handle?.removeEventListener?.('pointerup', onUp)
-    handle?.removeEventListener?.('pointercancel', onUp)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-  }
+  const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0]?.clientY) || 0
+  const deltaY = currentY - panelStartY
 
-  handle?.addEventListener?.('pointermove', onMove)
-  handle?.addEventListener?.('pointerup', onUp)
-  handle?.addEventListener?.('pointercancel', onUp)
-};
+  // NO LIMITATIONS - let it drag freely!
+  const newHeight = panelStartHeight + deltaY
+  height.value = newHeight
+  emit('resize', newHeight)
+
+  moveEvent.preventDefault()
+}
+
+const handlePanelEnd = () => {
+  if (!isPanelDragging) return
+
+  isPanelDragging = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+
+  // Remove document-level listeners
+  document.removeEventListener('mousemove', handlePanelMove)
+  document.removeEventListener('touchmove', handlePanelMove)
+  document.removeEventListener('mouseup', handlePanelEnd)
+  document.removeEventListener('touchend', handlePanelEnd)
+  document.removeEventListener('touchcancel', handlePanelEnd)
+}
 
 onMounted(() => {
   if (props.defaultHeight) {
@@ -169,6 +187,13 @@ watch(
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  max-height: 100vh; /* Ensure panels never exceed viewport */
+}
+
+.panel-content {
+  flex: 1;
+  overflow: auto; /* Allow scrolling if content exceeds panel height */
   min-height: 0;
 }
 
