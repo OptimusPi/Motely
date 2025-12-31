@@ -1183,12 +1183,16 @@ public static partial class MotelyJsonFilterClauseExtensions
         {
             if (clause.EventTypeEnum.HasValue)
             {
+                DebugLogger.Log($"[DEBUG] Found event clause: EventType={clause.EventTypeEnum}, EffectiveAntes=[{string.Join(",", clause.EffectiveAntes)}], Rolls=[{string.Join(",", clause.Rolls ?? [])}]");
+                
                 bool[] wantedAntes = new bool[40];
                 foreach (var ante in clause.EffectiveAntes)
                 {
                     if (ante >= 0 && ante < wantedAntes.Length)
                         wantedAntes[ante] = true;
                 }
+                
+                DebugLogger.Log($"[DEBUG] WantedAntes has {wantedAntes.Count(b => b)} true values");
 
                 eventClauses.Add(
                     new MotelyJsonEventFilterClause
