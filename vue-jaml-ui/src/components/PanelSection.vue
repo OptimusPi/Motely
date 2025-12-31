@@ -7,6 +7,7 @@
       'fill-remaining': fillRemaining
     }"
   >
+
     <!-- Manilla-style tab (title lives here, not on the grab bar) -->
     <div
       v-if="showTab"
@@ -25,12 +26,12 @@
       :style="panelStyle"
     >
       <!-- The top colored edge IS the grab bar (hitbox matches the visible edge) -->
-      <div
+      <div 
         v-if="showTopGrab"
         class="panel-top-grab"
         @pointerdown.prevent.stop="emit('topgrab', $event)"
       ></div>
-
+      
       <div class="panel-content">
         <slot />
       </div>
@@ -63,6 +64,7 @@ const props = defineProps({
     type: String,
     default: null
   },
+
   showTopGrab: {
     type: Boolean,
     default: false
@@ -87,6 +89,7 @@ const props = defineProps({
   }
 });
 
+
 const emit = defineEmits(['resize', 'collapse', 'topgrab']);
 
 const panelWrapper = ref(null);
@@ -100,6 +103,7 @@ const panelStyle = computed(() => {
       '--panel-color': `var(--balatro-${props.color})`
     };
   }
+
 
   // NO LIMITATIONS - use whatever height the user drags to!
   return {
@@ -149,33 +153,36 @@ watch(
   width: 100%;
   box-sizing: border-box;
   background: var(--panel-dark, #2c3e50);
+
   /* Style contract (A): Balatro frame — thick top border, thin sides/bottom, flat/square */
-  --panel-top-h: 8px;
+  --panel-top-h: 10px; /* Increased by 2px */
   border-top: var(--panel-top-h) solid var(--panel-color);
-  border-left: 2px solid var(--panel-color);
-  border-right: 2px solid var(--panel-color);
-  border-bottom: 2px solid var(--panel-color);
+  border-left: 4px solid var(--panel-color); /* Increased by 2px */
+  border-right: 4px solid var(--panel-color); /* Increased by 2px */
+  border-bottom: 4px solid var(--panel-color); /* Increased by 2px */
   border-radius: 0;
   box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
+
   max-height: 100vh; /* Ensure panels never exceed viewport */
 }
 
 .panel-top-grab {
   position: absolute;
-  top: 0;
+  top: -2px; /* Scoot up to align with colored border */
   left: 0;
   right: 0;
-  height: var(--panel-top-h);
+  height: calc(var(--panel-top-h) + 2px); /* Extend to cover the border */
   cursor: ns-resize;
   z-index: 40;
   background: transparent;
   touch-action: none;
   user-select: none;
 }
+
 
 .panel-tab {
   position: absolute;
