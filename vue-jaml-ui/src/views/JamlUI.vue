@@ -1,9 +1,9 @@
 <template>
   <div class="jaml-ui">
-    <!-- Panel tabs at top edge -->
+    <!-- Top tab bar: always shows the top-most open panel per side + any collapsed tabs -->
     <div ref="tabRow" class="tab-overflow-row">
       <div class="tab-shelf tab-shelf-left">
-        <template v-for="panel in leftTabPanels" :key="panel.id">
+        <template v-for="panel in tabRowLeft" :key="panel.id">
           <div
             class="panel-tab-inline"
             :class="`panel-tab-${panel.color}`"
@@ -16,7 +16,7 @@
       </div>
 
       <div class="tab-shelf tab-shelf-right">
-        <template v-for="panel in rightTabPanels" :key="panel.id">
+        <template v-for="panel in tabRowRight" :key="panel.id">
           <div
             class="panel-tab-inline"
             :class="`panel-tab-${panel.color}`"
@@ -34,23 +34,20 @@
       class="main-layout" 
       :class="`layout-${layoutMode}`"
     >
-      <div v-if="layoutMode === 'stack'" ref="stackContainer" class="layout-stack">
+      <div v-if="layoutMode === 'stack'" class="layout-stack">
         <template v-for="(panel, index) in panels" :key="panel.id">
-          <div
-            v-if="index > 0"
-            class="stack-divider"
-            @pointerdown="startStackResize(index - 1, $event)"
-          ></div>
-
           <PanelSection
             :color="panel.color"
             :label="panel.label"
             :badge="panel.badge"
+            :show-tab="index !== 0"
+            tab-align="left"
+            :show-top-grab="index > 0"
+            @topgrab="startStackResize(index - 1, $event)"
             :min-height="panel.minHeight"
             :default-height="panel.defaultHeight"
             :layout-mode="layoutMode"
             :fill-remaining="index === panels.length - 1"
-            :show-top-grab="false"
             @resize="onPanelResize(panel.id, $event)"
             @collapse="onPanelCollapse(panel.id, $event)"
           >
@@ -78,21 +75,18 @@
       <div v-else ref="splitContainer" class="layout-split">
         <div ref="leftColumnContainer" class="split-column split-left" :style="{ width: splitLeftWidth + '%' }">
           <template v-for="(panel, index) in leftPanels" :key="panel.id">
-            <div
-              v-if="index > 0"
-              class="stack-divider"
-              @pointerdown="startColumnResize('left', index - 1, $event)"
-            ></div>
-
             <PanelSection
               :color="panel.color"
               :label="panel.label"
               :badge="panel.badge"
+              :show-tab="index !== 0"
+              tab-align="left"
+              :show-top-grab="index > 0"
+              @topgrab="startColumnResize('left', index - 1, $event)"
               :min-height="panel.minHeight"
               :default-height="panel.defaultHeight"
               :layout-mode="'stack'"
               :fill-remaining="index === leftPanels.length - 1"
-              :show-top-grab="false"
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
             >
@@ -112,7 +106,7 @@
             class="jaml-badge"
             :class="badgeSnapClass"
             :style="badgeStyle"
-            @pointerdown.stop="startSplitResizeFromBadge"
+            @pointerdown.stop="startSplitResize"
             ref="badgeEl"
           >
             <GripVertical v-if="badgeSnapState !== 'left'" :size="16" />
@@ -125,21 +119,18 @@
 
         <div ref="rightColumnContainer" class="split-column split-right" :style="{ width: (100 - splitLeftWidth) + '%' }">
           <template v-for="(panel, index) in rightPanels" :key="panel.id">
-            <div
-              v-if="index > 0"
-              class="stack-divider"
-              @pointerdown="startColumnResize('right', index - 1, $event)"
-            ></div>
-
             <PanelSection
               :color="panel.color"
               :label="panel.label"
               :badge="panel.badge"
+              :show-tab="index !== 0"
+              tab-align="right"
+              :show-top-grab="index > 0"
+              @topgrab="startColumnResize('right', index - 1, $event)"
               :min-height="panel.minHeight"
               :default-height="panel.defaultHeight"
               :layout-mode="'split'"
               :fill-remaining="index === rightPanels.length - 1"
-              :show-top-grab="false"
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
             >
@@ -248,72 +239,21 @@ const TOP_TABS_PX = 28 // phone notch margin; tabs live at top: 28px and are 28p
 
 const tabRow = ref(null)
 const badgeEl = ref(null)
-const badgeForceSide = ref(null) // legacy (no longer used for positioning)
 const BADGE_EDGE_GAP_PX = 8
-
-let badgeRecalcPending = false
-const requestBadgeRecalc = () => {
-  if (badgeRecalcPending) return
-  badgeRecalcPending = true
-  requestAnimationFrame(() => {
-    badgeRecalcPending = false
-    recomputeBadgeForceSide()
-  })
-}
-
-const recomputeBadgeForceSide = () => {
-  // Only avoid overlap while centered; snapped modes should be stable.
-  if (badgeSnapState.value !== 'center') {
-    badgeForceSide.value = null
-    return
-  }
-  if (!tabRow.value || !badgeEl.value || typeof window === 'undefined') {
-    badgeForceSide.value = null
-    return
-  }
-
-  const badgeRect = badgeEl.value.getBoundingClientRect?.()
-  const badgeWidth = badgeRect?.width || 120
-
-  // Theoretical centered badge bounds (avoid depending on forced-side rendering)
-  const centerX = (splitLeftWidth.value / 100) * window.innerWidth
-  const badgeLeft = centerX - badgeWidth / 2
-  const badgeRight = centerX + badgeWidth / 2
-
-  let overlapsAnyTab = false
-  const tabs = tabRow.value.querySelectorAll?.('.panel-tab-inline') || []
-  for (const tab of tabs) {
-    const r = tab.getBoundingClientRect?.()
-    if (!r || r.width <= 0) continue
-    // Tabs and badge share the same Y band, so horizontal overlap is the important part.
-    if (badgeRight > r.left && badgeLeft < r.right) {
-      overlapsAnyTab = true
-      break
-    }
-  }
-
-  if (!overlapsAnyTab) {
-    badgeForceSide.value = null
-    return
-  }
-
-  // Move to opposite side of the divider when it would cover a tab.
-  badgeForceSide.value = splitLeftWidth.value < 50 ? 'right' : 'left'
-}
 
 // Badge style - always attached to the divider (never teleports as an overlap avoidance mechanism).
 const badgeStyle = computed(() => {
   const base = { top: `${TOP_TABS_PX}px` }
 
   // Position by divider percentage
-  const leftPercent = splitLeftWidth.value
-  const anchored = { ...base, left: `${leftPercent}%` }
+  const anchored = { ...base, left: `${splitLeftWidth.value ?? 0}%` }
 
-  // Flagpole feel at extremes: keep badge visible/draggable when divider is at 0%/100%.
-  if (badgeSnapState.value === 'left') {
+  // Flagpole feel at extremes: keep badge visible/draggable when divider is at/near 0%/100%.
+  // IMPORTANT: do this even while dragging (badgeSnapState stays 'center' until pointerup).
+  if (badgeSnapState.value === 'left' || splitLeftWidth.value <= 1) {
     return { ...anchored, transform: `translateX(${BADGE_EDGE_GAP_PX}px)` }
   }
-  if (badgeSnapState.value === 'right') {
+  if (badgeSnapState.value === 'right' || splitLeftWidth.value >= 99) {
     return { ...anchored, transform: `translateX(calc(-100% - ${BADGE_EDGE_GAP_PX}px))` }
   }
 
@@ -321,67 +261,36 @@ const badgeStyle = computed(() => {
   return { ...anchored, transform: 'translateX(-50%)' }
 })
 
-// --- Tab fling state (two shelves) ---
-const tabSideById = reactive({}) // panelId -> 'left' | 'right'
-
-const ensureTabSides = () => {
-  for (const p of topVisiblePanels.value) {
-    if (!tabSideById[p.id]) tabSideById[p.id] = 'left'
-  }
-}
-
-const leftTabPanels = computed(() => {
-  return topVisiblePanels.value.filter(p => tabSideById[p.id] !== 'right')
+// --- Active tabs per side + placeholder collapsed tabs (future hook) ---
+const activeLeftTab = computed(() => {
+  if (layoutMode.value === 'split') return leftPanels.value[0] || null
+  return panels[0] || null
+})
+const activeRightTab = computed(() => {
+  if (layoutMode.value === 'split') return rightPanels.value[0] || null
+  return null
 })
 
-const rightTabPanels = computed(() => {
-  return topVisiblePanels.value.filter(p => tabSideById[p.id] === 'right')
+const collapsedLeftTabs = computed(() => [])
+const collapsedRightTabs = computed(() => [])
+
+const tabRowLeft = computed(() => {
+  const arr = []
+  if (activeLeftTab.value) arr.push(activeLeftTab.value)
+  return arr.concat(collapsedLeftTabs.value)
 })
 
-const TAB_HYSTERESIS_PX = 8
+const tabRowRight = computed(() => {
+  const arr = []
+  if (activeRightTab.value) arr.push(activeRightTab.value)
+  return arr.concat(collapsedRightTabs.value)
+})
 
-let tabFlingPending = false
-const requestTabFlingRecalc = () => {
-  if (tabFlingPending) return
-  tabFlingPending = true
-  requestAnimationFrame(() => {
-    tabFlingPending = false
-    recomputeTabSides()
-  })
-}
-
-const recomputeTabSides = () => {
-  ensureTabSides()
-  if (!tabRow.value || typeof window === 'undefined') return
-
-  const dividerX = (splitLeftWidth.value / 100) * window.innerWidth
-
-  for (const p of topVisiblePanels.value) {
-    const el = tabRow.value.querySelector?.(`.panel-tab-inline[data-panel-id="${p.id}"]`)
-    if (!el) continue
-    const r = el.getBoundingClientRect?.()
-    if (!r || r.width <= 0) continue
-    const tabMidX = r.left + r.width / 2
-
-    const side = tabSideById[p.id] || 'left'
-    if (side === 'left') {
-      // Fire when divider crosses left of midpoint (with hysteresis)
-      if (dividerX < tabMidX - TAB_HYSTERESIS_PX) tabSideById[p.id] = 'right'
-    } else {
-      // Fire when divider crosses right of midpoint (with hysteresis)
-      if (dividerX > tabMidX + TAB_HYSTERESIS_PX) tabSideById[p.id] = 'left'
-    }
-  }
-}
-
-const SNAP_THRESHOLD = 100
-
-const stackContainer = ref(null)
 const splitContainer = ref(null)
 const leftColumnContainer = ref(null)
 const rightColumnContainer = ref(null)
 
-const STACK_DIVIDER_HEIGHT_PX = 10
+// No separate divider elements between panels; the panel's own top border is the grab bar.
 
 const layoutMode = computed(() => {
   // Force single column when snapped left or right
@@ -390,36 +299,26 @@ const layoutMode = computed(() => {
   }
   return 'split'
 })
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
 const startSplitResize = (event) => {
   if (event.button !== 0) return
   event.preventDefault()
 
-  const dividerEl = event.currentTarget
-  dividerEl?.setPointerCapture?.(event.pointerId)
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
 
-  const updateFromPointer = (clientX) => {
+  const onMove = (moveEvent) => {
     const rect = splitContainer.value?.getBoundingClientRect?.()
     if (!rect || rect.width <= 0) return
-    const percent = ((clientX - rect.left) / rect.width) * 100
-    splitLeftWidth.value = clamp(percent, 0, 100)
-  }
-
-  const onMove = (moveEvent) => {
-    updateFromPointer(moveEvent.clientX)
-    requestTabFlingRecalc()
+    splitLeftWidth.value = ((moveEvent.clientX - rect.left) / rect.width) * 100
   }
 
   const onUp = () => {
-    dividerEl?.releasePointerCapture?.(event.pointerId)
-    dividerEl?.removeEventListener?.('pointermove', onMove)
-    dividerEl?.removeEventListener?.('pointerup', onUp)
-    dividerEl?.removeEventListener?.('pointercancel', onUp)
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onUp)
+    document.removeEventListener('pointercancel', onUp)
 
     // Snap logic on release
     if (splitLeftWidth.value < 10) {
@@ -433,144 +332,41 @@ const startSplitResize = (event) => {
     }
   }
 
-  dividerEl?.addEventListener?.('pointermove', onMove)
-  dividerEl?.addEventListener?.('pointerup', onUp)
-  dividerEl?.addEventListener?.('pointercancel', onUp)
-  updateFromPointer(event.clientX)
-  requestTabFlingRecalc()
+  document.addEventListener('pointermove', onMove)
+  document.addEventListener('pointerup', onUp)
+  document.addEventListener('pointercancel', onUp)
+  onMove(event)
 }
 
-// Separate handler for badge drag - uses document-level listeners for smooth dragging
-const startSplitResizeFromBadge = (event) => {
+const startStackResize = (resizeIndex, event) => {
   if (event.button !== 0) return
   event.preventDefault()
-  event.stopPropagation() // Don't trigger divider drag
 
-  document.body.style.cursor = 'col-resize'
+  const stackPanels = panels
+  if (!stackPanels[resizeIndex]) return
+
+  const startY = event.clientY
+  const startHeight = stackPanels[resizeIndex].defaultHeight || stackPanels[resizeIndex].minHeight || 200
+
+  document.body.style.cursor = 'row-resize'
   document.body.style.userSelect = 'none'
 
-  const updateFromPointer = (clientX) => {
-    const rect = splitContainer.value?.getBoundingClientRect?.()
-    if (!rect || rect.width <= 0) return
-    const percent = ((clientX - rect.left) / rect.width) * 100
-    splitLeftWidth.value = clamp(percent, 0, 100)
-  }
-
   const onMove = (moveEvent) => {
-    updateFromPointer(moveEvent.clientX)
-    requestTabFlingRecalc()
-    moveEvent.preventDefault()
+    const newHeight = startHeight + (moveEvent.clientY - startY)
+    stackPanels[resizeIndex].defaultHeight = newHeight
   }
 
   const onUp = () => {
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
-
-    // Snap logic on release
-    if (splitLeftWidth.value < 10) {
-      badgeSnapState.value = 'left'
-      splitLeftWidth.value = 0
-    } else if (splitLeftWidth.value > 90) {
-      badgeSnapState.value = 'right'
-      splitLeftWidth.value = 100
-    } else {
-      badgeSnapState.value = 'center'
-    }
-
-    // Remove document-level listeners
     document.removeEventListener('pointermove', onMove)
     document.removeEventListener('pointerup', onUp)
     document.removeEventListener('pointercancel', onUp)
   }
 
-  // Use document-level listeners for smooth dragging (like stack dividers)
   document.addEventListener('pointermove', onMove)
   document.addEventListener('pointerup', onUp)
   document.addEventListener('pointercancel', onUp)
-  updateFromPointer(event.clientX)
-  requestTabFlingRecalc()
-}
-
-const computeMaxHeightForIndex = (stackPanels, resizeIndex, containerHeight) => {
-  let minBelow = 0
-  for (let i = resizeIndex + 1; i < stackPanels.length; i++) {
-    minBelow += stackPanels[i].minHeight
-  }
-  const dividerCountBelow = stackPanels.length - 1 - resizeIndex
-  const dividerSpace = dividerCountBelow * STACK_DIVIDER_HEIGHT_PX
-  return containerHeight - minBelow - dividerSpace
-}
-
-let isStackDragging = false
-let stackResizeIndex = -1
-let stackStartY = 0
-let stackStartHeight = 0
-
-const startStackResize = (resizeIndex, event) => {
-  if (event.button !== 0 && event.type !== 'touchstart') return
-  event.preventDefault()
-  event.stopPropagation()
-
-  isStackDragging = true
-  stackResizeIndex = resizeIndex
-
-  const stackPanels = panels
-  if (!stackPanels[resizeIndex]) return
-
-  const dividerEl = event.currentTarget
-  dividerEl?.classList?.add?.('is-dragging')
-  document.body.style.cursor = 'row-resize'
-  document.body.style.userSelect = 'none'
-
-  // Get starting position (works for both mouse and touch)
-  stackStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
-  stackStartHeight = stackPanels[resizeIndex].defaultHeight || stackPanels[resizeIndex].minHeight || 200
-
-  // Use document-level listeners for smooth dragging (like SplitPane)
-  document.addEventListener('mousemove', handleStackMove)
-  document.addEventListener('touchmove', handleStackMove, { passive: false })
-  document.addEventListener('mouseup', handleStackEnd)
-  document.addEventListener('touchend', handleStackEnd)
-  document.addEventListener('touchcancel', handleStackEnd)
-}
-
-const handleStackMove = (moveEvent) => {
-  if (!isStackDragging || stackResizeIndex < 0) return
-
-  const stackPanels = panels
-  if (!stackPanels[stackResizeIndex]) return
-
-  // Get current position (works for both mouse and touch)
-  const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0]?.clientY) || 0
-  const deltaY = currentY - stackStartY
-
-  // NO LIMITATIONS - let it drag freely!
-  const newHeight = stackStartHeight + deltaY
-  stackPanels[stackResizeIndex].defaultHeight = newHeight
-
-  moveEvent.preventDefault()
-}
-
-const handleStackEnd = () => {
-  if (!isStackDragging) return
-
-  isStackDragging = false
-  stackResizeIndex = -1
-
-  // Remove all dragging classes
-  document.querySelectorAll('.stack-divider.is-dragging').forEach(el => {
-    el.classList.remove('is-dragging')
-  })
-
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-
-  // Remove document-level listeners
-  document.removeEventListener('mousemove', handleStackMove)
-  document.removeEventListener('touchmove', handleStackMove)
-  document.removeEventListener('mouseup', handleStackEnd)
-  document.removeEventListener('touchend', handleStackEnd)
-  document.removeEventListener('touchcancel', handleStackEnd)
 }
 
 const startColumnResize = (side, resizeIndex, event) => {
@@ -707,24 +503,17 @@ onMounted(async () => {
     console.warn('SignalR connection failed (non-critical):', err?.message)
   })
 
-  // Badge should not cover tabs: recompute after initial layout and on resize.
   await nextTick()
-  ensureTabSides()
-  requestTabFlingRecalc()
-  window.addEventListener('resize', requestTabFlingRecalc)
 })
 
 onUnmounted(() => {
   disconnect()
-  window.removeEventListener('resize', requestTabFlingRecalc)
 })
 
 watch(
   () => [splitLeftWidth.value, badgeSnapState.value, topVisiblePanels.value?.length],
   async () => {
     await nextTick()
-    ensureTabSides()
-    requestTabFlingRecalc()
   }
 )
 </script>
@@ -801,7 +590,7 @@ watch(
 .main-layout {
   display: flex;
   position: relative;
-  padding: 56px 0 0 0; /* Account for badge (28px) + tabs (28px) */
+  padding: 56px 0 0 0; /* Badge band (28px notch + 28px tab/badge band) */
   box-sizing: border-box;
   height: 100vh;
   overflow: hidden;
@@ -816,27 +605,6 @@ watch(
   overflow: hidden;
 }
 
-.stack-divider {
-  height: 10px;
-  min-height: 10px;
-  cursor: ns-resize;
-  background: rgba(234, 186, 68, 0.28);
-  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 1px, transparent 1px);
-  background-size: 4px 4px;
-  background-position: center;
-  flex-shrink: 0;
-  touch-action: none;
-  user-select: none;
-  margin-top: -10px; /* Pull divider up to overlap panel above, removing visual gap */
-  position: relative;
-  z-index: 5; /* Above panel content so it can still be dragged */
-}
-
-.stack-divider:hover,
-.stack-divider.is-dragging {
-  background: rgba(234, 186, 68, 0.65);
-  background-image: radial-gradient(rgba(0, 0, 0, 0.28) 1px, transparent 1px);
-}
 
 .layout-split {
   display: flex;

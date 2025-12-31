@@ -39,10 +39,10 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
     {
         // Check if this is a type we should handle
         var expectedTypeName = expectedType.FullName ?? "";
-        var isMotleyJsonFilterClause = expectedTypeName.Contains("MotleyJsonFilterClause") && expectedType != typeof(MotelyJsonConfig);
+        var isMotelyJsonConfigClause = expectedTypeName.Contains("MotleyJsonFilterClause") && expectedType != typeof(MotelyJsonConfig);
         var isMotelyJsonFilterClause = expectedType == typeof(MotelyJsonFilterClause);
         
-        if (!isMotleyJsonFilterClause && !isMotelyJsonFilterClause)
+        if (!isMotelyJsonConfigClause && !isMotelyJsonFilterClause)
         {
             value = null;
             return false;
@@ -81,6 +81,7 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                         return false;
                     }
 
+                    DebugLogger.Log($"[CONVERTER] Type-as-key: {key} -> {mappedType}, value: {valueScalar.Value}");
                     entries["type"] = mappedType;
                     entries["value"] = valueScalar.Value;
                 }
@@ -116,61 +117,11 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                 entries[key] = nodeValue!;
             }
         }
-
-        // Check if this is an event type - handle it by creating a MotleyJsonFilterClause with event properties
         if (entries.TryGetValue("type", out var typeValue))
         {
             var typeStr = typeValue.ToString();
-            
-            if (typeStr == "Event")
-            {
-                // Create a MotleyJsonFilterClause (the nested class) and set event properties
-                var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
-                
-                // Set the type to event
-                clause.Type = "event";
-                
-                // Parse the event value and set it as the value
-                if (entries.TryGetValue("value", out var eventValue))
-                {
-                    clause.Value = eventValue.ToString();
-                }
-                
-                // Set other properties from entries
-                foreach (var entry in entries)
-                {
-                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || 
-                        entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase))
-                        continue;
-                        
-                    var property = clause.GetType().GetProperty(entry.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    if (property != null && property.CanWrite)
-                    {
-                        if (property.PropertyType == typeof(string))
-                        {
-                            property.SetValue(clause, entry.Value?.ToString());
-                        }
-                        else if (property.PropertyType == typeof(int[]))
-                        {
-                            if (entry.Value is object[] array)
-                            {
-                                property.SetValue(clause, array.Cast<int>().ToArray());
-                            }
-                        }
-                        else if (property.PropertyType == typeof(int))
-                        {
-                            if (int.TryParse(entry.Value?.ToString(), out var intValue))
-                            {
-                                property.SetValue(clause, intValue);
-                            }
-                        }
-                    }
-                }
-                
-                value = clause;
-                return true;
-            }
-            else if (typeStr == "And" || typeStr == "Or")
+
+            if (typeStr.Equals("And", StringComparison.OrdinalIgnoreCase) || typeStr.Equals("Or", StringComparison.OrdinalIgnoreCase))
             {
                 // Create a MotleyJsonFilterClause (the nested class) and set logical operator properties
                 var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
@@ -187,22 +138,22 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                         // Convert the List<object> to List<MotleyJsonFilterClause>
                         if (complexValue is System.Collections.IList list)
                         {
-                            Console.WriteLine($"  Converting list with {list.Count} items");
+                            DebugLogger.Log($"  Converting list with {list.Count} items");
                             var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
                             foreach (var item in list)
                             {
-                                Console.WriteLine($"    Item type: {item?.GetType().Name}, value: {item}");
+                                DebugLogger.Log($"    Item type: {item?.GetType().Name}, value: {item}");
                                 if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
                                 {
                                     convertedList.Add(filterClause);
-                                    Console.WriteLine($"    Added filter clause with Type='{filterClause.Type}'");
+                                    DebugLogger.Log($"    Added filter clause with Type='{filterClause.Type}'");
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"    WARNING: Item is not a MotleyJsonFilterClause");
+                                    DebugLogger.Log($"    WARNING: Item is not a MotleyJsonFilterClause");
                                 }
                             }
-                            Console.WriteLine($"  Final converted list has {convertedList.Count} items");
+                            DebugLogger.Log($"  Final converted list has {convertedList.Count} items");
                             clausesProperty.SetValue(clause, convertedList);
                         }
                     }
@@ -245,7 +196,7 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
         }
 
         // Create the appropriate filter clause from the processed entries
-        if (isMotleyJsonFilterClause)
+        if (isMotelyJsonConfigClause)
         {
             // Create a MotleyJsonFilterClause (the nested class in MotelyJsonConfig)
             var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
@@ -297,13 +248,13 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                     "tarotcard" => new MotelyJsonTarotFilterClause(),
                     "spectralcard" => new MotelyJsonSpectralFilterClause(),
                     "planetcard" => new MotelyJsonPlanetFilterClause(),
-                    _ => new MotelyJsonJokerFilterClause() // Default fallback
+                    "event" => new MotelyJsonJokerFilterClause(),
+                    _ => throw new ArgumentException($"Unknown type: {typeStr}")
                 };
             }
             else
             {
-                // No type found, use default
-                clause = new MotelyJsonJokerFilterClause();
+                throw new ArgumentException($"Unknown type: {clauseTypeValue}");
             }
             
             foreach (var entry in entries)

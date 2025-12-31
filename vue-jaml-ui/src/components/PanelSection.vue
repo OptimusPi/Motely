@@ -7,20 +7,30 @@
       'fill-remaining': fillRemaining
     }"
   >
-    <!-- Expanded panel -->
+    <!-- Manilla-style tab (title lives here, not on the grab bar) -->
+    <div
+      v-if="showTab"
+      class="panel-tab"
+      :class="[`panel-tab-${tabAlign}`]"
+      :style="{ '--panel-color': `var(--balatro-${color})` }"
+    >
+      <span class="panel-tab-label">{{ label }}</span>
+      <span v-if="badge" class="panel-tab-badge">{{ badge }}</span>
+    </div>
+
     <div
       ref="panel"
       class="panel-section"
       :class="[`panel-section-${color}`]"
       :style="panelStyle"
     >
-      <!-- Resize handle at top (mobile-friendly 24px+ area) -->
-      <div 
-        v-if="!fillRemaining"
-        class="panel-resize-handle"
-        @pointerdown="startResize"
+      <!-- The top colored edge IS the grab bar (hitbox matches the visible edge) -->
+      <div
+        v-if="showTopGrab"
+        class="panel-top-grab"
+        @pointerdown.prevent.stop="emit('topgrab', $event)"
       ></div>
-      
+
       <div class="panel-content">
         <slot />
       </div>
@@ -53,6 +63,19 @@ const props = defineProps({
     type: String,
     default: null
   },
+  showTopGrab: {
+    type: Boolean,
+    default: false
+  },
+  showTab: {
+    type: Boolean,
+    default: true
+  },
+  tabAlign: {
+    type: String,
+    default: 'left',
+    validator: (v) => ['left', 'right'].includes(v)
+  },
   layoutMode: {
     type: String,
     default: 'stack',
@@ -64,7 +87,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['resize', 'collapse']);
+const emit = defineEmits(['resize', 'collapse', 'topgrab']);
 
 const panelWrapper = ref(null);
 const panel = ref(null);
@@ -89,59 +112,6 @@ const panelStyle = computed(() => {
 const toggleCollapse = () => {
   // Placeholder for future collapse/expand behavior
 };
-
-let isPanelDragging = false
-let panelStartY = 0
-let panelStartHeight = 0
-
-const startResize = (event) => {
-  if (event.button !== 0 && event.type !== 'touchstart') return
-  event.preventDefault()
-  event.stopPropagation()
-
-  isPanelDragging = true
-  panelStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
-  panelStartHeight = height.value
-
-  document.body.style.cursor = 'ns-resize'
-  document.body.style.userSelect = 'none'
-
-  // Use document-level listeners for smooth dragging (like SplitPane)
-  document.addEventListener('mousemove', handlePanelMove)
-  document.addEventListener('touchmove', handlePanelMove, { passive: false })
-  document.addEventListener('mouseup', handlePanelEnd)
-  document.addEventListener('touchend', handlePanelEnd)
-  document.addEventListener('touchcancel', handlePanelEnd)
-}
-
-const handlePanelMove = (moveEvent) => {
-  if (!isPanelDragging) return
-
-  const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0]?.clientY) || 0
-  const deltaY = currentY - panelStartY
-
-  // NO LIMITATIONS - let it drag freely!
-  const newHeight = panelStartHeight + deltaY
-  height.value = newHeight
-  emit('resize', newHeight)
-
-  moveEvent.preventDefault()
-}
-
-const handlePanelEnd = () => {
-  if (!isPanelDragging) return
-
-  isPanelDragging = false
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-
-  // Remove document-level listeners
-  document.removeEventListener('mousemove', handlePanelMove)
-  document.removeEventListener('touchmove', handlePanelMove)
-  document.removeEventListener('mouseup', handlePanelEnd)
-  document.removeEventListener('touchend', handlePanelEnd)
-  document.removeEventListener('touchcancel', handlePanelEnd)
-}
 
 onMounted(() => {
   if (props.defaultHeight) {
@@ -179,11 +149,14 @@ watch(
   width: 100%;
   box-sizing: border-box;
   background: var(--panel-dark, #2c3e50);
-  border-top: 0;
-  border-left: 3px solid var(--panel-color);
-  border-right: 3px solid var(--panel-color);
-  border-bottom: 3px solid var(--panel-color);
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+  /* Style contract (A): Balatro frame — thick top border, thin sides/bottom, flat/square */
+  --panel-top-h: 8px;
+  border-top: var(--panel-top-h) solid var(--panel-color);
+  border-left: 2px solid var(--panel-color);
+  border-right: 2px solid var(--panel-color);
+  border-bottom: 2px solid var(--panel-color);
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -191,26 +164,58 @@ watch(
   max-height: 100vh; /* Ensure panels never exceed viewport */
 }
 
+.panel-top-grab {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--panel-top-h);
+  cursor: ns-resize;
+  z-index: 40;
+  background: transparent;
+  touch-action: none;
+  user-select: none;
+}
+
+.panel-tab {
+  position: absolute;
+  top: -28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: var(--panel-color);
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  color: #fff;
+  font-family: 'm6x11plus', monospace;
+  font-size: 14px;
+  user-select: none;
+  pointer-events: none; /* purely visual for now */
+  z-index: 60; /* above stack-divider */
+  box-shadow: none;
+}
+
+.panel-tab-left {
+  left: 8px;
+}
+
+.panel-tab-right {
+  right: 8px;
+}
+
+.panel-tab-badge {
+  background: rgba(0, 0, 0, 0.22);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
 .panel-content {
   flex: 1;
   overflow: auto; /* Allow scrolling if content exceeds panel height */
   min-height: 0;
-}
-
-.panel-resize-handle {
-  position: absolute;
-  top: -3px; /* overlay/replace the old 3px top border */
-  left: 0;
-  right: 0;
-  height: 10px;
-  cursor: ns-resize;
-  z-index: 10;
-  background: rgba(255, 255, 255, 0.03);
-  border-top: 3px solid var(--panel-color);
-  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 1px, transparent 1px);
-  background-size: 4px 4px;
-  background-position: center;
-  touch-action: none;
-  user-select: none;
 }
 </style>

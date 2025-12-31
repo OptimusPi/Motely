@@ -433,8 +433,6 @@ public class MotelyJsonConfig
 
         public void InitializeParsedEnums()
         {
-            Console.WriteLine($"Initializing parsed enums for Type={Type}, EventType={EventType}"); // Debugging log
-
             // PERFORMANCE FIX: Use pre-computed dictionary instead of ToLowerInvariant() + switch
             ItemTypeEnum = MotelyJsonPerformanceUtils.ParseItemType(Type);
 
@@ -750,12 +748,22 @@ public class MotelyJsonConfig
             }
 
             // Parse EventType for Event filters
-            if (!string.IsNullOrEmpty(EventType))
+            if (ItemTypeEnum == MotelyFilterItemType.Event)
             {
-                if (Enum.TryParse<MotelyEventType>(EventType, true, out var eventType))
-                    EventTypeEnum = eventType;
+                // For event clauses, the event type comes from the Value property
+                if (!string.IsNullOrEmpty(Value))
+                {
+                    if (Enum.TryParse<MotelyEventType>(Value, true, out var eventType))
+                    {
+                        EventTypeEnum = eventType;
+                    }
+                    else
+                        throw new ArgumentException($"'{Value}' is not a valid EventType value.");
+                }
                 else
-                    throw new ArgumentException($"'{EventType}' is not a valid EventType value.");
+                {
+                    throw new ArgumentException("Event clause missing Value property - cannot determine event type");
+                }
             }
         }
 
@@ -1279,6 +1287,23 @@ public class MotelyJsonConfig
 #if DEBUG
         DebugLogger.Log($"[Config] MaxBossAnte calculated as: {MaxBossAnte}");
 #endif
+
+        // CRITICAL VALIDATION: Ensure all MUST clauses are properly parsed
+        foreach (var clause in Must ?? [])
+        {
+            // For Event clauses, ensure EventTypeEnum is set
+            if (clause.ItemTypeEnum == MotelyFilterItemType.Event && !clause.EventTypeEnum.HasValue)
+            {
+                throw new ArgumentException($"CRITICAL: MUST Event clause failed to parse - missing EventTypeEnum. Type={clause.Type}, Value={clause.Value}");
+            }
+            
+            // For And/Or clauses, ensure they have nested clauses
+            if ((clause.ItemTypeEnum == MotelyFilterItemType.And || clause.ItemTypeEnum == MotelyFilterItemType.Or) 
+                && (clause.Clauses == null || clause.Clauses.Count == 0))
+            {
+                throw new ArgumentException($"CRITICAL: MUST {clause.ItemTypeEnum} clause has no nested clauses");
+            }
+        }
     }
 
     private static SourcesConfig GetDefaultSources(string itemType, string? itemValue, string deck)
