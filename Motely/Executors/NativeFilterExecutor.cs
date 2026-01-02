@@ -341,29 +341,15 @@ namespace Motely.Executors
 
             if (!string.IsNullOrEmpty(_params.SeedSources))
             {
-                var extension = Path.GetExtension(_params.SeedSources).ToLowerInvariant();
-                var seedSourcePath = Path.Combine("SeedSources", _params.SeedSources);
-                
+                var seedSourcePath = $"SeedSources/{_params.SeedSources}.txt";
                 if (!File.Exists(seedSourcePath))
                 {
                     throw new FileNotFoundException($"Seed source file not found: {seedSourcePath}");
                 }
-
-                if (extension == ".txt")
-                {
-                    _searchSeeds = File.ReadAllLines(seedSourcePath)
-                        .Where(static s => !string.IsNullOrWhiteSpace(s))
-                        .ToList();
-                }
-                else if (extension == ".db")
-                {
-                    // For DuckDB files, we'd need to use DuckDBSeeds.Stream but this executor might not support that
-                    throw new NotSupportedException("NativeFilterExecutor only supports text files. Use JsonSearchExecutor for DuckDB files.");
-                }
-                else
-                {
-                    throw new NotSupportedException($"Unsupported file extension: {extension}");
-                }
+                _searchSeeds = File.ReadAllLines(seedSourcePath)
+                    .Where(line => !string.IsNullOrWhiteSpace(line))
+                    .ToList();
+                return _searchSeeds;
             }
 
             return null;
