@@ -674,7 +674,9 @@ namespace Motely.Executors
                 foreach (var clause in config.MustNot)
                 {
                     clause.IsInverted = true;
-                    var invertedFilter = CreateSingleClauseFilterDesc(clause);
+                    var baseFilter = CreateSingleClauseFilterDesc(clause);
+                    // Wrap in invert filter to actually invert the results!
+                    var invertedFilter = new MotelyJsonInvertFilterDesc(baseFilter);
                     searchSettings = searchSettings.WithAdditionalFilter(invertedFilter);
                 }
             }
