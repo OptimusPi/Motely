@@ -2,101 +2,9 @@ using Motely.Filters;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Core;
-using System.Reflection;
 using Motely.Filters.MotelyJson;
 
 namespace Motely;
-
-/// <summary>
-/// Case-insensitive naming convention for YAML deserialization
-/// </summary>
-public class CaseInsensitiveNamingConvention : INamingConvention
-{
-    public string Apply(string value)
-    {
-        return value; // Return as-is, matching is done case-insensitively
-    }
-
-    public string Reverse(string name)
-    {
-        return name; // Return as-is
-    }
-}
-
-/// <summary>
-/// Case-insensitive property type inspector for YAML deserialization
-/// </summary>
-internal class CaseInsensitivePropertyTypeInspector : ITypeInspector
-{
-    private readonly ITypeInspector _innerInspector;
-
-    public CaseInsensitivePropertyTypeInspector(ITypeInspector innerInspector)
-    {
-        _innerInspector = innerInspector;
-    }
-
-    public IEnumerable<IPropertyDescriptor> GetProperties(Type type, object? container)
-    {
-        return _innerInspector.GetProperties(type, container);
-    }
-
-    public IPropertyDescriptor GetProperty(Type type, object? container, string name, bool ignoreUnmatched)
-    {
-        return GetProperty(type, container, name, ignoreUnmatched, caseInsensitivePropertyMatching: true);
-    }
-
-    public IPropertyDescriptor GetProperty(Type type, object? container, string name, bool ignoreUnmatched, bool caseInsensitivePropertyMatching)
-    {
-        // Try exact match first
-        var property = _innerInspector.GetProperty(type, container, name, ignoreUnmatched: true, caseInsensitivePropertyMatching: false);
-        if (property != null)
-            return property;
-
-        // If case-sensitive, don't do case-insensitive matching
-        if (!caseInsensitivePropertyMatching)
-        {
-            if (ignoreUnmatched)
-                return null!;
-            throw new YamlDotNet.Core.YamlException($"Property '{name}' not found on type '{type.Name}'");
-        }
-
-        // Try case-insensitive match by checking all properties and their aliases
-        var properties = _innerInspector.GetProperties(type, container).ToList();
-        foreach (var prop in properties)
-        {
-            // Check property name case-insensitively
-            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
-                return prop;
-
-            // Check YamlMember alias if present
-            var propInfo = type.GetProperty(prop.Name, BindingFlags.Public | BindingFlags.Instance);
-            if (propInfo != null)
-            {
-                var yamlMember = propInfo.GetCustomAttribute<YamlMemberAttribute>();
-                if (yamlMember != null && !string.IsNullOrEmpty(yamlMember.Alias))
-                {
-                    if (string.Equals(yamlMember.Alias, name, StringComparison.OrdinalIgnoreCase))
-                        return prop;
-                }
-            }
-        }
-
-        if (ignoreUnmatched)
-            return null!;
-
-        throw new YamlDotNet.Core.YamlException($"Property '{name}' not found on type '{type.Name}'");
-    }
-
-    public string GetEnumName(Type type, string name)
-    {
-        return _innerInspector.GetEnumName(type, name);
-    }
-
-    public string GetEnumValue(object value)
-    {
-        return _innerInspector.GetEnumValue(value);
-    }
-}
 
 /// <summary>
 /// JAML (Joker Ante Markup Language) configuration loader.
@@ -149,15 +57,14 @@ public static class JamlConfigLoader
 
         try
         {
-            // Pre-process JAML to support type-as-key syntax (but let YAML handle arrays naturally)
-            jamlContent = PreProcessJaml(jamlContent);
+            // Pre-process JAML ONLY for type-as-key syntax expansion (Joker: Showman -> type: Joker, value: Showman)
+            // YamlDotNet handles case-insensitive matching natively via .WithCaseInsensitivePropertyMatching()
+            jamlContent = PreProcessJamlForTypeAsKey(jamlContent);
 
-            // Parse JAML (YAML-based) to object
-            // Use NullNamingConvention to preserve exact property names and YamlMember aliases
-            // Add case-insensitive property matching and type-as-key deserializer
+            // Parse JAML using YamlDotNet's BUILT-IN case-insensitive matching
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(NullNamingConvention.Instance)
-                .WithTypeInspector(inner => new CaseInsensitivePropertyTypeInspector(inner))
+                .WithCaseInsensitivePropertyMatching()
                 .WithNodeDeserializer(new JamlTypeAsKeyNodeDeserializer(), s => s.Before<YamlDotNet.Serialization.NodeDeserializers.ObjectNodeDeserializer>())
                 .IgnoreUnmatchedProperties()
                 .Build();
@@ -190,43 +97,14 @@ public static class JamlConfigLoader
         }
     }
 
-    private static string PreProcessJaml(string jamlContent)
+    /// <summary>
+    /// Pre-process JAML ONLY for type-as-key syntax expansion (Joker: Showman -> type: Joker, value: Showman).
+    /// Case-insensitive property matching is handled by YamlDotNet's .WithCaseInsensitivePropertyMatching().
+    /// </summary>
+    private static string PreProcessJamlForTypeAsKey(string jamlContent)
     {
-        
         var lines = jamlContent.Split('\n');
         var result = new System.Text.StringBuilder();
-        
-        // Normalize section keys (Must/Should/MustNot) to lowercase for case-insensitive matching
-        // This is a clean preprocessing step, not a hack - it normalizes case before parsing
-        var sectionKeyMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Must"] = "must",
-            ["Should"] = "should",
-            ["MustNot"] = "mustnot"
-        };
-        
-        foreach (var line in lines)
-        {
-            var trimmedLine = line.Trim();
-            var processedLine = line;
-            
-            // Check if this line is a section key and normalize it
-            foreach (var kvp in sectionKeyMappings)
-            {
-                if (trimmedLine.StartsWith(kvp.Key + ":", StringComparison.OrdinalIgnoreCase))
-                {
-                    var indent = line.Substring(0, line.Length - trimmedLine.Length);
-                    processedLine = indent + kvp.Value + ":" + line.Substring(line.IndexOf(':') + 1);
-                    break;
-                }
-            }
-            
-            result.AppendLine(processedLine);
-        }
-        
-        jamlContent = result.ToString();
-        lines = jamlContent.Split('\n');
-        result = new System.Text.StringBuilder();
         
         // Support clean type-as-key syntax: "joker: Blueprint" instead of "type: Joker, value: Blueprint"
         // Support plural values arrays: "jokers: [Blueprint, Brainstorm]" expands to multiple clauses
@@ -375,8 +253,9 @@ public static class JamlConfigLoader
             "tarot" or "tarotcard" => "TarotCard",
             "planet" or "planetcard" => "PlanetCard",
             "spectral" or "spectralcard" => "SpectralCard",
-            "standardcard" => "StandardCard",
+            "standardcard" => "PlayingCard", // StandardCard maps to PlayingCard enum
             "boss" => "Boss",
+            "tag" => "Tag", // Generic tag (matches both SmallBlindTag and BigBlindTag)
             "smallblindtag" => "SmallBlindTag",
             "bigblindtag" => "BigBlindTag",
             "event" => "Event",

@@ -55,7 +55,8 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
             return false;
         }
 
-        var entries = new Dictionary<string, object>();
+        // Use case-insensitive dictionary for entries to handle any casing
+        var entries = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         
         while (!reader.TryConsume<MappingEnd>(out _))
         {
@@ -430,13 +431,17 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
     /// </summary>
     private static System.Reflection.PropertyInfo? FindPropertyWithAlias(Type type, string name)
     {
-        // First try direct case-insensitive match
-        var property = type.GetProperty(name, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-        if (property != null)
-            return property;
-        
-        // Then check all properties for YamlMember aliases
+        // Get all properties once
         var allProperties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        
+        // First check property names case-insensitively
+        foreach (var prop in allProperties)
+        {
+            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
+                return prop;
+        }
+        
+        // Then check all properties for YamlMember aliases (case-insensitive)
         foreach (var prop in allProperties)
         {
             var yamlMember = System.Attribute.GetCustomAttribute(prop, typeof(YamlMemberAttribute)) as YamlMemberAttribute;

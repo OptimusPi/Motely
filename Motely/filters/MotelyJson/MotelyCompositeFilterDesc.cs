@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Linq;
 using Motely.Utils;
 
 namespace Motely.Filters;
@@ -51,6 +52,8 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
             // Check if ALL clauses in this category are inverted (mustNot)
             bool isInverted = clauses.All(c => c.IsInverted);
+            
+            DebugLogger.Log($"[COMPOSITE DESC] Category={category}, clauses.Count={clauses.Count}, isInverted={isInverted}, clause.IsInverted values=[{string.Join(",", clauses.Select(c => c.IsInverted))}]");
 
             IMotelySeedFilter filter = category switch
             {
@@ -414,7 +417,12 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
                 // If this is a mustNot filter (inverted), negate the mask
                 if (isInverted)
+                {
+                    var beforeInvert = filterMask.Value;
                     filterMask = ~filterMask;
+                    var afterInvert = filterMask.Value;
+                    DebugLogger.Log($"[COMPOSITE FILTER] Inverted filter: before=0x{beforeInvert:X2}, after=0x{afterInvert:X2}");
+                }
 
                 result &= filterMask;
             }

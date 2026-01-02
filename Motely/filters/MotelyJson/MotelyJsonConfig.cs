@@ -27,9 +27,11 @@ public class MotelyFilterDefaults
     public int[]? Antes { get; set; }
 
     [JsonPropertyName("packSlots")]
+    [YamlMember(Alias = "packSlots")]
     public int[]? PackSlots { get; set; }
 
     [JsonPropertyName("shopSlots")]
+    [YamlMember(Alias = "shopSlots")]
     public int[]? ShopSlots { get; set; }
 
     [JsonPropertyName("score")]
@@ -264,32 +266,41 @@ public class MotelyJsonConfig
 
         // PlayingCard specific
         [JsonPropertyName("suit")]
+        [YamlMember(Alias = "suit")]
         public string? Suit { get; set; }
 
         [JsonPropertyName("rank")]
+        [YamlMember(Alias = "rank")]
         public string? Rank { get; set; }
 
         [JsonPropertyName("seal")]
+        [YamlMember(Alias = "seal")]
         public string? Seal { get; set; }
 
         [JsonPropertyName("enhancement")]
+        [YamlMember(Alias = "enhancement")]
         public string? Enhancement { get; set; }
 
         // Sources configuration
         [JsonPropertyName("sources")]
+        [YamlMember(Alias = "sources")]
         public SourcesConfig? Sources { get; set; }
 
         // Direct properties for backwards compatibility
         [JsonPropertyName("packSlots")]
+        [YamlMember(Alias = "packSlots")]
         public int[]? PackSlots { get; set; }
 
         [JsonPropertyName("shopSlots")]
+        [YamlMember(Alias = "shopSlots")]
         public int[]? ShopSlots { get; set; }
 
         [JsonPropertyName("requireMega")]
+        [YamlMember(Alias = "requireMega")]
         public bool? RequireMega { get; set; }
 
         [JsonPropertyName("tags")]
+        [YamlMember(Alias = "tags")]
         public bool? Tags { get; set; }
 
         // Event-specific properties

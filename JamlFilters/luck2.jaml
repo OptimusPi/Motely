@@ -2,34 +2,20 @@ name: luck2
 author: pifreak
 deck: Anaglyph
 stake: White
-Must:
-  - Joker: Showman
-    Edition: Negative
-    Antes: [1,2]
-    ShopSlots: [0,1,2,3]
-    PackSlots: [0,1]
 
-  - SmallBlindTag: NegativeTag
-    Antes: [2]
+
+MustNot:
+  - joker: Any
+    antes: [2]
+    shopSlots: [0,1]
 
 Should:
-  - Joker: Showman
+  - soulJoker: Perkeo
+    label: GetSoulJoker
+
+  - joker: Any
     Edition: Negative
-    Antes: [1,2]
-    ShopSlots: [0,1,2,3]
-    PackSlots: [0,1]
 
   - SmallBlindTag: NegativeTag
     Antes: [2]
   
-  - SmallBlindTag: NegativeTag
-    Antes: [4]
-
-  - SmallBlindTag: NegativeTag
-    Antes: [6]
-
-  - SmallBlindTag: NegativeTag
-    Antes: [8]
-  
-  - SmallBlindTag: NegativeTag
-    Antes: [10]
