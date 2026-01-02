@@ -105,6 +105,8 @@ should:
             // Act - Load JAML with anchors
             var config = ConfigFormatConverter.LoadFromJamlString(jamlWithAnchors);
             Assert.NotNull(config);
+            Assert.NotNull(config.Must);
+            Assert.True(config.Must.Count >= 2, $"Expected at least 2 Must clauses, got {config.Must.Count}");
 
             // Convert to JSON (anchors should expand to full values)
             var jsonString = config.SaveAsJson();
