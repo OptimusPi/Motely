@@ -158,33 +158,48 @@
             "Joker",
             "SoulJoker",
             "Voucher",
-            "Tarot",
             "TarotCard",
             "Planet",
             "PlanetCard",
             "Spectral",
             "SpectralCard",
             "Tag",
+            "SmallBlindTag",
+            "BigBlindTag",
             "Boss",
             "BossBlind",
-            "PlayingCard",
             "StandardCard",
-            "LuckyMoney",
-            "LuckyMult",
-            "PurpleSeal",
-            "EightBall",
-            "RiffRaff",
-            "Seance",
-            "SixthSense",
-            "JokerRiffRaff",
-            "PurpleSealOrEightBall",
-            "SpectralSource"
+            "Event",
+            "ErraticRank",
+            "ErraticSuit",
+            "And",
+            "Or"
           ],
           "description": "Type of item to search for"
         },
         "value": {
           "type": "string",
-          "description": "Name of the specific item (e.g., 'Perkeo', 'Hieroglyph')"
+          "description": "Name of the specific item (e.g., 'Perkeo', 'Hieroglyph'). For Event type, this is the event type name (e.g., 'LuckyMoney', 'LuckyMult'). Shorthand: use 'event: LuckyMoney' instead of 'type: Event, value: LuckyMoney'"
+        },
+        "eventType": {
+          "type": "string",
+          "enum": [
+            "LuckyMoney",
+            "LuckyMult",
+            "MisprintMult",
+            "WheelOfFortune",
+            "CavendishExtinct",
+            "GrosMichelExtinct"
+          ],
+          "description": "Event type (alternative to 'value' for Event clauses). Shorthand: use 'event: LuckyMoney' instead."
+        },
+        "rolls": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Roll indices for Event clauses (e.g. [0, 1] for first two occurrences of the event). Only valid for type: Event. Example: 'rolls: [0]' checks the first occurrence"
         },
         "antes": {
           "type": "array",
@@ -305,6 +320,11 @@
               "type": "array",
               "items": { "type": "integer" },
               "description": "Purple Seal / 8Ball tarot card roll indices (e.g. [0] for first tarot from Purple Seal or 8Ball - both use same PRNG key)"
+            },
+            "emperor": {
+              "type": "array",
+              "items": { "type": "integer" },
+              "description": "Emperor tarot card roll indices (e.g. [0, 1] for first two tarot cards from Emperor - Emperor creates 2 tarot cards)"
             },
             "sixthSense": {
               "type": "array",

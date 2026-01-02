@@ -49,8 +49,10 @@ public static class JamlFormatter
             return string.Empty;
 
         // First serialize with YamlDotNet
+        // Use NullNamingConvention to match JamlConfigLoader's deserialization setup
+        // This ensures round-trip compatibility - properties are matched by YamlMember aliases
         var serializer = new SerializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .WithNamingConvention(NullNamingConvention.Instance)
             .ConfigureDefaultValuesHandling(
                 DefaultValuesHandling.OmitNull | 
                 DefaultValuesHandling.OmitEmptyCollections | 

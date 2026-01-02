@@ -28,25 +28,19 @@ public ref struct MotelyVectorItemSet
 #endif
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItemVector GetItem(int index)
     {
         return GetItemRef(ref this, index);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public void Append(MotelyItemVector item)
     {
         GetItemRef(ref this, Length++) = item;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector256<int> Contains(MotelyItemType item)
     {
         Vector256<int> mask = Vector256<int>.Zero;
@@ -59,9 +53,7 @@ public ref struct MotelyVectorItemSet
         return mask;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector256<int> Contains(MotelyItemVector item)
     {
         Vector256<int> mask = Vector256<int>.Zero;
@@ -74,9 +66,7 @@ public ref struct MotelyVectorItemSet
         return mask;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector256<int> Contains(MotelyItem item)
     {
         Vector256<int> mask = Vector256<int>.Zero;

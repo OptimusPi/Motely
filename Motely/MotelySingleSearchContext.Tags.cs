@@ -22,17 +22,13 @@ ref partial struct MotelySingleSearchContext
         MotelyTag.OrbitalTag,
     ];
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleTagStream CreateTagStream(int ante, bool isCached = false)
     {
         return new(CreateResampleStream(MotelyPrngKeys.Tags + ante, isCached), ante);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyTag GetNextTag(ref MotelySingleTagStream tagStream)
     {
         if (tagStream.Ante > 1)

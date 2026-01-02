@@ -1,0 +1,22 @@
+name: luck
+author: pifreak
+description: ShowmAnthen oops skipper!
+deck: Anaglyph
+stake: Black
+must:
+  - Joker: Showman
+    Antes: [1,2]
+
+
+Should:
+  - smallBlindTag: NegativeTag
+    Antes: [3]
+    score: 1
+  
+  - souljoker: Perkeo
+    score: 10
+
+  - Joker: OopsAll6s
+    Antes: [3]
+    shopSlots: [2,3,4,5]
+    score: 100

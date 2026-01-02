@@ -10,17 +10,13 @@ public struct MotelySingleBossStream(MotelySinglePrngStream prngStream)
 
 unsafe ref partial struct MotelySingleSearchContext
 {
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleBossStream CreateBossStream()
     {
         return new(CreatePrngStream(MotelyPrngKeys.Boss));
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyBossBlind GetBossForAnte(
         ref MotelySingleBossStream stream,
         int ante,

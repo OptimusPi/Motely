@@ -43,9 +43,7 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
         _pool[Count - 1].Weight += WeightSum;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public T Choose(double poll)
     {
         // get_pack common_events.lua

@@ -9,17 +9,13 @@ public ref struct MotelySingleVoucherStream(int ante, MotelySingleResampleStream
 
 ref partial struct MotelySingleSearchContext
 {
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleVoucherStream CreateVoucherStream(int ante, bool isCached = false)
     {
         return new(ante, CreateResampleStream(MotelyPrngKeys.Voucher + ante, isCached));
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyVoucher GetAnteFirstVoucher(int ante, bool isCached = false)
     {
         MotelySinglePrngStream prngStream = CreatePrngStream(
@@ -61,9 +57,7 @@ ref partial struct MotelySingleSearchContext
         return voucher;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyVoucher GetAnteFirstVoucher(
         int ante,
         in MotelyRunState voucherState,
@@ -120,9 +114,7 @@ ref partial struct MotelySingleSearchContext
         return voucher;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyVoucher GetNextVoucher(
         ref MotelySingleVoucherStream voucherStream,
         in MotelyRunState voucherState

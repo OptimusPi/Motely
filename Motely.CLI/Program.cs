@@ -1,7 +1,6 @@
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.Executors;
-using Motely.TUI;
 
 namespace Motely
 {
@@ -9,11 +8,6 @@ namespace Motely
     {
         static int Main(string[] args)
         {
-            // If no args provided, launch TUI
-            if (args.Length == 0)
-            {
-                return MotelyTUI.Run();
-            }
 
             var app = new CommandLineApplication
             {
