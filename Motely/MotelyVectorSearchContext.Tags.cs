@@ -11,17 +11,13 @@ public ref struct MotelyVectorTagStream(MotelyVectorResampleStream resampleStrea
 
 ref partial struct MotelyVectorSearchContext
 {
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyVectorTagStream CreateTagStream(int ante, bool isCached = false)
     {
         return new(CreateResampleStream(MotelyPrngKeys.Tags + ante, isCached), ante);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public VectorEnum256<MotelyTag> GetNextTag(ref MotelyVectorTagStream tagStream)
     {
         if (tagStream.Ante > 1)

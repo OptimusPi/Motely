@@ -98,9 +98,7 @@ internal readonly unsafe struct MotelySearchContextParams(
     public readonly Vector512<double>* SeedLastCharacters = seedLastCharacters;
     public readonly bool IsAdditionalFilter = isAdditionalFilter;
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly bool IsLaneValid(int lane)
     {
         // If all the lanes are the same seed, we say only the first lane is valid
@@ -111,9 +109,7 @@ internal readonly unsafe struct MotelySearchContextParams(
         return ((double*)&SeedLastCharacters[0])[lane] != '\0';
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly string GetSeed(int lane)
     {
         char* seed = stackalloc char[Motely.MaxSeedLength];
@@ -121,9 +117,7 @@ internal readonly unsafe struct MotelySearchContextParams(
         return new string(seed, 0, length);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly int GetSeed(int lane, char* output)
     {
         Debug.Assert(IsLaneValid(lane));
@@ -179,9 +173,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     private Vector512<double>* SeedLastCharacters => _contextParams.SeedLastCharacters;
     private bool IsAdditionalFilter => _contextParams.IsAdditionalFilter;
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     internal MotelyVectorSearchContext(
         ref readonly MotelySearchParameters searchParameters,
         ref readonly MotelySearchContextParams contextParams
@@ -261,9 +253,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return new(results);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector512<double> PseudoHash(string key, bool isCached = false)
     {
         Vector512<double> partialHash;
@@ -283,9 +273,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return InternalPseudoHash(key, partialHash);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private Vector512<double> InternalPseudoHashSeed(int keyLength)
     {
         int seedLastCharacterLength = SeedLastCharactersLength;
@@ -319,9 +307,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return numVector;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private static Vector512<double> InternalPseudoHash(string key, Vector512<double> partialHash)
     {
         // AUDIT ISSUE #4: Use hoisted constants instead of creating in loop
@@ -433,9 +419,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return state;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyVectorPrngStream CreatePrngStream(string key, bool isCached = false)
     {
         return new(PseudoHash(key, isCached));
@@ -520,18 +504,14 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return VectorLuaRandom.RandInt(IteratePseudoSeed(ref stream, mask), min, max);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public VectorEnum256<T> GetNextRandomElement<T>(ref MotelyVectorPrngStream stream, T[] choices)
         where T : unmanaged, Enum
     {
         return VectorEnum256.Create(GetNextRandomInt(ref stream, 0, choices.Length), choices);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public VectorEnum256<T> GetNextRandomElement<T>(
         ref MotelyVectorPrngStream stream,
         T[] choices,
@@ -542,17 +522,13 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return VectorEnum256.Create(GetNextRandomInt(ref stream, 0, choices.Length, mask), choices);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyVectorResampleStream CreateResampleStream(string key, bool isCached)
     {
         return new(CreatePrngStream(key, isCached), isCached);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyVectorPrngStream CreateResamplePrngStream(string key, int resample, bool isCached)
     {
         // We don't cache resamples >= 8 because they'd use an extra digit
@@ -561,9 +537,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         return CreatePrngStream(key + MotelyPrngKeys.Resample + (resample + 2), isCached);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private ref MotelyVectorPrngStream GetResamplePrngStream(
         ref MotelyVectorResampleStream resampleStream,
         string key,

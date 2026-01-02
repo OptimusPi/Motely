@@ -531,13 +531,15 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         // PERFORMANCE: Use calculated CompletedBatchCount (no extra state to maintain)
         long thisCompletedCount = CompletedBatchCount;
+        long totalBatches = _threads[0].MaxBatch;
+        long seedsSearched = thisCompletedCount * _threads[0].SeedsPerBatch;
+        
+        // Calculate seeds per millisecond once (reuse for both callback and display)
+        double seedsPerMs = elapsedMS > 1 ? seedsSearched / elapsedMS : 0;
 
         // ALWAYS invoke progress callback if set (even in quiet mode) - needed for API speed stats
         if (_progressCallback != null)
         {
-            long totalBatches = _threads[0].MaxBatch;
-            long seedsSearched = thisCompletedCount * _threads[0].SeedsPerBatch;
-            double seedsPerMs = elapsedMS > 1 ? seedsSearched / elapsedMS : 0;
             _progressCallback(thisCompletedCount, totalBatches, seedsSearched, seedsPerMs);
         }
 
@@ -568,19 +570,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
         }
 
-        // Calculate seeds per millisecond
-        // Avoid divide by zero for a very fast find
-        double seedsPerMS = 0;
-        if (elapsedMS > 1)
-            seedsPerMS = thisCompletedCount * (double)_threads[0].SeedsPerBatch / elapsedMS;
-
         // Different progress display for CSV mode vs normal mode
         if (_csvOutput)
         {
             // In CSV mode, write progress to stderr with carriage return (erase and redraw)
             // Clear the line first, then write new progress
             var progressMsg =
-                $"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)";
+                $"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMs)} seeds/ms)";
             Console.Error.Write(
                 $"\r{progressMsg}{new string(' ', Math.Max(0, 100 - progressMsg.Length))}"
             );
@@ -589,7 +585,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             // Normal mode - use fancy bottom line
             FancyConsole.SetBottomLine(
-                $"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMS)} seeds/ms)"
+                $"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMs)} seeds/ms)"
             );
         }
     }
@@ -843,9 +839,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
-#if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void SearchSeeds(in MotelySearchContextParams searchContextParams)
         {
             char* seed = stackalloc char[Motely.MaxSeedLength];
@@ -1498,9 +1492,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
-#if !DEBUG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SearchVector(
             int i,
             Vector512<double> seedDigitVector,

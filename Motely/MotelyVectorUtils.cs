@@ -115,9 +115,7 @@ public unsafe static class MotelyVectorUtils
     public static Vector512<double> ExtendIntMaskToDouble(in Vector256<int> smallMask)
         => Extend32MaskTo64<int, double>(smallMask);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static Vector512<TTo> Extend32MaskTo64<TFrom, TTo>(in Vector256<TFrom> smallMask)
         where TFrom : unmanaged
         where TTo : unmanaged
@@ -146,9 +144,7 @@ public unsafe static class MotelyVectorUtils
     public static Vector256<int> ShrinkLongMaskToInt(in Vector512<long> smallMask)
         => Shrink64MaskTo32<long, int>(smallMask);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static Vector256<TTo> Shrink64MaskTo32<TFrom, TTo>(in Vector512<TFrom> smallMask)
         where TFrom : unmanaged
         where TTo : unmanaged
@@ -159,18 +155,14 @@ public unsafe static class MotelyVectorUtils
         return Vector256.Narrow(smallMask.GetLower().AsUInt64(), smallMask.GetUpper().AsUInt64()).As<uint, TTo>();
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static uint VectorMaskToIntMask<T>(in Vector256<T> vector) where T : unmanaged
     {
         if (sizeof(T) != 4) throw new InvalidOperationException();
         return Vector256.ExtractMostSignificantBits(vector);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static uint VectorMaskToIntMask<T>(in Vector512<T> vector) where T : unmanaged
     {
         if (sizeof(T) != 8) throw new InvalidOperationException();

@@ -12,9 +12,7 @@ public struct LuaRandom
 
     private LuaRandomState _state;
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public LuaRandom(double seed)
     {
         double d = seed;
@@ -67,9 +65,7 @@ public struct LuaRandom
         _state[3] = z;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public ulong RandInt()
     {
         ulong r = 0;
@@ -93,34 +89,26 @@ public struct LuaRandom
         return r;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public ulong RandDblMem()
     {
         return (RandInt() & 4503599627370495) | 4607182418800017408;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public double Random()
     {
         ulong u = RandDblMem();
         return Unsafe.As<ulong, double>(ref u) - 1.0;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public int RandInt(int min, int max)
     {
         return (int)(Random() * (max - min)) + min;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static ulong RandInt(double seed)
     {
         double d = seed;
@@ -213,26 +201,20 @@ public struct LuaRandom
         return randint;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static ulong RandDblMem(double seed)
     {
         return (RandInt(seed) & 4503599627370495ul) | 4607182418800017408ul;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static double Random(double seed)
     {
         ulong u = RandDblMem(seed);
         return Unsafe.As<ulong, double>(ref u) - 1;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static int RandInt(double seed, int min, int max)
     {
         return (int)(Random(seed) * (max - min)) + min;

@@ -18,9 +18,7 @@ public ref struct MotelySingleTarotStream(
 
 ref partial struct MotelySingleSearchContext
 {
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelySingleTarotStream CreateTarotStream(
         string source,
         int ante,
@@ -40,36 +38,26 @@ ref partial struct MotelySingleSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleTarotStream CreateArcanaPackTarotStream(
         int ante,
         bool soulOnly = false,
         bool isCached = false
     ) => CreateTarotStream(MotelyPrngKeys.ArcanaPackItemSource, ante, !soulOnly, true, isCached);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleTarotStream CreateShopTarotStream(int ante, bool isCached = false) =>
         CreateTarotStream(MotelyPrngKeys.ShopItemSource, ante, true, false, isCached);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleTarotStream CreateEmperorTarotStream(int ante, bool isCached = false) =>
         CreateTarotStream(MotelyPrngKeys.TarotEmperor, ante, true, false, isCached);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleTarotStream CreatePurpleSealTarotStream(int ante, bool isCached = false) =>
         CreateTarotStream(MotelyPrngKeys.SealPurple, ante, true, false, isCached);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public bool GetNextArcanaPackHasTheSoul(ref MotelySingleTarotStream tarotStream, MotelyBoosterPackSize size)
     {
         Debug.Assert(tarotStream.IsSoulable, "Tarot pack does not have the soul.");
@@ -105,9 +93,7 @@ ref partial struct MotelySingleSearchContext
         return pack;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public (MotelyItem, MotelyItem) GetNextEmperorTarots(ref MotelySingleTarotStream tarotStream)
     {
         Debug.Assert(!tarotStream.IsSoulable, "Emperor tarot stream should not have the soul.");

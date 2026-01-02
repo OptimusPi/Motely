@@ -53,9 +53,7 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     private Vector512<double>* SeedLastCharacters => _contextParams.SeedLastCharacters;
     private bool IsAdditionalFilter => _contextParams.IsAdditionalFilter;
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     internal MotelySingleSearchContext(
         ref readonly MotelySearchParameters searchParameters,
         ref readonly MotelySearchContextParams contextParams,
@@ -76,9 +74,7 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int GetSeed(char* output) => _contextParams.GetSeed(VectorLane, output);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public double PseudoHash(string key, bool isCached = false)
     {
         double partialHash;
@@ -95,9 +91,7 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         return InternalPseudoHashKey(key, partialHash);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private double InternalPseudoHashKey(string key, double partialHash)
     {
         double num = partialHash;
@@ -110,9 +104,7 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         return num;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private double InternalPseudoHashSeed(int keyLength)
     {
         int seedLastCharacterLength = SeedLastCharactersLength;
@@ -141,9 +133,7 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         return num;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private static double Fract(double x)
     {
         if (double.IsNaN(x)) return x;
@@ -191,9 +181,7 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
     private static readonly double TwoInvPrec = Math.Pow(2.0, 13);
     private static readonly double FiveInvPrec = Math.Pow(5.0, 13);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private static double Round13(double x)
     {
         double normalCase = Math.Round(x * InvPrec, MidpointRounding.AwayFromZero) / InvPrec;
@@ -212,17 +200,13 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         return Math.Floor(x * InvPrec) / InvPrec;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private static double IteratePRNG(double state)
     {
         return Round13(Fract(state * 1.72431234 + 2.134453429141));
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySinglePrngStream CreatePrngStream(string key, bool isCached = false)
     {
         return new(PseudoHash(key, isCached));
@@ -237,57 +221,43 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         return stream.State = IteratePRNG(stream.State);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public double GetNextPseudoSeed(ref MotelySinglePrngStream stream)
     {
         return (GetNextPrngState(ref stream) + SeedHashCache->GetSeedHash(VectorLane)) / 2d;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public LuaRandom GetNextLuaRandom(ref MotelySinglePrngStream stream)
     {
         return new LuaRandom(GetNextPseudoSeed(ref stream));
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public double GetNextRandom(ref MotelySinglePrngStream stream)
     {
         return LuaRandom.Random(GetNextPseudoSeed(ref stream));
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public int GetNextRandomInt(ref MotelySinglePrngStream stream, int min, int max)
     {
         return LuaRandom.RandInt(GetNextPseudoSeed(ref stream), min, max);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public T GetNextRandomElement<T>(ref MotelySinglePrngStream stream, T[] choices)
     {
         return choices[GetNextRandomInt(ref stream, 0, choices.Length)];
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelySingleResampleStream CreateResampleStream(string key, bool isCached)
     {
         return new(CreatePrngStream(key, isCached), isCached);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelySinglePrngStream CreateResamplePrngStream(string key, int resample, bool isCached)
     {
         // We don't cache resamples >= 8 because they'd use an extra digit
@@ -296,9 +266,7 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         return CreatePrngStream(key + MotelyPrngKeys.Resample + (resample + 2), isCached);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private ref MotelySinglePrngStream GetResamplePrngStream(
         ref MotelySingleResampleStream resampleStream,
         string key,

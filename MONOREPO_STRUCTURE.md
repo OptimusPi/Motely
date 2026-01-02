@@ -32,7 +32,8 @@ BalatroSeedOracle/
 │       │           └── deploy.ps1
 │       │
 │       ├── Motely.Tests/          # Unit tests
-│       ├── Motely.TUI/            # Terminal UI (optional)
+│       ├── Motely.CLI/            # Command Line Interface
+│       ├── Motely.TUI/            # Terminal UI (Terminal.GUI v2)
 │       ├── JamlFilters/           # JAML filter files (human-facing)
 │       ├── WordLists/             # Seed source databases
 │       └── Motely.sln             # Visual Studio solution
@@ -46,7 +47,19 @@ BalatroSeedOracle/
 - Pure C# library
 - Searches seeds based on JAML filters
 - No UI, just logic
-- Used by API, TUI, and tests
+- Used by API, CLI, TUI, and tests
+
+### 1.5. Command Line Interface (`Motely.CLI/`)
+- Standalone CLI executable
+- Parses command-line arguments
+- Runs searches via core engine
+- No GUI dependencies
+
+### 1.6. Terminal UI (`Motely.TUI/`)
+- Terminal.GUI v2 interface
+- Interactive menu system
+- Filter builder
+- API server launcher
 
 ### 2. Backend API (`Motely.API/`)
 - ASP.NET Core web server

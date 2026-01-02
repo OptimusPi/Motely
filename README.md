@@ -21,8 +21,8 @@ dotnet run --project Motely
 
 ### Launch the TUI (Terminal User Interface)
 ```bash
-# Launch interactive TUI (default when no arguments provided)
-dotnet run
+# Launch interactive TUI
+dotnet run --project Motely.TUI
 ```
 
 The TUI provides an interactive menu for:
@@ -53,20 +53,20 @@ The TUI provides an interactive menu for:
 
 #### Search with JSON/JAML filters
 ```bash
-dotnet run -- --json PerkeoObservatory --threads 16 --cutoff 2
-dotnet run -- --jaml MyFilter --threads 16 --cutoff 2
+dotnet run --project Motely.CLI -- --json PerkeoObservatory --threads 16 --cutoff 2
+dotnet run --project Motely.CLI -- --jaml MyFilter --threads 16 --cutoff 2
 ```
 
 #### Use Native C# Filters
 Built-in filters from [tacodiva's original Motely](https://github.com/tacodiva/Motely):
 ```bash
-dotnet run -- --native PerkeoObservatory --threads 16
+dotnet run --project Motely.CLI -- --native PerkeoObservatory --threads 16
 ```
 
 #### Analyze Seeds
 Following the `analyzer.cl` convention from [Immolate](https://github.com/SpectralPack/Immolate), [TheSoul](https://github.com/SpectralPack/TheSoul), and [Blueprint](https://miaklwalker.github.io/Blueprint/):
 ```bash
-dotnet run -- --analyze 5SC1HR14
+dotnet run --project Motely.CLI -- --analyze 5SC1HR14
 ```
 
 ### Available Options
@@ -76,7 +76,10 @@ dotnet run -- --analyze 5SC1HR14
 - `--jaml <name>` - Load filter from JamlFilters/
 - `--native <name>` - Use built-in C# filter
 - `--analyze <SEED>` - Analyze specific seed
-- _(no args)_ - Launch TUI
+
+**Note:** CLI and TUI are now separate projects:
+- CLI: `dotnet run --project Motely.CLI -- [args]`
+- TUI: `dotnet run --project Motely.TUI` (no args launches GUI)
 
 **Performance:**
 - `--threads <N>` - Thread count (default: CPU cores)
