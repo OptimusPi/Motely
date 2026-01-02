@@ -30,9 +30,7 @@ public ref struct MotelySingleItemSet
 #endif
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleItemSet(params ReadOnlySpan<MotelyItem> items)
     {
         Debug.Assert(items.Length <= MaxLength);
@@ -41,25 +39,19 @@ public ref struct MotelySingleItemSet
             GetItemRef(ref this, i) = items[i];
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItem GetItem(int index)
     {
         return GetItemRef(ref this, index);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public void Append(MotelyItem item)
     {
         GetItemRef(ref this, Length++) = item;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public bool Contains(MotelyItemType item)
     {
         for (int i = 0; i < Length; i++)
@@ -73,9 +65,7 @@ public ref struct MotelySingleItemSet
         return false;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public bool Contains(MotelyItem item)
     {
         for (int i = 0; i < Length; i++)

@@ -83,9 +83,7 @@ unsafe partial struct MotelyVectorSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyVectorJokerStream CreateJokerStream(
         string source,
         string eternalPerishableSource,
@@ -158,9 +156,7 @@ unsafe partial struct MotelyVectorSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyVectorJokerFixedRarityStream CreateJokerFixedRarityStream(string source, string eternalPerishableSource, string rentalSource, int ante, MotelyJokerFixedRarityStreamFlags flags, MotelyJokerRarity rarity, bool isCached)
     {
         return new()
@@ -177,9 +173,7 @@ unsafe partial struct MotelyVectorSearchContext
         };
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private VectorEnum256<MotelyItemEdition> GetNextEdition(
         ref MotelyVectorPrngStream stream,
         int editionRate
@@ -226,9 +220,7 @@ unsafe partial struct MotelyVectorSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyItemVector ApplyNextStickers(
         MotelyItemVector item,
         ref MotelyVectorPrngStream eternalPerishableStream,
@@ -290,9 +282,7 @@ unsafe partial struct MotelyVectorSearchContext
         return item;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItemVector GetNextJoker(ref MotelyVectorJokerFixedRarityStream stream)
     {
         MotelyItemVector item;
@@ -338,17 +328,13 @@ unsafe partial struct MotelyVectorSearchContext
         return item;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItemVector GetNextJoker(ref MotelyVectorJokerStream stream)
     {
         return GetNextJoker(ref stream, Vector512<double>.AllBitsSet);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItemVector GetNextJoker(ref MotelyVectorJokerStream stream, Vector512<double> mask)
     {
         MotelyItemVector jokers;
@@ -425,9 +411,7 @@ unsafe partial struct MotelyVectorSearchContext
         return jokers;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private Vector256<int> GetNextJoker<T>(
         ref MotelyVectorPrngStream stream,
         MotelyJokerRarity rarity,
@@ -442,9 +426,7 @@ unsafe partial struct MotelyVectorSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private Vector256<int> GetNextJoker<T>(
         ref MotelyVectorPrngStream stream,
         MotelyJokerRarity rarity

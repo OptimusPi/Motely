@@ -24,6 +24,26 @@ namespace Motely.Filters
             ValidateFilterItems(config.Must, "must", errors, warnings, stake, config.Deck, isMust: true);
             ValidateFilterItems(config.Should, "should", errors, warnings, stake, config.Deck);
             ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake, config.Deck);
+            
+            // #region agent log
+            // Check for duplicate clauses between Must and Should
+            if (config.Must != null && config.Should != null)
+            {
+                foreach (var mustClause in config.Must)
+                {
+                    foreach (var shouldClause in config.Should)
+                    {
+                        bool isDuplicate = mustClause.Type == shouldClause.Type 
+                            && mustClause.Value == shouldClause.Value
+                            && mustClause.ItemTypeEnum == shouldClause.ItemTypeEnum;
+                        if (isDuplicate)
+                        {
+                            // Duplicate clause found - validator will handle it
+                        }
+                    }
+                }
+            }
+            // #endregion
 
             // Validate deck
             if (
@@ -1058,6 +1078,12 @@ namespace Motely.Filters
                 item.Sources.PurpleSealOrEightBall = NormalizeRollIndices(
                     item.Sources.PurpleSealOrEightBall,
                     $"{prefix}.sources.purpleSealOrEightBall",
+                    errors,
+                    warnings
+                );
+                item.Sources.Emperor = NormalizeRollIndices(
+                    item.Sources.Emperor,
+                    $"{prefix}.sources.emperor",
                     errors,
                     warnings
                 );

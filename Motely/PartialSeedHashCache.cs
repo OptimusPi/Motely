@@ -19,9 +19,7 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     public readonly Vector512<double>* DynamicCacheMemory;
     public int DynamicCacheEntryCount;
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public PartialSeedHashCache(IInternalMotelySearch search, Vector512<double>* partialSeedHashes)
     {
         Cache = (Vector512<double>**)Marshal.AllocHGlobal(sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
@@ -44,18 +42,14 @@ internal unsafe struct PartialSeedHashCache : IDisposable
 
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private void ResetCache()
     {
         Unsafe.CopyBlock(Cache, InitialCache, (uint)sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
         DynamicCacheEntryCount = 0;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public void Reset()
     {
         if (DynamicCacheEntryCount != 0)
@@ -64,51 +58,39 @@ internal unsafe struct PartialSeedHashCache : IDisposable
         }
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly bool HasPartialHash(int keyLength)
     {
         return keyLength < Motely.MaxCachedPseudoHashKeyLength && Cache[keyLength] != null;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly Vector512<double> GetSeedHashVector()
     {
         Debug.Assert(Cache[0] != null);
         return *Cache[0];
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly double GetSeedHash(int lane)
     {
         return GetSeedHashVector()[lane];
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly Vector512<double> GetPartialHashVector(int keyLength)
     {
         Debug.Assert(HasPartialHash(keyLength));
         return *Cache[keyLength];
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public readonly double GetPartialHash(int keyLength, int lane)
     {
         return GetPartialHashVector(keyLength)[lane];
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public void CachePartialHash(int keyLength, Vector512<double> partialHash)
     {
         Debug.Assert(keyLength < Motely.MaxCachedPseudoHashKeyLength);

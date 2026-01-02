@@ -198,6 +198,73 @@ public static class MotelyJsonScoring
             }
         }
 
+        // Check Emperor tarot sources if specified
+        if (clause.Sources?.Emperor != null && clause.Sources.Emperor.Length > 0)
+        {
+            var emperorStream = ctx.CreateEmperorTarotStream(ante);
+            foreach (var rollIndex in clause.Sources.Emperor)
+            {
+                if (rollIndex < 0)
+                    continue;
+
+                // Advance stream to the specified roll index
+                var tarotStream = emperorStream;
+                for (int i = 0; i < rollIndex; i++)
+                {
+                    ctx.GetNextEmperorTarots(ref tarotStream);
+                }
+
+                // Emperor gives 2 tarot cards - check both
+                var (firstTarot, secondTarot) = ctx.GetNextEmperorTarots(ref tarotStream);
+                
+                // Check first tarot
+                bool matchesFirst = false;
+                if (!clause.TarotType.HasValue)
+                {
+                    matchesFirst = firstTarot.TypeCategory == MotelyItemTypeCategory.TarotCard;
+                }
+                else if (
+                    firstTarot.Type
+                    == (MotelyItemType)(
+                        (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                    )
+                )
+                {
+                    matchesFirst = true;
+                }
+
+                if (matchesFirst && (clause.EditionEnum == null || firstTarot.Edition == clause.EditionEnum.Value))
+                {
+                    tally++;
+                    if (earlyExit)
+                        return tally;
+                }
+
+                // Check second tarot
+                bool matchesSecond = false;
+                if (!clause.TarotType.HasValue)
+                {
+                    matchesSecond = secondTarot.TypeCategory == MotelyItemTypeCategory.TarotCard;
+                }
+                else if (
+                    secondTarot.Type
+                    == (MotelyItemType)(
+                        (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                    )
+                )
+                {
+                    matchesSecond = true;
+                }
+
+                if (matchesSecond && (clause.EditionEnum == null || secondTarot.Edition == clause.EditionEnum.Value))
+                {
+                    tally++;
+                    if (earlyExit)
+                        return tally;
+                }
+            }
+        }
+
         return tally;
     }
 

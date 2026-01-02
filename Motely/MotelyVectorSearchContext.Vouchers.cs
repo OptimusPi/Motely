@@ -16,17 +16,13 @@ public struct MotelyVectorVoucherStream(int ante, MotelyVectorResampleStream res
 
 ref partial struct MotelyVectorSearchContext
 {
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyVectorVoucherStream CreateVoucherStream(int ante, bool isCached = false)
     {
         return new(ante, CreateResampleStream(MotelyPrngKeys.Voucher + ante, isCached));
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public VectorEnum256<MotelyVoucher> GetAnteFirstVoucher(int ante, bool isCached = false)
     {
         MotelyVectorPrngStream prngStream = CreatePrngStream(
@@ -75,9 +71,7 @@ ref partial struct MotelyVectorSearchContext
         return vouchers;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public VectorEnum256<MotelyVoucher> GetAnteFirstVoucher(
         int ante,
         in MotelyVectorRunState voucherState,

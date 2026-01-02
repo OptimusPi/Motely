@@ -17,9 +17,7 @@ public ref struct MotelySinglePlanetStream(
 
 ref partial struct MotelySingleSearchContext
 {
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelySinglePlanetStream CreatePlanetStream(
         string source,
         int ante,
@@ -39,17 +37,13 @@ ref partial struct MotelySingleSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySinglePlanetStream CreateCelestialPackPlanetStream(
         int ante,
         bool isCached = false
     ) => CreatePlanetStream(MotelyPrngKeys.CelestialPackItemSource, ante, true, isCached);
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySinglePlanetStream CreateShopPlanetStream(int ante, bool isCached = false) =>
         CreatePlanetStream(MotelyPrngKeys.ShopItemSource, ante, false, isCached);
 

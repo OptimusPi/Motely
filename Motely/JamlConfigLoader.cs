@@ -1,13 +1,102 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Motely.Filters;
-using Motely.Filters.MotelyJson;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using YamlDotNet.Serialization.NodeDeserializers;
+using YamlDotNet.Core;
+using System.Reflection;
+using Motely.Filters.MotelyJson;
 
 namespace Motely;
+
+/// <summary>
+/// Case-insensitive naming convention for YAML deserialization
+/// </summary>
+public class CaseInsensitiveNamingConvention : INamingConvention
+{
+    public string Apply(string value)
+    {
+        return value; // Return as-is, matching is done case-insensitively
+    }
+
+    public string Reverse(string name)
+    {
+        return name; // Return as-is
+    }
+}
+
+/// <summary>
+/// Case-insensitive property type inspector for YAML deserialization
+/// </summary>
+internal class CaseInsensitivePropertyTypeInspector : ITypeInspector
+{
+    private readonly ITypeInspector _innerInspector;
+
+    public CaseInsensitivePropertyTypeInspector(ITypeInspector innerInspector)
+    {
+        _innerInspector = innerInspector;
+    }
+
+    public IEnumerable<IPropertyDescriptor> GetProperties(Type type, object? container)
+    {
+        return _innerInspector.GetProperties(type, container);
+    }
+
+    public IPropertyDescriptor GetProperty(Type type, object? container, string name, bool ignoreUnmatched)
+    {
+        return GetProperty(type, container, name, ignoreUnmatched, caseInsensitivePropertyMatching: true);
+    }
+
+    public IPropertyDescriptor GetProperty(Type type, object? container, string name, bool ignoreUnmatched, bool caseInsensitivePropertyMatching)
+    {
+        // Try exact match first
+        var property = _innerInspector.GetProperty(type, container, name, ignoreUnmatched: true, caseInsensitivePropertyMatching: false);
+        if (property != null)
+            return property;
+
+        // If case-sensitive, don't do case-insensitive matching
+        if (!caseInsensitivePropertyMatching)
+        {
+            if (ignoreUnmatched)
+                return null!;
+            throw new YamlDotNet.Core.YamlException($"Property '{name}' not found on type '{type.Name}'");
+        }
+
+        // Try case-insensitive match by checking all properties and their aliases
+        var properties = _innerInspector.GetProperties(type, container).ToList();
+        foreach (var prop in properties)
+        {
+            // Check property name case-insensitively
+            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
+                return prop;
+
+            // Check YamlMember alias if present
+            var propInfo = type.GetProperty(prop.Name, BindingFlags.Public | BindingFlags.Instance);
+            if (propInfo != null)
+            {
+                var yamlMember = propInfo.GetCustomAttribute<YamlMemberAttribute>();
+                if (yamlMember != null && !string.IsNullOrEmpty(yamlMember.Alias))
+                {
+                    if (string.Equals(yamlMember.Alias, name, StringComparison.OrdinalIgnoreCase))
+                        return prop;
+                }
+            }
+        }
+
+        if (ignoreUnmatched)
+            return null!;
+
+        throw new YamlDotNet.Core.YamlException($"Property '{name}' not found on type '{type.Name}'");
+    }
+
+    public string GetEnumName(Type type, string name)
+    {
+        return _innerInspector.GetEnumName(type, name);
+    }
+
+    public string GetEnumValue(object value)
+    {
+        return _innerInspector.GetEnumValue(value);
+    }
+}
 
 /// <summary>
 /// JAML (Joker Ante Markup Language) configuration loader.
@@ -60,11 +149,17 @@ public static class JamlConfigLoader
 
         try
         {
-            // Parse YAML with custom node deserializer for type-as-key syntax
+            // Pre-process JAML to support type-as-key syntax (but let YAML handle arrays naturally)
+            jamlContent = PreProcessJaml(jamlContent);
+
+            // Parse JAML (YAML-based) to object
+            // Use NullNamingConvention to preserve exact property names and YamlMember aliases
+            // Add case-insensitive property matching and type-as-key deserializer
             var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                .IgnoreUnmatchedProperties()
+                .WithNamingConvention(NullNamingConvention.Instance)
+                .WithTypeInspector(inner => new CaseInsensitivePropertyTypeInspector(inner))
                 .WithNodeDeserializer(new JamlTypeAsKeyNodeDeserializer(), s => s.Before<YamlDotNet.Serialization.NodeDeserializers.ObjectNodeDeserializer>())
+                .IgnoreUnmatchedProperties()
                 .Build();
 
             var deserializedConfig = deserializer.Deserialize<MotelyJsonConfig>(jamlContent);
@@ -93,5 +188,203 @@ public static class JamlConfigLoader
 
             return false;
         }
+    }
+
+    private static string PreProcessJaml(string jamlContent)
+    {
+        
+        var lines = jamlContent.Split('\n');
+        var result = new System.Text.StringBuilder();
+        
+        // Normalize section keys (Must/Should/MustNot) to lowercase for case-insensitive matching
+        // This is a clean preprocessing step, not a hack - it normalizes case before parsing
+        var sectionKeyMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Must"] = "must",
+            ["Should"] = "should",
+            ["MustNot"] = "mustnot"
+        };
+        
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+            var processedLine = line;
+            
+            // Check if this line is a section key and normalize it
+            foreach (var kvp in sectionKeyMappings)
+            {
+                if (trimmedLine.StartsWith(kvp.Key + ":", StringComparison.OrdinalIgnoreCase))
+                {
+                    var indent = line.Substring(0, line.Length - trimmedLine.Length);
+                    processedLine = indent + kvp.Value + ":" + line.Substring(line.IndexOf(':') + 1);
+                    break;
+                }
+            }
+            
+            result.AppendLine(processedLine);
+        }
+        
+        jamlContent = result.ToString();
+        lines = jamlContent.Split('\n');
+        result = new System.Text.StringBuilder();
+        
+        // Support clean type-as-key syntax: "joker: Blueprint" instead of "type: Joker, value: Blueprint"
+        // Support plural values arrays: "jokers: [Blueprint, Brainstorm]" expands to multiple clauses
+        // Singular type keys (case-insensitive matching handled via ToLowerInvariant)
+        var typeKeys = new[] {
+            "joker", "souljoker", "voucher",
+            "tarot", "tarotcard",
+            "planet", "planetcard",
+            "spectral", "spectralcard",
+            "standardcard",
+            "boss", "tag", "smallblindtag", "bigblindtag",
+            "erraticrank", "erraticsuit",
+            "event", "and", "or"
+        };
+
+        // Plural type keys for array syntax (case-insensitive)
+        var pluralTypeKeys = new[] {
+            "jokers", "souljokers", "vouchers",
+            "tarots", "tarotcards",
+            "planets", "planetcards",
+            "spectrals", "spectralcards",
+            "standardcards",
+            "bosses", "tags", "smallblindtags", "bigblindtags",
+            "erraticranks", "erraticsuits", "events"
+        };
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var trimmed = line.TrimStart();
+            bool matched = false;
+
+            // Check if line has type-as-key pattern (e.g., "  - joker: Blueprint")
+            if (trimmed.StartsWith("- "))
+            {
+                // Handle plural arrays (jokers: [Blueprint, Brainstorm])
+                foreach (var pluralKey in pluralTypeKeys)
+                {
+                    var pattern = $"- {pluralKey}:";
+                    if (trimmed.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var indent = line.Substring(0, line.IndexOf('-'));
+                        var singularType = GetSingularTypeName(pluralKey);
+                        var normalizedType = NormalizeTypeName(singularType);
+                        var arrayContent = trimmed.Substring(pattern.Length).Trim();
+                        
+                        // Convert jokers: [Blueprint, Brainstorm] to type: Joker + values: [Blueprint, Brainstorm]
+                        result.AppendLine($"{indent}- type: {normalizedType}");
+                        result.AppendLine($"{indent}  values: {arrayContent}");
+                        matched = true;
+                        break;
+                    }
+                }
+                
+                // Then check for singular type-as-key patterns
+                if (!matched)
+                {
+                    foreach (var typeKey in typeKeys)
+                    {
+                        var pattern = $"- {typeKey}:";
+                        if (trimmed.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var indent = line.Substring(0, line.IndexOf('-'));
+                            var value = trimmed.Substring(pattern.Length).Trim();
+
+                            // Convert to standard format
+                            var normalizedType = NormalizeTypeName(typeKey);
+                            result.AppendLine($"{indent}- type: {normalizedType}");
+
+                            // Special handling for or/and - they use "clauses:" not "value:"
+                            // This allows shorthand: "- or:" followed by nested items
+                            // instead of requiring explicit "clauses:" keyword
+                            if (typeKey.Equals("or", StringComparison.OrdinalIgnoreCase) ||
+                                typeKey.Equals("and", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // "null" comes from js-yaml formatter quirk - treat as empty
+                                // User already has explicit "clauses:" on next line, don't add another
+                                if (value.Equals("null", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // Just emit type, user has explicit clauses: below
+                                }
+                                else if (string.IsNullOrEmpty(value))
+                                {
+                                    // Normal shorthand: "- or:" with nested items (no explicit clauses:)
+                                    // Add "clauses:" so nested items become the clauses array
+                                    result.AppendLine($"{indent}  clauses:");
+                                }
+                                else
+                                {
+                                    // User wrote "- or: something" which doesn't make sense
+                                    // Just pass it through and let the deserializer error
+                                    result.AppendLine($"{indent}  value: {value}");
+                                }
+                            }
+                            else
+                            {
+                                result.AppendLine($"{indent}  value: {value}");
+                            }
+                            matched = true;
+                            break; // Found match, stop checking other typeKeys
+                        }
+                    }
+                }
+            }
+
+            // Only append original line if no type-as-key pattern was found
+            if (!matched)
+            {
+                result.AppendLine(line);
+            }
+        }
+
+        var processed = result.ToString();
+        return processed;
+    }
+
+    private static string GetSingularTypeName(string pluralKey)
+    {
+        return pluralKey.ToLowerInvariant() switch
+        {
+            "jokers" => "joker",
+            "souljokers" => "soulJoker",
+            "vouchers" => "voucher",
+            "tarots" or "tarotcards" => "tarot",
+            "planets" or "planetcards" => "planet",
+            "spectrals" or "spectralcards" => "spectral",
+            "standardcards" => "standardCard",
+            "bosses" => "boss",
+            "tags" => "tag",
+            "smallblindtags" => "smallBlindTag",
+            "bigblindtags" => "bigBlindTag",
+            "events" => "event",
+            "erraticranks" => "erraticRank",
+            "erraticsuits" => "erraticSuit",
+            _ => pluralKey.TrimEnd('s') // fallback: remove 's'
+        };
+    }
+
+    private static string NormalizeTypeName(string typeKey)
+    {
+        return typeKey.ToLowerInvariant() switch
+        {
+            "joker" => "Joker",
+            "souljoker" => "SoulJoker",
+            "voucher" => "Voucher",
+            "tarot" or "tarotcard" => "TarotCard",
+            "planet" or "planetcard" => "PlanetCard",
+            "spectral" or "spectralcard" => "SpectralCard",
+            "standardcard" => "StandardCard",
+            "boss" => "Boss",
+            "smallblindtag" => "SmallBlindTag",
+            "bigblindtag" => "BigBlindTag",
+            "event" => "Event",
+            "erraticrank" => "ErraticRank",
+            "erraticsuit" => "ErraticSuit",
+            "and" => "And",
+            "or" => "Or",
+            _ => typeKey
+        };
     }
 }

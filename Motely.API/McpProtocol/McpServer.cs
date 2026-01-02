@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Motely;
 using Motely.Filters;
 using Motely.Analysis;
+using Motely.Executors;
 
 namespace Motely.API.McpProtocol;
 
@@ -198,6 +199,39 @@ public class McpProtocolServer
                     },
                     required = new[] { "seed" }
                 }
+            },
+            new McpTool
+            {
+                Name = "verify_seed",
+                Description = "Verify if a specific Balatro seed matches a JAML filter. Returns whether it matches, the score, and detailed tallies.",
+                InputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        seed = new
+                        {
+                            type = "string",
+                            description = "Balatro seed string to verify (e.g., 'UQP1JJ11', 'ALEEB')"
+                        },
+                        jaml = new
+                        {
+                            type = "string",
+                            description = "JAML filter configuration to verify against (can be JAML string or path to .jaml file)"
+                        },
+                        deck = new
+                        {
+                            type = "string",
+                            description = "Optional: Deck name (defaults to filter's deck or Red)"
+                        },
+                        stake = new
+                        {
+                            type = "string",
+                            description = "Optional: Stake level (defaults to filter's stake or White)"
+                        }
+                    },
+                    required = new[] { "seed", "jaml" }
+                }
             }
         };
 
@@ -227,6 +261,7 @@ public class McpProtocolServer
                 "search_seeds" => await HandleSearchSeeds(arguments),
                 "get_search_status" => HandleGetSearchStatus(arguments),
                 "analyze_seed" => HandleAnalyzeSeed(arguments),
+                "verify_seed" => HandleVerifySeed(arguments),
                 _ => throw new ArgumentException($"Unknown tool: {toolName}")
             };
 
@@ -383,6 +418,107 @@ public class McpProtocolServer
             deck = deckValue,
             stake = stakeValue,
             analysis = analysis.ToString()
+        };
+    }
+
+    private object HandleVerifySeed(Dictionary<string, object> args)
+    {
+        if (!args.TryGetValue("seed", out var seedObj) || seedObj is not string seed)
+        {
+            throw new ArgumentException("Missing or invalid 'seed' parameter");
+        }
+
+        if (!args.TryGetValue("jaml", out var jamlObj) || jamlObj is not string jaml)
+        {
+            throw new ArgumentException("Missing or invalid 'jaml' parameter");
+        }
+
+        // Determine if jaml is a file path or JAML content
+        string jamlContent;
+        string configPath;
+        bool isJamlFile = jaml.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) && 
+                         (File.Exists(jaml) || File.Exists(Path.Combine("JamlFilters", jaml)));
+
+        if (isJamlFile)
+        {
+            // It's a file path
+            configPath = File.Exists(jaml) ? jaml : Path.Combine("JamlFilters", jaml);
+            if (!File.Exists(configPath))
+            {
+                throw new FileNotFoundException($"JAML file not found: {jaml}");
+            }
+            jamlContent = File.ReadAllText(configPath);
+        }
+        else
+        {
+            // It's JAML content
+            jamlContent = jaml;
+            configPath = "inline";
+        }
+
+        // Validate and load JAML config
+        if (!JamlConfigLoader.TryLoadFromJamlString(jamlContent, out var config, out var error) || config == null)
+        {
+            throw new ArgumentException($"Invalid JAML: {error}");
+        }
+
+        var deck = args.TryGetValue("deck", out var deckObj) ? deckObj?.ToString() : null;
+        var deckValue = deck ?? config.Deck ?? "Red";
+        var stake = args.TryGetValue("stake", out var stakeObj) ? stakeObj?.ToString() : null;
+        var stakeValue = stake ?? config.Stake ?? "White";
+
+        // Collect results via callback
+        List<MotelySeedScoreTally> results = new();
+
+        var parameters = new JsonSearchParams
+        {
+            SpecificSeed = seed,
+            Quiet = true, // Suppress console output
+            Cutoff = 0, // No cutoff - we want to see the actual score
+            Threads = 1
+        };
+
+        // Use JsonSearchExecutor with config object (supports both file path and inline JAML)
+        var executor = new JsonSearchExecutor(
+            config,
+            parameters,
+            (MotelySeedScoreTally result) =>
+            {
+                results.Add(result);
+            }
+        );
+        
+        var exitCode = executor.Execute(awaitCompletion: true);
+
+        // Determine if seed matched (exit code 0 and has results)
+        bool matched = exitCode == 0 && results.Count > 0;
+        MotelySeedScoreTally? result = results.Count > 0 ? results.First() : null;
+
+        // Get column names from config and pair with tally values
+        var columnNames = config.GetColumnNames();
+        var talliesDict = new Dictionary<string, int>();
+        if (result != null && result.Value.TallyColumns != null)
+        {
+            // Skip first two columns (seed, score), map remaining to tally values
+            for (int i = 0; i < result.Value.TallyColumns.Count && i + 2 < columnNames.Count; i++)
+            {
+                talliesDict[columnNames[i + 2]] = result.Value.TallyColumns[i];
+            }
+        }
+
+        return new
+        {
+            seed,
+            jaml = configPath == "inline" ? "(inline)" : configPath,
+            deck = deckValue,
+            stake = stakeValue,
+            matched,
+            score = result?.Score ?? 0,
+            tallies = talliesDict,
+            exitCode,
+            message = matched
+                ? $"✅ Seed '{seed}' MATCHES the filter (score: {result?.Score ?? 0})"
+                : $"❌ Seed '{seed}' does NOT match the filter"
         };
     }
 

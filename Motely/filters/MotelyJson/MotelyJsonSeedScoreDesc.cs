@@ -265,16 +265,15 @@ public struct MotelyJsonSeedScoreDesc(
                                         break;
 
                                     case MotelyFilterItemType.Joker:
-                                        if (
-                                            MotelyJsonScoring.CountJokerOccurrences(
-                                                ref singleCtx,
-                                                MotelyJsonJokerFilterClause.FromJsonClause(clause),
-                                                ante,
-                                                ref runState,
-                                                earlyExit: true,
-                                                originalClause: clause
-                                            ) > 0
-                                        )
+                                        var mustCount = MotelyJsonScoring.CountJokerOccurrences(
+                                            ref singleCtx,
+                                            MotelyJsonJokerFilterClause.FromJsonClause(clause),
+                                            ante,
+                                            ref runState,
+                                            earlyExit: true,
+                                            originalClause: clause
+                                        );
+                                        if (mustCount > 0)
                                         {
                                             clauseSatisfied = true;
                                             break;
@@ -398,6 +397,30 @@ public struct MotelyJsonSeedScoreDesc(
                                         }
                                         break;
 
+                                    case MotelyFilterItemType.Event:
+                                        // Events should be handled by Event filters, not in per-ante scoring
+                                        // If an Event clause appears here, it's a configuration error
+                                        throw new InvalidOperationException(
+                                            $"Event clauses should not be in MustNonVouchers. " +
+                                            $"Event filtering is handled separately by Event filter system."
+                                        );
+
+                                    case MotelyFilterItemType.And:
+                                    case MotelyFilterItemType.Or:
+                                        // And/Or clauses should be handled at the filter level, not in per-ante scoring
+                                        // If they appear here, it's a configuration error
+                                        throw new InvalidOperationException(
+                                            $"{clause.ItemTypeEnum} clauses should not be in MustNonVouchers. " +
+                                            $"Logical operators are handled at the filter composition level."
+                                        );
+
+                                    case MotelyFilterItemType.Voucher:
+                                        // Vouchers should be in MustVouchers, not MustNonVouchers
+                                        throw new InvalidOperationException(
+                                            $"Voucher clauses should be in MustVouchers, not MustNonVouchers. " +
+                                            $"This is a configuration error."
+                                        );
+
                                     default:
                                         throw new NotImplementedException(
                                             $"MUST clause verification not implemented for type: {clause.ItemTypeEnum}. " +
@@ -442,10 +465,15 @@ public struct MotelyJsonSeedScoreDesc(
                             case MotelyScoreAggregationMode.Sum:
                                 foreach (var should in config.Should)
                                 {
+                                    // CRITICAL FIX: Create a COPY of runState for each clause evaluation
+                                    // runState is mutated by counting functions (e.g., AddOwnedJoker),
+                                    // and this mutation was affecting subsequent clause evaluations!
+                                    var clauseRunState = runState; // Struct copy - preserves original state
+                                    
                                     int count = MotelyJsonScoring.CountOccurrences(
                                         ref singleCtx,
                                         should,
-                                        ref runState
+                                        ref clauseRunState
                                     );
                                     int score = count * should.Score;
                                     totalScore += score;
@@ -460,10 +488,13 @@ public struct MotelyJsonSeedScoreDesc(
                                 int maxCount = 0;
                                 foreach (var should in config.Should)
                                 {
+                                    // CRITICAL FIX: Create a COPY of runState for each clause evaluation
+                                    var clauseRunState = runState; // Struct copy - preserves original state
+                                    
                                     int count = MotelyJsonScoring.CountOccurrences(
                                         ref singleCtx,
                                         should,
-                                        ref runState
+                                        ref clauseRunState
                                     );
                                     if (count > maxCount)
                                         maxCount = count;
@@ -479,10 +510,13 @@ public struct MotelyJsonSeedScoreDesc(
                                 );
                                 foreach (var should in config.Should)
                                 {
+                                    // CRITICAL FIX: Create a COPY of runState for each clause evaluation
+                                    var clauseRunState = runState; // Struct copy - preserves original state
+                                    
                                     int count = MotelyJsonScoring.CountOccurrences(
                                         ref singleCtx,
                                         should,
-                                        ref runState
+                                        ref clauseRunState
                                     );
                                     int score = count * should.Score;
                                     totalScore += score;

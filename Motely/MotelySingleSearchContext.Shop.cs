@@ -35,9 +35,7 @@ unsafe ref partial struct MotelySingleSearchContext
 {
     private const int ShopJokerRate = 20;
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleShopItemStream CreateShopItemStream(
         int ante,
         MotelyShopStreamFlags flags = MotelyShopStreamFlags.Default,
@@ -48,9 +46,7 @@ unsafe ref partial struct MotelySingleSearchContext
         return CreateShopItemStream(ante, Deck.GetDefaultRunState(), flags, jokerFlags);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelySingleShopItemStream CreateShopItemStream(
         int ante,
         MotelyRunState runState,
@@ -120,9 +116,7 @@ unsafe ref partial struct MotelySingleSearchContext
         return stream;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItem GetNextShopItem(ref MotelySingleShopItemStream stream)
     {
         double itemTypePoll = GetNextRandom(ref stream.ItemTypeStream) * stream.TotalRate;

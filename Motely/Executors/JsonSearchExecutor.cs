@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using System.IO;
 using Motely.Filters;
 using Motely.Utils;
+#if !BROWSER
+using DuckDB.NET.Data;
+#endif
 
 namespace Motely.Executors
 {
@@ -239,33 +242,57 @@ namespace Motely.Executors
 
         private (IEnumerable<string>? seeds, bool preSorted) LoadSeedSources(string seedSource)
         {
-            string extension = Path.GetExtension(seedSource).ToLowerInvariant();
-            string fullPath;
+            // Remove extension to get base name, then check priority: .db > .csv > .txt
+            string baseName = Path.GetFileNameWithoutExtension(seedSource);
+            string directory;
 
             // Handle absolute paths vs relative paths
             if (Path.IsPathRooted(seedSource))
             {
-                // Absolute path - use as-is
-                fullPath = seedSource;
+                // Absolute path - use directory from path
+                directory = Path.GetDirectoryName(seedSource) ?? "";
             }
             else
             {
                 // Relative path - look in SeedSources folder
-                fullPath = Path.Combine("SeedSources", seedSource);
+                directory = "SeedSources";
             }
 
-            if (!File.Exists(fullPath))
-            {
-                throw new FileNotFoundException($"Seed source file not found: {fullPath}");
-            }
+            // Check in priority order: .db > .csv > .txt
+            string dbPath = Path.Combine(directory, baseName + ".db");
+            string csvPath = Path.Combine(directory, baseName + ".csv");
+            string txtPath = Path.Combine(directory, baseName + ".txt");
 
-            return extension switch
+            if (File.Exists(dbPath))
             {
-                ".db" => LoadDuckDBSource(fullPath),
-                ".csv" => LoadCsvSource(fullPath),
-                ".txt" => LoadTextSource(fullPath),
-                _ => throw new NotSupportedException($"Unsupported file extension: {extension}")
-            };
+                return LoadDuckDBSource(dbPath);
+            }
+            else if (File.Exists(csvPath))
+            {
+                return LoadCsvSource(csvPath);
+            }
+            else if (File.Exists(txtPath))
+            {
+                return LoadTextSource(txtPath);
+            }
+            else
+            {
+                // If none exist, try the original path as-is (in case user specified full path with extension)
+                string originalPath = Path.IsPathRooted(seedSource) ? seedSource : Path.Combine("SeedSources", seedSource);
+                if (File.Exists(originalPath))
+                {
+                    string extension = Path.GetExtension(originalPath).ToLowerInvariant();
+                    return extension switch
+                    {
+                        ".db" => LoadDuckDBSource(originalPath),
+                        ".csv" => LoadCsvSource(originalPath),
+                        ".txt" => LoadTextSource(originalPath),
+                        _ => throw new NotSupportedException($"Unsupported file extension: {extension}")
+                    };
+                }
+                
+                throw new FileNotFoundException($"Seed source file not found. Checked: {dbPath}, {csvPath}, {txtPath}");
+            }
         }
 
         private (IEnumerable<string>? seeds, bool preSorted) LoadDuckDBSource(string dbPath)
@@ -287,9 +314,36 @@ namespace Motely.Executors
                 Console.WriteLine($"🔄 Converting CSV to DuckDB: {csvPath} -> {tempDbPath}");
             }
 
-            // TODO: Implement CSV to DuckDB conversion
-            // For now, fall back to reading as text
-            return LoadTextSource(csvPath);
+            try
+            {
+                // Check if temp DB already exists and is newer than CSV
+                if (File.Exists(tempDbPath) && File.GetLastWriteTime(tempDbPath) > File.GetLastWriteTime(csvPath))
+                {
+                    if (!_params.Quiet)
+                    {
+                        Console.WriteLine($"✅ Using existing DuckDB: {tempDbPath}");
+                    }
+                    return LoadDuckDBSource(tempDbPath);
+                }
+
+                // Create DuckDB database and import CSV
+                DuckDBHelper.ConvertCsvToDuckDB(csvPath, tempDbPath);
+                
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"✅ Converted CSV to DuckDB: {tempDbPath}");
+                }
+                
+                return LoadDuckDBSource(tempDbPath);
+            }
+            catch (Exception ex)
+            {
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"⚠️  Failed to convert CSV to DuckDB: {ex.Message}. Falling back to text reading.");
+                }
+                return LoadTextSource(csvPath);
+            }
         }
 
         private (IEnumerable<string>? seeds, bool preSorted) LoadTextSource(string textPath)
@@ -635,7 +689,7 @@ namespace Motely.Executors
             searchSettings = searchSettings.WithBatchCharacterCount(_params.BatchSize);
             searchSettings = searchSettings.WithStartBatchIndex((long)_params.StartBatch);
             if (_params.EndBatch > 0)
-                searchSettings = searchSettings.WithEndBatchIndex((long)_params.EndBatch);
+                searchSettings = searchSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
 
             searchSettings = searchSettings.WithSeedScoreProvider(scoreDesc);
             searchSettings = searchSettings.WithCsvOutput(true);
@@ -835,7 +889,7 @@ namespace Motely.Executors
                 compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
                 compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
                 if (_params.EndBatch > 0)
-                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch);
+                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
 
                 // Always enable CSV output and scoring (score will be 0 if no SHOULD clauses)
                 compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
@@ -926,7 +980,7 @@ namespace Motely.Executors
                 compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
                 compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
                 if (_params.EndBatch > 0)
-                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch);
+                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
 
                 // Always enable CSV output and scoring (score will be 0 if no SHOULD clauses)
                 compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);

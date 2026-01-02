@@ -72,7 +72,8 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                 bool hasShop = HasShopSlots(clause.WantedShopSlots);
                 bool hasPack = HasPackSlots(clause.WantedPackSlots);
                 bool hasTarotStreamSources =
-                    clause.Sources?.PurpleSealOrEightBall is { Length: > 0 };
+                    clause.Sources?.PurpleSealOrEightBall is { Length: > 0 }
+                    || clause.Sources?.Emperor is { Length: > 0 };
                 bool useDefaults = !hasShop && !hasPack && !hasTarotStreamSources;
 
                 int maxShopSlots = 0;
@@ -169,6 +170,89 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                             }
 
                             VectorMask matches = isActualTarot & typeMatches & editionMatches;
+                            clauseMask |= matches;
+                        }
+
+                        pos++;
+                        if (pos >= rollIndices.Length)
+                            break;
+                        nextWanted = rollIndices[pos];
+                    }
+                }
+
+                // Check Emperor tarot sources
+                if (clause.Sources?.Emperor != null && clause.Sources.Emperor.Length > 0)
+                {
+                    var emperorStream = ctx.CreateEmperorTarotStream(ante);
+                    var rollIndices = clause.Sources.Emperor;
+
+                    // rollIndices are normalized at config load time (sorted, unique, non-negative)
+                    int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                    int pos = 0;
+                    int nextWanted = rollIndices[0];
+                    var excludedValue = Vector256.Create((int)MotelyItemType.TarotExcludedByStream);
+
+                    for (int r = 0; r <= maxRollIndex; r++)
+                    {
+                        // Emperor gives 2 tarot cards - we need to check both
+                        var emperorTarots = ctx.GetNextEmperorTarots(ref emperorStream);
+                        if (r != nextWanted)
+                            continue;
+
+                        // Check both tarot cards from Emperor
+                        var firstTarot = emperorTarots[0];
+                        var secondTarot = emperorTarots[1];
+
+                        var isNotExcludedFirst = ~Vector256.Equals(firstTarot.Value, excludedValue);
+                        var isNotExcludedSecond = ~Vector256.Equals(secondTarot.Value, excludedValue);
+                        VectorMask isActualTarotFirst = isNotExcludedFirst;
+                        VectorMask isActualTarotSecond = isNotExcludedSecond;
+
+                        if (!isActualTarotFirst.IsAllFalse() || !isActualTarotSecond.IsAllFalse())
+                        {
+                            // Check type match for first tarot
+                            VectorMask typeMatchesFirst = VectorMask.AllBitsSet;
+                            if (clause.TarotType.HasValue)
+                            {
+                                var targetTarotType = (MotelyItemType)(
+                                    (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                                );
+                                typeMatchesFirst = VectorEnum256.Equals(firstTarot.Type, targetTarotType);
+                            }
+
+                            // Check edition match for first tarot
+                            VectorMask editionMatchesFirst = VectorMask.AllBitsSet;
+                            if (clause.EditionEnum.HasValue)
+                            {
+                                editionMatchesFirst = VectorEnum256.Equals(
+                                    firstTarot.Edition,
+                                    clause.EditionEnum.Value
+                                );
+                            }
+
+                            // Check type match for second tarot
+                            VectorMask typeMatchesSecond = VectorMask.AllBitsSet;
+                            if (clause.TarotType.HasValue)
+                            {
+                                var targetTarotType = (MotelyItemType)(
+                                    (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                                );
+                                typeMatchesSecond = VectorEnum256.Equals(secondTarot.Type, targetTarotType);
+                            }
+
+                            // Check edition match for second tarot
+                            VectorMask editionMatchesSecond = VectorMask.AllBitsSet;
+                            if (clause.EditionEnum.HasValue)
+                            {
+                                editionMatchesSecond = VectorEnum256.Equals(
+                                    secondTarot.Edition,
+                                    clause.EditionEnum.Value
+                                );
+                            }
+
+                            // Match if either tarot matches
+                            VectorMask matches = (isActualTarotFirst & typeMatchesFirst & editionMatchesFirst)
+                                              | (isActualTarotSecond & typeMatchesSecond & editionMatchesSecond);
                             clauseMask |= matches;
                         }
 

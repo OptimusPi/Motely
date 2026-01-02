@@ -3,6 +3,7 @@ using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 using Motely.Filters.MotelyJson;
 using System.Linq;
+using System.Reflection;
 
 namespace Motely.Filters.MotelyJson;
 
@@ -22,8 +23,7 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
         ["planetcard"] = "PlanetCard",
         ["spectral"] = "SpectralCard",
         ["spectralcard"] = "SpectralCard",
-        ["playingcard"] = "PlayingCard",
-        ["standardcard"] = "PlayingCard",
+        ["standardcard"] = "StandardCard",
         ["boss"] = "Boss",
         ["tag"] = "Tag",
         ["smallblindtag"] = "SmallBlindTag",
@@ -112,9 +112,19 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
             }
             else
             {
-                // Regular entry, just copy it using objectFactory
-                var nodeValue = objectFactory(reader, typeof(object));
-                entries[key] = nodeValue!;
+                // Regular entry - check if it's the "clauses" property for And/Or clauses
+                if (string.Equals(key, "clauses", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Deserialize as List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    var clausesValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>));
+                    entries[key] = clausesValue!;
+                }
+                else
+                {
+                    // Regular entry, just copy it using objectFactory
+                    var nodeValue = objectFactory(reader, typeof(object));
+                    entries[key] = nodeValue!;
+                }
             }
         }
         if (entries.TryGetValue("type", out var typeValue))
@@ -129,11 +139,32 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                 // Set the type to and/or
                 clause.Type = typeStr.ToLowerInvariant();
                 
-                // For and/or entries, the complex value should be stored in the 'clauses' property
-                if (entries.TryGetValue("value", out var complexValue))
+                // For and/or entries, nested clauses can be in 'value' (shorthand) or 'clauses' (standard format)
+                var clausesProperty = clause.GetType().GetProperty("clauses", System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (clausesProperty != null && clausesProperty.CanWrite)
                 {
-                    var clausesProperty = clause.GetType().GetProperty("clauses", System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    if (clausesProperty != null && clausesProperty.CanWrite)
+                    // Check for standard format: clauses property
+                    if (entries.TryGetValue("clauses", out var clausesValue))
+                    {
+                        if (clausesValue is List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList)
+                        {
+                            clausesProperty.SetValue(clause, clausesList);
+                        }
+                        else if (clausesValue is System.Collections.IList list)
+                        {
+                            var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                            foreach (var item in list)
+                            {
+                                if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
+                                {
+                                    convertedList.Add(filterClause);
+                                }
+                            }
+                            clausesProperty.SetValue(clause, convertedList);
+                        }
+                    }
+                    // Check for shorthand format: value property contains the clauses
+                    else if (entries.TryGetValue("value", out var complexValue))
                     {
                         // Convert the List<object> to List<MotleyJsonFilterClause>
                         if (complexValue is System.Collections.IList list)
@@ -166,33 +197,55 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                         entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase))
                         continue;
                         
-                    var property = clause.GetType().GetProperty(entry.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    var property = FindPropertyWithAlias(clause.GetType(), entry.Key);
                     if (property != null && property.CanWrite)
                     {
                         if (property.PropertyType == typeof(string))
                         {
                             property.SetValue(clause, entry.Value?.ToString());
                         }
-                        else if (property.PropertyType == typeof(int[]))
+                    else if (property.PropertyType == typeof(int[]))
+                    {
+                        int[]? intArray = null;
+                        if (entry.Value is object[] array)
                         {
-                            if (entry.Value is object[] array)
-                            {
-                                property.SetValue(clause, array.Cast<int>().ToArray());
-                            }
+                            intArray = array.Cast<int>().ToArray();
                         }
-                        else if (property.PropertyType == typeof(int))
+                        else if (entry.Value is System.Collections.IList list)
                         {
-                            if (int.TryParse(entry.Value?.ToString(), out var intValue))
-                            {
-                                property.SetValue(clause, intValue);
-                            }
+                            intArray = list.Cast<object>().Select(o => Convert.ToInt32(o)).ToArray();
+                        }
+                        
+                        if (intArray != null)
+                        {
+                            property.SetValue(clause, intArray);
+                        }
+                    }
+                    else if (property.PropertyType == typeof(int))
+                    {
+                        if (int.TryParse(entry.Value?.ToString(), out var intValue))
+                        {
+                            property.SetValue(clause, intValue);
+                        }
+                    }
+                    else if (property.PropertyType == typeof(int?))
+                    {
+                        // Handle nullable int
+                        if (entry.Value == null)
+                        {
+                            property.SetValue(clause, null);
+                        }
+                        else if (int.TryParse(entry.Value.ToString(), out var intValue))
+                        {
+                            property.SetValue(clause, intValue);
                         }
                     }
                 }
-                
-                value = clause;
-                return true;
             }
+            
+            value = clause;
+            return true;
+        }
         }
 
         // Create the appropriate filter clause from the processed entries
@@ -204,7 +257,8 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
             // Set all properties from entries
             foreach (var entry in entries)
             {
-                var property = clause.GetType().GetProperty(entry.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                // Try to find property by name (case-insensitive) or YamlMember alias
+                var property = FindPropertyWithAlias(clause.GetType(), entry.Key);
                 if (property != null && property.CanWrite)
                 {
                     if (property.PropertyType == typeof(string))
@@ -213,9 +267,36 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                     }
                     else if (property.PropertyType == typeof(int[]))
                     {
+                        int[]? intArray = null;
                         if (entry.Value is object[] array)
                         {
-                            property.SetValue(clause, array.Cast<int>().ToArray());
+                            intArray = array.Cast<int>().ToArray();
+                        }
+                        else if (entry.Value is System.Collections.IList list)
+                        {
+                            intArray = list.Cast<object>().Select(o => Convert.ToInt32(o)).ToArray();
+                        }
+                        
+                        if (intArray != null)
+                        {
+                            property.SetValue(clause, intArray);
+                        }
+                    }
+                    else if (property.PropertyType == typeof(string[]))
+                    {
+                        string[]? stringArray = null;
+                        if (entry.Value is object[] array)
+                        {
+                            stringArray = array.Select(o => o?.ToString() ?? "").ToArray();
+                        }
+                        else if (entry.Value is System.Collections.IList list)
+                        {
+                            stringArray = list.Cast<object>().Select(o => o?.ToString() ?? "").ToArray();
+                        }
+                        
+                        if (stringArray != null)
+                        {
+                            property.SetValue(clause, stringArray);
                         }
                     }
                     else if (property.PropertyType == typeof(int))
@@ -223,6 +304,40 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                         if (int.TryParse(entry.Value?.ToString(), out var intValue))
                         {
                             property.SetValue(clause, intValue);
+                        }
+                    }
+                    else if (property.PropertyType == typeof(int?))
+                    {
+                        // Handle nullable int
+                        if (entry.Value == null)
+                        {
+                            property.SetValue(clause, null);
+                        }
+                        else if (int.TryParse(entry.Value.ToString(), out var intValue))
+                        {
+                            property.SetValue(clause, intValue);
+                        }
+                    }
+                    else if (property.PropertyType == typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>))
+                    {
+                        // Handle nested clauses for And/Or clauses
+                        if (entry.Value is List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList)
+                        {
+                            // Already the correct type, just set it
+                            property.SetValue(clause, clausesList);
+                        }
+                        else if (entry.Value is System.Collections.IList list)
+                        {
+                            // Convert from generic list to typed list
+                            var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                            foreach (var item in list)
+                            {
+                                if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
+                                {
+                                    convertedList.Add(filterClause);
+                                }
+                            }
+                            property.SetValue(clause, convertedList);
                         }
                     }
                 }
@@ -259,7 +374,7 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
             
             foreach (var entry in entries)
             {
-                var property = clause.GetType().GetProperty(entry.Key, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                var property = FindPropertyWithAlias(clause.GetType(), entry.Key);
                 if (property != null && property.CanWrite)
                 {
                     if (property.PropertyType == typeof(string))
@@ -268,14 +383,36 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
                     }
                     else if (property.PropertyType == typeof(int[]))
                     {
+                        int[]? intArray = null;
                         if (entry.Value is object[] array)
                         {
-                            property.SetValue(clause, array.Cast<int>().ToArray());
+                            intArray = array.Cast<int>().ToArray();
+                        }
+                        else if (entry.Value is System.Collections.IList list)
+                        {
+                            intArray = list.Cast<object>().Select(o => Convert.ToInt32(o)).ToArray();
+                        }
+                        
+                        if (intArray != null)
+                        {
+                            property.SetValue(clause, intArray);
                         }
                     }
                     else if (property.PropertyType == typeof(int))
                     {
                         if (int.TryParse(entry.Value?.ToString(), out var intValue))
+                        {
+                            property.SetValue(clause, intValue);
+                        }
+                    }
+                    else if (property.PropertyType == typeof(int?))
+                    {
+                        // Handle nullable int
+                        if (entry.Value == null)
+                        {
+                            property.SetValue(clause, null);
+                        }
+                        else if (int.TryParse(entry.Value.ToString(), out var intValue))
                         {
                             property.SetValue(clause, intValue);
                         }
@@ -286,5 +423,30 @@ public class JamlTypeAsKeyNodeDeserializer : INodeDeserializer
             value = clause;
             return true;
         }
+    }
+    
+    /// <summary>
+    /// Find a property by name (case-insensitive) or YamlMember alias
+    /// </summary>
+    private static System.Reflection.PropertyInfo? FindPropertyWithAlias(Type type, string name)
+    {
+        // First try direct case-insensitive match
+        var property = type.GetProperty(name, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        if (property != null)
+            return property;
+        
+        // Then check all properties for YamlMember aliases
+        var allProperties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        foreach (var prop in allProperties)
+        {
+            var yamlMember = System.Attribute.GetCustomAttribute(prop, typeof(YamlMemberAttribute)) as YamlMemberAttribute;
+            if (yamlMember != null && !string.IsNullOrEmpty(yamlMember.Alias))
+            {
+                if (string.Equals(yamlMember.Alias, name, StringComparison.OrdinalIgnoreCase))
+                    return prop;
+            }
+        }
+        
+        return null;
     }
 }

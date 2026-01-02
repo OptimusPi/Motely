@@ -71,9 +71,7 @@ public static class MotelyPrngKeys
 
     public const string DeckErratic = "erratic";
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static string FixedRarityJoker(MotelyJokerRarity rarity, string source, int ante)
     {
         return rarity switch

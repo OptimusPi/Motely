@@ -26,9 +26,7 @@ public struct VectorLuaRandom
 
     private VectorLuaRandomState _state;
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public VectorLuaRandom(Vector512<double> seed)
     {
         Vector512<double> d = seed;
@@ -84,9 +82,7 @@ public struct VectorLuaRandom
         _state[3] = z;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector512<ulong> RandInt()
     {
         Vector512<ulong> r = Vector512<ulong>.Zero;
@@ -110,35 +106,27 @@ public struct VectorLuaRandom
         return r;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector512<ulong> RandDblMem()
     {
         return (RandInt() & _randDblMemMask) | _randDblMemOr;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector512<double> Random()
     {
         Vector512<ulong> u = RandDblMem();
         return u.AsDouble() - _vecOne;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public Vector256<int> RandInt(int min, int max)
     {
         return MotelyVectorUtils.ConvertToVector256Int32(Random() * (max - min))
             + Vector256.Create<int>(min);
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static Vector512<ulong> RandInt(Vector512<double> seed)
     {
         Vector512<double> d = seed;
@@ -231,26 +219,20 @@ public struct VectorLuaRandom
         return randint;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static Vector512<ulong> RandDblMem(Vector512<double> seed)
     {
         return (RandInt(seed) & _randDblMemMask) | _randDblMemOr;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static Vector512<double> Random(Vector512<double> seed)
     {
         Vector512<ulong> u = RandDblMem(seed);
         return u.AsDouble() - _vecOne;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public static Vector256<int> RandInt(Vector512<double> seed, int min, int max)
     {
         return MotelyVectorUtils.ConvertToVector256Int32(Random(seed) * (max - min))

@@ -123,9 +123,7 @@ unsafe ref partial struct MotelySingleSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelySingleJokerStream CreateJokerStream(
         string source,
         string eternalPerishableSource,
@@ -203,9 +201,7 @@ unsafe ref partial struct MotelySingleSearchContext
         );
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelySingleJokerFixedRarityStream CreateJokerFixedRarityStream(string source, string eternalPerishableSource, string rentalSource, int ante, MotelyJokerFixedRarityStreamFlags flags, MotelyJokerRarity rarity, bool isCached)
     {
         return new()
@@ -250,9 +246,7 @@ unsafe ref partial struct MotelySingleSearchContext
         return pack;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyItemEdition GetNextEdition(ref MotelySinglePrngStream stream, int editionRate)
     {
         double editionPoll = GetNextRandom(ref stream);
@@ -269,9 +263,7 @@ unsafe ref partial struct MotelySingleSearchContext
             return MotelyItemEdition.None;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private static bool CanBeEternal(MotelyItem item)
     {
         // Jokers that self-destruct or activate on sell cannot receive the Eternal Sticker
@@ -325,9 +317,7 @@ unsafe ref partial struct MotelySingleSearchContext
         return item;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     public MotelyItem GetNextJoker(ref MotelySingleJokerFixedRarityStream stream)
     {
         MotelyItem item;
@@ -373,9 +363,7 @@ unsafe ref partial struct MotelySingleSearchContext
         return item;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     // Overload that handles duplicate checking for packs using resample stream
     public MotelyItem GetNextJoker(
         ref MotelySingleJokerStream stream,
@@ -490,9 +478,7 @@ unsafe ref partial struct MotelySingleSearchContext
     public MotelyItem GetNextJoker(ref MotelySingleJokerStream stream) =>
         GetNextJokerInternal(ref stream, in Unsafe.NullRef<MotelySingleItemSet>());
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyItem GetNextJokerInternal(
         ref MotelySingleJokerStream stream,
         in MotelySingleItemSet items
@@ -635,9 +621,7 @@ unsafe ref partial struct MotelySingleSearchContext
         return jokerItem;
     }
 
-#if !DEBUG
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
     private MotelyJoker GetNextJoker<T>(ref MotelySinglePrngStream stream, MotelyJokerRarity rarity)
         where T : unmanaged, Enum
     {
