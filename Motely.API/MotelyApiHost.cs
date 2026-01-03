@@ -85,9 +85,22 @@ public static class MotelyApiHost
         // Add SignalR
         app.MapHub<SearchHub>("/searchHub");
         
-        // Add static files
+        // Add static files with custom caching for HTML files
+        var staticFileOptions = new StaticFileOptions
+        {
+            OnPrepareResponse = ctx =>
+            {
+                // Don't cache HTML files to prevent stale asset references
+                if (ctx.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
+                    ctx.Context.Response.Headers.Append("Pragma", "no-cache");
+                    ctx.Context.Response.Headers.Append("Expires", "0");
+                }
+            }
+        };
         app.UseDefaultFiles();
-        app.UseStaticFiles();
+        app.UseStaticFiles(staticFileOptions);
 
         // Basic endpoints
         app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });

@@ -14,16 +14,15 @@
       :class="[`panel-section-${color}`]"
       :style="panelStyle"
     >
-      <!-- Colored top border acts as drag handle for panels below this one -->
+      <!-- Panel tab/label area - THIS IS THE DIVIDER/GRAB HANDLE -->
+      <!-- The colored tab bar IS the divider - dragging it resizes the panel ABOVE -->
       <div 
-        v-if="showTopGrab"
-        class="panel-top-drag-handle"
-        :style="{ borderTop: `3px solid var(--panel-color)` }"
+        class="panel-tab-area"
+        :class="`panel-tab-${color}`"
         @pointerdown="handleTopDrag"
-      ></div>
-      
-      <!-- Panel tab/label area -->
-      <div class="panel-tab-area">
+        @mousedown="handleTopDrag"
+        @touchstart="handleTopDrag"
+      >
         <span class="panel-label">{{ label }}</span>
         <span v-if="badge" class="panel-badge">{{ badge }}</span>
       </div>
@@ -68,18 +67,10 @@ const props = defineProps({
   fillRemaining: {
     type: Boolean,
     default: false
-  },
-  showTopGrab: {
-    type: Boolean,
-    default: false
-  },
-  resizeIndex: {
-    type: Number,
-    default: null
   }
 });
 
-const emit = defineEmits(['resize', 'collapse', 'top-drag']);
+const emit = defineEmits(['resize', 'collapse', 'top-drag']); // top-drag: dragging tab resizes panel above
 
 const panelWrapper = ref(null);
 const panel = ref(null);
@@ -106,62 +97,12 @@ const toggleCollapse = () => {
 };
 
 const handleTopDrag = (event) => {
+  // The colored tab bar IS the divider - dragging it resizes the panel ABOVE
   // Emit the drag event to parent so it can handle stack resize
   emit('top-drag', event)
 }
 
-let isPanelDragging = false
-let panelStartY = 0
-let panelStartHeight = 0
-
-const startResize = (event) => {
-  if (event.button !== 0 && event.type !== 'touchstart') return
-  event.preventDefault()
-  event.stopPropagation()
-
-  isPanelDragging = true
-  panelStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
-  panelStartHeight = height.value
-
-  document.body.style.cursor = 'ns-resize'
-  document.body.style.userSelect = 'none'
-
-  // Use document-level listeners for smooth dragging (like SplitPane)
-  document.addEventListener('mousemove', handlePanelMove)
-  document.addEventListener('touchmove', handlePanelMove, { passive: false })
-  document.addEventListener('mouseup', handlePanelEnd)
-  document.addEventListener('touchend', handlePanelEnd)
-  document.addEventListener('touchcancel', handlePanelEnd)
-}
-
-const handlePanelMove = (moveEvent) => {
-  if (!isPanelDragging) return
-
-  const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0]?.clientY) || 0
-  const deltaY = currentY - panelStartY
-
-  // NO LIMITATIONS - let it drag freely!
-  const newHeight = panelStartHeight + deltaY
-  height.value = newHeight
-  emit('resize', newHeight)
-
-  moveEvent.preventDefault()
-}
-
-const handlePanelEnd = () => {
-  if (!isPanelDragging) return
-
-  isPanelDragging = false
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-
-  // Remove document-level listeners
-  document.removeEventListener('mousemove', handlePanelMove)
-  document.removeEventListener('touchmove', handlePanelMove)
-  document.removeEventListener('mouseup', handlePanelEnd)
-  document.removeEventListener('touchend', handlePanelEnd)
-  document.removeEventListener('touchcancel', handlePanelEnd)
-}
+// Removed unused startResize/handlePanelMove/handlePanelEnd - tab drag handled by parent via top-drag event
 
 onMounted(() => {
   if (props.defaultHeight) {
@@ -204,10 +145,10 @@ watch(
   position: relative;
   width: 100%;
   box-sizing: border-box;
-  background: var(--panel-dark, #2c3e50);
-  border-left: 3px solid var(--panel-color);
-  border-right: 3px solid var(--panel-color);
-  border-bottom: 3px solid var(--panel-color);
+  background: var(--dark-bg);
+  border-left: 3px solid var(--balatro-blue);
+  border-right: 3px solid var(--balatro-blue);
+  border-bottom: 3px solid var(--balatro-blue);
   border-top: none; /* Top border removed - panels touch each other */
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
   overflow: hidden;
@@ -219,18 +160,7 @@ watch(
   padding: 0;
 }
 
-.panel-top-drag-handle {
-  position: absolute;
-  top: -3px; /* Overlap with panel above */
-  left: 0;
-  right: 0;
-  height: 3px;
-  cursor: ns-resize;
-  z-index: 20;
-  background: transparent;
-  touch-action: none;
-  user-select: none;
-}
+/* Removed panel-top-drag-handle - the tab IS the divider */
 
 .panel-tab-area {
   height: 24px;
@@ -244,6 +174,43 @@ watch(
   font-weight: normal;
   user-select: none;
   flex-shrink: 0;
+  cursor: ns-resize; /* This IS the divider - resize cursor */
+  touch-action: none;
+  position: relative;
+  z-index: 10; /* Above panel content */
+  /* Manila envelope tab effect - tab sticks out slightly */
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.panel-tab-area:active {
+  cursor: ns-resize;
+  filter: brightness(1.2);
+}
+
+.panel-tab-area:hover {
+  filter: brightness(1.1);
+}
+
+/* Colored tabs like manila envelopes */
+.panel-tab-red {
+  background: var(--balatro-red);
+  --panel-color: var(--balatro-red);
+}
+
+.panel-tab-blue {
+  background: var(--balatro-blue);
+  --panel-color: var(--balatro-blue);
+}
+
+.panel-tab-green {
+  background: var(--balatro-green);
+  --panel-color: var(--balatro-green);
+}
+
+.panel-tab-purple {
+  background: var(--balatro-purple);
+  --panel-color: var(--balatro-purple);
 }
 
 .panel-label {

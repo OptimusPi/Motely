@@ -7,7 +7,8 @@
     >
       <div v-if="layoutMode === 'stack'" ref="stackContainer" class="layout-stack">
         <template v-for="(panel, index) in panels" :key="panel.id">
-            <PanelSection
+          <PanelSection
+            v-if="!isMobile || getMobilePanelVisibility(panel.id)"
             :color="panel.color"
             :label="panel.label"
             :badge="panel.badge"
@@ -15,11 +16,9 @@
             :default-height="panel.defaultHeight"
             :layout-mode="layoutMode"
             :fill-remaining="index === panels.length - 1"
-            :show-top-grab="index > 0"
-            :resize-index="index > 0 ? index - 1 : null"
             @resize="onPanelResize(panel.id, $event)"
             @collapse="onPanelCollapse(panel.id, $event)"
-            @top-drag="(e) => { if (index > 0) startStackResize(index - 1, e) }"
+            @top-drag="(e) => { if (index > 0 && !isMobile) startStackResize(index - 1, e) }"
           >
             <component
               :is="panel.component"
@@ -42,7 +41,7 @@
         </template>
       </div>
 
-      <div v-else ref="splitContainer" class="layout-split">
+      <div v-else ref="splitContainer" class="layout-split" :class="{ 'mobile-hidden': isMobile }">
         <div ref="leftColumnContainer" class="split-column split-left" :style="{ width: splitLeftWidth + '%' }">
           <template v-for="(panel, index) in leftPanels" :key="panel.id">
             <PanelSection
@@ -53,11 +52,9 @@
               :default-height="panel.defaultHeight"
               :layout-mode="'stack'"
               :fill-remaining="index === leftPanels.length - 1"
-              :show-top-grab="index > 0"
-              :resize-index="index > 0 ? index - 1 : null"
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
-              @top-drag="(e) => { if (index > 0) startColumnResize('left', index - 1, e) }"
+              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('left', index - 1, e) }"
             >
               <component
                 :is="panel.component"
@@ -70,7 +67,7 @@
           </template>
         </div>
 
-        <div class="split-divider" @pointerdown="startSplitResize">
+        <div v-if="!isMobile" class="split-divider" @pointerdown="startSplitResize">
           <div 
             class="jaml-badge"
             :class="badgeSnapClass"
@@ -94,11 +91,9 @@
               :default-height="panel.defaultHeight"
               :layout-mode="'split'"
               :fill-remaining="index === rightPanels.length - 1"
-              :show-top-grab="index > 0"
-              :resize-index="index > 0 ? index - 1 : null"
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
-              @top-drag="(e) => { if (index > 0) startColumnResize('right', index - 1, e) }"
+              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('right', index - 1, e) }"
             >
               <component
                 :is="panel.component"
@@ -118,6 +113,42 @@
           </template>
         </div>
       </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div v-if="isMobile" class="mobile-nav">
+      <button 
+        @click="activePanel = 'editor'"
+        :class="['nav-btn', { active: activePanel === 'editor' }]"
+        aria-label="Editor"
+      >
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">Editor</span>
+      </button>
+      <button 
+        @click="activePanel = 'searches'"
+        :class="['nav-btn', { active: activePanel === 'searches' }]"
+        aria-label="Active Searches"
+      >
+        <span class="nav-icon">🔍</span>
+        <span class="nav-label">Searches</span>
+      </button>
+      <button 
+        @click="activePanel = 'results'"
+        :class="['nav-btn', { active: activePanel === 'results' }]"
+        aria-label="Results"
+      >
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Results</span>
+      </button>
+      <button 
+        @click="toggleSettings"
+        :class="['nav-btn', { active: showSettings }]"
+        aria-label="Settings"
+      >
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
+      </button>
     </div>
 
     <SettingsModal
@@ -150,6 +181,7 @@ import { useFilters } from '../composables/useFilters'
 import { useSearch } from '../composables/useSearch'
 import { useSignalR } from '../composables/useSignalR'
 import { useGlobalError } from '../composables/useGlobalError'
+import { useLayout } from '../composables/useLayout'
 
 // Layout state
 const panels = reactive([
@@ -196,6 +228,7 @@ const topVisiblePanels = computed(() => {
 
 const showSettings = ref(false)
 const splitLeftWidth = ref(50)
+const activePanel = ref('editor') // For mobile navigation
 
 // Badge positioning state
 const badgeSnapState = ref('center') // 'left', 'center', 'right'
@@ -210,7 +243,15 @@ const rightColumnContainer = ref(null)
 
 const STACK_DIVIDER_HEIGHT_PX = 4
 
+// Mobile detection
+const { windowWidth } = useLayout()
+const isMobile = computed(() => windowWidth.value < 768)
+
 const layoutMode = computed(() => {
+  // Force stack layout on mobile
+  if (isMobile.value) {
+    return 'stack'
+  }
   // Force single column when snapped left or right
   if (badgeSnapState.value === 'left' || badgeSnapState.value === 'right') {
     return 'stack'
@@ -457,6 +498,18 @@ const onPanelCollapse = (panelId, isCollapsed) => {
   // This handler can be used for future analytics/persistence
 }
 
+// Mobile panel visibility helper
+const getMobilePanelVisibility = (panelId) => {
+  if (!isMobile.value) return true
+  const panelMap = {
+    'jaml-editor': 'editor',
+    'blueprint': 'editor',
+    'active-searches': 'searches',
+    'results': 'results'
+  }
+  return panelMap[panelId] === activePanel.value
+}
+
 // Lifecycle
 onMounted(async () => {
   // Load data with timeout to prevent hanging
@@ -497,8 +550,8 @@ onUnmounted(() => {
 
 :global(body) {
   position: relative;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-color);
+  color: var(--text-color);
   font-family: 'm6x11plus', 'Courier New', monospace;
 }
 
@@ -696,5 +749,67 @@ onUnmounted(() => {
 .panel-tab-purple {
   background: var(--balatro-purple);
   --panel-color: var(--balatro-purple);
+}
+
+/* Mobile Navigation */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--panel-bg);
+  border-top: 2px solid var(--border-color);
+  z-index: 1000;
+  padding: 8px 0;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 60px; /* Ensure 44px+ touch target */
+}
+
+.nav-btn:active {
+  background: var(--dark-bg);
+}
+
+.nav-btn.active {
+  color: var(--balatro-gold);
+}
+
+.nav-icon {
+  font-size: 20px;
+}
+
+.nav-label {
+  font-size: 11px;
+  font-weight: normal;
+}
+
+.mobile-hidden {
+  display: none;
+}
+
+/* Adjust layout for mobile nav */
+@media (max-width: 767px) {
+  .jaml-ui {
+    padding-bottom: 60px; /* Space for bottom nav */
+  }
+  
+  .main-layout {
+    height: calc(100vh - 60px);
+  }
 }
 </style>
