@@ -469,32 +469,6 @@ html, body {
   }
 }
 
-/* Mobile-specific improvements */
-@media (max-width: 768px) {
-  .btn {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 12px 20px;
-  }
-  
-  .select {
-    min-height: 44px;
-    padding: 12px 16px;
-    font-size: 16px; /* Prevent zoom on iOS */
-  }
-  
-  .splitter {
-    min-height: 20px; /* Thicker drag handles on mobile */
-    min-width: 20px;
-  }
-  
-  .top-bar button {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 12px;
-  }
-}
-
 /* Smooth transitions */
 .btn, .nav-link button, .top-bar button, .chip, .pill {
   transition: background-color 0.2s, border-color 0.2s, transform 0.2s;

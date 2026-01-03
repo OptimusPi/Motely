@@ -230,33 +230,5 @@ onUnmounted(() => {
   background: var(--balatro-gold);
   color: var(--dark-bg);
 }
-
-@media (max-width: 768px) {
-  .results-toolbar {
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px;
-  }
-  
-  .results-toolbar .btn {
-    flex: 1;
-    min-width: 0;
-    min-height: 44px;
-    padding: 12px 8px;
-    font-size: 14px;
-  }
-  
-  .results-toolbar .select {
-    flex: 1 1 100%;
-    min-height: 44px;
-    padding: 12px 16px;
-    font-size: 16px; /* Prevent zoom on iOS */
-  }
-  
-  .status-bar {
-    padding: 12px;
-    font-size: 13px;
-  }
-}
 </style>
 

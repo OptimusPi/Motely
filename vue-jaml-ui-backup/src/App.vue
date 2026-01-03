@@ -144,14 +144,10 @@ html, body {
   .btn {
     padding: 12px 20px;
     font-size: 16px; /* Prevent zoom on iOS */
-    min-height: 44px; /* Ensure 44px touch target */
-    min-width: 44px;
   }
 
   .form-field {
     font-size: 16px; /* Prevent zoom on iOS */
-    min-height: 44px;
-    padding: 12px 16px;
   }
 }
 
