@@ -1,4 +1,25 @@
 import { ref } from 'vue'
+import { useRequests } from './useRequests'
+
+/**
+ * Get the API base URL for the current environment
+ */
+function getApiBaseUrl() {
+  // In development, use relative URLs (Vite proxy handles them)
+  if (import.meta.env.DEV) {
+    return ''
+  }
+  
+  // In production, check for API_URL environment variable or use same origin
+  // If API_URL is set, use it; otherwise assume API is on same origin
+  const apiUrl = import.meta.env.VITE_API_URL
+  if (apiUrl) {
+    return apiUrl
+  }
+  
+  // Default: use same origin (API should be on same server)
+  return window.location.origin
+}
 
 /**
  * Composable for API calls with error handling
@@ -7,10 +28,11 @@ import { ref } from 'vue'
 export function useApi() {
   const loading = ref(false)
   const error = ref(null)
+  const { addRequest, updateRequest } = useRequests()
   
   /**
    * Make an API request
-   * @param {string} url - Request URL
+   * @param {string} url - Request URL (can be relative or absolute)
    * @param {Object} options - Fetch options
    * @returns {Promise<Object>} Response data
    */
@@ -18,14 +40,35 @@ export function useApi() {
     loading.value = true
     error.value = null
     
+    // Resolve relative URLs to full API URLs
+    let fullUrl = url
+    if (url.startsWith('/')) {
+      // Relative URL - prepend API base URL
+      const apiBase = getApiBaseUrl()
+      fullUrl = apiBase + url
+    }
+    
+    // Extract method for logging
+    const method = options.method || 'GET'
+    
+    // Log request start
+    const requestIndex = addRequest(method, fullUrl, 'pending')
+    
     try {
-      const response = await fetch(url, {
+      const response = await fetch(fullUrl, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
           ...options.headers
         }
       })
+      
+      // Update request status
+      if (response.ok) {
+        updateRequest(0, 'success')
+      } else {
+        updateRequest(0, 'error', `HTTP ${response.status}: ${response.statusText}`)
+      }
       
       if (!response.ok) {
         if (response.status === 0 || !navigator.onLine) {
@@ -46,6 +89,9 @@ export function useApi() {
       return await response.text()
     } catch (err) {
       error.value = err
+      // Update request status to error
+      updateRequest(0, 'error', err.message)
+      
       // In dev, suppress HTTP errors and return fallback
       if (import.meta.env.DEV) {
         if (err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('500')) {

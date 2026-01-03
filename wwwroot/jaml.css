@@ -178,7 +178,7 @@ html, body {
 }
 /* Target direct input groups to ensure they wrap properly */
 .dropdown-row > .input-group { 
-  flex: 1 1 140px !important; /* Override inline style, set min-basis */
+  flex: 1 1 140px; /* Set min-basis for proper wrapping */
   min-width: 0;
 }
 
@@ -200,8 +200,15 @@ select, input {
 }
 select:focus, input:focus { outline: 2px solid var(--balatro-blue); }
 
-/* Inputs should allow selection */
-input, textarea, .monaco-container, .plain-editor { user-select: text !important; -webkit-user-select: text !important; }
+/* Inputs should allow selection - use high specificity */
+input[type="text"],
+input[type="number"],
+textarea,
+.monaco-container,
+.plain-editor { 
+  user-select: text;
+  -webkit-user-select: text;
+}
 
 /* Buttons - CHUNKY, NO BORDERS */
 button { 
@@ -252,17 +259,27 @@ button:active {
 }
 .icon-btn:hover { background: #888e99; }
 
-/* Cell Color Mode Classes */
-.color-mode-0 { background-color: #1a0a1a !important; color: white !important; }
-.color-mode-1 { background-color: #0093ff !important; color: white !important; }
-.color-mode-2 { background-color: #429f79 !important; color: white !important; }
-.color-mode-3 { background-color: #eaba44 !important; color: white !important; } /* Balatro Gold-ish */
-.color-mode-4 { background-color: #ff9800 !important; color: white !important; }
-.color-mode-5 { background-color: #ff4c40 !important; color: white !important; }
-.color-mode-6 { background-color: #ff69b4 !important; color: white !important; } /* Hot Pink */
-.color-mode-7 { background-color: #ff00ff !important; color: white !important; } /* Magenta */
-.color-mode-8 { background-color: #9c27b0 !important; color: white !important; } /* Purple */
-.color-mode-9 { background-color: #ffffff !important; color: #1e2b2d !important; } /* White background, using dark text for readability */
+/* Cell Color Mode Classes - use higher specificity with element + class */
+td.color-mode-0,
+th.color-mode-0 { background-color: #1a0a1a; color: white; }
+td.color-mode-1,
+th.color-mode-1 { background-color: #0093ff; color: white; }
+td.color-mode-2,
+th.color-mode-2 { background-color: #429f79; color: white; }
+td.color-mode-3,
+th.color-mode-3 { background-color: #eaba44; color: white; } /* Balatro Gold-ish */
+td.color-mode-4,
+th.color-mode-4 { background-color: #ff9800; color: white; }
+td.color-mode-5,
+th.color-mode-5 { background-color: #ff4c40; color: white; }
+td.color-mode-6,
+th.color-mode-6 { background-color: #ff69b4; color: white; } /* Hot Pink */
+td.color-mode-7,
+th.color-mode-7 { background-color: #ff00ff; color: white; } /* Magenta */
+td.color-mode-8,
+th.color-mode-8 { background-color: #9c27b0; color: white; } /* Purple */
+td.color-mode-9,
+th.color-mode-9 { background-color: #ffffff; color: #1e2b2d; } /* White background, using dark text for readability */
 
 /* Editor */
 .editor-header { 
@@ -448,7 +465,7 @@ button:active {
   .dropdown-row { 
     flex-direction: column; 
     gap: 4px;
-    margin-bottom: 4px !important;
+    margin-bottom: 4px;
   }
   
   .input-group {
@@ -457,7 +474,7 @@ button:active {
   
   /* Compact editor header - reduce margins */
   .editor-header { 
-    margin-bottom: 4px !important;
+    margin-bottom: 4px;
     gap: 4px;
   }
   
@@ -481,20 +498,20 @@ button:active {
   .tab-content.active {
     flex: 1;
     min-height: 0;
-    display: flex !important;
+    display: flex;
     flex-direction: column;
   }
   
   /* Make Monaco editor fill ALL available vertical space */
   .monaco-container {
-    flex: 1 !important;
+    flex: 1;
     min-height: 200px;
     max-height: none;
     height: auto;
   }
   
   .plain-editor {
-    flex: 1 !important;
+    flex: 1;
     min-height: 200px;
     max-height: none;
     height: auto;

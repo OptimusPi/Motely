@@ -516,7 +516,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         )
             return;
 
+        // Wait for all threads to reach the pause barrier
+        // Threads check status in their loop and will signal when they see Paused
         _pauseBarrier.SignalAndWait();
+        
         _elapsedTime.Stop();
     }
 
@@ -592,26 +595,55 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     public void Dispose()
     {
-        Pause();
+        // First, try to pause if running
+        if (_status == MotelySearchStatus.Running)
+        {
+            Pause();
+        }
 
-        // Atomically replace paused state with Disposed state
-
+        // Atomically replace current state with Disposed state
         MotelySearchStatus oldStatus = Interlocked.Exchange(
             ref _status,
             MotelySearchStatus.Disposed
         );
 
+        // If we were paused, threads are waiting on unpauseBarrier
+        // Signal it so they wake up and see Disposed status, then exit
         if (oldStatus == MotelySearchStatus.Paused)
         {
-            _unpauseBarrier.SignalAndWait();
+            // Threads will see Disposed status in their loop and exit
+            // Signal barrier to wake them up - if it fails, threads will still exit on next status check
+            try
+            {
+                _unpauseBarrier.SignalAndWait(TimeSpan.FromSeconds(5));
+            }
+            catch (BarrierPostPhaseException)
+            {
+                // Barrier already broken - threads will exit when they check status
+            }
+            catch (TimeoutException)
+            {
+                // Threads didn't respond in time - they'll exit when they check Disposed status
+            }
         }
-        else
+        else if (oldStatus == MotelySearchStatus.Running)
         {
-            Debug.Assert(oldStatus == MotelySearchStatus.Completed);
+            // Threads are running - they'll see Disposed status and exit
+            // No barrier synchronization needed
         }
 
+        // Wait for threads to finish (they should exit when they see Disposed status)
         foreach (MotelySearchThread thread in _threads)
         {
+            if (thread.Thread.IsAlive)
+            {
+                // Give threads a moment to see the Disposed status and exit
+                if (!thread.Thread.Join(TimeSpan.FromSeconds(2)))
+                {
+                    // Thread didn't exit in time - this shouldn't happen but handle gracefully
+                    // The thread should exit when it checks _status in ThreadMain
+                }
+            }
             thread.Dispose();
         }
 

@@ -68,7 +68,7 @@ defineEmits(['edit', 'delete'])
 }
 
 .chip-value {
-  font-weight: 600;
+  font-weight: normal;
 }
 
 .chip-meta {
