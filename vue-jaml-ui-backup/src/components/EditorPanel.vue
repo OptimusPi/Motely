@@ -18,10 +18,10 @@
         </optgroup>
       </select>
       <button @click="handleNew" class="btn">+ New</button>
-      <button v-if="!isMobile" @click="toggleBuilder" class="btn">
+      <button @click="toggleBuilder" class="btn">
         {{ showBuilder ? 'Hide Builder' : 'Show Builder' }}
       </button>
-      <button v-if="!isMobile" @click="toggleEditor" class="btn">{{ editorMode === 'monaco' ? 'Text' : 'Monaco' }}</button>
+      <button @click="toggleEditor" class="btn">{{ editorMode === 'monaco' ? 'Text' : 'Monaco' }}</button>
       <button @click="handleFormat" class="btn">Format</button>
       <button @click="$emit('save')" class="btn">💾 Save</button>
     </div>
@@ -54,11 +54,10 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import yaml from 'js-yaml'
 import { useMonaco } from '../composables/useMonaco'
 import { useApi } from '../composables/useApi'
-import { useLayout } from '../composables/useLayout'
 import JamlBuilder from './JamlBuilder.vue'
 
 const props = defineProps({
@@ -71,11 +70,8 @@ const props = defineProps({
 const emit = defineEmits(['update:jaml', 'save', 'format'])
 
 const monacoContainer = ref(null)
-const { windowWidth } = useLayout()
-const isMobile = computed(() => windowWidth.value < 768)
-// Default to textarea on mobile, monaco on desktop
-const editorMode = ref(isMobile.value ? 'text' : 'monaco') // 'text' | 'monaco'
-const showBuilder = ref(!isMobile.value) // Hide builder on mobile by default
+const editorMode = ref('text') // 'text' | 'monaco'
+const showBuilder = ref(true)
 const selectedFilter = ref('')
 const localJaml = ref(props.jaml)
 const filterGroups = ref([])
@@ -347,29 +343,6 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .editor-toolbar {
     flex-wrap: wrap;
-    gap: 6px;
-  }
-  
-  .btn {
-    padding: 12px 16px; /* Larger touch targets */
-    font-size: 14px;
-    min-height: 44px; /* Ensure 44px touch target */
-  }
-  
-  .select {
-    padding: 12px 16px;
-    font-size: 16px; /* Prevent zoom on iOS */
-    min-height: 44px;
-  }
-  
-  .editor-body {
-    padding: 8px;
-  }
-  
-  .textarea-editor {
-    font-size: 16px; /* Prevent zoom on iOS */
-    padding: 16px;
-    line-height: 1.8; /* Better readability on mobile */
   }
 }
 </style>
