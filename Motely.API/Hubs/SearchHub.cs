@@ -13,4 +13,28 @@ public class SearchHub : Hub
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"search_{searchId}");
     }
+
+    // Chat methods
+    public async Task SendMessage(string text, long timestamp)
+    {
+        // Get a simple username from connection (could be enhanced with auth)
+        var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
+        
+        // Broadcast to all clients
+        await Clients.All.SendAsync("ReceiveMessage", username, text, timestamp);
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
+        await Clients.Others.SendAsync("UserJoined", username);
+        await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
+        await Clients.Others.SendAsync("UserLeft", username);
+        await base.OnDisconnectedAsync(exception);
+    }
 }

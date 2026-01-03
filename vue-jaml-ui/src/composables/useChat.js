@@ -4,6 +4,7 @@ import { useSignalR } from './useSignalR'
 export function useChat() {
   const messages = ref([])
   const isConnected = ref(false)
+  // Create a separate SignalR connection for chat (or reuse existing one)
   const { connection, connect: connectSignalR, disconnect: disconnectSignalR } = useSignalR()
 
   const connect = async () => {
