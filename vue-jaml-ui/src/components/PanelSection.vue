@@ -3,6 +3,7 @@
     ref="panelWrapper"
     class="panel-wrapper"
     :data-layout="layoutMode"
+    :data-panel-id="panelId"
     :class="{
       'fill-remaining': fillRemaining
     }"
@@ -108,6 +109,13 @@ const handleTabDragStart = (event) => {
     event.dataTransfer.setData('text/plain', props.panelId)
     event.dataTransfer.effectAllowed = 'move'
     event.currentTarget.classList.add('dragging')
+    // Prevent the browser's default drag image which can cause visual jumps
+    const dragImage = event.currentTarget.cloneNode(true)
+    dragImage.style.position = 'absolute'
+    dragImage.style.top = '-9999px'
+    document.body.appendChild(dragImage)
+    event.dataTransfer.setDragImage(dragImage, 0, 0)
+    setTimeout(() => document.body.removeChild(dragImage), 0)
   }
 }
 
@@ -121,7 +129,8 @@ const handleTabDrop = (event) => {
   if (draggedPanelId && draggedPanelId !== props.panelId) {
     // Determine target side based on tab alignment
     const targetSide = props.tabAlign === 'left' ? 'left' : 'right'
-    emit('move-to-side', targetSide)
+    // Emit with the dragged panel ID, not this panel's ID
+    emit('move-to-side', draggedPanelId, targetSide)
   }
 }
 
@@ -150,45 +159,7 @@ const handleTopDrag = (event) => {
   emit('top-drag', event)
 }
 
-// Handle tab dragging to move panels between sides
-let isTabDragging = false
-let tabStartX = 0
-
-const handleTabDrag = (event) => {
-  if (event.button !== 0 && event.type !== 'touchstart') return
-  event.preventDefault()
-  event.stopPropagation()
-  
-  isTabDragging = true
-  tabStartX = event.clientX || (event.touches && event.touches[0]?.clientX) || 0
-  
-  document.addEventListener('mousemove', handleTabMove)
-  document.addEventListener('touchmove', handleTabMove, { passive: false })
-  document.addEventListener('mouseup', handleTabEnd)
-  document.addEventListener('touchend', handleTabEnd)
-  document.addEventListener('touchcancel', handleTabEnd)
-}
-
-const handleTabMove = (moveEvent) => {
-  if (!isTabDragging) return
-  
-  const currentX = moveEvent.clientX || (moveEvent.touches && moveEvent.touches[0]?.clientX) || 0
-  const deltaX = currentX - tabStartX
-  
-  // Emit tab drag event to parent
-  emit('tab-drag', { deltaX, clientX: currentX })
-  
-  moveEvent.preventDefault()
-}
-
-const handleTabEnd = () => {
-  isTabDragging = false
-  document.removeEventListener('mousemove', handleTabMove)
-  document.removeEventListener('touchmove', handleTabMove)
-  document.removeEventListener('mouseup', handleTabEnd)
-  document.removeEventListener('touchend', handleTabEnd)
-  document.removeEventListener('touchcancel', handleTabEnd)
-}
+// Removed unused handleTabDrag/handleTabMove/handleTabEnd - using HTML5 drag API instead
 
 onMounted(() => {
   if (props.defaultHeight) {
@@ -294,12 +265,44 @@ watch(
   right: 8px;
 }
 
+.panel-tab-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .panel-tab-badge {
   background: rgba(0, 0, 0, 0.22);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 14px;
   font-weight: normal;
+  flex-shrink: 0;
+}
+
+.panel-tab-duplicate {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.panel-tab-duplicate:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .panel-content {

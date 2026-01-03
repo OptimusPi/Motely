@@ -322,7 +322,7 @@ onUnmounted(() => {
 /* Monaco editor uses its own font - don't override with m6x11 */
 .monaco-wrapper :deep(.monaco-editor),
 .monaco-wrapper :deep(.monaco-editor *) {
-  font-family: 'Lucida Console', 'Consolas', monospace !important;
+  font-family: 'Courier New', 'Consolas', 'Monaco', monospace !important; /* Coder-friendly monospace font for Monaco editor */
 }
 
 .textarea-editor {
@@ -332,7 +332,7 @@ onUnmounted(() => {
   color: var(--text-color, #fff);
   border: none;
   padding: 12px;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: 'Courier New', 'Consolas', 'Monaco', monospace; /* Coder-friendly monospace font for text editor */
   font-size: 14px;
   line-height: 1.6;
   resize: none;

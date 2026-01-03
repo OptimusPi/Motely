@@ -4,89 +4,82 @@ deck: Anaglyph
 stake: White
 
 Must:
+  - smallBlindTag: NegativeTag
+    antes: [2,3,4]
+  - smallBlindTag: NegativeTag
+    antes: [5,6,7,8]
   - soulJoker: Perkeo
-    antes: [1,2,3,4,5,6,7,8]
+    antes: [1,2,3]
   - joker: Showman
     antes: [1,2]
-Should:
-  - soulJoker: Perkeo
-    antes: [1,2,3,4,5,6,7,8]
-  - tag: DoubleTag
-    antes: [1]
-    score: 100
-  - joker: DietCola
-    antes: [1]
-    score: 100
-  - joker: DietCola
-    antes: [2]
     shopSlots: [0,1]
     packSlots: [0,1]
-    score: 100
+Should:
   - And:
     Mode: Sum
-    Score: 100
+    Score: 72
     clauses:  
     - SmallBlindTag: NegativeTag
       Antes: [2]
-    - joker: OopsAll6s
+    - jokers: [Blueprint, SockAndBuskin, HangingChad, OopsAll6s, Photograph]
       Antes: [2]
+      ShopSlots: [2,3,4,5]
+      score: 100
+
+  - And:
+    Score: 100
+    clauses:  
+    - SmallBlindTag: NegativeTag
+      Antes: [3]
+    - jokers: [Blueprint, SockAndBuskin, HangingChad, OopsAll6s, Photograph]
+      Antes: [3]
+      ShopSlots: [2,3,4,5,6]
+      score: 100
+
+  - And:
+    Score: 90
+    clauses:  
+    - SmallBlindTag: NegativeTag
+      Antes: [4]
+    - jokers: [Blueprint, SockAndBuskin, HangingChad, OopsAll6s, Photograph]
+      Antes: [4]
       ShopSlots: [2,3,4,5,6,7,8]
       score: 100
 
   - And:
-    Score: 10
+    Score: 60
     clauses:  
     - SmallBlindTag: NegativeTag
-      Antes: [3]
-    - joker: OopsAll6s
-      Antes: [3]
+      Antes: [5]
+    - jokers: [Blueprint, SockAndBuskin, HangingChad, OopsAll6s, Photograph]
+      Antes: [5]
+      ShopSlots: [2,3,4,5,6,7,8,9]
+      score: 100
+  - And:
+    Score: 50
+    clauses:  
+    - SmallBlindTag: NegativeTag
+      Antes: [6]
+    - jokers: [Blueprint, SockAndBuskin, HangingChad, OopsAll6s, Photograph]
+      Antes: [6]
       ShopSlots: [2,3,4,5,6,7,8,9,10,11]
-      score: 10
-
+      score: 100
   - And:
-    Score: 5
-    clauses:  
-    - SmallBlindTag: NegativeTag
-      Antes: [4]
-    - joker: OopsAll6s
-      Antes: [4]
-      ShopSlots: [2,3,4,5,6,7,8,9,10,11,12,13,14]
-      score: 5
-
-  - And:
-    Score: 1
-    clauses:  
-    - SmallBlindTag: NegativeTag
-      Antes: [5]
-    - joker: OopsAll6s
-      Antes: [5]
-      ShopSlots: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
-      score: 1
-  - And:
-    Score: 1
-    clauses:  
-    - SmallBlindTag: NegativeTag
-      Antes: [6]
-    - joker: OopsAll6s
-      Antes: [6]
-      ShopSlots: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
-      score: 1
-  - And:
-    Score: 1
+    Score: 60
     clauses:  
     - SmallBlindTag: NegativeTag
       Antes: [7]
-    - joker: OopsAll6s
+    - jokers: [Blueprint, SockAndBuskin, HangingChad, OopsAll6s, Photograph]
       Antes: [7]
-      ShopSlots: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39]
-      score: 1
+      ShopSlots: [2,3,4,5,6,7,8,9,10,11,12,13]
+      score: 100
 
   - And:
-    Score: 1
+    Score: 70
     clauses:  
     - SmallBlindTag: NegativeTag
       Antes: [8]
-    - joker: OopsAll6s
+    - jokers: [Blueprint, SockAndBuskin, HangingChad, OopsAll6s, Photograph]
       Antes: [8]
       ShopSlots: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42]
-      score: 1
+      score: 7

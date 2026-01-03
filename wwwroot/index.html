@@ -1,231 +1,91 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Balatro Seed Search Tools</title>
-    <link rel="icon" href="/favicon.ico" />
     <style>
-      :root {
-        --balatro-red: #ff4c40;
-        --balatro-blue: #0093ff;
-        --balatro-gold: #eaba44;
-        --bg: #33464b;
-        --panel: #3a5055;
-        --text: #ffffff;
-        --border: #b9c2d2;
-      }
-
-      @font-face {
-        font-family: 'm6x11plus';
-        src: url('/fonts/m6x11plus.ttf') format('truetype');
-        font-display: swap;
-      }
-
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      body {
-        font-family: 'm6x11plus', monospace;
-        background: var(--bg);
-        color: var(--text);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        -webkit-tap-highlight-color: transparent;
-        font-weight: normal;
-      }
-
-      /* NEVER use bold - always normal weight for readability */
-      /* Using high specificity selector instead of !important */
-      html *,
-      html *::before,
-      html *::after {
-        font-weight: normal;
-      }
-
-      .header {
-        background: var(--panel);
-        padding: 2rem;
-        text-align: center;
-        border-bottom: 2px solid var(--border);
-      }
-
-      .header h1 {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-        color: var(--balatro-gold);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-      }
-
-      .header p {
-        font-size: 1.1rem;
-        opacity: 0.9;
-      }
-
-      .main {
-        flex: 1;
-        padding: 2rem;
-        max-width: 1200px;
-        margin: 0 auto;
-        width: 100%;
-      }
-
-      .tools-section {
-        margin-bottom: 3rem;
-      }
-
-      .tools-section h2 {
-        font-size: 1.8rem;
-        margin-bottom: 1.5rem;
-        color: var(--balatro-gold);
-      }
-
-      .tools-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-      }
-
-      .tool-card {
-        background: var(--panel);
-        border: 2px solid var(--border);
-        border-radius: 8px;
-        padding: 1.5rem;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        color: inherit;
-        display: block;
-      }
-
-      .tool-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--balatro-gold);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      }
-
-      .tool-card h3 {
-        font-size: 1.4rem;
-        margin-bottom: 0.8rem;
-        color: var(--text);
-      }
-
-      .tool-card p {
-        font-size: 0.95rem;
-        opacity: 0.9;
-        line-height: 1.5;
-      }
-
-      .badge {
-        display: inline-block;
-        background: var(--balatro-red);
-        color: white;
-        padding: 0.2rem 0.6rem;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        margin-left: 0.5rem;
-        font-weight: normal;
-      }
-
-      .footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 24px;
-        background: var(--panel);
-        border-top: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 16px;
-        padding: 0 8px;
-        font-size: 11px;
-        color: var(--text);
-        opacity: 0.9;
-        z-index: 1000;
-        line-height: 1;
-      }
-
-      .footer a {
-        color: var(--balatro-gold);
-        text-decoration: none;
-      }
-
-      .footer a:hover {
-        text-decoration: underline;
-      }
-
-      body {
-        padding-bottom: 24px;
-      }
-
-      @media (max-width: 768px) {
-        .header h1 {
-          font-size: 2rem;
-        }
-        .tools-grid {
-          grid-template-columns: 1fr;
-        }
-      }
+    :root { --bg:#0a0a0f; --card:#12121a; --gold:#f4c430; --blue:#4cc9f0; --green:#06d6a0; --text:#f0f0f0; --muted:#8888aa; --border:#2a2a3a; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .container { max-width:900px; margin:0 auto; padding:2rem 1rem; }
+    h1 { font-size:2rem; color:var(--gold); text-align:center; margin-bottom:0.5rem; }
+    .subtitle { text-align:center; color:var(--muted); margin-bottom:2rem; }
+    section { margin-bottom:2rem; }
+    h2 { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:0.5rem; margin-bottom:1rem; }
+    .local h2 { color:var(--green); }
+    .games h2 { color:var(--gold); }
+    .searchers h2 { color:var(--blue); }
+    .mobile h2 { color:var(--green); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem; }
+    .card { display:block; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1rem; text-decoration:none; color:var(--text); transition:all 0.2s; }
+    .card:hover { border-color:var(--gold); transform:translateY(-2px); }
+    .card h3 { font-size:1rem; margin-bottom:0.25rem; }
+    .card p { font-size:0.75rem; color:var(--muted); }
+    .api-links { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:1rem; }
+    .api-links a { font-size:0.7rem; padding:0.4rem 0.8rem; border:1px solid var(--border); border-radius:4px; color:var(--muted); text-decoration:none; }
+    .api-links a:hover { border-color:var(--gold); color:var(--gold); }
+    footer { margin-top:2rem; padding-top:1rem; border-top:1px solid var(--border); text-align:center; font-size:0.65rem; color:var(--muted); line-height:1.8; }
+    footer a { color:var(--gold); }
     </style>
   </head>
   <body>
-    <header class="header">
+  <div class="container">
       <h1>Balatro Seed Search Tools</h1>
-      <p>Advanced seed filtering and analysis tools for Balatro</p>
-    </header>
+    <p class="subtitle">All Ways to Search for Balatro Seeds</p>
 
-    <main class="main">
-      <section class="tools-section">
-        <h2>JAML Tools</h2>
-        <div class="tools-grid">
-          <a href="/JAML/" class="tool-card">
-            <h3>JAML Grid <span class="badge">Vue 3</span></h3>
-            <p>Modern Vue 3 interface with modular panel system, drag layouts, and real-time SignalR updates. Features split-screen and stacked views with smooth transitions.</p>
-          </a>
-          <a href="/JamlUI-HTMX/" class="tool-card">
-            <h3>JamlUI HTMX</h3>
-            <p>HTMX-based experiment for dynamic interactions without heavy JavaScript frameworks.</p>
-          </a>
+    <section class="local">
+      <h2>Local Tools</h2>
+      <div class="grid">
+        <a href="/JAML/" class="card"><h3>JAML WebUI</h3><p>Commander control for JAML filters and live seed searches.</p></a>
+        <a href="/BSO/" class="card"><h3>BSO Browser</h3><p>Avalonia UI compiled to WebAssembly. Full oracle in browser.</p></a>
+        <a href="/JamlGenie/" class="card"><h3>JamlGenie</h3><p>JAML filter generator and helper tool.</p></a>
+        <a href="/JamlUI/" class="card"><h3>JamlUI</h3><p>Modular responsive JAML editor with drag-and-drop panels.</p></a>
+        <a href="/JamlUI-Alpine/" class="card"><h3>JamlUI Alpine</h3><p>JAML UI experiment using Alpine.js framework.</p></a>
+        <a href="/JamlUI-HTMX/" class="card"><h3>JamlUI HTMX</h3><p>JAML UI experiment using HTMX for dynamic interactions.</p></a>
+        <a href="/JamlUI-Lit/" class="card"><h3>JamlUI Lit</h3><p>JAML UI experiment using Lit web components.</p></a>
+        <a href="/JamlUI-Preact/" class="card"><h3>JamlUI Preact</h3><p>JAML UI experiment using Preact framework.</p></a>
+        <a href="/JamlUI-Vue3-Vite/" class="card"><h3>JamlUI Vue3</h3><p>JAML UI experiment using Vue 3 with Vite.</p></a>
+        <a href="/JamlUI5/" class="card"><h3>JamlUI5</h3><p>Fifth iteration of JAML UI experiments.</p></a>
+      </div>
+      <div class="api-links">
+        <a href="/swagger">Swagger UI</a>
+        <a href="/openapi/v1.json">openapi.json</a>
+        <a href="/health">/health</a>
+        <a href="/filters">/filters</a>
+        <a href="/seed-sources">/seed-sources</a>
+      </div>
+    </section>
+
+    <section class="games">
+      <h2>Games</h2>
+      <div class="grid">
+        <a href="https://weejoker.app/" class="card" target="_blank"><h3>The Daily Wee</h3><p>Daily challenge on WeeJoker.app</p></a>
+        <a href="https://erraticdeck.app/" class="card" target="_blank"><h3>ErraticDeck</h3><p>Deck building and analysis.</p></a>
         </div>
       </section>
 
-      <section class="tools-section">
-        <h2>Analysis Tools</h2>
-        <div class="tools-grid">
-          <a href="/genie/" class="tool-card">
-            <h3>JAML Genie</h3>
-            <p>AI-powered JAML generation and optimization suggestions.</p>
-          </a>
-          <a href="/blueprint/" class="tool-card">
-            <h3>Blueprint Analyzer</h3>
-            <p>Analyze and compare deck blueprints with detailed statistics.</p>
-          </a>
+    <section class="searchers">
+      <h2>Other Searchers</h2>
+      <div class="grid">
+        <a href="https://miaklwalker.github.io/Blueprint/" class="card" target="_blank"><h3>Blueprint</h3><p>Online seed analyzer by miaklwalker.</p></a>
+        <a href="https://exitatmosphere.github.io/TheEgg/" class="card" target="_blank"><h3>The Egg</h3><p>Balatro seed searcher by exitatmosphere.</p></a>
+        <a href="https://legendaryseeds.app/" class="card" target="_blank"><h3>Legendary Seeds</h3><p>Seed searcher powered by balatro4j.</p></a>
+        <a href="https://github.com/tacodiva/motely" class="card" target="_blank"><h3>Motely by tacodiva</h3><p>Original fast CPU SIMD seed searcher.</p></a>
         </div>
       </section>
 
-      <section class="tools-section">
-        <h2>Legacy Tools</h2>
-        <div class="tools-grid">
-          <a href="/legacy/seed-search" class="tool-card">
-            <h3>Seed Search</h3>
-            <p>Classic seed search interface with basic filtering options.</p>
-          </a>
-          <a href="/legacy/filter-builder" class="tool-card">
-            <h3>Filter Builder</h3>
-            <p>Build and test JAML filters with live preview.</p>
-          </a>
+    <section class="mobile">
+      <h2>Mobile</h2>
+      <div class="grid">
+        <a href="https://github.com/alex-cova/perkeoapp" class="card" target="_blank"><h3>Perkeo</h3><p>Balatro companion app for iOS by alex-cova.</p></a>
         </div>
       </section>
-    </main>
 
-    <footer class="footer">
-      <span>Not affiliated with LocalThunk or PlayStack. <a href="https://playbalatro.com/" target="_blank" rel="noreferrer">BUY Balatro</a></span>
-      <span>Made with ❤️ for the Balatro community.</span>
+    <footer>
+      <p>Not affiliated with LocalThunk or PlayStack. <a href="https://playbalatro.com/">BUY Balatro</a></p>
+      <p>Made with ❤️ for the Balatro community.</p>
     </footer>
-  </body>
-</html>
+  </div>
+
+
+</body></html>
