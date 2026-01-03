@@ -165,6 +165,7 @@ import ActiveSearchesPanel from '../components/ActiveSearchesPanel.vue'
 import ResultsPanel from '../components/ResultsPanel.vue'
 import ChatPanel from '../components/ChatPanel.vue'
 import RequestsPanel from '../components/RequestsPanel.vue'
+import JamlGeniePanel from '../components/JamlGeniePanel.vue'
 import SettingsModal from '../components/SettingsModal.vue'
 import ErrorModal from '../components/ErrorModal.vue'
 import { useFilters } from '../composables/useFilters'
@@ -241,6 +242,30 @@ const panels = reactive([
     minHeight: 200,
     defaultHeight: 300,
     component: markRaw(ChatPanel)
+  },
+  {
+    id: generatePanelId('requests'),
+    baseId: 'requests',
+    color: 'green',
+    label: 'API Requests',
+    filterId: null,
+    side: 'right',
+    collapsed: false,
+    minHeight: 200,
+    defaultHeight: 280,
+    component: markRaw(RequestsPanel)
+  },
+  {
+    id: generatePanelId('jaml-genie'),
+    baseId: 'jaml-genie',
+    color: 'purple',
+    label: 'JAML Genie',
+    filterId: null,
+    side: 'left',
+    collapsed: false,
+    minHeight: 300,
+    defaultHeight: 400,
+    component: markRaw(JamlGeniePanel)
   }
 ])
 
@@ -255,7 +280,9 @@ const getPanelLabel = (panel) => {
   } else if (panel.baseId === 'chat') {
     return 'Chat'
   } else if (panel.baseId === 'requests') {
-    return 'Requests'
+    return 'API Requests'
+  } else if (panel.baseId === 'jaml-genie') {
+    return '🧞‍♂️ JAML Genie'
   } else {
     return panel.label
   }
