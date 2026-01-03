@@ -319,6 +319,12 @@ onUnmounted(() => {
   bottom: 0;
 }
 
+/* Monaco editor uses its own font - don't override with m6x11 */
+.monaco-wrapper :deep(.monaco-editor),
+.monaco-wrapper :deep(.monaco-editor *) {
+  font-family: 'Lucida Console', 'Consolas', monospace !important;
+}
+
 .textarea-editor {
   width: 100%;
   height: 100%;

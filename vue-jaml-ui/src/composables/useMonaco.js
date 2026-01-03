@@ -28,7 +28,11 @@ const fetchSchema = async () => {
   if (jamlSchema) return jamlSchema
   try {
     // Respect Vite base (prod deploy is under /JAML/)
-    const schemaUrl = `${import.meta.env.BASE_URL}jaml.schema.json`
+    // In production, schema should be in the same directory as the app
+    // In dev, it's served by the Vite plugin
+    const schemaUrl = import.meta.env.DEV 
+      ? '/jaml.schema.json'
+      : `${import.meta.env.BASE_URL}jaml.schema.json`
     const response = await fetch(schemaUrl)
     jamlSchema = await response.json()
     return jamlSchema

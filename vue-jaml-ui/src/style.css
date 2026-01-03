@@ -25,7 +25,9 @@
 @font-face {
   font-family: 'm6x11plus';
   src: url('/fonts/m6x11plus.ttf') format('truetype');
-  font-display: swap;
+  font-display: optional; /* Prevent layout shift - use fallback if font not ready */
+  font-weight: normal;
+  font-style: normal;
 }
 
 * {
@@ -181,35 +183,16 @@ html, body {
   display: none;
 }
 
-.panel-tab {
-  height: 24px;
-  padding: 4px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: normal;
-  cursor: grab;
-  user-select: none;
-  position: relative;
-  z-index: 10;
-}
-
-.panel-tab:active {
-  cursor: grabbing;
-}
-
-.panel-tab-red { background: var(--balatro-red); }
-.panel-tab-blue { background: var(--balatro-blue); }
-.panel-tab-green { background: var(--balatro-green); }
-.panel-tab-purple { background: var(--balatro-purple); }
+/* Panel tab styles moved to PanelSection.vue scoped styles */
+/* Removed to prevent conflicts with manila envelope tab styling */
 
 .panel-content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto; /* Allow scrolling within panel content */
   display: flex;
   flex-direction: column;
   background: var(--dark-bg);
+  min-height: 0; /* Allow flex shrinking */
 }
 
 /* Editor */
@@ -246,7 +229,7 @@ html, body {
   color: var(--text-color);
   border: none;
   padding: 12px;
-  font-family: 'Lucida Console', Consolas, monospace;
+  font-family: 'm6x11plus', monospace; /* Use m6x11 font, Monaco editor has its own font */
   font-size: 16px;
   line-height: 1.6;
   resize: none;

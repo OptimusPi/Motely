@@ -266,12 +266,12 @@ public struct MotelyJsonSeedScoreDesc(
 
                                     case MotelyFilterItemType.Joker:
                                         var mustCount = MotelyJsonScoring.CountJokerOccurrences(
-                                            ref singleCtx,
-                                            MotelyJsonJokerFilterClause.FromJsonClause(clause),
-                                            ante,
-                                            ref runState,
-                                            earlyExit: true,
-                                            originalClause: clause
+                                                ref singleCtx,
+                                                MotelyJsonJokerFilterClause.FromJsonClause(clause),
+                                                ante,
+                                                ref runState,
+                                                earlyExit: true,
+                                                originalClause: clause
                                         );
                                         if (mustCount > 0)
                                         {

@@ -128,7 +128,7 @@ const formatNumber = (num) => {
 
 .searches-table th {
   background: var(--panel);
-  font-weight: bold;
+  font-weight: normal;
 }
 
 .btn-sm {
@@ -172,7 +172,7 @@ const formatNumber = (num) => {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: normal;
   text-transform: uppercase;
 }
 

@@ -54,10 +54,6 @@
       </div>
     </section>
 
-    <footer>
-      <p>Not affiliated with LocalThunk or PlayStack. <a href="https://playbalatro.com/" target="_blank" rel="noreferrer">BUY Balatro</a></p>
-      <p>Made with ❤️ for the Balatro community.</p>
-    </footer>
   </div>
 </template>
 
@@ -182,6 +178,7 @@ h2 {
 .card h3 {
   font-size: 1.05rem;
   margin-bottom: 0.35rem;
+  color: var(--text-color);
 }
 
 .card p {
@@ -189,17 +186,4 @@ h2 {
   font-size: 0.85rem;
 }
 
-footer {
-  margin-top: 48px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border-color);
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--light-grey);
-  line-height: 1.6;
-}
-
-footer a {
-  color: var(--balatro-gold);
-}
 </style>

@@ -500,7 +500,7 @@ onMounted(() => {
 }
 
 .filter-name {
-  font-weight: bold;
+  font-weight: normal;
   margin-bottom: 4px;
 }
 

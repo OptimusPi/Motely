@@ -5,6 +5,9 @@
         <router-view />
       </main>
     </ErrorBoundary>
+    <footer class="global-footer">
+      <span>Not affiliated with LocalThunk or PlayStack. <a href="https://playbalatro.com/" target="_blank" rel="noreferrer">BUY Balatro</a> • Made with ❤️ for the Balatro community.</span>
+    </footer>
   </div>
 </template>
 
@@ -48,14 +51,31 @@ import ErrorBoundary from './components/ErrorBoundary.vue'
 
 html, body {
   height: 100vh;
-  font-family: 'm6x11plus', monospace;
+  font-family: 'm6x11plus', monospace; /* Use m6x11 font everywhere */
   background: var(--bg-color);
   color: var(--text-color);
   -webkit-tap-highlight-color: transparent;
+  /* NEVER use bold - always normal weight for readability */
+  font-weight: normal;
+  /* Prevent layout shift - set font metrics upfront */
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Force all elements to use normal font weight - NO BOLD EVER */
+/* Using high specificity selector instead of !important */
+html *,
+html *::before,
+html *::after {
+  font-weight: normal;
 }
 
 #app {
   height: 100vh;
+  min-height: 100vh; /* Prevent collapse */
+  overflow: hidden; /* Disable page scrolling */
+  /* Prevent layout shift */
+  contain: layout style paint;
 }
 
 /* Utility classes */
@@ -187,5 +207,49 @@ html, body {
 
 .error-display button:hover {
   background: var(--balatro-dark-blue);
+}
+
+/* Global footer - one line, appears on all pages */
+.global-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: var(--panel-bg);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text-color);
+  z-index: 3000; /* Above split divider (2000) but below modals (10000) */
+  line-height: 1;
+}
+
+.global-footer a {
+  color: var(--balatro-gold);
+  text-decoration: none;
+}
+
+.global-footer a:hover {
+  text-decoration: underline;
+}
+
+.app {
+  height: 100vh;
+  overflow: hidden; /* Disable page scrolling */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Add padding to main content so footer doesn't overlap */
+.app-main {
+  padding-bottom: 24px;
+  flex: 1;
+  overflow: hidden; /* Disable page scrolling */
+  min-height: 0;
 }
 </style>
