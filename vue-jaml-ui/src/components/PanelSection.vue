@@ -7,25 +7,39 @@
       'fill-remaining': fillRemaining
     }"
   >
-    <!-- Expanded panel -->
+    <!-- Manila-style tab (title lives here, not on the grab bar) -->
+    <div
+      class="panel-tab"
+      :class="[`panel-tab-${tabAlign}`]"
+      :style="{ '--panel-color': `var(--balatro-${color})` }"
+      draggable="true"
+      @dragstart="handleTabDragStart"
+      @dragend="handleTabDragEnd"
+      @dragover.prevent
+      @drop="handleTabDrop"
+    >
+      <span class="panel-tab-label">{{ label }}</span>
+      <span v-if="badge" class="panel-tab-badge">{{ badge }}</span>
+      <button
+        v-if="canDuplicate"
+        class="panel-tab-duplicate"
+        @click.stop="handleDuplicate"
+        aria-label="Duplicate panel"
+        title="Duplicate panel"
+      >+</button>
+    </div>
+
     <div
       ref="panel"
       class="panel-section"
       :class="[`panel-section-${color}`]"
       :style="panelStyle"
     >
-      <!-- Panel tab/label area - THIS IS THE DIVIDER/GRAB HANDLE -->
-      <!-- The colored tab bar IS the divider - dragging it resizes the panel ABOVE -->
+      <!-- The top colored edge IS the grab bar (hitbox matches the visible edge) -->
       <div 
-        class="panel-tab-area"
-        :class="`panel-tab-${color}`"
-        @pointerdown="handleTopDrag"
-        @mousedown="handleTopDrag"
-        @touchstart="handleTopDrag"
-      >
-        <span class="panel-label">{{ label }}</span>
-        <span v-if="badge" class="panel-badge">{{ badge }}</span>
-      </div>
+        class="panel-top-grab"
+        @pointerdown.prevent.stop="handleTopDrag"
+      ></div>
       
       <div class="panel-content">
         <slot />
@@ -59,6 +73,11 @@ const props = defineProps({
     type: String,
     default: null
   },
+  tabAlign: {
+    type: String,
+    default: 'left',
+    validator: (v) => ['left', 'right'].includes(v)
+  },
   layoutMode: {
     type: String,
     default: 'stack',
@@ -67,10 +86,44 @@ const props = defineProps({
   fillRemaining: {
     type: Boolean,
     default: false
+  },
+  panelId: {
+    type: String,
+    default: null
+  },
+  canDuplicate: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['resize', 'collapse', 'top-drag']); // top-drag: dragging tab resizes panel above
+const emit = defineEmits(['resize', 'collapse', 'top-drag', 'duplicate', 'move-to-side']);
+
+const handleDuplicate = () => {
+  emit('duplicate')
+}
+
+const handleTabDragStart = (event) => {
+  if (props.panelId) {
+    event.dataTransfer.setData('text/plain', props.panelId)
+    event.dataTransfer.effectAllowed = 'move'
+    event.currentTarget.classList.add('dragging')
+  }
+}
+
+const handleTabDragEnd = (event) => {
+  event.currentTarget.classList.remove('dragging')
+}
+
+const handleTabDrop = (event) => {
+  event.preventDefault()
+  const draggedPanelId = event.dataTransfer.getData('text/plain')
+  if (draggedPanelId && draggedPanelId !== props.panelId) {
+    // Determine target side based on tab alignment
+    const targetSide = props.tabAlign === 'left' ? 'left' : 'right'
+    emit('move-to-side', targetSide)
+  }
+}
 
 const panelWrapper = ref(null);
 const panel = ref(null);
@@ -92,17 +145,50 @@ const panelStyle = computed(() => {
   };
 });
 
-const toggleCollapse = () => {
-  // Placeholder for future collapse/expand behavior
-};
-
 const handleTopDrag = (event) => {
-  // The colored tab bar IS the divider - dragging it resizes the panel ABOVE
   // Emit the drag event to parent so it can handle stack resize
   emit('top-drag', event)
 }
 
-// Removed unused startResize/handlePanelMove/handlePanelEnd - tab drag handled by parent via top-drag event
+// Handle tab dragging to move panels between sides
+let isTabDragging = false
+let tabStartX = 0
+
+const handleTabDrag = (event) => {
+  if (event.button !== 0 && event.type !== 'touchstart') return
+  event.preventDefault()
+  event.stopPropagation()
+  
+  isTabDragging = true
+  tabStartX = event.clientX || (event.touches && event.touches[0]?.clientX) || 0
+  
+  document.addEventListener('mousemove', handleTabMove)
+  document.addEventListener('touchmove', handleTabMove, { passive: false })
+  document.addEventListener('mouseup', handleTabEnd)
+  document.addEventListener('touchend', handleTabEnd)
+  document.addEventListener('touchcancel', handleTabEnd)
+}
+
+const handleTabMove = (moveEvent) => {
+  if (!isTabDragging) return
+  
+  const currentX = moveEvent.clientX || (moveEvent.touches && moveEvent.touches[0]?.clientX) || 0
+  const deltaX = currentX - tabStartX
+  
+  // Emit tab drag event to parent
+  emit('tab-drag', { deltaX, clientX: currentX })
+  
+  moveEvent.preventDefault()
+}
+
+const handleTabEnd = () => {
+  isTabDragging = false
+  document.removeEventListener('mousemove', handleTabMove)
+  document.removeEventListener('touchmove', handleTabMove)
+  document.removeEventListener('mouseup', handleTabEnd)
+  document.removeEventListener('touchend', handleTabEnd)
+  document.removeEventListener('touchcancel', handleTabEnd)
+}
 
 onMounted(() => {
   if (props.defaultHeight) {
@@ -129,16 +215,10 @@ watch(
   flex-direction: column;
   flex: 0 0 auto;
   min-height: 0;
-  max-height: 100%; /* Never exceed container */
-  margin: 0;
-  padding: 0;
 }
 
 .panel-wrapper.fill-remaining {
   flex: 1 1 0;
-  min-height: 0;
-  max-height: 100%; /* Force to fit */
-  overflow: hidden; /* Prevent overflow */
 }
 
 .panel-section {
@@ -146,84 +226,102 @@ watch(
   width: 100%;
   box-sizing: border-box;
   background: var(--dark-bg);
-  border-left: 3px solid var(--balatro-blue);
-  border-right: 3px solid var(--balatro-blue);
-  border-bottom: 3px solid var(--balatro-blue);
-  border-top: none; /* Top border removed - panels touch each other */
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
+
+  /* Style contract (A): Balatro frame — thick top border, thin sides/bottom, flat/square */
+  --panel-top-h: 10px;
+  border-top: var(--panel-top-h) solid var(--panel-color);
+  border-left: 4px solid var(--panel-color);
+  border-right: 4px solid var(--panel-color);
+  border-bottom: 4px solid var(--panel-color);
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible; /* Allow grab bar to extend above border */
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: 100%; /* Never exceed container */
-  margin: 0; /* No gaps between panels */
-  padding: 0;
+  max-height: 100vh; /* Ensure panels never exceed viewport */
 }
 
-/* Removed panel-top-drag-handle - the tab IS the divider */
+.panel-top-grab {
+  position: absolute;
+  top: -2px; /* Scoot up to align with colored border edge */
+  left: 0;
+  right: 0;
+  height: calc(var(--panel-top-h) + 2px); /* Extend to cover the border (10px + 2px overlap) */
+  cursor: ns-resize;
+  z-index: 40;
+  background: transparent;
+  touch-action: none;
+  user-select: none;
+}
 
-.panel-tab-area {
-  height: 24px;
-  padding: 2px 12px;
-  display: flex;
+.panel-tab {
+  position: absolute;
+  top: -28px;
+  height: 28px;
+  width: 200px; /* Fixed width */
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
   background: var(--panel-color);
+  border: 0;
+  border-radius: 6px 6px 0 0;
   color: #fff;
-  font-size: 14px;
+  font-family: 'm6x11plus', monospace;
+  font-size: 18px;
   font-weight: normal;
   user-select: none;
-  flex-shrink: 0;
-  cursor: ns-resize; /* This IS the divider - resize cursor */
-  touch-action: none;
-  position: relative;
-  z-index: 10; /* Above panel content */
-  /* Manila envelope tab effect - tab sticks out slightly */
-  border-radius: 4px 4px 0 0;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: auto; /* Allow dragging and clicking */
+  z-index: 60; /* above grab bar */
+  box-shadow: none;
+  cursor: move;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.panel-tab-area:active {
-  cursor: ns-resize;
-  filter: brightness(1.2);
+.panel-tab.dragging {
+  opacity: 0.5;
 }
 
-.panel-tab-area:hover {
-  filter: brightness(1.1);
+.panel-tab-left {
+  left: 8px;
 }
 
-/* Colored tabs like manila envelopes */
-.panel-tab-red {
-  background: var(--balatro-red);
+.panel-tab-right {
+  right: 8px;
+}
+
+.panel-tab-badge {
+  background: rgba(0, 0, 0, 0.22);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.panel-content {
+  flex: 1;
+  overflow: auto; /* Allow scrolling if content exceeds panel height */
+  min-height: 0;
+}
+
+/* Colored tabs */
+.panel-section-red {
   --panel-color: var(--balatro-red);
 }
 
-.panel-tab-blue {
-  background: var(--balatro-blue);
+.panel-section-blue {
   --panel-color: var(--balatro-blue);
 }
 
-.panel-tab-green {
-  background: var(--balatro-green);
+.panel-section-green {
   --panel-color: var(--balatro-green);
 }
 
-.panel-tab-purple {
-  background: var(--balatro-purple);
+.panel-section-purple {
   --panel-color: var(--balatro-purple);
-}
-
-.panel-label {
-  flex: 1;
-}
-
-.panel-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  font-size: 12px;
-  min-width: 20px;
-  text-align: center;
 }
 </style>
