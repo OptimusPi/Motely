@@ -129,16 +129,39 @@ features:
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
-    <script>
+    <script type="module">
+        // This is a standalone test file - if you need YAML parsing, use the Vue app instead
+        // which bundles js-yaml properly via Vite
+        console.warn('jaml-test.html is deprecated. Use the Vue app at /JAML/ instead.');
+        
         const editor = document.getElementById('editor');
         const output = document.getElementById('output');
 
+        // Simple YAML validation without external dependencies
         function validateYAML() {
             try {
-                const parsed = jsyaml.load(editor.value);
-                output.className = 'success';
-                output.textContent = JSON.stringify(parsed, null, 2);
+                // Basic YAML structure check (no parsing without js-yaml)
+                const lines = editor.value.split('\n');
+                let indentLevel = 0;
+                let isValid = true;
+                
+                for (const line of lines) {
+                    if (line.trim() === '' || line.trim().startsWith('#')) continue;
+                    const currentIndent = line.match(/^(\s*)/)[1].length;
+                    if (currentIndent > indentLevel + 2) {
+                        isValid = false;
+                        break;
+                    }
+                    indentLevel = currentIndent;
+                }
+                
+                if (isValid) {
+                    output.className = 'success';
+                    output.textContent = 'YAML structure appears valid (basic check only).\n\nFor full validation and parsing, use the Vue app at /JAML/';
+                } else {
+                    output.className = 'error';
+                    output.textContent = 'YAML structure appears invalid (indentation issue detected).';
+                }
             } catch (e) {
                 output.className = 'error';
                 output.textContent = 'Error: ' + e.message;
@@ -146,14 +169,9 @@ features:
         }
 
         function formatYAML() {
-            try {
-                const parsed = jsyaml.load(editor.value);
-                editor.value = jsyaml.dump(parsed, { indent: 2 });
-                validateYAML();
-            } catch (e) {
-                output.className = 'error';
-                output.textContent = 'Error: ' + e.message;
-            }
+            // Formatting requires js-yaml - redirect to Vue app
+            output.className = 'error';
+            output.textContent = 'Full YAML formatting requires js-yaml.\nPlease use the Vue app at /JAML/ for full functionality.';
         }
 
         function clearEditor() {

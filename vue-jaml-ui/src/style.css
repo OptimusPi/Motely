@@ -229,7 +229,7 @@ html, body {
   color: var(--text-color);
   border: none;
   padding: 12px;
-  font-family: 'm6x11plus', monospace; /* Use m6x11 font, Monaco editor has its own font */
+  font-family: 'Courier New', 'Consolas', 'Monaco', monospace; /* Coder-friendly monospace font for text editor */
   font-size: 16px;
   line-height: 1.6;
   resize: none;
@@ -426,7 +426,7 @@ html, body {
   gap: 4px;
   color: var(--dark-orange);
   font-size: 16px;
-  font-family: 'm6x11', monospace;
+  font-family: 'm6x11plus', monospace;
   cursor: grab;
 }
 

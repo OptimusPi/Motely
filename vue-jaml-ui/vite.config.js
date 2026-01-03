@@ -104,6 +104,7 @@ export default defineConfig(({ mode }) => ({
     emptyOutDir: true, // Clean output directory for proper cache busting
     assetsDir: 'assets',
     chunkSizeWarningLimit: 4000,
+    minify: false, // Disable minification - build with npm in CI/CD instead
     // Vite automatically uses content-based hashing for cache busting
     // File names include hash: index-[hash].js, assets/[name]-[hash].[ext]
     rollupOptions: {

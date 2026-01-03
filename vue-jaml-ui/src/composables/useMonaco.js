@@ -171,7 +171,7 @@ export function useMonaco() {
       automaticLayout: true,
       minimap: { enabled: false },
       fontSize: 16,
-      fontFamily: "'Lucida Console', 'Consolas', monospace",
+      fontFamily: "'Courier New', 'Consolas', 'Monaco', monospace", // Coder-friendly monospace font for Monaco editor
       lineHeight: 24,
       tabSize: 2,
       wordWrap: 'on',

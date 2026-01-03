@@ -1,53 +1,42 @@
 <template>
   <div class="jaml-ui">
-    <!-- Top tab display for collapsed panels -->
-    <div v-if="collapsedPanels.length > 0" class="top-tab-bar">
-      <div
-        v-for="panel in collapsedPanels"
-        :key="panel.id"
-        class="top-tab"
-        :class="[`top-tab-${panel.color}`]"
-        :style="{ '--panel-color': `var(--balatro-${panel.color})` }"
-        @click="expandPanel(panel.id)"
-      >
-        <span class="top-tab-label">{{ getPanelLabel(panel) }}</span>
-        <button 
-          class="top-tab-close"
-          @click.stop="removePanel(panel.id)"
-          aria-label="Remove panel"
-        >×</button>
-      </div>
-    </div>
-
-    <!-- Panels (tabs are part of each panel) -->
+    <!-- Panels (tabs are part of each panel, collapsed tabs appear inline) -->
     <div 
       class="main-layout" 
       :class="`layout-${layoutMode}`"
     >
       <div v-if="layoutMode === 'stack'" ref="stackContainer" class="layout-stack">
-        <template v-for="(panel, index) in panels" :key="panel.id">
+        <template v-for="(panel, index) in panels.filter(p => !p.collapsed)" :key="panel.id">
           <PanelSection
-            v-if="!isMobile || getMobilePanelVisibility(panel.id)"
             :color="panel.color"
-            :label="panel.label"
+            :label="getPanelLabel(panel)"
             :badge="panel.badge"
             :min-height="panel.minHeight"
             :default-height="panel.defaultHeight"
             :layout-mode="layoutMode"
-            :fill-remaining="index === panels.length - 1"
+            :fill-remaining="index === panels.filter(p => !p.collapsed).length - 1"
+            :panel-id="panel.id"
+            :can-duplicate="true"
+            :tab-align="panel.side === 'left' ? 'left' : 'right'"
             @resize="onPanelResize(panel.id, $event)"
             @collapse="onPanelCollapse(panel.id, $event)"
-            @top-drag="(e) => { if (index > 0 && !isMobile) startStackResize(index - 1, e) }"
+            @duplicate="duplicatePanel(panel.id)"
+            @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
+            @top-drag="(e) => { if (index > 0 && !isMobile) startStackResize(panels.filter(p => !p.collapsed)[index - 1]?.id, e) }"
           >
             <component
               :is="panel.component"
-              v-bind="panel.props || {}"
-              :jaml="panel.id === 'jaml-editor' ? jamlContent : undefined"
-              :results="panel.id === 'results' ? results : undefined"
-              :columns="panel.id === 'results' ? columns : undefined"
-              :status="panel.id === 'results' ? searchStatus : undefined"
-              :is-searching="panel.id === 'results' ? isSearching : undefined"
-              :searches="panel.id === 'active-searches' ? activeSearches : undefined"
+              v-bind="{
+                ...(panel.props || {}),
+                ...(panel.baseId === 'jaml-editor' ? { jaml: jamlContent || '' } : {}),
+                ...(panel.baseId === 'results' ? { 
+                  results, 
+                  columns, 
+                  status: searchStatus, 
+                  isSearching 
+                } : {}),
+                ...(panel.baseId === 'active-searches' ? { searches: activeSearches } : {})
+              }"
               @save="handleSaveFilter"
               @start="handleStartSearch"
               @stop="handleStopSearch"
@@ -60,7 +49,7 @@
         </template>
       </div>
 
-      <div v-else ref="splitContainer" class="layout-split" :class="{ 'mobile-hidden': isMobile }">
+      <div v-else ref="splitContainer" class="layout-split">
         <div ref="leftColumnContainer" class="split-column split-left" :style="{ width: splitLeftWidth + '%' }">
           <template v-for="(panel, index) in leftPanels" :key="panel.id">
             <PanelSection
@@ -77,13 +66,15 @@
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
               @duplicate="duplicatePanel(panel.id)"
-              @move-to-side="movePanelToSide(panel.id, $event)"
-              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('left', index - 1, e) }"
+              @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
+              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('left', leftPanels[index - 1]?.id, e) }"
             >
               <component
                 :is="panel.component"
-                v-bind="panel.props || {}"
-                :jaml="panel.id === 'jaml-editor' ? jamlContent : undefined"
+                v-bind="{
+                  ...(panel.props || {}),
+                  ...(panel.baseId === 'jaml-editor' ? { jaml: jamlContent || '' } : {})
+                }"
                 @save="handleSaveFilter"
                 @update:jaml="updateJamlContent"
               />
@@ -121,17 +112,21 @@
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
               @duplicate="duplicatePanel(panel.id)"
-              @move-to-side="movePanelToSide(panel.id, $event)"
-              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('right', index - 1, e) }"
+              @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
+              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('right', rightPanels[index - 1]?.id, e) }"
             >
               <component
                 :is="panel.component"
-                v-bind="panel.props || {}"
-                :results="panel.id === 'results' ? results : undefined"
-                :columns="panel.id === 'results' ? columns : undefined"
-                :status="panel.id === 'results' ? searchStatus : undefined"
-                :is-searching="panel.id === 'results' ? isSearching : undefined"
-                :searches="panel.id === 'active-searches' ? activeSearches : undefined"
+                v-bind="{
+                  ...(panel.props || {}),
+                  ...(panel.baseId === 'results' ? { 
+                    results, 
+                    columns, 
+                    status: searchStatus, 
+                    isSearching 
+                  } : {}),
+                  ...(panel.baseId === 'active-searches' ? { searches: activeSearches } : {})
+                }"
                 @start="handleStartSearch"
                 @stop="handleStopSearch"
                 @clear="clearResults"
@@ -142,42 +137,6 @@
           </template>
         </div>
       </div>
-    </div>
-
-    <!-- Mobile Bottom Navigation -->
-    <div v-if="isMobile" class="mobile-nav">
-      <button 
-        @click="activePanel = 'editor'"
-        :class="['nav-btn', { active: activePanel === 'editor' }]"
-        aria-label="Editor"
-      >
-        <span class="nav-icon">📝</span>
-        <span class="nav-label">Editor</span>
-      </button>
-      <button 
-        @click="activePanel = 'searches'"
-        :class="['nav-btn', { active: activePanel === 'searches' }]"
-        aria-label="Active Searches"
-      >
-        <span class="nav-icon">🔍</span>
-        <span class="nav-label">Searches</span>
-      </button>
-      <button 
-        @click="activePanel = 'results'"
-        :class="['nav-btn', { active: activePanel === 'results' }]"
-        aria-label="Results"
-      >
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">Results</span>
-      </button>
-      <button 
-        @click="toggleSettings"
-        :class="['nav-btn', { active: showSettings }]"
-        aria-label="Settings"
-      >
-        <span class="nav-icon">⚙️</span>
-        <span class="nav-label">Settings</span>
-      </button>
     </div>
 
     <SettingsModal
@@ -270,6 +229,18 @@ const panels = reactive([
     minHeight: 260,
     defaultHeight: 360,
     component: markRaw(ResultsPanel)
+  },
+  {
+    id: generatePanelId('chat'),
+    baseId: 'chat',
+    color: 'blue',
+    label: 'Chat',
+    filterId: null,
+    side: 'right',
+    collapsed: false,
+    minHeight: 200,
+    defaultHeight: 300,
+    component: markRaw(ChatPanel)
   }
 ])
 
@@ -293,11 +264,14 @@ const getPanelLabel = (panel) => {
 const leftPanels = computed(() => panels.filter(p => p.side === 'left' && !p.collapsed))
 const rightPanels = computed(() => panels.filter(p => p.side === 'right' && !p.collapsed))
 const collapsedPanels = computed(() => panels.filter(p => p.collapsed))
+const collapsedLeftPanels = computed(() => panels.filter(p => p.side === 'left' && p.collapsed))
+const collapsedRightPanels = computed(() => panels.filter(p => p.side === 'right' && p.collapsed))
+const leftAnchorPanel = computed(() => leftPanels.value[0] || null)
+const rightAnchorPanel = computed(() => rightPanels.value[0] || null)
 const topVisiblePanels = computed(() => collapsedPanels.value)
 
 const showSettings = ref(false)
 const splitLeftWidth = ref(50)
-const activePanel = ref('editor') // For mobile navigation
 
 // Badge positioning state
 const badgeSnapState = ref('center') // 'left', 'center', 'right'
@@ -347,39 +321,6 @@ const startSplitResize = (event) => {
 
   const onMove = (moveEvent) => {
     updateFromPointer(moveEvent.clientX)
-    
-    // Check if resize bar crosses 50% of any tab - switch that tab's side
-    const rect = splitContainer.value?.getBoundingClientRect?.()
-    if (rect) {
-      const leftColumn = leftColumnContainer.value
-      const rightColumn = rightColumnContainer.value
-      
-      // Check left column tabs
-      if (leftColumn) {
-        const leftTabs = leftColumn.querySelectorAll('.panel-tab')
-        leftTabs.forEach(tab => {
-          const tabRect = tab.getBoundingClientRect()
-          const tabCenter = tabRect.left + tabRect.width / 2
-          if (moveEvent.clientX > tabCenter && tab.classList.contains('panel-tab-left')) {
-            tab.classList.remove('panel-tab-left')
-            tab.classList.add('panel-tab-right')
-          }
-        })
-      }
-      
-      // Check right column tabs
-      if (rightColumn) {
-        const rightTabs = rightColumn.querySelectorAll('.panel-tab')
-        rightTabs.forEach(tab => {
-          const tabRect = tab.getBoundingClientRect()
-          const tabCenter = tabRect.left + tabRect.width / 2
-          if (moveEvent.clientX < tabCenter && tab.classList.contains('panel-tab-right')) {
-            tab.classList.remove('panel-tab-right')
-            tab.classList.add('panel-tab-left')
-          }
-        })
-      }
-    }
   }
 
   const onUp = () => {
@@ -411,20 +352,22 @@ const startSplitResize = (event) => {
 // Removed computeMaxHeightForIndex - no limits needed
 
 let isStackDragging = false
-let stackResizeIndex = -1
+let stackResizePanelId = null
 let stackStartY = 0
 let stackStartHeight = 0
 
-const startStackResize = (resizeIndex, event) => {
+const startStackResize = (panelId, event) => {
   if (event.button !== 0 && event.type !== 'touchstart') return
+  if (!panelId) return
   event.preventDefault()
   event.stopPropagation()
 
-  isStackDragging = true
-  stackResizeIndex = resizeIndex
+  const stackPanels = panels.filter(p => !p.collapsed)
+  const resizingPanel = stackPanels.find(p => p.id === panelId)
+  if (!resizingPanel) return
 
-  const stackPanels = panels
-  if (!stackPanels[resizeIndex]) return
+  isStackDragging = true
+  stackResizePanelId = panelId
 
   const dividerEl = event.currentTarget
   dividerEl?.classList?.add?.('is-dragging')
@@ -433,7 +376,7 @@ const startStackResize = (resizeIndex, event) => {
 
   // Get starting position (works for both mouse and touch)
   stackStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
-  stackStartHeight = stackPanels[resizeIndex].defaultHeight || stackPanels[resizeIndex].minHeight || 200
+  stackStartHeight = resizingPanel.defaultHeight || resizingPanel.minHeight || 200
 
   // Use document-level listeners for smooth dragging (like SplitPane)
   document.addEventListener('mousemove', handleStackMove)
@@ -444,13 +387,20 @@ const startStackResize = (resizeIndex, event) => {
 }
 
 const handleStackMove = (moveEvent) => {
-  if (!isStackDragging || stackResizeIndex < 0) return
+  if (!isStackDragging || !stackResizePanelId) return
 
   const stackPanels = panels.filter(p => !p.collapsed)
-  if (!stackPanels[stackResizeIndex]) return
+  const resizingPanel = stackPanels.find(p => p.id === stackResizePanelId)
+  if (!resizingPanel) {
+    handleStackEnd()
+    return
+  }
 
-  const resizingPanel = stackPanels[stackResizeIndex]
-  const sameSidePanels = stackPanels.filter(p => p.side === resizingPanel.side)
+  const resizeIndex = stackPanels.findIndex(p => p.id === stackResizePanelId)
+  if (resizeIndex < 0) {
+    handleStackEnd()
+    return
+  }
 
   // Get current position (works for both mouse and touch)
   const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0]?.clientY) || 0
@@ -461,12 +411,36 @@ const handleStackMove = (moveEvent) => {
   
   // Collision detection: if dragging up, shrink panels above
   if (deltaY < 0 && resizeIndex > 0) {
-    const panelAbove = sameSidePanels[resizeIndex - 1]
+    const panelAbove = stackPanels[resizeIndex - 1]
     if (panelAbove) {
-      const shrinkAmount = Math.min(Math.abs(deltaY), panelAbove.defaultHeight - panelAbove.minHeight)
+      const currentHeight = panelAbove.defaultHeight || panelAbove.minHeight
+      const shrinkAmount = Math.min(Math.abs(deltaY), currentHeight - panelAbove.minHeight)
       if (shrinkAmount > 0) {
-        panelAbove.defaultHeight = Math.max(panelAbove.minHeight, panelAbove.defaultHeight - shrinkAmount)
+        panelAbove.defaultHeight = Math.max(panelAbove.minHeight, currentHeight - shrinkAmount)
         newHeight = stackStartHeight + (deltaY + shrinkAmount)
+        
+        // If panel above is at minHeight and we're still dragging up, collapse it
+        if (panelAbove.defaultHeight <= panelAbove.minHeight) {
+          panelAbove.collapsed = true
+        }
+      }
+    }
+  }
+  
+  // Uncollapse: if dragging topmost panel down with space, uncollapse next collapsed panel
+  if (deltaY > 0 && resizeIndex === 0) {
+    const resizingPanelSide = resizingPanel.side
+    const collapsedOnSameSide = panels.filter(p => p.side === resizingPanelSide && p.collapsed)
+    
+    if (collapsedOnSameSide.length > 0) {
+      // Check if there's space above the resizing panel
+      const availableSpace = deltaY
+      if (availableSpace >= collapsedOnSameSide[0].minHeight) {
+        const panelToUncollapse = collapsedOnSameSide[0]
+        panelToUncollapse.collapsed = false
+        panelToUncollapse.defaultHeight = panelToUncollapse.minHeight
+        // Adjust the resizing panel height to account for the uncollapsed panel
+        newHeight = Math.max(resizingPanel.minHeight, newHeight - panelToUncollapse.minHeight)
       }
     }
   }
@@ -482,7 +456,7 @@ const handleStackEnd = () => {
   if (!isStackDragging) return
 
   isStackDragging = false
-  stackResizeIndex = -1
+  stackResizePanelId = null
 
   // Remove all dragging classes
   document.querySelectorAll('.stack-divider.is-dragging').forEach(el => {
@@ -500,9 +474,14 @@ const handleStackEnd = () => {
   document.removeEventListener('touchcancel', handleStackEnd)
 }
 
-const startColumnResize = (side, resizeIndex, event) => {
+const startColumnResize = (side, panelId, event) => {
   if (event.button !== 0) return
+  if (!panelId) return
   event.preventDefault()
+
+  const columnPanels = side === 'left' ? leftPanels.value : rightPanels.value
+  const resizingPanel = columnPanels.find(p => p.id === panelId)
+  if (!resizingPanel) return
 
   const dividerEl = event.currentTarget
   dividerEl?.setPointerCapture?.(event.pointerId)
@@ -510,18 +489,24 @@ const startColumnResize = (side, resizeIndex, event) => {
   document.body.style.cursor = 'row-resize'
   document.body.style.userSelect = 'none'
 
-  const columnPanels = side === 'left' ? leftPanels.value : rightPanels.value
   const containerEl = side === 'left' ? leftColumnContainer.value : rightColumnContainer.value
   const containerHeight = containerEl?.getBoundingClientRect?.().height
   if (!containerHeight) return
 
   const startY = event.clientY
-  const startHeight = columnPanels[resizeIndex].defaultHeight
+  const startHeight = resizingPanel.defaultHeight || resizingPanel.minHeight || 200
 
   const onMove = (moveEvent) => {
+    // Find panel again in case array changed
+    const currentPanels = side === 'left' ? leftPanels.value : rightPanels.value
+    const currentPanel = currentPanels.find(p => p.id === panelId)
+    if (!currentPanel) {
+      onUp()
+      return
+    }
     // NO LIMITATIONS - let it drag freely!
     const desired = startHeight + (moveEvent.clientY - startY)
-    columnPanels[resizeIndex].defaultHeight = desired
+    currentPanel.defaultHeight = Math.max(currentPanel.minHeight, desired)
   }
 
   const onUp = () => {
@@ -573,7 +558,6 @@ const handleSelectFilter = async (filter) => {
       p.filterId = filter?.id || filter?.name || null
     }
   })
-}
   showSettings.value = false
 }
 
@@ -619,13 +603,18 @@ const onPanelCollapse = (panelId, isCollapsed) => {
     panel.collapsed = isCollapsed
     // When a panel collapses, the panel above it should expand to fill the space
     if (isCollapsed) {
-      const sameSidePanels = panels.filter(p => p.side === panel.side && !p.collapsed && p.id !== panelId)
+      // Get all panels on the same side (including collapsed ones) to find position
+      const sameSidePanels = panels.filter(p => p.side === panel.side)
       const panelIndex = sameSidePanels.findIndex(p => p.id === panelId)
       if (panelIndex > 0) {
-        const panelAbove = sameSidePanels[panelIndex - 1]
-        if (panelAbove) {
-          // Expand the panel above
-          panelAbove.defaultHeight = (panelAbove.defaultHeight || panelAbove.minHeight) + (panel.defaultHeight || panel.minHeight)
+        // Find the panel above that is not collapsed
+        for (let i = panelIndex - 1; i >= 0; i--) {
+          const panelAbove = sameSidePanels[i]
+          if (panelAbove && !panelAbove.collapsed) {
+            // Expand the panel above
+            panelAbove.defaultHeight = (panelAbove.defaultHeight || panelAbove.minHeight) + (panel.defaultHeight || panel.minHeight)
+            break
+          }
         }
       }
     }
@@ -649,8 +638,8 @@ const duplicatePanel = (panelId) => {
   panels.push(newPanel)
 }
 
-const movePanelToSide = (panelId, targetSide) => {
-  const panel = panels.find(p => p.id === panelId)
+const movePanelToSide = (draggedPanelId, targetSide) => {
+  const panel = panels.find(p => p.id === draggedPanelId)
   if (panel && (targetSide === 'left' || targetSide === 'right')) {
     panel.side = targetSide
   }
@@ -668,18 +657,6 @@ const removePanel = (panelId) => {
   if (index >= 0) {
     panels.splice(index, 1)
   }
-}
-
-// Mobile panel visibility helper
-const getMobilePanelVisibility = (panelId) => {
-  if (!isMobile.value) return true
-  const panelMap = {
-    'jaml-editor': 'editor',
-    'blueprint': 'editor',
-    'active-searches': 'searches',
-    'results': 'results'
-  }
-  return panelMap[panelId] === activePanel.value
 }
 
 // Lifecycle
@@ -910,7 +887,7 @@ onUnmounted(() => {
   display: inline;
 }
 
-/* Top tab bar for collapsed panels */
+/* Top tab bar for collapsed panels and anchors */
 .top-tab-bar {
   position: fixed;
   top: 0;
@@ -921,11 +898,27 @@ onUnmounted(() => {
   border-bottom: 2px solid var(--balatro-gold);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 4px;
   padding: 2px 8px;
   z-index: 10000; /* Above everything */
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+.top-tab-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.top-tab-group-left {
+  justify-content: flex-start;
+}
+
+.top-tab-group-right {
+  justify-content: flex-end;
 }
 
 .top-tab {
@@ -983,6 +976,11 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.3);
 }
 
+.top-tab-anchor {
+  cursor: default;
+  opacity: 0.9;
+}
+
 .panel-tab-inline .tab-badge {
   margin-left: 8px;
   background: rgba(0, 0, 0, 0.2);
@@ -1011,65 +1009,4 @@ onUnmounted(() => {
   --panel-color: var(--balatro-purple);
 }
 
-/* Mobile Navigation */
-.mobile-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  background: var(--panel-bg);
-  border-top: 2px solid var(--border-color);
-  z-index: 1000;
-  padding: 8px 0;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.nav-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 4px;
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-height: 60px; /* Ensure 44px+ touch target */
-}
-
-.nav-btn:active {
-  background: var(--dark-bg);
-}
-
-.nav-btn.active {
-  color: var(--balatro-gold);
-}
-
-.nav-icon {
-  font-size: 20px;
-}
-
-.nav-label {
-  font-size: 11px;
-  font-weight: normal;
-}
-
-.mobile-hidden {
-  display: none;
-}
-
-/* Adjust layout for mobile nav */
-@media (max-width: 767px) {
-  .jaml-ui {
-    padding-bottom: 60px; /* Space for bottom nav */
-  }
-  
-  .main-layout {
-    height: calc(100vh - 60px);
-  }
-}
 </style>
