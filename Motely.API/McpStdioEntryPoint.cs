@@ -74,9 +74,9 @@ public static class McpStdioEntryPoint
         builder.Services.AddScoped<McpProtocol.McpProtocolServer>(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<McpProtocol.McpProtocolServer>>();
-            var jamlGenieService = sp.GetRequiredService<McpServer>();
+            var mcpServer = sp.GetRequiredService<McpServer>();
             var searchManager = SearchManager.Instance;
-            return new McpProtocol.McpProtocolServer(logger, jamlGenieService, searchManager);
+            return new McpProtocol.McpProtocolServer(logger, mcpServer, searchManager);
         });
 
         builder.Services.AddScoped<McpProtocol.McpStdioServer>();

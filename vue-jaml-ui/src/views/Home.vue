@@ -161,7 +161,7 @@ h2 {
   border: 1px solid var(--border-color);
   background: rgba(0, 0, 0, 0.25);
   color: var(--text-color);
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .card-primary {
@@ -171,7 +171,7 @@ h2 {
 
 .card:hover,
 .card-primary:hover {
-  transform: translateY(-4px);
+  background: rgba(0, 0, 0, 0.3);
   border-color: var(--balatro-gold);
 }
 

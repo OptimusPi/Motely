@@ -11,6 +11,7 @@
   --gold: #eaba44;
   --balatro-gold: #eaba44;
   --orange: #ff9800;
+  --orange-dark: #cc7700;
   
   --bg: #33464b;
   --panel: #3a5055;
@@ -138,7 +139,7 @@ html, body {
 }
 
 .splitter:hover {
-  background: var(--balatro-gold);
+  background: var(--balatro-dark-gold);
 }
 
 .splitter.dragging {
@@ -478,7 +479,7 @@ html, body {
   }
 }
 
-/* Smooth transitions */
+/* Smooth transitions - flat 2D style, no transforms */
 .btn, .nav-link button, .top-bar button, .chip, .pill {
-  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+  transition: background-color 0.15s, border-color 0.15s;
 }
