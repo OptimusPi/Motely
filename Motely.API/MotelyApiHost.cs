@@ -11,6 +11,7 @@ using Motely.Analysis;
 using Motely.API.Services;
 using Motely.API;
 using Motely.API.Hubs;
+using Motely.API.McpProtocol;
 
 // Request records
 public record SearchStartRequest(string? FilterId, string? Deck, string? Stake, long? SeedCount, long? StartBatch, int? Cutoff, string? SeedSource);
@@ -66,8 +67,29 @@ public static class MotelyApiHost
         builder.Services.AddHostedService<SearchQueueHostedService>();
         builder.Services.AddSingleton<SearchService>();
         
+        // Register MCP Server for JAML generation
+        builder.Services.AddScoped<McpServer>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<McpServer>>();
+            var httpClient = new HttpClient();
+            var config = sp.GetRequiredService<IConfiguration>();
+            return new McpServer(logger, httpClient, config);
+        });
+        
+        // Register MCP Protocol Server (JSON-RPC 2.0 handler)
+        builder.Services.AddScoped<McpProtocolServer>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<McpProtocolServer>>();
+            var mcpServer = sp.GetRequiredService<McpServer>();
+            var searchManager = SearchManager.Instance;
+            return new McpProtocolServer(logger, mcpServer, searchManager);
+        });
+        
         // Add SignalR
         builder.Services.AddSignalR();
+        
+        // Register SearchBroadcaster
+        builder.Services.AddSingleton<ISearchBroadcaster, SearchBroadcaster>();
 
         var app = builder.Build();
 
@@ -78,6 +100,10 @@ public static class MotelyApiHost
         {
             SearchManager.Instance.SetMotelyRoot(motelyRoot);
         }
+        
+        // Wire up SearchBroadcaster to SearchManager
+        var broadcaster = app.Services.GetRequiredService<ISearchBroadcaster>();
+        SearchManager.Instance.SetBroadcaster(broadcaster);
 
         // Configure middleware
         app.UseCors("AllowAll");
@@ -228,6 +254,102 @@ public static class MotelyApiHost
                     results = results,
                     isBackgroundRunning = false
                 });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        // MCP endpoints for JAML generation
+        app.MapPost("/mcp/prompt", async (HttpRequest request, McpServer mcpServer) =>
+        {
+            try
+            {
+                var req = await request.ReadFromJsonAsync<McpPromptRequest>();
+                if (req?.Prompt == null)
+                    return Results.BadRequest(new { error = "Missing prompt" });
+
+                var response = await mcpServer.ProcessPromptAsync(req.Prompt);
+                
+                return Results.Ok(new
+                {
+                    success = response.Success,
+                    jamlFilter = response.JamlFilter,
+                    reasoning = response.Reasoning,
+                    error = response.Error,
+                    searchId = response.SearchId,
+                    results = response.Results,
+                    columns = response.Columns,
+                    message = response.Message,
+                    searchUrl = response.SearchUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        app.MapPost("/mcp/generate", async (HttpRequest request, McpServer mcpServer) =>
+        {
+            try
+            {
+                var req = await request.ReadFromJsonAsync<McpPromptRequest>();
+                if (req?.Prompt == null)
+                    return Results.BadRequest(new { error = "Missing prompt" });
+
+                // Generate JAML only (no search)
+                var (jaml, reasoning, error) = await mcpServer.GenerateJamlOnlyAsync(req.Prompt);
+                
+                return Results.Ok(new
+                {
+                    success = string.IsNullOrEmpty(error),
+                    jaml = jaml,
+                    reasoning = reasoning,
+                    error = error
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        // MCP Protocol endpoint (JSON-RPC 2.0) for AI assistants (Claude Desktop, Cline, etc.)
+        app.MapPost("/mcp", async (HttpRequest request, McpProtocolServer mcpProtocolServer) =>
+        {
+            try
+            {
+                // Read request body
+                using var reader = new StreamReader(request.Body);
+                var body = await reader.ReadToEndAsync();
+                
+                if (string.IsNullOrWhiteSpace(body))
+                {
+                    return Results.BadRequest(new { error = "Request body is required" });
+                }
+
+                // Deserialize JSON-RPC request
+                var jsonRpcRequest = JsonSerializer.Deserialize<JsonRpcRequest>(body, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                if (jsonRpcRequest == null)
+                {
+                    return Results.BadRequest(new { error = "Invalid JSON-RPC request" });
+                }
+
+                // Handle request via MCP Protocol Server
+                var response = await mcpProtocolServer.HandleRequestAsync(jsonRpcRequest);
+                
+                // Return JSON-RPC response (respects JsonPropertyName attributes)
+                return Results.Json(response);
+            }
+            catch (JsonException ex)
+            {
+                return Results.BadRequest(new { error = $"Invalid JSON: {ex.Message}" });
             }
             catch (Exception ex)
             {
