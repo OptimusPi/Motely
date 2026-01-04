@@ -1380,14 +1380,17 @@ public class SearchManager
         }
     }
     
-    private void DumpToFertilizerAndDeleteDb(string dbPath)
+    private async void DumpToFertilizerAndDeleteDb(string dbPath)
     {
-        // TODO: Get top 1000 from search DB and add to fertilizer pile
+        // Get top 1000 seeds from search DB and add to fertilizer pile
         // Then delete the search DB file
         try
         {
-            var topResults = GetTopResultsFromDb(dbPath, 1000);
-            // Add to fertilizer logic here
+            var topSeeds = GetTopSeedsOnlyFromDb(dbPath, 1000);
+            if (topSeeds.Count > 0)
+            {
+                await FertilizerDatabase.Instance.AddSeedsAsync(topSeeds);
+            }
             File.Delete(dbPath);
         }
         catch (Exception ex)
