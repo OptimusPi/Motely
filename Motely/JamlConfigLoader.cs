@@ -62,6 +62,8 @@ public static class JamlConfigLoader
             jamlContent = PreProcessJamlForTypeAsKey(jamlContent);
 
             // Parse JAML using YamlDotNet's BUILT-IN case-insensitive matching
+            // NullNamingConvention preserves property names as-is, but WithCaseInsensitivePropertyMatching
+            // ensures case-insensitive matching for both property names AND YamlMember aliases
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(NullNamingConvention.Instance)
                 .WithCaseInsensitivePropertyMatching()
@@ -137,74 +139,127 @@ public static class JamlConfigLoader
             var trimmed = line.TrimStart();
             bool matched = false;
 
-            // Check if line has type-as-key pattern (e.g., "  - joker: Blueprint")
-            if (trimmed.StartsWith("- "))
+            // Check if line has type-as-key pattern (e.g., "  - joker: Blueprint" or "    - joker: Blueprint")
+            // Match ANY case variation: "Joker:", "JOKER:", "joker:", etc.
+            if (trimmed.StartsWith("- ", StringComparison.OrdinalIgnoreCase))
             {
-                // Handle plural arrays (jokers: [Blueprint, Brainstorm])
-                foreach (var pluralKey in pluralTypeKeys)
+                // Extract the key part (everything between "- " and ":")
+                var colonIndex = trimmed.IndexOf(':', 2);
+                if (colonIndex > 2)
                 {
-                    var pattern = $"- {pluralKey}:";
-                    if (trimmed.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
+                    var keyPart = trimmed.Substring(2, colonIndex - 2).Trim().ToLowerInvariant();
+                    
+                    // Handle plural arrays (jokers: [Blueprint, Brainstorm])
+                    foreach (var pluralKey in pluralTypeKeys)
                     {
-                        var indent = line.Substring(0, line.IndexOf('-'));
-                        var singularType = GetSingularTypeName(pluralKey);
-                        var normalizedType = NormalizeTypeName(singularType);
-                        var arrayContent = trimmed.Substring(pattern.Length).Trim();
-                        
-                        // Convert jokers: [Blueprint, Brainstorm] to type: Joker + values: [Blueprint, Brainstorm]
-                        result.AppendLine($"{indent}- type: {normalizedType}");
-                        result.AppendLine($"{indent}  values: {arrayContent}");
-                        matched = true;
-                        break;
-                    }
-                }
-                
-                // Then check for singular type-as-key patterns
-                if (!matched)
-                {
-                    foreach (var typeKey in typeKeys)
-                    {
-                        var pattern = $"- {typeKey}:";
-                        if (trimmed.StartsWith(pattern, StringComparison.OrdinalIgnoreCase))
+                        if (keyPart == pluralKey.ToLowerInvariant())
                         {
                             var indent = line.Substring(0, line.IndexOf('-'));
-                            var value = trimmed.Substring(pattern.Length).Trim();
-
-                            // Convert to standard format
-                            var normalizedType = NormalizeTypeName(typeKey);
+                            var singularType = GetSingularTypeName(pluralKey);
+                            var normalizedType = NormalizeTypeName(singularType);
+                            var arrayContent = trimmed.Substring(colonIndex + 1).Trim();
+                            
+                            // Convert jokers: [Blueprint, Brainstorm] to type: Joker + values: [Blueprint, Brainstorm]
                             result.AppendLine($"{indent}- type: {normalizedType}");
-
-                            // Special handling for or/and - they use "clauses:" not "value:"
-                            // This allows shorthand: "- or:" followed by nested items
-                            // instead of requiring explicit "clauses:" keyword
-                            if (typeKey.Equals("or", StringComparison.OrdinalIgnoreCase) ||
-                                typeKey.Equals("and", StringComparison.OrdinalIgnoreCase))
+                            result.AppendLine($"{indent}  values: {arrayContent}");
+                            matched = true;
+                            break;
+                        }
+                    }
+                    
+                    // Then check for singular type-as-key patterns
+                    if (!matched)
+                    {
+                        foreach (var typeKey in typeKeys)
+                        {
+                            if (keyPart == typeKey.ToLowerInvariant())
                             {
-                                // "null" comes from js-yaml formatter quirk - treat as empty
-                                // User already has explicit "clauses:" on next line, don't add another
-                                if (value.Equals("null", StringComparison.OrdinalIgnoreCase))
+                                var indent = line.Substring(0, line.IndexOf('-'));
+                                var value = trimmed.Substring(colonIndex + 1).Trim();
+
+                                // Convert to standard format
+                                var normalizedType = NormalizeTypeName(typeKey);
+                                result.AppendLine($"{indent}- type: {normalizedType}");
+
+                                // Special handling for or/and - they use "clauses:" not "value:"
+                                // This allows shorthand: "- or:" followed by nested items
+                                // instead of requiring explicit "clauses:" keyword
+                                if (typeKey.Equals("or", StringComparison.OrdinalIgnoreCase) ||
+                                    typeKey.Equals("and", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    // Just emit type, user has explicit clauses: below
-                                }
-                                else if (string.IsNullOrEmpty(value))
-                                {
-                                    // Normal shorthand: "- or:" with nested items (no explicit clauses:)
-                                    // Add "clauses:" so nested items become the clauses array
-                                    result.AppendLine($"{indent}  clauses:");
+                                    // "null" comes from js-yaml formatter quirk - treat as empty
+                                    // User already has explicit "clauses:" on next line, don't add another
+                                    if (value.Equals("null", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        // Just emit type, user has explicit clauses: below
+                                    }
+                                    else if (string.IsNullOrEmpty(value))
+                                    {
+                                        // Normal shorthand: "- or:" with nested items (no explicit clauses:)
+                                        // Add "clauses:" so nested items become the clauses array
+                                        result.AppendLine($"{indent}  clauses:");
+                                    }
+                                    else
+                                    {
+                                        // User wrote "- or: something" which doesn't make sense
+                                        // Just pass it through and let the deserializer error
+                                        result.AppendLine($"{indent}  value: {value}");
+                                    }
                                 }
                                 else
                                 {
-                                    // User wrote "- or: something" which doesn't make sense
-                                    // Just pass it through and let the deserializer error
                                     result.AppendLine($"{indent}  value: {value}");
                                 }
+                                matched = true;
+                                break; // Found match, stop checking other typeKeys
                             }
-                            else
-                            {
-                                result.AppendLine($"{indent}  value: {value}");
-                            }
+                        }
+                    }
+                }
+            }
+            
+            // Also handle type-as-key in nested clauses (indented, no "- " prefix)
+            // Pattern: "    smallblindtag: NegativeTag" (inside clauses array)
+            if (!matched && trimmed.Length > 0 && !trimmed.StartsWith("- "))
+            {
+                var colonIndex = trimmed.IndexOf(':');
+                if (colonIndex > 0)
+                {
+                    var keyPart = trimmed.Substring(0, colonIndex).Trim().ToLowerInvariant();
+                    
+                    // Check plural keys
+                    foreach (var pluralKey in pluralTypeKeys)
+                    {
+                        if (keyPart == pluralKey.ToLowerInvariant())
+                        {
+                            var indent = line.Substring(0, line.Length - trimmed.Length);
+                            var singularType = GetSingularTypeName(pluralKey);
+                            var normalizedType = NormalizeTypeName(singularType);
+                            var arrayContent = trimmed.Substring(colonIndex + 1).Trim();
+                            
+                            result.AppendLine($"{indent}type: {normalizedType}");
+                            result.AppendLine($"{indent}values: {arrayContent}");
                             matched = true;
-                            break; // Found match, stop checking other typeKeys
+                            break;
+                        }
+                    }
+                    
+                    // Check singular keys
+                    if (!matched)
+                    {
+                        foreach (var typeKey in typeKeys)
+                        {
+                            if (keyPart == typeKey.ToLowerInvariant())
+                            {
+                                var indent = line.Substring(0, line.Length - trimmed.Length);
+                                var value = trimmed.Substring(colonIndex + 1).Trim();
+                                var normalizedType = NormalizeTypeName(typeKey);
+                                
+                                result.AppendLine($"{indent}type: {normalizedType}");
+                                result.AppendLine($"{indent}value: {value}");
+                                matched = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -215,9 +270,25 @@ public static class JamlConfigLoader
             {
                 result.AppendLine(line);
             }
+            else
+            {
+                // Skip the next line if it's just the value continuation (already handled)
+                // This handles multi-line values that might follow
+            }
         }
 
         var processed = result.ToString();
+        
+        // DEBUG: Log preprocessed output if it changed
+        #if DEBUG
+        if (processed != jamlContent)
+        {
+            System.Diagnostics.Debug.WriteLine("=== PREPROCESSOR OUTPUT ===");
+            System.Diagnostics.Debug.WriteLine(processed);
+            System.Diagnostics.Debug.WriteLine("=== END PREPROCESSOR ===");
+        }
+        #endif
+        
         return processed;
     }
 
