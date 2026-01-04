@@ -23,11 +23,18 @@
       <span v-if="badge" class="panel-tab-badge">{{ badge }}</span>
       <button
         v-if="canDuplicate"
-        class="panel-tab-duplicate"
+        class="panel-tab-button panel-tab-duplicate"
         @click.stop="handleDuplicate"
         aria-label="Duplicate panel"
         title="Duplicate panel"
       >+</button>
+      <button
+        v-if="canClose"
+        class="panel-tab-button panel-tab-close"
+        @click.stop="handleClose"
+        aria-label="Close panel"
+        title="Close panel"
+      >×</button>
     </div>
 
     <div
@@ -56,7 +63,7 @@ const props = defineProps({
   color: {
     type: String,
     default: 'red',
-    validator: (v) => ['red', 'blue', 'green', 'purple'].includes(v)
+    validator: (v) => ['red', 'blue', 'green', 'purple', 'orange'].includes(v)
   },
   label: {
     type: String,
@@ -95,13 +102,21 @@ const props = defineProps({
   canDuplicate: {
     type: Boolean,
     default: false
+  },
+  canClose: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['resize', 'collapse', 'top-drag', 'duplicate', 'move-to-side']);
+const emit = defineEmits(['resize', 'collapse', 'top-drag', 'duplicate', 'move-to-side', 'close', 'drag-start']);
 
 const handleDuplicate = () => {
   emit('duplicate')
+}
+
+const handleClose = () => {
+  emit('close')
 }
 
 const handleTabDragStart = (event) => {
@@ -109,6 +124,7 @@ const handleTabDragStart = (event) => {
     event.dataTransfer.setData('text/plain', props.panelId)
     event.dataTransfer.effectAllowed = 'move'
     event.currentTarget.classList.add('dragging')
+    emit('drag-start') // Emit drag start for sound
     // Prevent the browser's default drag image which can cause visual jumps
     const dragImage = event.currentTarget.cloneNode(true)
     dragImage.style.position = 'absolute'
@@ -230,7 +246,7 @@ watch(
   position: absolute;
   top: -28px;
   height: 28px;
-  width: 200px; /* Fixed width */
+  width: 200px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -244,13 +260,18 @@ watch(
   font-size: 18px;
   font-weight: normal;
   user-select: none;
-  pointer-events: auto; /* Allow dragging and clicking */
-  z-index: 60; /* above grab bar */
+  pointer-events: auto;
+  z-index: 60;
   box-shadow: none;
   cursor: move;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.panel-tab:hover {
+  background: var(--panel-color-dark);
 }
 
 .panel-tab.dragging {
@@ -281,7 +302,7 @@ watch(
   flex-shrink: 0;
 }
 
-.panel-tab-duplicate {
+.panel-tab-button {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: #fff;
@@ -297,12 +318,21 @@ watch(
   justify-content: center;
   flex-shrink: 0;
   opacity: 0.7;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
 
-.panel-tab-duplicate:hover {
+.panel-tab-button:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--panel-color-dark);
+}
+
+.panel-tab-close {
+  font-size: 18px;
+  font-weight: normal;
+}
+
+.panel-tab-close:hover {
+  background: rgba(255, 76, 64, 0.3);
 }
 
 .panel-content {
@@ -314,17 +344,26 @@ watch(
 /* Colored tabs */
 .panel-section-red {
   --panel-color: var(--balatro-red);
+  --panel-color-dark: var(--balatro-dark-red);
 }
 
 .panel-section-blue {
   --panel-color: var(--balatro-blue);
+  --panel-color-dark: var(--balatro-dark-blue);
 }
 
 .panel-section-green {
   --panel-color: var(--balatro-green);
+  --panel-color-dark: var(--balatro-dark-green);
 }
 
 .panel-section-purple {
   --panel-color: var(--balatro-purple);
+  --panel-color-dark: var(--balatro-dark-purple);
+}
+
+.panel-section-orange {
+  --panel-color: var(--balatro-orange);
+  --panel-color-dark: var(--balatro-dark-orange);
 }
 </style>

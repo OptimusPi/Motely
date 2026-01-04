@@ -1,12 +1,12 @@
 <template>
-  <div class="jaml-ui">
+  <div class="jaml-ui" role="application" aria-label="JAML UI - Balatro Seed Filter Interface">
     <!-- Panels (tabs are part of each panel, collapsed tabs appear inline) -->
     <div 
       class="main-layout" 
       :class="`layout-${layoutMode}`"
     >
       <div v-if="layoutMode === 'stack'" ref="stackContainer" class="layout-stack">
-        <template v-for="(panel, index) in panels.filter(p => !p.collapsed)" :key="panel.id">
+        <template v-for="(panel, index) in visiblePanels" :key="panel.id">
           <PanelSection
             :color="panel.color"
             :label="getPanelLabel(panel)"
@@ -14,15 +14,19 @@
             :min-height="panel.minHeight"
             :default-height="panel.defaultHeight"
             :layout-mode="layoutMode"
-            :fill-remaining="index === panels.filter(p => !p.collapsed).length - 1"
+            :fill-remaining="index === visiblePanels.length - 1"
             :panel-id="panel.id"
             :can-duplicate="true"
+            :can-close="visiblePanels.length > 1 && !isBasePanel(panel)"
             :tab-align="panel.side === 'left' ? 'left' : 'right'"
+            :aria-label="`${getPanelLabel(panel)} panel`"
             @resize="onPanelResize(panel.id, $event)"
             @collapse="onPanelCollapse(panel.id, $event)"
             @duplicate="duplicatePanel(panel.id)"
+            @close="removePanel(panel.id)"
             @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
-            @top-drag="(e) => { if (index > 0 && !isMobile) startStackResize(panels.filter(p => !p.collapsed)[index - 1]?.id, e) }"
+            @drag-start="() => playClickSound('click')"
+            @top-drag="(e) => { if (index > 0 && !isMobile) startStackResize(visiblePanels[index - 1]?.id, e) }"
           >
             <component
               :is="panel.component"
@@ -49,7 +53,7 @@
         </template>
       </div>
 
-      <div v-else ref="splitContainer" class="layout-split">
+      <div v-else ref="splitContainer" class="layout-split" style="position: relative;">
         <div ref="leftColumnContainer" class="split-column split-left" :style="{ width: splitLeftWidth + '%' }">
           <template v-for="(panel, index) in leftPanels" :key="panel.id">
             <PanelSection
@@ -63,10 +67,13 @@
               :fill-remaining="index === leftPanels.length - 1"
               :panel-id="panel.id"
               :can-duplicate="true"
+              :can-close="leftPanels.length > 1 && !isBasePanel(panel)"
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
               @duplicate="duplicatePanel(panel.id)"
+              @close="removePanel(panel.id)"
               @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
+              @drag-start="() => playClickSound('click')"
               @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('left', leftPanels[index - 1]?.id, e) }"
             >
               <component
@@ -77,22 +84,59 @@
                 }"
                 @save="handleSaveFilter"
                 @update:jaml="updateJamlContent"
+                @load-jaml="handleLoadJamlFromGenie"
               />
             </PanelSection>
           </template>
         </div>
 
-        <div v-if="!isMobile" class="split-divider" @pointerdown="startSplitResize">
+        <div 
+          v-if="!isMobile" 
+          class="split-divider" 
+          @pointerdown="startSplitResize"
+          role="separator"
+          aria-label="Resize split view"
+          aria-orientation="vertical"
+        >
           <div 
             class="jaml-badge"
-            :class="badgeSnapClass"
-            @pointerdown.stop
+            :class="[badgeSnapClass, { 'corner-resize-mode': leftPanels.length === 2 && rightPanels.length === 2 }]"
+            :style="leftPanels.length === 2 && rightPanels.length === 2 && cornerHandleY > 0 
+              ? { top: cornerHandleY + 'px', transform: 'translateY(-50%)' } 
+              : { top: '50%', transform: 'translateY(-50%)' }"
+            @pointerdown="handleBadgePointerDown"
+            role="toolbar"
+            aria-label="Main navigation"
           >
-            <GripVertical v-if="badgeSnapState !== 'left'" :size="16" />
-            <Home :size="16" @click.stop.prevent="goHome" class="icon-btn" />
-            <span class="logo">JAML</span>
-            <Settings :size="16" @click.stop.prevent="toggleSettings" class="icon-btn" />
-            <GripVertical v-if="badgeSnapState !== 'right'" :size="16" />
+            <GripVertical v-if="badgeSnapState !== 'left'" :size="16" aria-hidden="true" />
+            <Home 
+              :size="16" 
+              @click.stop.prevent="goHome" 
+              class="icon-btn" 
+              title="Go Home"
+              aria-label="Go to home page"
+              role="button"
+              tabindex="0"
+            />
+            <span class="logo" aria-label="JAML Interface">JAML</span>
+            <button 
+              @click.stop.prevent="resetLayout" 
+              class="icon-btn reset-btn" 
+              title="Reset Layout (Ctrl+R)"
+              aria-label="Reset panel layout to default"
+              :disabled="savingFilter || startingSearch"
+            >↻</button>
+            <Settings 
+              :size="16" 
+              @click.stop.prevent="toggleSettings" 
+              class="icon-btn" 
+              title="Settings (Ctrl+K)"
+              aria-label="Open settings"
+              role="button"
+              tabindex="0"
+              :aria-expanded="showSettings"
+            />
+            <GripVertical v-if="badgeSnapState !== 'right'" :size="16" aria-hidden="true" />
           </div>
         </div>
 
@@ -109,10 +153,13 @@
               :fill-remaining="index === rightPanels.length - 1"
               :panel-id="panel.id"
               :can-duplicate="true"
+              :can-close="rightPanels.length > 1 && !isBasePanel(panel)"
               @resize="onPanelResize(panel.id, $event)"
               @collapse="onPanelCollapse(panel.id, $event)"
               @duplicate="duplicatePanel(panel.id)"
+              @close="removePanel(panel.id)"
               @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
+              @drag-start="() => playClickSound('click')"
               @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('right', rightPanels[index - 1]?.id, e) }"
             >
               <component
@@ -132,6 +179,7 @@
                 @clear="clearResults"
                 @export="exportResults"
                 @stop-search="handleStopSpecificSearch"
+                @load-jaml="handleLoadJamlFromGenie"
               />
             </PanelSection>
           </template>
@@ -152,11 +200,26 @@
       :error="globalError"
       :dismiss-error="dismissError"
     />
+    
+    <!-- Toast notifications -->
+    <div class="toast-container">
+      <transition-group name="toast" tag="div">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          class="toast"
+          :class="`toast-${toast.type}`"
+        >
+          <span class="toast-message">{{ toast.message }}</span>
+          <button class="toast-close" @click="removeToast(toast.id)">×</button>
+        </div>
+      </transition-group>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, reactive, markRaw } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, reactive, markRaw, nextTick } from 'vue'
 import { Home, Settings, GripVertical } from 'lucide-vue-next'
 import PanelSection from '../components/PanelSection.vue'
 import EditorPanel from '../components/EditorPanel.vue'
@@ -173,6 +236,7 @@ import { useSearch } from '../composables/useSearch'
 import { useSignalR } from '../composables/useSignalR'
 import { useGlobalError } from '../composables/useGlobalError'
 import { useLayout } from '../composables/useLayout'
+import { useSound } from '../composables/useSound'
 
 // Helper to generate unique panel IDs
 let panelIdCounter = 0
@@ -181,8 +245,8 @@ const generatePanelId = (baseId) => {
   return `${baseId}-${panelIdCounter}`
 }
 
-// Layout state - panels now have unique IDs, filterId, side, and collapsed state
-const panels = reactive([
+// Create initial panel configuration factory
+const createInitialPanels = () => [
   {
     id: generatePanelId('jaml-editor'),
     baseId: 'jaml-editor',
@@ -198,7 +262,7 @@ const panels = reactive([
   {
     id: generatePanelId('blueprint'),
     baseId: 'blueprint',
-    color: 'blue',
+    color: 'orange',
     label: 'Blueprint Analyzer',
     filterId: null,
     side: 'left',
@@ -220,18 +284,6 @@ const panels = reactive([
     component: markRaw(ActiveSearchesPanel)
   },
   {
-    id: generatePanelId('results'),
-    baseId: 'results',
-    color: 'purple',
-    label: 'Search Results',
-    filterId: null,
-    side: 'right',
-    collapsed: false,
-    minHeight: 260,
-    defaultHeight: 360,
-    component: markRaw(ResultsPanel)
-  },
-  {
     id: generatePanelId('chat'),
     baseId: 'chat',
     color: 'blue',
@@ -242,6 +294,18 @@ const panels = reactive([
     minHeight: 200,
     defaultHeight: 300,
     component: markRaw(ChatPanel)
+  },
+  {
+    id: generatePanelId('results'),
+    baseId: 'results',
+    color: 'purple',
+    label: 'Search Results',
+    filterId: null,
+    side: 'right',
+    collapsed: false,
+    minHeight: 260,
+    defaultHeight: 360,
+    component: markRaw(ResultsPanel)
   },
   {
     id: generatePanelId('requests'),
@@ -267,7 +331,10 @@ const panels = reactive([
     defaultHeight: 400,
     component: markRaw(JamlGeniePanel)
   }
-])
+]
+
+// Layout state - panels now have unique IDs, filterId, side, and collapsed state
+const panels = reactive(createInitialPanels())
 
 // Computed panel labels based on type and filterId
 const getPanelLabel = (panel) => {
@@ -288,17 +355,43 @@ const getPanelLabel = (panel) => {
   }
 }
 
+// Optimized computed properties - only compute what we actually use
+const visiblePanels = computed(() => panels.filter(p => !p.collapsed))
 const leftPanels = computed(() => panels.filter(p => p.side === 'left' && !p.collapsed))
 const rightPanels = computed(() => panels.filter(p => p.side === 'right' && !p.collapsed))
-const collapsedPanels = computed(() => panels.filter(p => p.collapsed))
-const collapsedLeftPanels = computed(() => panels.filter(p => p.side === 'left' && p.collapsed))
-const collapsedRightPanels = computed(() => panels.filter(p => p.side === 'right' && p.collapsed))
-const leftAnchorPanel = computed(() => leftPanels.value[0] || null)
-const rightAnchorPanel = computed(() => rightPanels.value[0] || null)
-const topVisiblePanels = computed(() => collapsedPanels.value)
 
 const showSettings = ref(false)
 const splitLeftWidth = ref(50)
+const savingFilter = ref(false)
+const startingSearch = ref(false)
+
+// Corner handle state for unified height resize (using badge position)
+const cornerHandleY = ref(0) // Position from top of layout (50% = center by default)
+let isCornerDragging = false
+let cornerStartY = 0
+let cornerStartHeights = { left: [], right: [] }
+
+// Toast notifications
+const toasts = ref([])
+let toastIdCounter = 0
+
+const showToast = (message, type = 'info', duration = 3000) => {
+  const id = ++toastIdCounter
+  toasts.value.push({ id, message, type })
+  
+  if (duration > 0) {
+    setTimeout(() => {
+      removeToast(id)
+    }, duration)
+  }
+}
+
+const removeToast = (id) => {
+  const index = toasts.value.findIndex(t => t.id === id)
+  if (index >= 0) {
+    toasts.value.splice(index, 1)
+  }
+}
 
 // Badge positioning state
 const badgeSnapState = ref('center') // 'left', 'center', 'right'
@@ -334,10 +427,13 @@ const startSplitResize = (event) => {
   if (event.button !== 0) return
   event.preventDefault()
 
+  playTick() // Start resize
+
   const dividerEl = event.currentTarget
   dividerEl?.setPointerCapture?.(event.pointerId)
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
+  dividerEl?.classList?.add?.('is-resizing')
 
   const updateFromPointer = (clientX) => {
     const rect = splitContainer.value?.getBoundingClientRect?.()
@@ -352,6 +448,7 @@ const startSplitResize = (event) => {
 
   const onUp = () => {
     dividerEl?.releasePointerCapture?.(event.pointerId)
+    dividerEl?.classList?.remove?.('is-resizing')
     dividerEl?.removeEventListener?.('pointermove', onMove)
     dividerEl?.removeEventListener?.('pointerup', onUp)
     dividerEl?.removeEventListener?.('pointercancel', onUp)
@@ -362,9 +459,11 @@ const startSplitResize = (event) => {
     if (splitLeftWidth.value < 10) {
       badgeSnapState.value = 'left'
       splitLeftWidth.value = 0
+      playClickSound('snap') // Snap to side
     } else if (splitLeftWidth.value > 90) {
       badgeSnapState.value = 'right'
       splitLeftWidth.value = 100
+      playClickSound('snap') // Snap to side
     } else {
       badgeSnapState.value = 'center'
     }
@@ -388,6 +487,8 @@ const startStackResize = (panelId, event) => {
   if (!panelId) return
   event.preventDefault()
   event.stopPropagation()
+
+  playTick() // Start resize
 
   const stackPanels = panels.filter(p => !p.collapsed)
   const resizingPanel = stackPanels.find(p => p.id === panelId)
@@ -506,6 +607,8 @@ const startColumnResize = (side, panelId, event) => {
   if (!panelId) return
   event.preventDefault()
 
+  playTick() // Start resize
+
   const columnPanels = side === 'left' ? leftPanels.value : rightPanels.value
   const resizingPanel = columnPanels.find(p => p.id === panelId)
   if (!resizingPanel) return
@@ -551,23 +654,187 @@ const startColumnResize = (side, panelId, event) => {
   dividerEl?.addEventListener?.('pointercancel', onUp)
 }
 
+// Handle badge pointer down - only start corner resize if not clicking a button
+const handleBadgePointerDown = (event) => {
+  // Only handle corner resize in 4-panel mode
+  if (leftPanels.value.length !== 2 || rightPanels.value.length !== 2) return
+  
+  // Don't start resize if clicking on a button or icon
+  const target = event.target
+  if (target.closest('.icon-btn') || target.closest('button') || target.closest('svg')) {
+    return // Let the button handle the click
+  }
+  
+  // Start corner resize
+  startCornerResize(event)
+}
+
+// Unified corner resize - resizes all 4 panels' heights simultaneously using the badge
+const startCornerResize = (event) => {
+  if (event.button !== 0) return
+  if (leftPanels.value.length !== 2 || rightPanels.value.length !== 2) return
+  
+  playTick() // Start corner resize
+  
+  event.preventDefault()
+  event.stopPropagation()
+
+  const badgeEl = event.currentTarget
+  if (!badgeEl) return
+
+  badgeEl?.setPointerCapture?.(event.pointerId)
+  isCornerDragging = true
+  document.body.style.cursor = 'row-resize'
+  document.body.style.userSelect = 'none'
+  badgeEl?.classList?.add?.('is-resizing')
+
+  // Get container bounds
+  const layoutEl = splitContainer.value
+  if (!layoutEl) return
+  
+  const layoutRect = layoutEl.getBoundingClientRect()
+  const startY = event.clientY
+  const startCornerY = cornerHandleY.value
+
+  // Store initial heights of all panels
+  cornerStartHeights.left = leftPanels.value.map(p => ({
+    id: p.id,
+    height: p.defaultHeight || p.minHeight || 200,
+    minHeight: p.minHeight
+  }))
+  cornerStartHeights.right = rightPanels.value.map(p => ({
+    id: p.id,
+    height: p.defaultHeight || p.minHeight || 200,
+    minHeight: p.minHeight
+  }))
+
+  // Calculate total height of all panels
+  const totalLeftHeight = cornerStartHeights.left.reduce((sum, p) => sum + p.height, 0)
+  const totalRightHeight = cornerStartHeights.right.reduce((sum, p) => sum + p.height, 0)
+
+  const onMove = (moveEvent) => {
+    if (!isCornerDragging) return
+
+    const deltaY = moveEvent.clientY - startY
+    const availableHeight = layoutRect.height - 28 // 28px for tab space
+    
+    // Clamp corner position to valid range
+    const minCornerY = Math.max(
+      cornerStartHeights.left[0].minHeight,
+      cornerStartHeights.right[0].minHeight
+    )
+    const maxCornerY = availableHeight - Math.max(
+      cornerStartHeights.left[1].minHeight,
+      cornerStartHeights.right[1].minHeight
+    )
+    const newCornerY = Math.max(minCornerY, Math.min(maxCornerY, startCornerY + deltaY))
+    
+    // Calculate target heights: top panels share cornerY, bottom panels share remaining
+    const topPanelTargetHeight = newCornerY
+    const bottomPanelTargetHeight = availableHeight - newCornerY
+    
+    // Calculate proportions for each panel within its column
+    const leftTopRatio = cornerStartHeights.left[0].height / totalLeftHeight
+    const leftBottomRatio = cornerStartHeights.left[1].height / totalLeftHeight
+    const rightTopRatio = cornerStartHeights.right[0].height / totalRightHeight
+    const rightBottomRatio = cornerStartHeights.right[1].height / totalRightHeight
+    
+    // Update left panels proportionally
+    const leftTopPanel = leftPanels.value[0]
+    const leftBottomPanel = leftPanels.value[1]
+    if (leftTopPanel && leftBottomPanel) {
+      const leftTopHeight = topPanelTargetHeight * leftTopRatio
+      const leftBottomHeight = bottomPanelTargetHeight * leftBottomRatio
+      
+      leftTopPanel.defaultHeight = Math.max(leftTopPanel.minHeight, leftTopHeight)
+      leftBottomPanel.defaultHeight = Math.max(leftBottomPanel.minHeight, leftBottomHeight)
+    }
+    
+    // Update right panels proportionally
+    const rightTopPanel = rightPanels.value[0]
+    const rightBottomPanel = rightPanels.value[1]
+    if (rightTopPanel && rightBottomPanel) {
+      const rightTopHeight = topPanelTargetHeight * rightTopRatio
+      const rightBottomHeight = bottomPanelTargetHeight * rightBottomRatio
+      
+      rightTopPanel.defaultHeight = Math.max(rightTopPanel.minHeight, rightTopHeight)
+      rightBottomPanel.defaultHeight = Math.max(rightBottomPanel.minHeight, rightBottomHeight)
+    }
+    
+    cornerHandleY.value = newCornerY
+    moveEvent.preventDefault()
+  }
+
+  const onUp = () => {
+    badgeEl?.releasePointerCapture?.(event.pointerId)
+    badgeEl?.classList?.remove?.('is-resizing')
+    badgeEl?.removeEventListener?.('pointermove', onMove)
+    badgeEl?.removeEventListener?.('pointerup', onUp)
+    badgeEl?.removeEventListener?.('pointercancel', onUp)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+    isCornerDragging = false
+  }
+
+  badgeEl?.addEventListener?.('pointermove', onMove)
+  badgeEl?.addEventListener?.('pointerup', onUp)
+  badgeEl?.addEventListener?.('pointercancel', onUp)
+}
+
 // Composables
 const { filters, currentFilter, currentFilterName, jamlContent, loadFilters, selectFilter, saveFilter, deleteFilter } = useFilters()
 const { results, columns, searchStatus, isSearching, activeSearches, currentSearchId, loadActiveSearches, startSearch, stopAll, stopSearch, clearResults, exportResults } = useSearch()
 const { connect, disconnect, joinSearchGroup, leaveSearchGroup, isConnected, connectionError } = useSignalR({
   onResult: (result) => {
-    results.value.push(result)
+    // Result comes as object with seed, score, tallies
+    if (result && typeof result === 'object') {
+      results.value.push(result)
+    }
   },
   onProgress: (progress) => {
-    searchStatus.value = `Progress: ${progress.processed.toLocaleString()} seeds`
+    // Progress comes as object with processed, speed, found, etc.
+    if (progress && typeof progress === 'object') {
+      const processed = progress.processed || progress.seedsSearched || 0
+      searchStatus.value = `Progress: ${processed.toLocaleString()} seeds`
+      
+      // Update active search if we have searchId
+      if (progress.searchId) {
+        const searchIndex = activeSearches.value.findIndex(s => s.searchId === progress.searchId)
+        if (searchIndex >= 0) {
+          activeSearches.value[searchIndex] = {
+            ...activeSearches.value[searchIndex],
+            searched: processed,
+            speed: progress.speed || progress.seedsPerSecond || 0,
+            found: progress.found || progress.seedsFound || 0,
+            progress: progress.totalBatches > 0 
+              ? Math.round((progress.currentBatch / progress.totalBatches) * 100)
+              : 0
+          }
+        }
+      }
+    }
   },
   onSearchUpdate: (update) => {
-    // Handle search updates
-    const searchIndex = activeSearches.value.findIndex(s => s.searchId === update.searchId)
-    if (searchIndex >= 0) {
-      activeSearches.value[searchIndex] = { ...activeSearches.value[searchIndex], ...update }
-    } else {
-      activeSearches.value.push(update)
+    // Handle search updates (completion, errors, etc.)
+    if (update && typeof update === 'object' && update.searchId) {
+      const searchIndex = activeSearches.value.findIndex(s => s.searchId === update.searchId)
+      if (searchIndex >= 0) {
+        activeSearches.value[searchIndex] = { 
+          ...activeSearches.value[searchIndex], 
+          ...update,
+          status: update.completed ? 'completed' : update.status || 'running'
+        }
+      } else if (update.type === 'search_completed' || update.type === 'search_failed') {
+        // New search update - add to list
+        activeSearches.value.push({
+          searchId: update.searchId,
+          status: update.completed ? 'completed' : (update.error ? 'error' : 'running'),
+          progress: 100,
+          searched: update.seedsSearched || 0,
+          found: update.seedsFound || 0,
+          speed: 0
+        })
+      }
     }
   }
 })
@@ -578,31 +845,80 @@ const goHome = () => window.location.href = '/'
 const toggleSettings = () => showSettings.value = !showSettings.value
 
 const handleSelectFilter = async (filter) => {
-  await selectFilter(filter)
-  // Update filterId on all jaml-editor panels
-  panels.forEach(p => {
-    if (p.baseId === 'jaml-editor') {
-      p.filterId = filter?.id || filter?.name || null
-    }
-  })
-  showSettings.value = false
+  try {
+    await selectFilter(filter)
+    // Update filterId on all jaml-editor panels
+    panels.forEach(p => {
+      if (p.baseId === 'jaml-editor') {
+        p.filterId = filter?.id || filter?.name || null
+      }
+    })
+    showSettings.value = false
+    showToast(`Filter "${filter?.name || filter?.id}" loaded`, 'success')
+  } catch (err) {
+    showToast(`Error loading filter: ${err.message}`, 'error')
+    console.error('Select filter error:', err)
+  }
 }
 
 const handleDeleteFilter = async (filter) => {
-  await deleteFilter(filter)
+  try {
+    await deleteFilter(filter)
+    showToast('Filter deleted successfully', 'success')
+    // Clear filterId from panels if this was the current filter
+    if (currentFilter.value?.id === filter.id || currentFilter.value?.name === filter.name) {
+      panels.forEach(p => {
+        if (p.baseId === 'jaml-editor') {
+          p.filterId = null
+        }
+      })
+    }
+  } catch (err) {
+    showToast(`Error deleting filter: ${err.message}`, 'error')
+    console.error('Delete filter error:', err)
+  }
 }
 
 const handleSaveFilter = async (jaml) => {
-  const success = await saveFilter(jaml)
-  if (success) {
-    // Show success feedback
+  if (savingFilter.value) return // Prevent double-save
+  
+  try {
+    savingFilter.value = true
+    const success = await saveFilter(jaml)
+    if (success) {
+      showToast('Filter saved successfully!', 'success')
+    } else {
+      showToast('Failed to save filter', 'error')
+    }
+  } catch (err) {
+    showToast(`Error saving filter: ${err.message}`, 'error')
+    console.error('Save filter error:', err)
+  } finally {
+    savingFilter.value = false
   }
 }
 
 const handleStartSearch = async (jaml) => {
-  const searchId = await startSearch(jaml)
-  if (searchId) {
-    await joinSearchGroup(searchId)
+  if (startingSearch.value) return // Prevent double-start
+  
+  try {
+    if (!jaml || !jaml.trim()) {
+      showToast('Please provide JAML content to search', 'error')
+      return
+    }
+    startingSearch.value = true
+    const searchId = await startSearch(jaml)
+    if (searchId) {
+      await joinSearchGroup(searchId)
+      showToast('Search started successfully!', 'success')
+    } else {
+      showToast('Failed to start search', 'error')
+    }
+  } catch (err) {
+    showToast(`Error starting search: ${err.message}`, 'error')
+    console.error('Start search error:', err)
+  } finally {
+    startingSearch.value = false
   }
 }
 
@@ -617,6 +933,32 @@ const handleStopSpecificSearch = async (searchId) => {
 
 const updateJamlContent = (newJaml) => {
   jamlContent.value = newJaml
+}
+
+const handleLoadJamlFromGenie = (jaml) => {
+  // Find the first JAML editor panel and load the JAML into it
+  const editorPanel = panels.find(p => p.baseId === 'jaml-editor')
+  if (editorPanel) {
+    jamlContent.value = jaml
+    showToast('JAML loaded into editor!', 'success')
+  } else {
+    showToast('No JAML editor panel found', 'error')
+  }
+}
+
+// Copy JAML to clipboard
+const copyJamlToClipboard = async () => {
+  try {
+    if (!jamlContent.value) {
+      showToast('No JAML content to copy', 'error')
+      return
+    }
+    await navigator.clipboard.writeText(jamlContent.value)
+    showToast('JAML copied to clipboard!', 'success')
+  } catch (err) {
+    showToast('Failed to copy to clipboard', 'error')
+    console.error('Copy error:', err)
+  }
 }
 
 const onPanelResize = (panelId, newHeight) => {
@@ -663,12 +1005,14 @@ const duplicatePanel = (panelId) => {
   newPanel.component = markRaw(panel.component)
   
   panels.push(newPanel)
+  playDoubleClick() // Panel created
 }
 
 const movePanelToSide = (draggedPanelId, targetSide) => {
   const panel = panels.find(p => p.id === draggedPanelId)
   if (panel && (targetSide === 'left' || targetSide === 'right')) {
     panel.side = targetSide
+    playClickSound('clack') // Panel moved/collided
   }
 }
 
@@ -679,15 +1023,204 @@ const expandPanel = (panelId) => {
   }
 }
 
+// Check if a panel is a base panel (original, not duplicated)
+const isBasePanel = (panel) => {
+  // Base panels are the first instance of each baseId
+  const firstWithBaseId = panels.find(p => p.baseId === panel.baseId)
+  return firstWithBaseId?.id === panel.id
+}
+
 const removePanel = (panelId) => {
+  const panel = panels.find(p => p.id === panelId)
+  if (!panel) return
+  
+  // Don't allow removing the last panel
+  if (visiblePanels.value.length <= 1) {
+    showToast('Cannot remove the last panel', 'error')
+    return
+  }
+  
+  // Don't allow removing base panels (only duplicated ones)
+  if (isBasePanel(panel)) {
+    showToast('Cannot remove base panels. Close duplicated panels instead.', 'error')
+    return
+  }
+  
   const index = panels.findIndex(p => p.id === panelId)
   if (index >= 0) {
     panels.splice(index, 1)
+    showToast('Panel removed', 'success')
+    playSnap() // Panel destroyed
   }
 }
 
+// Reset layout to default
+const resetLayout = () => {
+  // Reset panel counter to start fresh
+  panelIdCounter = 0
+  
+  // Clear localStorage
+  try {
+    localStorage.removeItem(PANEL_STORAGE_KEY)
+    localStorage.removeItem(SPLIT_WIDTH_STORAGE_KEY)
+  } catch (err) {
+    console.warn('Failed to clear localStorage:', err)
+  }
+  
+  // Reset to initial panels
+  const initialPanels = createInitialPanels()
+  panels.splice(0, panels.length, ...initialPanels)
+  
+  // Reset split width
+  splitLeftWidth.value = 50
+  badgeSnapState.value = 'center'
+  
+  showToast('Layout reset to default', 'success')
+}
+
+// Panel persistence
+const PANEL_STORAGE_KEY = 'jaml-ui-panels'
+const SPLIT_WIDTH_STORAGE_KEY = 'jaml-ui-split-width'
+
+const savePanelState = () => {
+  try {
+    const panelState = panels.map(p => ({
+      id: p.id,
+      baseId: p.baseId,
+      side: p.side,
+      collapsed: p.collapsed,
+      defaultHeight: p.defaultHeight
+    }))
+    localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(panelState))
+    localStorage.setItem(SPLIT_WIDTH_STORAGE_KEY, splitLeftWidth.value.toString())
+  } catch (err) {
+    console.warn('Failed to save panel state:', err)
+  }
+}
+
+const loadPanelState = () => {
+  try {
+    const saved = localStorage.getItem(PANEL_STORAGE_KEY)
+    if (saved) {
+      const panelState = JSON.parse(saved)
+      panelState.forEach(savedPanel => {
+        const panel = panels.find(p => p.id === savedPanel.id || p.baseId === savedPanel.baseId)
+        if (panel) {
+          panel.side = savedPanel.side || panel.side
+          panel.collapsed = savedPanel.collapsed ?? panel.collapsed
+          if (savedPanel.defaultHeight) {
+            panel.defaultHeight = savedPanel.defaultHeight
+          }
+        }
+      })
+    }
+    
+    const savedWidth = localStorage.getItem(SPLIT_WIDTH_STORAGE_KEY)
+    if (savedWidth) {
+      splitLeftWidth.value = parseFloat(savedWidth) || 50
+    }
+  } catch (err) {
+    console.warn('Failed to load panel state:', err)
+  }
+}
+
+// Watch for panel changes and persist
+watch(() => panels.map(p => ({ side: p.side, collapsed: p.collapsed, defaultHeight: p.defaultHeight })), 
+  () => savePanelState(), 
+  { deep: true }
+)
+watch(splitLeftWidth, () => savePanelState())
+
+// Keyboard shortcuts
+const handleKeydown = (event) => {
+  // Ctrl/Cmd + K: Toggle settings
+  if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+    event.preventDefault()
+    toggleSettings()
+    return
+  }
+  
+  // Ctrl/Cmd + S: Save current filter (if in editor)
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    event.preventDefault()
+    if (jamlContent.value) {
+      handleSaveFilter(jamlContent.value)
+    }
+    return
+  }
+  
+  // Ctrl/Cmd + R: Reset layout (prevent default reload)
+  if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
+    event.preventDefault()
+    resetLayout()
+    return
+  }
+  
+  // Ctrl/Cmd + C: Copy JAML (when not in input/textarea)
+  if ((event.ctrlKey || event.metaKey) && event.key === 'c' && 
+      !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+    // Only copy if there's JAML content and user isn't in an input field
+    if (jamlContent.value) {
+      event.preventDefault()
+      copyJamlToClipboard()
+      return
+    }
+  }
+  
+  // Escape: Close modals
+  if (event.key === 'Escape') {
+    if (showSettings.value) {
+      showSettings.value = false
+    }
+  }
+}
+
+// Initialize corner handle position based on panel heights
+const updateCornerHandlePosition = () => {
+  if (leftPanels.value.length === 2 && rightPanels.value.length === 2 && splitContainer.value) {
+    // Position badge at the boundary between top and bottom panels
+    // Use the average of left and right top panel heights
+    const leftTopHeight = leftPanels.value[0]?.defaultHeight || leftPanels.value[0]?.minHeight || 200
+    const rightTopHeight = rightPanels.value[0]?.defaultHeight || rightPanels.value[0]?.minHeight || 200
+    const avgTopHeight = (leftTopHeight + rightTopHeight) / 2
+    cornerHandleY.value = Math.max(0, avgTopHeight)
+  } else {
+    // Default to center when not in 4-panel mode (use 0 to trigger '50%' in style)
+    cornerHandleY.value = 0
+  }
+}
+
+// Watch for panel changes to update corner handle position
+watch([leftPanels, rightPanels], () => {
+  if (leftPanels.value.length === 2 && rightPanels.value.length === 2) {
+    updateCornerHandlePosition()
+  } else {
+    cornerHandleY.value = 0 // Reset to center when not in 4-panel mode
+  }
+}, { deep: true })
+
+// Also watch for individual panel height changes to update corner position
+watch(() => [
+  leftPanels.value.map(p => p.defaultHeight),
+  rightPanels.value.map(p => p.defaultHeight)
+], () => {
+  if (leftPanels.value.length === 2 && rightPanels.value.length === 2 && !isCornerDragging) {
+    updateCornerHandlePosition()
+  }
+}, { deep: true })
+
 // Lifecycle
 onMounted(async () => {
+  // Load persisted panel state
+  loadPanelState()
+  
+  // Initialize corner handle position
+  await nextTick()
+  updateCornerHandlePosition()
+  
+  // Add keyboard shortcuts
+  window.addEventListener('keydown', handleKeydown)
+  
   // Load data with timeout to prevent hanging
   const loadWithTimeout = async (fn, timeout = 3000) => {
     return Promise.race([
@@ -712,7 +1245,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
   disconnect()
+  savePanelState()
 })
 </script>
 
@@ -733,10 +1268,17 @@ onUnmounted(() => {
 
 :global(:root) {
   --balatro-red: #ff4c40;
+  --balatro-dark-red: #a02721;
   --balatro-blue: #0093ff;
+  --balatro-dark-blue: #0057a1;
   --balatro-green: #429f79;
+  --balatro-dark-green: #215f46;
   --balatro-purple: #9b59b6;
+  --balatro-dark-purple: #5D3570;
   --balatro-gold: #eaba44;
+  --balatro-dark-gold: #b89435;
+  --balatro-orange: #ff9800;
+  --balatro-dark-orange: #cc7700;
 }
 
 .jaml-ui {
@@ -802,7 +1344,7 @@ onUnmounted(() => {
   width: 10px;
   min-width: 10px;
   cursor: ew-resize;
-  background: #d4851f;
+  background: var(--balatro-gold);
   flex-shrink: 0;
   position: relative;
   touch-action: none;
@@ -815,7 +1357,61 @@ onUnmounted(() => {
 }
 
 .split-divider:hover {
+  background: var(--balatro-dark-gold);
+}
+
+.split-divider.is-resizing {
+  background: var(--balatro-dark-gold);
+}
+
+/* Unified Corner Handle - positioned at intersection of left/right columns */
+.corner-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 2px;
+  background: transparent;
+  cursor: row-resize;
+  z-index: 2002; /* Above divider and badge */
+  touch-action: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.corner-handle.is-resizing {
   background: var(--balatro-gold);
+  box-shadow: 0 0 10px rgba(234, 186, 68, 0.5);
+  height: 4px;
+}
+
+.corner-handle:hover {
+  background: rgba(234, 186, 68, 0.5);
+  height: 3px;
+}
+
+.corner-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'm6x11plus', monospace;
+  font-size: 14px;
+  font-weight: normal;
+  padding: 4px 10px;
+  background: rgba(50, 60, 70, 0.95);
+  color: #fff;
+  height: 28px;
+  box-sizing: border-box;
+  user-select: none;
+  border-radius: 8px; /* Curved on all sides */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: auto; /* Allow clicking on badge buttons */
+  z-index: 2003; /* Above corner handle */
+  transition: none; /* No transition when dragging */
 }
 
 .jaml-badge {
@@ -843,6 +1439,20 @@ onUnmounted(() => {
   transition: top 0.2s ease; /* Smooth glide up/down */
 }
 
+/* When in corner resize mode (4 panels), badge becomes draggable vertically */
+.jaml-badge.corner-resize-mode {
+  cursor: row-resize;
+  transition: none; /* No transition when dragging */
+}
+
+.jaml-badge.corner-resize-mode:hover {
+  background: var(--balatro-dark-gold);
+}
+
+.jaml-badge.corner-resize-mode.is-resizing {
+  background: var(--balatro-dark-gold);
+}
+
 .jaml-badge.badge-snap-left {
   border-radius: 8px; /* Still curved on all sides */
 }
@@ -864,10 +1474,30 @@ onUnmounted(() => {
   cursor: pointer;
   opacity: 0.8;
   pointer-events: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+  font-weight: normal;
 }
 
 .jaml-badge .icon-btn:hover {
   opacity: 1;
+}
+
+.jaml-badge .reset-btn {
+  font-size: 16px;
+  font-weight: normal;
+  width: 20px;
+  height: 20px;
+}
+
+.jaml-badge .reset-btn:hover {
+  color: var(--balatro-gold);
 }
 
 .logo-btn {
@@ -907,7 +1537,7 @@ onUnmounted(() => {
 }
 
 .panel-tab-inline:hover {
-  filter: brightness(1.1);
+  background: var(--panel-color-dark);
 }
 
 .panel-tab-inline .tab-label {
@@ -969,7 +1599,7 @@ onUnmounted(() => {
 }
 
 .top-tab:hover {
-  filter: brightness(1.1);
+  background: var(--panel-color-dark);
 }
 
 .top-tab-label {
@@ -1000,7 +1630,7 @@ onUnmounted(() => {
 
 .top-tab-close:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--balatro-dark-red);
 }
 
 .top-tab-anchor {
@@ -1019,21 +1649,273 @@ onUnmounted(() => {
 .panel-tab-red {
   background: var(--balatro-red);
   --panel-color: var(--balatro-red);
+  --panel-color-dark: var(--balatro-dark-red);
 }
 
 .panel-tab-blue {
   background: var(--balatro-blue);
   --panel-color: var(--balatro-blue);
+  --panel-color-dark: var(--balatro-dark-blue);
 }
 
 .panel-tab-green {
   background: var(--balatro-green);
   --panel-color: var(--balatro-green);
+  --panel-color-dark: var(--balatro-dark-green);
 }
 
 .panel-tab-purple {
   background: var(--balatro-purple);
   --panel-color: var(--balatro-purple);
+  --panel-color-dark: var(--balatro-dark-purple);
+}
+
+.panel-tab-orange {
+  background: var(--balatro-orange);
+  --panel-color: var(--balatro-orange);
+  --panel-color-dark: var(--balatro-dark-orange);
+}
+
+.panel-tab-red:hover,
+.panel-tab-blue:hover,
+.panel-tab-green:hover,
+.panel-tab-purple:hover,
+.panel-tab-orange:hover {
+  background: var(--panel-color-dark);
+}
+
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(30, 35, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-family: 'm6x11plus', monospace;
+  font-size: 14px;
+  min-width: 250px;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  animation: slideInRight 0.3s ease-out;
+}
+
+.toast-success {
+  border-left: 4px solid var(--balatro-green);
+}
+
+.toast-error {
+  border-left: 4px solid var(--balatro-red);
+}
+
+.toast-info {
+  border-left: 4px solid var(--balatro-blue);
+}
+
+.toast-message {
+  flex: 1;
+  word-wrap: break-word;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.toast-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* Smooth panel transitions */
+.panel-wrapper {
+  transition: opacity 0.15s ease;
+}
+
+.panel-wrapper:has(.panel-section[data-collapsing]) {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Loading spinner for async operations */
+.loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--balatro-gold);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Improved focus states for accessibility */
+.icon-btn:focus-visible,
+.panel-tab-button:focus-visible,
+.send-button:focus-visible {
+  outline: 2px solid var(--balatro-blue);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Smooth resize feedback */
+.panel-top-grab:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.panel-top-grab:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Better visual hierarchy for collapsed panels */
+.panel-section[data-collapsed="true"] {
+  opacity: 0.6;
+}
+
+/* Badge hover state - using dark gold for consistency */
+.jaml-badge:hover {
+  background: var(--balatro-dark-gold);
+}
+
+/* Smooth panel removal animation */
+@keyframes panelRemove {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    max-height: 1000px;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.panel-wrapper.removing {
+  animation: panelRemove 0.3s ease-out forwards;
+}
+
+/* Better disabled states */
+button:disabled,
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Improved scrollbar styling */
+:global(::-webkit-scrollbar) {
+  width: 8px;
+  height: 8px;
+}
+
+:global(::-webkit-scrollbar-track) {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+:global(::-webkit-scrollbar-thumb) {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+:global(::-webkit-scrollbar-thumb:hover) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Smooth transitions for all interactive elements - flat 2D style */
+button,
+.icon-btn,
+.panel-tab-button {
+  transition: background 0.15s;
+}
+
+/* Better visual feedback for drag operations */
+.panel-tab.dragging {
+  opacity: 0.6;
+  transform: scale(0.95);
+  z-index: 1000;
+}
+
+.panel-tab:hover {
+  background: var(--panel-color-dark);
+}
+
+/* Loading state for buttons */
+button.loading {
+  position: relative;
+  color: transparent;
+}
+
+button.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
 }
 
 </style>

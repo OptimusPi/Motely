@@ -43,6 +43,37 @@ export function useChat() {
           })
         })
 
+        // Handle connection errors with auto-reconnect
+        connection.value.onclose((error) => {
+          isConnected.value = false
+          if (error) {
+            messages.value.push({
+              author: 'System',
+              text: 'Chat disconnected. Attempting to reconnect...',
+              timestamp: Date.now(),
+              isOwn: false,
+              isSystem: true
+            })
+            // Auto-reconnect after 3 seconds
+            setTimeout(() => {
+              connect().catch(err => {
+                console.error('Auto-reconnect failed:', err)
+              })
+            }, 3000)
+          }
+        })
+
+        connection.value.onreconnected(() => {
+          isConnected.value = true
+          messages.value.push({
+            author: 'System',
+            text: 'Chat reconnected!',
+            timestamp: Date.now(),
+            isOwn: false,
+            isSystem: true
+          })
+        })
+
         isConnected.value = true
       }
     } catch (error) {
@@ -50,11 +81,17 @@ export function useChat() {
       // Fallback: add a local message
       messages.value.push({
         author: 'System',
-        text: 'Chat connection failed. Messages will be local only.',
+        text: 'Chat connection failed. Messages will be local only. Retrying in 5 seconds...',
         timestamp: Date.now(),
         isOwn: false,
         isSystem: true
       })
+      // Retry connection after 5 seconds
+      setTimeout(() => {
+        connect().catch(err => {
+          console.error('Retry connection failed:', err)
+        })
+      }, 5000)
     }
   }
 
