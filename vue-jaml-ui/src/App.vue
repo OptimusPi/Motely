@@ -37,6 +37,9 @@ import ErrorBoundary from './components/ErrorBoundary.vue'
   --balatro-green: #429f79;
   --balatro-dark-green: #215f46;
   --balatro-gold: #eaba44;
+  --balatro-dark-gold: #b89435;
+  --balatro-orange: #ff9800;
+  --balatro-dark-orange: #cc7700;
 
   /* Shadows */
   --shadow-color: rgba(0, 0, 0, 0.4);
@@ -156,7 +159,7 @@ html *::after {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--balatro-blue);
+  background: var(--balatro-dark-blue);
 }
 
 /* Mobile optimizations */

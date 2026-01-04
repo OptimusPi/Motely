@@ -92,6 +92,19 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
+import { useApi } from '../composables/useApi'
+import { 
+  findJoker, 
+  findVoucher, 
+  searchJokers, 
+  formatJokerInfo,
+  formatVoucherInfo,
+  jokers,
+  vouchers,
+  coreMechanics
+} from '../constants/balatroKnowledge'
+
+const { get, post } = useApi()
 
 const messages = ref([
   {
@@ -149,7 +162,7 @@ const sendMessage = async () => {
 }
 
 const generateGenieResponse = async (message) => {
-  // Simulate AI response - in real implementation, this would call an AI service
+  // Enhanced AI response generator with knowledge base integration
   const responses = [
     "Ah, an excellent question! Let me weave some JAML magic for you... 🎭",
     "Your curiosity pleases me! Here's what the cards reveal about that filter... 🃏",
@@ -159,17 +172,115 @@ const generateGenieResponse = async (message) => {
   ]
 
   const baseResponse = responses[Math.floor(Math.random() * responses.length)]
-
-  // Add context-specific responses
-  if (message.toLowerCase().includes('planet')) {
-    return baseResponse + "\n\nFor planet-focused runs, try targeting specific constellations: `planets_required: ['neptune', 'pluto']` - the outer planets bring great power! 🪐"
-  } else if (message.toLowerCase().includes('tag')) {
-    return baseResponse + "\n\nTags are the wild cards of Balatro! Consider: `tags_required: ['top_up', 'orbital']` for maximum chaos and fun! 🎪"
-  } else if (message.toLowerCase().includes('deck')) {
-    return baseResponse + "\n\nDeck selection is destiny's foundation. The Red Deck offers power, Blue offers mystery, while Yellow dances with chance! 🎨"
+  const lowerMessage = message.toLowerCase()
+  
+  // Check if user wants to CREATE/GENERATE a filter - call real API
+  const createKeywords = ['create', 'generate', 'make', 'build', 'filter for', 'find', 'search for']
+  const wantsToCreate = createKeywords.some(keyword => lowerMessage.includes(keyword))
+  
+  if (wantsToCreate && (lowerMessage.includes('filter') || lowerMessage.includes('jaml') || lowerMessage.includes('joker') || lowerMessage.includes('voucher'))) {
+    try {
+      // Call backend API to generate JAML only (no search)
+      const response = await post('/mcp/generate', { prompt: message })
+      
+      if (response.success && response.jaml) {
+        return baseResponse + "\n\n**Generated JAML Filter** ✨\n\n```yaml\n" + 
+          response.jaml + 
+          "\n```\n\n" +
+          (response.reasoning ? `**Reasoning:** ${response.reasoning}\n\n` : '') +
+          "**Next Steps:**\n" +
+          "- Copy this JAML and use it in the JAML Editor\n" +
+          "- Or navigate to the JAML UI to start a search!"
+      } else if (response.error) {
+        return baseResponse + "\n\n**Error generating filter:** " + response.error + 
+          "\n\nTry rephrasing your request or ask me about specific jokers/vouchers first!"
+      }
+    } catch (err) {
+      console.error('API error:', err)
+      // Fall through to knowledge base responses
+    }
+  }
+  
+  // Check for specific joker queries
+  for (const joker of Object.values(jokers)) {
+    if (lowerMessage.includes(joker.name.toLowerCase()) || lowerMessage.includes(joker.id)) {
+      const jokerInfo = formatJokerInfo(joker)
+      return baseResponse + "\n\n" + jokerInfo
+    }
+  }
+  
+  // Check for specific voucher queries
+  for (const voucher of Object.values(vouchers)) {
+    if (lowerMessage.includes(voucher.name.toLowerCase()) || lowerMessage.includes(voucher.id)) {
+      const voucherInfo = formatVoucherInfo(voucher)
+      return baseResponse + "\n\n" + voucherInfo
+    }
+  }
+  
+  // Search for joker mentions
+  const jokerMatches = searchJokers(message)
+  if (jokerMatches.length > 0 && jokerMatches.length <= 3) {
+    const jokerList = jokerMatches.map(j => formatJokerInfo(j)).join("\n\n---\n\n")
+    return baseResponse + "\n\nI found these jokers matching your query:\n\n" + jokerList
   }
 
-  return baseResponse + "\n\nWhat other secrets of the deck shall we explore together? The genie is listening... 👂"
+  // Enhanced context-specific responses with knowledge base
+  if (lowerMessage.includes('planet') || lowerMessage.includes('constellation')) {
+    const telescope = findVoucher('telescope')
+    return baseResponse + "\n\n**Planet-Focused Filters** 🪐\n\nFor planet-focused runs, target specific constellations:\n```yaml\nmust:\n  - type: Planet\n    value: Neptune\n  - type: Planet\n    value: Pluto\n```\n\nThe outer planets (Neptune, Pluto) offer powerful effects, while inner planets (Mercury, Venus) provide consistency. Mix and match for your strategy!\n\n" + (telescope ? `**Pro Tip:** ${telescope.name} voucher makes Celestial packs always contain the Planet for your most-played hand!` : "")
+  } 
+  
+  if (lowerMessage.includes('tag') || lowerMessage.includes('tagged')) {
+    return baseResponse + "\n\n**Tag-Based Filters** 🎪\n\nTags add chaos and fun to runs! Example:\n```yaml\nmust:\n  - tags_required: ['top_up', 'orbital', 'meteor']\n```\n\nPopular tags: `top_up`, `orbital`, `meteor`, `retrigger`, `mult`. Combine multiple tags for wild runs!"
+  } 
+  
+  if (lowerMessage.includes('deck') || lowerMessage.includes('deck selection')) {
+    return baseResponse + "\n\n**Deck Selection Strategy** 🎨\n\n```yaml\ndefaults:\n  deck: Red  # Power and consistency\n  # deck: Blue  # Mystery and variety\n  # deck: Yellow  # Chance and chaos\n```\n\n- **Red Deck**: Balanced, reliable, great for beginners\n- **Blue Deck**: More variety, higher risk/reward\n- **Yellow Deck**: Pure chaos, maximum variance\n\nChoose based on your playstyle!"
+  } 
+  
+  if (lowerMessage.includes('joker') || lowerMessage.includes('card') || lowerMessage.includes('joker card')) {
+    const popularJokers = ['Blueprint', 'Baron', 'Stuntman', 'Supernova', 'Cavendish', 'Fortune Teller', 'Ramen', 'Sock and Buskin']
+    const jokerList = popularJokers.map(name => {
+      const j = findJoker(name)
+      return j ? `- **${j.name}** (${j.rarity}) - ${j.effect}` : `- ${name}`
+    }).join('\n')
+    
+    return baseResponse + "\n\n**Joker Filters** 🃏\n\nFind specific jokers:\n```yaml\nmust:\n  - type: Joker\n    value: Blueprint\n  # or\n  - type: Joker\n    value: Hologram\n```\n\n**Popular Jokers to Target:**\n" + jokerList + "\n\nAsk me about any specific joker for detailed information! The deck favors the prepared!"
+  } 
+  
+  if (lowerMessage.includes('voucher')) {
+    const voucherList = Object.values(vouchers).slice(0, 5).map(v => 
+      `- **${v.name}** - ${v.effect}`
+    ).join('\n')
+    return baseResponse + "\n\n**Vouchers** 🎫\n\nVouchers provide permanent upgrades:\n\n" + voucherList + "\n\nAsk about a specific voucher for details!"
+  }
+  
+  if (lowerMessage.includes('scoring') || lowerMessage.includes('how score') || lowerMessage.includes('score calculation')) {
+    const pipeline = coreMechanics.scoring.pipeline.map((step, i) => `${i + 1}. ${step}`).join('\n')
+    return baseResponse + "\n\n**Scoring Pipeline** 📊\n\nThe scoring process:\n\n" + pipeline + "\n\n**Formula:** `Final Score = Total Chips × Total Mult`\n\nUnderstanding this helps optimize your JAML filters!"
+  }
+  
+  if (lowerMessage.includes('synergy') || lowerMessage.includes('combo') || lowerMessage.includes('combination')) {
+    const blueprint = findJoker('Blueprint')
+    const baron = findJoker('Baron')
+    if (blueprint && baron) {
+      return baseResponse + "\n\n**Powerful Synergies** ⚡\n\n**Blueprint + Baron:**\n" + 
+        `- ${blueprint.name} copies ${baron.name}'s effect\n` +
+        `- Each King held gives X1.5 Mult, and Blueprint adds another copy\n` +
+        `- With Mime, this can create exponential scaling!\n\n` +
+        `**Other Great Combos:**\n` +
+        `- Blueprint + Stuntman (copies +250 Chips, not -2 hand size)\n` +
+        `- Baron + Mime (doubles multiplier per King)\n` +
+        `- Supernova + consistent hand types (additive Mult scaling)\n\n` +
+        `Ask about specific jokers for their synergies!`
+    }
+  }
+  
+  if (lowerMessage.includes('help') || lowerMessage.includes('how') || lowerMessage.includes('tutorial')) {
+    return baseResponse + "\n\n**JAML Genie Quick Guide** 📚\n\nI can help you with:\n- **Joker information** - Ask about any joker by name\n- **Voucher details** - Learn about shop upgrades\n- **Creating filters** - Ask me to generate a filter\n- **Synergies** - Discover powerful joker combinations\n- **Deck selection** - Which deck fits your style\n- **Scoring mechanics** - Understand how scores are calculated\n\n**Try asking:**\n- \"Tell me about Blueprint\"\n- \"What are Baron's synergies?\"\n- \"Create a filter for Blueprint runs\"\n- \"How does scoring work?\"\n\nWhat would you like to explore? 🧞‍♂️"
+  }
+
+  return baseResponse + "\n\nI'm here to help with JAML filters, Balatro strategies, and seed searching! Try asking about:\n- Creating filters\n- Joker combinations\n- Deck strategies\n- Planet targeting\n- Tag-based runs\n\nWhat would you like to know? The genie is listening... 👂"
 }
 
 const scrollToBottom = () => {
@@ -227,7 +338,7 @@ onMounted(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: var(--dark-bg);
   color: white;
 }
 
@@ -423,13 +534,13 @@ onMounted(() => {
   color: white;
   cursor: pointer;
   font-size: 1.2rem;
-  transition: all 0.2s;
+  transition: background 0.15s;
   flex-shrink: 0;
+  font-weight: normal;
 }
 
 .send-button:hover:not(:disabled) {
   background: var(--balatro-dark-blue);
-  transform: translateY(-1px);
 }
 
 .send-button:disabled {
@@ -466,12 +577,12 @@ onMounted(() => {
   color: white;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.2s;
+  transition: background 0.15s;
+  font-weight: normal;
 }
 
 .action-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .action-button:disabled {
@@ -495,8 +606,7 @@ onMounted(() => {
 }
 
 .filter-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(2px);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .filter-name {
