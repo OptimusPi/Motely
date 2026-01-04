@@ -1,190 +1,47 @@
 <template>
   <div class="jaml-ui" role="application" aria-label="JAML UI - Balatro Seed Filter Interface">
-    <!-- Panels (tabs are part of each panel, collapsed tabs appear inline) -->
-    <div 
-      class="main-layout" 
-      :class="`layout-${layoutMode}`"
-    >
-      <div v-if="layoutMode === 'stack'" ref="stackContainer" class="layout-stack">
-        <template v-for="(panel, index) in visiblePanels" :key="panel.id">
-          <PanelSection
-            :color="panel.color"
-            :label="getPanelLabel(panel)"
-            :badge="panel.badge"
-            :min-height="panel.minHeight"
-            :default-height="panel.defaultHeight"
-            :layout-mode="layoutMode"
-            :fill-remaining="index === visiblePanels.length - 1"
-            :panel-id="panel.id"
-            :can-duplicate="true"
-            :can-close="visiblePanels.length > 1 && !isBasePanel(panel)"
-            :tab-align="panel.side === 'left' ? 'left' : 'right'"
-            :aria-label="`${getPanelLabel(panel)} panel`"
-            @resize="onPanelResize(panel.id, $event)"
-            @collapse="onPanelCollapse(panel.id, $event)"
-            @duplicate="duplicatePanel(panel.id)"
-            @close="removePanel(panel.id)"
-            @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
-            @drag-start="() => playClickSound('click')"
-            @top-drag="(e) => { if (index > 0 && !isMobile) startStackResize(visiblePanels[index - 1]?.id, e) }"
-          >
-            <component
-              :is="panel.component"
-              v-bind="{
-                ...(panel.props || {}),
-                ...(panel.baseId === 'jaml-editor' ? { jaml: jamlContent || '' } : {}),
-                ...(panel.baseId === 'results' ? { 
-                  results, 
-                  columns, 
-                  status: searchStatus, 
-                  isSearching 
-                } : {}),
-                ...(panel.baseId === 'active-searches' ? { searches: activeSearches } : {})
-              }"
-              @save="handleSaveFilter"
-              @start="handleStartSearch"
-              @stop="handleStopSearch"
-              @clear="clearResults"
-              @export="exportResults"
-              @stop-search="handleStopSpecificSearch"
-              @update:jaml="updateJamlContent"
-            />
-          </PanelSection>
-        </template>
-      </div>
-
-      <div v-else ref="splitContainer" class="layout-split" style="position: relative;">
-        <div ref="leftColumnContainer" class="split-column split-left" :style="{ width: splitLeftWidth + '%' }">
-          <template v-for="(panel, index) in leftPanels" :key="panel.id">
-            <PanelSection
-              :color="panel.color"
-              :label="getPanelLabel(panel)"
-              :badge="panel.badge"
-              :min-height="panel.minHeight"
-              :default-height="panel.defaultHeight"
-              :tab-align="'left'"
-              :layout-mode="'stack'"
-              :fill-remaining="index === leftPanels.length - 1"
-              :panel-id="panel.id"
-              :can-duplicate="true"
-              :can-close="leftPanels.length > 1 && !isBasePanel(panel)"
-              @resize="onPanelResize(panel.id, $event)"
-              @collapse="onPanelCollapse(panel.id, $event)"
-              @duplicate="duplicatePanel(panel.id)"
-              @close="removePanel(panel.id)"
-              @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
-              @drag-start="() => playClickSound('click')"
-              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('left', leftPanels[index - 1]?.id, e) }"
-            >
-              <component
-                :is="panel.component"
-                v-bind="{
-                  ...(panel.props || {}),
-                  ...(panel.baseId === 'jaml-editor' ? { jaml: jamlContent || '' } : {})
-                }"
-                @save="handleSaveFilter"
-                @update:jaml="updateJamlContent"
-                @load-jaml="handleLoadJamlFromGenie"
-              />
-            </PanelSection>
-          </template>
-        </div>
-
-        <div 
-          v-if="!isMobile" 
-          class="split-divider" 
-          @pointerdown="startSplitResize"
-          role="separator"
-          aria-label="Resize split view"
-          aria-orientation="vertical"
-        >
-          <div 
-            class="jaml-badge"
-            :class="[badgeSnapClass, { 'corner-resize-mode': leftPanels.length === 2 && rightPanels.length === 2 }]"
-            :style="leftPanels.length === 2 && rightPanels.length === 2 && cornerHandleY > 0 
-              ? { top: cornerHandleY + 'px', transform: 'translateY(-50%)' } 
-              : { top: '50%', transform: 'translateY(-50%)' }"
-            @pointerdown="handleBadgePointerDown"
-            role="toolbar"
-            aria-label="Main navigation"
-          >
-            <GripVertical v-if="badgeSnapState !== 'left'" :size="16" aria-hidden="true" />
-            <Home 
-              :size="16" 
-              @click.stop.prevent="goHome" 
-              class="icon-btn" 
-              title="Go Home"
-              aria-label="Go to home page"
-              role="button"
-              tabindex="0"
-            />
-            <span class="logo" aria-label="JAML Interface">JAML</span>
-            <button 
-              @click.stop.prevent="resetLayout" 
-              class="icon-btn reset-btn" 
-              title="Reset Layout (Ctrl+R)"
-              aria-label="Reset panel layout to default"
-              :disabled="savingFilter || startingSearch"
-            >↻</button>
-            <Settings 
-              :size="16" 
-              @click.stop.prevent="toggleSettings" 
-              class="icon-btn" 
-              title="Settings (Ctrl+K)"
-              aria-label="Open settings"
-              role="button"
-              tabindex="0"
-              :aria-expanded="showSettings"
-            />
-            <GripVertical v-if="badgeSnapState !== 'right'" :size="16" aria-hidden="true" />
-          </div>
-        </div>
-
-        <div ref="rightColumnContainer" class="split-column split-right" :style="{ width: (100 - splitLeftWidth) + '%' }">
-          <template v-for="(panel, index) in rightPanels" :key="panel.id">
-            <PanelSection
-              :color="panel.color"
-              :label="getPanelLabel(panel)"
-              :badge="panel.badge"
-              :min-height="panel.minHeight"
-              :default-height="panel.defaultHeight"
-              :tab-align="'right'"
-              :layout-mode="'split'"
-              :fill-remaining="index === rightPanels.length - 1"
-              :panel-id="panel.id"
-              :can-duplicate="true"
-              :can-close="rightPanels.length > 1 && !isBasePanel(panel)"
-              @resize="onPanelResize(panel.id, $event)"
-              @collapse="onPanelCollapse(panel.id, $event)"
-              @duplicate="duplicatePanel(panel.id)"
-              @close="removePanel(panel.id)"
-              @move-to-side="(draggedId, targetSide) => movePanelToSide(draggedId, targetSide)"
-              @drag-start="() => playClickSound('click')"
-              @top-drag="(e) => { if (index > 0 && !isMobile) startColumnResize('right', rightPanels[index - 1]?.id, e) }"
-            >
-              <component
-                :is="panel.component"
-                v-bind="{
-                  ...(panel.props || {}),
-                  ...(panel.baseId === 'results' ? { 
-                    results, 
-                    columns, 
-                    status: searchStatus, 
-                    isSearching 
-                  } : {}),
-                  ...(panel.baseId === 'active-searches' ? { searches: activeSearches } : {})
-                }"
-                @start="handleStartSearch"
-                @stop="handleStopSearch"
-                @clear="clearResults"
-                @export="exportResults"
-                @stop-search="handleStopSpecificSearch"
-                @load-jaml="handleLoadJamlFromGenie"
-              />
-            </PanelSection>
-          </template>
-        </div>
-      </div>
+    <div class="main-layout" :class="`layout-${layoutMode}`">
+      <PanelManager
+        :layout-mode="layoutMode"
+        :visible-panels="visiblePanels"
+        :left-panels="leftPanels"
+        :right-panels="rightPanels"
+        :split-left-width="splitLeftWidth"
+        :badge-snap-state="badgeSnapState"
+        :corner-handle-y="cornerHandleY"
+        :is-mobile="isMobile"
+        :saving-filter="savingFilter"
+        :starting-search="startingSearch"
+        :show-settings="showSettings"
+        :jaml-content="jamlContent"
+        :results="results"
+        :columns="columns"
+        :search-status="searchStatus"
+        :is-searching="isSearching"
+        :active-searches="activeSearches"
+        :get-panel-label="getPanelLabel"
+        :is-base-panel="isBasePanel"
+        :duplicate-panel="duplicatePanel"
+        :remove-panel="removePanel"
+        :move-panel-to-side="movePanelToSide"
+        :on-panel-resize="onPanelResize"
+        :on-panel-collapse="onPanelCollapse"
+        :start-split-resize="startSplitResize"
+        :start-stack-resize="startStackResize"
+        :start-column-resize="startColumnResize"
+        :start-corner-resize="startCornerResize"
+        :go-home="goHome"
+        :reset-layout="resetLayout"
+        :toggle-settings="toggleSettings"
+        :handle-save-filter="handleSaveFilter"
+        :handle-start-search="handleStartSearch"
+        :handle-stop-search="handleStopSearch"
+        :clear-results="clearResults"
+        :export-results="exportResults"
+        :handle-stop-specific-search="handleStopSpecificSearch"
+        :update-jaml-content="updateJamlContent"
+        :handle-load-jaml-from-genie="handleLoadJamlFromGenie"
+      />
     </div>
 
     <SettingsModal
@@ -219,9 +76,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, reactive, markRaw, nextTick } from 'vue'
-import { Home, Settings, GripVertical } from 'lucide-vue-next'
-import PanelSection from '../components/PanelSection.vue'
+import { ref, computed, onMounted, onUnmounted, watch, markRaw, nextTick } from 'vue'
+import PanelManager from '../components/PanelManager.vue'
+import SettingsModal from '../components/SettingsModal.vue'
+import ErrorModal from '../components/ErrorModal.vue'
 import EditorPanel from '../components/EditorPanel.vue'
 import BlueprintPanel from '../components/BlueprintPanel.vue'
 import ActiveSearchesPanel from '../components/ActiveSearchesPanel.vue'
@@ -229,31 +87,24 @@ import ResultsPanel from '../components/ResultsPanel.vue'
 import ChatPanel from '../components/ChatPanel.vue'
 import RequestsPanel from '../components/RequestsPanel.vue'
 import JamlGeniePanel from '../components/JamlGeniePanel.vue'
-import SettingsModal from '../components/SettingsModal.vue'
-import ErrorModal from '../components/ErrorModal.vue'
 import { useFilters } from '../composables/useFilters'
 import { useSearch } from '../composables/useSearch'
 import { useSignalR } from '../composables/useSignalR'
 import { useGlobalError } from '../composables/useGlobalError'
 import { useLayout } from '../composables/useLayout'
 import { useSound } from '../composables/useSound'
-
-// Helper to generate unique panel IDs
-let panelIdCounter = 0
-const generatePanelId = (baseId) => {
-  panelIdCounter++
-  return `${baseId}-${panelIdCounter}`
-}
+import { usePanels } from '../composables/usePanels'
+import { useResize } from '../composables/useResize'
 
 // Create initial panel configuration factory
-const createInitialPanels = () => [
+const createInitialPanels = (generatePanelId) => [
   {
     id: generatePanelId('jaml-editor'),
     baseId: 'jaml-editor',
     color: 'red',
     label: 'JAML Editor',
-    filterId: null, // Will be set when filter is selected
-    side: 'left', // 'left' or 'right'
+    filterId: null,
+    side: 'left',
     collapsed: false,
     minHeight: 220,
     defaultHeight: 320,
@@ -333,505 +184,94 @@ const createInitialPanels = () => [
   }
 ]
 
-// Layout state - panels now have unique IDs, filterId, side, and collapsed state
-const panels = reactive(createInitialPanels())
-
-// Computed panel labels based on type and filterId
-const getPanelLabel = (panel) => {
-  if (panel.baseId === 'jaml-editor' && panel.filterId) {
-    return `${panel.filterId}.jaml`
-  } else if (panel.baseId === 'results') {
-    return 'Search Results'
-  } else if (panel.baseId === 'blueprint') {
-    return 'Analyze Seed'
-  } else if (panel.baseId === 'chat') {
-    return 'Chat'
-  } else if (panel.baseId === 'requests') {
-    return 'API Requests'
-  } else if (panel.baseId === 'jaml-genie') {
-    return '🧞‍♂️ JAML Genie'
-  } else {
-    return panel.label
-  }
-}
-
-// Optimized computed properties - only compute what we actually use
-const visiblePanels = computed(() => panels.filter(p => !p.collapsed))
-const leftPanels = computed(() => panels.filter(p => p.side === 'left' && !p.collapsed))
-const rightPanels = computed(() => panels.filter(p => p.side === 'right' && !p.collapsed))
+// Use panels composable
+const {
+  panels,
+  visiblePanels,
+  leftPanels,
+  rightPanels,
+  getPanelLabel,
+  isBasePanel,
+  duplicatePanel: duplicatePanelOp,
+  removePanel: removePanelOp,
+  movePanelToSide: movePanelToSideOp,
+  collapsePanel,
+  expandPanel,
+  updatePanelFilterId,
+  resetPanels,
+  loadPanelState
+} = usePanels(createInitialPanels)
 
 const showSettings = ref(false)
-const splitLeftWidth = ref(50)
 const savingFilter = ref(false)
 const startingSearch = ref(false)
-
-// Corner handle state for unified height resize (using badge position)
-const cornerHandleY = ref(0) // Position from top of layout (50% = center by default)
-let isCornerDragging = false
-let cornerStartY = 0
-let cornerStartHeights = { left: [], right: [] }
-
-// Toast notifications
-const toasts = ref([])
-let toastIdCounter = 0
-
-const showToast = (message, type = 'info', duration = 3000) => {
-  const id = ++toastIdCounter
-  toasts.value.push({ id, message, type })
-  
-  if (duration > 0) {
-    setTimeout(() => {
-      removeToast(id)
-    }, duration)
-  }
-}
-
-const removeToast = (id) => {
-  const index = toasts.value.findIndex(t => t.id === id)
-  if (index >= 0) {
-    toasts.value.splice(index, 1)
-  }
-}
-
-// Badge positioning state
-const badgeSnapState = ref('center') // 'left', 'center', 'right'
-const badgeSnapClass = computed(() => `badge-snap-${badgeSnapState.value}`)
-
-const SNAP_THRESHOLD = 100
 
 const stackContainer = ref(null)
 const splitContainer = ref(null)
 const leftColumnContainer = ref(null)
 const rightColumnContainer = ref(null)
 
-// Removed STACK_DIVIDER_HEIGHT_PX - no dividers, tabs are the resize handles
+const {
+  splitLeftWidth,
+  badgeSnapState,
+  cornerHandleY,
+  isCornerDragging,
+  startSplitResize,
+  startStackResize,
+  startColumnResize,
+  startCornerResize,
+  updateCornerHandlePosition,
+  loadSplitWidth
+} = useResize(computed(() => panels), leftPanels, rightPanels, splitContainer, leftColumnContainer, rightColumnContainer)
+
+const { toasts, showToast, removeToast } = useToasts()
+const badgeSnapClass = computed(() => `badge-snap-${badgeSnapState.value}`)
 
 // Mobile detection
 const { windowWidth } = useLayout()
 const isMobile = computed(() => windowWidth.value < 768)
 
 const layoutMode = computed(() => {
-  // Force stack layout on mobile
-  if (isMobile.value) {
-    return 'stack'
-  }
-  // Force single column when snapped left or right
-  if (badgeSnapState.value === 'left' || badgeSnapState.value === 'right') {
-    return 'stack'
-  }
+  if (isMobile.value) return 'stack'
+  if (badgeSnapState.value === 'left' || badgeSnapState.value === 'right') return 'stack'
   return 'split'
 })
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-
-const startSplitResize = (event) => {
-  if (event.button !== 0) return
-  event.preventDefault()
-
-  playTick() // Start resize
-
-  const dividerEl = event.currentTarget
-  dividerEl?.setPointerCapture?.(event.pointerId)
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-  dividerEl?.classList?.add?.('is-resizing')
-
-  const updateFromPointer = (clientX) => {
-    const rect = splitContainer.value?.getBoundingClientRect?.()
-    if (!rect || rect.width <= 0) return
-    const percent = ((clientX - rect.left) / rect.width) * 100
-    splitLeftWidth.value = clamp(percent, 0, 100)
-  }
-
-  const onMove = (moveEvent) => {
-    updateFromPointer(moveEvent.clientX)
-  }
-
-  const onUp = () => {
-    dividerEl?.releasePointerCapture?.(event.pointerId)
-    dividerEl?.classList?.remove?.('is-resizing')
-    dividerEl?.removeEventListener?.('pointermove', onMove)
-    dividerEl?.removeEventListener?.('pointerup', onUp)
-    dividerEl?.removeEventListener?.('pointercancel', onUp)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-
-    // Snap logic on release
-    if (splitLeftWidth.value < 10) {
-      badgeSnapState.value = 'left'
-      splitLeftWidth.value = 0
-      playClickSound('snap') // Snap to side
-    } else if (splitLeftWidth.value > 90) {
-      badgeSnapState.value = 'right'
-      splitLeftWidth.value = 100
-      playClickSound('snap') // Snap to side
-    } else {
-      badgeSnapState.value = 'center'
-    }
-  }
-
-  dividerEl?.addEventListener?.('pointermove', onMove)
-  dividerEl?.addEventListener?.('pointerup', onUp)
-  dividerEl?.addEventListener?.('pointercancel', onUp)
-  updateFromPointer(event.clientX)
-}
-
-// Removed computeMaxHeightForIndex - no limits needed
-
-let isStackDragging = false
-let stackResizePanelId = null
-let stackStartY = 0
-let stackStartHeight = 0
-
-const startStackResize = (panelId, event) => {
-  if (event.button !== 0 && event.type !== 'touchstart') return
-  if (!panelId) return
-  event.preventDefault()
-  event.stopPropagation()
-
-  playTick() // Start resize
-
-  const stackPanels = panels.filter(p => !p.collapsed)
-  const resizingPanel = stackPanels.find(p => p.id === panelId)
-  if (!resizingPanel) return
-
-  isStackDragging = true
-  stackResizePanelId = panelId
-
-  const dividerEl = event.currentTarget
-  dividerEl?.classList?.add?.('is-dragging')
-  document.body.style.cursor = 'row-resize'
-  document.body.style.userSelect = 'none'
-
-  // Get starting position (works for both mouse and touch)
-  stackStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
-  stackStartHeight = resizingPanel.defaultHeight || resizingPanel.minHeight || 200
-
-  // Use document-level listeners for smooth dragging (like SplitPane)
-  document.addEventListener('mousemove', handleStackMove)
-  document.addEventListener('touchmove', handleStackMove, { passive: false })
-  document.addEventListener('mouseup', handleStackEnd)
-  document.addEventListener('touchend', handleStackEnd)
-  document.addEventListener('touchcancel', handleStackEnd)
-}
-
-const handleStackMove = (moveEvent) => {
-  if (!isStackDragging || !stackResizePanelId) return
-
-  const stackPanels = panels.filter(p => !p.collapsed)
-  const resizingPanel = stackPanels.find(p => p.id === stackResizePanelId)
-  if (!resizingPanel) {
-    handleStackEnd()
-    return
-  }
-
-  const resizeIndex = stackPanels.findIndex(p => p.id === stackResizePanelId)
-  if (resizeIndex < 0) {
-    handleStackEnd()
-    return
-  }
-
-  // Get current position (works for both mouse and touch)
-  const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0]?.clientY) || 0
-  const deltaY = currentY - stackStartY
-
-  // Calculate new height
-  let newHeight = stackStartHeight + deltaY
-  
-  // Collision detection: if dragging up, shrink panels above
-  if (deltaY < 0 && resizeIndex > 0) {
-    const panelAbove = stackPanels[resizeIndex - 1]
-    if (panelAbove) {
-      const currentHeight = panelAbove.defaultHeight || panelAbove.minHeight
-      const shrinkAmount = Math.min(Math.abs(deltaY), currentHeight - panelAbove.minHeight)
-      if (shrinkAmount > 0) {
-        panelAbove.defaultHeight = Math.max(panelAbove.minHeight, currentHeight - shrinkAmount)
-        newHeight = stackStartHeight + (deltaY + shrinkAmount)
-        
-        // If panel above is at minHeight and we're still dragging up, collapse it
-        if (panelAbove.defaultHeight <= panelAbove.minHeight) {
-          panelAbove.collapsed = true
-        }
-      }
-    }
-  }
-  
-  // Uncollapse: if dragging topmost panel down with space, uncollapse next collapsed panel
-  if (deltaY > 0 && resizeIndex === 0) {
-    const resizingPanelSide = resizingPanel.side
-    const collapsedOnSameSide = panels.filter(p => p.side === resizingPanelSide && p.collapsed)
-    
-    if (collapsedOnSameSide.length > 0) {
-      // Check if there's space above the resizing panel
-      const availableSpace = deltaY
-      if (availableSpace >= collapsedOnSameSide[0].minHeight) {
-        const panelToUncollapse = collapsedOnSameSide[0]
-        panelToUncollapse.collapsed = false
-        panelToUncollapse.defaultHeight = panelToUncollapse.minHeight
-        // Adjust the resizing panel height to account for the uncollapsed panel
-        newHeight = Math.max(resizingPanel.minHeight, newHeight - panelToUncollapse.minHeight)
-      }
-    }
-  }
-
-  // Ensure minimum height
-  newHeight = Math.max(resizingPanel.minHeight, newHeight)
-  resizingPanel.defaultHeight = newHeight
-
-  moveEvent.preventDefault()
-}
-
-const handleStackEnd = () => {
-  if (!isStackDragging) return
-
-  isStackDragging = false
-  stackResizePanelId = null
-
-  // Remove all dragging classes
-  document.querySelectorAll('.stack-divider.is-dragging').forEach(el => {
-    el.classList.remove('is-dragging')
-  })
-
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-
-  // Remove document-level listeners
-  document.removeEventListener('mousemove', handleStackMove)
-  document.removeEventListener('touchmove', handleStackMove)
-  document.removeEventListener('mouseup', handleStackEnd)
-  document.removeEventListener('touchend', handleStackEnd)
-  document.removeEventListener('touchcancel', handleStackEnd)
-}
-
-const startColumnResize = (side, panelId, event) => {
-  if (event.button !== 0) return
-  if (!panelId) return
-  event.preventDefault()
-
-  playTick() // Start resize
-
-  const columnPanels = side === 'left' ? leftPanels.value : rightPanels.value
-  const resizingPanel = columnPanels.find(p => p.id === panelId)
-  if (!resizingPanel) return
-
-  const dividerEl = event.currentTarget
-  dividerEl?.setPointerCapture?.(event.pointerId)
-  dividerEl?.classList?.add?.('is-dragging')
-  document.body.style.cursor = 'row-resize'
-  document.body.style.userSelect = 'none'
-
-  const containerEl = side === 'left' ? leftColumnContainer.value : rightColumnContainer.value
-  const containerHeight = containerEl?.getBoundingClientRect?.().height
-  if (!containerHeight) return
-
-  const startY = event.clientY
-  const startHeight = resizingPanel.defaultHeight || resizingPanel.minHeight || 200
-
-  const onMove = (moveEvent) => {
-    // Find panel again in case array changed
-    const currentPanels = side === 'left' ? leftPanels.value : rightPanels.value
-    const currentPanel = currentPanels.find(p => p.id === panelId)
-    if (!currentPanel) {
-      onUp()
-      return
-    }
-    // NO LIMITATIONS - let it drag freely!
-    const desired = startHeight + (moveEvent.clientY - startY)
-    currentPanel.defaultHeight = Math.max(currentPanel.minHeight, desired)
-  }
-
-  const onUp = () => {
-    dividerEl?.releasePointerCapture?.(event.pointerId)
-    dividerEl?.classList?.remove?.('is-dragging')
-    dividerEl?.removeEventListener?.('pointermove', onMove)
-    dividerEl?.removeEventListener?.('pointerup', onUp)
-    dividerEl?.removeEventListener?.('pointercancel', onUp)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-  }
-
-  dividerEl?.addEventListener?.('pointermove', onMove)
-  dividerEl?.addEventListener?.('pointerup', onUp)
-  dividerEl?.addEventListener?.('pointercancel', onUp)
-}
-
-// Handle badge pointer down - only start corner resize if not clicking a button
-const handleBadgePointerDown = (event) => {
-  // Only handle corner resize in 4-panel mode
-  if (leftPanels.value.length !== 2 || rightPanels.value.length !== 2) return
-  
-  // Don't start resize if clicking on a button or icon
-  const target = event.target
-  if (target.closest('.icon-btn') || target.closest('button') || target.closest('svg')) {
-    return // Let the button handle the click
-  }
-  
-  // Start corner resize
-  startCornerResize(event)
-}
-
-// Unified corner resize - resizes all 4 panels' heights simultaneously using the badge
-const startCornerResize = (event) => {
-  if (event.button !== 0) return
-  if (leftPanels.value.length !== 2 || rightPanels.value.length !== 2) return
-  
-  playTick() // Start corner resize
-  
-  event.preventDefault()
-  event.stopPropagation()
-
-  const badgeEl = event.currentTarget
-  if (!badgeEl) return
-
-  badgeEl?.setPointerCapture?.(event.pointerId)
-  isCornerDragging = true
-  document.body.style.cursor = 'row-resize'
-  document.body.style.userSelect = 'none'
-  badgeEl?.classList?.add?.('is-resizing')
-
-  // Get container bounds
-  const layoutEl = splitContainer.value
-  if (!layoutEl) return
-  
-  const layoutRect = layoutEl.getBoundingClientRect()
-  const startY = event.clientY
-  const startCornerY = cornerHandleY.value
-
-  // Store initial heights of all panels
-  cornerStartHeights.left = leftPanels.value.map(p => ({
-    id: p.id,
-    height: p.defaultHeight || p.minHeight || 200,
-    minHeight: p.minHeight
-  }))
-  cornerStartHeights.right = rightPanels.value.map(p => ({
-    id: p.id,
-    height: p.defaultHeight || p.minHeight || 200,
-    minHeight: p.minHeight
-  }))
-
-  // Calculate total height of all panels
-  const totalLeftHeight = cornerStartHeights.left.reduce((sum, p) => sum + p.height, 0)
-  const totalRightHeight = cornerStartHeights.right.reduce((sum, p) => sum + p.height, 0)
-
-  const onMove = (moveEvent) => {
-    if (!isCornerDragging) return
-
-    const deltaY = moveEvent.clientY - startY
-    const availableHeight = layoutRect.height - 28 // 28px for tab space
-    
-    // Clamp corner position to valid range
-    const minCornerY = Math.max(
-      cornerStartHeights.left[0].minHeight,
-      cornerStartHeights.right[0].minHeight
-    )
-    const maxCornerY = availableHeight - Math.max(
-      cornerStartHeights.left[1].minHeight,
-      cornerStartHeights.right[1].minHeight
-    )
-    const newCornerY = Math.max(minCornerY, Math.min(maxCornerY, startCornerY + deltaY))
-    
-    // Calculate target heights: top panels share cornerY, bottom panels share remaining
-    const topPanelTargetHeight = newCornerY
-    const bottomPanelTargetHeight = availableHeight - newCornerY
-    
-    // Calculate proportions for each panel within its column
-    const leftTopRatio = cornerStartHeights.left[0].height / totalLeftHeight
-    const leftBottomRatio = cornerStartHeights.left[1].height / totalLeftHeight
-    const rightTopRatio = cornerStartHeights.right[0].height / totalRightHeight
-    const rightBottomRatio = cornerStartHeights.right[1].height / totalRightHeight
-    
-    // Update left panels proportionally
-    const leftTopPanel = leftPanels.value[0]
-    const leftBottomPanel = leftPanels.value[1]
-    if (leftTopPanel && leftBottomPanel) {
-      const leftTopHeight = topPanelTargetHeight * leftTopRatio
-      const leftBottomHeight = bottomPanelTargetHeight * leftBottomRatio
-      
-      leftTopPanel.defaultHeight = Math.max(leftTopPanel.minHeight, leftTopHeight)
-      leftBottomPanel.defaultHeight = Math.max(leftBottomPanel.minHeight, leftBottomHeight)
-    }
-    
-    // Update right panels proportionally
-    const rightTopPanel = rightPanels.value[0]
-    const rightBottomPanel = rightPanels.value[1]
-    if (rightTopPanel && rightBottomPanel) {
-      const rightTopHeight = topPanelTargetHeight * rightTopRatio
-      const rightBottomHeight = bottomPanelTargetHeight * rightBottomRatio
-      
-      rightTopPanel.defaultHeight = Math.max(rightTopPanel.minHeight, rightTopHeight)
-      rightBottomPanel.defaultHeight = Math.max(rightBottomPanel.minHeight, rightBottomHeight)
-    }
-    
-    cornerHandleY.value = newCornerY
-    moveEvent.preventDefault()
-  }
-
-  const onUp = () => {
-    badgeEl?.releasePointerCapture?.(event.pointerId)
-    badgeEl?.classList?.remove?.('is-resizing')
-    badgeEl?.removeEventListener?.('pointermove', onMove)
-    badgeEl?.removeEventListener?.('pointerup', onUp)
-    badgeEl?.removeEventListener?.('pointercancel', onUp)
-    document.body.style.cursor = ''
-    document.body.style.userSelect = ''
-    isCornerDragging = false
-  }
-
-  badgeEl?.addEventListener?.('pointermove', onMove)
-  badgeEl?.addEventListener?.('pointerup', onUp)
-  badgeEl?.addEventListener?.('pointercancel', onUp)
-}
 
 // Composables
-const { filters, currentFilter, currentFilterName, jamlContent, loadFilters, selectFilter, saveFilter, deleteFilter } = useFilters()
-const { results, columns, searchStatus, isSearching, activeSearches, currentSearchId, loadActiveSearches, startSearch, stopAll, stopSearch, clearResults, exportResults } = useSearch()
-const { connect, disconnect, joinSearchGroup, leaveSearchGroup, isConnected, connectionError } = useSignalR({
-  onResult: (result) => {
-    // Result comes as object with seed, score, tallies
-    if (result && typeof result === 'object') {
-      results.value.push(result)
-    }
-  },
-  onProgress: (progress) => {
-    // Progress comes as object with processed, speed, found, etc.
-    if (progress && typeof progress === 'object') {
-      const processed = progress.processed || progress.seedsSearched || 0
-      searchStatus.value = `Progress: ${processed.toLocaleString()} seeds`
-      
-      // Update active search if we have searchId
-      if (progress.searchId) {
-        const searchIndex = activeSearches.value.findIndex(s => s.searchId === progress.searchId)
-        if (searchIndex >= 0) {
-          activeSearches.value[searchIndex] = {
-            ...activeSearches.value[searchIndex],
-            searched: processed,
-            speed: progress.speed || progress.seedsPerSecond || 0,
-            found: progress.found || progress.seedsFound || 0,
-            progress: progress.totalBatches > 0 
-              ? Math.round((progress.currentBatch / progress.totalBatches) * 100)
-              : 0
+const { filters, currentFilter, jamlContent, loadFilters, selectFilter, saveFilter, deleteFilter } = useFilters()
+const { results, columns, searchStatus, isSearching, activeSearches, loadActiveSearches, startSearch, stopAll, stopSearch, clearResults, exportResults } = useSearch()
+const { connect, disconnect, joinSearchGroup, leaveSearchGroup } = useSignalR({
+  onResult: (r) => r && typeof r === 'object' && results.value.push(r),
+  onProgress: (p) => {
+    if (p && typeof p === 'object') {
+      const proc = p.processed || p.seedsSearched || 0
+      searchStatus.value = `Progress: ${proc.toLocaleString()} seeds`
+      if (p.searchId) {
+        const idx = activeSearches.value.findIndex(s => s.searchId === p.searchId)
+        if (idx >= 0) {
+          activeSearches.value[idx] = {
+            ...activeSearches.value[idx],
+            searched: proc,
+            speed: p.speed || p.seedsPerSecond || 0,
+            found: p.found || p.seedsFound || 0,
+            progress: p.totalBatches > 0 ? Math.round((p.currentBatch / p.totalBatches) * 100) : 0
           }
         }
       }
     }
   },
-  onSearchUpdate: (update) => {
-    // Handle search updates (completion, errors, etc.)
-    if (update && typeof update === 'object' && update.searchId) {
-      const searchIndex = activeSearches.value.findIndex(s => s.searchId === update.searchId)
-      if (searchIndex >= 0) {
-        activeSearches.value[searchIndex] = { 
-          ...activeSearches.value[searchIndex], 
-          ...update,
-          status: update.completed ? 'completed' : update.status || 'running'
-        }
-      } else if (update.type === 'search_completed' || update.type === 'search_failed') {
-        // New search update - add to list
+  onSearchUpdate: (u) => {
+    if (u && typeof u === 'object' && u.searchId) {
+      const idx = activeSearches.value.findIndex(s => s.searchId === u.searchId)
+      if (idx >= 0) {
+        activeSearches.value[idx] = { ...activeSearches.value[idx], ...u, status: u.completed ? 'completed' : u.status || 'running' }
+      } else if (u.type === 'search_completed' || u.type === 'search_failed') {
         activeSearches.value.push({
-          searchId: update.searchId,
-          status: update.completed ? 'completed' : (update.error ? 'error' : 'running'),
+          searchId: u.searchId,
+          status: u.completed ? 'completed' : (u.error ? 'error' : 'running'),
           progress: 100,
-          searched: update.seedsSearched || 0,
-          found: update.seedsFound || 0,
+          searched: u.seedsSearched || 0,
+          found: u.seedsFound || 0,
           speed: 0
         })
       }
@@ -844,34 +284,24 @@ const { error: globalError, showError, dismissError } = useGlobalError()
 const goHome = () => window.location.href = '/'
 const toggleSettings = () => showSettings.value = !showSettings.value
 
-const handleSelectFilter = async (filter) => {
+const handleSelectFilter = async (f) => {
   try {
-    await selectFilter(filter)
-    // Update filterId on all jaml-editor panels
-    panels.forEach(p => {
-      if (p.baseId === 'jaml-editor') {
-        p.filterId = filter?.id || filter?.name || null
-      }
-    })
+    await selectFilter(f)
+    updatePanelFilterId('jaml-editor', f?.id || f?.name || null)
     showSettings.value = false
-    showToast(`Filter "${filter?.name || filter?.id}" loaded`, 'success')
+    showToast(`Filter "${f?.name || f?.id}" loaded`, 'success')
   } catch (err) {
     showToast(`Error loading filter: ${err.message}`, 'error')
     console.error('Select filter error:', err)
   }
 }
 
-const handleDeleteFilter = async (filter) => {
+const handleDeleteFilter = async (f) => {
   try {
-    await deleteFilter(filter)
+    await deleteFilter(f)
     showToast('Filter deleted successfully', 'success')
-    // Clear filterId from panels if this was the current filter
-    if (currentFilter.value?.id === filter.id || currentFilter.value?.name === filter.name) {
-      panels.forEach(p => {
-        if (p.baseId === 'jaml-editor') {
-          p.filterId = null
-        }
-      })
+    if (currentFilter.value?.id === f.id || currentFilter.value?.name === f.name) {
+      updatePanelFilterId('jaml-editor', null)
     }
   } catch (err) {
     showToast(`Error deleting filter: ${err.message}`, 'error')
@@ -879,17 +309,11 @@ const handleDeleteFilter = async (filter) => {
   }
 }
 
-const handleSaveFilter = async (jaml) => {
-  if (savingFilter.value) return // Prevent double-save
-  
+const handleSaveFilter = async (j) => {
+  if (savingFilter.value) return
   try {
     savingFilter.value = true
-    const success = await saveFilter(jaml)
-    if (success) {
-      showToast('Filter saved successfully!', 'success')
-    } else {
-      showToast('Failed to save filter', 'error')
-    }
+    showToast(await saveFilter(j) ? 'Filter saved successfully!' : 'Failed to save filter', await saveFilter(j) ? 'success' : 'error')
   } catch (err) {
     showToast(`Error saving filter: ${err.message}`, 'error')
     console.error('Save filter error:', err)
@@ -898,18 +322,16 @@ const handleSaveFilter = async (jaml) => {
   }
 }
 
-const handleStartSearch = async (jaml) => {
-  if (startingSearch.value) return // Prevent double-start
-  
+const handleStartSearch = async (j) => {
+  if (startingSearch.value || !j?.trim()) {
+    if (!j?.trim()) showToast('Please provide JAML content to search', 'error')
+    return
+  }
   try {
-    if (!jaml || !jaml.trim()) {
-      showToast('Please provide JAML content to search', 'error')
-      return
-    }
     startingSearch.value = true
-    const searchId = await startSearch(jaml)
-    if (searchId) {
-      await joinSearchGroup(searchId)
+    const id = await startSearch(j)
+    if (id) {
+      await joinSearchGroup(id)
       showToast('Search started successfully!', 'success')
     } else {
       showToast('Failed to start search', 'error')
@@ -922,37 +344,21 @@ const handleStartSearch = async (jaml) => {
   }
 }
 
-const handleStopSearch = async () => {
-  await stopAll()
-}
-
-const handleStopSpecificSearch = async (searchId) => {
-  await leaveSearchGroup(searchId)
-  await stopSearch(searchId)
-}
-
-const updateJamlContent = (newJaml) => {
-  jamlContent.value = newJaml
-}
-
-const handleLoadJamlFromGenie = (jaml) => {
-  // Find the first JAML editor panel and load the JAML into it
-  const editorPanel = panels.find(p => p.baseId === 'jaml-editor')
-  if (editorPanel) {
-    jamlContent.value = jaml
+const handleStopSearch = () => stopAll()
+const handleStopSpecificSearch = async (id) => { await leaveSearchGroup(id); await stopSearch(id) }
+const updateJamlContent = (j) => { jamlContent.value = j }
+const handleLoadJamlFromGenie = (j) => {
+  if (panels.find(p => p.baseId === 'jaml-editor')) {
+    jamlContent.value = j
     showToast('JAML loaded into editor!', 'success')
   } else {
     showToast('No JAML editor panel found', 'error')
   }
 }
 
-// Copy JAML to clipboard
 const copyJamlToClipboard = async () => {
+  if (!jamlContent.value) return showToast('No JAML content to copy', 'error')
   try {
-    if (!jamlContent.value) {
-      showToast('No JAML content to copy', 'error')
-      return
-    }
     await navigator.clipboard.writeText(jamlContent.value)
     showToast('JAML copied to clipboard!', 'success')
   } catch (err) {
@@ -961,27 +367,20 @@ const copyJamlToClipboard = async () => {
   }
 }
 
-const onPanelResize = (panelId, newHeight) => {
-  // Panel resize handled internally by PanelSection
-  // This handler can be used for future analytics/persistence
-}
+const onPanelResize = () => {}
 
-const onPanelCollapse = (panelId, isCollapsed) => {
-  const panel = panels.find(p => p.id === panelId)
-  if (panel) {
-    panel.collapsed = isCollapsed
-    // When a panel collapses, the panel above it should expand to fill the space
-    if (isCollapsed) {
-      // Get all panels on the same side (including collapsed ones) to find position
-      const sameSidePanels = panels.filter(p => p.side === panel.side)
-      const panelIndex = sameSidePanels.findIndex(p => p.id === panelId)
-      if (panelIndex > 0) {
-        // Find the panel above that is not collapsed
-        for (let i = panelIndex - 1; i >= 0; i--) {
-          const panelAbove = sameSidePanels[i]
-          if (panelAbove && !panelAbove.collapsed) {
-            // Expand the panel above
-            panelAbove.defaultHeight = (panelAbove.defaultHeight || panelAbove.minHeight) + (panel.defaultHeight || panel.minHeight)
+const onPanelCollapse = (id, collapsed) => {
+  collapsePanel(id, collapsed)
+  if (collapsed) {
+    const p = panels.find(x => x.id === id)
+    if (p) {
+      const sameSide = panels.filter(x => x.side === p.side)
+      const idx = sameSide.findIndex(x => x.id === id)
+      if (idx > 0) {
+        for (let i = idx - 1; i >= 0; i--) {
+          const above = sameSide[i]
+          if (above && !above.collapsed) {
+            above.defaultHeight = (above.defaultHeight || above.minHeight) + (p.defaultHeight || p.minHeight)
             break
           }
         }
@@ -990,264 +389,64 @@ const onPanelCollapse = (panelId, isCollapsed) => {
   }
 }
 
-const duplicatePanel = (panelId) => {
-  const panel = panels.find(p => p.id === panelId)
-  if (!panel) return
-  
-  const newPanel = {
-    ...panel,
-    id: generatePanelId(panel.baseId),
-    side: panel.side,
-    collapsed: false,
-    defaultHeight: panel.defaultHeight || panel.minHeight
-  }
-  // Deep clone the component reference
-  newPanel.component = markRaw(panel.component)
-  
-  panels.push(newPanel)
-  playDoubleClick() // Panel created
+const duplicatePanel = (id) => duplicatePanelOp(id) && playDoubleClick()
+const movePanelToSide = (id, side) => movePanelToSideOp(id, side) && playClickSound('clack')
+const removePanel = (id) => {
+  const r = removePanelOp(id)
+  showToast(r.message, r.success ? 'success' : 'error')
+  if (r.success) playSnap()
 }
 
-const movePanelToSide = (draggedPanelId, targetSide) => {
-  const panel = panels.find(p => p.id === draggedPanelId)
-  if (panel && (targetSide === 'left' || targetSide === 'right')) {
-    panel.side = targetSide
-    playClickSound('clack') // Panel moved/collided
-  }
-}
-
-const expandPanel = (panelId) => {
-  const panel = panels.find(p => p.id === panelId)
-  if (panel) {
-    panel.collapsed = false
-  }
-}
-
-// Check if a panel is a base panel (original, not duplicated)
-const isBasePanel = (panel) => {
-  // Base panels are the first instance of each baseId
-  const firstWithBaseId = panels.find(p => p.baseId === panel.baseId)
-  return firstWithBaseId?.id === panel.id
-}
-
-const removePanel = (panelId) => {
-  const panel = panels.find(p => p.id === panelId)
-  if (!panel) return
-  
-  // Don't allow removing the last panel
-  if (visiblePanels.value.length <= 1) {
-    showToast('Cannot remove the last panel', 'error')
-    return
-  }
-  
-  // Don't allow removing base panels (only duplicated ones)
-  if (isBasePanel(panel)) {
-    showToast('Cannot remove base panels. Close duplicated panels instead.', 'error')
-    return
-  }
-  
-  const index = panels.findIndex(p => p.id === panelId)
-  if (index >= 0) {
-    panels.splice(index, 1)
-    showToast('Panel removed', 'success')
-    playSnap() // Panel destroyed
-  }
-}
-
-// Reset layout to default
 const resetLayout = () => {
-  // Reset panel counter to start fresh
-  panelIdCounter = 0
-  
-  // Clear localStorage
   try {
-    localStorage.removeItem(PANEL_STORAGE_KEY)
-    localStorage.removeItem(SPLIT_WIDTH_STORAGE_KEY)
+    localStorage.removeItem('jaml-ui-panels')
+    localStorage.removeItem('jaml-ui-split-width')
   } catch (err) {
     console.warn('Failed to clear localStorage:', err)
   }
-  
-  // Reset to initial panels
-  const initialPanels = createInitialPanels()
-  panels.splice(0, panels.length, ...initialPanels)
-  
-  // Reset split width
+  resetPanels()
   splitLeftWidth.value = 50
   badgeSnapState.value = 'center'
-  
   showToast('Layout reset to default', 'success')
 }
 
-// Panel persistence
-const PANEL_STORAGE_KEY = 'jaml-ui-panels'
-const SPLIT_WIDTH_STORAGE_KEY = 'jaml-ui-split-width'
-
-const savePanelState = () => {
-  try {
-    const panelState = panels.map(p => ({
-      id: p.id,
-      baseId: p.baseId,
-      side: p.side,
-      collapsed: p.collapsed,
-      defaultHeight: p.defaultHeight
-    }))
-    localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(panelState))
-    localStorage.setItem(SPLIT_WIDTH_STORAGE_KEY, splitLeftWidth.value.toString())
-  } catch (err) {
-    console.warn('Failed to save panel state:', err)
-  }
+const handleKeydown = (e) => {
+  const mod = e.ctrlKey || e.metaKey
+  if (mod && e.key === 'k') { e.preventDefault(); toggleSettings(); return }
+  if (mod && e.key === 's' && jamlContent.value) { e.preventDefault(); handleSaveFilter(jamlContent.value); return }
+  if (mod && e.key === 'r') { e.preventDefault(); resetLayout(); return }
+  if (mod && e.key === 'c' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName) && jamlContent.value) { e.preventDefault(); copyJamlToClipboard(); return }
+  if (e.key === 'Escape' && showSettings.value) showSettings.value = false
 }
 
-const loadPanelState = () => {
-  try {
-    const saved = localStorage.getItem(PANEL_STORAGE_KEY)
-    if (saved) {
-      const panelState = JSON.parse(saved)
-      panelState.forEach(savedPanel => {
-        const panel = panels.find(p => p.id === savedPanel.id || p.baseId === savedPanel.baseId)
-        if (panel) {
-          panel.side = savedPanel.side || panel.side
-          panel.collapsed = savedPanel.collapsed ?? panel.collapsed
-          if (savedPanel.defaultHeight) {
-            panel.defaultHeight = savedPanel.defaultHeight
-          }
-        }
-      })
-    }
-    
-    const savedWidth = localStorage.getItem(SPLIT_WIDTH_STORAGE_KEY)
-    if (savedWidth) {
-      splitLeftWidth.value = parseFloat(savedWidth) || 50
-    }
-  } catch (err) {
-    console.warn('Failed to load panel state:', err)
-  }
-}
-
-// Watch for panel changes and persist
-watch(() => panels.map(p => ({ side: p.side, collapsed: p.collapsed, defaultHeight: p.defaultHeight })), 
-  () => savePanelState(), 
-  { deep: true }
-)
-watch(splitLeftWidth, () => savePanelState())
-
-// Keyboard shortcuts
-const handleKeydown = (event) => {
-  // Ctrl/Cmd + K: Toggle settings
-  if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-    event.preventDefault()
-    toggleSettings()
-    return
-  }
-  
-  // Ctrl/Cmd + S: Save current filter (if in editor)
-  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-    event.preventDefault()
-    if (jamlContent.value) {
-      handleSaveFilter(jamlContent.value)
-    }
-    return
-  }
-  
-  // Ctrl/Cmd + R: Reset layout (prevent default reload)
-  if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
-    event.preventDefault()
-    resetLayout()
-    return
-  }
-  
-  // Ctrl/Cmd + C: Copy JAML (when not in input/textarea)
-  if ((event.ctrlKey || event.metaKey) && event.key === 'c' && 
-      !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
-    // Only copy if there's JAML content and user isn't in an input field
-    if (jamlContent.value) {
-      event.preventDefault()
-      copyJamlToClipboard()
-      return
-    }
-  }
-  
-  // Escape: Close modals
-  if (event.key === 'Escape') {
-    if (showSettings.value) {
-      showSettings.value = false
-    }
-  }
-}
-
-// Initialize corner handle position based on panel heights
-const updateCornerHandlePosition = () => {
-  if (leftPanels.value.length === 2 && rightPanels.value.length === 2 && splitContainer.value) {
-    // Position badge at the boundary between top and bottom panels
-    // Use the average of left and right top panel heights
-    const leftTopHeight = leftPanels.value[0]?.defaultHeight || leftPanels.value[0]?.minHeight || 200
-    const rightTopHeight = rightPanels.value[0]?.defaultHeight || rightPanels.value[0]?.minHeight || 200
-    const avgTopHeight = (leftTopHeight + rightTopHeight) / 2
-    cornerHandleY.value = Math.max(0, avgTopHeight)
-  } else {
-    // Default to center when not in 4-panel mode (use 0 to trigger '50%' in style)
-    cornerHandleY.value = 0
-  }
-}
-
-// Watch for panel changes to update corner handle position
 watch([leftPanels, rightPanels], () => {
   if (leftPanels.value.length === 2 && rightPanels.value.length === 2) {
     updateCornerHandlePosition()
   } else {
-    cornerHandleY.value = 0 // Reset to center when not in 4-panel mode
+    cornerHandleY.value = 0
   }
 }, { deep: true })
 
-// Also watch for individual panel height changes to update corner position
-watch(() => [
-  leftPanels.value.map(p => p.defaultHeight),
-  rightPanels.value.map(p => p.defaultHeight)
-], () => {
-  if (leftPanels.value.length === 2 && rightPanels.value.length === 2 && !isCornerDragging) {
+watch(() => [leftPanels.value.map(p => p.defaultHeight), rightPanels.value.map(p => p.defaultHeight)], () => {
+  if (leftPanels.value.length === 2 && rightPanels.value.length === 2 && !isCornerDragging()) {
     updateCornerHandlePosition()
   }
 }, { deep: true })
 
-// Lifecycle
 onMounted(async () => {
-  // Load persisted panel state
   loadPanelState()
-  
-  // Initialize corner handle position
+  loadSplitWidth()
   await nextTick()
   updateCornerHandlePosition()
-  
-  // Add keyboard shortcuts
   window.addEventListener('keydown', handleKeydown)
-  
-  // Load data with timeout to prevent hanging
-  const loadWithTimeout = async (fn, timeout = 3000) => {
-    return Promise.race([
-      fn(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Load timeout')), timeout)
-      )
-    ]).catch(err => {
-      console.warn('Data load failed (continuing anyway):', err?.message)
-    })
-  }
-
-  await Promise.all([
-    loadWithTimeout(() => loadFilters()),
-    loadWithTimeout(() => loadActiveSearches())
-  ])
-
-  // Connect SignalR without blocking UI
-  connect().catch(err => {
-    console.warn('SignalR connection failed (non-critical):', err?.message)
-  })
+  const loadWithTimeout = async (fn, t = 3000) => Promise.race([fn(), new Promise((_, r) => setTimeout(() => r(new Error('Load timeout')), t))]).catch(e => console.warn('Data load failed (continuing anyway):', e?.message))
+  await Promise.all([loadWithTimeout(() => loadFilters()), loadWithTimeout(() => loadActiveSearches())])
+  connect().catch(e => console.warn('SignalR connection failed (non-critical):', e?.message))
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   disconnect()
-  savePanelState()
 })
 </script>
 
@@ -1313,181 +512,6 @@ onUnmounted(() => {
   margin-top: 28px; /* Space for tabs to stick out */
 }
 
-.layout-stack {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  overflow: visible; /* Allow tabs to stick out */
-  gap: 0; /* No gaps - panels touch */
-  padding-top: 28px; /* Space for first panel's tab */
-}
-
-/* Stack dividers removed - panels touch each other, top border acts as drag handle */
-
-.layout-split {
-  display: flex;
-  width: 100%;
-}
-
-.split-column {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: visible; /* Allow tabs to stick out */
-  gap: 0; /* No gaps - panels touch */
-  min-height: 0; /* Force panels to fit */
-  padding-top: 28px; /* Space for first panel's tab */
-}
-
-.split-divider {
-  width: 10px;
-  min-width: 10px;
-  cursor: ew-resize;
-  background: var(--balatro-gold);
-  flex-shrink: 0;
-  position: relative;
-  touch-action: none;
-  user-select: none;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 0;
-  z-index: 2000; /* High z-index to be above panels, but below footer (3000) and modals (10000) */
-}
-
-.split-divider:hover {
-  background: var(--balatro-dark-gold);
-}
-
-.split-divider.is-resizing {
-  background: var(--balatro-dark-gold);
-}
-
-/* Unified Corner Handle - positioned at intersection of left/right columns */
-.corner-handle {
-  position: absolute;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: 2px;
-  background: transparent;
-  cursor: row-resize;
-  z-index: 2002; /* Above divider and badge */
-  touch-action: none;
-  user-select: none;
-  pointer-events: auto;
-}
-
-.corner-handle.is-resizing {
-  background: var(--balatro-gold);
-  box-shadow: 0 0 10px rgba(234, 186, 68, 0.5);
-  height: 4px;
-}
-
-.corner-handle:hover {
-  background: rgba(234, 186, 68, 0.5);
-  height: 3px;
-}
-
-.corner-badge {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'm6x11plus', monospace;
-  font-size: 14px;
-  font-weight: normal;
-  padding: 4px 10px;
-  background: rgba(50, 60, 70, 0.95);
-  color: #fff;
-  height: 28px;
-  box-sizing: border-box;
-  user-select: none;
-  border-radius: 8px; /* Curved on all sides */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  pointer-events: auto; /* Allow clicking on badge buttons */
-  z-index: 2003; /* Above corner handle */
-  transition: none; /* No transition when dragging */
-}
-
-.jaml-badge {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'm6x11plus', monospace;
-  font-size: 14px;
-  font-weight: normal;
-  padding: 4px 10px;
-  background: rgba(50, 60, 70, 0.95);
-  color: #fff;
-  height: 28px;
-  box-sizing: border-box;
-  user-select: none;
-  border-radius: 8px; /* Curved on all sides */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  pointer-events: auto; /* Allow clicking on badge buttons */
-  z-index: 2001; /* Even higher to ensure badge is visible on top of divider */
-  left: 50%;
-  margin-left: -50px; /* Center horizontally */
-  transition: top 0.2s ease; /* Smooth glide up/down */
-}
-
-/* When in corner resize mode (4 panels), badge becomes draggable vertically */
-.jaml-badge.corner-resize-mode {
-  cursor: row-resize;
-  transition: none; /* No transition when dragging */
-}
-
-.jaml-badge.corner-resize-mode:hover {
-  background: var(--balatro-dark-gold);
-}
-
-.jaml-badge.corner-resize-mode.is-resizing {
-  background: var(--balatro-dark-gold);
-}
-
-.jaml-badge.badge-snap-left {
-  border-radius: 8px; /* Still curved on all sides */
-}
-
-.jaml-badge.badge-snap-right {
-  border-radius: 8px; /* Still curved on all sides */
-}
-
-.jaml-badge.badge-snap-center {
-  border-radius: 8px; /* Curved on all sides */
-}
-
-.jaml-badge .logo {
-  letter-spacing: 1px;
-  font-weight: normal;
-}
-
-.jaml-badge .icon-btn {
-  cursor: pointer;
-  opacity: 0.8;
-  pointer-events: auto;
-  background: none;
-  border: none;
-  color: inherit;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.15s;
-  font-weight: normal;
-}
-
-.jaml-badge .icon-btn:hover {
-  opacity: 1;
-}
 
 .jaml-badge .reset-btn {
   font-size: 16px;

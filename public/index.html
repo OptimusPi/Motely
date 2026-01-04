@@ -26,6 +26,8 @@
     .api-links a:hover { border-color:var(--gold); color:var(--gold); }
     footer { margin-top:2rem; padding-top:1rem; border-top:1px solid var(--border); text-align:center; font-size:0.65rem; color:var(--muted); line-height:1.8; }
     footer a { color:var(--gold); }
+    #soundToggle:hover { border-color:var(--gold); color:var(--gold); }
+    #soundToggle.enabled { border-color:var(--green); color:var(--green); }
     </style>
   </head>
   <body>
@@ -34,12 +36,17 @@
     <p class="subtitle">All Ways to Search for Balatro Seeds</p>
 
     <section class="local">
-      <h2>Local Tools</h2>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+        <h2 style="margin:0;">Local Tools</h2>
+        <button id="soundToggle" style="background:var(--card); border:1px solid var(--border); border-radius:4px; padding:0.5rem 1rem; color:var(--text); cursor:pointer; font-size:0.75rem; transition:all 0.2s;">
+          <span id="soundToggleText">🔇 Enable Sound</span>
+        </button>
+      </div>
       <div class="grid">
         <a href="/JAML/" class="card"><h3>JAML WebUI</h3><p>Commander control for JAML filters and live seed searches.</p></a>
         <a href="/BSO/" class="card"><h3>BSO Browser</h3><p>Avalonia UI compiled to WebAssembly. Full oracle in browser.</p></a>
         <a href="/JamlGenie/" class="card"><h3>JamlGenie</h3><p>JAML filter generator and helper tool.</p></a>
-        <a href="/JamlUI/" class="card"><h3>JamlUI</h3><p>Modular responsive JAML editor with drag-and-drop panels.</p></a>
+        <a href="/JAML/" class="card"><h3>JamlUI (Vue 3)</h3><p>Modular responsive JAML editor with drag-and-drop panels, sound effects, and unified corner resize.</p></a>
         <a href="/JamlUI-Alpine/" class="card"><h3>JamlUI Alpine</h3><p>JAML UI experiment using Alpine.js framework.</p></a>
         <a href="/JamlUI-HTMX/" class="card"><h3>JamlUI HTMX</h3><p>JAML UI experiment using HTMX for dynamic interactions.</p></a>
         <a href="/JamlUI-Lit/" class="card"><h3>JamlUI Lit</h3><p>JAML UI experiment using Lit web components.</p></a>
@@ -87,5 +94,60 @@
     </footer>
   </div>
 
+  <script>
+    // Sound toggle functionality
+    (function() {
+      const soundToggle = document.getElementById('soundToggle');
+      const soundToggleText = document.getElementById('soundToggleText');
+      
+      // Check localStorage for saved preference
+      let soundEnabled = localStorage.getItem('jaml-ui-sound-enabled') === 'true';
+      
+      function updateSoundToggle(enabled) {
+        soundEnabled = enabled;
+        if (enabled) {
+          soundToggle.classList.add('enabled');
+          soundToggleText.textContent = '🔊 Sound On';
+          localStorage.setItem('jaml-ui-sound-enabled', 'true');
+        } else {
+          soundToggle.classList.remove('enabled');
+          soundToggleText.textContent = '🔇 Enable Sound';
+          localStorage.setItem('jaml-ui-sound-enabled', 'false');
+        }
+      }
+      
+      // Initialize
+      updateSoundToggle(soundEnabled);
+      
+      // Toggle on click
+      soundToggle.addEventListener('click', () => {
+        const newState = !soundEnabled;
+        updateSoundToggle(newState);
+        // Play a test sound if enabling
+        if (newState) {
+          try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.001);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+          } catch (e) {
+            console.warn('Could not play test sound:', e);
+          }
+        }
+      });
+    })();
+  </script>
 
 </body></html>

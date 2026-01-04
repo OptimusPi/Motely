@@ -40,21 +40,11 @@ public class McpServer
         }
     }
     
-    /// <summary>
-    /// Generates JAML filter from natural language prompt (NO search - config only)
-    /// Used by MCP protocol tool generate_jaml_filter
-    /// </summary>
     public async Task<(string jaml, string reasoning, string? error)> GenerateJamlOnlyAsync(string prompt)
     {
-        // LLM handles refinement - just send the raw prompt
-        // The system prompt already instructs the LLM to handle typos, slang, fuzzy matching, etc.
         return await GenerateJamlOnlyAsyncInternal(prompt, prompt);
     }
 
-    /// <summary>
-    /// Internal method that generates JAML from user prompt
-    /// LLM handles refinement via system prompt - no regex preprocessing needed
-    /// </summary>
     private async Task<(string jaml, string reasoning, string? error, string? rawJaml, string? cleanedJaml, string? finalJaml, string? validationError)> GenerateJamlOnlyAsyncInternalWithSteps(string userPrompt, string originalPrompt)
     {
         string? rawJaml = null;
@@ -83,15 +73,12 @@ public class McpServer
                 return (string.Empty, string.Empty, "AI failed to generate JAML filter", rawJaml, null, null, null);
             }
 
-            // Track transformation steps for debugging
             cleanedJaml = CleanMarkdown(jamlFilter);
             finalJaml = EnsureJamlHeader(cleanedJaml, originalPrompt);
             jamlFilter = finalJaml;
 
-            // Validate JAML (but don't search)
             if (!JamlConfigLoader.TryLoadFromJamlString(jamlFilter, out var validatedConfig, out validationError) || validatedConfig == null)
             {
-                // Save invalid JAML to failures bucket for review
                 _feedbackService?.LogFailure(
                     prompt: originalPrompt,
                     generatedJaml: jamlFilter,
@@ -132,26 +119,10 @@ public class McpServer
         return (jaml, reasoning, error);
     }
 
-    /// <summary>
-    /// Translates natural language prompt to JAML filter AND starts search
-    /// Used by REST API endpoint /mcp/prompt (for JamlGenie frontend)
-    /// </summary>
     public async Task<McpResponse> ProcessPromptAsync(string prompt)
     {
         try
         {
-            // LLM handles refinement via system prompt - just use the prompt directly
-            // The system prompt already instructs the LLM to handle typos, slang, fuzzy matching, etc.
-            var refinementSteps = new RefinementSteps
-            {
-                Original = prompt,
-                AfterStep1 = prompt,
-                AfterStep2 = prompt,
-                AfterStep3 = prompt,
-                Final = prompt
-            };
-            
-            // Generate JAML - LLM does all the refinement work
             var (jamlFilter, reasoning, error) = await GenerateJamlOnlyAsyncInternal(prompt, prompt);
             
             if (!string.IsNullOrEmpty(error))
@@ -199,8 +170,7 @@ public class McpServer
                 Results = results,
                 Columns = columns,
                 Message = $"Generated JAML filter for: {prompt}. Search started with ID: {searchId}",
-                SearchUrl = searchUrl, // URL to view full search results in JAML UI
-                RefinementSteps = refinementSteps // Show prompt pipeline
+                SearchUrl = searchUrl
             };
         }
         catch (Exception ex)
@@ -218,11 +188,6 @@ public class McpServer
     }
 
 
-    /// <summary>
-    /// Refines user prompt through multi-step AI agent pipeline
-    /// Returns both the final refined prompt and intermediate steps for debugging/visualization
-    /// PUBLIC for notebook access
-    /// </summary>
     public (string final, RefinementSteps steps) RefinePromptWithSteps(string rawPrompt)
     {
         var steps = new RefinementSteps
@@ -269,10 +234,6 @@ public class McpServer
     }
 
 
-    /// <summary>
-    /// STEP 1: Fix common voice-to-text typos and slang
-    /// PUBLIC for notebook access
-    /// </summary>
     public string RefineStep1_TypoFix(string prompt)
     {
         if (string.IsNullOrWhiteSpace(prompt))

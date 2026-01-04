@@ -156,7 +156,7 @@ onUnmounted(() => {
 }
 
 .chat-send:hover:not(:disabled) {
-  background: var(--balatro-gold);
+  background: var(--balatro-dark-blue);
 }
 
 .chat-send:disabled {
