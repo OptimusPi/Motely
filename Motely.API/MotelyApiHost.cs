@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ using Motely.API.Services;
 using Motely.API;
 using Motely.API.Hubs;
 using Motely.API.McpProtocol;
+using Motely.API.Models;
 
 // Request records
 public record SearchStartRequest(string? FilterId, string? Deck, string? Stake, long? SeedCount, long? StartBatch, int? Cutoff, string? SeedSource);
@@ -277,7 +279,7 @@ public static class MotelyApiHost
                     success = response.Success,
                     jamlFilter = response.JamlFilter,
                     reasoning = response.Reasoning,
-                    error = response.Error,
+                    error = response.Success ? null : response.Message,
                     searchId = response.SearchId,
                     results = response.Results,
                     columns = response.Columns,
