@@ -15,15 +15,22 @@ namespace Motely.Filters.MotelyJson
         private static readonly Dictionary<string, string> TypeMappings = new(StringComparer.OrdinalIgnoreCase)
         {
             ["joker"] = "Joker",
-            ["souljoker"] = "SoulJoker", 
+            ["jokers"] = "Joker",
+            ["souljoker"] = "SoulJoker",
+            ["souljokers"] = "SoulJoker",
             ["voucher"] = "Voucher",
+            ["vouchers"] = "Voucher",
             ["tarot"] = "TarotCard",
             ["tarotcard"] = "TarotCard",
+            ["tarotcards"] = "TarotCard",
             ["planet"] = "PlanetCard",
             ["planetcard"] = "PlanetCard",
+            ["planetcards"] = "PlanetCard",
             ["spectral"] = "SpectralCard",
             ["spectralcard"] = "SpectralCard",
+            ["spectralcards"] = "SpectralCard",
             ["standardcard"] = "StandardCard",
+            ["standardcards"] = "StandardCard",
             ["boss"] = "Boss",
             ["tag"] = "Tag",
             ["smallblindtag"] = "SmallBlindTag",
@@ -80,9 +87,15 @@ namespace Motely.Filters.MotelyJson
                         entries["type"] = mappedType;
                         entries["value"] = valueScalar.Value;
                     }
-                    else if (nextEvent is MappingStart || nextEvent is SequenceStart)
+                    else if (nextEvent is SequenceStart)
                     {
-                        if (mappedType == "And" || mappedType == "Or" && nextEvent is SequenceStart)
+                        var arrayValue = objectFactory(reader, typeof(object));
+                        entries["type"] = mappedType;
+                        entries["values"] = arrayValue!;
+                    }
+                    else if (nextEvent is MappingStart)
+                    {
+                        if (mappedType == "And" || mappedType == "Or")
                         {
                             var complexValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>));
                             entries["type"] = mappedType;
