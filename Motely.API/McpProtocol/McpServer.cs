@@ -758,24 +758,30 @@ Tarot cards provide one-time effects when used.";
             
             if (getParams.Name == "find_joker_build")
             {
-                var jokers = getParams.Arguments?.FirstOrDefault(a => a.Name == "jokers")?.Value ?? "";
-                var antes = getParams.Arguments?.FirstOrDefault(a => a.Name == "antes")?.Value ?? "";
+                string? jokers = null;
+                string? antes = null;
+                getParams.Arguments?.TryGetValue("jokers", out jokers);
+                getParams.Arguments?.TryGetValue("antes", out antes);
+                var jokersStr = jokers ?? "";
+                var antesStr = antes ?? "";
                 
-                if (string.IsNullOrEmpty(jokers))
+                if (string.IsNullOrEmpty(jokersStr))
                 {
                     return JsonRpcResponse.Error(request.Id, -32602, "jokers argument is required");
                 }
                 
-                promptText = $"Find Balatro seeds with these jokers: {jokers}";
-                if (!string.IsNullOrEmpty(antes))
+                promptText = $"Find Balatro seeds with these jokers: {jokersStr}";
+                if (!string.IsNullOrEmpty(antesStr))
                 {
-                    promptText += $" in antes {antes}";
+                    promptText += $" in antes {antesStr}";
                 }
             }
             else if (getParams.Name == "find_economy_build")
             {
-                var focus = getParams.Arguments?.FirstOrDefault(a => a.Name == "focus")?.Value ?? "early";
-                var antes = focus == "early" ? "1-3" : focus == "mid" ? "4-6" : "7-8";
+                string? focus = null;
+                getParams.Arguments?.TryGetValue("focus", out focus);
+                var focusStr = focus ?? "early";
+                var antes = focusStr == "early" ? "1-3" : focusStr == "mid" ? "4-6" : "7-8";
                 
                 promptText = $"Find Balatro seeds with economy items (money-generating jokers, vouchers, tarot cards) in antes {antes}";
             }
