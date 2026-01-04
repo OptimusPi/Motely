@@ -86,8 +86,8 @@ public class SearchBroadcaster : ISearchBroadcaster
                                 progressDict["currentBatch"] = currentBatch.GetInt64();
                             if (rootElement.TryGetProperty("totalBatches", out var totalBatches))
                                 progressDict["totalBatches"] = totalBatches.GetInt64();
-                            if (rootElement.TryGetProperty("searchId", out var searchId))
-                                progressDict["searchId"] = searchId.GetString() ?? "";
+                            if (rootElement.TryGetProperty("searchId", out var searchIdProp))
+                                progressDict["searchId"] = searchIdProp.GetString() ?? "";
                             
                             _hubContext.Clients.Group(groupName).SendAsync("Progress", progressDict).Wait();
                             break;
