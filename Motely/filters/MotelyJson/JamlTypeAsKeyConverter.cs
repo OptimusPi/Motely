@@ -145,6 +145,9 @@ namespace Motely.Filters.MotelyJson
             {
                 var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
                 
+                // SET TYPE FIRST - this is critical!
+                clause.Type = typeStr ?? "";
+                
                 if (typeStr != null && (typeStr.Equals("And", StringComparison.OrdinalIgnoreCase) || typeStr.Equals("Or", StringComparison.OrdinalIgnoreCase)))
                 {
                     clause.Type = typeStr.ToLowerInvariant();
@@ -181,9 +184,26 @@ namespace Motely.Filters.MotelyJson
                     }
                 }
                 
+                // Set value property if present
+                if (entries.TryGetValue("value", out var valueEntry) && valueEntry != null)
+                {
+                    clause.Value = valueEntry.ToString();
+                }
+                if (entries.TryGetValue("values", out var valuesEntry) && valuesEntry != null)
+                {
+                    if (valuesEntry is string[] strArray)
+                    {
+                        clause.Values = strArray;
+                    }
+                    else if (valuesEntry is System.Collections.IList list)
+                    {
+                        clause.Values = list.Cast<object>().Select(o => o?.ToString() ?? "").ToArray();
+                    }
+                }
+                
                 foreach (var entry in entries)
                 {
-                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase))
+                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("values", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase))
                         continue;
                     var property = FindPropertyWithAlias(clause.GetType(), entry.Key);
                     if (property != null && property.CanWrite)
