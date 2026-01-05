@@ -90,7 +90,7 @@ namespace Motely.Executors
             // Gate colored output based on --nofancy
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 
-            var (seeds, preSorted) = LoadSeeds();
+            string? duckDbPath = LoadSeeds();
 
             // Suppress startup messages in quiet mode
             if (!_params.Quiet)
@@ -120,7 +120,7 @@ namespace Motely.Executors
             try
             {
                 MotelyJsonConfig config = LoadConfig();
-                IMotelySearch search = CreateSearch(config, seeds, preSorted);
+                IMotelySearch search = CreateSearch(config, duckDbPath);
                 if (search == null)
                 {
                     return 1;
@@ -206,10 +206,10 @@ namespace Motely.Executors
 
         /// <summary>
         /// Load seeds from the configured source.
-        /// Returns (seeds, preSorted) where preSorted=true means seeds are already sorted by length.
-        /// For DbList, returns streaming IEnumerable that doesn't load everything into RAM.
+        /// Returns duckDbPath if we have a file-based source (converts txt/csv to db first).
+        /// Returns null for sequential search or in-memory lists.
         /// </summary>
-        private (IEnumerable<string>? seeds, bool preSorted) LoadSeeds()
+        private string? LoadSeeds()
         {
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
@@ -217,8 +217,8 @@ namespace Motely.Executors
                 {
                     Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
                 }
-                // Return just the specific seed
-                return (new[] { _params.SpecificSeed }, false);
+                // For specific seed, return null to use in-memory list
+                return null;
             }
 
             // Direct seed list takes priority over wordlist file
@@ -228,7 +228,8 @@ namespace Motely.Executors
                 {
                     Console.WriteLine($"🔍 Searching {_params.SeedList.Count} seeds from provided list");
                 }
-                return (_params.SeedList, false);
+                // For small lists, return null to use in-memory
+                return null;
             }
 
             // Unified SeedSources parameter - handles both relative and absolute paths
@@ -237,10 +238,14 @@ namespace Motely.Executors
                 return LoadSeedSources(_params.SeedSources);
             }
 
-            return (null, false); // Sequential search
+            return null; // Sequential search
         }
 
-        private (IEnumerable<string>? seeds, bool preSorted) LoadSeedSources(string seedSource)
+        /// <summary>
+        /// Load seed sources - ALWAYS converts to DuckDB first, then returns dbPath.
+        /// ONE TRUE WAY: DuckDB streaming for performance and safety!
+        /// </summary>
+        private string? LoadSeedSources(string seedSource)
         {
             // Remove extension to get base name, then check priority: .db > .csv > .txt
             string baseName = Path.GetFileNameWithoutExtension(seedSource);
@@ -263,17 +268,22 @@ namespace Motely.Executors
             string csvPath = Path.Combine(directory, baseName + ".csv");
             string txtPath = Path.Combine(directory, baseName + ".txt");
 
+            // ONE TRUE WAY: Always use DuckDB! Convert if needed.
             if (File.Exists(dbPath))
             {
-                return LoadDuckDBSource(dbPath);
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"✅ Using DuckDB: {dbPath}");
+                }
+                return dbPath;
             }
             else if (File.Exists(csvPath))
             {
-                return LoadCsvSource(csvPath);
+                return ConvertCsvToDuckDB(csvPath, dbPath);
             }
             else if (File.Exists(txtPath))
             {
-                return LoadTextSource(txtPath);
+                return ConvertTextToDuckDB(txtPath, dbPath);
             }
             else
             {
@@ -282,11 +292,13 @@ namespace Motely.Executors
                 if (File.Exists(originalPath))
                 {
                     string extension = Path.GetExtension(originalPath).ToLowerInvariant();
+                    string originalDbPath = Path.ChangeExtension(originalPath, ".db");
+                    
                     return extension switch
                     {
-                        ".db" => LoadDuckDBSource(originalPath),
-                        ".csv" => LoadCsvSource(originalPath),
-                        ".txt" => LoadTextSource(originalPath),
+                        ".db" => originalPath,
+                        ".csv" => ConvertCsvToDuckDB(originalPath, originalDbPath),
+                        ".txt" => ConvertTextToDuckDB(originalPath, originalDbPath),
                         _ => throw new NotSupportedException($"Unsupported file extension: {extension}")
                     };
                 }
@@ -295,70 +307,87 @@ namespace Motely.Executors
             }
         }
 
-        private (IEnumerable<string>? seeds, bool preSorted) LoadDuckDBSource(string dbPath)
+        /// <summary>
+        /// Convert CSV to DuckDB and return dbPath. ONE TRUE WAY!
+        /// </summary>
+        private string? ConvertCsvToDuckDB(string csvPath, string dbPath)
         {
-            if (!_params.Quiet)
+            // Check if DB already exists - use it directly
+            if (File.Exists(dbPath))
             {
-                Console.WriteLine($"✅ Streaming seeds from DuckDB: {dbPath}");
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"✅ Using existing DuckDB: {dbPath}");
+                }
+                return dbPath;
             }
-            return (DuckDBSeeds.Stream(dbPath), true);
-        }
 
-        private (IEnumerable<string>? seeds, bool preSorted) LoadCsvSource(string csvPath)
-        {
-            // For CSV files, we'll create a temporary DuckDB database and import the CSV
-            string tempDbPath = Path.Combine("SeedSources", $"temp_{Path.GetFileNameWithoutExtension(csvPath)}.db");
-            
             if (!_params.Quiet)
             {
-                Console.WriteLine($"🔄 Converting CSV to DuckDB: {csvPath} -> {tempDbPath}");
+                Console.WriteLine($"🔄 Converting CSV to DuckDB: {csvPath} -> {dbPath}");
             }
 
             try
             {
-                // Check if temp DB already exists and is newer than CSV
-                if (File.Exists(tempDbPath) && File.GetLastWriteTime(tempDbPath) > File.GetLastWriteTime(csvPath))
-                {
-                    if (!_params.Quiet)
-                    {
-                        Console.WriteLine($"✅ Using existing DuckDB: {tempDbPath}");
-                    }
-                    return LoadDuckDBSource(tempDbPath);
-                }
-
                 // Create DuckDB database and import CSV
-                DuckDBHelper.ConvertCsvToDuckDB(csvPath, tempDbPath);
+                DuckDBHelper.ConvertCsvToDuckDB(csvPath, dbPath);
                 
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"✅ Converted CSV to DuckDB: {tempDbPath}");
+                    Console.WriteLine($"✅ Converted CSV to DuckDB: {dbPath}");
                 }
                 
-                return LoadDuckDBSource(tempDbPath);
+                // Keep source file - don't delete it! User may need it later.
+                return dbPath;
             }
             catch (Exception ex)
             {
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine($"⚠️  Failed to convert CSV to DuckDB: {ex.Message}. Falling back to text reading.");
-                }
-                return LoadTextSource(csvPath);
+                throw new Exception($"Failed to convert CSV to DuckDB: {ex.Message}", ex);
             }
         }
 
-        private (IEnumerable<string>? seeds, bool preSorted) LoadTextSource(string textPath)
+        /// <summary>
+        /// Convert text file to DuckDB and return dbPath. ONE TRUE WAY!
+        /// </summary>
+        private string? ConvertTextToDuckDB(string textPath, string dbPath)
         {
-            List<string> seeds = [
-                .. File.ReadAllLines(textPath)
-                    .Where(static s => !string.IsNullOrWhiteSpace(s)),
-            ];
-            
+            // Check if DB already exists - use it directly
+            if (File.Exists(dbPath))
+            {
+                if (!_params.Quiet)
+                {
+                    Console.WriteLine($"✅ Using existing DuckDB: {dbPath}");
+                }
+                return dbPath;
+            }
+
             if (!_params.Quiet)
             {
-                Console.WriteLine($"✅ Loaded {seeds.Count} seeds from text file: {textPath}");
+                var fileInfo = new FileInfo(textPath);
+                var sizeMB = fileInfo.Length / (1024.0 * 1024.0);
+                Console.WriteLine($"🔄 Converting text file to DuckDB: {textPath} -> {dbPath}");
+                Console.WriteLine($"   File size: {sizeMB:F1} MB - this may take a minute for large files...");
             }
-            
-            return (seeds, false);
+
+            try
+            {
+                // Create DuckDB database and import text file
+                DuckDBHelper.ConvertTextToDuckDB(textPath, dbPath);
+                
+                if (!_params.Quiet)
+                {
+                    var dbInfo = new FileInfo(dbPath);
+                    var dbSizeMB = dbInfo.Length / (1024.0 * 1024.0);
+                    Console.WriteLine($"✅ Converted text file to DuckDB: {dbPath} ({dbSizeMB:F1} MB)");
+                }
+                
+                // Keep source file - don't delete it! User may need it later.
+                return dbPath;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to convert text file to DuckDB: {ex.Message}", ex);
+            }
         }
 
         private static string ResolveWordlistPath(string wordlistInput)
@@ -462,7 +491,7 @@ namespace Motely.Executors
             return config;
         }
 
-        private IMotelySearch CreateSearch(MotelyJsonConfig config, IEnumerable<string>? seeds, bool preSorted = false)
+        private IMotelySearch CreateSearch(MotelyJsonConfig config, string? duckDbPath = null)
         {
             if (!_params.Quiet)
             {
@@ -583,8 +612,8 @@ namespace Motely.Executors
                     // Configure search mode
                     if (_params.RandomSeeds.HasValue)
                         compositeSettings = compositeSettings.WithRandomSearch(_params.RandomSeeds.Value);
-                    else if (seeds != null)
-                        compositeSettings = compositeSettings.WithListSearch(seeds, preSorted);
+                    else if (!string.IsNullOrEmpty(duckDbPath))
+                        compositeSettings = compositeSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath));
                     else
                         compositeSettings = compositeSettings.WithSequentialSearch();
 
@@ -636,8 +665,11 @@ namespace Motely.Executors
                 if (_params.ProgressCallback != null)
                     passthroughSettings = passthroughSettings.WithProgressCallback(_params.ProgressCallback);
 
-                if (seeds != null)
-                    return passthroughSettings.WithListSearch(seeds, preSorted).Start();
+                // Configure search mode
+                if (_params.RandomSeeds.HasValue)
+                    return passthroughSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                else if (!string.IsNullOrEmpty(duckDbPath))
+                    return passthroughSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
                 else
                     return passthroughSettings.WithSequentialSearch().Start();
             }
@@ -704,8 +736,8 @@ namespace Motely.Executors
             // Configure search mode
             if (_params.RandomSeeds.HasValue)
                 searchSettings = searchSettings.WithRandomSearch(_params.RandomSeeds.Value);
-            else if (seeds != null)
-                searchSettings = searchSettings.WithListSearch(seeds, preSorted);
+            else if (!string.IsNullOrEmpty(duckDbPath))
+                searchSettings = searchSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath));
             else
                 searchSettings = searchSettings.WithSequentialSearch();
 
@@ -824,7 +856,7 @@ namespace Motely.Executors
         }
 
         // Keep old category-based code for now in case we need to revert
-        private IMotelySearch CreateSearchOLD_GROUPED(MotelyJsonConfig config, IEnumerable<string>? seeds, bool preSorted, MotelyJsonSeedScoreDesc scoreDesc, List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses)
+        private IMotelySearch CreateSearchOLD_GROUPED(MotelyJsonConfig config, IEnumerable<string>? seeds, bool preSorted, MotelyJsonSeedScoreDesc scoreDesc, List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses, string? duckDbPath = null)
         {
             Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
             List<FilterCategory> categories = [.. clausesByCategory.Keys];
@@ -997,8 +1029,8 @@ namespace Motely.Executors
                 if (_params.RandomSeeds.HasValue)
                     return (IMotelySearch)
                         compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
-                else if (seeds != null)
-                    return (IMotelySearch)compositeSettings.WithListSearch(seeds, preSorted).Start();
+                else if (!string.IsNullOrEmpty(duckDbPath))
+                    return (IMotelySearch)compositeSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
                 else
                     return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
             }
@@ -1272,21 +1304,21 @@ namespace Motely.Executors
                 searchSettings = searchSettings.WithEndBatchIndex((long)_params.EndBatch);
             }
 
-            // Start search
+            // Start search - ONE TRUE WAY: DuckDB provider!
             if (_params.RandomSeeds.HasValue)
             {
                 // Use random seed provider for testing
                 return (IMotelySearch)
                     searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
             }
-            else if (seeds != null)
+            else if (!string.IsNullOrEmpty(duckDbPath))
             {
-                // Use provided seed list (streaming IEnumerable for DuckDB)
-                return (IMotelySearch)searchSettings.WithListSearch(seeds, preSorted).Start();
+                // Use DuckDB seed provider - streams directly from DB, no memory loading!
+                return (IMotelySearch)searchSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
             }
             else
             {
-                // Use sequential search
+                // Use sequential search (for specific seeds or small lists handled elsewhere)
                 return (IMotelySearch)searchSettings.WithSequentialSearch().Start();
             }
         }

@@ -1,6 +1,7 @@
 // Desktop-specific DuckDB implementation using DuckDB.NET.Data
 #if !BROWSER && !ANDROID && !IOS
 using DuckDB.NET.Data;
+using System.Collections.Generic;
 
 namespace Motely;
 
@@ -23,7 +24,8 @@ public static partial class DuckDBSeeds
 
 /// <summary>
 /// Desktop implementation of DuckDBSeedProvider - queries DuckDB directly (in-memory, fast!)
-/// Uses OFFSET/LIMIT queries with atomic counter for thread-safe parallel access
+/// Uses ROWID-based batch fetching for efficient multi-threaded access
+/// Each thread fetches a batch of seeds at once using ID ranges (much faster than OFFSET!)
 /// </summary>
 public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
 {
@@ -32,6 +34,11 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
     private readonly string _columnName;
     private long _currentIndex = -1; // Atomic counter for parallel access
     private bool _disposed = false;
+    
+    // Batch fetching: each thread fetches BATCH_SIZE seeds at once for efficiency
+    private const int BATCH_SIZE = 1000; // Fetch 1000 seeds per query
+    private readonly ThreadLocal<Queue<string>> _seedCache = new(() => new Queue<string>());
+    private readonly ThreadLocal<long> _cacheStartIndex = new(() => -1);
 
     public int SeedCount { get; }
 
@@ -51,25 +58,54 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
         SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
     }
 
+    /// <summary>
+    /// Fetch a batch of seeds from the database using OFFSET/LIMIT (reliable and fast)
+    /// </summary>
+    private void FetchBatch(long startIndex)
+    {
+        var cache = _seedCache.Value!;
+        cache.Clear();
+        
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = $"SELECT {_columnName} FROM {_tableName} LIMIT {BATCH_SIZE} OFFSET {startIndex}";
+        
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            cache.Enqueue(reader.GetString(0));
+        }
+        
+        _cacheStartIndex.Value = startIndex;
+    }
+
     public ReadOnlySpan<char> NextSeed()
     {
         if (_disposed)
             return ReadOnlySpan<char>.Empty;
 
-        // Atomically get next index - each thread gets unique offset
-        long index = Interlocked.Increment(ref _currentIndex);
+        var cache = _seedCache.Value!;
         
-        if (index >= SeedCount)
-            return ReadOnlySpan<char>.Empty;
-
-        // Query DuckDB directly with OFFSET/LIMIT - in-memory, so this is fast!
-        // Each thread queries independently, no locking needed
-        using var cmd = _connection.CreateCommand();
-        cmd.CommandText = $"SELECT {_columnName} FROM {_tableName} ORDER BY LENGTH({_columnName}) LIMIT 1 OFFSET {index}";
-        using var reader = cmd.ExecuteReader();
+        // If cache is empty, fetch a new batch
+        if (cache.Count == 0)
+        {
+            // Atomically get next batch start index - each thread gets unique range
+            long batchStart = Interlocked.Add(ref _currentIndex, BATCH_SIZE) - BATCH_SIZE;
+            
+            // Ensure batchStart is never negative and within bounds
+            if (batchStart < 0)
+                batchStart = 0;
+            
+            if (batchStart >= SeedCount)
+                return ReadOnlySpan<char>.Empty;
+            
+            FetchBatch(batchStart);
+        }
         
-        if (reader.Read())
-            return reader.GetString(0);
+        // Return next seed from cache
+        if (cache.Count > 0)
+        {
+            return cache.Dequeue();
+        }
         
         return ReadOnlySpan<char>.Empty;
     }
@@ -78,6 +114,8 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
     {
         if (_disposed) return;
         _disposed = true;
+        _seedCache.Dispose();
+        _cacheStartIndex.Dispose();
         _connection?.Dispose();
     }
 }

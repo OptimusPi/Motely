@@ -20,7 +20,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "Joker",
             Value = "Blueprint",
-            Sources = new MotelyJsonConfig.SourcesConfig
+            Sources = new SourcesConfig
             {
                 ShopSlots = wantedSlots
             },
@@ -69,7 +69,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "Joker",
             Value = "Joker",
-            Sources = new MotelyJsonConfig.SourcesConfig
+            Sources = new SourcesConfig
             {
                 ShopSlots = new[] { 0, 2, 5 }
             },
@@ -170,7 +170,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "TarotCard",
             Value = "The Fool",
-            Sources = new MotelyJsonConfig.SourcesConfig
+            Sources = new SourcesConfig
             {
                 ShopSlots = wantedSlots
             },
@@ -198,7 +198,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "SpectralCard",
             Value = "Ankh",
-            Sources = new MotelyJsonConfig.SourcesConfig
+            Sources = new SourcesConfig
             {
                 ShopSlots = wantedSlots
             },
@@ -224,7 +224,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "PlanetCard",
             Value = "Pluto",
-            Sources = new MotelyJsonConfig.SourcesConfig
+            Sources = new SourcesConfig
             {
                 ShopSlots = wantedSlots
             },

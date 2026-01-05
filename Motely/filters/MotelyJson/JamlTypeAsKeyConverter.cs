@@ -2,6 +2,7 @@ using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 using Motely.Filters.MotelyJson;
+using Motely.Filters;
 using System.Linq;
 using System.Reflection;
 
@@ -121,6 +122,11 @@ namespace Motely.Filters.MotelyJson
                         var clausesValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>));
                         entries[key] = clausesValue!;
                     }
+                    else if (string.Equals(key, "sources", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var sourcesValue = objectFactory(reader, typeof(SourcesConfig));
+                        entries[key] = sourcesValue!;
+                    }
                     else
                     {
                         var nodeValue = objectFactory(reader, typeof(object));
@@ -203,59 +209,19 @@ namespace Motely.Filters.MotelyJson
                 
                 foreach (var entry in entries)
                 {
-                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("values", StringComparison.OrdinalIgnoreCase) || entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase))
+                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || 
+                        entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase) || 
+                        entry.Key.Equals("values", StringComparison.OrdinalIgnoreCase) || 
+                        entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase))
                         continue;
+                    
                     var property = FindPropertyWithAlias(clause.GetType(), entry.Key);
                     if (property != null && property.CanWrite)
                     {
-                        if (property.PropertyType == typeof(string))
-                            property.SetValue(clause, entry.Value?.ToString());
-                        else if (property.PropertyType == typeof(int[]))
+                        var handler = PropertyTypeHandlerRegistry.GetHandler(property.PropertyType);
+                        if (handler != null)
                         {
-                            int[]? intArray = null;
-                            if (entry.Value is object[] array)
-                                intArray = array.Cast<int>().ToArray();
-                            else if (entry.Value is System.Collections.IList list)
-                                intArray = list.Cast<object>().Select(o => Convert.ToInt32(o)).ToArray();
-                            if (intArray != null)
-                                property.SetValue(clause, intArray);
-                        }
-                        else if (property.PropertyType == typeof(string[]))
-                        {
-                            string[]? stringArray = null;
-                            if (entry.Value is object[] array)
-                                stringArray = array.Select(o => o?.ToString() ?? "").ToArray();
-                            else if (entry.Value is System.Collections.IList list)
-                                stringArray = list.Cast<object>().Select(o => o?.ToString() ?? "").ToArray();
-                            if (stringArray != null)
-                                property.SetValue(clause, stringArray);
-                        }
-                        else if (property.PropertyType == typeof(int))
-                        {
-                            if (int.TryParse(entry.Value?.ToString(), out var intValue))
-                                property.SetValue(clause, intValue);
-                        }
-                        else if (property.PropertyType == typeof(int?))
-                        {
-                            if (entry.Value == null)
-                                property.SetValue(clause, null);
-                            else if (int.TryParse(entry.Value.ToString(), out var intValue))
-                                property.SetValue(clause, intValue);
-                        }
-                        else if (property.PropertyType == typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>))
-                        {
-                            if (entry.Value is List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList)
-                                property.SetValue(clause, clausesList);
-                            else if (entry.Value is System.Collections.IList list)
-                            {
-                                var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-                                foreach (var item in list)
-                                {
-                                    if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
-                                        convertedList.Add(filterClause);
-                                }
-                                property.SetValue(clause, convertedList);
-                            }
+                            handler.SetValue(property, clause, entry.Value);
                         }
                     }
                 }

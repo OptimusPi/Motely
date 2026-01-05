@@ -69,7 +69,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     public List<MotelyJokerSticker>? StickerEnums { get; init; } // ADDED: Preserve sticker requirements
     public bool IsWildcard { get; init; }
     public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
-    public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
+    public SourcesConfig? Sources { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedShopSlots { get; init; } = new bool[1024]; // Support large maxShopSlot values (600+)
     public bool[] WantedPackSlots { get; init; } = new bool[6];
@@ -472,7 +472,7 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     public MotelyTarotCard? TarotType { get; init; }
     public List<MotelyTarotCard>? TarotTypes { get; init; }
     public bool IsWildcard { get; init; }
-    public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
+    public SourcesConfig? Sources { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedPackSlots { get; init; } = new bool[6];
     public bool[] WantedShopSlots { get; init; } = new bool[1024];
@@ -729,7 +729,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     public MotelySpectralCard? SpectralType { get; init; }
     public List<MotelySpectralCard>? SpectralTypes { get; init; }
     public bool IsWildcard { get; init; }
-    public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
+    public SourcesConfig? Sources { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedShopSlots { get; init; } = new bool[1024];
     public bool[] WantedPackSlots { get; init; } = new bool[6];
@@ -886,7 +886,7 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     public MotelyPlanetCard? PlanetType { get; init; }
     public List<MotelyPlanetCard>? PlanetTypes { get; init; }
     public bool IsWildcard { get; init; }
-    public MotelyJsonConfig.SourcesConfig? Sources { get; init; }
+    public SourcesConfig? Sources { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
     public bool[] WantedShopSlots { get; init; } = new bool[1024];
     public bool[] WantedPackSlots { get; init; } = new bool[6];
