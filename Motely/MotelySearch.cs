@@ -1024,6 +1024,20 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             in MotelySearchContextParams searchParams
         )
         {
+            // Bounds check to prevent access violation
+            if (_filterSeedBatches == null || Search._additionalFilters == null || filterIndex < 0 || filterIndex >= Search._additionalFilters.Length)
+            {
+                DebugLogger.Log($"[BATCH] ERROR: Invalid filterIndex {filterIndex}, _additionalFilters={(Search._additionalFilters == null ? "NULL" : $"Length={Search._additionalFilters.Length}")}");
+                return;
+            }
+
+            // Validate searchParams
+            if (searchParams.SeedHashCache == null)
+            {
+                DebugLogger.Log($"[BATCH] ERROR: SeedHashCache is null");
+                return;
+            }
+
             FilterSeedBatch* filterBatch = &_filterSeedBatches[filterIndex];
 
             Debug.Assert(
@@ -1157,8 +1171,16 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
                 else
                 {
-                    // Otherwise, we batch the seeds up for the next filter :3
-                    BatchSeeds(nextFilterIndex, searchResultMask, in searchParams);
+                    // Bounds check before batching for next filter
+                    if (nextFilterIndex < Search._additionalFilters.Length)
+                    {
+                        // Otherwise, we batch the seeds up for the next filter :3
+                        BatchSeeds(nextFilterIndex, searchResultMask, in searchParams);
+                    }
+                    else
+                    {
+                        DebugLogger.Log($"[BATCH] ERROR: nextFilterIndex {nextFilterIndex} >= _additionalFilters.Length {Search._additionalFilters.Length}");
+                    }
                 }
             }
 
@@ -1238,9 +1260,12 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // If we have fewer than 8 seeds remaining, search them individually
             if (seedsRemainingInProvider < Motely.MaxVectorWidth)
             {
-                for (int i = 0; i < seedsRemainingInProvider; i++)
+                int actualSeedsToProcess = (int)Math.Min(seedsRemainingInProvider, Motely.MaxVectorWidth);
+                for (int i = 0; i < actualSeedsToProcess; i++)
                 {
-                    SearchSingleSeed(SeedProvider.NextSeed());
+                    ReadOnlySpan<char> seed = SeedProvider.NextSeed();
+                    if (seed.IsEmpty) break;
+                    SearchSingleSeed(seed);
                 }
                 return;
             }
@@ -1269,14 +1294,24 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     break;
                 }
 
-                seedLengths[seedIdx] = seed.Length;
-
-                if (seedLengths[0] != seed.Length)
-                    homogeneousSeedLength = false;
-
-                for (int i = 0; i < seed.Length; i++)
+                // Bounds check for seedLengths array
+                if (seedIdx < Motely.MaxVectorWidth)
                 {
-                    ((double*)_seedCharacterMatrix)[i * Motely.MaxVectorWidth + seedIdx] = seed[i];
+                    seedLengths[seedIdx] = seed.Length;
+
+                    if (seedIdx > 0 && seedLengths[0] != seed.Length)
+                        homogeneousSeedLength = false;
+                }
+
+                // Bounds check for seed length and matrix access
+                int seedLen = Math.Min(seed.Length, Motely.MaxSeedLength);
+                for (int i = 0; i < seedLen; i++)
+                {
+                    int matrixIndex = i * Motely.MaxVectorWidth + seedIdx;
+                    if (matrixIndex >= 0 && matrixIndex < Motely.MaxSeedLength * Motely.MaxVectorWidth)
+                    {
+                        ((double*)_seedCharacterMatrix)[matrixIndex] = seed[i];
+                    }
                 }
                 actualSeedCount++;
             }

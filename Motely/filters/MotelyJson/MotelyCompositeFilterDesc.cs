@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Linq;
 using Motely.Utils;
+using static Motely.Utils.NullCheckExtensions;
 
 namespace Motely.Filters;
 
@@ -161,7 +162,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
         cloned.CopyParsedEnumsFrom(source);
 
         // Recursively clone nested clauses with the same ante!
-        if (source.Clauses != null && source.Clauses.Count > 0)
+        if (!source.Clauses.IsNullOrEmpty() && source.Clauses != null)
         {
             cloned.Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
             foreach (var nestedClause in source.Clauses)
@@ -171,6 +172,54 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
         }
 
         return cloned;
+    }
+
+    /// <summary>
+    /// Propagates antes from parent clause to all children recursively.
+    /// Creates separate filter groups for each ante, then ORs them together.
+    /// </summary>
+    private static List<IMotelySeedFilter> PropagateAntesToChildren(
+        MotelyJsonConfig.MotleyJsonFilterClause parentClause,
+        ref MotelyFilterCreationContext ctx,
+        bool isAndClause
+    )
+    {
+        if (!parentClause.AntesWasExplicitlySet || 
+            parentClause.Antes.IsNullOrEmpty() ||
+            parentClause.Clauses.IsNullOrEmpty())
+        {
+            return new List<IMotelySeedFilter>();
+        }
+
+        var anteSpecificFilters = new List<IMotelySeedFilter>();
+
+        foreach (var ante in parentClause.Antes!)
+        {
+            if (isAndClause)
+            {
+                // For AND: Clone all children with this ante, create AND filter
+                var clonedChildren = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                foreach (var child in parentClause.Clauses!)
+                {
+                    clonedChildren.Add(CloneClauseWithAnte(child, ante));
+                }
+                var anteComposite = new MotelyCompositeFilterDesc(clonedChildren);
+                anteSpecificFilters.Add(anteComposite.CreateFilter(ref ctx));
+            }
+            else
+            {
+                // For OR: Clone each child separately with this ante, create individual filters
+                foreach (var child in parentClause.Clauses!)
+                {
+                    var clonedChild = CloneClauseWithAnte(child, ante);
+                    var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clonedChild };
+                    var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
+                    anteSpecificFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                }
+            }
+        }
+
+        return anteSpecificFilters;
     }
 
     private static IMotelySeedFilter CreateAndFilter(
@@ -183,46 +232,26 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
         foreach (var andClause in andClauses)
         {
-            if (andClause.Clauses == null || andClause.Clauses.Count == 0)
+            if (andClause.Clauses.IsNullOrEmpty())
                 continue; // Skip empty And clause
 
             // Check if Antes was EXPLICITLY SET (not just defaulted)
             // If explicitly set, use helper behavior (propagate to children)
             // If defaulted, respect individual child Antes
-            if (
-                andClause.AntesWasExplicitlySet
-                && andClause.Antes != null
-                && andClause.Antes.Length > 0
-            )
+            var anteFilters = PropagateAntesToChildren(andClause, ref ctx, isAndClause: true);
+            if (anteFilters.Count > 0)
             {
-                // YES! Create separate AND groups for EACH ante, then OR them together
-                // So: (child1[ante4] AND child2[ante4]) OR (child1[ante5] AND child2[ante5]) OR ...
-                var anteSpecificAndFilters = new List<IMotelySeedFilter>();
-
-                foreach (var ante in andClause.Antes)
-                {
-                    // Clone each child clause with this specific ante (RECURSIVELY!)
-                    var clonedChildren = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-                    foreach (var child in andClause.Clauses)
-                    {
-                        // Use the recursive helper to propagate ante to ALL descendants
-                        var clonedChild = CloneClauseWithAnte(child, ante);
-                        clonedChildren.Add(clonedChild);
-                    }
-
-                    // Create AND filter for this specific ante
-                    var anteComposite = new MotelyCompositeFilterDesc(clonedChildren);
-                    anteSpecificAndFilters.Add(anteComposite.CreateFilter(ref ctx));
-                }
-
                 // Wrap all ante-specific ANDs in an OR
-                nestedFilters.Add(new OrFilter(anteSpecificAndFilters));
+                nestedFilters.Add(new OrFilter(anteFilters));
             }
             else
             {
                 // No antes array on parent - just process normally
-                var nestedComposite = new MotelyCompositeFilterDesc(andClause.Clauses);
-                nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                if (andClause.Clauses != null)
+                {
+                    var nestedComposite = new MotelyCompositeFilterDesc(andClause.Clauses);
+                    nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                }
             }
         }
 
@@ -239,36 +268,16 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
 
         foreach (var orClause in orClauses)
         {
-            if (orClause.Clauses == null || orClause.Clauses.Count == 0)
+            if (orClause.Clauses.IsNullOrEmpty())
                 continue; // Skip empty Or clause
 
             // Check if parent OR clause has Antes EXPLICITLY SET (not just defaulted)
             // If Antes was explicitly set, use helper behavior (propagate to children)
             // If Antes was defaulted (not explicitly set), respect individual child Antes
-            if (
-                orClause.AntesWasExplicitlySet
-                && orClause.Antes != null
-                && orClause.Antes.Length > 0
-            )
+            var anteFilters = PropagateAntesToChildren(orClause, ref ctx, isAndClause: false);
+            if (anteFilters.Count > 0)
             {
-                // YES! Clone each child clause for each ante, then OR them all together
-                // So: (child1[ante4]) OR (child2[ante4]) OR (child1[ante5]) OR (child2[ante5]) OR ...
-                foreach (var ante in orClause.Antes)
-                {
-                    foreach (var child in orClause.Clauses)
-                    {
-                        // Use the recursive helper to propagate ante to ALL descendants
-                        var clonedChild = CloneClauseWithAnte(child, ante);
-
-                        // Create a composite filter with just this one cloned clause
-                        var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause>
-                        {
-                            clonedChild,
-                        };
-                        var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
-                        nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
-                    }
-                }
+                nestedFilters.AddRange(anteFilters);
             }
             else
             {
@@ -277,16 +286,19 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 // If we have ["King", "Queen", "Jack"], we want "King OR Queen OR Jack"
                 // NOT "(King AND Queen AND Jack) as one group"
                 // So we create a separate filter for EACH individual clause
-                foreach (var individualClause in orClause.Clauses)
+                if (orClause.Clauses != null)
                 {
-                    // Create a composite filter with just this one clause
-                    // This prevents same-type items from being grouped together
-                    var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    foreach (var individualClause in orClause.Clauses)
                     {
-                        individualClause,
-                    };
-                    var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
-                    nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                        // Create a composite filter with just this one clause
+                        // This prevents same-type items from being grouped together
+                        var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                        {
+                            individualClause,
+                        };
+                        var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
+                        nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
+                    }
                 }
             }
         }
@@ -350,40 +362,25 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     {
         var nestedFilters = new List<IMotelySeedFilter>();
 
-        if (andClause.Clauses == null || andClause.Clauses.Count == 0)
+        if (andClause.Clauses.IsNullOrEmpty())
             return new AndFilter(nestedFilters); // Empty And fails all
 
         // Check if Antes was EXPLICITLY SET
-        if (
-            andClause.AntesWasExplicitlySet
-            && andClause.Antes != null
-            && andClause.Antes.Length > 0
-        )
+        var anteFilters = PropagateAntesToChildren(andClause, ref ctx, isAndClause: true);
+        if (anteFilters.Count > 0)
         {
-            // Create separate AND groups for EACH ante, then OR them together
-            var anteSpecificAndFilters = new List<IMotelySeedFilter>();
-
-            foreach (var ante in andClause.Antes)
-            {
-                var clonedChildren = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-                foreach (var child in andClause.Clauses)
-                {
-                    var clonedChild = CloneClauseWithAnte(child, ante);
-                    clonedChildren.Add(clonedChild);
-                }
-
-                var anteComposite = new MotelyCompositeFilterDesc(clonedChildren);
-                anteSpecificAndFilters.Add(anteComposite.CreateFilter(ref ctx));
-            }
-
             // Wrap all ante-specific ANDs in an OR
-            return new OrFilter(anteSpecificAndFilters);
+            return new OrFilter(anteFilters);
         }
         else
         {
             // No antes array on parent - just process normally
-            var nestedComposite = new MotelyCompositeFilterDesc(andClause.Clauses);
-            return nestedComposite.CreateFilter(ref ctx);
+            if (andClause.Clauses != null)
+            {
+                var nestedComposite = new MotelyCompositeFilterDesc(andClause.Clauses);
+                return nestedComposite.CreateFilter(ref ctx);
+            }
+            return new AndFilter(new List<IMotelySeedFilter>());
         }
     }
 

@@ -224,12 +224,7 @@ public struct MotelyJsonSeedScoreDesc(
 
                             if (!clauseSatisfied)
                             {
-                                // DebugLogger.Log($"[Score] Voucher clause not satisfied: {clause.Value}"); // DISABLED FOR PERFORMANCE
                                 return false;
-                            }
-                            else
-                            {
-                                // DebugLogger.Log($"[Score] Voucher clause satisfied: {clause.Value}"); // DISABLED FOR PERFORMANCE
                             }
                         }
 

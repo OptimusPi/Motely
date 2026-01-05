@@ -125,7 +125,7 @@ public sealed class JsonFilterSlicedChainTests
                     Type = "Joker",
                     Value = "Joker",
                     Antes = new int[] { 3 },
-                    Sources = new MotelyJsonConfig.SourcesConfig
+                    Sources = new SourcesConfig
                     {
                         ShopSlots = new int[] { 0, 1, 2, 3, 4 }
                     }
@@ -143,7 +143,7 @@ public sealed class JsonFilterSlicedChainTests
                     Type = "TarotCard",
                     Value = "The Fool",
                     Antes = new int[] { 1 },
-                    Sources = new MotelyJsonConfig.SourcesConfig
+                    Sources = new SourcesConfig
                     {
                         PackSlots = new int[] { 0, 1, 2 }
                     }

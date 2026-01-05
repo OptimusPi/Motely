@@ -19,6 +19,10 @@ namespace Motely.Filters;
 /// </summary>
 public static class JamlFormatter
 {
+    // Constants for array inlining validation
+    private const int MaxInlineStringLength = 50;
+    private const int MaxSimpleValueLength = 30;
+
     // Properties that should have inline numeric arrays
     private static readonly HashSet<string> InlineArrayProperties = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -39,6 +43,15 @@ public static class JamlFormatter
         "tag", "blind", "boss", "card", "playingcard", "standardcard", "event",
         "tarotcard", "planetcard", "spectralcard"
     };
+
+    // Shared regex patterns for JAML processing
+    private static class Patterns
+    {
+        public static readonly string TypeAsKeyMatch = @"^-\s*type:\s*['""]?(\w+)['""]?\s*$";
+        public static readonly string ValueMatch = @"^value:\s*(.+)$";
+        public static readonly string ArrayPropertyMatch = @"^(\w+):\s*$";
+        public static readonly string InlineArrayMatch = @"^(\w+):\s*\[\s*(.+?)\s*\]\s*$";
+    }
 
     /// <summary>
     /// Format a MotelyJsonConfig to clean JAML string
@@ -115,7 +128,7 @@ public static class JamlFormatter
             // Look for "- type: X" followed by "  value: Y"
             if (trimmed.StartsWith("- type:", StringComparison.OrdinalIgnoreCase))
             {
-                var typeMatch = Regex.Match(trimmed, @"^-\s*type:\s*['""]?(\w+)['""]?\s*$", RegexOptions.IgnoreCase);
+                var typeMatch = Regex.Match(trimmed, Patterns.TypeAsKeyMatch, RegexOptions.IgnoreCase);
                 if (typeMatch.Success && i + 1 < lines.Length)
                 {
                     var typeName = typeMatch.Groups[1].Value.ToLowerInvariant();
@@ -123,7 +136,7 @@ public static class JamlFormatter
                     var nextTrimmed = nextLine.TrimStart();
                     
                     // Check if next line is "value: X"
-                    var valueMatch = Regex.Match(nextTrimmed, @"^value:\s*(.+)$", RegexOptions.IgnoreCase);
+                    var valueMatch = Regex.Match(nextTrimmed, Patterns.ValueMatch, RegexOptions.IgnoreCase);
                     if (valueMatch.Success && ValidTypes.Contains(typeName))
                     {
                         var value = valueMatch.Groups[1].Value.Trim();
@@ -142,44 +155,66 @@ public static class JamlFormatter
                 }
             }
 
-            // Check for numeric array properties that should be inlined
-            var arrayPropMatch = Regex.Match(trimmed, @"^(\w+):\s*$");
+            // Check for array properties that should be inlined (numeric arrays, string arrays like stickers)
+            // Match: "propName:" or "  propName:" (with optional trailing whitespace)
+            var arrayPropMatch = Regex.Match(trimmed, Patterns.ArrayPropertyMatch);
             if (arrayPropMatch.Success && InlineArrayProperties.Contains(arrayPropMatch.Groups[1].Value))
             {
                 var propName = arrayPropMatch.Groups[1].Value;
                 var values = new List<string>();
                 var j = i + 1;
                 
-                // Collect array items
+                // Collect array items that follow this property
                 while (j < lines.Length)
                 {
                     var itemLine = lines[j];
+                    if (string.IsNullOrWhiteSpace(itemLine))
+                    {
+                        j++;
+                        continue;
+                    }
+                    
                     var itemTrimmed = itemLine.TrimStart();
                     var itemIndent = itemLine.Length - itemTrimmed.Length;
                     
-                    // Check if this is an array item at the correct indent level
-                    if (itemIndent > indent && itemTrimmed.StartsWith("- "))
+                    // Stop if we hit a line at same or less indent (end of array, next property)
+                    if (itemIndent <= indent)
+                    {
+                        break;
+                    }
+                    
+                    // Check if this is an array item (starts with "- " at deeper indent)
+                    if (itemTrimmed.StartsWith("- "))
                     {
                         var itemValue = itemTrimmed[2..].Trim();
-                        // Only inline if it's a simple value (number or short string)
-                        if (int.TryParse(itemValue, out _) || 
+                        
+                        // Accept simple values: numbers, quoted strings, or short unquoted strings
+                        // For stickers and other string arrays, accept unquoted strings
+                        bool isValidValue = int.TryParse(itemValue, out _) || 
                             (itemValue.StartsWith("'") && itemValue.EndsWith("'")) ||
                             (itemValue.StartsWith("\"") && itemValue.EndsWith("\"")) ||
-                            (!itemValue.Contains(':') && itemValue.Length < 30))
+                            (!itemValue.Contains(':') && !itemValue.Contains('[') && !itemValue.Contains('{') && 
+                             !itemValue.Contains('}') && !itemValue.Contains(']') && itemValue.Length < MaxInlineStringLength);
+                        
+                        if (isValidValue)
                         {
-                            // Remove quotes for numbers
-                            if (int.TryParse(itemValue.Trim('\'', '"'), out var num))
+                            // Remove quotes if present
+                            var cleanValue = itemValue.Trim('\'', '"');
+                            if (int.TryParse(cleanValue, out var num))
                             {
                                 values.Add(num.ToString());
                             }
                             else
                             {
-                                values.Add(itemValue.Trim('\'', '"'));
+                                // For string values, add them as-is
+                                values.Add(cleanValue);
                             }
                             j++;
                             continue;
                         }
                     }
+                    
+                    // If we get here, it's not an array item, stop collecting
                     break;
                 }
                 
@@ -193,7 +228,7 @@ public static class JamlFormatter
             }
 
             // Check for already-inline arrays that need reformatting (remove spaces)
-            var inlineArrayMatch = Regex.Match(trimmed, @"^(\w+):\s*\[\s*(.+?)\s*\]\s*$");
+            var inlineArrayMatch = Regex.Match(trimmed, Patterns.InlineArrayMatch);
             if (inlineArrayMatch.Success && InlineArrayProperties.Contains(inlineArrayMatch.Groups[1].Value))
             {
                 var propName = inlineArrayMatch.Groups[1].Value;

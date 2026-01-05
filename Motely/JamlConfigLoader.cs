@@ -93,7 +93,24 @@ public static class JamlConfigLoader
             // Include inner exception and stack trace for better debugging
             var innerMsg = ex.InnerException?.Message;
             var details = innerMsg != null ? $" -> {innerMsg}" : "";
-            error = $"Failed to parse JAML: {ex.Message}{details}\n{ex.StackTrace}";
+            
+            // Try to extract line number from YAML parser exceptions
+            var lineInfo = "";
+            if (ex.Message.Contains("Line:") || ex.Message.Contains("at Line"))
+            {
+                var lineMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Line:\s*(\d+)");
+                if (lineMatch.Success)
+                {
+                    lineInfo = $" (Line {lineMatch.Groups[1].Value})";
+                }
+            }
+            
+            error = $"Failed to parse JAML{lineInfo}: {ex.Message}{details}\n" +
+                   $"💡 Common issues:\n" +
+                   $"  - Check YAML syntax (indentation, colons, brackets)\n" +
+                   $"  - Verify property names match schema\n" +
+                   $"  - Ensure array properties use [] brackets\n" +
+                   $"{ex.StackTrace}";
 
             return false;
         }
@@ -225,12 +242,12 @@ public static class JamlConfigLoader
                 var colonIndex = trimmed.IndexOf(':');
                 if (colonIndex > 0)
                 {
-                    var keyPart = trimmed.Substring(0, colonIndex).Trim().ToLowerInvariant();
+                    var keyPart = trimmed.Substring(0, colonIndex).Trim();
                     
                     // Check plural keys
                     foreach (var pluralKey in pluralTypeKeys)
                     {
-                        if (keyPart == pluralKey.ToLowerInvariant())
+                        if (string.Equals(keyPart, pluralKey, StringComparison.OrdinalIgnoreCase))
                         {
                             var indent = line.Substring(0, line.Length - trimmed.Length);
                             var singularType = GetSingularTypeName(pluralKey);
@@ -294,6 +311,7 @@ public static class JamlConfigLoader
 
     private static string GetSingularTypeName(string pluralKey)
     {
+        // Normalize to lowercase for switch expression
         return pluralKey.ToLowerInvariant() switch
         {
             "jokers" => "joker",

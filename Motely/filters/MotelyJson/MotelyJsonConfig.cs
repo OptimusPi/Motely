@@ -135,9 +135,17 @@ public enum MotelyScoreAggregationMode
 /// <summary>
 /// MongoDB compound Operator-style JSON configuration
 /// </summary>
-public class MotelyJsonConfig
-{
-    // Metadata fields
+    /// <summary>
+    /// MongoDB compound Operator-style JSON configuration for Balatro seed filters.
+    /// 
+    /// NOTE: There is a naming inconsistency in this codebase:
+    /// - Class name: MotelyJsonConfig (correct spelling: "Motely")
+    /// - Nested class: MotleyJsonFilterClause (typo: "Motley" instead of "Motely")
+    /// This typo is preserved for backwards compatibility and to avoid breaking changes.
+    /// </summary>
+    public class MotelyJsonConfig
+    {
+        // Metadata fields
     [JsonPropertyName("name")]
     [YamlMember(Alias = "name")]
     public string? Name { get; set; }
@@ -825,80 +833,7 @@ public class MotelyJsonConfig
     [YamlIgnore]
     public int MaxBossAnte { get; private set; }
 
-    public class SourcesConfig
-    {
-        [JsonPropertyName("shopSlots")]
-        [YamlMember(Alias = "shopSlots")]
-        public int[]? ShopSlots { get; set; }
-
-        [JsonPropertyName("packSlots")]
-        [YamlMember(Alias = "packSlots")]
-        public int[]? PackSlots { get; set; }
-
-        [JsonPropertyName("minShopSlot")]
-        [YamlMember(Alias = "minShopSlot")]
-        public int? MinShopSlot { get; set; }
-
-        [JsonPropertyName("maxShopSlot")]
-        [YamlMember(Alias = "maxShopSlot")]
-        public int? MaxShopSlot { get; set; }
-
-        [JsonPropertyName("minPackSlot")]
-        [YamlMember(Alias = "minPackSlot")]
-        public int? MinPackSlot { get; set; }
-
-        [JsonPropertyName("maxPackSlot")]
-        [YamlMember(Alias = "maxPackSlot")]
-        public int? MaxPackSlot { get; set; }
-
-        [JsonPropertyName("tags")]
-        [YamlMember(Alias = "tags")]
-        public bool? Tags { get; set; }
-
-        [JsonPropertyName("requireMega")]
-        [YamlMember(Alias = "requireMega")]
-        public bool? RequireMega { get; set; }
-
-        /// <summary>Judgement tarot joker roll indices (e.g. [0, 1] for first two uses)</summary>
-        [JsonPropertyName("judgement")]
-        [YamlMember(Alias = "judgement")]
-        public int[]? Judgement { get; set; }
-
-        /// <summary>Rare tag joker roll indices (e.g. [0] for first rare tag)</summary>
-        [JsonPropertyName("rareTag")]
-        [YamlMember(Alias = "rareTag")]
-        public int[]? RareTag { get; set; }
-
-        /// <summary>Uncommon tag joker roll indices (e.g. [0] for first uncommon tag)</summary>
-        [JsonPropertyName("uncommonTag")]
-        [YamlMember(Alias = "uncommonTag")]
-        public int[]? UncommonTag { get; set; }
-
-        /// <summary>RiffRaff joker roll indices (e.g. [0, 1] for first two RiffRaff jokers - RiffRaff creates 2 jokers)</summary>
-        [JsonPropertyName("riffRaff")]
-        [YamlMember(Alias = "riffRaff")]
-        public int[]? RiffRaff { get; set; }
-
-        /// <summary>Purple Seal / 8Ball tarot card roll indices (e.g. [0] for first tarot from Purple Seal or 8Ball - both use same PRNG key "8ba")</summary>
-        [JsonPropertyName("purpleSealOrEightBall")]
-        [YamlMember(Alias = "purpleSealOrEightBall")]
-        public int[]? PurpleSealOrEightBall { get; set; }
-
-        /// <summary>Emperor tarot card roll indices (e.g. [0, 1] for first two tarot cards from Emperor - Emperor creates 2 tarot cards)</summary>
-        [JsonPropertyName("emperor")]
-        [YamlMember(Alias = "emperor")]
-        public int[]? Emperor { get; set; }
-
-        /// <summary>SixthSense spectral card roll indices (e.g. [0] for first spectral card from SixthSense joker)</summary>
-        [JsonPropertyName("sixthSense")]
-        [YamlMember(Alias = "sixthSense")]
-        public int[]? SixthSense { get; set; }
-
-        /// <summary>Seance spectral card roll indices (e.g. [0, 1] for first two spectral cards from Seance joker)</summary>
-        [JsonPropertyName("seance")]
-        [YamlMember(Alias = "seance")]
-        public int[]? Seance { get; set; }
-    }
+    // SourcesConfig moved to SourcesConfig.cs
 
     /// <summary>
     /// Try to load configuration from JSON file
@@ -1160,44 +1095,41 @@ public class MotelyJsonConfig
         }
 
         // Populate Sources.ShopSlots/PackSlots from min/max if needed
-        if (
-            item.Sources?.MinShopSlot.HasValue == true
-            || item.Sources?.MaxShopSlot.HasValue == true
-        )
+        if (item.Sources != null)
         {
-            int minSlot = item.Sources.MinShopSlot ?? 0;
-            int maxSlot = item.Sources.MaxShopSlot ?? MotelySlotLimits.MAX_SHOP_SLOT;
-            var shopSlots = new List<int>();
-            for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_SHOP_SLOT; i++)
-                shopSlots.Add(i);
-            item.Sources.ShopSlots = shopSlots.ToArray();
-            item.MinShopSlot = minSlot;
-            item.MaxShopSlot = maxSlot;
-        }
-        else if (item.Sources?.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
-        {
-            item.MinShopSlot = item.Sources.ShopSlots.Min();
-            item.MaxShopSlot = item.Sources.ShopSlots.Max();
-        }
+            if (item.Sources.MinShopSlot.HasValue || item.Sources.MaxShopSlot.HasValue)
+            {
+                int minSlot = item.Sources.MinShopSlot ?? 0;
+                int maxSlot = item.Sources.MaxShopSlot ?? MotelySlotLimits.MAX_SHOP_SLOT;
+                var shopSlots = new List<int>();
+                for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_SHOP_SLOT; i++)
+                    shopSlots.Add(i);
+                item.Sources.ShopSlots = shopSlots.ToArray();
+                item.MinShopSlot = minSlot;
+                item.MaxShopSlot = maxSlot;
+            }
+            else if (item.Sources.ShopSlots != null && item.Sources.ShopSlots.Length > 0)
+            {
+                item.MinShopSlot = item.Sources.ShopSlots.Min();
+                item.MaxShopSlot = item.Sources.ShopSlots.Max();
+            }
 
-        if (
-            item.Sources?.MinPackSlot.HasValue == true
-            || item.Sources?.MaxPackSlot.HasValue == true
-        )
-        {
-            int minSlot = item.Sources.MinPackSlot ?? 0;
-            int maxSlot = item.Sources.MaxPackSlot ?? MotelySlotLimits.MAX_PACK_SLOT;
-            var packSlots = new List<int>();
-            for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_PACK_SLOT; i++)
-                packSlots.Add(i);
-            item.Sources.PackSlots = packSlots.ToArray();
-            item.MinPackSlot = minSlot;
-            item.MaxPackSlot = maxSlot;
-        }
-        else if (item.Sources?.PackSlots != null && item.Sources.PackSlots.Length > 0)
-        {
-            item.MinPackSlot = item.Sources.PackSlots.Min();
-            item.MaxPackSlot = item.Sources.PackSlots.Max();
+            if (item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue)
+            {
+                int minSlot = item.Sources.MinPackSlot ?? 0;
+                int maxSlot = item.Sources.MaxPackSlot ?? MotelySlotLimits.MAX_PACK_SLOT;
+                var packSlots = new List<int>();
+                for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_PACK_SLOT; i++)
+                    packSlots.Add(i);
+                item.Sources.PackSlots = packSlots.ToArray();
+                item.MinPackSlot = minSlot;
+                item.MaxPackSlot = maxSlot;
+            }
+            else if (item.Sources.PackSlots != null && item.Sources.PackSlots.Length > 0)
+            {
+                item.MinPackSlot = item.Sources.PackSlots.Min();
+                item.MaxPackSlot = item.Sources.PackSlots.Max();
+            }
         }
     }
 
