@@ -1,3 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishTrimmed>false</PublishTrimmed>
     <!-- Performance optimizations -->
@@ -12,7 +13,6 @@
     <EnableAVX512F>true</EnableAVX512F>
     <EnableAVX512BW>true</EnableAVX512BW>
   </PropertyGroup>
-<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

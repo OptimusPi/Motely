@@ -1,4 +1,7 @@
 using DuckDB.NET.Data;
+using System;
+using System.IO;
+using System.Linq;
 
 namespace Motely.API;
 
@@ -19,6 +22,7 @@ public class MotelySearchDatabase : IDisposable
     /// <summary>
     /// Creates a new search database with dual connections (write + read).
     /// Opens connections immediately and validates/creates schema.
+    /// Creates appender immediately and keeps it open for the entire search.
     /// </summary>
     /// <param name="dbPath">Path to DuckDB database file</param>
     /// <param name="columnNames">Column schema (must start with 'seed', 'score', then tallies)</param>
@@ -45,6 +49,14 @@ public class MotelySearchDatabase : IDisposable
         _connection.Open();
 
         InitializeSchema();
+        
+        // CRITICAL: Create appender immediately and keep it open for the entire search!
+        // This is an in-memory database - we can keep the appender open!
+        lock (_lock)
+        {
+            _appender = _connection.CreateAppender("results");
+            _logCallback?.Invoke("[MotelySearchDatabase] Appender created and kept open for entire search");
+        }
     }
 
     public string DatabasePath => _dbPath;
@@ -53,6 +65,7 @@ public class MotelySearchDatabase : IDisposable
     /// <summary>
     /// Insert a row into the database.
     /// Thread-safe. Handles duplicate keys gracefully.
+    /// NEVER silently swallows exceptions - always logs and reports errors!
     /// </summary>
     public void InsertRow(string seed, int score, List<int>? tallies = null)
     {
@@ -64,13 +77,29 @@ public class MotelySearchDatabase : IDisposable
 
             try
             {
-                _appender ??= _connection.CreateAppender("results");
+                // Appender should already be created in constructor - but check just in case
+                if (_appender == null)
+                {
+                    _appender = _connection.CreateAppender("results");
+                    _logCallback?.Invoke("[MotelySearchDatabase] Appender created lazily (shouldn't happen)");
+                }
 
                 var row = _appender.CreateRow();
                 row.AppendValue(seed);
                 row.AppendValue(score);
 
                 int tallyCount = _columnNames.Count - 2;
+                int providedTallyCount = tallies?.Count ?? 0;
+                
+                // Validate column count match
+                if (providedTallyCount > tallyCount)
+                {
+                    var errorMsg = $"[CRITICAL] Column count mismatch! Expected {tallyCount} tallies, got {providedTallyCount}. Seed: {seed}, Columns: {string.Join(", ", _columnNames)}";
+                    _logCallback?.Invoke(errorMsg);
+                    Console.Error.WriteLine($"❌ {errorMsg}");
+                    throw new InvalidOperationException(errorMsg);
+                }
+
                 for (int i = 0; i < tallyCount; i++)
                 {
                     int value = (tallies != null && i < tallies.Count) ? tallies[i] : 0;
@@ -81,10 +110,34 @@ public class MotelySearchDatabase : IDisposable
             }
             catch (Exception ex)
             {
-                if (!ex.Message.Contains("PRIMARY KEY") && !ex.Message.Contains("Duplicate"))
+                // Check if it's a duplicate key (acceptable to ignore)
+                bool isDuplicate = ex.Message.Contains("PRIMARY KEY", StringComparison.OrdinalIgnoreCase) ||
+                                   ex.Message.Contains("Duplicate", StringComparison.OrdinalIgnoreCase) ||
+                                   ex.Message.Contains("UNIQUE constraint", StringComparison.OrdinalIgnoreCase);
+                
+                if (isDuplicate)
                 {
-                    throw;
+                    // Duplicate is acceptable - just log it quietly
+                    _logCallback?.Invoke($"[MotelySearchDatabase] Duplicate seed skipped: {seed}");
+                    return;
                 }
+
+                // ANY OTHER EXCEPTION IS CRITICAL - LOG AND THROW!
+                var errorDetails = $@"
+[CRITICAL DATABASE ERROR] Failed to insert row!
+  Seed: {seed}
+  Score: {score}
+  Tally Count: {tallies?.Count ?? 0}
+  Expected Columns: {_columnNames.Count} ({string.Join(", ", _columnNames)})
+  Exception Type: {ex.GetType().Name}
+  Exception Message: {ex.Message}
+  Stack Trace: {ex.StackTrace}
+";
+                _logCallback?.Invoke(errorDetails);
+                Console.Error.WriteLine($"❌ {errorDetails}");
+                
+                // Re-throw so caller knows insertion failed
+                throw new InvalidOperationException($"Database insert failed for seed '{seed}': {ex.Message}", ex);
             }
         }
     }
@@ -113,7 +166,7 @@ public class MotelySearchDatabase : IDisposable
 
     /// <summary>
     /// Get top N results ordered by score descending.
-    /// Closes appender to flush buffered rows before querying.
+    /// Appender stays open - DuckDB appenders handle buffering internally.
     /// </summary>
     public List<SearchResult> GetTopResults(int limit = 1000)
     {
@@ -121,15 +174,8 @@ public class MotelySearchDatabase : IDisposable
         {
             ThrowIfDisposed();
 
-            if (_appender != null)
-            {
-                try { _appender.Close(); }
-                catch (Exception ex)
-                {
-                    _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close appender in GetTopResults: {ex.Message}");
-                }
-                _appender = null;
-            }
+            // Appender stays open - no need to flush or close it!
+            // DuckDB appenders handle buffering internally and can be queried while open.
 
             var results = new List<SearchResult>();
             using var cmd = _connection.CreateCommand();
@@ -159,6 +205,7 @@ public class MotelySearchDatabase : IDisposable
 
     /// <summary>
     /// Get total count of results in database.
+    /// Appender stays open - DuckDB appenders handle buffering internally.
     /// </summary>
     public long GetResultCount()
     {
@@ -166,15 +213,8 @@ public class MotelySearchDatabase : IDisposable
         {
             ThrowIfDisposed();
 
-            if (_appender != null)
-            {
-                try { _appender.Close(); }
-                catch (Exception ex)
-                {
-                    _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close appender in GetTopResults: {ex.Message}");
-                }
-                _appender = null;
-            }
+            // Appender stays open - no need to flush or close it!
+            // DuckDB appenders handle buffering internally and can be queried while open.
 
             using var cmd = _connection.CreateCommand();
             cmd.CommandText = "SELECT COUNT(*) FROM results";
@@ -209,6 +249,7 @@ public class MotelySearchDatabase : IDisposable
 
     /// <summary>
     /// Force flush WAL to main database file.
+    /// Closes appender and checkpoints - call this when search is complete.
     /// </summary>
     public void Checkpoint()
     {
@@ -216,19 +257,76 @@ public class MotelySearchDatabase : IDisposable
         {
             ThrowIfDisposed();
 
+            // NOW we close the appender - search is done!
             if (_appender != null)
             {
-                try { _appender.Close(); }
+                try 
+                { 
+                    _appender.Close(); 
+                    _logCallback?.Invoke("[MotelySearchDatabase] Appender closed successfully before checkpoint");
+                }
                 catch (Exception ex)
                 {
-                    _logCallback?.Invoke($"[MotelySearchDatabase] Failed to close appender in GetTopResults: {ex.Message}");
+                    var errorMsg = $"[MotelySearchDatabase] CRITICAL: Failed to close appender before checkpoint: {ex.Message}\n{ex.StackTrace}";
+                    _logCallback?.Invoke(errorMsg);
+                    Console.Error.WriteLine($"❌ {errorMsg}");
+                    throw; // Don't silently swallow appender close errors!
                 }
                 _appender = null;
             }
 
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText = "FORCE CHECKPOINT";
-            cmd.ExecuteNonQuery();
+            try
+            {
+                using var cmd = _connection.CreateCommand();
+                cmd.CommandText = "FORCE CHECKPOINT";
+                cmd.ExecuteNonQuery();
+                _logCallback?.Invoke("[MotelySearchDatabase] Checkpoint completed successfully");
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"[MotelySearchDatabase] CRITICAL: Failed to checkpoint database: {ex.Message}\n{ex.StackTrace}";
+                _logCallback?.Invoke(errorMsg);
+                Console.Error.WriteLine($"❌ {errorMsg}");
+                throw; // Don't silently swallow checkpoint errors!
+            }
+        }
+    }
+
+    /// <summary>
+    /// Verify that the database actually contains data.
+    /// Throws if database is empty or inaccessible.
+    /// NOTE: This should be called AFTER Checkpoint() when appender is closed,
+    /// because DuckDB appenders buffer data and queries may not see buffered rows
+    /// until the appender is closed/flushed.
+    /// </summary>
+    public void VerifyDataWritten()
+    {
+        lock (_lock)
+        {
+            ThrowIfDisposed();
+
+            // Appender should already be closed by Checkpoint() at this point
+            // If it's still open, we might not see all buffered data in queries
+
+            try
+            {
+                var count = GetResultCount();
+                if (count == 0)
+                {
+                    var errorMsg = "[MotelySearchDatabase] CRITICAL: Database verification failed - no rows found in database!";
+                    _logCallback?.Invoke(errorMsg);
+                    Console.Error.WriteLine($"❌ {errorMsg}");
+                    throw new InvalidOperationException("Database is empty - no data was written successfully!");
+                }
+                _logCallback?.Invoke($"[MotelySearchDatabase] Verification passed - {count} rows found in database");
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"[MotelySearchDatabase] CRITICAL: Failed to verify database contents: {ex.Message}\n{ex.StackTrace}";
+                _logCallback?.Invoke(errorMsg);
+                Console.Error.WriteLine($"❌ {errorMsg}");
+                throw;
+            }
         }
     }
 

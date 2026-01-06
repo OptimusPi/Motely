@@ -222,8 +222,8 @@ must:
             // The important thing is that Sources exists and the values are handled correctly
             Assert.NotNull(clause.Sources!.ShopSlots);
             // When min=0 and max=0, it creates a range with just [0]
-            Assert.Equal(1, clause.Sources.ShopSlots!.Length);
-            Assert.Equal(0, clause.Sources.ShopSlots[0]);
+            Assert.Single(clause.Sources.ShopSlots!);
+            Assert.Equal(0, clause.Sources.ShopSlots![0]);
             // Min and max should be set to 0
             Assert.Equal(0, clause.Sources.MinShopSlot);
             Assert.Equal(0, clause.Sources.MaxShopSlot);

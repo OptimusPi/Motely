@@ -68,10 +68,23 @@ public class MotelyFilterDefaults
     {
         if (PackSlots != null)
         {
-            // User specified pack slots - filter based on ante
-            return ante == 1
-                ? PackSlots.Where(s => s <= 3).ToArray()
-                : PackSlots;
+            // User specified pack slots - filter based on ante (zero-allocation)
+            if (ante == 1)
+            {
+                int count = 0;
+                foreach (var slot in PackSlots)
+                    if (slot <= 3) count++;
+                
+                if (count == 0) return [];
+                
+                int[] result = new int[count];
+                int index = 0;
+                foreach (var slot in PackSlots)
+                    if (slot <= 3) result[index++] = slot;
+                
+                return result;
+            }
+            return PackSlots;
         }
 
         // Use hardcoded defaults
@@ -85,10 +98,23 @@ public class MotelyFilterDefaults
     {
         if (ShopSlots != null)
         {
-            // User specified shop slots - filter based on ante
-            return ante == 1
-                ? ShopSlots.Where(s => s <= 3).ToArray()
-                : ShopSlots;
+            // User specified shop slots - filter based on ante (zero-allocation)
+            if (ante == 1)
+            {
+                int count = 0;
+                foreach (var slot in ShopSlots)
+                    if (slot <= 3) count++;
+                
+                if (count == 0) return [];
+                
+                int[] result = new int[count];
+                int index = 0;
+                foreach (var slot in ShopSlots)
+                    if (slot <= 3) result[index++] = slot;
+                
+                return result;
+            }
+            return ShopSlots;
         }
 
         // Use hardcoded defaults
@@ -994,6 +1020,12 @@ public enum MotelyScoreAggregationMode
         // Parse all enums ONCE to avoid string operations in hot path
         item.InitializeParsedEnums();
 
+        // CRITICAL: Preserve Sources if it was explicitly specified in JAML (deserialized by YamlDotNet)
+        // Even if all properties are empty/null, if sources: was specified, Sources should exist.
+        // If Sources exists at this point, it means sources: was explicitly specified in JAML.
+        // Store this BEFORE any code that might modify Sources
+        bool sourcesWasExplicitlySpecified = item.Sources != null;
+
         // Merge flat properties into Sources for backwards compatibility
         DebugLogger.Log(
             $"[MERGE] Type={item.Type}, Value={item.Value}, flat ShopSlots={(item.ShopSlots == null ? "null" : $"[{string.Join(",", item.ShopSlots)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}"
@@ -1029,8 +1061,11 @@ public enum MotelyScoreAggregationMode
 
         // Don't apply GetDefaultSources anymore - we use ante-based defaults dynamically!
         // Only apply defaults for special cases that REQUIRE specific sources (like soul jokers pack-only)
+        // CRITICAL: If Sources was explicitly specified in JAML (sourcesWasExplicitlySpecified = true),
+        // we must NOT overwrite it with defaults. Sources should be preserved even if all properties are empty.
         if (
             item.Sources == null
+            && !sourcesWasExplicitlySpecified
             && item.ItemTypeEnum != MotelyFilterItemType.And
             && item.ItemTypeEnum != MotelyFilterItemType.Or
         )
@@ -1095,16 +1130,40 @@ public enum MotelyScoreAggregationMode
         }
 
         // Populate Sources.ShopSlots/PackSlots from min/max if needed
+        // CRITICAL FIX: When sources: is specified in JAML (even with empty arrays),
+        // Sources should exist. The problem is that YamlDotNet might not create SourcesConfig
+        // when all properties are null/empty, even if sources: was specified.
+        // 
+        // SOLUTION: If Sources was explicitly specified (sourcesWasExplicitlySpecified = true),
+        // ensure it exists. Then populate from min/max if needed.
+        if (sourcesWasExplicitlySpecified && item.Sources == null)
+        {
+            // Sources was detected earlier but is now null - recreate it
+            // This handles the case where YamlDotNet didn't create SourcesConfig
+            // even though sources: was specified in JAML
+            item.Sources = new SourcesConfig();
+        }
+        
         if (item.Sources != null)
         {
+            // Sources exists (either was deserialized or we just created it) - populate from min/max
             if (item.Sources.MinShopSlot.HasValue || item.Sources.MaxShopSlot.HasValue)
             {
                 int minSlot = item.Sources.MinShopSlot ?? 0;
                 int maxSlot = item.Sources.MaxShopSlot ?? MotelySlotLimits.MAX_SHOP_SLOT;
-                var shopSlots = new List<int>();
-                for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_SHOP_SLOT; i++)
-                    shopSlots.Add(i);
-                item.Sources.ShopSlots = shopSlots.ToArray();
+                int count = maxSlot - minSlot + 1;
+                if (count > 0 && maxSlot <= MotelySlotLimits.MAX_SHOP_SLOT)
+                {
+                    int[] shopSlots = new int[Math.Min(count, MotelySlotLimits.MAX_SHOP_SLOT - minSlot + 1)];
+                    int index = 0;
+                    for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_SHOP_SLOT; i++)
+                        shopSlots[index++] = i;
+                    item.Sources.ShopSlots = shopSlots;
+                }
+                else
+                {
+                    item.Sources.ShopSlots = [];
+                }
                 item.MinShopSlot = minSlot;
                 item.MaxShopSlot = maxSlot;
             }
@@ -1114,21 +1173,41 @@ public enum MotelyScoreAggregationMode
                 item.MaxShopSlot = item.Sources.ShopSlots.Max();
             }
 
-            if (item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue)
+            // Same logic for packSlots - don't auto-populate if explicitly empty
+            bool packSlotsExplicitlyEmpty = item.Sources.PackSlots != null && item.Sources.PackSlots.Length == 0;
+            
+            if ((item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue) && !packSlotsExplicitlyEmpty)
             {
+                // Only populate if packSlots wasn't explicitly set to empty array
                 int minSlot = item.Sources.MinPackSlot ?? 0;
                 int maxSlot = item.Sources.MaxPackSlot ?? MotelySlotLimits.MAX_PACK_SLOT;
-                var packSlots = new List<int>();
-                for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_PACK_SLOT; i++)
-                    packSlots.Add(i);
-                item.Sources.PackSlots = packSlots.ToArray();
+                int count = maxSlot - minSlot + 1;
+                if (count > 0 && maxSlot <= MotelySlotLimits.MAX_PACK_SLOT)
+                {
+                    int[] packSlots = new int[Math.Min(count, MotelySlotLimits.MAX_PACK_SLOT - minSlot + 1)];
+                    int index = 0;
+                    for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_PACK_SLOT; i++)
+                        packSlots[index++] = i;
+                    item.Sources.PackSlots = packSlots;
+                }
+                else
+                {
+                    item.Sources.PackSlots = [];
+                }
                 item.MinPackSlot = minSlot;
                 item.MaxPackSlot = maxSlot;
             }
             else if (item.Sources.PackSlots != null && item.Sources.PackSlots.Length > 0)
             {
+                // packSlots was explicitly set (non-empty) - derive min/max from it
                 item.MinPackSlot = item.Sources.PackSlots.Min();
                 item.MaxPackSlot = item.Sources.PackSlots.Max();
+            }
+            else if (item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue)
+            {
+                // min/max are set but packSlots is explicitly empty - just set min/max, don't populate packSlots
+                item.MinPackSlot = item.Sources.MinPackSlot ?? 0;
+                item.MaxPackSlot = item.Sources.MaxPackSlot ?? MotelySlotLimits.MAX_PACK_SLOT;
             }
         }
     }
@@ -1186,31 +1265,54 @@ public enum MotelyScoreAggregationMode
         DebugLogger.Log($"[PostProcess] Finished processing clauses. Starting voucher partitioning. Must.Count={Must?.Count}, Should.Count={Should?.Count}");
 
         // PERFORMANCE: Pre-partition clauses by type to avoid repeated iteration in hot paths
-        var mustVouchers = new List<MotelyJsonFilterClause>();
-        var mustNonVouchers = new List<MotelyJsonFilterClause>();
-        var shouldVouchers = new List<MotelyJsonFilterClause>();
-        var shouldNonVouchers = new List<MotelyJsonFilterClause>();
+        // Count first to avoid List reallocation
+        int mustVoucherCount = 0, mustNonVoucherCount = 0;
+        int shouldVoucherCount = 0, shouldNonVoucherCount = 0;
 
         foreach (var clause in Must ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
-                mustVouchers.Add(clause);
+                mustVoucherCount++;
             else
-                mustNonVouchers.Add(clause);
+                mustNonVoucherCount++;
         }
 
         foreach (var clause in Should ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
-                shouldVouchers.Add(clause);
+                shouldVoucherCount++;
             else
-                shouldNonVouchers.Add(clause);
+                shouldNonVoucherCount++;
         }
 
-        MustVouchers = mustVouchers.ToArray();
-        MustNonVouchers = mustNonVouchers.ToArray();
-        ShouldVouchers = shouldVouchers.ToArray();
-        ShouldNonVouchers = shouldNonVouchers.ToArray();
+        // Allocate exact-size arrays (zero-allocation partitioning)
+        var mustVouchers = new MotelyJsonFilterClause[mustVoucherCount];
+        var mustNonVouchers = new MotelyJsonFilterClause[mustNonVoucherCount];
+        var shouldVouchers = new MotelyJsonFilterClause[shouldVoucherCount];
+        var shouldNonVouchers = new MotelyJsonFilterClause[shouldNonVoucherCount];
+
+        int mvIdx = 0, mnvIdx = 0, svIdx = 0, snvIdx = 0;
+
+        foreach (var clause in Must ?? [])
+        {
+            if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
+                mustVouchers[mvIdx++] = clause;
+            else
+                mustNonVouchers[mnvIdx++] = clause;
+        }
+
+        foreach (var clause in Should ?? [])
+        {
+            if (clause.ItemTypeEnum == MotelyFilterItemType.Voucher)
+                shouldVouchers[svIdx++] = clause;
+            else
+                shouldNonVouchers[snvIdx++] = clause;
+        }
+
+        MustVouchers = mustVouchers;
+        MustNonVouchers = mustNonVouchers;
+        ShouldVouchers = shouldVouchers;
+        ShouldNonVouchers = shouldNonVouchers;
 
         DebugLogger.Log($"[PostProcess] Partitioned. MustVouchers={MustVouchers.Length}, ShouldVouchers={ShouldVouchers.Length}");
 

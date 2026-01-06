@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Runtime.CompilerServices;
+using Motely.Reporting;
 
 namespace Motely.Filters;
 
@@ -13,11 +14,16 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     private fixed int _tallyValues[1024];
     private int _tallyCount;
 
+    // New: Support for string/object column values (for InlineLabel, AnteDisplay, ItemDisplay)
+    // This is a managed array, so it's separate from the unsafe fixed array
+    private string[]? _columnValues;
+
     public MotelySeedScoreTally(string seed, int score)
     {
         Seed = seed;
         Score = score;
         _tallyCount = 0;
+        _columnValues = null;
     }
 
     public void AddTally(int value)
@@ -28,12 +34,41 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
         }
     }
 
+    /// <summary>
+    /// Add a string value for a column (used for InlineLabel, AnteDisplay, ItemDisplay types)
+    /// </summary>
+    public void AddColumnValue(string? value)
+    {
+        if (_columnValues == null)
+        {
+            _columnValues = new string[1024];
+        }
+
+        if (_tallyCount < 1024)
+        {
+            // _columnValues is guaranteed to be non-null here due to check above
+            _columnValues![_tallyCount] = value;
+            // Also add 0 to tally for backward compatibility (so TallyCount matches)
+            _tallyValues[_tallyCount++] = 0;
+        }
+    }
+
     public int GetTally(int index)
     {
         // Return 0 for out-of-bounds indices (graceful degradation)
         if (index < 0 || index >= _tallyCount)
             return 0;
         return _tallyValues[index];
+    }
+
+    /// <summary>
+    /// Get the string value for a column at the given index
+    /// </summary>
+    public string? GetColumnValue(int index)
+    {
+        if (index < 0 || index >= _tallyCount || _columnValues == null)
+            return null;
+        return _columnValues[index];
     }
 
     public int TallyCount => _tallyCount;
@@ -46,6 +81,26 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
             for (int i = 0; i < _tallyCount; i++)
             {
                 list.Add(_tallyValues[i]);
+            }
+            return list;
+        }
+    }
+
+    /// <summary>
+    /// Get all column values as strings (for CSV export)
+    /// Returns null for columns that have integer values (backward compatibility)
+    /// </summary>
+    public List<string?>? ColumnValues
+    {
+        get
+        {
+            if (_columnValues == null)
+                return null;
+
+            var list = new List<string?>(_tallyCount);
+            for (int i = 0; i < _tallyCount; i++)
+            {
+                list.Add(_columnValues[i]);
             }
             return list;
         }
@@ -448,11 +503,58 @@ public struct MotelyJsonSeedScoreDesc(
                     }
 
                     // Score Should clauses and add tallies (aggregation controlled by top-level mode)
+                    // Use new column architecture if available, otherwise fall back to legacy behavior
                     int totalScore = 0;
                     var seedScore = new MotelySeedScoreTally(seedStr, 0);
 
-                    if (config.Should?.Count > 0)
+                    // Check if config has explicit column definitions (future feature)
+                    // For now, create columns from Should clauses (backward compatibility)
+                    var columnDefinitions = ColumnDefinitionHelper.CreateFromShouldClauses(config);
+
+                    if (columnDefinitions.Count > 0 && config.Should != null)
                     {
+                        // New column-based scoring system
+                        // Match columns to Should clauses by index
+                        for (int i = 0; i < columnDefinitions.Count && i < config.Should.Count; i++)
+                        {
+                            var column = columnDefinitions[i];
+                            var shouldClause = config.Should[i];
+                            
+                            // Create a copy of runState for each column evaluation
+                            var columnRunState = runState;
+                            
+                            // Evaluate the column
+                            var columnValue = column.Evaluate(ref singleCtx, ref columnRunState);
+                            
+                            // Add to score if it's a ScoreTally column
+                            if (column.Type == ColumnType.ScoreTally)
+                            {
+                                // Try to parse as integer for scoring
+                                if (int.TryParse(columnValue, out var intValue))
+                                {
+                                    var scoreMultiplier = shouldClause.Score;
+                                    totalScore += intValue * scoreMultiplier;
+                                    
+                                    // Add as integer tally (backward compatibility)
+                                    seedScore.AddTally(intValue);
+                                }
+                                else
+                                {
+                                    seedScore.AddTally(0);
+                                }
+                            }
+                            else
+                            {
+                                // For non-ScoreTally columns, add as string value
+                                // Still add 0 to tally for index alignment
+                                seedScore.AddTally(0);
+                                seedScore.AddColumnValue(columnValue);
+                            }
+                        }
+                    }
+                    else if (config.Should?.Count > 0)
+                    {
+                        // Legacy scoring system (backward compatibility)
                         switch (config.ScoreAggregationMode)
                         {
                             case MotelyScoreAggregationMode.Sum:

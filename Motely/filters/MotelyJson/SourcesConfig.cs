@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NodeDeserializers;
 
 namespace Motely.Filters
 {
@@ -9,6 +10,12 @@ namespace Motely.Filters
     /// </summary>
     public class SourcesConfig
     {
+        public SourcesConfig()
+        {
+            // Initialize with null arrays - will be populated during ProcessClause if needed
+            // Empty arrays in YAML deserialize to null, so we don't pre-initialize
+        }
+
         [JsonPropertyName("shopSlots")]
         [YamlMember(Alias = "shopSlots")]
         public int[]? ShopSlots { get; set; }
