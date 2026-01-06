@@ -16,7 +16,7 @@ public class MotelyJsonFilterClauseTests
     public void JokerClause_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Blueprint",
@@ -40,7 +40,7 @@ public class MotelyJsonFilterClauseTests
     public void JokerClause_PreCalculatesAnteArray()
     {
         // Build clause with specific antes
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Blueprint",
@@ -65,7 +65,7 @@ public class MotelyJsonFilterClauseTests
     public void JokerClause_PreCalculatesShopSlotArray()
     {
         // Build clause with specific shop slots
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Joker",
@@ -95,7 +95,7 @@ public class MotelyJsonFilterClauseTests
     public void JokerClause_MultipleValues_StoresAsList()
     {
         // Build clause with multiple joker values
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Values = new[] { "Blueprint", "Brainstorm", "Showman" },
@@ -120,7 +120,7 @@ public class MotelyJsonFilterClauseTests
     public void JokerClause_SingleValue_StoresAsSingle()
     {
         // Build clause with single joker value
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Blueprint",
@@ -142,7 +142,7 @@ public class MotelyJsonFilterClauseTests
     public void JokerClause_EditionEnum_StoredForFastComparison()
     {
         // Build clause with edition requirement - use Blueprint (a regular joker, not soul joker)
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Blueprint",
@@ -166,7 +166,7 @@ public class MotelyJsonFilterClauseTests
     public void TarotCriteria_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "TarotCard",
             Value = "The Fool",
@@ -179,7 +179,7 @@ public class MotelyJsonFilterClauseTests
         jsonClause.InitializeParsedEnums();
 
         // Convert to specialized clause - THIS is where pre-calculation happens
-        var clauses = MotelyJsonTarotFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotleyJsonFilterClause> { jsonClause });
+        var clauses = MotelyJsonTarotFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause });
         var criteria = MotelyJsonTarotFilterClause.CreateCriteria(clauses);
 
         // CRITICAL: MaxShopSlotsNeeded must be pre-calculated in criteria during CreateCriteria!
@@ -194,7 +194,7 @@ public class MotelyJsonFilterClauseTests
     public void SpectralCriteria_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "SpectralCard",
             Value = "Ankh",
@@ -206,7 +206,7 @@ public class MotelyJsonFilterClauseTests
         };
         jsonClause.InitializeParsedEnums();
 
-        var clauses = MotelyJsonSpectralFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotleyJsonFilterClause> { jsonClause });
+        var clauses = MotelyJsonSpectralFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause });
         var criteria = MotelyJsonSpectralFilterClause.CreateCriteria(clauses);
 
         Assert.Equal(expected, criteria.MaxShopSlotsNeeded);
@@ -220,7 +220,7 @@ public class MotelyJsonFilterClauseTests
     public void PlanetCriteria_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "PlanetCard",
             Value = "Pluto",
@@ -232,7 +232,7 @@ public class MotelyJsonFilterClauseTests
         };
         jsonClause.InitializeParsedEnums();
 
-        var clauses = MotelyJsonPlanetFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotleyJsonFilterClause> { jsonClause });
+        var clauses = MotelyJsonPlanetFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause });
         var criteria = MotelyJsonPlanetFilterClause.CreateCriteria(clauses);
 
         Assert.Equal(expected, criteria.MaxShopSlotsNeeded);
@@ -242,7 +242,7 @@ public class MotelyJsonFilterClauseTests
     public void JokerClause_MinShopSlot_WithoutPackSlots_ShouldNotSearchPacks()
     {
         // Build clause with minShopSlot/maxShopSlot but NO packSlots
-        var jsonClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var jsonClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Values = new[] { "Blueprint", "InvisibleJoker" },

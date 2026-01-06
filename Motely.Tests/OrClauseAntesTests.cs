@@ -27,22 +27,22 @@ public sealed class OrClauseAntesTests
 
         var config = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
                     // NO Antes on parent OR clause
-                    Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
                             Antes = new[] { 1 },  // Individual ante constraint
                             ShopSlots = new[] { 1 }
                         },
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
@@ -76,21 +76,21 @@ public sealed class OrClauseAntesTests
 
         var config = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
                     Antes = new[] { 1, 2 },  // Helper prop - applies to all children
-                    Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
                             ShopSlots = new[] { 1 }
                         },
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
@@ -119,26 +119,26 @@ public sealed class OrClauseAntesTests
 
         var config = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
-                    Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
                             Antes = new[] { 1 }
                         },
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Brainstorm",
                             Antes = new[] { 2 }
                         },
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Mime",
@@ -167,15 +167,15 @@ public sealed class OrClauseAntesTests
 
         var configWithExplicitAntes = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
                     Antes = new[] { 1, 2 },  // Explicitly set
-                    Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint"
@@ -187,15 +187,15 @@ public sealed class OrClauseAntesTests
 
         var configWithoutAntes = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
                     // No Antes specified - will be defaulted
-                    Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
@@ -235,15 +235,15 @@ public sealed class OrClauseAntesTests
         // Pattern 1: Helper Antes on parent
         var helperPattern = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
                     Antes = new[] { 1, 2 },  // Helper
-                    Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint"
@@ -256,20 +256,20 @@ public sealed class OrClauseAntesTests
         // Pattern 2: Individual Antes on children
         var individualPattern = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
-                    Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                    Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
                             Antes = new[] { 1 }
                         },
-                        new MotelyJsonConfig.MotleyJsonFilterClause
+                        new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",

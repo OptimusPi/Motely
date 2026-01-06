@@ -271,7 +271,7 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int SmallBlindTagTally(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante,
         ref MotelyRunState runState,
         bool earlyExit = false
@@ -293,7 +293,7 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int BigBlindTagTally(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante,
         ref MotelyRunState runState,
         bool earlyExit = false
@@ -646,7 +646,7 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountPlayingCardOccurrences(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante,
         bool earlyExit = false
     )
@@ -760,7 +760,7 @@ public static class MotelyJsonScoring
         int ante,
         ref MotelyRunState runState,
         bool earlyExit = false,
-        MotelyJsonConfig.MotleyJsonFilterClause? originalClause = null
+        MotelyJsonConfig.MotelyJsonFilterClause? originalClause = null
     )
     {
         int tally = 0;
@@ -1314,7 +1314,7 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool CheckEditionAndStickers(
         in MotelyItem item,
-        MotelyJsonConfig.MotleyJsonFilterClause clause
+        MotelyJsonConfig.MotelyJsonFilterClause clause
     )
     {
         if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
@@ -1405,7 +1405,7 @@ public static class MotelyJsonScoring
 
     public static bool CheckSingleClause(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         ref MotelyRunState runState
     )
     {
@@ -1533,7 +1533,7 @@ public static class MotelyJsonScoring
 
     public static bool CheckTagSingle(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante
     )
     {
@@ -1629,7 +1629,7 @@ public static class MotelyJsonScoring
     /// </summary>
     public static int CountTagOccurrences(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante
     )
     {
@@ -1686,7 +1686,7 @@ public static class MotelyJsonScoring
 
     public static bool CheckBossSingle(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante,
         ref MotelyRunState runState
     )
@@ -1704,7 +1704,7 @@ public static class MotelyJsonScoring
 
     public static bool CheckVoucherSingle(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante,
         ref MotelyRunState runState
     )
@@ -1734,7 +1734,7 @@ public static class MotelyJsonScoring
 
     public static int CountOccurrences(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         ref MotelyRunState runState
     )
     {
@@ -2122,7 +2122,7 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountSoulJokerOccurrences(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         ref MotelyRunState runState
     )
     {
@@ -2293,7 +2293,7 @@ public static class MotelyJsonScoring
     /// </summary>
     private static int CountSoulJokerOccurrencesForAllAntes(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         ref MotelyRunState runState
     )
     {
@@ -2335,7 +2335,7 @@ public static class MotelyJsonScoring
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int CountSoulJokerOccurrencesForAnte(
         ref MotelySingleSearchContext ctx,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante,
         ref MotelyRunState runState
     )
@@ -2354,7 +2354,7 @@ public static class MotelyJsonScoring
         ref MotelySingleSearchContext ctx,
         ref MotelySingleJokerFixedRarityStream soulFaceStream,
         ref MotelySingleJokerFixedRarityStream soulEditionStream,
-        MotelyJsonConfig.MotleyJsonFilterClause clause,
+        MotelyJsonConfig.MotelyJsonFilterClause clause,
         int ante,
         ref MotelyRunState runState
     )

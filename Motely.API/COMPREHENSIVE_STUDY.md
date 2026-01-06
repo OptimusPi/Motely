@@ -405,9 +405,9 @@ public class MotelyJsonConfig
     public string? Deck { get; set; }
     public string? Stake { get; set; }
     
-    public List<MotleyJsonFilterClause>? Must { get; set; }
-    public List<MotleyJsonFilterClause>? Should { get; set; }
-    public List<MotleyJsonFilterClause>? MustNot { get; set; }
+    public List<MotelyJsonFilterClause>? Must { get; set; }
+    public List<MotelyJsonFilterClause>? Should { get; set; }
+    public List<MotelyJsonFilterClause>? MustNot { get; set; }
     
     public void PostProcess() {
         // Initialize enums
@@ -417,10 +417,10 @@ public class MotelyJsonConfig
 }
 ```
 
-### MotleyJsonFilterClause
+### MotelyJsonFilterClause
 
 ```csharp
-public class MotleyJsonFilterClause
+public class MotelyJsonFilterClause
 {
     public string Type { get; set; }  // "Joker", "Voucher", etc.
     public string? Value { get; set; }  // "Blueprint", "Telescope"
@@ -428,7 +428,7 @@ public class MotleyJsonFilterClause
     public int[]? Antes { get; set; }  // [1, 2, 3]
     public string? Edition { get; set; }  // "Negative", "Foil"
     public int Score { get; set; }  // For SHOULD clauses
-    public List<MotleyJsonFilterClause>? Clauses { get; set; }  // For And/Or
+    public List<MotelyJsonFilterClause>? Clauses { get; set; }  // For And/Or
     // ... playing card fields, stickers, etc.
 }
 ```

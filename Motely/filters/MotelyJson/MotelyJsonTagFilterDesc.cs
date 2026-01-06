@@ -47,12 +47,12 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
 
     public struct MotelyJsonTagFilter : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses;
+        private readonly List<MotelyJsonConfig.MotelyJsonFilterClause> _clauses;
         private readonly int _minAnte;
         private readonly int _maxAnte;
 
         public MotelyJsonTagFilter(
-            List<MotelyJsonConfig.MotleyJsonFilterClause> clauses,
+            List<MotelyJsonConfig.MotelyJsonFilterClause> clauses,
             int minAnte,
             int maxAnte
         )

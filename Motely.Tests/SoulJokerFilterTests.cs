@@ -13,7 +13,7 @@ namespace Motely.Tests
         public void SoulJoker_Enum_Should_Be_Properly_Set()
         {
             // Arrange
-            var clause = new MotelyJsonConfig.MotleyJsonFilterClause
+            var clause = new MotelyJsonConfig.MotelyJsonFilterClause
             {
                 Type = "SoulJoker",
                 Value = "Perkeo",
@@ -81,14 +81,14 @@ namespace Motely.Tests
         public void SoulJoker_Different_From_Regular_Joker()
         {
             // This test verifies that SoulJoker and regular Joker are handled differently
-            var soulJokerClause = new MotelyJsonConfig.MotleyJsonFilterClause
+            var soulJokerClause = new MotelyJsonConfig.MotelyJsonFilterClause
             {
                 Type = "SoulJoker",
                 Value = "Perkeo",
                 Antes = new[] { 1 },
             };
 
-            var regularJokerClause = new MotelyJsonConfig.MotleyJsonFilterClause
+            var regularJokerClause = new MotelyJsonConfig.MotelyJsonFilterClause
             {
                 Type = "Joker",
                 Value = "Joker", // Use regular Joker instead of Perkeo
@@ -117,16 +117,16 @@ namespace Motely.Tests
                 Description = "Test for Perkeo soul joker",
                 Deck = "Ghost",
                 Stake = "White",
-                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                 {
-                    new MotelyJsonConfig.MotleyJsonFilterClause
+                    new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Perkeo",
                         Antes = new[] { 1 },
                     },
                 },
-                Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>(),
+                Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
             };
 
             // Initialize parsed enums

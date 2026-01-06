@@ -12,7 +12,7 @@
 
 **MCP Server (McpServer.cs:1187-1219):**
 ```csharp
-config.Should.Add(new MotelyJsonConfig.MotleyJsonFilterClause
+config.Should.Add(new MotelyJsonConfig.MotelyJsonFilterClause
 {
     Type = "Joker",  // String - no compile-time checking!
     Value = joker,
@@ -41,9 +41,9 @@ var config = new MotelyJsonConfig
 ```csharp
 var config = new MotelyJsonConfig
 {
-    Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+    Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
     {
-        new MotelyJsonConfig.MotleyJsonFilterClause
+        new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Blueprint",
@@ -71,9 +71,9 @@ Create a type-safe builder that directly creates filter descriptors:
 // Instead of this:
 var config = new MotelyJsonConfig
 {
-    Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+    Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
     {
-        new MotelyJsonConfig.MotleyJsonFilterClause
+        new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Blueprint",

@@ -86,7 +86,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     /// Create from generic JSON config clause
     /// </summary>
     public static MotelyJsonJokerFilterClause FromJsonClause(
-        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+        MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
         bool[] wantedAntes = new bool[40];
@@ -224,7 +224,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     /// Convert a list of generic clauses to joker-specific clauses
     /// </summary>
     public static List<MotelyJsonJokerFilterClause> ConvertClauses(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> genericClauses
     )
     {
         return genericClauses
@@ -317,7 +317,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     }
 
     public static MotelyJsonSoulJokerFilterClause FromJsonClause(
-        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+        MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
         bool[] wantedAntes = new bool[40];
@@ -374,7 +374,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     }
 
     public static List<MotelyJsonSoulJokerFilterClause> ConvertClauses(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> genericClauses
     )
     {
         return genericClauses
@@ -482,7 +482,7 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
     public static MotelyJsonTarotFilterClause FromJsonClause(
-        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+        MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
         bool[] wantedAntes = new bool[40];
@@ -556,7 +556,7 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     }
 
     public static List<MotelyJsonTarotFilterClause> ConvertClauses(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> genericClauses
     )
     {
         return genericClauses
@@ -630,7 +630,7 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
     public int[] EffectiveAntes { get; init; } = Array.Empty<int>(); // Pre-computed for SIMD hotpath!
 
     public static MotelyJsonVoucherFilterClause FromJsonClause(
-        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+        MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
         bool[] wantedAntes = new bool[40];
@@ -656,7 +656,7 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
     }
 
     public static List<MotelyJsonVoucherFilterClause> ConvertClauses(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> genericClauses
     )
     {
         var converted = genericClauses
@@ -739,7 +739,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
     public static MotelyJsonSpectralFilterClause FromJsonClause(
-        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+        MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
         bool[] wantedAntes = new bool[40];
@@ -813,7 +813,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     }
 
     public static List<MotelyJsonSpectralFilterClause> ConvertClauses(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> genericClauses
     )
     {
         return genericClauses
@@ -896,7 +896,7 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
 
     public static MotelyJsonPlanetFilterClause FromJsonClause(
-        MotelyJsonConfig.MotleyJsonFilterClause jsonClause
+        MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
         bool[] wantedAntes = new bool[40];
@@ -970,7 +970,7 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     }
 
     public static List<MotelyJsonPlanetFilterClause> ConvertClauses(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> genericClauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> genericClauses
     )
     {
         return genericClauses
@@ -1042,7 +1042,7 @@ public static partial class MotelyJsonFilterClauseExtensions
     /// Create Boss filter criteria from generic clauses
     /// </summary>
     public static MotelyJsonBossFilterCriteria CreateBossCriteria(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
     )
     {
         if (clauses == null || clauses.Count == 0)
@@ -1080,7 +1080,7 @@ public static partial class MotelyJsonFilterClauseExtensions
     /// Create Tag filter criteria from generic clauses
     /// </summary>
     public static MotelyJsonTagFilterCriteria CreateTagCriteria(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
     )
     {
         if (clauses == null || clauses.Count == 0)
@@ -1116,7 +1116,7 @@ public static partial class MotelyJsonFilterClauseExtensions
     /// Create PlayingCard filter criteria from generic clauses
     /// </summary>
     public static MotelyJsonPlayingCardFilterCriteria CreatePlayingCardCriteria(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
     )
     {
         if (clauses == null || clauses.Count == 0)
@@ -1154,7 +1154,7 @@ public static partial class MotelyJsonFilterClauseExtensions
     /// Create Event filter criteria from generic clauses
     /// </summary>
     public static MotelyJsonEventFilterCriteria CreateEventCriteria(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
     )
     {
         if (clauses == null || clauses.Count == 0)
@@ -1175,7 +1175,7 @@ public static partial class MotelyJsonFilterClauseExtensions
     /// Recursively collect event clauses from a list of clauses, handling And/Or nesting
     /// </summary>
     private static void CollectEventClauses(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses,
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses,
         List<MotelyJsonEventFilterClause> eventClauses
     )
     {

@@ -23,23 +23,20 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             ctx.CacheBoosterPackStream(ante);
         }
 
-        // SINGLE clause only - caller must chain multiple filters for multiple clauses
-        if (_criteria.Clauses.Count != 1)
-            throw new ArgumentException($"MotelyJsonJokerFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
-
-        return new MotelyJsonJokerFilter(_criteria.Clauses[0], minAnte, maxAnte);
+        // Support multiple clauses - all checked in single shop simulation pass for efficiency
+        return new MotelyJsonJokerFilter(_criteria.Clauses, minAnte, maxAnte);
     }
 
     public struct MotelyJsonJokerFilter(
-        MotelyJsonJokerFilterClause clause,
+        List<MotelyJsonJokerFilterClause> clauses,
         int minAnte,
         int maxAnte
     ) : IMotelySeedFilter
     {
-        private readonly MotelyJsonJokerFilterClause Clause = clause;
+        private readonly List<MotelyJsonJokerFilterClause> Clauses = clauses;
         private readonly int MinAnte = minAnte;
         private readonly int MaxAnte = maxAnte;
-        private readonly int _lastWantedAnte = CalculateLastWantedAnte(clause);
+        private readonly int[] _lastWantedAntes = clauses.Select(CalculateLastWantedAnte).ToArray();
 
         private static int CalculateLastWantedAnte(MotelyJsonJokerFilterClause clause)
         {
@@ -56,52 +53,84 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            var clause = Clause;
             int _minAnte = MinAnte;
             int _maxAnte = MaxAnte;
 
-            // SINGLE clause - track if it matched across all antes
-            VectorMask clauseMask = VectorMask.NoBitsSet;
+            // MULTIPLE clauses - track if each matched across all antes
+            VectorMask[] clauseMasks = new VectorMask[Clauses.Count];
+            for (int i = 0; i < clauseMasks.Length; i++)
+            {
+                clauseMasks[i] = VectorMask.NoBitsSet;
+            }
 
             // Initialize run state for voucher calculations
             var runState = ctx.Deck.GetDefaultRunState();
 
-            // Walk each ante and check the clause
+            // Walk each ante and check all clauses
             for (int ante = _minAnte; ante <= _maxAnte; ante++)
             {
-                // CRITICAL: Early exit if clause has NO matches yet and we're past its last wanted ante
-                if (_lastWantedAnte >= 0 && ante > _lastWantedAnte && clauseMask.IsAllFalse())
+                // CRITICAL: Early exit if any clause has NO matches yet and we're past its last wanted ante
+                bool canEarlyExit = true;
+                for (int c = 0; c < Clauses.Count; c++)
                 {
-                    return VectorMask.NoBitsSet;
+                    if (_lastWantedAntes[c] >= 0 && ante > _lastWantedAntes[c] && clauseMasks[c].IsAllFalse())
+                    {
+                        return VectorMask.NoBitsSet;
+                    }
+                    if (ante < Clauses[c].WantedAntes.Length && Clauses[c].WantedAntes[ante])
+                    {
+                        canEarlyExit = false;
+                    }
                 }
-
-                // Determine max slots needed for THIS ante
-                if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                if (canEarlyExit)
                     continue;
 
-                bool hasShop = HasShopSlots(clause.WantedShopSlots);
-                bool hasPack = HasPackSlots(clause.WantedPackSlots);
-                bool hasJokerStreamSources =
-                    clause.Sources?.Judgement is { Length: > 0 }
-                    || clause.Sources?.RareTag is { Length: > 0 }
-                    || clause.Sources?.UncommonTag is { Length: > 0 }
-                    || clause.Sources?.RiffRaff is { Length: > 0 };
-                bool useDefaults = !hasShop && !hasPack && !hasJokerStreamSources;
-
+                // Calculate max slots needed across ALL clauses for this ante
                 int maxShopSlots = 0;
                 int maxPackSlots = 0;
+                bool anyHasShop = false;
+                bool anyHasPack = false;
+                bool anyHasJokerStreamSources = false;
 
-                if (hasShop || useDefaults)
+                for (int c = 0; c < Clauses.Count; c++)
                 {
-                    maxShopSlots = hasShop
-                        ? FindMaxSlotIndex(clause.WantedShopSlots) + 1
-                        : MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+                    var clause = Clauses[c];
+                    if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                        continue;
+
+                    bool hasShop = HasShopSlots(clause.WantedShopSlots);
+                    bool hasPack = HasPackSlots(clause.WantedPackSlots);
+                    bool hasJokerStreamSources =
+                        clause.Sources?.Judgement is { Length: > 0 }
+                        || clause.Sources?.RareTag is { Length: > 0 }
+                        || clause.Sources?.UncommonTag is { Length: > 0 }
+                        || clause.Sources?.RiffRaff is { Length: > 0 };
+
+                    if (hasShop) anyHasShop = true;
+                    if (hasPack) anyHasPack = true;
+                    if (hasJokerStreamSources) anyHasJokerStreamSources = true;
+
+                    if (hasShop)
+                    {
+                        int clauseMaxShop = FindMaxSlotIndex(clause.WantedShopSlots) + 1;
+                        if (clauseMaxShop > maxShopSlots) maxShopSlots = clauseMaxShop;
+                    }
+                    if (hasPack)
+                    {
+                        int clauseMaxPack = (clause.MaxPackSlot ?? 5) + 1;
+                        if (clauseMaxPack > maxPackSlots) maxPackSlots = clauseMaxPack;
+                    }
                 }
-                if (hasPack || useDefaults)
+
+                // Use defaults if no clause specifies slots
+                bool useDefaults = !anyHasShop && !anyHasPack && !anyHasJokerStreamSources;
+                if (useDefaults || (!anyHasShop && maxShopSlots == 0))
                 {
-                    maxPackSlots = hasPack
-                        ? (clause.MaxPackSlot ?? 5) + 1
-                        : MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
+                    maxShopSlots = MotelyJsonScoring.GetDefaultShopSlotsForAnte(ante);
+                }
+                if (useDefaults || (!anyHasPack && maxPackSlots == 0))
+                {
+                    maxPackSlots = MotelyJsonScoring.GetDefaultPackSlotsForAnte(ante);
                 }
 
                 // Create streams ONCE for this ante
@@ -118,7 +147,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                 var buffoonStream =
                     maxPackSlots > 0 ? ctx.CreateBuffoonPackJokerStream(ante) : default;
 
-                // Walk shops, check SINGLE clause
+                // Walk shops, check ALL clauses
                 for (int slot = 0; slot < maxShopSlots; slot++)
                 {
                     var jokerItem = shopJokerStream.GetNext(ref ctx);
@@ -130,17 +159,25 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
 
                     if (!isActualJoker.IsAllFalse())
                     {
-                        // Does this clause want this shop slot?
-                        bool wantsSlot = !hasShop || clause.WantedShopSlots[slot];
-                        if (wantsSlot)
+                        // Check this joker against ALL clauses
+                        for (int c = 0; c < Clauses.Count; c++)
                         {
-                            VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                            clauseMask |= (isActualJoker & matches);
+                            var clause = Clauses[c];
+                            if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                                continue;
+
+                            bool hasShop = HasShopSlots(clause.WantedShopSlots);
+                            bool wantsSlot = useDefaults || !hasShop || (slot < clause.WantedShopSlots.Length && clause.WantedShopSlots[slot]);
+                            if (wantsSlot)
+                            {
+                                VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                                clauseMasks[c] |= (isActualJoker & matches);
+                            }
                         }
                     }
                 }
 
-                // Walk packs, check SINGLE clause
+                // Walk packs, check ALL clauses
                 if (maxPackSlots > 0)
                 {
                     for (int packSlot = 0; packSlot < maxPackSlots; packSlot++)
@@ -160,32 +197,44 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                                 maxPackSize
                             );
 
-                            // Check if clause wants this pack slot
-                            bool wantsSlot = !hasPack || clause.WantedPackSlots[packSlot];
-                            if (wantsSlot)
+                            // Check each joker in the pack against ALL clauses
+                            for (int packJokerIndex = 0; packJokerIndex < maxPackSize; packJokerIndex++)
                             {
-                                // Check each joker in the pack
-                                for (int packJokerIndex = 0; packJokerIndex < maxPackSize; packJokerIndex++)
+                                var joker = packContents[packJokerIndex];
+                                for (int c = 0; c < Clauses.Count; c++)
                                 {
-                                    var joker = packContents[packJokerIndex];
-                                    VectorMask matches = CheckJokerMatchesClause(joker, clause);
-                                    clauseMask |= (isBuffoonPack & matches);
+                                    var clause = Clauses[c];
+                                    if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                                        continue;
+
+                                    bool hasPack = HasPackSlots(clause.WantedPackSlots);
+                                    bool wantsSlot = useDefaults || !hasPack || (packSlot < clause.WantedPackSlots.Length && clause.WantedPackSlots[packSlot]);
+                                    if (wantsSlot)
+                                    {
+                                        VectorMask matches = CheckJokerMatchesClause(joker, clause);
+                                        clauseMasks[c] |= (isBuffoonPack & matches);
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Check Judgement/Tag sources for SINGLE clause
-                if (clause.Sources != null)
+                // Check Judgement/Tag sources for ALL clauses
+                for (int c = 0; c < Clauses.Count; c++)
                 {
+                    var clause = Clauses[c];
+                    if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                        continue;
+                    if (clause.Sources == null)
+                        continue;
+
                     // Check Judgement tarot joker sources
                     if (clause.Sources.Judgement != null && clause.Sources.Judgement.Length > 0)
                     {
                         var judgementStream = ctx.CreateJudgementJokerStream(ante);
                         var rollIndices = clause.Sources.Judgement;
 
-                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
@@ -203,7 +252,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                             if (!isActualJoker.IsAllFalse())
                             {
                                 VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                                clauseMask |= (isActualJoker & matches);
+                                clauseMasks[c] |= (isActualJoker & matches);
                             }
 
                             pos++;
@@ -219,7 +268,6 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         var rareTagStream = ctx.CreateRareTagJokerStream(ante);
                         var rollIndices = clause.Sources.RareTag;
 
-                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
@@ -237,7 +285,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                             if (!isActualJoker.IsAllFalse())
                             {
                                 VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                                clauseMask |= (isActualJoker & matches);
+                                clauseMasks[c] |= (isActualJoker & matches);
                             }
 
                             pos++;
@@ -253,7 +301,6 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         var uncommonTagStream = ctx.CreateUncommonTagJokerStream(ante);
                         var rollIndices = clause.Sources.UncommonTag;
 
-                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
@@ -271,7 +318,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                             if (!isActualJoker.IsAllFalse())
                             {
                                 VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                                clauseMask |= (isActualJoker & matches);
+                                clauseMasks[c] |= (isActualJoker & matches);
                             }
 
                             pos++;
@@ -287,7 +334,6 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         var riffRaffStream = ctx.CreateRiffRaffJokerStream(ante);
                         var rollIndices = clause.Sources.RiffRaff;
 
-                        // rollIndices are normalized at config load time (sorted, unique, non-negative)
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
@@ -305,7 +351,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                             if (!isActualJoker.IsAllFalse())
                             {
                                 VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
-                                clauseMask |= (isActualJoker & matches);
+                                clauseMasks[c] |= (isActualJoker & matches);
                             }
 
                             pos++;
@@ -317,15 +363,22 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                 }
             }
 
-            // SINGLE clause - if it found nothing, fail
-            if (clauseMask.IsAllFalse())
+            // ALL clauses must match - combine with AND
+            VectorMask finalMask = clauseMasks[0];
+            for (int c = 1; c < clauseMasks.Length; c++)
             {
-                DebugLogger.Log($"[JOKER VECTORIZED] Clause found no matches - failing all seeds");
+                finalMask &= clauseMasks[c];
+            }
+
+            // If any clause found nothing, fail
+            if (finalMask.IsAllFalse())
+            {
+                DebugLogger.Log($"[JOKER VECTORIZED] Not all clauses matched - failing all seeds");
                 return VectorMask.NoBitsSet;
             }
 
-            DebugLogger.Log($"[JOKER VECTORIZED] Final result mask: {clauseMask.Value:X}");
-            return clauseMask;
+            DebugLogger.Log($"[JOKER VECTORIZED] Final result mask: {finalMask.Value:X}");
+            return finalMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

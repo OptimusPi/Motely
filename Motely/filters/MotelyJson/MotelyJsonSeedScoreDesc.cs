@@ -402,12 +402,10 @@ public struct MotelyJsonSeedScoreDesc(
 
                                     case MotelyFilterItemType.And:
                                     case MotelyFilterItemType.Or:
-                                        // And/Or clauses should be handled at the filter level, not in per-ante scoring
-                                        // If they appear here, it's a configuration error
-                                        throw new InvalidOperationException(
-                                            $"{clause.ItemTypeEnum} clauses should not be in MustNonVouchers. " +
-                                            $"Logical operators are handled at the filter composition level."
-                                        );
+                                        // And/Or clauses are handled at the filter level, so if we reach scoring,
+                                        // they've already passed. Just mark as satisfied.
+                                        clauseSatisfied = true;
+                                        break;
 
                                     case MotelyFilterItemType.Voucher:
                                         // Vouchers should be in MustVouchers, not MustNonVouchers

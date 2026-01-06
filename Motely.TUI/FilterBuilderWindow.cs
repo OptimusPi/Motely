@@ -389,12 +389,12 @@ public class FilterBuilderWindow : Window
         }
     }
 
-    private MotelyJsonConfig.MotleyJsonFilterClause ParseDisplayTextToClause(string displayText)
+    private MotelyJsonConfig.MotelyJsonFilterClause ParseDisplayTextToClause(string displayText)
     {
         // Parse format: "ItemName (Category)"
         var lastParenIndex = displayText.LastIndexOf('(');
         if (lastParenIndex < 0)
-            return new MotelyJsonConfig.MotleyJsonFilterClause
+            return new MotelyJsonConfig.MotelyJsonFilterClause
             {
                 Type = "Joker",
                 Value = displayText,
@@ -419,7 +419,7 @@ public class FilterBuilderWindow : Window
             _ => "Joker",
         };
 
-        return new MotelyJsonConfig.MotleyJsonFilterClause
+        return new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = type,
             Value = itemName,

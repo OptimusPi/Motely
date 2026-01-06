@@ -15,7 +15,7 @@ public static partial class DuckDBSeeds
         using var connection = new DuckDBConnection($"Data Source={dbPath}");
         connection.Open();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = $"SELECT {columnName} FROM {tableName} ORDER BY LENGTH({columnName})";
+        cmd.CommandText = $"SELECT {columnName} FROM {tableName}";
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
             yield return reader.GetString(0);
@@ -29,53 +29,144 @@ public static partial class DuckDBSeeds
 /// </summary>
 public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
 {
-    private readonly DuckDBConnection _connection;
+    private readonly string _dbPath;
     private readonly string _tableName;
     private readonly string _columnName;
-    private long _currentIndex = -1; // Atomic counter for parallel access
     private bool _disposed = false;
+
+    // IMPORTANT: Use one DuckDB connection per thread.
+    // DuckDB.NET connections are not intended to be hammered concurrently from many threads;
+    // sharing a single connection can serialize work and destroy throughput.
+    private readonly ThreadLocal<DuckDBConnection> _threadConnection;
+    private readonly string _rangeQuery;
+    private readonly string _rangeQueryRowId;
     
-    // Batch fetching: each thread fetches BATCH_SIZE seeds at once for efficiency
-    private const int BATCH_SIZE = 1000; // Fetch 1000 seeds per query
-    private readonly ThreadLocal<Queue<string>> _seedCache = new(() => new Queue<string>());
-    private readonly ThreadLocal<long> _cacheStartIndex = new(() => -1);
+    // ========= SHARED CHUNK BUFFER =========
+    // Provider-mode threads currently drive work via a global batch index, but they *pull seeds*
+    // from the provider. If we "reserve" large per-thread chunks, we can end up reserving seeds
+    // that never get consumed (and lose results) when using many threads.
+    //
+    // Fix: Hand out seeds by a single global seed index, backed by a shared chunk fetched from DuckDB.
+    // - NextSeed() is cheap: one Interlocked.Increment + array index
+    // - Chunk refills are rare (1 query per _chunkSize seeds)
+    // - No per-thread reservation => no missing "final batch" with multiple threads
+    private readonly object _chunkLock = new();
+    private readonly int _chunkSize = 100_000;
+    private long _nextSeedIndex = -1; // global seed cursor (0-based)
+    private long _chunkStartIndex = 0;
+    private int _chunkCount = 0;
+    private string[] _chunk = Array.Empty<string>();
 
     public int SeedCount { get; }
+
+    private readonly bool _hasIdColumn;
 
     /// <summary>
     /// Create provider from a DuckDB database file - queries directly from in-memory DB
     /// </summary>
     public DuckDBSeedProvider(string dbPath, string tableName = "seeds", string columnName = "seed")
     {
-        _connection = new DuckDBConnection($"Data Source={dbPath}");
-        _connection.Open();
+        _dbPath = dbPath;
         _tableName = tableName;
         _columnName = columnName;
 
-        // Get count - DuckDB is in-memory, this is instant
-        using var countCmd = _connection.CreateCommand();
-        countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
-        SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
+        using (var conn = new DuckDBConnection($"Data Source={dbPath}"))
+        {
+            conn.Open();
+
+            // Get count - DuckDB is in-memory, this is instant
+            using var countCmd = conn.CreateCommand();
+            countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
+            SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
+
+            // Check if table has 'id' column for optimized fetching
+            // If not, we'll use ROWID (DuckDB's built-in row identifier)
+            using var checkCmd = conn.CreateCommand();
+            checkCmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{tableName}') WHERE name='id'";
+            _hasIdColumn = Convert.ToInt32(checkCmd.ExecuteScalar()) > 0;
+        }
+
+        // Pre-build parameterized range queries (identifiers are fixed; bounds are parameters).
+        _rangeQuery = $"SELECT {_columnName} FROM {_tableName} WHERE id >= ? AND id < ? ORDER BY id";
+        _rangeQueryRowId =
+            $"SELECT {_columnName} FROM {_tableName} WHERE ROWID >= ? AND ROWID < ? ORDER BY ROWID";
+
+        _threadConnection = new ThreadLocal<DuckDBConnection>(() =>
+        {
+            var c = new DuckDBConnection($"Data Source={_dbPath}");
+            c.Open();
+            // Configure connection for optimal performance (per DuckDB docs)
+            // - Limit threads per connection to avoid too many threads causing slowdowns
+            // - DuckDB parallelizes within queries, so we don't need many threads per connection
+            using var configCmd = c.CreateCommand();
+            configCmd.CommandText = "SET threads=4;";
+            configCmd.ExecuteNonQuery();
+            return c;
+        });
     }
 
     /// <summary>
-    /// Fetch a batch of seeds from the database using OFFSET/LIMIT (reliable and fast)
+    /// Fetch a batch of seeds from the database using efficient ID ranges or OFFSET fallback
     /// </summary>
-    private void FetchBatch(long startIndex)
+    private void FetchChunk(long startIndex)
     {
-        var cache = _seedCache.Value!;
-        cache.Clear();
+        // Check if disposed before attempting fetch
+        if (_disposed)
+            return;
         
-        using var cmd = _connection.CreateCommand();
-        cmd.CommandText = $"SELECT {_columnName} FROM {_tableName} LIMIT {BATCH_SIZE} OFFSET {startIndex}";
+        // Bounds check - don't fetch if invalid
+        if (startIndex < 0 || startIndex >= SeedCount)
+            return;
         
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        long limit = Math.Min(_chunkSize, SeedCount - startIndex);
+        if (limit <= 0)
+            return;
+        
+        try
         {
-            cache.Enqueue(reader.GetString(0));
+            var conn = _threadConnection.Value!;
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = _hasIdColumn ? _rangeQuery : _rangeQueryRowId;
+
+            // id is 0-based in our schema; ROWID is 1-based in DuckDB
+            long lower = _hasIdColumn ? startIndex : (startIndex + 1);
+            long upperExclusive = _hasIdColumn ? (startIndex + limit) : (startIndex + limit + 1);
+
+            cmd.Parameters.Add(new DuckDBParameter(lower));
+            cmd.Parameters.Add(new DuckDBParameter(upperExclusive));
+            
+            using var reader = cmd.ExecuteReader();
+            
+            // Reuse/resize shared buffer to avoid churn.
+            var buffer = _chunk;
+            if (buffer.Length < (int)limit)
+                buffer = new string[(int)limit];
+
+            int count = 0;
+            while (reader.Read())
+            {
+                if (_disposed) break; // Check again during read
+                buffer[count++] = reader.GetString(0);
+            }
+            
+            // Publish chunk
+            _chunk = buffer;
+            _chunkStartIndex = startIndex;
+            _chunkCount = count;
         }
-        
-        _cacheStartIndex.Value = startIndex;
+        catch (DuckDBException)
+        {
+            // Connection closed or query failed (e.g., during shutdown) - ignore
+            _chunk = Array.Empty<string>();
+            _chunkStartIndex = startIndex;
+            _chunkCount = 0;
+        }
+        catch (ObjectDisposedException)
+        {
+            _chunk = Array.Empty<string>();
+            _chunkStartIndex = startIndex;
+            _chunkCount = 0;
+        }
     }
 
     public ReadOnlySpan<char> NextSeed()
@@ -83,40 +174,62 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
         if (_disposed)
             return ReadOnlySpan<char>.Empty;
 
-        var cache = _seedCache.Value!;
-        
-        // If cache is empty, fetch a new batch
-        if (cache.Count == 0)
+        long index = Interlocked.Increment(ref _nextSeedIndex);
+        if (index < 0 || index >= SeedCount)
+            return ReadOnlySpan<char>.Empty;
+
+        // Fast path: current chunk contains this index
+        long chunkStart = _chunkStartIndex;
+        int chunkCount = _chunkCount;
+        if (index >= chunkStart && index < chunkStart + chunkCount)
         {
-            // Atomically get next batch start index - each thread gets unique range
-            long batchStart = Interlocked.Add(ref _currentIndex, BATCH_SIZE) - BATCH_SIZE;
-            
-            // Ensure batchStart is never negative and within bounds
-            if (batchStart < 0)
-                batchStart = 0;
-            
-            if (batchStart >= SeedCount)
+            return _chunk[(int)(index - chunkStart)];
+        }
+
+        // Slow path: refill chunk (rare)
+        lock (_chunkLock)
+        {
+            if (_disposed)
                 return ReadOnlySpan<char>.Empty;
-            
-            FetchBatch(batchStart);
+
+            chunkStart = _chunkStartIndex;
+            chunkCount = _chunkCount;
+            if (index >= chunkStart && index < chunkStart + chunkCount)
+            {
+                return _chunk[(int)(index - chunkStart)];
+            }
+
+            // Fetch a chunk aligned to chunkSize. Since index is global-monotonic, this usually
+            // just advances forward.
+            long newStart = (index / _chunkSize) * _chunkSize;
+            FetchChunk(newStart);
+
+            chunkStart = _chunkStartIndex;
+            chunkCount = _chunkCount;
+            if (chunkCount <= 0 || index < chunkStart || index >= chunkStart + chunkCount)
+                return ReadOnlySpan<char>.Empty;
+
+            return _chunk[(int)(index - chunkStart)];
         }
-        
-        // Return next seed from cache
-        if (cache.Count > 0)
-        {
-            return cache.Dequeue();
-        }
-        
-        return ReadOnlySpan<char>.Empty;
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
-        _seedCache.Dispose();
-        _cacheStartIndex.Dispose();
-        _connection?.Dispose();
+        try
+        {
+            foreach (var c in _threadConnection.Values)
+            {
+                try { c?.Dispose(); }
+                catch { /* ignore */ }
+            }
+        }
+        catch
+        {
+            // Some runtimes may throw if Values is accessed during shutdown; ignore.
+        }
+        _threadConnection.Dispose();
     }
 }
 #endif

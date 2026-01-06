@@ -140,7 +140,7 @@ public enum MotelyScoreAggregationMode
     /// 
     /// NOTE: There is a naming inconsistency in this codebase:
     /// - Class name: MotelyJsonConfig (correct spelling: "Motely")
-    /// - Nested class: MotleyJsonFilterClause (typo: "Motley" instead of "Motely")
+    /// - Nested class: MotelyJsonFilterClause (typo: "Motely" instead of "Motely")
     /// This typo is preserved for backwards compatibility and to avoid breaking changes.
     /// </summary>
     public class MotelyJsonConfig
@@ -183,34 +183,34 @@ public enum MotelyScoreAggregationMode
 
     [JsonPropertyName("must")]
     [YamlMember(Alias = "must")]
-    public List<MotleyJsonFilterClause> Must { get; set; } = new();
+    public List<MotelyJsonFilterClause> Must { get; set; } = new();
 
     [JsonPropertyName("should")]
     [YamlMember(Alias = "should")]
-    public List<MotleyJsonFilterClause> Should { get; set; } = new();
+    public List<MotelyJsonFilterClause> Should { get; set; } = new();
 
     [JsonPropertyName("mustNot")]
     [YamlMember(Alias = "mustNot")]
-    public List<MotleyJsonFilterClause> MustNot { get; set; } = new();
+    public List<MotelyJsonFilterClause> MustNot { get; set; } = new();
 
     // PERFORMANCE: Pre-partitioned clauses to avoid repeated iteration
     [JsonIgnore]
     [YamlIgnore]
-    public MotleyJsonFilterClause[] MustVouchers { get; private set; } = Array.Empty<MotleyJsonFilterClause>();
+    public MotelyJsonFilterClause[] MustVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
 
     [JsonIgnore]
     [YamlIgnore]
-    public MotleyJsonFilterClause[] MustNonVouchers { get; private set; } = Array.Empty<MotleyJsonFilterClause>();
+    public MotelyJsonFilterClause[] MustNonVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
 
     [JsonIgnore]
     [YamlIgnore]
-    public MotleyJsonFilterClause[] ShouldVouchers { get; private set; } = Array.Empty<MotleyJsonFilterClause>();
+    public MotelyJsonFilterClause[] ShouldVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
 
     [JsonIgnore]
     [YamlIgnore]
-    public MotleyJsonFilterClause[] ShouldNonVouchers { get; private set; } = Array.Empty<MotleyJsonFilterClause>();
+    public MotelyJsonFilterClause[] ShouldNonVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
 
-    public class MotleyJsonFilterClause
+    public class MotelyJsonFilterClause
     {
         [JsonPropertyName("type")]
         [YamlMember(Alias = "type")]
@@ -235,7 +235,7 @@ public enum MotelyScoreAggregationMode
         // Nested clauses for And/Or grouping
         [JsonPropertyName("clauses")]
         [YamlMember(Alias = "clauses")]
-        public List<MotleyJsonFilterClause>? Clauses { get; set; }
+        public List<MotelyJsonFilterClause>? Clauses { get; set; }
 
         // Inversion flag for mustNot clauses (set internally, not from JSON)
         [JsonIgnore]
@@ -795,7 +795,7 @@ public enum MotelyScoreAggregationMode
         /// NOTE: This does NOT copy AntesWasExplicitlySet - that should be set explicitly by the caller
         /// based on whether the cloning operation is intentionally setting Antes.
         /// </summary>
-        public void CopyParsedEnumsFrom(MotleyJsonFilterClause source)
+        public void CopyParsedEnumsFrom(MotelyJsonFilterClause source)
         {
             this.ItemTypeEnum = source.ItemTypeEnum;
             this.VoucherEnum = source.VoucherEnum;
@@ -956,7 +956,7 @@ public enum MotelyScoreAggregationMode
     /// <summary>
     /// Recursively process a single clause and all its nested clauses
     /// </summary>
-    private void ProcessClause(MotleyJsonFilterClause item)
+    private void ProcessClause(MotelyJsonFilterClause item)
     {
         DebugLogger.Log(
             $"[PROCESS START] Type={item.Type}, Value={item.Value}, Antes={(item.Antes == null ? "null" : $"[{string.Join(",", item.Antes)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}"
@@ -1186,10 +1186,10 @@ public enum MotelyScoreAggregationMode
         DebugLogger.Log($"[PostProcess] Finished processing clauses. Starting voucher partitioning. Must.Count={Must?.Count}, Should.Count={Should?.Count}");
 
         // PERFORMANCE: Pre-partition clauses by type to avoid repeated iteration in hot paths
-        var mustVouchers = new List<MotleyJsonFilterClause>();
-        var mustNonVouchers = new List<MotleyJsonFilterClause>();
-        var shouldVouchers = new List<MotleyJsonFilterClause>();
-        var shouldNonVouchers = new List<MotleyJsonFilterClause>();
+        var mustVouchers = new List<MotelyJsonFilterClause>();
+        var mustNonVouchers = new List<MotelyJsonFilterClause>();
+        var shouldVouchers = new List<MotelyJsonFilterClause>();
+        var shouldNonVouchers = new List<MotelyJsonFilterClause>();
 
         foreach (var clause in Must ?? [])
         {
@@ -1372,7 +1372,7 @@ public enum MotelyScoreAggregationMode
     /// Generate a human-readable column name for a filter clause
     /// Supports spaces and proper casing - will be quoted in CSV/DuckDB
     /// </summary>
-    private static string GetClauseColumnName(MotleyJsonFilterClause clause)
+    private static string GetClauseColumnName(MotelyJsonFilterClause clause)
     {
         // Use label if provided (highest priority - keep original formatting!)
         if (!string.IsNullOrEmpty(clause.Label))
@@ -1470,13 +1470,13 @@ public enum MotelyScoreAggregationMode
     /// <summary>
     /// Parse shorthand syntax like `event: luckyMoney` into filter clause
     /// </summary>
-    public static MotleyJsonFilterClause ParseShorthand(string shorthand)
+    public static MotelyJsonFilterClause ParseShorthand(string shorthand)
     {
         Console.WriteLine($"Parsing shorthand: {shorthand}"); // Debugging log
 
         if (shorthand.StartsWith("event:", StringComparison.OrdinalIgnoreCase))
         {
-            var clause = new MotleyJsonFilterClause
+            var clause = new MotelyJsonFilterClause
             {
                 Type = "LuckyMoney",
                 Value = shorthand.Substring("event:".Length).Trim()
