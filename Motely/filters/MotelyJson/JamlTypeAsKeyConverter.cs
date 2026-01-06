@@ -265,11 +265,16 @@ namespace Motely.Filters.MotelyJson
                 int[]? intArray = null;
                 if (entryValue is object[] array)
                 {
-                    intArray = array.Select(o => Convert.ToInt32(o)).ToArray();
+                    // Zero-allocation: direct array allocation
+                    intArray = new int[array.Length];
+                    for (int i = 0; i < array.Length; i++)
+                        intArray[i] = Convert.ToInt32(array[i]);
                 }
                 else if (entryValue is System.Collections.IList list)
                 {
-                    intArray = list.Cast<object>().Select(o => Convert.ToInt32(o)).ToArray();
+                    intArray = new int[list.Count];
+                    for (int i = 0; i < list.Count; i++)
+                        intArray[i] = Convert.ToInt32(list[i]);
                 }
                 
                 if (intArray != null)
@@ -282,11 +287,16 @@ namespace Motely.Filters.MotelyJson
                 string[]? stringArray = null;
                 if (entryValue is object[] array)
                 {
-                    stringArray = array.Select(o => o?.ToString() ?? "").ToArray();
+                    // Zero-allocation: direct array allocation
+                    stringArray = new string[array.Length];
+                    for (int i = 0; i < array.Length; i++)
+                        stringArray[i] = array[i]?.ToString() ?? "";
                 }
                 else if (entryValue is System.Collections.IList list)
                 {
-                    stringArray = list.Cast<object>().Select(o => o?.ToString() ?? "").ToArray();
+                    stringArray = new string[list.Count];
+                    for (int i = 0; i < list.Count; i++)
+                        stringArray[i] = list[i]?.ToString() ?? "";
                 }
                 
                 if (stringArray != null)

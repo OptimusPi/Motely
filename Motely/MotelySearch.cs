@@ -49,6 +49,7 @@ public interface IMotelySeedScore
 
 public interface IMotelySeedScoreProvider
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public VectorMask Score(
         ref MotelyVectorSearchContext searchContext,
         MotelySeedScoreTally[] buffer,
@@ -59,6 +60,7 @@ public interface IMotelySeedScoreProvider
 
 public interface IMotelySeedFilter
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public VectorMask Filter(ref MotelyVectorSearchContext searchContext);
 }
 
@@ -977,6 +979,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ReportScoredResults(
             VectorMask resultMask,
             in MotelySearchContextParams searchParams
@@ -1000,6 +1003,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void FlushPendingFilterBatches()
         {
             if (_filterSeedBatches == null)
@@ -1018,6 +1022,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ReportBasicSeeds(
             VectorMask searchResultMask,
             in MotelySearchContextParams searchParams
@@ -1044,6 +1049,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void BatchSeeds(
             int filterIndex,
             VectorMask searchResultMask,
@@ -1176,6 +1182,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
 
         // Searches a batch with a filter then resets that batch
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SearchFilterBatch(int filterIndex, FilterSeedBatch* filterBatch)
         {
             Debug.Assert(filterBatch->SeedCount != 0);
