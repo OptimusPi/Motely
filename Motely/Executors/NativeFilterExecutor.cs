@@ -398,7 +398,8 @@ namespace Motely.Executors
             {
                 var speed = (double)totalSeedsSearched / duration.TotalMilliseconds;
                 Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
-                Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
+                // Show 2 decimal places for precision (especially important for slow searches)
+                Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
             }
         }
     }
