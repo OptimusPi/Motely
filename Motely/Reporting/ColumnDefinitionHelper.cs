@@ -1,0 +1,112 @@
+using Motely.Filters;
+
+namespace Motely.Reporting;
+
+/// <summary>
+/// Helper class to create column definitions from config and support backward compatibility
+/// </summary>
+public static class ColumnDefinitionHelper
+{
+    /// <summary>
+    /// Create column definitions from a config's Should clauses (backward compatibility)
+    /// Each Should clause becomes a ScoreTally column
+    /// </summary>
+    public static List<IColumnDefinition> CreateFromShouldClauses(
+        MotelyJsonConfig config
+    )
+    {
+        var columns = new List<IColumnDefinition>();
+
+        if (config.Should == null || config.Should.Count == 0)
+            return columns;
+
+        foreach (var clause in config.Should)
+        {
+            var columnName = GetClauseColumnName(clause);
+            var scorer = new FilterClauseScorer(clause);
+            var column = new ColumnDefinition(
+                name: columnName,
+                type: ColumnType.ScoreTally,
+                scorers: new[] { scorer },
+                aggregationStrategy: new SumAllStrategy()
+            );
+            columns.Add(column);
+        }
+
+        return columns;
+    }
+
+    /// <summary>
+    /// Generate a human-readable column name for a filter clause
+    /// (Matches logic from MotelyJsonConfig.GetClauseColumnName)
+    /// </summary>
+    private static string GetClauseColumnName(MotelyJsonConfig.MotelyJsonFilterClause clause)
+    {
+        // Use label if provided (highest priority - keep original formatting!)
+        if (!string.IsNullOrEmpty(clause.Label))
+            return clause.Label;
+
+        // Handle OR/AND clauses with compact notation
+        if ((clause.Type?.ToLower() == "or" || clause.Type?.ToLower() == "and") && clause.Clauses != null && clause.Clauses.Count > 0)
+        {
+            var clauseType = clause.Type.ToUpper();
+            var count = clause.Clauses.Count;
+            var anteSuffix = "";
+            if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
+            {
+                var minAnte = clause.Antes.Min();
+                var maxAnte = clause.Antes.Max();
+                anteSuffix = minAnte == maxAnte ? $" A{minAnte}" : $" A{minAnte}-{maxAnte}";
+            }
+
+            return $"{count} {clauseType}{anteSuffix}";
+        }
+
+        // Build name from value/type
+        string name;
+        if (!string.IsNullOrEmpty(clause.Value))
+        {
+            // Special handling for wildcards (Any)
+            if (clause.Value.Equals("Any", StringComparison.OrdinalIgnoreCase))
+            {
+                name = $"Any_{clause.Type}";
+            }
+            else
+            {
+                name = clause.Value;
+            }
+        }
+        else if (clause.Values != null && clause.Values.Length > 0)
+        {
+            // Multi-value case: Use first value + count indicator
+            if (clause.Values.Length == 1)
+            {
+                name = clause.Values[0];
+            }
+            else
+            {
+                // Multiple values: create descriptive name
+                name = $"{clause.Values[0]}_Plus{clause.Values.Length - 1}More";
+            }
+        }
+        else
+        {
+            // Fallback to type
+            name = clause.Type ?? "Unknown";
+        }
+
+        // Add edition prefix if specified
+        if (!string.IsNullOrEmpty(clause.Edition))
+            name = clause.Edition + " " + name;
+
+        // Add ante suffix if specified (human-readable range format)
+        if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
+        {
+            var minAnte = clause.Antes.Min();
+            var maxAnte = clause.Antes.Max();
+            name += minAnte == maxAnte ? $" A{minAnte}" : $" A{minAnte}-{maxAnte}";
+        }
+
+        return name;
+    }
+}

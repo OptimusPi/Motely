@@ -379,12 +379,22 @@ namespace Motely
                         
                         dbCallback = (result) =>
                         {
-                            db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
-                            seedsFound++;
-                            // Avoid spamming/interleaving with progress output (both write to stderr).
-                            // Just print once when the first result is found.
-                            if (seedsFound == 1)
-                                Console.Error.WriteLine("✅ Found first matching seed (writing to DuckDB)...");
+                            try
+                            {
+                                db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
+                                seedsFound++;
+                                // Avoid spamming/interleaving with progress output (both write to stderr).
+                                // Just print once when the first result is found.
+                                if (seedsFound == 1)
+                                    Console.Error.WriteLine("✅ Found first matching seed (writing to DuckDB)...");
+                            }
+                            catch (Exception ex)
+                            {
+                                // CRITICAL: Never silently swallow database errors!
+                                Console.Error.WriteLine($"❌ [CRITICAL] Failed to write seed {result.Seed} to database: {ex.Message}");
+                                Console.Error.WriteLine($"   This is a fatal error - stopping search to prevent data loss!");
+                                throw; // Re-throw to stop the search
+                            }
                         };
                     }
                     
@@ -392,13 +402,33 @@ namespace Motely
                     int exitCode = executor.Execute();
                     
                     // Flush and close database
-                    db?.Checkpoint();
-                    db?.Dispose();
-                    
-                    // Print final count if using database output
-                    if (dbCallback != null && seedsFound > 0)
+                    if (db != null)
                     {
-                        Console.WriteLine($"💾 Total seeds saved to database: {seedsFound}");
+                        try
+                        {
+                            db.Checkpoint();
+                            
+                            // CRITICAL: Verify data was actually written!
+                            db.VerifyDataWritten();
+                            
+                            var actualCount = db.GetResultCount();
+                            Console.WriteLine($"💾 Total seeds saved to database: {actualCount} (verified)");
+                            
+                            if (seedsFound != actualCount)
+                            {
+                                Console.Error.WriteLine($"⚠️  WARNING: Expected {seedsFound} seeds but database contains {actualCount}!");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"❌ [CRITICAL] Database checkpoint/verification failed: {ex.Message}");
+                            Console.Error.WriteLine($"   This may indicate data loss - check the database manually!");
+                            return 1; // Return error code
+                        }
+                        finally
+                        {
+                            db.Dispose();
+                        }
                     }
                     
                     return exitCode;

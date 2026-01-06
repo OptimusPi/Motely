@@ -148,7 +148,80 @@ public static class TallyColorizer
         if (!ColorEnabled)
             return string.Join(",", tallies);
 
+        // Zero-allocation path for collections
+        if (tallies is ICollection<int> collection)
+        {
+            if (collection.Count == 0)
+                return string.Empty;
+
+            Span<char> buffer = stackalloc char[collection.Count * 16]; // 16 chars per value max
+            var writer = new SpanWriter(buffer);
+            bool first = true;
+
+            foreach (var tally in collection)
+            {
+                if (!first) writer.Write(',');
+                first = false;
+
+                int colorKey = Math.Max(0, Math.Min(8, tally));
+                if (TallyColors.TryGetValue(colorKey, out var color))
+                {
+                    writer.Write(color);
+                    writer.Write(tally);
+                    writer.Write(ResetColor);
+                }
+                else
+                {
+                    writer.Write(TallyColors[8]);
+                    writer.Write(tally);
+                    writer.Write(ResetColor);
+                }
+            }
+
+            return writer.ToString();
+        }
+
+        // Fallback for unknown collection types (rare)
         return string.Join(",", tallies.Select(ColorizeTally));
+    }
+
+    // Minimal span-based string writer for zero-allocation formatting
+    private ref struct SpanWriter
+    {
+        private Span<char> _buffer;
+        private int _position;
+
+        public SpanWriter(Span<char> buffer)
+        {
+            _buffer = buffer;
+            _position = 0;
+        }
+
+        public void Write(char c)
+        {
+            if (_position < _buffer.Length)
+                _buffer[_position++] = c;
+        }
+
+        public void Write(string s)
+        {
+            if (_position + s.Length <= _buffer.Length)
+            {
+                s.AsSpan().CopyTo(_buffer.Slice(_position));
+                _position += s.Length;
+            }
+        }
+
+        public void Write(int value)
+        {
+            if (_position < _buffer.Length)
+            {
+                if (value.TryFormat(_buffer.Slice(_position), out int written))
+                    _position += written;
+            }
+        }
+
+        public override string ToString() => _buffer.Slice(0, _position).ToString();
     }
 
     /// <summary>

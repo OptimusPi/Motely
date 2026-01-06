@@ -289,12 +289,44 @@
             "shopSlots": {
               "type": "array",
               "items": { "type": "integer" },
-              "description": "Shop slot indices (0-based)"
+              "description": "Shop slot indices (0-based). If empty array [], will be populated from minShopSlot/maxShopSlot if provided."
             },
             "packSlots": {
               "type": "array",
               "items": { "type": "integer" },
-              "description": "Pack slot indices (0-based)"
+              "description": "Pack slot indices (0-based). If empty array [], will be populated from minPackSlot/maxPackSlot if provided."
+            },
+            "minShopSlot": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1023,
+              "description": "Minimum shop slot index (inclusive). If specified with maxShopSlot, generates shopSlots array [minShopSlot..maxShopSlot]."
+            },
+            "maxShopSlot": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1023,
+              "description": "Maximum shop slot index (inclusive). If specified with minShopSlot, generates shopSlots array [minShopSlot..maxShopSlot]."
+            },
+            "minPackSlot": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Minimum pack slot index (inclusive). If specified with maxPackSlot, generates packSlots array [minPackSlot..maxPackSlot]."
+            },
+            "maxPackSlot": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Maximum pack slot index (inclusive). If specified with minPackSlot, generates packSlots array [minPackSlot..maxPackSlot]."
+            },
+            "tags": {
+              "type": "boolean",
+              "description": "Whether item can come from tags (Rare Tag, Uncommon Tag, Negative Tag)"
+            },
+            "requireMega": {
+              "type": "boolean",
+              "description": "Whether pack must be a Mega pack (for pack slots 4-5)"
             },
             "judgement": {
               "type": "array",
@@ -337,7 +369,8 @@
               "description": "Seance spectral card roll indices (e.g. [0, 1] for first two spectral cards from Seance joker)"
             }
           },
-          "description": "Where the item can be found - object with source-specific roll indices"
+          "additionalProperties": false,
+          "description": "Where the item can be found - object with source-specific roll indices. If sources: is specified (even with empty arrays), the Sources object will exist after processing."
         },
         "and": {
           "type": "array",
