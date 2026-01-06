@@ -1,4 +1,19 @@
+
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- Performance optimizations -->
+    <Optimize>true</Optimize>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
+    <EnableAVX2>true</EnableAVX2>
+    <EnableAVX512F>true</EnableAVX512F>
+    <EnableAVX512BW>true</EnableAVX512BW>
+  </PropertyGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

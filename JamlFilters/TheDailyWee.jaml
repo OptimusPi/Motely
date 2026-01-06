@@ -1,12 +1,12 @@
-name: DailyWees
-description: verifying some dungmot fertilizer seed sources
+name: TheDailyWee
+description: Curated seeds for The Daily Wee, a 
 author: pifreak
 deck: Erratic
 stake: White
 
 Must:
   - erraticRank: Two
-    min: 14
+    min: 10
   - joker: WeeJoker
     antes: [1,2]
   - joker: HangingChad
@@ -181,3 +181,4 @@ Should:
     edition: Foil
     antes: [1,2]
     score: 4
+  - souljoker: Perkeo
