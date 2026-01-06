@@ -537,6 +537,14 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
             int maxPackSlot = clause.MaxPackSlot.HasValue
                 ? clause.MaxPackSlot.Value + 1
                 : (ante == 1 ? 4 : 6);
+            
+            // OPTIMIZATION: If we have specific slots, only check up to the max wanted slot
+            // This avoids checking unnecessary slots when only early slots are needed
+            if (hasSpecificSlots)
+            {
+                int maxWantedSlot = FindMaxSlotIndex(clause.WantedPackSlots);
+                maxPackSlot = Math.Min(maxPackSlot, maxWantedSlot + 1);
+            }
 
             for (int packSlot = 0; packSlot < maxPackSlot; packSlot++)
             {

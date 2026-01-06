@@ -70,7 +70,7 @@ public readonly struct MotelyJsonVoucherFilterCriteria
 /// </summary>
 public readonly struct MotelyJsonBossFilterCriteria
 {
-    public List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses { get; init; }
+    public List<MotelyJsonConfig.MotelyJsonFilterClause> Clauses { get; init; }
     public int MinAnte { get; init; }
     public int MaxAnte { get; init; }
 }
@@ -80,7 +80,7 @@ public readonly struct MotelyJsonBossFilterCriteria
 /// </summary>
 public readonly struct MotelyJsonTagFilterCriteria
 {
-    public List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses { get; init; }
+    public List<MotelyJsonConfig.MotelyJsonFilterClause> Clauses { get; init; }
     public int MinAnte { get; init; }
     public int MaxAnte { get; init; }
 }
@@ -90,7 +90,7 @@ public readonly struct MotelyJsonTagFilterCriteria
 /// </summary>
 public readonly struct MotelyJsonPlayingCardFilterCriteria
 {
-    public List<MotelyJsonConfig.MotleyJsonFilterClause> Clauses { get; init; }
+    public List<MotelyJsonConfig.MotelyJsonFilterClause> Clauses { get; init; }
     public int MinAnte { get; init; }
     public int MaxAnte { get; init; }
 }

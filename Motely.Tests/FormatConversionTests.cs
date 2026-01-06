@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using Motely.Filters;
 
@@ -139,6 +140,57 @@ should:
             Assert.Equal(3, finalConfig!.Must![0].Antes!.Length);
         }
 
+        [Fact]
+        public void Test6_CompleteRoundTrip_JsonToJamlToJsonToJaml_Lossless()
+        {
+            // Arrange - Start with JSON
+            var originalJson = File.ReadAllText(_testConfigPath);
+            var originalConfig = ConfigFormatConverter.LoadFromJsonString(originalJson);
+            Assert.NotNull(originalConfig);
+
+            // Step 1: JSON -> JAML
+            var jaml1 = originalConfig!.SaveAsJaml();
+            Assert.NotNull(jaml1);
+            Assert.NotEmpty(jaml1);
+
+            var config1 = ConfigFormatConverter.LoadFromJamlString(jaml1);
+            Assert.NotNull(config1);
+            AssertConfigsEqual(originalConfig, config1!, "JSON→JAML (Step 1)");
+
+            // Step 2: JAML -> JSON
+            var json2 = config1!.SaveAsJson();
+            Assert.NotNull(json2);
+            Assert.NotEmpty(json2);
+
+            var config2 = ConfigFormatConverter.LoadFromJsonString(json2);
+            Assert.NotNull(config2);
+            AssertConfigsEqual(originalConfig, config2!, "JAML→JSON (Step 2)");
+
+            // Step 3: JSON -> JAML (again)
+            var jaml3 = config2!.SaveAsJaml();
+            Assert.NotNull(jaml3);
+            Assert.NotEmpty(jaml3);
+
+            var config3 = ConfigFormatConverter.LoadFromJamlString(jaml3);
+            Assert.NotNull(config3);
+            AssertConfigsEqual(originalConfig, config3!, "JSON→JAML (Step 3)");
+
+            // Step 4: JAML -> JSON (again)
+            var json4 = config3!.SaveAsJson();
+            Assert.NotNull(json4);
+            Assert.NotEmpty(json4);
+
+            var config4 = ConfigFormatConverter.LoadFromJsonString(json4);
+            Assert.NotNull(config4);
+            AssertConfigsEqual(originalConfig, config4!, "JAML→JSON (Step 4)");
+
+            // Final verification: All configs should be equivalent
+            AssertConfigsEqual(config1, config2, "Config1 vs Config2");
+            AssertConfigsEqual(config2, config3, "Config2 vs Config3");
+            AssertConfigsEqual(config3, config4, "Config3 vs Config4");
+            AssertConfigsEqual(config1, config4, "Config1 vs Config4");
+        }
+
         private void AssertConfigsEqual(MotelyJsonConfig expected, MotelyJsonConfig actual, string conversionPath)
         {
             // Basic properties
@@ -157,32 +209,118 @@ should:
             Assert.Equal(expected.MustNot?.Count ?? 0, actual.MustNot?.Count ?? 0);
             Assert.Equal(expected.Should?.Count ?? 0, actual.Should?.Count ?? 0);
 
-            // Deep check first Must clause as example
-            if (expected.Must?.Count > 0 && actual.Must?.Count > 0)
+            // Deep check all Must clauses
+            if (expected.Must != null && actual.Must != null)
             {
-                var expectedFirst = expected.Must[0];
-                var actualFirst = actual.Must[0];
-
-                Assert.Equal(expectedFirst.Type, actualFirst.Type);
-                Assert.Equal(expectedFirst.Value, actualFirst.Value);
-                Assert.Equal(expectedFirst.Label, actualFirst.Label);
-                Assert.Equal(expectedFirst.Score, actualFirst.Score);
-                Assert.Equal(expectedFirst.Mode, actualFirst.Mode);
-                Assert.Equal(expectedFirst.Min, actualFirst.Min);
-                Assert.Equal(expectedFirst.FilterOrder, actualFirst.FilterOrder);
-                Assert.Equal(expectedFirst.Edition, actualFirst.Edition);
-
-                // Arrays
-                Assert.Equal(expectedFirst.Antes?.Length ?? 0, actualFirst.Antes?.Length ?? 0);
-                Assert.Equal(expectedFirst.Values?.Length ?? 0, actualFirst.Values?.Length ?? 0);
-                Assert.Equal(expectedFirst.Stickers?.Count ?? 0, actualFirst.Stickers?.Count ?? 0);
-
-                // Nested objects
-                if (expectedFirst.Sources != null)
+                Assert.Equal(expected.Must.Count, actual.Must.Count);
+                for (int i = 0; i < expected.Must.Count; i++)
                 {
-                    Assert.NotNull(actualFirst.Sources);
-                    Assert.Equal(expectedFirst.Sources.ShopSlots?.Length, actualFirst.Sources.ShopSlots?.Length);
-                    Assert.Equal(expectedFirst.Sources.PackSlots?.Length, actualFirst.Sources.PackSlots?.Length);
+                    AssertClauseEqual(expected.Must[i], actual.Must[i], $"Must[{i}]");
+                }
+            }
+
+            // Deep check all Should clauses
+            if (expected.Should != null && actual.Should != null)
+            {
+                Assert.Equal(expected.Should.Count, actual.Should.Count);
+                for (int i = 0; i < expected.Should.Count; i++)
+                {
+                    AssertClauseEqual(expected.Should[i], actual.Should[i], $"Should[{i}]");
+                }
+            }
+
+            // Deep check all MustNot clauses
+            if (expected.MustNot != null && actual.MustNot != null)
+            {
+                Assert.Equal(expected.MustNot.Count, actual.MustNot.Count);
+                for (int i = 0; i < expected.MustNot.Count; i++)
+                {
+                    AssertClauseEqual(expected.MustNot[i], actual.MustNot[i], $"MustNot[{i}]");
+                }
+            }
+        }
+
+        private void AssertClauseEqual(MotelyJsonConfig.MotelyJsonFilterClause expected, MotelyJsonConfig.MotelyJsonFilterClause actual, string path)
+        {
+            Assert.Equal(expected.Type, actual.Type);
+            Assert.Equal(expected.Value, actual.Value);
+            Assert.Equal(expected.Label, actual.Label);
+            Assert.Equal(expected.Score, actual.Score);
+            Assert.Equal(expected.Mode, actual.Mode);
+            Assert.Equal(expected.Min, actual.Min);
+            Assert.Equal(expected.FilterOrder, actual.FilterOrder);
+            Assert.Equal(expected.Edition, actual.Edition);
+
+            // Arrays - check both null/empty and content
+            if (expected.Antes != null && expected.Antes.Length > 0)
+            {
+                Assert.NotNull(actual.Antes);
+                Assert.Equal(expected.Antes.Length, actual.Antes.Length);
+                Assert.Equal(expected.Antes, actual.Antes);
+            }
+            else if (expected.Antes == null || expected.Antes.Length == 0)
+            {
+                // Both should be null or empty
+                Assert.True(actual.Antes == null || actual.Antes.Length == 0, 
+                    $"{path}: Expected null/empty Antes, got {actual.Antes?.Length ?? 0} items");
+            }
+
+            if (expected.Values != null && expected.Values.Length > 0)
+            {
+                Assert.NotNull(actual.Values);
+                Assert.Equal(expected.Values.Length, actual.Values.Length);
+                Assert.Equal(expected.Values, actual.Values);
+            }
+            else if (expected.Values == null || expected.Values.Length == 0)
+            {
+                Assert.True(actual.Values == null || actual.Values.Length == 0,
+                    $"{path}: Expected null/empty Values, got {actual.Values?.Length ?? 0} items");
+            }
+
+            // Stickers - important: check if expected has stickers, actual should too
+            if (expected.Stickers != null && expected.Stickers.Count > 0)
+            {
+                Assert.NotNull(actual.Stickers);
+                Assert.Equal(expected.Stickers.Count, actual.Stickers.Count);
+                if (actual.Stickers != null)
+                {
+                    var expectedSorted = expected.Stickers.OrderBy(s => s).ToList();
+                    var actualSorted = actual.Stickers.OrderBy(s => s).ToList();
+                    Assert.Equal(expectedSorted, actualSorted);
+                }
+            }
+            else if (expected.Stickers == null || expected.Stickers.Count == 0)
+            {
+                // If expected has no stickers, actual can be null or empty (both are valid)
+                // This is fine - empty collections may be omitted in JAML
+            }
+
+            // Nested objects
+            if (expected.Sources != null)
+            {
+                Assert.NotNull(actual.Sources);
+                Assert.Equal(expected.Sources.ShopSlots?.Length ?? 0, actual.Sources.ShopSlots?.Length ?? 0);
+                if (expected.Sources.ShopSlots != null && expected.Sources.ShopSlots.Length > 0)
+                {
+                    Assert.Equal(expected.Sources.ShopSlots, actual.Sources.ShopSlots);
+                }
+                Assert.Equal(expected.Sources.PackSlots?.Length ?? 0, actual.Sources.PackSlots?.Length ?? 0);
+                if (expected.Sources.PackSlots != null && expected.Sources.PackSlots.Length > 0)
+                {
+                    Assert.Equal(expected.Sources.PackSlots, actual.Sources.PackSlots);
+                }
+                Assert.Equal(expected.Sources.MinShopSlot, actual.Sources.MinShopSlot);
+                Assert.Equal(expected.Sources.MaxShopSlot, actual.Sources.MaxShopSlot);
+            }
+
+            // Nested clauses (And/Or)
+            if (expected.Clauses != null && expected.Clauses.Count > 0)
+            {
+                Assert.NotNull(actual.Clauses);
+                Assert.Equal(expected.Clauses.Count, actual.Clauses.Count);
+                for (int i = 0; i < expected.Clauses.Count; i++)
+                {
+                    AssertClauseEqual(expected.Clauses[i], actual.Clauses[i], $"{path}.Clauses[{i}]");
                 }
             }
         }

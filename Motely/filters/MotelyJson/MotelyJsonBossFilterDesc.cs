@@ -17,12 +17,12 @@ public struct MotelyJsonBossFilterDesc(MotelyJsonBossFilterCriteria criteria)
     }
 
     public struct MotelyJsonBossFilter(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses,
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses,
         int minAnte,
         int maxAnte
     ) : IMotelySeedFilter
     {
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses = clauses;
+        private readonly List<MotelyJsonConfig.MotelyJsonFilterClause> _clauses = clauses;
         private readonly int _minAnte = minAnte;
         private readonly int _maxAnte = maxAnte;
 

@@ -1133,14 +1133,14 @@ author: JamlGenie
             
             if (config.Should == null)
             {
-                config.Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                config.Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
             }
 
             // Add economy jokers (early antes 1-3)
             var economyJokers = new[] { "GoldenTicket", "BusinessCard", "CouponBook", "Rocket" };
             foreach (var joker in economyJokers)
             {
-                config.Should.Add(new MotelyJsonConfig.MotleyJsonFilterClause
+                config.Should.Add(new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Joker",
                     Value = joker,
@@ -1154,7 +1154,7 @@ author: JamlGenie
             var moneyTarots = new[] { "Temperance", "TheFool", "TheHermit" };
             foreach (var tarot in moneyTarots)
             {
-                config.Should.Add(new MotelyJsonConfig.MotleyJsonFilterClause
+                config.Should.Add(new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Tarot",
                     Value = tarot,
@@ -1165,7 +1165,7 @@ author: JamlGenie
             }
 
             // Add Gold Seal on standard cards (early antes 1-3)
-            config.Should.Add(new MotelyJsonConfig.MotleyJsonFilterClause
+            config.Should.Add(new MotelyJsonConfig.MotelyJsonFilterClause
             {
                 Type = "PlayingCard",
                 Seal = "Gold",
@@ -1182,11 +1182,11 @@ author: JamlGenie
             
             if (config.Should == null)
             {
-                config.Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                config.Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
             }
             
             // Add the "prank" default: Egg joker
-            config.Should.Add(new MotelyJsonConfig.MotleyJsonFilterClause
+            config.Should.Add(new MotelyJsonConfig.MotelyJsonFilterClause
             {
                 Type = "Joker",
                 Value = "Egg",
@@ -1198,13 +1198,13 @@ author: JamlGenie
         // Ensure Must array exists (even if empty)
         if (config.Must == null)
         {
-            config.Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+            config.Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
         }
         
         // Ensure MustNot array exists (even if empty)
         if (config.MustNot == null)
         {
-            config.MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+            config.MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
         }
     }
 
@@ -1226,7 +1226,7 @@ author: JamlGenie
             { "ScoreByChad", "ScoreByChad" },
         };
 
-        void NormalizeClause(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        void NormalizeClause(MotelyJsonConfig.MotelyJsonFilterClause clause)
         {
             // Normalize Value
             if (!string.IsNullOrEmpty(clause.Value) && cardNameMap.TryGetValue(clause.Value, out var normalizedValue))
@@ -1288,7 +1288,7 @@ author: JamlGenie
     {
         var validEditions = new[] { "None", "Foil", "Holographic", "Polychrome", "Negative" };
         
-        void FixClause(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        void FixClause(MotelyJsonConfig.MotelyJsonFilterClause clause)
         {
             if (!string.IsNullOrEmpty(clause.Edition))
             {

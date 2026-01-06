@@ -127,7 +127,7 @@ public class MotelyJsonErraticRankAndSuitFilterCriteria
 public static partial class MotelyJsonFilterClauseExtensions
 {
     public static MotelyJsonErraticRankAndSuitFilterCriteria CreateErraticRankAndSuitCriteria(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
     )
     {
         var criteria = new MotelyJsonErraticRankAndSuitFilterCriteria();

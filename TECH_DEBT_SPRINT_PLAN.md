@@ -54,7 +54,7 @@ These can all be done simultaneously by different agents:
 ### Task 1.6: Fix Naming Typo Documentation
 **Files**: All files
 **Action**: 
-- Document that `MotleyJsonFilterClause` (typo) vs `MotelyJsonConfig` is intentional or needs fixing
+- Document that `MotelyJsonFilterClause` (typo) vs `MotelyJsonConfig` is intentional or needs fixing
 - Add XML comment explaining the discrepancy
 **Time**: 10 minutes
 **Agent**: Any

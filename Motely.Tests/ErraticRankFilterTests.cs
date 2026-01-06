@@ -9,7 +9,7 @@ public sealed class ErraticRankFilterTests
     public void ErraticRank_Clause_Should_Parse_Correctly()
     {
         // Arrange
-        var clause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var clause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "ErraticRank",
             Value = "Two",

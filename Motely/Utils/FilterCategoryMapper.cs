@@ -38,11 +38,11 @@ namespace Motely.Utils
         /// </summary>
         public static Dictionary<
             FilterCategory,
-            List<MotelyJsonConfig.MotleyJsonFilterClause>
-        > GroupClausesByCategory(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+            List<MotelyJsonConfig.MotelyJsonFilterClause>
+        > GroupClausesByCategory(List<MotelyJsonConfig.MotelyJsonFilterClause> clauses)
         {
             var grouped =
-                new Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>>();
+                new Dictionary<FilterCategory, List<MotelyJsonConfig.MotelyJsonFilterClause>>();
 
             foreach (var clause in clauses)
             {
@@ -84,7 +84,7 @@ namespace Motely.Utils
 
                 if (!grouped.ContainsKey(category))
                 {
-                    grouped[category] = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                    grouped[category] = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
                 }
 
                 grouped[category].Add(clause);
@@ -97,7 +97,7 @@ namespace Motely.Utils
                 && grouped.ContainsKey(FilterCategory.ErraticSuit)
             )
             {
-                var combinedClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                var combinedClauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
                 combinedClauses.AddRange(grouped[FilterCategory.ErraticRank]);
                 combinedClauses.AddRange(grouped[FilterCategory.ErraticSuit]);
 

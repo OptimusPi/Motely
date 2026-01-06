@@ -96,7 +96,7 @@ namespace Motely.Filters
         }
 
         private static void ValidateFilterItems(
-            List<MotelyJsonConfig.MotleyJsonFilterClause> items,
+            List<MotelyJsonConfig.MotelyJsonFilterClause> items,
             string section,
             List<string> errors,
             List<string> warnings,
@@ -867,7 +867,7 @@ namespace Motely.Filters
         /// NO AMBIGUITY IN THE HOT PATH!
         /// </summary>
         private static void NormalizeSourcesForItem(
-            MotelyJsonConfig.MotleyJsonFilterClause item,
+            MotelyJsonConfig.MotelyJsonFilterClause item,
             string prefix,
             List<string> errors,
             List<string> warnings
