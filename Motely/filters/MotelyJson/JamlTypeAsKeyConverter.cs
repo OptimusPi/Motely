@@ -36,7 +36,7 @@ namespace Motely.Filters.MotelyJson
             ["or"] = "Or"
         };
 
-        private static PropertyInfo? FindPropertyWithAlias([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties)] Type type, string alias)
+        private static PropertyInfo? FindPropertyWithAlias(Type type, string alias)
         {
             return type.GetProperty(alias, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
         }

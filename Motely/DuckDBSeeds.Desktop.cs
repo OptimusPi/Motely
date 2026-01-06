@@ -56,6 +56,9 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
     private long _chunkStartIndex = 0;
     private int _chunkCount = 0;
     private string[] _chunk = Array.Empty<string>();
+    
+    // Agent debug: limit invalid-seed logging to avoid huge logs
+    private int _agentInvalidSeedLogs = 0;
 
     public int SeedCount { get; }
 
@@ -76,8 +79,32 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
 
             // Get count - DuckDB is in-memory, this is instant
             using var countCmd = conn.CreateCommand();
-            countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
-            SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
+            try
+            {
+                countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
+                SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
+            }
+            catch (DuckDBException ex) when (ex.Message.Contains("does not exist") || ex.Message.Contains("Table with name"))
+            {
+                // Database is corrupted - delete it so JsonSearchExecutor can re-import
+                try
+                {
+                    conn.Close();
+                    conn.Dispose();
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    Thread.Sleep(500);
+                    if (File.Exists(dbPath))
+                    {
+                        File.Delete(dbPath);
+                    }
+                }
+                catch { }
+                throw new InvalidOperationException(
+                    $"Database {dbPath} exists but '{tableName}' table is missing. " +
+                    $"Deleted corrupted database. Re-run to trigger automatic re-import."
+                );
+            }
 
             // Check if table has 'id' column for optimized fetching
             // If not, we'll use ROWID (DuckDB's built-in row identifier)
@@ -146,7 +173,38 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
             while (reader.Read())
             {
                 if (_disposed) break; // Check again during read
-                buffer[count++] = reader.GetString(0);
+                string raw = reader.GetString(0);
+                
+                // Sanitize seed (extract first field, filter invalid chars)
+                string seed = SeedValidator.SanitizeSeed(raw);
+                
+                // Skip invalid seeds (safety net for corrupted databases)
+                if (!SeedValidator.IsValidSeed(seed))
+                {
+                    // Log first few invalid seeds for debugging
+                    if (_agentInvalidSeedLogs < 5)
+                    {
+                        _agentInvalidSeedLogs++;
+                        AgentNdjsonLog.Log(
+                            hypothesisId: "A",
+                            location: "DuckDBSeeds.Desktop.cs:FetchChunk",
+                            message: "provider_seed_invalid_skipped",
+                            data: new
+                            {
+                                dbPath = _dbPath,
+                                table = _tableName,
+                                startIndex,
+                                rawSeed = raw.Length <= 80 ? raw : raw.Substring(0, 80),
+                                sanitizedSeed = seed,
+                                seedLength = seed.Length,
+                                hasZero = seed.IndexOf('0') >= 0,
+                            }
+                        );
+                    }
+                    continue; // Skip invalid seed
+                }
+                
+                buffer[count++] = seed;
             }
             
             // Publish chunk

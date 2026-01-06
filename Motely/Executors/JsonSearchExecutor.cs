@@ -273,68 +273,155 @@ namespace Motely.Executors
             if (File.Exists(dbPath))
             {
                 // Sanity check: verify 'seeds' table exists
+                bool dbIsValid = false;
                 try
                 {
 #if !BROWSER
+                    bool tableExists;
                     using (var conn = new DuckDBConnection($"Data Source={dbPath}"))
                     {
                         conn.Open();
                         using var cmd = conn.CreateCommand();
                         cmd.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='seeds'";
-                        var tableExists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
-                        if (!tableExists)
+                        tableExists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                        if (tableExists)
                         {
-                            // Check if CSV/TXT exists - offer to re-import
-                            string? sourcePath = null;
-                            if (File.Exists(csvPath)) sourcePath = csvPath;
-                            else if (File.Exists(txtPath)) sourcePath = txtPath;
-                            
-                            if (sourcePath != null)
+                            // Validate and migrate schema (add id column, validate seed column, check for invalid seeds)
+                            dbIsValid = ValidateAndMigrateDuckDBSchema(dbPath, csvPath, txtPath);
+                        }
+                    } // IMPORTANT: dispose connection before touching the db file on disk
+
+                    if (!tableExists)
+                    {
+                        // Table missing - check if CSV/TXT exists for re-import
+                        string? sourcePath = null;
+                        if (File.Exists(csvPath)) sourcePath = csvPath;
+                        else if (File.Exists(txtPath)) sourcePath = txtPath;
+
+                        if (sourcePath != null)
+                        {
+                            if (!_params.Quiet)
                             {
                                 Console.Error.WriteLine($"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}");
                                 Console.Error.WriteLine($"   Backing up corrupted DB and re-importing from: {sourcePath}");
-                                string backupPath = dbPath + ".corrupted";
-                                if (File.Exists(backupPath)) File.Delete(backupPath);
-                                File.Move(dbPath, backupPath);
-                                
-                                // Re-import
-                                string extension = Path.GetExtension(sourcePath).ToLowerInvariant();
-                                return extension switch
-                                {
-                                    ".csv" => ConvertCsvToDuckDB(sourcePath, dbPath),
-                                    ".txt" => ConvertTextToDuckDB(sourcePath, dbPath),
-                                    _ => throw new NotSupportedException($"Unsupported source extension: {extension}")
-                                };
                             }
-                            else
+
+                            string backupPath = dbPath + ".corrupted";
+                            if (File.Exists(backupPath)) File.Delete(backupPath);
+
+                            try
                             {
-                                throw new InvalidOperationException(
-                                    $"DuckDB file exists but 'seeds' table is missing: {dbPath}\n" +
-                                    $"   This usually means the database is corrupted or incomplete.\n" +
-                                    $"   Please re-import from a CSV/TXT source file."
+                                File.Move(dbPath, backupPath);
+                            }
+                            catch (IOException moveEx)
+                            {
+                                throw new IOException(
+                                    $"Cannot access database file {dbPath}. File is locked by another process. Close any programs using this file and try again.",
+                                    moveEx
                                 );
                             }
+
+                            // Re-import
+                            string extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+                            return extension switch
+                            {
+                                ".csv" => ConvertCsvToDuckDB(sourcePath, dbPath),
+                                ".txt" => ConvertTextToDuckDB(sourcePath, dbPath),
+                                _ => throw new NotSupportedException($"Unsupported source extension: {extension}")
+                            };
                         }
+
+                        // No source file found - delete corrupted DB and fall through
+                        if (!_params.Quiet)
+                        {
+                            Console.Error.WriteLine($"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}");
+                            Console.Error.WriteLine($"   No matching CSV/TXT source found. Deleting corrupted database...");
+                        }
+
+                        try
+                        {
+                            File.Delete(dbPath);
+                            if (!_params.Quiet)
+                            {
+                                Console.Error.WriteLine($"   ✅ Deleted. Please provide a CSV/TXT source file.");
+                            }
+                        }
+                        catch (IOException deleteEx)
+                        {
+                            throw new IOException(
+                                $"Could not delete corrupted database file {dbPath}. File is locked by another process. Close any programs using this file and try again.",
+                                deleteEx
+                            );
+                        }
+                        // dbIsValid remains false - will fall through to check for CSV/TXT
                     }
 #endif
                 }
                 catch (Exception ex) when (!(ex is InvalidOperationException))
                 {
-                    // If sanity check fails for other reasons, log but continue
-                    Console.Error.WriteLine($"⚠️  Warning: Could not verify 'seeds' table in {dbPath}: {ex.Message}");
+                    // Connection/query error - check if table doesn't exist or file is locked
+                    bool isTableMissing = ex.Message.Contains("does not exist") || ex.Message.Contains("Table with name seeds");
+                    bool isLocked = ex.Message.Contains("locked") || ex.Message.Contains("being used");
+                    
+                    if (isTableMissing)
+                    {
+                        // Table missing - try to re-import from source
+                        if (!_params.Quiet)
+                        {
+                            Console.Error.WriteLine($"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}");
+                            Console.Error.WriteLine($"   Attempting to re-import from source file...");
+                        }
+                        
+                        // Try to delete the corrupted DB
+                        try
+                        {
+                            if (File.Exists(dbPath))
+                            {
+                                File.Delete(dbPath);
+                            }
+                        }
+                        catch (IOException deleteEx)
+                        {
+                            throw new IOException($"Cannot delete corrupted database file {dbPath}. File is locked by another process. Close any programs using this file and try again.", deleteEx);
+                        }
+                        
+                        // Fall through to check for CSV/TXT and re-import
+                        dbIsValid = false;
+                    }
+                    else if (isLocked)
+                    {
+                        throw new IOException($"Cannot access database file {dbPath}. File is locked by another process. Close any programs using this file and try again.", ex);
+                    }
+                    else
+                    {
+                        if (!_params.Quiet)
+                        {
+                            Console.Error.WriteLine($"⚠️  Could not verify 'seeds' table in {dbPath}: {ex.Message}");
+                            Console.Error.WriteLine($"   Database may be corrupted. Consider deleting and re-importing.");
+                        }
+                        dbIsValid = false;
+                    }
                 }
                 
-                if (!_params.Quiet)
+                // Only return dbPath if it's valid
+                if (dbIsValid)
                 {
-                    Console.WriteLine($"✅ Using DuckDB: {dbPath}");
+                    if (!_params.Quiet)
+                    {
+                        Console.WriteLine($"✅ Using DuckDB: {dbPath}");
+                    }
+                    return dbPath;
                 }
-                return dbPath;
+                // If invalid and deleted, fall through to check for CSV/TXT files
             }
-            else if (File.Exists(csvPath))
+            
+            // Check for CSV/TXT files (even if DB existed but was invalid/deleted)
+            if (File.Exists(csvPath))
             {
                 return ConvertCsvToDuckDB(csvPath, dbPath);
             }
-            else if (File.Exists(txtPath))
+            
+            if (File.Exists(txtPath))
             {
                 return ConvertTextToDuckDB(txtPath, dbPath);
             }
@@ -358,6 +445,131 @@ namespace Motely.Executors
                 
                 throw new FileNotFoundException($"Seed source file not found. Checked: {dbPath}, {csvPath}, {txtPath}");
             }
+        }
+
+        /// <summary>
+        /// Validate and migrate DuckDB schema: ensure id column exists, seed column is VARCHAR(8), and seeds are valid.
+        /// If invalid seeds are found and source file exists, re-import from source.
+        /// </summary>
+        private bool ValidateAndMigrateDuckDBSchema(string dbPath, string? csvPath, string? txtPath)
+        {
+#if !BROWSER
+            try
+            {
+                using (var conn = new DuckDBConnection($"Data Source={dbPath}"))
+                {
+                    conn.Open();
+                    using var cmd = conn.CreateCommand();
+                    
+                    // Step 1: Check if 'id' column exists
+                    cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('seeds') WHERE name='id'";
+                    bool hasIdColumn = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                    
+                    if (!hasIdColumn)
+                    {
+                        if (!_params.Quiet)
+                        {
+                            Console.WriteLine($"🔧 Adding missing 'id' column to {dbPath}...");
+                        }
+                        cmd.CommandText = "ALTER TABLE seeds ADD COLUMN id BIGINT";
+                        cmd.ExecuteNonQuery();
+                        cmd.CommandText = "UPDATE seeds SET id = ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 WHERE id IS NULL";
+                        cmd.ExecuteNonQuery();
+                        cmd.CommandText = "CREATE INDEX IF NOT EXISTS idx_seeds_id ON seeds(id)";
+                        cmd.ExecuteNonQuery();
+                    }
+                    
+                    // Step 2: Check for invalid seeds (contain comma, '0', invalid chars, or >8 chars)
+                    // Check for invalid seeds
+                    cmd.CommandText = @"
+                        SELECT COUNT(*) FROM seeds 
+                        WHERE seed LIKE '%,%' 
+                           OR seed LIKE '%0%' 
+                           OR regexp_matches(seed, '^[1-9A-Z]*$') IS NOT TRUE
+                           OR LENGTH(seed) > 8
+                           OR seed = '';
+                    ";
+                    int invalidSeedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                    
+                    if (invalidSeedCount > 0)
+                    {
+                        // Invalid seeds found - fix in-place using SQL
+                        if (!_params.Quiet)
+                        {
+                            Console.WriteLine($"🔧 Found {invalidSeedCount} invalid seeds in {dbPath}, fixing in-place...");
+                        }
+                        
+                        // Rename old table, create new one with sanitized data
+                        cmd.CommandText = @"
+                            -- Rename old table
+                            ALTER TABLE seeds RENAME TO seeds_old;
+                            
+                            -- Create new table with sanitized seeds
+                            CREATE TABLE seeds_temp AS
+                            SELECT 
+                                -- Extract first field: split on comma, then whitespace, take first 8 chars
+                                UPPER(TRIM(SUBSTRING(
+                                    CASE 
+                                        WHEN INSTR(seed, ',') > 0 THEN SUBSTRING(seed, 1, INSTR(seed, ',') - 1)
+                                        WHEN INSTR(seed, ' ') > 0 THEN SUBSTRING(seed, 1, INSTR(seed, ' ') - 1)
+                                        ELSE seed
+                                    END,
+                                    1, 8
+                                ))) as seed
+                            FROM seeds_old
+                            WHERE seed IS NOT NULL AND trim(seed) != '';
+                            
+                            -- Remove invalid seeds
+                            DELETE FROM seeds_temp 
+                            WHERE seed = '' 
+                               OR seed LIKE '%0%' 
+                               OR regexp_matches(seed, '^[1-9A-Z]*$') IS NOT TRUE
+                               OR LENGTH(seed) > 8;
+                            
+                            -- Create final table with correct schema
+                            CREATE TABLE seeds (
+                                id BIGINT,
+                                seed VARCHAR(8)
+                            );
+                            
+                            INSERT INTO seeds (id, seed)
+                            SELECT 
+                                ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS id, 
+                                seed 
+                            FROM seeds_temp;
+                            
+                            CREATE INDEX idx_seeds_id ON seeds(id);
+                            
+                            -- Drop temp tables
+                            DROP TABLE seeds_temp;
+                            DROP TABLE seeds_old;
+                        ";
+                        cmd.ExecuteNonQuery();
+                        
+                        if (!_params.Quiet)
+                        {
+                            Console.WriteLine($"✅ Fixed database: removed invalid seeds, sanitized remaining seeds");
+                        }
+                    }
+                    
+                    // Step 3: Check if seed column is VARCHAR(8) - DuckDB doesn't support ALTER COLUMN TYPE easily,
+                    // so we just validate that all seeds are ≤8 chars (enforced by our import code going forward)
+                    // For existing DBs, the runtime sanitization in DuckDBSeeds.Desktop.cs will handle it
+                    
+                    return true;
+                }
+            }
+            catch (Exception ex) when (!(ex is InvalidOperationException))
+            {
+                if (!_params.Quiet)
+                {
+                    Console.Error.WriteLine($"⚠️  Could not validate schema in {dbPath}: {ex.Message}");
+                }
+                return false;
+            }
+#else
+            return true; // Browser: assume valid
+#endif
         }
 
         /// <summary>
@@ -1366,19 +1578,66 @@ namespace Motely.Executors
             }
             else if (!string.IsNullOrEmpty(duckDbPath))
             {
-                // Provider search from DuckDB seed source.
+                // Auto-detect: Check if we should load seeds into memory for better performance
+#if !BROWSER
+                using (var conn = new DuckDBConnection($"Data Source={duckDbPath}"))
+                {
+                    conn.Open();
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT COUNT(*) FROM seeds";
+                    int seedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                    
+                    // Auto-detect: Use 25% of available physical memory for seed loading
+                    // Estimate: ~20 bytes per seed (string overhead + array overhead)
+                    int maxBatchSize;
+                    try
+                    {
+                        // Try to get actual available system memory (works on .NET 7+)
+                        var workingSet = Environment.WorkingSet;
+                        // Conservative estimate: use max 2GB for seed loading
+                        long maxMemoryForSeeds = Math.Min(2_000_000_000, workingSet / 4);
+                        maxBatchSize = (int)(maxMemoryForSeeds / 20); // ~20 bytes per seed
+                        maxBatchSize = Math.Max(100_000, maxBatchSize); // At least 100K seeds
+                        maxBatchSize = Math.Min(10_000_000, maxBatchSize); // Cap at 10M seeds
+                    }
+                    catch
+                    {
+                        // Fallback: conservative 1M seeds if we can't detect memory
+                        maxBatchSize = 1_000_000;
+                    }
+                    
+                    if (seedCount <= maxBatchSize)
+                    {
+                        // Load all seeds into memory - MUCH faster than streaming!
+                        if (!_params.Quiet)
+                        {
+                            Console.WriteLine($"📦 Loading {seedCount:N0} seeds into memory (faster than streaming, auto-detected max: {maxBatchSize:N0})...");
+                        }
+                        
+                        var loadedSeeds = DuckDBSeeds.Stream(duckDbPath).ToArray();
+                        if (!_params.Quiet)
+                        {
+                            Console.WriteLine($"✅ Loaded {loadedSeeds.Length:N0} seeds into memory");
+                        }
+                        
+                        // Use list search with pre-sorted seeds (already sorted by length in DB)
+                        return (IMotelySearch)searchSettings.WithListSearch(loadedSeeds, alreadySorted: true).Start();
+                    }
+                    else if (!_params.Quiet)
+                    {
+                        Console.WriteLine($"💡 Database has {seedCount:N0} seeds (>{maxBatchSize:N0}), using streaming mode (auto-detected)");
+                    }
+                }
+#endif
+                
+                // Provider search from DuckDB seed source (streaming mode).
                 // NOTE: Performance-critical: avoid any debug logging / file I/O in the hot path.
                 return (IMotelySearch)
                     searchSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
             }
-            else if (seeds != null)
-            {
-                // Fallback to list search for small in-memory lists (e.g., specific seed or small seed list)
-                return (IMotelySearch)searchSettings.WithListSearch(seeds, preSorted).Start();
-            }
             else
             {
-                // Use sequential search
+                // Use sequential search (no seed list or DuckDB path provided)
                 return (IMotelySearch)searchSettings.WithSequentialSearch().Start();
             }
         }
@@ -1506,9 +1765,33 @@ namespace Motely.Executors
                     ? (long)_params.StartBatch + search.CompletedBatchCount
                     : 0;
 
-            // Calculate percentage of total search space
-            long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
-            int percentComplete = (int)(lastBatchIndex * 100 / maxBatches);
+            // Calculate percentage: for provider/list searches, use actual seed count
+            // For sequential searches, use theoretical search space
+            int percentComplete;
+            if (!string.IsNullOrEmpty(_params.SeedSources) || _params.SeedList != null)
+            {
+                // Provider/list search: if completed, we've processed all seeds (100%)
+                // For cancelled searches, we can't know exact percentage without total count
+                // So we'll show approximate based on batches processed
+                if (wasCancelled)
+                {
+                    // For cancelled provider searches, we don't have total count easily accessible
+                    // Show approximate: assume we're near completion if we processed many batches
+                    // This is a rough estimate - actual percentage would require querying DB
+                    percentComplete = 0; // Can't calculate accurately without total seed count
+                }
+                else
+                {
+                    // Search completed - we've processed all available seeds
+                    percentComplete = 100;
+                }
+            }
+            else
+            {
+                // Sequential search: use theoretical search space
+                long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
+                percentComplete = maxBatches > 0 ? (int)(lastBatchIndex * 100 / maxBatches) : 0;
+            }
 
             Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({percentComplete}%)");
             Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
@@ -1521,7 +1804,8 @@ namespace Motely.Executors
                     $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
                 );
                 double speed = (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds;
-                Console.WriteLine($"   Speed: {speed:N0} seeds/ms");
+                // Show 2 decimal places for precision (especially important for slow searches)
+                Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
             
 
             // Only show "To continue" message if search was cancelled (interrupted)
@@ -1558,6 +1842,9 @@ namespace Motely.Executors
         
         public List<string>? SeedList { get; set; }
         public int? RandomSeeds { get; set; }
+        
+        // REMOVED: SeedBatchSize parameter - always auto-detect based on available memory
+        
         /// <summary>
         /// Progress callback: (completedBatches, totalBatches, seedsSearched, seedsPerMs)
         /// </summary>
