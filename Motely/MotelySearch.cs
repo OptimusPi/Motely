@@ -552,25 +552,37 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         double totalPortionFinished = (double)thisCompletedCount / (double)_threads[0].MaxBatch;
         double thisPortionFinished = thisCompletedCount / (double)_threads[0].MaxBatch;
-        double totalTimeEstimate = elapsedMS / thisPortionFinished;
-        double timeLeft = totalTimeEstimate - elapsedMS;
-
+        
         string timeLeftFormatted;
-        bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
-        // Clamp to max TimeSpan if too large - for very slow searches
-        if (invalid || timeLeft > TimeSpan.MaxValue.TotalMilliseconds)
+        // Guard against unrealistic estimates early in search (when progress is < 0.01%)
+        // Also guard against division by zero or near-zero
+        if (thisPortionFinished < 0.0001 || thisCompletedCount == 0)
         {
-            timeLeftFormatted = "--:--:--";
+            timeLeftFormatted = "calculating...";
         }
         else
         {
-            TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(
-                Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds)
-            );
-            if (timeLeftSpan.Days == 0)
-                timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+            double totalTimeEstimate = elapsedMS / thisPortionFinished;
+            double timeLeft = totalTimeEstimate - elapsedMS;
+
+            bool invalid = double.IsNaN(timeLeft) || double.IsInfinity(timeLeft) || timeLeft < 0;
+            // Clamp to max TimeSpan if too large - for very slow searches
+            // Also cap at 30 days to avoid showing unrealistic estimates
+            const double MAX_ESTIMATE_MS = 30.0 * 24 * 60 * 60 * 1000; // 30 days
+            if (invalid || timeLeft > Math.Min(TimeSpan.MaxValue.TotalMilliseconds, MAX_ESTIMATE_MS))
+            {
+                timeLeftFormatted = "--:--:--";
+            }
             else
-                timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+            {
+                TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(
+                    Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds)
+                );
+                if (timeLeftSpan.Days == 0)
+                    timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+                else
+                    timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+            }
         }
 
         // Different progress display for CSV mode vs normal mode
@@ -579,7 +591,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // In CSV mode, write progress to stderr with carriage return (erase and redraw)
             // Clear the line first, then write new progress
             var progressMsg =
-                $"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMs)} seeds/ms)";
+                $"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)";
             Console.Error.Write(
                 $"\r{progressMsg}{new string(' ', Math.Max(0, 100 - progressMsg.Length))}"
             );
@@ -588,7 +600,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             // Normal mode - use fancy bottom line
             FancyConsole.SetBottomLine(
-                $"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({Math.Round(seedsPerMs)} seeds/ms)"
+                $"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)"
             );
         }
     }
@@ -781,9 +793,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         // PERFORMANCE: Flush any remaining thread-local counts and buffers on completion
                         FlushLocalCounters();
 
+                        // Assertion: We should have either processed all batches OR hit the end batch
+                        // OR the search was completed early (e.g., provider ran out of seeds)
+                        // For provider-based searches, early completion is valid when NextSeed() returns empty
+                        // Note: When provider exhausts, _batchIndex may be < MaxBatch, which is OK
                         Debug.Assert(
                             Search._batchIndex >= MaxBatch
                                 || Search._batchIndex >= Search._endBatchIndex
+                                || Search._status == MotelySearchStatus.Completed
                         );
                         return;
 
@@ -804,6 +821,15 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
 
                 SearchBatch(batchIdx);
+                
+                // Check if SearchBatch detected provider exhaustion (early completion)
+                // If so, the status was set to Completed and we should continue to next iteration
+                // so the switch statement can handle the Completed status properly
+                if (Search._status == MotelySearchStatus.Completed)
+                {
+                    // Provider ran out of seeds - continue to next iteration to handle Completed status
+                    continue;
+                }
                 _localBatchesCompleted++; // Thread-local increment (no Interlocked!)
 
                 // PERFORMANCE: ALL batch-end processing happens HERE in sequence
@@ -1039,6 +1065,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             }
 
             FilterSeedBatch* filterBatch = &_filterSeedBatches[filterIndex];
+            
+            // Validate filterBatch->SeedHashes is allocated
+            if (filterBatch->SeedHashes == null)
+            {
+                DebugLogger.Log($"[BATCH] ERROR: filterBatch->SeedHashes is null for filterIndex {filterIndex}");
+                return;
+            }
 
             Debug.Assert(
                 searchResultMask.IsPartiallyTrue(),
@@ -1106,13 +1139,31 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
 
                     // Store the cached hashes
+                    // The cache structure: Cache[partialHashLength] already points to the correct Vector512<double>*
+                    // for that key length. We just need to copy lane 'lane' from source to lane 'seedBatchIndex' in target.
+                    if (Search._pseudoHashKeyLengths == null || Search._pseudoHashKeyLengthCount <= 0)
+                        return;
+                    
                     for (int i = 0; i < Search._pseudoHashKeyLengthCount; i++)
                     {
                         int partialHashLength = Search._pseudoHashKeyLengths[i];
 
-                        ((double*)filterBatch->SeedHashes)[
-                            i * Vector512<double>.Count + seedBatchIndex
-                        ] = ((double*)searchParams.SeedHashCache->Cache[partialHashLength])[lane];
+                        // Ensure cache entry exists before accessing
+                        if (searchParams.SeedHashCache == null)
+                            continue;
+
+                        if (partialHashLength >= Motely.MaxCachedPseudoHashKeyLength)
+                            continue;
+
+                        if (searchParams.SeedHashCache->Cache[partialHashLength] == null)
+                            continue;
+
+                        // Cache[partialHashLength] already points to the correct Vector512<double>* for this key length
+                        // Per GitHub issue fix: use [lane] directly, NOT [i * Vector512<double>.Count + lane]
+                        double sourceValue = ((double*)searchParams.SeedHashCache->Cache[partialHashLength])[lane];
+                        
+                        // Write to target: filterBatch->SeedHashes is an array of Vector512<double>
+                        ((double*)filterBatch->SeedHashes)[i * Vector512<double>.Count + seedBatchIndex] = sourceValue;
                     }
 
                     if (seedBatchIndex == Vector512<double>.Count - 1)
@@ -1250,25 +1301,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         protected override void SearchBatch(long batchIdx)
         {
-            // Calculate how many seeds remain for this batch
-            long seedsProcessedSoFar = batchIdx * Motely.MaxVectorWidth;
-            long seedsRemainingInProvider = Math.Max(
-                0,
-                SeedProvider.SeedCount - seedsProcessedSoFar
-            );
-
-            // If we have fewer than 8 seeds remaining, search them individually
-            if (seedsRemainingInProvider < Motely.MaxVectorWidth)
-            {
-                int actualSeedsToProcess = (int)Math.Min(seedsRemainingInProvider, Motely.MaxVectorWidth);
-                for (int i = 0; i < actualSeedsToProcess; i++)
-                {
-                    ReadOnlySpan<char> seed = SeedProvider.NextSeed();
-                    if (seed.IsEmpty) break;
-                    SearchSingleSeed(seed);
-                }
-                return;
-            }
+            // NOTE: With global seed index (DuckDBSeedProvider), batchIdx doesn't correspond
+            // to actual seeds processed. Just try to get seeds and process them - NextSeed()
+            // will return empty when all seeds are exhausted.
 
             // The length of all the seeds
             int* seedLengths = stackalloc int[Motely.MaxVectorWidth];
@@ -1281,8 +1316,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 ReadOnlySpan<char> seed = SeedProvider.NextSeed();
 
-                // If we get an empty seed, we've run out of seeds to process
-                if (seed.IsEmpty || seed.Length == 0)
+                // If we get an empty span, we've run out of seeds to process
+                if (seed.IsEmpty)
                 {
                     // If we have no seeds at all, mark as completed and return
                     if (seedIdx == 0)
@@ -1293,6 +1328,24 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     // Otherwise, process the seeds we have so far
                     break;
                 }
+
+                // #region agent log
+                if (seed.Length > Motely.MaxSeedLength || seed.IndexOf('0') >= 0)
+                {
+                    AgentNdjsonLog.Log(
+                        hypothesisId: "A",
+                        location: "MotelySearch.cs:MotelyProviderSearchThread.SearchBatch",
+                        message: "seed_invalid_from_provider",
+                        data: new
+                        {
+                            seedIdx,
+                            seedLength = seed.Length,
+                            hasZero = seed.IndexOf('0') >= 0,
+                            snippet = seed.Length <= 80 ? new string(seed) : new string(seed[..80]),
+                        }
+                    );
+                }
+                // #endregion
 
                 // Bounds check for seedLengths array
                 if (seedIdx < Motely.MaxVectorWidth)
@@ -1384,7 +1437,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         private void SearchSingleSeed(ReadOnlySpan<char> seed)
         {
             // Skip empty seeds (indicates we've run out of seeds in the list)
-            if (seed.IsEmpty || seed.Length == 0)
+            if (seed.IsEmpty)
                 return;
 
             char* seedLastCharacters = stackalloc char[Motely.MaxSeedLength - 1];
