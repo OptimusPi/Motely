@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Motely.Filters;
 using Motely.Utils;
 #if !BROWSER
@@ -61,7 +62,7 @@ namespace Motely.Executors
         /// Initialize parsed enums for a clause with helpful error messages
         /// </summary>
         private static void InitializeClauseWithContext(
-            MotelyJsonConfig.MotleyJsonFilterClause clause,
+            MotelyJsonConfig.MotelyJsonFilterClause clause,
             string sectionName,  // "MUST", "MUSTNOT", "SHOULD"
             int index)
         {
@@ -271,6 +272,58 @@ namespace Motely.Executors
             // ONE TRUE WAY: Always use DuckDB! Convert if needed.
             if (File.Exists(dbPath))
             {
+                // Sanity check: verify 'seeds' table exists
+                try
+                {
+#if !BROWSER
+                    using (var conn = new DuckDBConnection($"Data Source={dbPath}"))
+                    {
+                        conn.Open();
+                        using var cmd = conn.CreateCommand();
+                        cmd.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='seeds'";
+                        var tableExists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                        if (!tableExists)
+                        {
+                            // Check if CSV/TXT exists - offer to re-import
+                            string? sourcePath = null;
+                            if (File.Exists(csvPath)) sourcePath = csvPath;
+                            else if (File.Exists(txtPath)) sourcePath = txtPath;
+                            
+                            if (sourcePath != null)
+                            {
+                                Console.Error.WriteLine($"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}");
+                                Console.Error.WriteLine($"   Backing up corrupted DB and re-importing from: {sourcePath}");
+                                string backupPath = dbPath + ".corrupted";
+                                if (File.Exists(backupPath)) File.Delete(backupPath);
+                                File.Move(dbPath, backupPath);
+                                
+                                // Re-import
+                                string extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+                                return extension switch
+                                {
+                                    ".csv" => ConvertCsvToDuckDB(sourcePath, dbPath),
+                                    ".txt" => ConvertTextToDuckDB(sourcePath, dbPath),
+                                    _ => throw new NotSupportedException($"Unsupported source extension: {extension}")
+                                };
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException(
+                                    $"DuckDB file exists but 'seeds' table is missing: {dbPath}\n" +
+                                    $"   This usually means the database is corrupted or incomplete.\n" +
+                                    $"   Please re-import from a CSV/TXT source file."
+                                );
+                            }
+                        }
+                    }
+#endif
+                }
+                catch (Exception ex) when (!(ex is InvalidOperationException))
+                {
+                    // If sanity check fails for other reasons, log but continue
+                    Console.Error.WriteLine($"⚠️  Warning: Could not verify 'seeds' table in {dbPath}: {ex.Message}");
+                }
+                
                 if (!_params.Quiet)
                 {
                     Console.WriteLine($"✅ Using DuckDB: {dbPath}");
@@ -542,7 +595,7 @@ namespace Motely.Executors
 
             // Use specialized filter system - DON'T GROUP! Chain each clause separately!
             // config.PostProcess() already initialized all clauses!
-            List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses = config.Must?.ToList() ?? [];
+            List<MotelyJsonConfig.MotelyJsonFilterClause> mustClauses = config.Must?.ToList() ?? [];
 
             // If no MUST clauses, check if we have mustNot clauses to use as a composite filter
             if (mustClauses.Count == 0)
@@ -564,7 +617,7 @@ namespace Motely.Executors
                     }
 
                     // Mark all mustNot clauses as inverted
-                    var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                    var allRequiredClauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
                     foreach (var clause in config.MustNot)
                     {
                         clause.IsInverted = true;
@@ -746,9 +799,9 @@ namespace Motely.Executors
         }
 
         // Helper: Create filter descriptor for a SINGLE clause
-        private static IMotelySeedFilterDesc CreateSingleClauseFilterDesc(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        private static IMotelySeedFilterDesc CreateSingleClauseFilterDesc(MotelyJsonConfig.MotelyJsonFilterClause clause)
         {
-            var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clause };
+            var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { clause };
 
             return clause.ItemTypeEnum switch
             {
@@ -856,9 +909,9 @@ namespace Motely.Executors
         }
 
         // Keep old category-based code for now in case we need to revert
-        private IMotelySearch CreateSearchOLD_GROUPED(MotelyJsonConfig config, IEnumerable<string>? seeds, bool preSorted, MotelyJsonSeedScoreDesc scoreDesc, List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses, string? duckDbPath = null)
+        private IMotelySearch CreateSearchOLD_GROUPED(MotelyJsonConfig config, IEnumerable<string>? seeds, bool preSorted, MotelyJsonSeedScoreDesc scoreDesc, List<MotelyJsonConfig.MotelyJsonFilterClause> mustClauses, string? duckDbPath = null)
         {
-            Dictionary<FilterCategory, List<MotelyJsonConfig.MotleyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
+            Dictionary<FilterCategory, List<MotelyJsonConfig.MotelyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
             List<FilterCategory> categories = [.. clausesByCategory.Keys];
 
             if (categories.Count > 1)
@@ -873,7 +926,7 @@ namespace Motely.Executors
 
                 // CRITICAL REFACTOR: Merge mustNot clauses into must clauses BEFORE creating composite
                 // Mark mustNot clauses with IsInverted=true so they're handled in one pass
-                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(
+                var allRequiredClauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>(
                     mustClauses
                 );
 
@@ -949,7 +1002,7 @@ namespace Motely.Executors
 
             // Single category - but check if we have mustNot clauses to merge
             FilterCategory primaryCategory = categories[0];
-            List<MotelyJsonConfig.MotleyJsonFilterClause> primaryClauses = clausesByCategory[
+            List<MotelyJsonConfig.MotelyJsonFilterClause> primaryClauses = clausesByCategory[
                 primaryCategory
             ];
 
@@ -968,7 +1021,7 @@ namespace Motely.Executors
                 }
 
                 // Initialize and mark mustNot clauses as inverted
-                var allRequiredClauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>(
+                var allRequiredClauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>(
                     primaryClauses
                 );
 
@@ -1029,8 +1082,8 @@ namespace Motely.Executors
                 if (_params.RandomSeeds.HasValue)
                     return (IMotelySearch)
                         compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
-                else if (!string.IsNullOrEmpty(duckDbPath))
-                    return (IMotelySearch)compositeSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
+                else if (seeds != null)
+                    return (IMotelySearch)compositeSettings.WithListSearch(seeds, preSorted).Start();
                 else
                     return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
             }
@@ -1190,7 +1243,7 @@ namespace Motely.Executors
             for (int i = 1; i < categories.Count; i++)
             {
                 FilterCategory category = categories[i];
-                List<MotelyJsonConfig.MotleyJsonFilterClause> clauses = clausesByCategory[category];
+                List<MotelyJsonConfig.MotelyJsonFilterClause> clauses = clausesByCategory[category];
                 IMotelySeedFilterDesc additionalFilter = category switch
                 {
                     FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
@@ -1313,12 +1366,19 @@ namespace Motely.Executors
             }
             else if (!string.IsNullOrEmpty(duckDbPath))
             {
-                // Use DuckDB seed provider - streams directly from DB, no memory loading!
-                return (IMotelySearch)searchSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
+                // Provider search from DuckDB seed source.
+                // NOTE: Performance-critical: avoid any debug logging / file I/O in the hot path.
+                return (IMotelySearch)
+                    searchSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
+            }
+            else if (seeds != null)
+            {
+                // Fallback to list search for small in-memory lists (e.g., specific seed or small seed list)
+                return (IMotelySearch)searchSettings.WithListSearch(seeds, preSorted).Start();
             }
             else
             {
-                // Use sequential search (for specific seeds or small lists handled elsewhere)
+                // Use sequential search
                 return (IMotelySearch)searchSettings.WithSequentialSearch().Start();
             }
         }
@@ -1339,7 +1399,7 @@ namespace Motely.Executors
         /// <summary>
         /// Generate a meaningful column name for a clause, handling And/Or groupings
         /// </summary>
-        private static string GetClauseHeaderName(MotelyJsonConfig.MotleyJsonFilterClause clause)
+        private static string GetClauseHeaderName(MotelyJsonConfig.MotelyJsonFilterClause clause)
         {
             // Handle And/Or clauses with nested clauses
             if (
@@ -1414,7 +1474,7 @@ namespace Motely.Executors
         }
 
         private static string GetClauseBaseNameInternal(
-            MotelyJsonConfig.MotleyJsonFilterClause clause
+            MotelyJsonConfig.MotelyJsonFilterClause clause
         )
         {
             if (!string.IsNullOrEmpty(clause.Label))
@@ -1451,8 +1511,9 @@ namespace Motely.Executors
             int percentComplete = (int)(lastBatchIndex * 100 / maxBatches);
 
             Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({percentComplete}%)");
-            Console.WriteLine($"   Seeds passed filter: {search.FilteredSeeds}");
-            Console.WriteLine($"   Seeds passed cutoff: {search.MatchingSeeds}");
+            Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
+            // Note: FilteredSeeds is deprecated and always returns 0
+            // MatchingSeeds represents seeds that passed all filters AND cutoff
 
             
                 Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");

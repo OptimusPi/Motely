@@ -51,9 +51,9 @@ namespace Motely.Tests
                 Description = "Test that soul joker editions are ante-dependent",
                 Deck = "Red",
                 Stake = "White",
-                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                 {
-                    new MotelyJsonConfig.MotleyJsonFilterClause
+                    new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Triboulet",
@@ -87,16 +87,16 @@ namespace Motely.Tests
                 Description = "Test multiple soul jokers across antes",
                 Deck = "Red",
                 Stake = "White",
-                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                 {
-                    new MotelyJsonConfig.MotleyJsonFilterClause
+                    new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Perkeo",
                         Edition = "Negative",
                         Antes = new[] { 1, 2, 3 }
                     },
-                    new MotelyJsonConfig.MotleyJsonFilterClause
+                    new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Triboulet",
@@ -144,10 +144,10 @@ namespace Motely.Tests
                 Description = "SHOULD clauses must also handle editions correctly",
                 Deck = "Red",
                 Stake = "White",
-                Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>(), // Empty MUST
-                Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>(), // Empty MUST
+                Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                 {
-                    new MotelyJsonConfig.MotleyJsonFilterClause
+                    new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Perkeo",

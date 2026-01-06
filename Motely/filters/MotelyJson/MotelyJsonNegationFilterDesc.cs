@@ -7,10 +7,10 @@ namespace Motely.Filters
     /// Used to implement 'mustNot' semantics from JSON configs.
     /// </summary>
     public struct MotelyJsonNegationFilterDesc(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
     ) : IMotelySeedFilterDesc<MotelyJsonNegationFilterDesc.MotelyJsonNegationFilter>
     {
-        private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _clauses = clauses;
+        private readonly List<MotelyJsonConfig.MotelyJsonFilterClause> _clauses = clauses;
 
         public MotelyJsonNegationFilter CreateFilter(ref MotelyFilterCreationContext ctx)
         {

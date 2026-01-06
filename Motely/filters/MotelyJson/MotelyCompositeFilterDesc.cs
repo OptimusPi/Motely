@@ -9,10 +9,10 @@ namespace Motely.Filters;
 /// Composite filter that directly calls multiple filters and combines their results
 /// BYPASSES the broken batching system entirely!
 /// </summary>
-public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses)
+public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterClause> mustClauses)
     : IMotelySeedFilterDesc<MotelyCompositeFilterDesc.MotelyCompositeFilter>
 {
-    private readonly List<MotelyJsonConfig.MotleyJsonFilterClause> _mustClauses = mustClauses;
+    private readonly List<MotelyJsonConfig.MotelyJsonFilterClause> _mustClauses = mustClauses;
 
     public MotelyCompositeFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
@@ -125,12 +125,12 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     }
 
     // Helper method to recursively clone a clause with a specific ante, propagating to ALL descendants
-    private static MotelyJsonConfig.MotleyJsonFilterClause CloneClauseWithAnte(
-        MotelyJsonConfig.MotleyJsonFilterClause source,
+    private static MotelyJsonConfig.MotelyJsonFilterClause CloneClauseWithAnte(
+        MotelyJsonConfig.MotelyJsonFilterClause source,
         int ante
     )
     {
-        var cloned = new MotelyJsonConfig.MotleyJsonFilterClause
+        var cloned = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = source.Type,
             Value = source.Value,
@@ -164,7 +164,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
         // Recursively clone nested clauses with the same ante!
         if (!source.Clauses.IsNullOrEmpty() && source.Clauses != null)
         {
-            cloned.Clauses = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+            cloned.Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
             foreach (var nestedClause in source.Clauses)
             {
                 cloned.Clauses.Add(CloneClauseWithAnte(nestedClause, ante));
@@ -179,7 +179,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     /// Creates separate filter groups for each ante, then ORs them together.
     /// </summary>
     private static List<IMotelySeedFilter> PropagateAntesToChildren(
-        MotelyJsonConfig.MotleyJsonFilterClause parentClause,
+        MotelyJsonConfig.MotelyJsonFilterClause parentClause,
         ref MotelyFilterCreationContext ctx,
         bool isAndClause
     )
@@ -198,7 +198,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             if (isAndClause)
             {
                 // For AND: Clone all children with this ante, create AND filter
-                var clonedChildren = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                var clonedChildren = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
                 foreach (var child in parentClause.Clauses!)
                 {
                     clonedChildren.Add(CloneClauseWithAnte(child, ante));
@@ -212,7 +212,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 foreach (var child in parentClause.Clauses!)
                 {
                     var clonedChild = CloneClauseWithAnte(child, ante);
-                    var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clonedChild };
+                    var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { clonedChild };
                     var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                     anteSpecificFilters.Add(nestedComposite.CreateFilter(ref ctx));
                 }
@@ -223,7 +223,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     }
 
     private static IMotelySeedFilter CreateAndFilter(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> andClauses,
+        List<MotelyJsonConfig.MotelyJsonFilterClause> andClauses,
         ref MotelyFilterCreationContext ctx
     )
     {
@@ -259,7 +259,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     }
 
     private static IMotelySeedFilter CreateOrFilter(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> orClauses,
+        List<MotelyJsonConfig.MotelyJsonFilterClause> orClauses,
         ref MotelyFilterCreationContext ctx
     )
     {
@@ -292,7 +292,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                     {
                         // Create a composite filter with just this one clause
                         // This prevents same-type items from being grouped together
-                        var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+                        var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                         {
                             individualClause,
                         };
@@ -310,7 +310,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     /// Create an OrFilter for a SINGLE or: clause (used to ensure multiple or: clauses in must are ANDed)
     /// </summary>
     private static IMotelySeedFilter CreateSingleOrFilter(
-        MotelyJsonConfig.MotleyJsonFilterClause orClause,
+        MotelyJsonConfig.MotelyJsonFilterClause orClause,
         ref MotelyFilterCreationContext ctx
     )
     {
@@ -332,7 +332,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
                 foreach (var child in orClause.Clauses)
                 {
                     var clonedChild = CloneClauseWithAnte(child, ante);
-                    var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { clonedChild };
+                    var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { clonedChild };
                     var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                     nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
                 }
@@ -343,7 +343,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
             // No antes array on parent - create separate filter for each child clause
             foreach (var individualClause in orClause.Clauses)
             {
-                var singleClauseList = new List<MotelyJsonConfig.MotleyJsonFilterClause> { individualClause };
+                var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { individualClause };
                 var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                 nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
             }
@@ -356,7 +356,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterCl
     /// Create an AndFilter for a SINGLE and: clause (used to ensure multiple and: clauses in must are ANDed)
     /// </summary>
     private static IMotelySeedFilter CreateSingleAndFilter(
-        MotelyJsonConfig.MotleyJsonFilterClause andClause,
+        MotelyJsonConfig.MotelyJsonFilterClause andClause,
         ref MotelyFilterCreationContext ctx
     )
     {

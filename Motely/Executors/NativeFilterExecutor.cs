@@ -390,8 +390,9 @@ namespace Motely.Executors
             Console.WriteLine($"   Batches completed: {search.CompletedBatchCount}");
             Console.WriteLine($"   Last batch: {lastBatch}");
             Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
-            Console.WriteLine($"   Seeds passed filter: {search.FilteredSeeds}");
-            Console.WriteLine($"   Seeds passed cutoff: {search.MatchingSeeds}");
+            Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
+            // Note: FilteredSeeds is deprecated and always returns 0
+            // MatchingSeeds represents seeds that passed all filters AND cutoff
 
             if (duration.TotalMilliseconds >= 1)
             {

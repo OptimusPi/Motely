@@ -8,7 +8,7 @@ public sealed class ChainedMustClauseSeedTests
     [Fact]
     public void ChainedMustClauses_SingleSeed_C7AOGOYY_ShouldMatch()
     {
-        var baronClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var baronClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Baron",
@@ -16,7 +16,7 @@ public sealed class ChainedMustClauseSeedTests
         };
         baronClause.InitializeParsedEnums();
 
-        var mimeClause = new MotelyJsonConfig.MotleyJsonFilterClause
+        var mimeClause = new MotelyJsonConfig.MotelyJsonFilterClause
         {
             Type = "Joker",
             Value = "Mime",

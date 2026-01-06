@@ -24,7 +24,7 @@ namespace Motely.Filters.MotelyJson
             { typeof(List<string>), new StringListHandler() },
             { typeof(int), new IntHandler() },
             { typeof(int?), new NullableIntHandler() },
-            { typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>), new ClausesListHandler() },
+            { typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>), new ClausesListHandler() },
             { typeof(SourcesConfig), new SourcesConfigHandler() }
         };
 
@@ -128,18 +128,18 @@ namespace Motely.Filters.MotelyJson
     internal class ClausesListHandler : IPropertyTypeHandler
     {
         public bool CanHandle(Type propertyType) => 
-            propertyType == typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>);
+            propertyType == typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>);
         
         public void SetValue(PropertyInfo property, object target, object? value)
         {
-            if (value is List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList)
+            if (value is List<MotelyJsonConfig.MotelyJsonFilterClause> clausesList)
                 property.SetValue(target, clausesList);
             else if (value is System.Collections.IList list)
             {
-                var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                var convertedList = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
                 foreach (var item in list)
                 {
-                    if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
+                    if (item is MotelyJsonConfig.MotelyJsonFilterClause filterClause)
                         convertedList.Add(filterClause);
                 }
                 property.SetValue(target, convertedList);

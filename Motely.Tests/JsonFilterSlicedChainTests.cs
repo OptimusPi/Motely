@@ -27,7 +27,7 @@ public sealed class JsonFilterSlicedChainTests
         
         // EXACTLY replicate JsonSearchExecutor.CreateSearch() logic
         // Step 1: Group clauses by category (PROPER SLICING)
-        var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+        var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotelyJsonFilterClause>();
         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
         
         Assert.Single(clausesByCategory);
@@ -85,7 +85,7 @@ public sealed class JsonFilterSlicedChainTests
     }
     
     // Helper method matching JsonSearchExecutor.CreateJokerFilterDesc()
-    private static MotelyJsonJokerFilterDesc CreateJokerFilterDesc(List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+    private static MotelyJsonJokerFilterDesc CreateJokerFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterClause> clauses)
     {
         var typedClauses = MotelyJsonJokerFilterClause.ConvertClauses(clauses);
         var criteria = MotelyJsonJokerFilterClause.CreateCriteria(typedClauses);
@@ -93,7 +93,7 @@ public sealed class JsonFilterSlicedChainTests
     }
     
     // Helper method for creating filters for additional categories
-    private static IMotelySeedFilterDesc CreateFilterForCategory(FilterCategory category, List<MotelyJsonConfig.MotleyJsonFilterClause> clauses)
+    private static IMotelySeedFilterDesc CreateFilterForCategory(FilterCategory category, List<MotelyJsonConfig.MotelyJsonFilterClause> clauses)
     {
         return category switch
         {
@@ -117,10 +117,10 @@ public sealed class JsonFilterSlicedChainTests
         var config = new MotelyJsonConfig
         {
             Name = "Multi-Category Test",
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
                 // Joker clause
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Joker",
                     Value = "Joker",
@@ -131,14 +131,14 @@ public sealed class JsonFilterSlicedChainTests
                     }
                 },
                 // Voucher clause
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Voucher",
                     Value = "Observatory",
                     Antes = new int[] { 2 }
                 },
                 // Tarot clause
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "TarotCard",
                     Value = "The Fool",
@@ -149,8 +149,8 @@ public sealed class JsonFilterSlicedChainTests
                     }
                 }
             },
-            Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>()
+            Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
         };
         
         // Initialize parsed enums for all clauses
@@ -206,17 +206,17 @@ public sealed class JsonFilterSlicedChainTests
         var config = new MotelyJsonConfig
         {
             Name = "Ante Optimization Test",
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Joker",
                     Value = "Any",
                     Antes = new int[] { 2, 4, 7 } // Sparse antes for optimization test
                 }
             },
-            Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>()
+            Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
         };
         
         // Initialize parsed enums for all clauses
@@ -259,17 +259,17 @@ public sealed class JsonFilterSlicedChainTests
         var config = new MotelyJsonConfig
         {
             Name = "Soul Joker Test",
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>
             {
-                new MotelyJsonConfig.MotleyJsonFilterClause
+                new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "SoulJoker",
                     Value = "Perkeo",
                     Antes = new int[] { 3 }
                 }
             },
-            Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>()
+            Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
         };
         
         // Initialize parsed enums for all clauses

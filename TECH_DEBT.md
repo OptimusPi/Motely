@@ -115,7 +115,7 @@ Generated: 2026-01-04
 
 ### 16. **Inconsistent Naming Conventions**
 **Location**: Throughout codebase
-**Issue**: Mix of `MotelyJsonConfig` vs `MotleyJsonFilterClause` (typo in "Motley")
+**Issue**: Mix of `MotelyJsonConfig` vs `MotelyJsonFilterClause` (typo in "Motely")
 **Impact**: Confusion, potential bugs
 **Solution**: Standardize naming (consider fixing typo if not breaking)
 **Effort**: Low (1 hour, but breaking change risk)

@@ -2,9 +2,9 @@ using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 using Motely.Filters.MotelyJson;
-using Motely.Filters;
 using System.Linq;
 using System.Reflection;
+using Motely.Filters;
 
 namespace Motely.Filters.MotelyJson
 {
@@ -16,22 +16,15 @@ namespace Motely.Filters.MotelyJson
         private static readonly Dictionary<string, string> TypeMappings = new(StringComparer.OrdinalIgnoreCase)
         {
             ["joker"] = "Joker",
-            ["jokers"] = "Joker",
-            ["souljoker"] = "SoulJoker",
-            ["souljokers"] = "SoulJoker",
+            ["souljoker"] = "SoulJoker", 
             ["voucher"] = "Voucher",
-            ["vouchers"] = "Voucher",
             ["tarot"] = "TarotCard",
             ["tarotcard"] = "TarotCard",
-            ["tarotcards"] = "TarotCard",
             ["planet"] = "PlanetCard",
             ["planetcard"] = "PlanetCard",
-            ["planetcards"] = "PlanetCard",
             ["spectral"] = "SpectralCard",
             ["spectralcard"] = "SpectralCard",
-            ["spectralcards"] = "SpectralCard",
             ["standardcard"] = "StandardCard",
-            ["standardcards"] = "StandardCard",
             ["boss"] = "Boss",
             ["tag"] = "Tag",
             ["smallblindtag"] = "SmallBlindTag",
@@ -43,62 +36,63 @@ namespace Motely.Filters.MotelyJson
             ["or"] = "Or"
         };
 
+        private static PropertyInfo? FindPropertyWithAlias([System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties)] Type type, string alias)
+        {
+            return type.GetProperty(alias, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+        }
+
         public bool Deserialize(IParser reader, Type expectedType, Func<IParser, Type, object?> objectFactory, out object? value, ObjectDeserializer rootDeserializer)
         {
-            var expectedTypeName = expectedType.FullName ?? "";
-            var isMotelyJsonConfigClause = expectedTypeName.Contains("MotleyJsonFilterClause") && expectedType != typeof(MotelyJsonConfig);
+            value = null;
+
+            // Check if this is a type we should handle
+            var expectedTypeName = expectedType.FullName ?? string.Empty;
+            var isMotelyJsonConfigClause = expectedTypeName.Contains("MotelyJsonFilterClause") && expectedType != typeof(MotelyJsonConfig);
             var isMotelyJsonFilterClause = expectedType == typeof(MotelyJsonFilterClause);
-            
+
             if (!isMotelyJsonConfigClause && !isMotelyJsonFilterClause)
             {
-                value = null;
                 return false;
             }
 
+            // Get the current node
             if (!reader.TryConsume<MappingStart>(out var mappingStart))
             {
-                value = null;
                 return false;
             }
 
+            // Use case-insensitive dictionary for entries to handle any casing
             var entries = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            
+
             while (!reader.TryConsume<MappingEnd>(out _))
             {
                 if (!reader.TryConsume<Scalar>(out var keyScalar))
                 {
-                    value = null;
                     return false;
                 }
 
                 var key = keyScalar.Value;
-                
+
                 if (TypeMappings.TryGetValue(key, out var mappedType))
                 {
                     var nextEvent = reader.Current;
-                    
+
                     if (nextEvent is Scalar)
                     {
                         if (!reader.TryConsume<Scalar>(out var valueScalar))
                         {
-                            value = null;
                             return false;
                         }
+
                         DebugLogger.Log($"[CONVERTER] Type-as-key: {key} -> {mappedType}, value: {valueScalar.Value}");
                         entries["type"] = mappedType;
                         entries["value"] = valueScalar.Value;
                     }
-                    else if (nextEvent is SequenceStart)
+                    else if (nextEvent is MappingStart || nextEvent is SequenceStart)
                     {
-                        var arrayValue = objectFactory(reader, typeof(object));
-                        entries["type"] = mappedType;
-                        entries["values"] = arrayValue!;
-                    }
-                    else if (nextEvent is MappingStart)
-                    {
-                        if (mappedType == "And" || mappedType == "Or")
+                        if (mappedType == "And" || mappedType == "Or" && nextEvent is SequenceStart)
                         {
-                            var complexValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>));
+                            var complexValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>));
                             entries["type"] = mappedType;
                             entries["value"] = complexValue!;
                         }
@@ -111,7 +105,6 @@ namespace Motely.Filters.MotelyJson
                     }
                     else
                     {
-                        value = null;
                         return false;
                     }
                 }
@@ -119,13 +112,8 @@ namespace Motely.Filters.MotelyJson
                 {
                     if (string.Equals(key, "clauses", StringComparison.OrdinalIgnoreCase))
                     {
-                        var clausesValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotleyJsonFilterClause>));
+                        var clausesValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>));
                         entries[key] = clausesValue!;
-                    }
-                    else if (string.Equals(key, "sources", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var sourcesValue = objectFactory(reader, typeof(SourcesConfig));
-                        entries[key] = sourcesValue!;
                     }
                     else
                     {
@@ -134,121 +122,215 @@ namespace Motely.Filters.MotelyJson
                     }
                 }
             }
-            
-            if (entries == null || !entries.TryGetValue("type", out var typeValue))
-            {
-                value = null;
-                return false;
-            }
-            if (typeValue == null)
-            {
-                value = null;
-                return false;
-            }
-            var typeStr = typeValue.ToString();
 
-            if (isMotelyJsonConfigClause)
+            if (!entries.TryGetValue("type", out var typeValue) || typeValue == null)
             {
-                var clause = new MotelyJsonConfig.MotleyJsonFilterClause();
+                return false;
+            }
+
+            var typeStr = typeValue.ToString();
+            
+            // Handle And/Or logical operators
+            if (!string.IsNullOrEmpty(typeStr) && (typeStr.Equals("And", StringComparison.OrdinalIgnoreCase) || typeStr.Equals("Or", StringComparison.OrdinalIgnoreCase)))
+            {
+                var andOrClause = new MotelyJsonConfig.MotelyJsonFilterClause();
+                andOrClause.Type = typeStr.ToLowerInvariant();
                 
-                // SET TYPE FIRST - this is critical!
-                clause.Type = typeStr ?? "";
-                
-                if (typeStr != null && (typeStr.Equals("And", StringComparison.OrdinalIgnoreCase) || typeStr.Equals("Or", StringComparison.OrdinalIgnoreCase)))
+                var clausesProperty = andOrClause.GetType().GetProperty("clauses", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+                if (clausesProperty != null && clausesProperty.CanWrite)
                 {
-                    clause.Type = typeStr.ToLowerInvariant();
-                    var clausesProperty = clause.GetType().GetProperty("clauses", System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    if (clausesProperty != null && clausesProperty.CanWrite)
+                    if (entries.TryGetValue("clauses", out var clausesValue))
                     {
-                        if (entries.TryGetValue("clauses", out var clausesValue))
+                        if (clausesValue is List<MotelyJsonConfig.MotelyJsonFilterClause> clausesList)
                         {
-                            if (clausesValue is List<MotelyJsonConfig.MotleyJsonFilterClause> clausesList)
-                            {
-                                clausesProperty.SetValue(clause, clausesList);
-                            }
-                            else if (clausesValue is System.Collections.IList list)
-                            {
-                                var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
-                                foreach (var item in list)
-                                {
-                                    if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
-                                        convertedList.Add(filterClause);
-                                }
-                                clausesProperty.SetValue(clause, convertedList);
-                            }
+                            clausesProperty.SetValue(andOrClause, clausesList);
                         }
-                        else if (entries.TryGetValue("value", out var complexValue) && complexValue is System.Collections.IList list)
+                        else if (clausesValue is System.Collections.IList list)
                         {
-                            var convertedList = new List<MotelyJsonConfig.MotleyJsonFilterClause>();
+                            var convertedList = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
                             foreach (var item in list)
                             {
-                                if (item is MotelyJsonConfig.MotleyJsonFilterClause filterClause)
+                                if (item is MotelyJsonConfig.MotelyJsonFilterClause filterClause)
+                                {
                                     convertedList.Add(filterClause);
+                                }
                             }
-                            clausesProperty.SetValue(clause, convertedList);
+                            clausesProperty.SetValue(andOrClause, convertedList);
+                        }
+                    }
+                    else if (entries.TryGetValue("value", out var complexValue))
+                    {
+                        if (complexValue is System.Collections.IList list)
+                        {
+                            DebugLogger.Log($"  Converting list with {list.Count} items");
+                            var convertedList = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
+                            foreach (var item in list)
+                            {
+                                DebugLogger.Log($"    Item type: {item?.GetType().Name}, value: {item}");
+                                if (item is MotelyJsonConfig.MotelyJsonFilterClause filterClause)
+                                {
+                                    convertedList.Add(filterClause);
+                                    DebugLogger.Log($"    Added filter clause with Type='{filterClause.Type}'");
+                                }
+                            }
+                            DebugLogger.Log($"  Final converted list has {convertedList.Count} items");
+                            clausesProperty.SetValue(andOrClause, convertedList);
                         }
                     }
                 }
                 
-                // Set value property if present
-                if (entries.TryGetValue("value", out var valueEntry) && valueEntry != null)
+                // Set other properties
+                foreach (var entry in entries)
                 {
-                    clause.Value = valueEntry.ToString();
+                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || 
+                        entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase) ||
+                        entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                        
+                    var property = FindPropertyWithAlias(andOrClause.GetType(), entry.Key);
+                    if (property != null && property.CanWrite)
+                    {
+                        SetPropertyValue(property, andOrClause, entry.Value);
+                    }
                 }
-                if (entries.TryGetValue("values", out var valuesEntry) && valuesEntry != null)
+                
+                value = andOrClause;
+                return true;
+            }
+            
+            // Create the appropriate filter clause from the processed entries
+            if (isMotelyJsonConfigClause)
+            {
+                var configClause = new MotelyJsonConfig.MotelyJsonFilterClause();
+                
+                foreach (var entry in entries)
                 {
-                    if (valuesEntry is string[] strArray)
+                    var property = FindPropertyWithAlias(configClause.GetType(), entry.Key);
+                    if (property != null && property.CanWrite)
                     {
-                        clause.Values = strArray;
+                        SetPropertyValue(property, configClause, entry.Value);
                     }
-                    else if (valuesEntry is System.Collections.IList list)
+                }
+                
+                value = configClause;
+                return true;
+            }
+            else
+            {
+                // Create the abstract MotelyJsonFilterClause concrete implementation
+                MotelyJsonFilterClause filterClause;
+                
+                if (entries.TryGetValue("type", out var clauseTypeValue))
+                {
+                    var innerTypeStr = clauseTypeValue.ToString()?.ToLowerInvariant();
+                    filterClause = innerTypeStr switch
                     {
-                        clause.Values = list.Cast<object>().Select(o => o?.ToString() ?? "").ToArray();
-                    }
+                        "joker" => new MotelyJsonJokerFilterClause(),
+                        "souljoker" => new MotelyJsonSoulJokerFilterClause(),
+                        "voucher" => new MotelyJsonVoucherFilterClause(),
+                        "tarotcard" => new MotelyJsonTarotFilterClause(),
+                        "spectralcard" => new MotelyJsonSpectralFilterClause(),
+                        "planetcard" => new MotelyJsonPlanetFilterClause(),
+                        "event" => new MotelyJsonJokerFilterClause(),
+                        _ => throw new ArgumentException($"Unknown type: {innerTypeStr}")
+                    };
+                }
+                else
+                {
+                    throw new ArgumentException($"Missing type in filter clause");
                 }
                 
                 foreach (var entry in entries)
                 {
-                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase) || 
-                        entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase) || 
-                        entry.Key.Equals("values", StringComparison.OrdinalIgnoreCase) || 
-                        entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    
-                    var property = FindPropertyWithAlias(clause.GetType(), entry.Key);
+                    var property = FindPropertyWithAlias(filterClause.GetType(), entry.Key);
                     if (property != null && property.CanWrite)
                     {
-                        var handler = PropertyTypeHandlerRegistry.GetHandler(property.PropertyType);
-                        if (handler != null)
-                        {
-                            handler.SetValue(property, clause, entry.Value);
-                        }
+                        SetPropertyValue(property, filterClause, entry.Value);
                     }
                 }
                 
-                value = clause;
+                value = filterClause;
                 return true;
             }
-            
-            value = null;
-            return false;
         }
         
-        private static System.Reflection.PropertyInfo? FindPropertyWithAlias(Type type, string name)
+        private static void SetPropertyValue(PropertyInfo property, object target, object? entryValue)
         {
-            var allProperties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            foreach (var prop in allProperties)
+            if (property.PropertyType == typeof(string))
             {
-                if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
-                    return prop;
+                property.SetValue(target, entryValue?.ToString());
             }
-            foreach (var prop in allProperties)
+            else if (property.PropertyType == typeof(int[]))
             {
-                var yamlMember = System.Attribute.GetCustomAttribute(prop, typeof(YamlMemberAttribute)) as YamlMemberAttribute;
-                if (yamlMember != null && !string.IsNullOrEmpty(yamlMember.Alias) && string.Equals(yamlMember.Alias, name, StringComparison.OrdinalIgnoreCase))
-                    return prop;
+                int[]? intArray = null;
+                if (entryValue is object[] array)
+                {
+                    intArray = array.Select(o => Convert.ToInt32(o)).ToArray();
+                }
+                else if (entryValue is System.Collections.IList list)
+                {
+                    intArray = list.Cast<object>().Select(o => Convert.ToInt32(o)).ToArray();
+                }
+                
+                if (intArray != null)
+                {
+                    property.SetValue(target, intArray);
+                }
             }
-            return null;
+            else if (property.PropertyType == typeof(string[]))
+            {
+                string[]? stringArray = null;
+                if (entryValue is object[] array)
+                {
+                    stringArray = array.Select(o => o?.ToString() ?? "").ToArray();
+                }
+                else if (entryValue is System.Collections.IList list)
+                {
+                    stringArray = list.Cast<object>().Select(o => o?.ToString() ?? "").ToArray();
+                }
+                
+                if (stringArray != null)
+                {
+                    property.SetValue(target, stringArray);
+                }
+            }
+            else if (property.PropertyType == typeof(int))
+            {
+                if (int.TryParse(entryValue?.ToString(), out var intValue))
+                {
+                    property.SetValue(target, intValue);
+                }
+            }
+            else if (property.PropertyType == typeof(int?))
+            {
+                if (entryValue == null)
+                {
+                    property.SetValue(target, null);
+                }
+                else if (int.TryParse(entryValue.ToString(), out var intValue))
+                {
+                    property.SetValue(target, intValue);
+                }
+            }
+            else if (property.PropertyType == typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>))
+            {
+                if (entryValue is List<MotelyJsonConfig.MotelyJsonFilterClause> clausesList)
+                {
+                    property.SetValue(target, clausesList);
+                }
+                else if (entryValue is System.Collections.IList list)
+                {
+                    var convertedList = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
+                    foreach (var item in list)
+                    {
+                        if (item is MotelyJsonConfig.MotelyJsonFilterClause filterClause)
+                        {
+                            convertedList.Add(filterClause);
+                        }
+                    }
+                    property.SetValue(target, convertedList);
+                }
+            }
         }
     }
 }

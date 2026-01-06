@@ -1,6 +1,8 @@
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.Executors;
+using Motely.Filters;
+using Motely.API;
 
 namespace Motely
 {
@@ -134,6 +136,11 @@ namespace Motely
             );
 
             // Output options
+            var outputDbOption = app.Option<string>(
+                "--output-db <PATH>",
+                "Write results to DuckDB database file (instead of CSV to console)",
+                CommandOptionType.SingleValue
+            );
             var debugOption = app.Option(
                 "--debug",
                 "Enable debug output",
@@ -312,8 +319,89 @@ namespace Motely
                         configFormat = "json";
                     }
 
-                    var executor = new JsonSearchExecutor(configName!, parameters, configFormat);
-                    return executor.Execute();
+                    // Setup DuckDB output if requested
+                    Action<MotelySeedScoreTally>? dbCallback = null;
+                    MotelySearchDatabase? db = null;
+                    long seedsFound = 0;
+                    
+                    if (outputDbOption.HasValue())
+                    {
+                        string dbPath = outputDbOption.Value()!;
+                        if (string.IsNullOrWhiteSpace(dbPath))
+                        {
+                            Console.WriteLine("❌ Error: --output-db requires a database path");
+                            return 1;
+                        }
+                        
+                        // Load config to get column names upfront
+                        MotelyJsonConfig? config = null;
+                        if (configFormat == "jaml")
+                        {
+                            string jamlPath = Path.Combine("JamlFilters", configName! + ".jaml");
+                            if (!File.Exists(jamlPath))
+                            {
+                                jamlPath = configName!; // Try as absolute path
+                            }
+                            if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out config, out var error))
+                            {
+                                Console.WriteLine($"❌ Error loading JAML config: {error}");
+                                return 1;
+                            }
+                        }
+                        else
+                        {
+                            string jsonPath = Path.Combine("JsonFilters", configName! + ".json");
+                            if (!File.Exists(jsonPath))
+                            {
+                                jsonPath = configName!; // Try as absolute path
+                            }
+                            if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonPath, out config))
+                            {
+                                Console.WriteLine($"❌ Error loading JSON config: {jsonPath}");
+                                return 1;
+                            }
+                        }
+                        
+                        if (config == null)
+                        {
+                            Console.WriteLine("❌ Error: Failed to load config");
+                            return 1;
+                        }
+                        
+                        // Get column names from config
+                        var columnNames = config.GetColumnNames();
+                        db = new MotelySearchDatabase(dbPath, columnNames);
+                        
+                        if (!parameters.Quiet)
+                        {
+                            Console.WriteLine($"💾 Writing results to: {dbPath}");
+                        }
+                        
+                        dbCallback = (result) =>
+                        {
+                            db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
+                            seedsFound++;
+                            // Avoid spamming/interleaving with progress output (both write to stderr).
+                            // Just print once when the first result is found.
+                            if (seedsFound == 1)
+                                Console.Error.WriteLine("✅ Found first matching seed (writing to DuckDB)...");
+                        };
+                    }
+                    
+                    var executor = new JsonSearchExecutor(configName!, parameters, configFormat, dbCallback);
+                    int exitCode = executor.Execute();
+                    
+                    // Flush and close database
+                    db?.Checkpoint();
+                    db?.Dispose();
+                    
+                    // Print final count if using database output
+                    if (dbCallback != null && seedsFound > 0)
+                    {
+                        Console.WriteLine($"💾 Total seeds saved to database: {seedsFound}");
+                    }
+                    
+                    return exitCode;
                 }
             });
 

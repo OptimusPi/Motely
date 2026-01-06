@@ -10,9 +10,9 @@ public sealed class JsonFilterTests
     {
         var config = new MotelyJsonConfig
         {
-            Must = new List<MotelyJsonConfig.MotleyJsonFilterClause>(),
-            Should = new List<MotelyJsonConfig.MotleyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotleyJsonFilterClause>()
+            Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
+            Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
         };
         
         var json = JsonSerializer.Serialize(config);

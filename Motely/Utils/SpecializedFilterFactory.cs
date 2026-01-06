@@ -12,7 +12,7 @@ public static class SpecializedFilterFactory
     /// </summary>
     public static IMotelySeedFilterDesc CreateSpecializedFilter(
         FilterCategory category,
-        List<MotelyJsonConfig.MotleyJsonFilterClause> clauses
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
     )
     {
         if (clauses == null || clauses.Count == 0)
@@ -64,6 +64,17 @@ public static class SpecializedFilterFactory
             FilterCategory.Tag => new MotelyJsonTagFilterDesc(
                 MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)
             ),
+            FilterCategory.ErraticRank => new MotelyJsonErraticRankFilterDesc(
+                clauses[0].RankEnum!.Value,
+                clauses[0].Min ?? 1
+            ),
+            FilterCategory.ErraticSuit => new MotelyJsonErraticSuitFilterDesc(
+                clauses[0].SuitEnum!.Value,
+                clauses[0].Min ?? 1
+            ),
+            FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
+                MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(clauses)
+            ),
             _ => throw new ArgumentException($"Specialized filter not implemented for: {category}"),
         };
     }
@@ -111,6 +122,12 @@ public static class SpecializedFilterFactory
                 new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>(bossDesc),
             MotelyJsonTagFilterDesc tagDesc =>
                 new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>(tagDesc),
+            MotelyJsonErraticRankFilterDesc erraticRankDesc =>
+                new MotelySearchSettings<MotelyJsonErraticRankFilterDesc.MotelyJsonErraticRankFilter>(erraticRankDesc),
+            MotelyJsonErraticSuitFilterDesc erraticSuitDesc =>
+                new MotelySearchSettings<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>(erraticSuitDesc),
+            MotelyJsonErraticRankAndSuitFilterDesc erraticRankAndSuitDesc =>
+                new MotelySearchSettings<MotelyJsonErraticRankAndSuitFilterDesc.MotelyJsonErraticRankAndSuitFilter>(erraticRankAndSuitDesc),
             _ => throw new ArgumentException(
                 $"Search settings not implemented for: {filterDesc.GetType()}"
             ),
@@ -121,7 +138,7 @@ public static class SpecializedFilterFactory
     /// Complete JSON filter pipeline: group by category, create base + chained filters
     /// </summary>
     public static dynamic CreateJsonFilterPipeline(
-        List<MotelyJsonConfig.MotleyJsonFilterClause> mustClauses,
+        List<MotelyJsonConfig.MotelyJsonFilterClause> mustClauses,
         int threads,
         int batchSize
     )
