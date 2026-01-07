@@ -23,7 +23,24 @@ public static class JamlFormatter
     private const int MaxInlineStringLength = 50;
     private const int MaxSimpleValueLength = 30;
 
-    // Properties that should have inline numeric arrays
+    private static string QuoteYamlString(string value)
+    {
+        if (value == null)
+            return "\"\"";
+
+        // Use double-quoted YAML scalars and escape the minimal set we might encounter.
+        // This keeps output round-trip safe when we inline arrays like stickers.
+        var escaped = value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\r", "\\r")
+            .Replace("\n", "\\n")
+            .Replace("\t", "\\t");
+
+        return $"\"{escaped}\"";
+    }
+
+    // Properties that should have inline numeric arrays (NOT string arrays - YamlDotNet can't parse inline quoted arrays)
     private static readonly HashSet<string> InlineArrayProperties = new(StringComparer.OrdinalIgnoreCase)
     {
         "antes",
@@ -32,8 +49,8 @@ public static class JamlFormatter
         "shopslots",
         "packslots",
         "shop_slots",
-        "pack_slots",
-        "stickers"
+        "pack_slots"
+        // NOTE: "stickers" removed - string arrays must stay multi-line for YamlDotNet compatibility
     };
 
     // Valid type names that can be used as keys (type-as-key format)
@@ -220,20 +237,37 @@ public static class JamlFormatter
                 
                 if (values.Count > 0)
                 {
-                    // Write inline array (compact, no spaces after commas)
-                    result.AppendLine($"{indentStr}{propName}: [{string.Join(",", values)}]");
-                    i = j;
-                    continue;
+                    // Only inline numeric arrays - string arrays must stay multi-line for YamlDotNet compatibility
+                    // Check if all values are numeric
+                    bool allNumeric = true;
+                    foreach (var v in values)
+                    {
+                        if (!int.TryParse(v, out _))
+                        {
+                            allNumeric = false;
+                            break;
+                        }
+                    }
+
+                    if (allNumeric)
+                    {
+                        // Write inline numeric array (compact, no spaces after commas)
+                        result.AppendLine($"{indentStr}{propName}: [{string.Join(",", values)}]");
+                        i = j;
+                        continue;
+                    }
+                    // If not all numeric, fall through to default behavior (keep as multi-line)
                 }
             }
 
             // Check for already-inline arrays that need reformatting (remove spaces)
+            // Only process numeric arrays - string arrays (like stickers) must stay multi-line
             var inlineArrayMatch = Regex.Match(trimmed, Patterns.InlineArrayMatch);
             if (inlineArrayMatch.Success && InlineArrayProperties.Contains(inlineArrayMatch.Groups[1].Value))
             {
                 var propName = inlineArrayMatch.Groups[1].Value;
                 var arrayContent = inlineArrayMatch.Groups[2].Value;
-                // Remove spaces after commas for compact format
+                // Remove spaces after commas for compact format (numeric arrays only)
                 var compactContent = Regex.Replace(arrayContent, @",\s+", ",");
                 result.AppendLine($"{indentStr}{propName}: [{compactContent}]");
                 i++;
