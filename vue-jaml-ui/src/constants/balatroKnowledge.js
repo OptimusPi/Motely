@@ -27,7 +27,7 @@ export const jokers = {
     sell_price: 5,
     unlock_condition: "Win 1 run",
     compatibility: {
-      editions: ["Foil", "Holo", "Polychrome", "Negative"],
+      editions: ["Foil", "Holographic", "Polychrome", "Negative"],
       seals: "Not applicable",
       stickers: ["Perishable", "Eternal"]
     },

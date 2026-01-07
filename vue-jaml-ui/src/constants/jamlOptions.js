@@ -91,7 +91,7 @@ export const voucherOptions = [
   'Tag Bag'
 ]
 
-export const editionOptions = ['Foil', 'Holo', 'Polychrome', 'Negative']
+export const editionOptions = ['Foil', 'Holographic', 'Polychrome', 'Negative']
 export const sealOptions = ['Red', 'Blue', 'Gold', 'Purple']
 export const enhancementOptions = [
   'Bonus',

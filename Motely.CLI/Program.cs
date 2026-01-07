@@ -141,6 +141,11 @@ namespace Motely
                 "Write results to DuckDB database file (instead of CSV to console)",
                 CommandOptionType.SingleValue
             );
+            var outputCsvOption = app.Option<string>(
+                "--output-csv <PATH>",
+                "Write results to CSV file (instead of CSV to console)",
+                CommandOptionType.SingleValue
+            );
             var debugOption = app.Option(
                 "--debug",
                 "Enable debug output",
@@ -319,10 +324,70 @@ namespace Motely
                         configFormat = "json";
                     }
 
-                    // Setup DuckDB output if requested
+                    // Setup output (DuckDB and/or CSV)
                     Action<MotelySeedScoreTally>? dbCallback = null;
                     MotelySearchDatabase? db = null;
+                    StreamWriter? csvWriter = null;
+                    List<string>? csvColumnNames = null;
                     long seedsFound = 0;
+                    
+                    // Setup CSV output if requested
+                    if (outputCsvOption.HasValue())
+                    {
+                        string csvPath = outputCsvOption.Value()!;
+                        if (string.IsNullOrWhiteSpace(csvPath))
+                        {
+                            Console.WriteLine("❌ Error: --output-csv requires a CSV file path");
+                            return 1;
+                        }
+                        
+                        // Load config to get column names for CSV header
+                        MotelyJsonConfig? csvConfig = null;
+                        if (configFormat == "jaml")
+                        {
+                            string jamlPath = Path.Combine("JamlFilters", configName! + ".jaml");
+                            if (!File.Exists(jamlPath))
+                            {
+                                jamlPath = configName!; // Try as absolute path
+                            }
+                            if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out csvConfig, out var error))
+                            {
+                                Console.WriteLine($"❌ Error loading JAML config: {error}");
+                                return 1;
+                            }
+                        }
+                        else
+                        {
+                            string jsonPath = Path.Combine("JsonFilters", configName! + ".json");
+                            if (!File.Exists(jsonPath))
+                            {
+                                jsonPath = configName!; // Try as absolute path
+                            }
+                            if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonPath, out csvConfig))
+                            {
+                                Console.WriteLine($"❌ Error loading JSON config: {jsonPath}");
+                                return 1;
+                            }
+                        }
+                        
+                        if (csvConfig == null)
+                        {
+                            Console.WriteLine("❌ Error: Failed to load config for CSV output");
+                            return 1;
+                        }
+                        
+                        csvColumnNames = csvConfig.GetColumnNames();
+                        csvWriter = new StreamWriter(csvPath, append: false);
+                        
+                        // Write CSV header
+                        csvWriter.WriteLine(string.Join(",", csvColumnNames.Select(name => $"\"{name}\"")));
+                        csvWriter.Flush();
+                        
+                        if (!parameters.Quiet)
+                        {
+                            Console.WriteLine($"💾 Writing results to CSV: {csvPath}");
+                        }
+                    }
                     
                     if (outputDbOption.HasValue())
                     {
@@ -398,8 +463,70 @@ namespace Motely
                         };
                     }
                     
+                    // Combine callbacks if both CSV and DB are requested
+                    if (csvWriter != null && dbCallback != null)
+                    {
+                        var originalDbCallback = dbCallback;
+                        dbCallback = (result) =>
+                        {
+                            // Write to CSV
+                            if (csvColumnNames != null && csvColumnNames.Count > 0)
+                            {
+                                var values = new List<string> { $"\"{result.Seed}\"", result.Score.ToString() };
+                                for (int i = 2; i < csvColumnNames.Count; i++)
+                                {
+                                    int tallyIndex = i - 2;
+                                    int tallyValue = (tallyIndex < result.TallyColumns.Count) ? result.TallyColumns[tallyIndex] : 0;
+                                    values.Add(tallyValue.ToString());
+                                }
+                                csvWriter.WriteLine(string.Join(",", values));
+                                csvWriter.Flush();
+                            }
+                            // Write to DB
+                            originalDbCallback(result);
+                        };
+                    }
+                    else if (csvWriter != null)
+                    {
+                        // CSV only
+                        dbCallback = (result) =>
+                        {
+                            if (csvColumnNames != null && csvColumnNames.Count > 0)
+                            {
+                                var values = new List<string> { $"\"{result.Seed}\"", result.Score.ToString() };
+                                for (int i = 2; i < csvColumnNames.Count; i++)
+                                {
+                                    int tallyIndex = i - 2;
+                                    int tallyValue = (tallyIndex < result.TallyColumns.Count) ? result.TallyColumns[tallyIndex] : 0;
+                                    values.Add(tallyValue.ToString());
+                                }
+                                csvWriter.WriteLine(string.Join(",", values));
+                                csvWriter.Flush();
+                                seedsFound++;
+                                if (seedsFound == 1 && !parameters.Quiet)
+                                    Console.Error.WriteLine("✅ Found first matching seed (writing to CSV)...");
+                            }
+                        };
+                    }
+                    
                     var executor = new JsonSearchExecutor(configName!, parameters, configFormat, dbCallback);
                     int exitCode = executor.Execute();
+                    
+                    // Flush and close CSV
+                    if (csvWriter != null)
+                    {
+                        try
+                        {
+                            csvWriter.Flush();
+                            csvWriter.Close();
+                            Console.WriteLine($"💾 Total seeds saved to CSV: {seedsFound}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"❌ [CRITICAL] CSV write failed: {ex.Message}");
+                            return 1;
+                        }
+                    }
                     
                     // Flush and close database
                     if (db != null)
@@ -435,7 +562,26 @@ namespace Motely
                 }
             });
 
-            return app.Execute(args);
+            try
+            {
+                return app.Execute(args);
+            }
+            catch (McMaster.Extensions.CommandLineUtils.UnrecognizedCommandParsingException ex)
+            {
+                // Clear the annoying "Specify --help" message by writing directly to stderr
+                Console.Error.WriteLine($"❌ Error: {ex.Message}");
+                Console.Error.WriteLine();
+                app.ShowHelp();
+                return 1;
+            }
+            catch (Exception ex) when (ex.Message.Contains("Unrecognized") || ex.Message.Contains("option"))
+            {
+                // Catch any other parsing errors
+                Console.Error.WriteLine($"❌ Error: {ex.Message}");
+                Console.Error.WriteLine();
+                app.ShowHelp();
+                return 1;
+            }
         }
 
         private static int ExecuteAnalyze(string seed, string deckName, string stakeName)

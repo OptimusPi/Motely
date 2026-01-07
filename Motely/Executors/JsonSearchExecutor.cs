@@ -5,6 +5,7 @@ using Motely.Filters;
 using Motely.Utils;
 #if !BROWSER
 using DuckDB.NET.Data;
+using Motely.DuckDB;
 #endif
 
 namespace Motely.Executors
@@ -21,6 +22,11 @@ namespace Motely.Executors
         private readonly Action<MotelySeedScoreTally>? _customCallback;
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
+        
+        // Track printed seeds to avoid duplicate console output
+        // (Database handles duplicates via PRIMARY KEY, but console should dedupe too)
+        private readonly HashSet<string> _printedSeeds = new();
+        private readonly object _printLock = new();
 
         public JsonSearchExecutor(
             string configPath,
@@ -278,13 +284,48 @@ namespace Motely.Executors
                 {
 #if !BROWSER
                     bool tableExists;
-                    using (var conn = new DuckDBConnection($"Data Source={dbPath}"))
+                    using (var conn = DuckDBConnectionFactory.CreateConnection(dbPath))
                     {
-                        conn.Open();
                         using var cmd = conn.CreateCommand();
-                        cmd.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='seeds'";
-                        tableExists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
-                        if (tableExists)
+                        // Use centralized operation for checking table existence
+                        tableExists = DuckDBOperations.TableExists(conn, "seeds");
+                        
+                        // Check if this is a results database (has "results" table instead of "seeds")
+                        bool hasResultsTable = DuckDBOperations.TableExists(conn, "results");
+                        
+                        if (hasResultsTable && !tableExists)
+                        {
+                            // This is a results database - convert it to a seed source
+                            if (!_params.Quiet)
+                            {
+                                Console.WriteLine($"📊 Detected results database, extracting seeds from results table...");
+                            }
+                            
+                            // Extract seeds from results table (seed is PRIMARY KEY so already unique)
+                            // and create seeds table with id column for performance
+                            cmd.CommandText = @"
+                                CREATE TABLE seeds AS
+                                SELECT
+                                    CAST(ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS BIGINT) AS id,
+                                    seed
+                                FROM results
+                                WHERE seed IS NOT NULL;
+                            ";
+                            cmd.ExecuteNonQuery();
+                            
+                            // Create index
+                            DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
+                            
+                            long seedCount = DuckDBOperations.GetRowCount(conn, "seeds");
+                            if (!_params.Quiet)
+                            {
+                                Console.WriteLine($"✅ Extracted {seedCount} unique seeds from results database");
+                            }
+                            
+                            tableExists = true;
+                            dbIsValid = true;
+                        }
+                        else if (tableExists)
                         {
                             // Validate and migrate schema (add id column, validate seed column, check for invalid seeds)
                             dbIsValid = ValidateAndMigrateDuckDBSchema(dbPath, csvPath, txtPath);
@@ -456,14 +497,12 @@ namespace Motely.Executors
 #if !BROWSER
             try
             {
-                using (var conn = new DuckDBConnection($"Data Source={dbPath}"))
+                using (var conn = DuckDBConnectionFactory.CreateConnection(dbPath))
                 {
-                    conn.Open();
                     using var cmd = conn.CreateCommand();
                     
-                    // Step 1: Check if 'id' column exists
-                    cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('seeds') WHERE name='id'";
-                    bool hasIdColumn = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+                    // Step 1: Check if 'id' column exists - use centralized operation
+                    bool hasIdColumn = DuckDBOperations.ColumnExists(conn, "seeds", "id");
                     
                     if (!hasIdColumn)
                     {
@@ -471,17 +510,29 @@ namespace Motely.Executors
                         {
                             Console.WriteLine($"🔧 Adding missing 'id' column to {dbPath}...");
                         }
-                        cmd.CommandText = "ALTER TABLE seeds ADD COLUMN id BIGINT";
+                        // DuckDB does not allow window functions in UPDATE, so rebuild the table instead.
+                        // Keep ordering stable so provider mode can seek by id deterministically.
+                        DuckDBOperations.DropTableIfExists(conn, "seeds_old_id");
+                        DuckDBOperations.RenameTable(conn, "seeds", "seeds_old_id");
+
+                        cmd.CommandText = @"
+                            CREATE TABLE seeds AS
+                            SELECT
+                                CAST(ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS BIGINT) AS id,
+                                seed
+                            FROM seeds_old_id;
+                        ";
                         cmd.ExecuteNonQuery();
-                        cmd.CommandText = "UPDATE seeds SET id = ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 WHERE id IS NULL";
-                        cmd.ExecuteNonQuery();
-                        cmd.CommandText = "CREATE INDEX IF NOT EXISTS idx_seeds_id ON seeds(id)";
-                        cmd.ExecuteNonQuery();
+
+                        // Use centralized index creation
+                        DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
+
+                        DuckDBOperations.DropTableIfExists(conn, "seeds_old_id");
                     }
                     
                     // Step 2: Check for invalid seeds (contain comma, '0', invalid chars, or >8 chars)
-                    // Check for invalid seeds
-                    cmd.CommandText = @"
+                    // Use centralized operation with custom query for invalid seed detection
+                    var invalidSeedQuery = @"
                         SELECT COUNT(*) FROM seeds 
                         WHERE seed LIKE '%,%' 
                            OR seed LIKE '%0%' 
@@ -489,7 +540,7 @@ namespace Motely.Executors
                            OR LENGTH(seed) > 8
                            OR seed = '';
                     ";
-                    int invalidSeedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                    int invalidSeedCount = (int)DuckDBOperations.ExecuteScalar<long>(conn, invalidSeedQuery);
                     
                     if (invalidSeedCount > 0)
                     {
@@ -500,9 +551,9 @@ namespace Motely.Executors
                         }
                         
                         // Rename old table, create new one with sanitized data
+                        DuckDBOperations.RenameTable(conn, "seeds", "seeds_old");
+                        
                         cmd.CommandText = @"
-                            -- Rename old table
-                            ALTER TABLE seeds RENAME TO seeds_old;
                             
                             -- Create new table with sanitized seeds
                             CREATE TABLE seeds_temp AS
@@ -526,7 +577,10 @@ namespace Motely.Executors
                                OR regexp_matches(seed, '^[1-9A-Z]*$') IS NOT TRUE
                                OR LENGTH(seed) > 8;
                             
-                            -- Create final table with correct schema
+                            -- Create final table with correct schema (using centralized schema)
+                            -- Note: We can't use DuckDBSchema.SeedSourcesTableSchema() directly here
+                            -- because it uses CREATE TABLE AS, but we need CREATE TABLE + INSERT
+                            -- So we use the same schema structure inline for consistency
                             CREATE TABLE seeds (
                                 id BIGINT,
                                 seed VARCHAR(8)
@@ -538,13 +592,15 @@ namespace Motely.Executors
                                 seed 
                             FROM seeds_temp;
                             
-                            CREATE INDEX idx_seeds_id ON seeds(id);
-                            
-                            -- Drop temp tables
-                            DROP TABLE seeds_temp;
-                            DROP TABLE seeds_old;
                         ";
                         cmd.ExecuteNonQuery();
+                        
+                        // Use centralized index creation
+                        DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
+                        
+                        // Drop temp tables using centralized operations
+                        DuckDBOperations.DropTableIfExists(conn, "seeds_temp");
+                        DuckDBOperations.DropTableIfExists(conn, "seeds_old");
                         
                         if (!_params.Quiet)
                         {
@@ -778,7 +834,16 @@ namespace Motely.Executors
             // Create callback for CSV output - use custom callback if provided, otherwise console output
             Action<MotelySeedScoreTally> scoreCallback = _customCallback ?? ((MotelySeedScoreTally result) =>
             {
-                // Just print the seed - it will naturally push the progress line down
+                // Deduplicate console output - same seed can be found in multiple batches/threads
+                lock (_printLock)
+                {
+                    if (_printedSeeds.Contains(result.Seed))
+                        return; // Already printed this seed
+                    
+                    _printedSeeds.Add(result.Seed);
+                }
+                
+                // Use original tally column format (CSV-style with colored numbers)
                 FancyConsole.WriteLine(
                     TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns)
                 );
@@ -1580,12 +1645,10 @@ namespace Motely.Executors
             {
                 // Auto-detect: Check if we should load seeds into memory for better performance
 #if !BROWSER
-                using (var conn = new DuckDBConnection($"Data Source={duckDbPath}"))
+                using (var conn = DuckDBConnectionFactory.CreateConnection(duckDbPath))
                 {
-                    conn.Open();
-                    using var cmd = conn.CreateCommand();
-                    cmd.CommandText = "SELECT COUNT(*) FROM seeds";
-                    int seedCount = Convert.ToInt32(cmd.ExecuteScalar());
+                    // Use centralized operation for getting row count
+                    int seedCount = (int)DuckDBOperations.GetRowCount(conn, "seeds");
                     
                     // Auto-detect: Use 25% of available physical memory for seed loading
                     // Estimate: ~20 bytes per seed (string overhead + array overhead)
@@ -1793,7 +1856,20 @@ namespace Motely.Executors
                 percentComplete = maxBatches > 0 ? (int)(lastBatchIndex * 100 / maxBatches) : 0;
             }
 
-            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({percentComplete}%)");
+            // Calculate precise percentage with 8 decimal places
+            double precisePercent = 0.0;
+            if (!string.IsNullOrEmpty(_params.SeedSources) || _params.SeedList != null)
+            {
+                if (!wasCancelled)
+                    precisePercent = 100.0;
+            }
+            else
+            {
+                long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
+                if (maxBatches > 0)
+                    precisePercent = (double)lastBatchIndex * 100.0 / (double)maxBatches;
+            }
+            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F8}%)");
             Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
             // Note: FilteredSeeds is deprecated and always returns 0
             // MatchingSeeds represents seeds that passed all filters AND cutoff

@@ -1,4 +1,5 @@
 using DuckDB.NET.Data;
+using Motely.DuckDB;
 
 namespace Motely.API;
 
@@ -30,16 +31,11 @@ public sealed class FertilizerDatabase : IDisposable
     {
         try
         {
-            _connection = new DuckDBConnection($"Data Source={_dbPath}");
-            _connection.Open();
+            _connection = DuckDBConnectionFactory.CreateConnection(_dbPath);
 
-            // Create table if not exists
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText = @"
-                CREATE TABLE IF NOT EXISTS seeds (
-                    seed VARCHAR PRIMARY KEY
-                )";
-            cmd.ExecuteNonQuery();
+            // Use centralized schema for fertilizer table
+            var fertilizerSchema = DuckDBSchema.FertilizerTableSchema();
+            DuckDBTableManager.EnsureTableExists(_connection, fertilizerSchema);
 
             // Migrate from fertilizer.txt if it exists
             MigrateFromTxtIfNeeded();
@@ -56,10 +52,8 @@ public sealed class FertilizerDatabase : IDisposable
 
         try
         {
-            // Check if DB already has data
-            using var countCmd = _connection.CreateCommand();
-            countCmd.CommandText = "SELECT COUNT(*) FROM seeds";
-            var count = (long)countCmd.ExecuteScalar()!;
+            // Check if DB already has data - use centralized operation
+            var count = DuckDBOperations.GetRowCount(_connection, "seeds");
 
             if (count > 0) return; // DB already populated
 
@@ -70,8 +64,8 @@ public sealed class FertilizerDatabase : IDisposable
             cmd.CommandText = $"COPY seeds(seed) FROM '{_txtPath.Replace("\\", "\\\\")}' (FORMAT CSV, HEADER false, DELIMITER '\n')";
             cmd.ExecuteNonQuery();
 
-            // Get final count
-            var finalCount = (long)countCmd.ExecuteScalar()!;
+            // Get final count - use centralized operation
+            var finalCount = DuckDBOperations.GetRowCount(_connection, "seeds");
             Console.WriteLine($"Migrated {finalCount} seeds to DuckDB");
 
             // Delete the txt file after successful migration
@@ -125,16 +119,8 @@ public sealed class FertilizerDatabase : IDisposable
 
         try
         {
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText = $"SELECT seed FROM seeds LIMIT {limit}";
-            
-            var results = new List<string>();
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                results.Add(reader.GetString(0));
-            }
-            return results;
+            // Use centralized query helper for getting seeds
+            return DuckDBQueryHelpers.GetAllSeeds(_connection, "seeds", "seed", $"LIMIT {limit}");
         }
         catch (Exception ex)
         {
@@ -152,9 +138,8 @@ public sealed class FertilizerDatabase : IDisposable
 
         try
         {
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText = "SELECT COUNT(*) FROM seeds";
-            return (long)cmd.ExecuteScalar()!;
+            // Use centralized operation for getting row count
+            return DuckDBOperations.GetRowCount(_connection, "seeds");
         }
         catch (Exception ex)
         {
