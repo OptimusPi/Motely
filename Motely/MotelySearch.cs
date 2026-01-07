@@ -590,19 +590,17 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Different progress display for CSV mode vs normal mode
         if (_csvOutput)
         {
-            // In CSV mode, write progress to stderr with carriage return (erase and redraw)
-            // Clear the line first, then write new progress
+            // In CSV mode, print progress on a NEW LINE (not overwriting) to avoid collision with results
+            // Print at end of batch flush, so it appears after any results from that batch
             var progressMsg =
-                $"# Progress: {Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)";
-            Console.Error.Write(
-                $"\r{progressMsg}{new string(' ', Math.Max(0, 100 - progressMsg.Length))}"
-            );
+                $"# Progress: {totalPortionFinished * 100:F8}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)";
+            Console.Error.WriteLine(progressMsg);
         }
         else
         {
             // Normal mode - use fancy bottom line
             FancyConsole.SetBottomLine(
-                $"{Math.Round(totalPortionFinished * 100, 2):F2}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)"
+                $"{totalPortionFinished * 100:F8}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)"
             );
         }
     }
@@ -1039,8 +1037,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     // Increment thread-local counter
                     _localMatchingSeeds++;
 
-                    // Write directly to console if not in quiet mode
-                    if (!Search._quietMode)
+                    // Write directly to console ONLY if:
+                    // 1. Not in quiet mode
+                    // 2. Not in CSV output mode (CSV/DB output goes to file, not console)
+                    if (!Search._quietMode && !Search._csvOutput)
                     {
                         string seedStr = new Span<char>(seed, length).ToString();
                         FancyConsole.WriteLine(seedStr);

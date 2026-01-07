@@ -3,6 +3,7 @@ using DuckDB.NET.Data;
 using System;
 using System.IO;
 using System.Text;
+using Motely.DuckDB;
 #endif
 
 namespace Motely;
@@ -18,8 +19,7 @@ public static partial class DuckDBHelper
             File.Delete(dbPath);
         }
 
-        using var conn = new DuckDBConnection($"Data Source={dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
 
         // One statement: read lines, extract the first token, take first 8 chars, validate, assign id.
         using (var cmd = conn.CreateCommand())
@@ -59,16 +59,13 @@ public static partial class DuckDBHelper
             cmd.ExecuteNonQuery();
         }
 
-        using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "CREATE INDEX idx_seeds_id ON seeds(id)";
-            cmd.ExecuteNonQuery();
-        }
+        // Use centralized index creation
+        DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
 
         using (var cmd = conn.CreateCommand())
         {
-            cmd.CommandText = "SELECT COUNT(*) FROM seeds";
-            long count = Convert.ToInt64(cmd.ExecuteScalar());
+            // Use centralized operation for getting row count
+            long count = DuckDBOperations.GetRowCount(conn, "seeds");
             if (count == 0)
             {
                 throw new InvalidDataException(
@@ -87,8 +84,7 @@ public static partial class DuckDBHelper
             File.Delete(dbPath);
         }
 
-        using var conn = new DuckDBConnection($"Data Source={dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
 
         var union = new StringBuilder();
         for (int i = 0; i < sourcePaths.Length; i++)
@@ -138,16 +134,13 @@ public static partial class DuckDBHelper
             cmd.ExecuteNonQuery();
         }
 
-        using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "CREATE INDEX idx_seeds_id ON seeds(id)";
-            cmd.ExecuteNonQuery();
-        }
+        // Use centralized index creation
+        DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
 
         using (var cmd = conn.CreateCommand())
         {
-            cmd.CommandText = "SELECT COUNT(*) FROM seeds";
-            long count = Convert.ToInt64(cmd.ExecuteScalar());
+            // Use centralized operation for getting row count
+            long count = DuckDBOperations.GetRowCount(conn, "seeds");
             if (count == 0)
             {
                 throw new InvalidDataException(

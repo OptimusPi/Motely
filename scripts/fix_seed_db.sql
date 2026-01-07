@@ -25,9 +25,18 @@ DELETE FROM seeds WHERE seed NOT GLOB '[1-9A-Z]*';
 
 -- Step 6: Rebuild id column if missing (for provider mode performance)
 -- Check if id column exists first, then add if needed
-ALTER TABLE seeds ADD COLUMN IF NOT EXISTS id BIGINT;
-UPDATE seeds SET id = ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 WHERE id IS NULL;
+-- DuckDB does not allow window functions in UPDATE, so rebuild the table.
+DROP TABLE IF EXISTS seeds_old_id;
+ALTER TABLE seeds RENAME TO seeds_old_id;
+
+CREATE TABLE seeds AS
+SELECT
+    CAST(ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS BIGINT) AS id,
+    seed
+FROM seeds_old_id;
+
 CREATE INDEX IF NOT EXISTS idx_seeds_id ON seeds(id);
+DROP TABLE seeds_old_id;
 
 -- Step 7: Verify fix
 SELECT COUNT(*) as total_seeds, 

@@ -2,6 +2,7 @@
 #if !BROWSER && !ANDROID && !IOS
 using DuckDB.NET.Data;
 using System.Collections.Generic;
+using Motely.DuckDB;
 
 namespace Motely;
 
@@ -12,8 +13,7 @@ public static partial class DuckDBSeeds
 {
     public static IEnumerable<string> Stream(string dbPath, string tableName = "seeds", string columnName = "seed")
     {
-        using var connection = new DuckDBConnection($"Data Source={dbPath}");
-        connection.Open();
+        using var connection = DuckDBConnectionFactory.CreateConnection(dbPath);
         using var cmd = connection.CreateCommand();
         cmd.CommandText = $"SELECT {columnName} FROM {tableName}";
         using var reader = cmd.ExecuteReader();
@@ -26,6 +26,8 @@ public static partial class DuckDBSeeds
 /// Desktop implementation of DuckDBSeedProvider - queries DuckDB directly (in-memory, fast!)
 /// Uses ROWID-based batch fetching for efficient multi-threaded access
 /// Each thread fetches a batch of seeds at once using ID ranges (much faster than OFFSET!)
+/// 
+/// NOW SUPPORTS DUCKLAKE: Auto-detects DuckLake vs legacy .db files for concurrent access!
 /// </summary>
 public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
 {
@@ -33,6 +35,12 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
     private readonly string _tableName;
     private readonly string _columnName;
     private bool _disposed = false;
+
+    // DuckLake support: track if this is a DuckLake or legacy database
+    private readonly bool _isDuckLake;
+    private readonly string? _duckLakeCatalogPath;
+    private readonly string? _duckLakeDataPath;
+    private readonly string _duckLakeSchemaName = "seed_source";
 
     // IMPORTANT: Use one DuckDB connection per thread.
     // DuckDB.NET connections are not intended to be hammered concurrently from many threads;
@@ -65,7 +73,8 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
     private readonly bool _hasIdColumn;
 
     /// <summary>
-    /// Create provider from a DuckDB database file - queries directly from in-memory DB
+    /// Create provider from a DuckDB database file or DuckLake - queries directly from in-memory DB
+    /// Auto-detects DuckLake vs legacy .db format for backward compatibility
     /// </summary>
     public DuckDBSeedProvider(string dbPath, string tableName = "seeds", string columnName = "seed")
     {
@@ -73,63 +82,95 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
         _tableName = tableName;
         _columnName = columnName;
 
-        using (var conn = new DuckDBConnection($"Data Source={dbPath}"))
+        // Auto-detect DuckLake vs legacy format
+        _isDuckLake = DuckLakeHelper.IsDuckLake(dbPath);
+        
+        if (_isDuckLake)
         {
-            conn.Open();
-
-            // Get count - DuckDB is in-memory, this is instant
-            using var countCmd = conn.CreateCommand();
-            try
+            // DuckLake: extract catalog and data paths
+            _duckLakeCatalogPath = DuckLakeHelper.GetDuckLakeCatalogPath(dbPath);
+            _duckLakeDataPath = DuckLakeHelper.GetDuckLakeDataPath(dbPath);
+            
+            // Use DuckLake connection
+            using (var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+                _duckLakeCatalogPath, _duckLakeDataPath, _duckLakeSchemaName))
             {
-                countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
-                SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
+                // Query from DuckLake schema
+                var fullTableName = $"{_duckLakeSchemaName}.{tableName}";
+                SeedCount = (int)DuckDBOperations.GetRowCount(conn, fullTableName);
+                _hasIdColumn = DuckDBOperations.ColumnExists(conn, fullTableName, "id");
             }
-            catch (DuckDBException ex) when (ex.Message.Contains("does not exist") || ex.Message.Contains("Table with name"))
+
+            // Pre-build queries for DuckLake (with schema prefix)
+            _rangeQuery = $"SELECT {_columnName} FROM {_duckLakeSchemaName}.{_tableName} WHERE id >= ? AND id < ? ORDER BY id";
+            _rangeQueryRowId = $"SELECT {_columnName} FROM {_duckLakeSchemaName}.{_tableName} WHERE ROWID >= ? AND ROWID < ? ORDER BY ROWID";
+
+            _threadConnection = new ThreadLocal<DuckDBConnection>(() =>
             {
-                // Database is corrupted - delete it so JsonSearchExecutor can re-import
+                var c = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+                    _duckLakeCatalogPath!, _duckLakeDataPath!, _duckLakeSchemaName);
+                using var configCmd = c.CreateCommand();
+                configCmd.CommandText = "SET threads=4;";
+                configCmd.ExecuteNonQuery();
+                return c;
+            });
+        }
+        else
+        {
+            // Legacy .db file: use existing logic
+            using (var conn = DuckDBConnectionFactory.CreateConnection(dbPath))
+            {
+                // Get count - DuckDB is in-memory, this is instant
+                // Use centralized operation for consistency
                 try
                 {
-                    conn.Close();
-                    conn.Dispose();
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    Thread.Sleep(500);
-                    if (File.Exists(dbPath))
-                    {
-                        File.Delete(dbPath);
-                    }
+                    SeedCount = (int)DuckDBOperations.GetRowCount(conn, tableName);
                 }
-                catch { }
-                throw new InvalidOperationException(
-                    $"Database {dbPath} exists but '{tableName}' table is missing. " +
-                    $"Deleted corrupted database. Re-run to trigger automatic re-import."
-                );
+                catch (DuckDBException ex) when (ex.Message.Contains("does not exist") || ex.Message.Contains("Table with name"))
+                {
+                    // Database is corrupted - delete it so JsonSearchExecutor can re-import
+                    try
+                    {
+                        conn.Close();
+                        conn.Dispose();
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                        Thread.Sleep(500);
+                        if (File.Exists(dbPath))
+                        {
+                            File.Delete(dbPath);
+                        }
+                    }
+                    catch { }
+                    throw new InvalidOperationException(
+                        $"Database {dbPath} exists but '{tableName}' table is missing. " +
+                        $"Deleted corrupted database. Re-run to trigger automatic re-import."
+                    );
+                }
+
+                // Check if table has 'id' column for optimized fetching
+                // If not, we'll use ROWID (DuckDB's built-in row identifier)
+                // Use centralized operation for consistency
+                _hasIdColumn = DuckDBOperations.ColumnExists(conn, tableName, "id");
             }
 
-            // Check if table has 'id' column for optimized fetching
-            // If not, we'll use ROWID (DuckDB's built-in row identifier)
-            using var checkCmd = conn.CreateCommand();
-            checkCmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{tableName}') WHERE name='id'";
-            _hasIdColumn = Convert.ToInt32(checkCmd.ExecuteScalar()) > 0;
+            // Pre-build parameterized range queries (identifiers are fixed; bounds are parameters).
+            _rangeQuery = $"SELECT {_columnName} FROM {_tableName} WHERE id >= ? AND id < ? ORDER BY id";
+            _rangeQueryRowId =
+                $"SELECT {_columnName} FROM {_tableName} WHERE ROWID >= ? AND ROWID < ? ORDER BY ROWID";
+
+            _threadConnection = new ThreadLocal<DuckDBConnection>(() =>
+            {
+                var c = DuckDBConnectionFactory.CreateConnection(_dbPath);
+                // Configure connection for optimal performance (per DuckDB docs)
+                // - Limit threads per connection to avoid too many threads causing slowdowns
+                // - DuckDB parallelizes within queries, so we don't need many threads per connection
+                using var configCmd = c.CreateCommand();
+                configCmd.CommandText = "SET threads=4;";
+                configCmd.ExecuteNonQuery();
+                return c;
+            });
         }
-
-        // Pre-build parameterized range queries (identifiers are fixed; bounds are parameters).
-        _rangeQuery = $"SELECT {_columnName} FROM {_tableName} WHERE id >= ? AND id < ? ORDER BY id";
-        _rangeQueryRowId =
-            $"SELECT {_columnName} FROM {_tableName} WHERE ROWID >= ? AND ROWID < ? ORDER BY ROWID";
-
-        _threadConnection = new ThreadLocal<DuckDBConnection>(() =>
-        {
-            var c = new DuckDBConnection($"Data Source={_dbPath}");
-            c.Open();
-            // Configure connection for optimal performance (per DuckDB docs)
-            // - Limit threads per connection to avoid too many threads causing slowdowns
-            // - DuckDB parallelizes within queries, so we don't need many threads per connection
-            using var configCmd = c.CreateCommand();
-            configCmd.CommandText = "SET threads=4;";
-            configCmd.ExecuteNonQuery();
-            return c;
-        });
     }
 
     /// <summary>
