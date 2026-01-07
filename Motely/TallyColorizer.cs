@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Motely;
 
@@ -116,7 +117,49 @@ public static class TallyColorizer
     /// </summary>
     public static bool ColorEnabled
     {
-        get => _colorEnabled ?? IsColorSupported();
+        get
+        {
+            // If explicitly set, use that value
+            if (_colorEnabled.HasValue)
+                return _colorEnabled.Value;
+            
+            // Check if NO_COLOR is set (standard way to disable colors)
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR")))
+                return false;
+            
+            // For Windows, be more aggressive - Windows 10+ supports ANSI colors
+            // Even if TERM=dumb, modern Windows terminals (PowerShell, Windows Terminal) support colors
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                var osVersion = Environment.OSVersion.Version;
+                if (osVersion.Major >= 10)
+                {
+                    // Windows 10+ - assume colors work (terminal will handle it)
+                    // TERM=dumb is often set but doesn't mean colors don't work
+                    return true;
+                }
+            }
+            
+            // Check environment variables for modern terminals
+            var wtSession = Environment.GetEnvironmentVariable("WT_SESSION");
+            var termProgram = Environment.GetEnvironmentVariable("TERM_PROGRAM");
+            var term = Environment.GetEnvironmentVariable("TERM");
+            
+            if (!string.IsNullOrEmpty(wtSession)) // Windows Terminal
+                return true;
+            if (termProgram?.Contains("vscode", StringComparison.OrdinalIgnoreCase) == true) // VS Code
+                return true;
+            if (!string.IsNullOrEmpty(term) && (term.Contains("color") || term.Contains("256") || term.Contains("xterm")))
+                return true;
+            
+            // Unix-like systems usually support colors
+            if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+                return true;
+            
+            // Default: enable colors (let terminal handle it - most modern terminals support ANSI)
+            // If the terminal doesn't support colors, ANSI codes will just be ignored
+            return true;
+        }
         set => _colorEnabled = value;
     }
 
@@ -233,6 +276,89 @@ public static class TallyColorizer
             return $"{seed},{score},{string.Join(",", tallies)}";
 
         return $"{seed},{score},{ColorizeTallies(tallies)}";
+    }
+
+    /// <summary>
+    /// Format a result line with visual ASCII block bars for tallies.
+    /// Shows tallies as colored Unicode block characters (░▒▓█) for easy visualization.
+    /// Perfect for visualizing seed search results at a glance!
+    /// </summary>
+    public static string FormatResultLineWithBlocks(string seed, int score, IEnumerable<int> tallies, int maxBlockWidth = 40)
+    {
+        bool useColor = ColorEnabled;
+        var blockBar = FormatTallyBlocks(tallies, maxBlockWidth, useColor);
+        return $"{seed} | Score: {score} | {blockBar}";
+    }
+
+    /// <summary>
+    /// Format tallies as a visual block bar using Unicode block characters.
+    /// Each tally value is represented by a proportional block height.
+    /// </summary>
+    private static string FormatTallyBlocks(IEnumerable<int> tallies, int maxWidth, bool useColor)
+    {
+        var tallyList = tallies is ICollection<int> coll ? coll : tallies.ToList();
+        if (tallyList.Count == 0)
+            return string.Empty;
+
+        // Find max value for normalization
+        int maxValue = tallyList.Max();
+        if (maxValue == 0)
+            return new string('░', maxWidth); // All empty
+
+        // Unicode block characters: ░ (light) ▒ (medium-light) ▓ (medium-dark) █ (full)
+        const char blockEmpty = '░';
+        const char blockLight = '▒';
+        const char blockMedium = '▓';
+        const char blockFull = '█';
+
+        var result = new StringBuilder(maxWidth * tallyList.Count);
+        int blockIndex = 0;
+
+        foreach (var tally in tallyList)
+        {
+            if (blockIndex >= maxWidth)
+                break;
+
+            // Normalize tally to 0-4 range for block selection
+            int normalized = maxValue > 0 ? (int)((double)tally / maxValue * 4) : 0;
+            normalized = Math.Max(0, Math.Min(4, normalized));
+
+            char blockChar = normalized switch
+            {
+                0 => blockEmpty,
+                1 => blockLight,
+                2 => blockMedium,
+                3 => blockFull,
+                4 => blockFull,
+                _ => blockEmpty
+            };
+
+            if (useColor)
+            {
+                // Apply color based on tally value
+                int colorKey = Math.Max(0, Math.Min(8, tally));
+                if (TallyColors.TryGetValue(colorKey, out var color))
+                {
+                    result.Append(color);
+                    result.Append(blockChar);
+                    result.Append(ResetColor);
+                }
+                else
+                {
+                    result.Append(TallyColors[8]);
+                    result.Append(blockChar);
+                    result.Append(ResetColor);
+                }
+            }
+            else
+            {
+                result.Append(blockChar);
+            }
+
+            blockIndex++;
+        }
+
+        return result.ToString();
     }
 
     /// <summary>

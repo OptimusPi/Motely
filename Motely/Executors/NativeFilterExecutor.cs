@@ -239,9 +239,23 @@ namespace Motely.Executors
             // Print CSV header
             PrintResultsHeader(config);
 
+            // Track printed seeds to avoid duplicate console output
+            var printedSeeds = new HashSet<string>();
+            var printLock = new object();
+            
             // Create scoring provider with callbacks
             Action<MotelySeedScoreTally> onResultFound = (score) =>
             {
+                // Deduplicate console output - same seed can be found in multiple batches/threads
+                lock (printLock)
+                {
+                    if (printedSeeds.Contains(score.Seed))
+                        return; // Already printed this seed
+                    
+                    printedSeeds.Add(score.Seed);
+                }
+                
+                // Use original tally column format (CSV-style with colored numbers)
                 Console.WriteLine(
                     TallyColorizer.FormatResultLine(score.Seed, score.Score, score.TallyColumns)
                 );

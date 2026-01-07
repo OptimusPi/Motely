@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using DuckDB.NET.Data;
+using Motely.DuckDB;
 using Motely;
 using Motely.Executors;
 using Motely.Filters;
@@ -725,7 +726,7 @@ public class SearchManager
 
         try
         {
-            using var conn = new DuckDBConnection($"Data Source={dbPath}");
+            using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
             conn.Open();
 
             using var cmd = conn.CreateCommand();
@@ -1319,19 +1320,9 @@ public class SearchManager
 
         try
         {
-            using var conn = new DuckDBConnection($"Data Source={dbPath}");
-            conn.Open();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT seed FROM results ORDER BY score DESC LIMIT ?";
-            cmd.Parameters.Add(new DuckDBParameter(limit));
-
-            var results = new List<string>();
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                results.Add(reader.GetString(0));
-            }
-            return results;
+            using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
+            // Use centralized query helper for consistency
+            return DuckDBQueryHelpers.GetTopSeeds(conn, "results", limit);
         }
         catch (Exception ex)
         {
@@ -1342,6 +1333,7 @@ public class SearchManager
     
     /// <summary>
     /// Get top results from a search DB
+    /// Uses centralized query helper for consistency.
     /// </summary>
     private List<SearchResult> GetTopResultsFromDb(string dbPath, int limit)
     {
@@ -1349,29 +1341,15 @@ public class SearchManager
         
         try
         {
-            using var conn = new DuckDBConnection($"Data Source={dbPath}");
-            conn.Open();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = $"SELECT * FROM results ORDER BY score DESC LIMIT {limit}";
-            
-            var results = new List<SearchResult>();
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
+            // Use centralized query helper for consistency
+            var resultsWithTallies = DuckDBQueryHelpers.GetResultsWithTallies(conn, "results", limit, 2);
+            return resultsWithTallies.Select(r => new SearchResult
             {
-                var tallies = new List<int>();
-                for (int i = 2; i < reader.FieldCount; i++)
-                {
-                    tallies.Add(reader.IsDBNull(i) ? 0 : reader.GetInt32(i));
-                }
-
-                results.Add(new SearchResult 
-                { 
-                    Seed = reader.GetString(0), 
-                    Score = reader.GetInt32(1),
-                    Tallies = tallies
-                });
-            }
-            return results;
+                Seed = r.Seed,
+                Score = r.Score,
+                Tallies = r.Tallies
+            }).ToList();
         }
         catch (Exception ex)
         {

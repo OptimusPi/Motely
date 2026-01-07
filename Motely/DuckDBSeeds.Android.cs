@@ -1,6 +1,7 @@
 // Android-specific DuckDB implementation using DuckDB.NET.Data
 #if ANDROID
 using DuckDB.NET.Data;
+using Motely.DuckDB;
 
 namespace Motely;
 
@@ -11,8 +12,7 @@ public static partial class DuckDBSeeds
 {
     public static IEnumerable<string> Stream(string dbPath, string tableName = "seeds", string columnName = "seed")
     {
-        using var connection = new DuckDBConnection($"Data Source={dbPath}");
-        connection.Open();
+        using var connection = DuckDBConnectionFactory.CreateConnection(dbPath);
         using var cmd = connection.CreateCommand();
         cmd.CommandText = $"SELECT {columnName} FROM {tableName} ORDER BY LENGTH({columnName})";
         using var reader = cmd.ExecuteReader();
@@ -40,15 +40,13 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
     /// </summary>
     public DuckDBSeedProvider(string dbPath, string tableName = "seeds", string columnName = "seed")
     {
-        _connection = new DuckDBConnection($"Data Source={dbPath}");
-        _connection.Open();
+        _connection = DuckDBConnectionFactory.CreateConnection(dbPath);
         _tableName = tableName;
         _columnName = columnName;
 
         // Get count - DuckDB is in-memory, this is instant
-        using var countCmd = _connection.CreateCommand();
-        countCmd.CommandText = $"SELECT COUNT(*) FROM {tableName}";
-        SeedCount = Convert.ToInt32(countCmd.ExecuteScalar());
+        // Use centralized operation for consistency
+        SeedCount = (int)DuckDBOperations.GetRowCount(_connection, tableName);
     }
 
     public ReadOnlySpan<char> NextSeed()

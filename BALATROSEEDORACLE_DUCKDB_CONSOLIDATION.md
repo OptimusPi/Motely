@@ -4,7 +4,7 @@
 We're consolidating all DuckDB table creation and schema management into **Motely core library** as the single source of truth.
 
 ## What's Happening in Motely
-- Creating `Motely/DuckDB/` namespace with:
+- Creating `Motely/Motely.DuckDB/` namespace with:
   - `DuckDBSchema.cs` - All table schema definitions
   - `DuckDBConnectionFactory.cs` - Centralized connection creation
   - `DuckDBTableManager.cs` - Table operations (create, validate, sanitize)

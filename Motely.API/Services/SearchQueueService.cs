@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Motely.API.Models;
 using System.Data;
 using DuckDB.NET.Data;
+using Motely.DuckDB;
 
 namespace Motely.API.Services;
 
@@ -19,30 +20,14 @@ public class SearchQueueService
 
     private void InitializeDatabase()
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            CREATE TABLE IF NOT EXISTS SearchQueue (
-                searchId TEXT PRIMARY KEY,
-                jamlFilter TEXT NOT NULL,
-                dateCreated TIMESTAMP NOT NULL DEFAULT (current_timestamp),
-                lastAccessed TIMESTAMP NOT NULL DEFAULT (current_timestamp),
-                status TEXT NOT NULL DEFAULT 'queued',
-                batchMarker BIGINT DEFAULT 0,
-                seedsSearched BIGINT DEFAULT 0,
-                resultsFound INTEGER DEFAULT 0,
-                threadCount INTEGER DEFAULT 1,
-                isBurst BOOLEAN DEFAULT FALSE
-            );
-        ";
-        cmd.ExecuteNonQuery();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
+        var searchQueueSchema = DuckDBSchema.SearchQueueTableSchema();
+        DuckDBTableManager.EnsureTableExists(conn, searchQueueSchema);
     }
 
     public void Enqueue(string searchId, string jamlFilter, int threadCount = 1, bool isBurst = false)
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT OR REPLACE INTO SearchQueue 
@@ -59,8 +44,7 @@ public class SearchQueueService
 
     public SearchQueueEntry? DequeueNext()
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT searchId, jamlFilter, dateCreated, lastAccessed, status,
@@ -100,8 +84,7 @@ public class SearchQueueService
 
     public void MarkCompleted(string searchId, long seedsSearched, int resultsFound)
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             UPDATE SearchQueue
@@ -125,8 +108,7 @@ public class SearchQueueService
 
     public void UpdateProgress(string searchId, long seedsSearched, int resultsFound, long batchMarker = 0)
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             UPDATE SearchQueue
@@ -145,8 +127,7 @@ public class SearchQueueService
 
     public void CleanupStale(TimeSpan olderThan)
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = $@"
             DELETE FROM SearchQueue
@@ -161,8 +142,7 @@ public class SearchQueueService
     public List<SearchQueueEntry> GetAll()
     {
         var list = new List<SearchQueueEntry>();
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT searchId, jamlFilter, dateCreated, lastAccessed, status,
@@ -192,8 +172,7 @@ public class SearchQueueService
 
     private void UpdateStatus(string searchId, string status)
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE SearchQueue SET status = ? WHERE searchId = ?;";
         cmd.Parameters.Add(new DuckDBParameter(status));
@@ -203,8 +182,7 @@ public class SearchQueueService
 
     private void Touch(string searchId)
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE SearchQueue SET lastAccessed = current_timestamp WHERE searchId = ?;";
         cmd.Parameters.Add(new DuckDBParameter(searchId));
@@ -213,8 +191,7 @@ public class SearchQueueService
 
     public void Update(SearchQueueEntry entry)
     {
-        using var conn = new DuckDBConnection($"Data Source={_dbPath}");
-        conn.Open();
+        using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             UPDATE SearchQueue

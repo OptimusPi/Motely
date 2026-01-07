@@ -546,8 +546,7 @@ public struct MotelyJsonSeedScoreDesc(
                             else
                             {
                                 // For non-ScoreTally columns, add as string value
-                                // Still add 0 to tally for index alignment
-                                seedScore.AddTally(0);
+                                // AddColumnValue already adds 0 to tally internally for index alignment
                                 seedScore.AddColumnValue(columnValue);
                             }
                         }

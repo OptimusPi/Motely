@@ -778,7 +778,7 @@ Hand levels are upgraded via Planet cards, Orbital Tag, Black Hole Spectral card
   "sell_price": 5,
   "unlock_condition": "Win 1 run",
   "compatibility": {
-    "editions": ["Foil", "Holo", "Polychrome", "Negative"],
+    "editions": ["Foil", "Holographic", "Polychrome", "Negative"],
     "seals": [],
     "stickers": ["Perishable", "Eternal"]
   },
