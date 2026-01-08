@@ -9,8 +9,16 @@ using Motely.API;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
+        // Check if we should run in MCP stdio mode (for Cursor, Claude Desktop, etc.)
+        if (McpStdioEntryPoint.ShouldRunStdioMode(args))
+        {
+            await McpStdioEntryPoint.RunStdioModeAsync(args);
+            return;
+        }
+
+        // Otherwise, run normal HTTP server
         MotelyApiHost.CreateHost(args).Run();
     }
 }

@@ -184,6 +184,7 @@ public class MotelySearchDatabase : IDisposable
     /// For seed searching, this is fine - we typically query after the search completes.
     /// 
     /// Uses centralized query helper for consistency.
+    /// Uses the SAME connection as the appender to avoid file locking issues.
     /// </summary>
     public List<SearchResult> GetTopResults(int limit = 1000)
     {
@@ -193,7 +194,7 @@ public class MotelySearchDatabase : IDisposable
 
             // If appender is open, buffered data won't be visible yet.
             // This is fine for seed searching - we usually query after Checkpoint().
-            // For real-time querying during search, you'd need a separate read connection.
+            // Uses same connection as appender to avoid DuckDB file locking issues.
 
             var resultsWithTallies = DuckDBQueryHelpers.GetResultsWithTallies(_connection, "results", limit, 2);
             return resultsWithTallies.Select(r => new SearchResult
@@ -202,6 +203,88 @@ public class MotelySearchDatabase : IDisposable
                 Score = r.Score,
                 Tallies = r.Tallies
             }).ToList();
+        }
+    }
+
+    /// <summary>
+    /// Get paginated results with OFFSET support.
+    /// Uses the SAME connection as the appender to avoid DuckDB file locking issues.
+    /// 
+    /// NOTE: If appender is still open, buffered data won't be visible.
+    /// </summary>
+    public List<Dictionary<string, object?>> GetResultsPage(int offset, int limit, string orderByColumn = "score", bool ascending = false)
+    {
+        lock (_lock)
+        {
+            ThrowIfDisposed();
+
+            var orderDirection = ascending ? "ASC" : "DESC";
+            var sql = $"SELECT * FROM results ORDER BY {orderByColumn} {orderDirection} LIMIT ? OFFSET ?";
+            return DuckDBOperations.ExecuteQuery(_connection, sql, 
+                new DuckDBParameter(limit), 
+                new DuckDBParameter(offset));
+        }
+    }
+
+    /// <summary>
+    /// Get results with custom ORDER BY column.
+    /// Uses the SAME connection as the appender to avoid DuckDB file locking issues.
+    /// 
+    /// NOTE: If appender is still open, buffered data won't be visible.
+    /// Column name should be validated by caller (whitelist against ColumnNames).
+    /// </summary>
+    public List<Dictionary<string, object?>> GetResultsOrderedBy(string orderByColumn, bool ascending, int limit = 1000)
+    {
+        lock (_lock)
+        {
+            ThrowIfDisposed();
+
+            var orderDirection = ascending ? "ASC" : "DESC";
+            var sql = $"SELECT * FROM results ORDER BY {orderByColumn} {orderDirection} LIMIT ?";
+            return DuckDBOperations.ExecuteQuery(_connection, sql, new DuckDBParameter(limit));
+        }
+    }
+
+    /// <summary>
+    /// Execute a custom query using the internal connection.
+    /// Uses the SAME connection as the appender to avoid DuckDB file locking issues.
+    /// 
+    /// WARNING: Only use for read-only queries. Do not modify data through this method.
+    /// </summary>
+    public List<Dictionary<string, object?>> ExecuteQuery(string sql, params DuckDBParameter[] parameters)
+    {
+        lock (_lock)
+        {
+            ThrowIfDisposed();
+            return DuckDBOperations.ExecuteQuery(_connection, sql, parameters);
+        }
+    }
+
+    /// <summary>
+    /// Execute a scalar query using the internal connection.
+    /// Uses the SAME connection as the appender to avoid DuckDB file locking issues.
+    /// </summary>
+    public T? ExecuteScalar<T>(string sql, params DuckDBParameter[] parameters)
+    {
+        lock (_lock)
+        {
+            ThrowIfDisposed();
+            return DuckDBOperations.ExecuteScalar<T>(_connection, sql, parameters);
+        }
+    }
+
+    /// <summary>
+    /// Execute a non-query command using the internal connection.
+    /// Uses the SAME connection as the appender to avoid DuckDB file locking issues.
+    /// 
+    /// WARNING: Use sparingly. Prefer InsertRow() for data insertion.
+    /// </summary>
+    public void ExecuteNonQuery(string sql, params DuckDBParameter[] parameters)
+    {
+        lock (_lock)
+        {
+            ThrowIfDisposed();
+            DuckDBOperations.ExecuteNonQuery(_connection, sql, parameters);
         }
     }
 
@@ -417,6 +500,19 @@ public class MotelySearchDatabase : IDisposable
             // Use centralized schema for results table
             var resultsSchema = DuckDBSchema.ResultsTableSchema(_columnNames);
             DuckDBTableManager.EnsureTableExists(_connection, resultsSchema);
+            
+            // Create indexes internally (black box - BSO/CLI/TUI don't need to know about this)
+            // Score index for fast sorting
+            DuckDBTableManager.CreateIndex(_connection, "CREATE INDEX IF NOT EXISTS idx_score ON results(score DESC);");
+            
+            // Tally column indexes for fast sorting by individual tallies
+            for (int i = 2; i < _columnNames.Count; i++)
+            {
+                var escapedColumnName = _columnNames[i].Replace("\"", "\"\"");
+                var indexName = $"idx_tally_{i}";
+                var indexSql = $"CREATE INDEX IF NOT EXISTS {indexName} ON results(\"{escapedColumnName}\" DESC);";
+                DuckDBTableManager.CreateIndex(_connection, indexSql);
+            }
         }
         catch (Exception ex)
         {
