@@ -114,7 +114,7 @@ public static class MotelyApiHost
         // Add SignalR
         app.MapHub<SearchHub>("/searchHub");
         
-        // Static file hosting - ASP.NET Core automatically serves files from wwwroot and subdirectories
+        // Static file hosting
         app.UseDefaultFiles();
         app.UseStaticFiles();
 

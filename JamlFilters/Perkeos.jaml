@@ -1,11 +1,11 @@
-name: luck2
+name: Perkeos
 author: pifreak
 deck: Anaglyph
 stake: White
 
 Must:  
-  - soulJoker: Any
-    edition: NegativeTag
+  - soulJoker: Perkeo
+    edition: Negative
     packSlots: [0]
   - smallblindtag: NegativeTag
     Antes: [4]  
