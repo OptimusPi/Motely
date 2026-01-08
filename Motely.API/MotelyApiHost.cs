@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -113,24 +114,11 @@ public static class MotelyApiHost
         // Add SignalR
         app.MapHub<SearchHub>("/searchHub");
         
-        // Add static files with custom caching for HTML files
-        var staticFileOptions = new StaticFileOptions
-        {
-            OnPrepareResponse = ctx =>
-            {
-                // Don't cache HTML files to prevent stale asset references
-                if (ctx.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
-                {
-                    ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
-                    ctx.Context.Response.Headers.Append("Pragma", "no-cache");
-                    ctx.Context.Response.Headers.Append("Expires", "0");
-                }
-            }
-        };
+        // Static file hosting - ASP.NET Core automatically serves files from wwwroot and subdirectories
         app.UseDefaultFiles();
-        app.UseStaticFiles(staticFileOptions);
+        app.UseStaticFiles();
 
-        // Basic endpoints
+        // Basic endpoints (registered AFTER static files)
         app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
         app.MapGet("/routes", () => new { 
             homepage = "/",
