@@ -211,13 +211,8 @@ public class SearchManager
             {
                 if (search.Database != null)
                 {
-                    var dictResults = search.Database.GetTopResults(1000);
-                    results = dictResults.Select(r => new SearchResult
-                    {
-                        Seed = r.TryGetValue("seed", out var seed) ? seed?.ToString() ?? "" : "",
-                        Score = r.TryGetValue("score", out var score) && score != null ? Convert.ToInt32(score) : 0,
-                        Tallies = r.TryGetValue("tallies", out var tallies) && tallies is List<int> talliesList ? talliesList : null
-                    }).ToList();
+                    // GetTopResults() now returns List<SearchResult> directly - no dictionary conversion!
+                    results = search.Database.GetTopResults(1000);
                 }
             }
             catch (Exception ex)
