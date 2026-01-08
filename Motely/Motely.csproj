@@ -77,6 +77,10 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android' OR '$(TargetFramework)' == 'net10.0-ios'">
     <PackageReference Include="DuckDB.NET.Data.Full" />
   </ItemGroup>
+  <!-- Browser packages - DuckDB WASM support -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <PackageReference Include="DuckDB.NET.Data.Full" />
+  </ItemGroup>
   <!-- Cross-platform packages -->
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
@@ -87,6 +91,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- Include Motely.DB files (moved from Motely/Motely.DuckDB to Motely/Motely.DB) -->
+  <ItemGroup>
+    <Compile Include="..\Motely.DB\**\*.cs" />
   </ItemGroup>
   <!-- Exclude desktop-only files from browser build (Terminal.Gui TUI, CLI executors) -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
