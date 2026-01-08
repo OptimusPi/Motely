@@ -6,6 +6,7 @@ using Motely.Executors;
 using Motely.Filters;
 using System.Text.Json;
 using System.Linq;
+using Motely.API; // For SearchResult type
 
 namespace Motely.API;
 
@@ -210,7 +211,13 @@ public class SearchManager
             {
                 if (search.Database != null)
                 {
-                    results = search.Database.GetTopResults(1000);
+                    var dictResults = search.Database.GetTopResults(1000);
+                    results = dictResults.Select(r => new SearchResult
+                    {
+                        Seed = r.TryGetValue("seed", out var seed) ? seed?.ToString() ?? "" : "",
+                        Score = r.TryGetValue("score", out var score) && score != null ? Convert.ToInt32(score) : 0,
+                        Tallies = r.TryGetValue("tallies", out var tallies) && tallies is List<int> talliesList ? talliesList : null
+                    }).ToList();
                 }
             }
             catch (Exception ex)
