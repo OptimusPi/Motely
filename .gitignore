@@ -52,11 +52,10 @@ Motely/tui.json
 /JamlFilters-old
 /Motely.API/wwwroot/BSO
 .cursor/debug.log
-/Motely.API/wwwroot/JamlUI3/dist
+/Motely.API/wwwroot/
 /Motely.API/wwwroot/JamlUI3/node_modules
 /publish/api/wwwroot/JamlUI3/dist
 /publish
-/wwwroot/assets
-/wwwroot
 /wwwroot
 /SeedSources
+/vue-jaml-ui/node_modules
