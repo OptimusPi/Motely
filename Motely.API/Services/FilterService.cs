@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Motely;
+using Motely.API;
 
 namespace Motely.API.Services;
 
@@ -9,8 +10,21 @@ public static class FilterService
     {
         if (string.IsNullOrEmpty(filterId))
             return string.Empty;
-            
-        var filterPath = Path.Combine("Filters", $"{filterId}.jaml");
+        
+        // Sanitize filterId to prevent path traversal attacks
+        // Extract just the filename stem (no path separators, no extension)
+        var safeName = Path.GetFileNameWithoutExtension(filterId);
+        if (string.IsNullOrWhiteSpace(safeName))
+            return string.Empty;
+        
+        // Remove any remaining path separators or invalid characters
+        var invalidChars = Path.GetInvalidFileNameChars();
+        foreach (var c in invalidChars)
+        {
+            safeName = safeName.Replace(c, '_');
+        }
+        
+        var filterPath = Path.Combine(MotelyPaths.JamlFiltersDir, $"{safeName}.jaml");
         if (!File.Exists(filterPath))
             return string.Empty;
             
