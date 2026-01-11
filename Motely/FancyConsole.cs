@@ -32,6 +32,9 @@ public partial class FancyConsoleImpl : IMotelyConsole
     {
         _bottomLine = bottomLine;
 
+        if (!IsEnabled)
+            return;
+
         if (_bottomLine != null)
         {
             WriteBottomLine(_bottomLine);
@@ -56,7 +59,16 @@ public partial class FancyConsoleImpl : IMotelyConsole
 /// </summary>
 public static class FancyConsole
 {
-    public static bool IsEnabled { get; set; } = true;
+    /// <summary>
+    /// Global lock for all console output to prevent interleaved writes from multiple threads
+    /// </summary>
+    public static readonly object ConsoleLock = new();
+
+    public static bool IsEnabled
+    {
+        get => FancyConsoleImpl.IsEnabled;
+        set => FancyConsoleImpl.IsEnabled = value;
+    }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void SetBottomLine(string? bottomLine)
@@ -67,12 +79,24 @@ public static class FancyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void WriteLine<T>(T message)
     {
+        if (!IsEnabled)
+        {
+            Console.WriteLine(message?.ToString() ?? "null");
+            return;
+        }
+
         FancyConsoleImpl.Instance.WriteLine(message);
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void WriteLine(string? message)
     {
+        if (!IsEnabled)
+        {
+            Console.WriteLine(message ?? "null");
+            return;
+        }
+
         FancyConsoleImpl.Instance.WriteLine(message);
     }
 }

@@ -1,8 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://balatrogenie.app/jaml.schema.json",
+  "version": "2.0.0",
   "title": "JAML - Jimbo's Ante Markup Language",
-  "description": "Schema for Balatro seed filter configuration files (.jaml)",
+  "description": "Schema for Balatro seed filter configuration files (.jaml). v2.0.0 adds Event type-as-key shorthand and full source support (Judgement, RiffRaff, Seance, SixthSense, Emperor, PurpleSealOrEightBall, RareTag, UncommonTag).",
   "type": "object",
   "properties": {
     "name": {
@@ -201,14 +202,26 @@
           },
           "description": "Roll indices for Event clauses (e.g. [0, 1] for first two occurrences of the event). Only valid for type: Event. Example: 'rolls: [0]' checks the first occurrence"
         },
+        "event": {
+          "type": "string",
+          "enum": [
+            "LuckyMoney",
+            "LuckyMult",
+            "MisprintMult",
+            "WheelOfFortune",
+            "CavendishExtinct",
+            "GrosMichelExtinct"
+          ],
+          "description": "Shorthand for Event type (type-as-key). Example: 'event: LuckyMoney' is equivalent to 'type: Event, value: LuckyMoney'. Use with 'rolls' to specify which occurrences to check."
+        },
         "antes": {
           "type": "array",
           "items": {
             "type": "integer",
-            "minimum": 1,
-            "maximum": 8
+            "minimum": 0,
+            "maximum": 39
           },
-          "description": "Which antes (1-8) to search in"
+          "description": "Which antes (0-39) to search in"
         },
         "score": {
           "type": "integer",
@@ -288,12 +301,16 @@
           "properties": {
             "shopSlots": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Shop slot indices (0-based). If empty array [], will be populated from minShopSlot/maxShopSlot if provided."
             },
             "packSlots": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Pack slot indices (0-based). If empty array [], will be populated from minPackSlot/maxPackSlot if provided."
             },
             "minShopSlot": {
@@ -330,42 +347,58 @@
             },
             "judgement": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Judgement tarot joker roll indices (e.g. [0, 1] for first two uses)"
             },
             "rareTag": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Rare tag joker roll indices (e.g. [0] for first rare tag)"
             },
             "uncommonTag": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Uncommon tag joker roll indices (e.g. [0] for first uncommon tag)"
             },
             "riffRaff": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "RiffRaff joker roll indices (e.g. [0, 1] for first two RiffRaff jokers - RiffRaff creates 2 jokers)"
             },
             "purpleSealOrEightBall": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Purple Seal / 8Ball tarot card roll indices (e.g. [0] for first tarot from Purple Seal or 8Ball - both use same PRNG key)"
             },
             "emperor": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Emperor tarot card roll indices (e.g. [0, 1] for first two tarot cards from Emperor - Emperor creates 2 tarot cards)"
             },
             "sixthSense": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "SixthSense spectral card roll indices (e.g. [0] for first spectral card from SixthSense joker)"
             },
             "seance": {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "description": "Seance spectral card roll indices (e.g. [0, 1] for first two spectral cards from Seance joker)"
             }
           },

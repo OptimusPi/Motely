@@ -1,67 +1,30 @@
-name: luck2
-author: pifreak
-deck: Anaglyph
-stake: White
+name: Meow Money
+author: AI Cat
+description: |
+  🐱💰 MEOW MONEY 💰🐱
+  Find seeds blessed by the Lucky Cat!
+  Prioritizes early LuckyMoney hits - because the first $20 
+  is worth more than the hundredth!
 
-Must:  
-  - soulJoker: Any
-    edition: NegativeTag
-    packSlots: [0]
-  - smallblindtag: NegativeTag
-    Antes: [4]  
-Should:
-
-  - soulJoker: Perkeo
-    antes: [1,2,3]
-    packSlots: [0,1]
-    score: 17
-  - soulJoker: Perkeo
-    antes: [1,2,3,4]
-    packSlots: [0,1,2,3]
-    score: 10
-  - joker: Showman
-    antes: [1,2,3,4]
-    shopSlots: [0,1,2,3]
-    packSlots: [0,1,2,3]
-
-
-
-  - joker: Mime
-    ShopSlots: [2,3,4,5,6,7]
-    score: 444
-    antes: [4]
-  - smallblindtag: NegativeTag
-  - tag: DoubleTag
-    antes: [1]
-    score: 2
-  - tag: DoubleTag
-    antes: [2]
-    score: 2
-  - tag: DoubleTag
-    antes: [3]
-    score: 2
-  - tag: DoubleTag
-    antes: [4]
-    score: 2
-  - tag: DoubleTag
-    antes: [5]
-    score: 2
-  - tag: DoubleTag
-    antes: [6]
-    score: 2
-  - tag: DoubleTag
-    antes: [7]
-    score: 2
-  - tag: DoubleTag
-    antes: [8]
-    score: 2
+must:
   - or:
     - TarotCard: TheMagician
       Antes: [1]
     - StandardCard:
       Antes: [1]
       Enhancement: Lucky
-    score: 666
+  - event: LuckyMoney
+    antes: [1]
+    rolls: [0, 1]
+
+should:
+  - or:
+    - TarotCard: TheMagician
+      Antes: [1]
+    - StandardCard:
+      Antes: [1]
+      Enhancement: Lucky
+    score: 77
 
   # 🌟 LEGENDARY: First roll hits in Ante 1 = JACKPOT
   - event: LuckyMoney

@@ -47,7 +47,8 @@ public sealed class ChainedMustClauseSeedTests
             .WithListSearch(seedsToTest)
             .Start();
 
-        search.AwaitCompletion();
+        // Wait for search to complete (with timeout to prevent hanging)
+        search.AwaitCompletionWithTimeout(timeoutSeconds: 2);
 
         Assert.Equal(MotelySearchStatus.Completed, search.Status);
         Assert.Equal(1, search.MatchingSeeds);

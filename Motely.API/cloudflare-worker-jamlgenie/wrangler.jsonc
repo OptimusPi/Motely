@@ -6,6 +6,12 @@
 	"ai": {
 		"binding": "AI"
 	},
+	"vectorize": [
+		{
+			"binding": "VECTORIZE",
+			"index_name": "jaml-examples"
+		}
+	],
 	"observability": {
 		"enabled": true,
 		"head_sampling_rate": 1
