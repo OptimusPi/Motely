@@ -47,6 +47,13 @@ public static class MotelyApiHost
     {
         var builder = WebApplication.CreateBuilder(args);
         
+        // Set ContentRoot to repo root for consistent path resolution
+        var motelyRoot = FindMotelyRoot();
+        if (!string.IsNullOrEmpty(motelyRoot))
+        {
+            builder.Host.UseContentRoot(motelyRoot);
+        }
+        
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddCors(options =>
         {
@@ -96,12 +103,14 @@ public static class MotelyApiHost
 
         var app = builder.Build();
 
-        // Initialize SearchManager with motely root path
-        // Find the root directory by looking for JamlFilters folder
-        var motelyRoot = FindMotelyRoot();
-        if (!string.IsNullOrEmpty(motelyRoot))
+        // Initialize MotelyPaths with ContentRoot and configuration
+        MotelyPaths.Initialize(app.Environment, app.Configuration);
+
+        // Initialize SearchManager with motely root path (for SaveFilterToEcosystem compatibility)
+        var motelyRootForSearchManager = FindMotelyRoot();
+        if (!string.IsNullOrEmpty(motelyRootForSearchManager))
         {
-            SearchManager.Instance.SetMotelyRoot(motelyRoot);
+            SearchManager.Instance.SetMotelyRoot(motelyRootForSearchManager);
         }
         
         // Wire up SearchBroadcaster to SearchManager
