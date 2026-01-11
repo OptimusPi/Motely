@@ -12,7 +12,6 @@ node_modules/
 
 # VS Code / Editors
 .vscode/
-.cursor/
 .claude/
 
 # Build / Publish

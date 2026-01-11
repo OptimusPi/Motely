@@ -1,0 +1,137 @@
+---
+description: Workspace structure and build conventions
+category: workspace
+alwaysApply: false
+priority: 3
+lastReviewed: 2026-01-11
+---
+
+# Workspace Structure
+
+## Repository Overview
+
+Motely is a .NET and Vue-based application for JAML (JSON-Augmented Markup Language) processing and visualization.
+
+## Directory Structure
+
+### .NET Projects
+
+- **`Motely/`** - Core library (.NET 10.0 class library)
+  - Main JAML processing logic
+  - Frameworks: net10.0, net10.0-browser
+
+- **`Motely.API/`** - API layer (.NET 10.0 class library)
+  - Web API endpoints
+  - HTTP services
+
+- **`Motely.TUI/`** - Terminal UI (.NET 10.0 console)
+  - Command-line interface
+  - Interactive terminal application
+
+- **`Motely.Tests/`** - Test suite (.NET 10.0 class library)
+  - Unit and integration tests
+  - xUnit framework
+
+### Frontend Projects
+
+- **`vue-jaml-ui/`** - Vue 3 frontend application
+  - Main UI for JAML visualization
+  - Built with Vite
+  - Dependencies: Vue 3, Vue Router, Monaco Editor, SignalR
+
+- **`wwwroot/`** - Static web assets
+  - Additional frontend applications
+  - JamlGenie Balatro seed oracle
+  - Static HTML/CSS/JS files
+
+### Data and Configuration
+
+- **`JamlFilters/`** - JAML filter definitions (50 .jaml files)
+- **`SearchResults/`** - JAML search result files (36 .jaml files)
+- **`SeedSources/`** - Seed data files (6 .txt files)
+- **`scripts/`** - Build and utility scripts (PowerShell, Python, SQL)
+- **`public/`** - Public assets
+
+### Configuration Files
+
+- **`Motely.slnx`** - .NET solution file (new format)
+- **`Directory.Build.props`** - MSBuild properties
+- **`Directory.Packages.props`** - NuGet package versions
+
+## Build Commands
+
+### .NET Projects
+
+```bash
+# Build entire solution
+dotnet build
+
+# Build specific project
+dotnet build Motely/Motely.csproj
+
+# Build in Release mode
+dotnet build --configuration Release
+
+# Run tests
+dotnet test
+
+# Run specific test project
+dotnet test Motely.Tests/Motely.Tests.csproj
+```
+
+### Vue Frontend
+
+```bash
+# Navigate to Vue project
+cd vue-jaml-ui
+
+# Install dependencies
+npm install
+
+# Development server
+npm run dev
+
+# Production build
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## Common Workflows
+
+### Making Changes to Core Library
+
+1. Edit files in `Motely/`
+2. Run `dotnet build` to verify compilation
+3. Run `dotnet test` to verify tests pass
+4. Update tests in `Motely.Tests/` if needed
+
+### Making Changes to API
+
+1. Edit files in `Motely.API/`
+2. Run `dotnet build` to verify compilation
+3. Run `dotnet test` to verify tests pass
+4. Test API endpoints if applicable
+
+### Making Changes to Vue UI
+
+1. Edit files in `vue-jaml-ui/`
+2. Run `npm run dev` for live development
+3. Run `npm run build` to verify production build
+4. Test in browser
+
+## File Naming Conventions
+
+- C# files: PascalCase (e.g., `JamlParser.cs`)
+- Vue files: PascalCase or kebab-case (e.g., `JamlViewer.vue` or `jaml-viewer.vue`)
+- Test files: Match source file with `Tests` suffix (e.g., `JamlParserTests.cs`)
+- Configuration files: lowercase with dots (e.g., `.editorconfig`)
+
+## Testing Conventions
+
+- Use xUnit for .NET tests
+- Test files in `Motely.Tests/` mirror source structure
+- Test method naming: `MethodName_Scenario_ExpectedResult`
+- Use `[Fact]` for single test cases
+- Use `[Theory]` with `[InlineData]` for parameterized tests
