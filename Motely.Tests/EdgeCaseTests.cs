@@ -212,7 +212,6 @@ must:
 
             var config = ConfigFormatConverter.LoadFromJamlString(jaml);
             Assert.NotNull(config);
-            if (config == null) return; // Skip if parsing failed
             
             config.PostProcess();
             var clause = config.Must![0];

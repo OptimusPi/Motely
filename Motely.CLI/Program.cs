@@ -3,6 +3,7 @@ using Motely.Analysis;
 using Motely.Executors;
 using Motely.Filters;
 using Motely.API;
+using Motely.DuckDB;
 
 namespace Motely
 {
@@ -107,8 +108,13 @@ namespace Motely
             );
             var keywordOption = app.Option<string>(
                 "--keyword <KEYWORD>",
-                "Generate from keyword",
+                "Generate seeds containing keyword (SFW by default, use --nsfw for NSFW)",
                 CommandOptionType.SingleValue
+            );
+            var nsfwOption = app.Option(
+                "--nsfw",
+                "Switch keyword search to NSFW mode",
+                CommandOptionType.NoValue
             );
             var randomOption = app.Option<int>(
                 "--random <COUNT>",
@@ -167,8 +173,6 @@ namespace Motely
             batchSizeOption.DefaultValue = 2;
             startBatchOption.DefaultValue = 0;
             endBatchOption.DefaultValue = 0;
-            startPercentOption.DefaultValue = 0;
-            endPercentOption.DefaultValue = 0;
             cutoffOption.DefaultValue = "0";
             deckOption.DefaultValue = "Red";
             stakeOption.DefaultValue = "White";
@@ -183,6 +187,15 @@ namespace Motely
                     return ExecuteAnalyze(analyzeSeed, deckOption.Value()!, stakeOption.Value()!);
                 }
 
+                // Handle --keyword option: generate seeds containing the keyword
+                string? keywordSeedSource = null;
+                if (keywordOption.HasValue())
+                {
+                    string keyword = keywordOption.Value()!.ToUpperInvariant();
+                    bool isNsfw = nsfwOption.HasValue();
+                    keywordSeedSource = GenerateKeywordSeeds(keyword, isNsfw, quietOption.HasValue());
+                }
+
                 // Build common parameters
                 var parameters = new JsonSearchParams
                 {
@@ -194,7 +207,7 @@ namespace Motely
                     NoFancy = noFancyOption.HasValue(),
                     Quiet = quietOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
-                    SeedSources = seedsourcesOption.Value(),
+                    SeedSources = keywordSeedSource ?? seedsourcesOption.Value(),
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
                 };
 
@@ -604,6 +617,167 @@ namespace Motely
             );
             Console.Write(analysis);
             return 0;
+        }
+
+        /// <summary>
+        /// Generate seeds containing a keyword and return path to the generated seed source file.
+        /// </summary>
+        private static string GenerateKeywordSeeds(string keyword, bool isNsfw, bool quiet)
+        {
+            // Validate keyword - only valid Balatro chars
+            keyword = keyword.ToUpperInvariant().Replace('0', 'O');
+            foreach (var c in keyword)
+            {
+                if (!"ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".Contains(c))
+                {
+                    throw new ArgumentException($"Invalid character '{c}' in keyword. Only A-Z and 1-9 allowed.");
+                }
+            }
+            
+            if (keyword.Length > 8)
+            {
+                throw new ArgumentException($"Keyword too long ({keyword.Length} chars). Max 8 chars allowed.");
+            }
+            
+            // Generate seeds containing this keyword
+            string directory = "SeedSources";
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            
+            string mode = isNsfw ? "nsfw" : "sfw";
+            string fileName = $"_keyword__{keyword.ToLowerInvariant()}_{mode}.txt";
+            string filePath = Path.Combine(directory, fileName);
+            
+            if (!quiet)
+            {
+                Console.WriteLine($"🔧 Generating {mode.ToUpper()} seeds containing '{keyword}'...");
+            }
+            
+            int count = 0;
+            using (var writer = new StreamWriter(filePath))
+            {
+                // Generate all valid padding combinations around the keyword
+                int maxPad = 8 - keyword.Length;
+                char[] validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".ToCharArray();
+                
+                // Keyword alone
+                if (CheckKeywordValidity(keyword, isNsfw))
+                {
+                    writer.WriteLine(keyword);
+                    count++;
+                }
+                
+                // Generate with padding
+                for (int padLen = 1; padLen <= maxPad; padLen++)
+                {
+                    foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
+                    {
+                        if (CheckKeywordValidity(seed, isNsfw))
+                        {
+                            writer.WriteLine(seed);
+                            count++;
+                        }
+                    }
+                }
+            }
+            
+            if (!quiet)
+            {
+                Console.WriteLine($"   Generated {count:N0} seeds containing '{keyword}'");
+            }
+            
+            return filePath;
+        }
+        
+        private static bool CheckKeywordValidity(string seed, bool isNsfw)
+        {
+            if (isNsfw)
+            {
+                // For NSFW mode, we want NSFW seeds
+                return NsfwSeedGenerator.ScoreSeed(seed) > 0;
+            }
+            else
+            {
+                // For SFW mode, reject NSFW seeds
+                return SfwSeedGenerator.IsSfw(seed);
+            }
+        }
+        
+        private static IEnumerable<string> GeneratePaddedSeeds(string keyword, int padLen, char[] validChars)
+        {
+            if (padLen <= 0)
+            {
+                yield return keyword;
+                yield break;
+            }
+            
+            // Generate padding combinations (limit depth to avoid explosion)
+            if (padLen == 1)
+            {
+                foreach (var c in validChars)
+                {
+                    yield return c + keyword;
+                    yield return keyword + c;
+                }
+            }
+            else if (padLen == 2)
+            {
+                foreach (var c1 in validChars)
+                {
+                    foreach (var c2 in validChars)
+                    {
+                        yield return $"{c1}{c2}{keyword}";
+                        yield return $"{keyword}{c1}{c2}";
+                        yield return $"{c1}{keyword}{c2}";
+                    }
+                }
+            }
+            else if (padLen == 3)
+            {
+                foreach (var c1 in validChars)
+                {
+                    foreach (var c2 in validChars)
+                    {
+                        foreach (var c3 in validChars)
+                        {
+                            yield return $"{c1}{c2}{c3}{keyword}";
+                            yield return $"{keyword}{c1}{c2}{c3}";
+                            yield return $"{c1}{keyword}{c2}{c3}";
+                            yield return $"{c1}{c2}{keyword}{c3}";
+                        }
+                    }
+                }
+            }
+            else if (padLen >= 4)
+            {
+                // For 4+ padding, only do prefix/suffix to avoid explosion
+                foreach (var c1 in validChars)
+                {
+                    foreach (var c2 in validChars)
+                    {
+                        foreach (var c3 in validChars)
+                        {
+                            foreach (var c4 in validChars)
+                            {
+                                string pad = $"{c1}{c2}{c3}{c4}";
+                                if (padLen == 4)
+                                {
+                                    yield return pad + keyword;
+                                    yield return keyword + pad;
+                                }
+                                else
+                                {
+                                    // For 5+, use 4-char pad on one side only
+                                    yield return pad + keyword;
+                                    yield return keyword + pad;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

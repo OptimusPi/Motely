@@ -95,6 +95,7 @@ import { useLayout } from '../composables/useLayout'
 import { useSound } from '../composables/useSound'
 import { usePanels } from '../composables/usePanels'
 import { useResize } from '../composables/useResize'
+import { useToasts } from '../composables/useToasts'
 
 // Create initial panel configuration factory
 const createInitialPanels = (generatePanelId) => [
