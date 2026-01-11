@@ -45,8 +45,8 @@ public sealed class JsonFilterSlicedChainTests
             _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
         };
         
-        // Step 4: Create search settings with explicit typing
-        dynamic searchSettings = primaryCategory switch
+        // Step 4: Create search settings with explicit typing (NOT dynamic - that breaks method chaining!)
+        MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter> searchSettings = primaryCategory switch
         {
             FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
             _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
@@ -58,7 +58,7 @@ public sealed class JsonFilterSlicedChainTests
             var category = categories[i];
             var clauses = clausesByCategory[category];
             var additionalFilter = CreateFilterForCategory(category, clauses);
-            searchSettings = searchSettings.WithAdditionalFilter(additionalFilter); // FIX: Capture return value
+            searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
         }
         
         // Apply deck and stake
@@ -66,12 +66,12 @@ public sealed class JsonFilterSlicedChainTests
         searchSettings = searchSettings.WithStake(MotelyStake.White);
         
         // TEST THE FILTER AGAINST ALEEB - not analyze ALEEB!
-        // Create a list search with just ALEEB
+        // Create a list search with just ALEEB (this LIMITS the search to only this seed)
         var seedsToTest = new List<string> { "ALEEB" };
         IMotelySearch search = searchSettings.WithListSearch(seedsToTest).Start();
         
-        // Wait for search to complete
-        search.AwaitCompletion();
+        // Wait for search to complete (with timeout to prevent hanging)
+        search.AwaitCompletionWithTimeout(timeoutSeconds: 2);
         
         // Verify ALEEB matched the filter
         Assert.Equal(MotelySearchStatus.Completed, search.Status);

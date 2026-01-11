@@ -18,6 +18,8 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
   let stackResizePanelId = null
   let stackStartY = 0
   let stackStartHeight = 0
+  let stackPointerId = null
+  let stackDragEl = null
 
   // Corner handle state
   const cornerHandleY = ref(0)
@@ -43,7 +45,8 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     dividerEl?.classList?.add?.('is-resizing')
 
     const updateFromPointer = (clientX) => {
-      const rect = splitContainer.value?.getBoundingClientRect?.()
+      const containerEl = splitContainer?.value || dividerEl?.closest?.('.layout-split')
+      const rect = containerEl?.getBoundingClientRect?.()
       if (!rect || rect.width <= 0) return
       const percent = ((clientX - rect.left) / rect.width) * 100
       splitLeftWidth.value = clamp(percent, 0, 100)
@@ -56,9 +59,9 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     const onUp = () => {
       dividerEl?.releasePointerCapture?.(event.pointerId)
       dividerEl?.classList?.remove?.('is-resizing')
-      dividerEl?.removeEventListener?.('pointermove', onMove)
-      dividerEl?.removeEventListener?.('pointerup', onUp)
-      dividerEl?.removeEventListener?.('pointercancel', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
 
@@ -76,9 +79,10 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
       }
     }
 
-    dividerEl?.addEventListener?.('pointermove', onMove)
-    dividerEl?.addEventListener?.('pointerup', onUp)
-    dividerEl?.addEventListener?.('pointercancel', onUp)
+    // Attach to window so drag still works even if pointer capture fails.
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
     updateFromPointer(event.clientX)
   }
 
@@ -97,24 +101,30 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
 
     isStackDragging = true
     stackResizePanelId = panelId
+    stackPointerId = event.pointerId ?? null
 
-    const dividerEl = event.currentTarget
-    dividerEl?.classList?.add?.('is-dragging')
+    stackDragEl = event.currentTarget
+    stackDragEl?.classList?.add?.('is-dragging')
+    stackDragEl?.setPointerCapture?.(event.pointerId)
     document.body.style.cursor = 'row-resize'
     document.body.style.userSelect = 'none'
 
     stackStartY = event.clientY || (event.touches && event.touches[0]?.clientY) || 0
     stackStartHeight = resizingPanel.defaultHeight || resizingPanel.minHeight || 200
 
-    document.addEventListener('mousemove', handleStackMove)
-    document.addEventListener('touchmove', handleStackMove, { passive: false })
-    document.addEventListener('mouseup', handleStackEnd)
-    document.addEventListener('touchend', handleStackEnd)
-    document.addEventListener('touchcancel', handleStackEnd)
+    // Use pointer events so the drag works reliably (mouse/touch/pen).
+    window.addEventListener('pointermove', handleStackMove)
+    window.addEventListener('pointerup', handleStackEnd)
+    window.addEventListener('pointercancel', handleStackEnd)
   }
 
   const handleStackMove = (moveEvent) => {
     if (!isStackDragging || !stackResizePanelId) return
+
+    // If we started with a pointerId, ignore other pointers.
+    if (stackPointerId != null && moveEvent.pointerId != null && moveEvent.pointerId !== stackPointerId) {
+      return
+    }
 
     const stackPanels = panels.value.filter(p => !p.collapsed)
     const resizingPanel = stackPanels.find(p => p.id === stackResizePanelId)
@@ -170,27 +180,35 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     newHeight = Math.max(resizingPanel.minHeight, newHeight)
     resizingPanel.defaultHeight = newHeight
 
-    moveEvent.preventDefault()
+    moveEvent.preventDefault?.()
   }
 
   const handleStackEnd = () => {
     if (!isStackDragging) return
 
+    const pointerIdToRelease = stackPointerId
+
     isStackDragging = false
     stackResizePanelId = null
 
-    document.querySelectorAll('.stack-divider.is-dragging').forEach(el => {
-      el.classList.remove('is-dragging')
-    })
+    try {
+      if (pointerIdToRelease != null) {
+        stackDragEl?.releasePointerCapture?.(pointerIdToRelease)
+      }
+    } catch {
+      // Ignore
+    }
+
+    stackPointerId = null
+    stackDragEl?.classList?.remove?.('is-dragging')
+    stackDragEl = null
 
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
 
-    document.removeEventListener('mousemove', handleStackMove)
-    document.removeEventListener('touchmove', handleStackMove)
-    document.removeEventListener('mouseup', handleStackEnd)
-    document.removeEventListener('touchend', handleStackEnd)
-    document.removeEventListener('touchcancel', handleStackEnd)
+    window.removeEventListener('pointermove', handleStackMove)
+    window.removeEventListener('pointerup', handleStackEnd)
+    window.removeEventListener('pointercancel', handleStackEnd)
   }
 
   // Column resize handlers
@@ -211,7 +229,9 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     document.body.style.cursor = 'row-resize'
     document.body.style.userSelect = 'none'
 
-    const containerEl = side === 'left' ? leftColumnContainer.value : rightColumnContainer.value
+    // Prefer refs (if they exist), but fall back to DOM traversal since the real DOM is in PanelManager.
+    const containerEl = (side === 'left' ? leftColumnContainer?.value : rightColumnContainer?.value)
+      || dividerEl?.closest?.('.split-column')
     const containerHeight = containerEl?.getBoundingClientRect?.().height
     if (!containerHeight) return
 
@@ -263,7 +283,7 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     document.body.style.userSelect = 'none'
     badgeEl?.classList?.add?.('is-resizing')
 
-    const layoutEl = splitContainer.value
+    const layoutEl = splitContainer?.value || badgeEl?.closest?.('.layout-split')
     if (!layoutEl) return
     
     const layoutRect = layoutEl.getBoundingClientRect()

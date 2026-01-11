@@ -5,10 +5,22 @@
  * System prompt is hardcoded for security.
  */
 
-import type { Ai } from '@cloudflare/workers-types';
+import type { Ai, VectorizeIndex } from '@cloudflare/workers-types';
 
 interface Env {
 	AI: Ai;
+	VECTORIZE: VectorizeIndex;
+}
+
+interface VectorMatch {
+	id: string;
+	score: number;
+	metadata?: {
+		type?: string;
+		filename?: string;
+		description?: string;
+		jaml?: string;
+	};
 }
 
 // SYSTEM PROMPT - Hardcoded (DO NOT accept from users for security)
@@ -340,6 +352,53 @@ NOTE: Telescope is a VOUCHER, not a joker. Check catalog to confirm type.
 OUTPUT FORMAT:
 Return JSON with success: true and jaml: "<YAML string>". The jaml value should be a complete, valid JAML filter as a YAML-formatted string. Use newlines (\\n) to separate YAML lines. Do NOT use markdown code blocks - just the raw YAML string.`;
 
+// RAG: Retrieve similar JAML examples from Vectorize
+async function retrieveSimilarExamples(query: string, env: Env): Promise<string> {
+	try {
+		// Skip if Vectorize not configured
+		if (!env.VECTORIZE) {
+			return '';
+		}
+
+		// Generate embedding for the query using Workers AI
+		const embeddingResult = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+			text: [query]
+		});
+
+		const queryVector = (embeddingResult as any).data?.[0];
+		if (!queryVector) {
+			return '';
+		}
+
+		// Query Vectorize for similar examples
+		const results = await env.VECTORIZE.query(queryVector, {
+			topK: 3,
+			returnMetadata: 'all'
+		});
+
+		if (!results.matches || results.matches.length === 0) {
+			return '';
+		}
+
+		// Build context from retrieved examples
+		let context = '\n\n## SIMILAR JAML EXAMPLES (use these as reference):\n';
+		
+		for (const match of results.matches as VectorMatch[]) {
+			if (match.metadata?.jaml) {
+				context += `\n### Example: ${match.metadata.filename || 'unknown'}\n`;
+				context += `Description: ${match.metadata.description || ''}\n`;
+				context += '```yaml\n' + match.metadata.jaml + '\n```\n';
+			}
+		}
+
+		return context;
+	} catch (error) {
+		// Silently fail - RAG is optional enhancement
+		console.error('RAG retrieval failed:', error);
+		return '';
+	}
+}
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		// Handle CORS preflight
@@ -353,7 +412,65 @@ export default {
 			});
 		}
 
-		// Only accept POST requests
+		// Handle embedding endpoint for seeding
+		if (request.method === 'POST') {
+			const url = new URL(request.url);
+			
+			// Endpoint: Generate embedding for seeding
+			if (url.pathname === '/embed') {
+				try {
+					const { text } = await request.json() as { text: string };
+					const result = await env.AI.run('@cf/baai/bge-base-en-v1.5', {
+						text: [text]
+					});
+					return new Response(JSON.stringify({ 
+						embedding: (result as any).data?.[0] 
+					}), {
+						headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+					});
+				} catch (error: any) {
+					return new Response(JSON.stringify({ error: error.message }), { 
+						status: 500,
+						headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+					});
+				}
+			}
+
+			// Endpoint: Index document in Vectorize
+			if (url.pathname === '/index') {
+				try {
+					const { id, embedding, metadata } = await request.json() as { 
+						id: string; 
+						embedding: number[]; 
+						metadata: Record<string, string> 
+					};
+					
+					if (!env.VECTORIZE) {
+						return new Response(JSON.stringify({ error: 'Vectorize not configured' }), { 
+							status: 500,
+							headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+						});
+					}
+
+					await env.VECTORIZE.insert([{
+						id,
+						values: embedding,
+						metadata
+					}]);
+
+					return new Response(JSON.stringify({ success: true, id }), {
+						headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+					});
+				} catch (error: any) {
+					return new Response(JSON.stringify({ error: error.message }), { 
+						status: 500,
+						headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+					});
+				}
+			}
+		}
+
+		// Only accept POST requests for main endpoint
 		if (request.method !== 'POST') {
 			return new Response('Method not allowed', { status: 405 });
 		}
@@ -375,11 +492,17 @@ export default {
 				});
 			}
 
+			// 🔥 RAG: Retrieve similar JAML examples
+			const ragContext = await retrieveSimilarExamples(userPrompt, env);
+
+			// Build enhanced system prompt with RAG context
+			const enhancedSystemPrompt = SYSTEM_PROMPT + ragContext;
+
 			// Call Workers AI with messages format
 			const ai = env.AI;
 			const response = await ai.run('@cf/meta/llama-3.1-8b-instruct-fp8', {
 				messages: [
-					{ role: 'system', content: SYSTEM_PROMPT },
+					{ role: 'system', content: enhancedSystemPrompt },
 					{ role: 'user', content: userPrompt }
 				],
 				max_tokens: 2048,

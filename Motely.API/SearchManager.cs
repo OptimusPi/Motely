@@ -211,8 +211,16 @@ public class SearchManager
             {
                 if (search.Database != null)
                 {
-                    // GetTopResults() now returns List<SearchResult> directly - no dictionary conversion!
-                    results = search.Database.GetTopResults(1000);
+                    // GetTopResults() returns database-level rows; convert to API model.
+                    results = search.Database
+                        .GetTopResults(1000)
+                        .Select(r => new SearchResult
+                        {
+                            Seed = r.Seed,
+                            Score = r.Score,
+                            Tallies = r.Tallies
+                        })
+                        .ToList();
                 }
             }
             catch (Exception ex)
