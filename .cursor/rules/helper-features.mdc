@@ -1,0 +1,116 @@
+---
+description: Stateless helper for feature implementation tasks (invoked by orchestrator only)
+category: helper
+alwaysApply: false
+priority: 5
+lastReviewed: 2026-01-11
+---
+
+# Feature Implementation Helper
+
+## Purpose
+
+Stateless helper rule for implementing new features or enhancements. Invoked exclusively by `@agent-orchestrator.mdc` when user intent matches feature implementation patterns.
+
+## Input Contract
+
+- `work_type`: "feature"
+- `changed_files`: Array of file paths modified
+- `language`: Primary language (cs, ts, js, vue, etc.)
+
+## Constraints
+
+- `memory`: none (stateless)
+- `max_tokens`: 4000 per operation
+- `cache_ttl`: 1 hour
+
+## Workflow Steps
+
+1. **Understand Requirements**
+   - Clarify feature requirements with user if unclear
+   - Identify affected components and files
+   - Plan implementation approach
+
+2. **Implement Feature**
+   - Follow existing code patterns in repository
+   - Make incremental, focused changes
+   - Keep changes reviewable and testable
+
+3. **Build and Verify Compilation**
+   - Build the project BEFORE running tests
+   - Use language-specific build commands:
+     - .NET: `dotnet build`
+     - Vue/JS: `npm run build`
+   - Fix ALL compilation errors before proceeding
+
+4. **Write and Run Tests**
+   - Write tests for new functionality via `@helper-testing.mdc`
+   - Ensure test coverage for happy path, edge cases, and error conditions
+   - Run tests and verify ALL pass before declaring work complete
+
+5. **Quality Validation**
+   - Run linting and formatting via `@helper-lint.mdc`
+   - Address any linting issues
+
+6. **Prepare for Review**
+   - Verify all tests pass
+   - Verify build succeeds
+   - Request approval before push/PR operations via `@helper-approval.mdc`
+
+## Language-Specific Guidelines
+
+### C#/.NET
+
+- Follow existing patterns in `Motely/`, `Motely.API/`, or `Motely.TUI/`
+- Use PascalCase for classes, methods, properties
+- Add XML documentation comments (`///`) for public APIs
+- Write xUnit tests in `Motely.Tests/`
+
+Build and test:
+
+```bash
+dotnet build
+dotnet test
+```
+
+### Vue/JavaScript
+
+- Follow existing patterns in `vue-jaml-ui/`
+- Use Vue 3 Composition API style if that's the project standard
+- Keep components focused and reusable
+
+Build and test:
+
+```bash
+cd vue-jaml-ui
+npm run build
+```
+
+## Do
+
+- Clarify requirements before implementation
+- Follow existing code patterns and conventions
+- Implement real functionality (no dummy data unless explicitly requested)
+- Build the project BEFORE running tests
+- Fix ALL compilation errors before proceeding to tests
+- Write tests for new functionality
+- Run tests and verify ALL pass
+- Run linting and formatting
+- Make incremental, focused commits
+- Request approval before push/PR operations via `@helper-approval.mdc`
+
+## Don't
+
+- Don't implement without understanding requirements
+- Don't skip the build step before running tests
+- Don't proceed to testing if build fails
+- Don't skip testing
+- Don't declare work complete without verifying all tests pass
+- Don't push or create PRs without explicit user approval
+- Don't ignore existing patterns and conventions
+- Don't make unrelated changes in the same commit
+
+## Output Format
+
+- Success: Summary of implemented feature, tests added, build status
+- Failure: Error description and suggested remediation steps
