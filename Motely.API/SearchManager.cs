@@ -22,9 +22,8 @@ public class SearchManager
 
     private readonly ConcurrentDictionary<string, ActiveSearch> _activeSearches = new();
     private readonly ConcurrentDictionary<string, string> _lastErrors = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly string _searchResultsDir = "SearchResults";
     
-    public string GetSearchResultsDir() => _searchResultsDir;
+    public string GetSearchResultsDir() => MotelyPaths.SearchResultsDir;
 
     private string? _motelyRoot;
 
@@ -115,7 +114,7 @@ public class SearchManager
         await _lifecycleGate.WaitAsync();
         try
         {
-            Directory.CreateDirectory(_searchResultsDir);
+            Directory.CreateDirectory(MotelyPaths.SearchResultsDir);
 
             if (!JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var config, out var error) || config == null)
                 throw new ArgumentException(error ?? "Invalid filter");
@@ -126,7 +125,7 @@ public class SearchManager
             var filterName = GetFilterName(filterJaml);
             var sanitizedName = SanitizeFilterFileStem(filterName);
             var searchId = $"{sanitizedName}_{deck}_{stake}";
-            var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
+            var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.db");
 
             _lastErrors.TryRemove(searchId, out _);
 
@@ -175,7 +174,7 @@ public class SearchManager
             search.Database = new MotelySearchDatabase(dbPath, columnNames);
 
             // Save JAML metadata file so it can be retrieved even after search stops
-            var jamlPath = Path.Combine(_searchResultsDir, $"{searchId}.jaml");
+            var jamlPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.jaml");
             File.WriteAllText(jamlPath, filterJaml);
 
             // Automatically save filter to JamlFilters ecosystem
@@ -772,7 +771,7 @@ public class SearchManager
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
             _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }, options));
 
-            var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
+            var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.db");
             return GetTopResultsFromDb(dbPath, 1000);
         }
         finally
@@ -820,9 +819,9 @@ public class SearchManager
             }
 
             // Clear all stored results by deleting all database files
-            if (Directory.Exists(_searchResultsDir))
+            if (Directory.Exists(MotelyPaths.SearchResultsDir))
             {
-                var dbFiles = Directory.GetFiles(_searchResultsDir, "*.db");
+                var dbFiles = Directory.GetFiles(MotelyPaths.SearchResultsDir, "*.db");
                 foreach (var file in dbFiles)
                 {
                     try
@@ -901,7 +900,7 @@ public class SearchManager
             try
             {
                 var dbPath = search.Database?.DatabasePath
-                             ?? Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
+                             ?? Path.Combine(MotelyPaths.SearchResultsDir, $"{search.SearchId}.db");
                 await ExportTopResultsToFertilizerAsync(dbPath, limit: 1000);
             }
             catch (Exception ex)
@@ -1028,7 +1027,7 @@ public class SearchManager
             else
             {
                 // Relative path - look in SeedSources folder
-                var relativePath = Path.Combine("SeedSources", safeName);
+                var relativePath = Path.Combine(MotelyPaths.SeedSourcesDir, safeName);
                 if (File.Exists(relativePath))
                 {
                     csvPath = relativePath;
@@ -1065,7 +1064,7 @@ public class SearchManager
             else
             {
                 // Relative path - look in SeedSources folder
-                var relativePath = Path.Combine("SeedSources", safeName);
+                var relativePath = Path.Combine(MotelyPaths.SeedSourcesDir, safeName);
                 if (File.Exists(relativePath))
                 {
                     searchParams.SeedSources = relativePath;
