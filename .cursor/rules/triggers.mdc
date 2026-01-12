@@ -1,0 +1,75 @@
+---
+description: Canonical trigger phrase registry for workflow routing
+category: policy
+alwaysApply: false
+priority: 1
+lastReviewed: 2026-01-11
+---
+
+# Trigger Phrase Registry
+
+Centralized registry of trigger phrases used by `@agent-orchestrator.mdc` for routing user intent to appropriate helpers.
+
+## Purpose
+
+Maintain single source of truth for trigger phrases to prevent drift and routing ambiguity across orchestrator and task rules.
+
+## Trigger Categories
+
+### Feature Implementation
+
+```yaml
+triggers: ["implement", "add feature", "create feature", "build", "work on", "start on"]
+```
+
+### Bug Fixes
+
+```yaml
+triggers: ["fix bug", "fix error", "fix issue", "bug in", "error in", "broken", "debug"]
+```
+
+### Maintenance/Refactoring
+
+```yaml
+triggers: ["refactor", "clean up", "organize", "optimize", "improve", "restructure"]
+```
+
+### Testing
+
+```yaml
+triggers: ["write test", "add test", "test", "run test", "verify", "validate"]
+```
+
+### Linting/Formatting
+
+```yaml
+triggers: ["lint", "format", "fix formatting", "run linter", "clean code"]
+```
+
+### Documentation
+
+```yaml
+triggers: ["update docs", "write documentation", "add comments", "document"]
+```
+
+### Research/Investigation
+
+```yaml
+triggers: ["research", "investigate", "analyze", "explore", "find", "understand", "how does"]
+```
+
+## Usage
+
+Orchestrator and task rules should reference these canonical lists instead of maintaining their own copies. Example:
+
+```markdown
+If user input matches triggers from @triggers.mdc#bug-fixes:
+- Route to @helper-bugfix.mdc
+```
+
+## Maintenance
+
+- Update this file when adding new workflow types
+- Keep phrases lowercase for case-insensitive matching
+- Avoid overlapping phrases between categories
+- Test routing with sample inputs after changes

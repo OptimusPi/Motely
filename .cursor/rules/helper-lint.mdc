@@ -1,0 +1,120 @@
+---
+description: Stateless helper for code linting and formatting (invoked by orchestrator only)
+category: helper
+alwaysApply: false
+priority: 5
+lastReviewed: 2026-01-11
+---
+
+# Linting and Formatting Helper
+
+## Purpose
+
+Stateless helper rule for running linters and formatters on modified code files. Invoked exclusively by `@agent-orchestrator.mdc` after code changes or when user requests linting/formatting.
+
+## Input Contract
+
+Receives from `@agent-orchestrator.mdc`:
+
+- `work_type`: "lint" | "format" | "both" (default: "both")
+- `changed_files`: Array of file paths to process (provided by orchestrator from git diff)
+- `language`: Primary language (cs, ts, js, vue, py, etc.)
+
+## Constraints
+
+- `memory`: none (stateless)
+- `max_tokens`: 2000 per operation
+- `cache_ttl`: 1 hour
+- `parallel`: true (when processing multiple files)
+
+## Workflow Steps
+
+1. Receive `changed_files` list from orchestrator (orchestrator uses `git diff --name-only` or `git diff --name-only --cached`)
+2. Detect project-specific tools from configuration files
+3. Batch files by language/tool type
+4. Run appropriate linter/formatter for each batch
+5. Report results (pass/fail, issues found)
+
+If `changed_files` is empty or not provided, short-circuit and return success with message "No files to lint/format".
+
+## Tool Detection
+
+ALWAYS check for project configuration files first:
+
+- `.editorconfig`, `.eslintrc*`, `eslint.config.js`, `.prettierrc*`
+- `package.json` scripts (`npm run lint`, `npm run format`)
+- Respect existing project conventions over default tool choices
+
+## Language-Specific Tools
+
+### C#/.NET
+
+- `dotnet format` (format check and fix)
+- `dotnet build` (verify no compilation errors after formatting)
+
+Commands:
+
+```bash
+# Format all files in solution
+dotnet format
+
+# Format specific project
+dotnet format <project>.csproj
+
+# Verify no changes needed (CI mode)
+dotnet format --verify-no-changes
+```
+
+### JavaScript/TypeScript/Vue
+
+First check `package.json` for configured scripts:
+
+```bash
+# If package.json has "lint" script
+npm run lint
+
+# If package.json has "format" script
+npm run format
+```
+
+If no scripts configured:
+
+- `eslint --fix` (if .eslintrc* exists)
+- `prettier --write` (if .prettierrc* exists)
+- Otherwise: skip with note "No linter/formatter configured"
+
+### Python
+
+- `ruff check --fix` (lint and auto-fix)
+- `ruff format` (format)
+
+### Shell Scripts
+
+- `shellcheck` (lint)
+- `shfmt -w` (format)
+
+## Workflow Rules
+
+- Run linters/formatters ONLY on files you modified, not entire codebase
+- Use `git diff --name-only --cached` to get list of staged files
+- Don't format or lint outside the repository root
+- Verify changes compile/run after formatting
+
+## Output Format
+
+- Success: Files processed, issues fixed, formatting applied
+- Failure: Tool errors, files that couldn't be processed, suggested fixes
+
+## Do
+
+- Check for project-specific configuration first
+- Run tools only on changed files
+- Verify compilation after formatting
+- Report clear success/failure status
+
+## Don't
+
+- Don't reformat entire codebase
+- Don't skip tool detection
+- Don't ignore tool errors
+- Don't proceed if formatting breaks compilation
