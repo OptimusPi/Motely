@@ -14,8 +14,7 @@ public static class Endpoints
     {
         try
         {
-            var fullPath = @"X:\BalatroSeedOracle\external\Motely\JamlFilters";
-            var filters = FilterService.LoadFiltersFromDisk(fullPath, cfg => false);
+            var filters = FilterService.LoadFiltersFromDisk(MotelyPaths.JamlFiltersDir, cfg => false);
             return Results.Ok(filters);
         }
         catch (Exception ex)
@@ -31,9 +30,10 @@ public static class Endpoints
             new { key = "all", label = "All Seeds", kind = "builtin" }
         };
         
-        if (Directory.Exists("WordLists"))
+        var seedSourcesDir = MotelyPaths.SeedSourcesDir;
+        if (Directory.Exists(seedSourcesDir))
         {
-            foreach (var file in Directory.GetFiles("WordLists", "*.*")
+            foreach (var file in Directory.GetFiles(seedSourcesDir, "*.*")
                 .Where(f => f.EndsWith(".db") || f.EndsWith(".txt") || f.EndsWith(".csv"))
                 .Select(Path.GetFileName)
                 .Where(f => f != null)
@@ -112,7 +112,8 @@ public static class Endpoints
         var request = await req.ReadFromJsonAsync<FilterSaveRequest>();
         if (request?.FilterJaml == null) return Results.BadRequest();
         
-        Directory.CreateDirectory("JamlFilters");
+        var jamlFiltersDir = MotelyPaths.JamlFiltersDir;
+        Directory.CreateDirectory(jamlFiltersDir);
         
         // Use id from route, or extract name from JAML
         string? name = id;
@@ -122,7 +123,7 @@ public static class Endpoints
         }
         
         var fileName = $"{name}.jaml";
-        var fullPath = Path.Combine("JamlFilters", fileName);
+        var fullPath = Path.Combine(jamlFiltersDir, fileName);
         File.WriteAllText(fullPath, request.FilterJaml);
         
         return Results.Ok(new { filePath = fileName });
@@ -131,7 +132,7 @@ public static class Endpoints
     public static IResult DeleteFilter(string id)
     {
         var safeName = Path.GetFileName(id);
-        var fullPath = Path.Combine("JamlFilters", safeName);
+        var fullPath = Path.Combine(MotelyPaths.JamlFiltersDir, safeName);
         
         if (File.Exists(fullPath))
         {
