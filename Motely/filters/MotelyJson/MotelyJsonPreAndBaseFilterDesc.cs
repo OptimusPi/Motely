@@ -2,7 +2,7 @@ namespace Motely.Filters
 {
     /// <summary>
     /// Descriptor that ensures a set of "pre" filters (e.g. MustNot inverted filters) run BEFORE the base filter.
-    /// Final pass mask = (AND of all pre filter masks) & (base filter mask).
+    /// Final pass mask = (AND of all pre filter masks) &amp; (base filter mask).
     /// This guarantees exclusion filters that rely on untouched PRNG streams execute prior to any stream-consuming base filter.
     /// </summary>
     public readonly struct MotelyJsonPreAndBaseFilterDesc(

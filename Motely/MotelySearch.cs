@@ -594,7 +594,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // Print at end of batch flush, so it appears after any results from that batch
             var progressMsg =
                 $"# Progress: {totalPortionFinished * 100:F8}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)";
-            Console.Error.WriteLine(progressMsg);
+            lock (FancyConsole.ConsoleLock)
+            {
+                Console.Error.WriteLine(progressMsg);
+            }
         }
         else
         {

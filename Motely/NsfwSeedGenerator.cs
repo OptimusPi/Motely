@@ -151,7 +151,7 @@ public static class NsfwSeedGenerator
     /// <summary>
     /// Generate all valid padding strings of given length.
     /// For len=1: 35 combos, len=2: 1225, len=3: 42875, len=4: 1.5M, len=5: 52M
-    /// We limit to len <= 4 for memory/time sanity (still gives millions).
+    /// We limit to len &lt;= 4 for memory/time sanity (still gives millions).
     /// </summary>
     private static IEnumerable<string> GeneratePadding(int length)
     {
