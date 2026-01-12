@@ -6,7 +6,7 @@ namespace Motely.Reporting;
 public enum ColumnType
 {
     /// <summary>
-    /// Legacy/Default: Arithmetic sum of a specific signal. Output: Integer.
+    /// Arithmetic sum of a specific signal. Output: Integer.
     /// Example: WeeJoker_Count: 2
     /// </summary>
     ScoreTally,

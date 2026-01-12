@@ -133,8 +133,7 @@ namespace Motely.Filters.MotelyJson
             // Handle And/Or logical operators
             if (!string.IsNullOrEmpty(typeStr) && (typeStr.Equals("And", StringComparison.OrdinalIgnoreCase) || typeStr.Equals("Or", StringComparison.OrdinalIgnoreCase)))
             {
-                var andOrClause = new MotelyJsonConfig.MotelyJsonFilterClause();
-                andOrClause.Type = typeStr.ToLowerInvariant();
+                var andOrClause = new MotelyJsonConfig.MotelyJsonFilterClause { Type = typeStr.ToLowerInvariant() };
                 
                 var clausesProperty = andOrClause.GetType().GetProperty("clauses", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
                 if (clausesProperty != null && clausesProperty.CanWrite)
@@ -201,7 +200,9 @@ namespace Motely.Filters.MotelyJson
             // Create the appropriate filter clause from the processed entries
             if (isMotelyJsonConfigClause)
             {
-                var configClause = new MotelyJsonConfig.MotelyJsonFilterClause();
+                // Type is required - extract it first, default to empty string if missing (will fail validation later)
+                var typeValue2 = entries.TryGetValue("type", out var tv) ? tv?.ToString() ?? "" : "";
+                var configClause = new MotelyJsonConfig.MotelyJsonFilterClause { Type = typeValue2 };
                 
                 foreach (var entry in entries)
                 {

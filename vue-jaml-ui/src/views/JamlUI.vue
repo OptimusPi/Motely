@@ -838,7 +838,7 @@ onUnmounted(() => {
   border-radius: 3px;
 }
 
-/* Smooth resize feedback */
+/* Panel grab bar styles */
 .panel-top-grab:active {
   background: rgba(255, 255, 255, 0.1);
 }

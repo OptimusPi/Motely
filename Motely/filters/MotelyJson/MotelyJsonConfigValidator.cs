@@ -202,7 +202,7 @@ namespace Motely.Filters
                 {
                     if (!string.IsNullOrEmpty(item.Value))
                     {
-                        // Special case: allow "X of Y" format for backwards compatibility
+                        // Special case: allow "X of Y" format
                         if (!item.Value.Contains(" of "))
                         {
                             errors.Add(

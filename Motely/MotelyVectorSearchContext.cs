@@ -161,9 +161,8 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     private readonly ref readonly MotelySearchParameters _searchParameters;
     private readonly ref readonly MotelySearchContextParams _contextParams;
 
-    public MotelyStake Stake =>
-        _searchParameters.Stake != 0 ? _searchParameters.Stake : MotelyStake.White;
-    public MotelyDeck Deck => _searchParameters.Deck != 0 ? _searchParameters.Deck : MotelyDeck.Red;
+    public MotelyStake Stake => _searchParameters.Stake;
+    public MotelyDeck Deck => _searchParameters.Deck;
 
     private PartialSeedHashCache* SeedHashCache => _contextParams.SeedHashCache;
     private int SeedLength => _contextParams.SeedLength;

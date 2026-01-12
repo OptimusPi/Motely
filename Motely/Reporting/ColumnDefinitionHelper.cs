@@ -3,12 +3,12 @@ using Motely.Filters;
 namespace Motely.Reporting;
 
 /// <summary>
-/// Helper class to create column definitions from config and support backward compatibility
+/// Helper class to create column definitions from config
 /// </summary>
 public static class ColumnDefinitionHelper
 {
     /// <summary>
-    /// Create column definitions from a config's Should clauses (backward compatibility)
+    /// Create column definitions from a config's Should clauses
     /// Each Should clause becomes a ScoreTally column
     /// </summary>
     public static List<IColumnDefinition> CreateFromShouldClauses(
