@@ -42,13 +42,8 @@
       class="panel-section"
       :class="[`panel-section-${color}`]"
       :style="panelStyle"
+      @pointerdown.prevent.stop="$emit('top-drag', $event)"
     >
-      <!-- The top colored edge IS the grab bar (hitbox matches the visible edge) -->
-      <div 
-        class="panel-top-grab"
-        @pointerdown.prevent.stop="handleTopDrag"
-      ></div>
-      
       <div class="panel-content">
         <slot />
       </div>
@@ -170,11 +165,6 @@ const panelStyle = computed(() => {
   };
 });
 
-const handleTopDrag = (event) => {
-  // Emit the drag event to parent so it can handle stack resize
-  emit('top-drag', event)
-}
-
 // Removed unused handleTabDrag/handleTabMove/handleTabEnd - using HTML5 drag API instead
 
 onMounted(() => {
@@ -214,7 +204,6 @@ watch(
   box-sizing: border-box;
   background: var(--dark-bg);
 
-  /* Style contract (A): Balatro frame — thick top border, thin sides/bottom, flat/square */
   --panel-top-h: 10px;
   border-top: var(--panel-top-h) solid var(--panel-color);
   border-left: 4px solid var(--panel-color);
@@ -222,24 +211,11 @@ watch(
   border-bottom: 4px solid var(--panel-color);
   border-radius: 0;
   box-shadow: none;
-  overflow: visible; /* Allow grab bar to extend above border */
+  overflow: visible;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: 100vh; /* Ensure panels never exceed viewport */
-}
-
-.panel-top-grab {
-  position: absolute;
-  top: -2px; /* Scoot up to align with colored border edge */
-  left: 0;
-  right: 0;
-  height: calc(var(--panel-top-h) + 2px); /* Extend to cover the border (10px + 2px overlap) */
-  cursor: ns-resize;
-  z-index: 40;
-  background: transparent;
-  touch-action: none;
-  user-select: none;
+  max-height: 100vh;
 }
 
 .panel-tab {

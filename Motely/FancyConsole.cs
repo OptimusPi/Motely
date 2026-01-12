@@ -55,7 +55,7 @@ public partial class FancyConsoleImpl : IMotelyConsole
 }
 
 /// <summary>
-/// Static facade for backward compatibility
+/// Static facade for console output
 /// </summary>
 public static class FancyConsole
 {

@@ -27,7 +27,7 @@ public static partial class DuckDBSeeds
 /// Uses ROWID-based batch fetching for efficient multi-threaded access
 /// Each thread fetches a batch of seeds at once using ID ranges (much faster than OFFSET!)
 /// 
-/// NOW SUPPORTS DUCKLAKE: Auto-detects DuckLake vs legacy .db files for concurrent access!
+/// NOW SUPPORTS DUCKLAKE: Auto-detects DuckLake vs .db files for concurrent access!
 /// </summary>
 public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
 {
@@ -36,7 +36,7 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
     private readonly string _columnName;
     private bool _disposed = false;
 
-    // DuckLake support: track if this is a DuckLake or legacy database
+    // DuckLake support: track if this is a DuckLake or standard database
     private readonly bool _isDuckLake;
     private readonly string? _duckLakeCatalogPath;
     private readonly string? _duckLakeDataPath;
@@ -74,7 +74,7 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
 
     /// <summary>
     /// Create provider from a DuckDB database file or DuckLake - queries directly from in-memory DB
-    /// Auto-detects DuckLake vs legacy .db format for backward compatibility
+    /// Auto-detects DuckLake vs .db format
     /// </summary>
     public DuckDBSeedProvider(string dbPath, string tableName = "seeds", string columnName = "seed")
     {
@@ -117,7 +117,7 @@ public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposabl
         }
         else
         {
-            // Legacy .db file: use existing logic
+            // Standard .db file: use existing logic
             using (var conn = DuckDBConnectionFactory.CreateConnection(dbPath))
             {
                 // Get count - DuckDB is in-memory, this is instant

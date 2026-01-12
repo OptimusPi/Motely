@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using YamlDotNet.Serialization;
 using System.Numerics;
+using System.Diagnostics;
 
 namespace Motely.Filters;
 
@@ -167,7 +168,6 @@ public enum MotelyScoreAggregationMode
     /// NOTE: There is a naming inconsistency in this codebase:
     /// - Class name: MotelyJsonConfig (correct spelling: "Motely")
     /// - Nested class: MotelyJsonFilterClause (typo: "Motely" instead of "Motely")
-    /// This typo is preserved for backwards compatibility and to avoid breaking changes.
     /// </summary>
     public class MotelyJsonConfig
     {
@@ -240,7 +240,7 @@ public enum MotelyScoreAggregationMode
     {
         [JsonPropertyName("type")]
         [YamlMember(Alias = "type")]
-        public string Type { get; set; } = "";
+        public required string Type { get; set; }
 
         [JsonPropertyName("value")]
         [YamlMember(Alias = "value")]
@@ -320,7 +320,7 @@ public enum MotelyScoreAggregationMode
         [YamlMember(Alias = "sources")]
         public SourcesConfig? Sources { get; set; }
 
-        // Direct properties for backwards compatibility
+        // Direct properties (alternative to Sources object)
         [JsonPropertyName("packSlots")]
         [YamlMember(Alias = "packSlots")]
         public int[]? PackSlots { get; set; }
@@ -984,9 +984,10 @@ public enum MotelyScoreAggregationMode
     /// </summary>
     private void ProcessClause(MotelyJsonFilterClause item)
     {
-        DebugLogger.Log(
-            $"[PROCESS START] Type={item.Type}, Value={item.Value}, Antes={(item.Antes == null ? "null" : $"[{string.Join(",", item.Antes)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}"
-        );
+        // FAIL FAST: Type is required
+        if (string.IsNullOrWhiteSpace(item.Type))
+            throw new ArgumentException("Filter clause missing required 'type' property");
+
         // Normalize type
         item.Type = item.Type.ToLowerInvariant();
 
@@ -1026,7 +1027,7 @@ public enum MotelyScoreAggregationMode
         // Store this BEFORE any code that might modify Sources
         bool sourcesWasExplicitlySpecified = item.Sources != null;
 
-        // Merge flat properties into Sources for backwards compatibility
+        // Merge flat properties into Sources
         DebugLogger.Log(
             $"[MERGE] Type={item.Type}, Value={item.Value}, flat ShopSlots={(item.ShopSlots == null ? "null" : $"[{string.Join(",", item.ShopSlots)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}"
         );
@@ -1427,6 +1428,105 @@ public enum MotelyScoreAggregationMode
     }
 
     /// <summary>
+    /// Convert this parsed DTO to a fully typed, validated runtime config.
+    /// The returned MotelyRunConfig has NO nullable fields - guaranteed runnable.
+    /// Call this AFTER PostProcess() has been called.
+    /// </summary>
+    public MotelyRunConfig ToRunConfig()
+    {
+        var mustClauses = ConvertClauses(Must ?? [], false);
+        var shouldClauses = ConvertClauses(Should ?? [], false);
+        var mustNotClauses = ConvertClauses(MustNot ?? [], true);
+        
+        return new MotelyRunConfig(
+            name: Name ?? "",
+            author: Author ?? "",
+            description: Description ?? "",
+            deck: Deck ?? "Red",
+            stake: Stake ?? "White",
+            scoreAggregationMode: ScoreAggregationMode,
+            must: mustClauses,
+            should: shouldClauses,
+            mustNot: mustNotClauses,
+            defaults: Defaults ?? new MotelyFilterDefaults()
+        );
+    }
+    
+    private static MotelyRunClause[] ConvertClauses(List<MotelyJsonFilterClause> clauses, bool invert)
+    {
+        var result = new MotelyRunClause[clauses.Count];
+        for (int i = 0; i < clauses.Count; i++)
+        {
+            result[i] = ConvertClause(clauses[i], invert);
+        }
+        return result;
+    }
+    
+    private static MotelyRunClause ConvertClause(MotelyJsonFilterClause c, bool invert)
+    {
+        Debug.Assert(!string.IsNullOrEmpty(c.Type), "Type must be set before conversion");
+        
+        // Convert nested clauses for And/Or
+        MotelyRunClause[]? nestedClauses = null;
+        if (c.Clauses != null && c.Clauses.Count > 0)
+        {
+            nestedClauses = new MotelyRunClause[c.Clauses.Count];
+            for (int i = 0; i < c.Clauses.Count; i++)
+            {
+                nestedClauses[i] = ConvertClause(c.Clauses[i], invert);
+            }
+        }
+        
+        // Convert sources
+        MotelyRunSources? sources = null;
+        if (c.Sources != null)
+        {
+            sources = new MotelyRunSources(
+                packSlots: c.Sources.PackSlots ?? [],
+                shopSlots: c.Sources.ShopSlots ?? [],
+                tags: c.Sources.Tags ?? true,
+                requireMega: c.Sources.RequireMega ?? false
+            );
+        }
+        
+        return new MotelyRunClause(
+            itemType: c.ItemTypeEnum,
+            antes: c.Antes ?? [],
+            score: c.Score,
+            isInverted: invert || c.IsInverted,
+            label: c.Label ?? "",
+            joker: c.JokerEnum ?? default,
+            jokers: c.JokerEnums?.ToArray(),
+            voucher: c.VoucherEnum ?? default,
+            vouchers: c.VoucherEnums?.ToArray(),
+            tarot: c.TarotEnum ?? default,
+            tarots: c.TarotEnums?.ToArray(),
+            planet: c.PlanetEnum ?? default,
+            planets: c.PlanetEnums?.ToArray(),
+            spectral: c.SpectralEnum ?? default,
+            spectrals: c.SpectralEnums?.ToArray(),
+            tag: c.TagEnum ?? default,
+            tags: c.TagEnums?.ToArray(),
+            tagType: c.TagTypeEnum,
+            boss: c.BossEnum ?? default,
+            bosses: c.BossEnums?.ToArray(),
+            eventType: c.EventTypeEnum ?? default,
+            suit: c.SuitEnum ?? default,
+            rank: c.RankEnum ?? default,
+            seal: c.SealEnum ?? default,
+            enhancement: c.EnhancementEnum ?? default,
+            edition: c.EditionEnum ?? default,
+            stickers: c.StickerEnums?.ToArray(),
+            isWildcard: c.IsWildcard,
+            wildcard: c.WildcardEnum ?? default,
+            sources: sources,
+            nestedClauses: nestedClauses,
+            rolls: c.Rolls,
+            min: c.Min
+        );
+    }
+
+    /// <summary>
     /// Convert to JSON string
     /// </summary>
     public string ToJson()
@@ -1459,10 +1559,8 @@ public enum MotelyScoreAggregationMode
             int suffix = 2;
             while (usedNames.Contains(uniqueName))
             {
-                uniqueName = $"{columnName}_{suffix}";
-                suffix++;
+                uniqueName = $"{columnName}_{suffix++}";
             }
-
             usedNames.Add(uniqueName);
             columns.Add(uniqueName);
         }
@@ -1480,8 +1578,27 @@ public enum MotelyScoreAggregationMode
         if (!string.IsNullOrEmpty(clause.Label))
             return clause.Label;
 
-        // Handle OR/AND clauses with compact notation
-        if ((clause.Type?.ToLower() == "or" || clause.Type?.ToLower() == "and") && clause.Clauses != null && clause.Clauses.Count > 0)
+        // Handle OR Clause
+        if (clause.Type == "or")
+        {
+            Debug.Assert(clause.Clauses != null);
+            Debug.Assert(clause.Clauses.Count > 0);
+            var clauseType = clause.Type.ToUpper();
+            var count = clause.Clauses.Count;
+            var anteSuffix = "";
+            if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
+            {
+                // Human-readable ante range: A1-3 instead of A1A2A3
+                var minAnte = clause.Antes.Min();
+                var maxAnte = clause.Antes.Max();
+                anteSuffix = minAnte == maxAnte ? $" A{minAnte}" : $" A{minAnte}-{maxAnte}";
+            }
+
+            return $"{count} {clauseType}{anteSuffix}";
+        }
+
+        // Handle AND clauses
+        if (clause.Type == "and" && clause.Clauses != null && clause.Clauses.Count > 0)
         {
             var clauseType = clause.Type.ToUpper();
             var count = clause.Clauses.Count;

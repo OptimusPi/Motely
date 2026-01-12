@@ -8,7 +8,7 @@
     <div v-else-if="isMobile" class="searches-cards">
       <div v-for="search in searches" :key="search.searchId" class="search-card">
         <div class="card-header">
-          <span class="card-id">{{ search.searchId?.substring(0, 8) }}...</span>
+          <span class="card-id">{{ search.searchId }}...</span>
           <span class="card-status" :class="`status-${search.status}`">{{ search.status }}</span>
         </div>
         <div class="card-body">
@@ -18,11 +18,11 @@
           </div>
           <div class="card-row">
             <span class="card-label">Speed:</span>
-            <span class="card-value">{{ formatSpeed(search.speed) }}</span>
+            <span class="card-value">{{ search.speed }} /s</span>
           </div>
           <div class="card-row">
             <span class="card-label">Searched:</span>
-            <span class="card-value">{{ formatNumber(search.searched) }}</span>
+            <span class="card-value">{{ search.searched }}</span>
           </div>
           <div class="card-row">
             <span class="card-label">Found:</span>
@@ -59,8 +59,8 @@
           <td>{{ search.searchId?.substring(0, 8) }}...</td>
           <td>{{ search.status }}</td>
           <td>{{ search.progress }}%</td>
-          <td>{{ formatSpeed(search.speed) }}</td>
-          <td>{{ formatNumber(search.searched) }}</td>
+          <td>{{ search.speed }} /s</td>
+          <td>{{ search.searched }}</td>
           <td>{{ search.found }}</td>
           <td>
             <button @click="$emit('stop-search', search.searchId)" class="btn btn-danger btn-sm">
@@ -89,15 +89,6 @@ defineEmits(['stop-search'])
 const { windowWidth } = useLayout()
 const isMobile = computed(() => windowWidth.value < 768)
 
-const formatSpeed = (speed) => {
-  if (speed == null) return '0/s'
-  return `${Number(speed).toLocaleString()}/s`
-}
-
-const formatNumber = (num) => {
-  if (num == null) return '0'
-  return Number(num).toLocaleString()
-}
 </script>
 
 <style scoped>
