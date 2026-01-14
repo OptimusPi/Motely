@@ -12,6 +12,8 @@
     <EnableAVX2>true</EnableAVX2>
     <EnableAVX512F>true</EnableAVX512F>
     <EnableAVX512BW>true</EnableAVX512BW>
+    <!-- FMA disabled: Fused Multiply-Add changes floating-point rounding, breaking deterministic PRNG -->
+    <EnableFMA>false</EnableFMA>
   </PropertyGroup>
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,6 +23,9 @@
     <GenerateProgramFile>true</GenerateProgramFile>
     <IsPackable>false</IsPackable>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <!-- FMA disabled: Fused Multiply-Add changes floating-point rounding, breaking deterministic PRNG -->
+    <!-- This must be set for ALL configurations, not just Release -->
+    <EnableFMA>false</EnableFMA>
   </PropertyGroup>
 
   <ItemGroup>

@@ -87,5 +87,24 @@ namespace Motely.Filters
         [JsonPropertyName("seance")]
         [YamlMember(Alias = "seance")]
         public int[]? Seance { get; set; }
+
+        // ========== RAW SHOP JOKER STREAM SOURCES (FAST PRE-FILTER) ==========
+        // These check the underlying joker streams directly WITHOUT checking shop item types.
+        // Much faster than shopSlots since they skip the "what type is this shop item?" check.
+
+        /// <summary>Uncommon shop joker roll indices - checks raw uncommon joker stream (e.g. [0, 1, 2] for first 3 uncommon jokers)</summary>
+        [JsonPropertyName("uncommonShopJokers")]
+        [YamlMember(Alias = "uncommonShopJokers")]
+        public int[]? UncommonShopJokers { get; set; }
+
+        /// <summary>Rare shop joker roll indices - checks raw rare joker stream (e.g. [0] for first rare joker)</summary>
+        [JsonPropertyName("rareShopJokers")]
+        [YamlMember(Alias = "rareShopJokers")]
+        public int[]? RareShopJokers { get; set; }
+
+        /// <summary>Common shop joker roll indices - checks raw common joker stream (e.g. [0, 1] for first 2 common jokers)</summary>
+        [JsonPropertyName("commonShopJokers")]
+        [YamlMember(Alias = "commonShopJokers")]
+        public int[]? CommonShopJokers { get; set; }
     }
 }

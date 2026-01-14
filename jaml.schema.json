@@ -3,7 +3,7 @@
   "$id": "https://balatrogenie.app/jaml.schema.json",
   "version": "2.0.0",
   "title": "JAML - Jimbo's Ante Markup Language",
-  "description": "Schema for Balatro seed filter configuration files (.jaml)",
+  "description": "Schema for Balatro seed filter configuration files (.jaml). v2.0.0 adds Event type-as-key shorthand and full source support (Judgement, RiffRaff, Seance, SixthSense, Emperor, PurpleSealOrEightBall, RareTag, UncommonTag).",
   "type": "object",
   "properties": {
     "name": {
@@ -400,6 +400,27 @@
                 "type": "integer"
               },
               "description": "Seance spectral card roll indices (e.g. [0, 1] for first two spectral cards from Seance joker)"
+            },
+            "uncommonShopJokers": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "description": "Raw uncommon shop joker stream roll indices - FAST pre-filter that bypasses shop item type check (e.g. [0, 1, 2] for first 3 uncommon jokers in stream)"
+            },
+            "rareShopJokers": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "description": "Raw rare shop joker stream roll indices - FAST pre-filter that bypasses shop item type check (e.g. [0] for first rare joker in stream)"
+            },
+            "commonShopJokers": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "description": "Raw common shop joker stream roll indices - FAST pre-filter that bypasses shop item type check (e.g. [0, 1] for first 2 common jokers in stream)"
             }
           },
           "additionalProperties": false,

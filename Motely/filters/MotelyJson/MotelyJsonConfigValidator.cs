@@ -694,6 +694,36 @@ namespace Motely.Filters
                         }
                         break;
 
+                    case "erraticcard":
+                        // ErraticCard only works with Erratic deck
+                        if (!deck?.Equals("Erratic", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            warnings.Add(
+                                $"{prefix}: erraticCard filter requires deck: Erratic (current deck: {deck ?? "not specified"}). This filter will never find seeds with other decks."
+                            );
+                        }
+                        // Validate minCount is reasonable (max 52 cards in deck, but realistically max is much lower)
+                        if (item.Min.HasValue && item.Min.Value > 52)
+                        {
+                            errors.Add(
+                                $"{prefix}: erraticCard minCount ({item.Min.Value}) cannot exceed 52 (total cards in deck). Maximum possible count for any specific card is 52."
+                            );
+                        }
+                        // Validate value format (should be "K_C" or "2_H" format)
+                        if (string.IsNullOrEmpty(item.Value))
+                        {
+                            warnings.Add(
+                                $"{prefix}: erraticCard requires a 'value' in format 'K_C' (King of Clubs) or '2_H' (2 of Hearts)."
+                            );
+                        }
+                        else if (!item.Value.Contains('_'))
+                        {
+                            warnings.Add(
+                                $"{prefix}: erraticCard value '{item.Value}' should be in format 'K_C' or '2_H' (rank_suit)."
+                            );
+                        }
+                        break;
+
                     case "and":
                     case "or":
                         // Validate that nested clauses exist
@@ -729,7 +759,7 @@ namespace Motely.Filters
                         else
                         {
                             errors.Add(
-                                $"{prefix}: Unknown type '{item.Type}'. Valid types: joker, souljoker, tarot, planet, spectral, playingcard, tag, smallblindtag, bigblindtag, voucher, boss, event, erraticrank, erraticsuit, and, or"
+                                $"{prefix}: Unknown type '{item.Type}'. Valid types: joker, souljoker, tarot, planet, spectral, playingcard, tag, smallblindtag, bigblindtag, voucher, boss, event, erraticrank, erraticsuit, erraticcard, and, or"
                             );
                         }
                         break;
