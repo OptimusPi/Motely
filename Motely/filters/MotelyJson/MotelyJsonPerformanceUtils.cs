@@ -34,6 +34,7 @@ public static class MotelyJsonPerformanceUtils
         ["event"] = MotelyFilterItemType.Event,
         ["erraticrank"] = MotelyFilterItemType.ErraticRank,
         ["erraticsuit"] = MotelyFilterItemType.ErraticSuit,
+        ["erraticcard"] = MotelyFilterItemType.ErraticCard,
         ["and"] = MotelyFilterItemType.And,
         ["or"] = MotelyFilterItemType.Or,
     };

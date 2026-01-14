@@ -343,26 +343,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public MotelySearchStatus Status => _status;
 
     private readonly TBaseFilter _baseFilter;
-
     private readonly IMotelySeedFilter[] _additionalFilters;
+    private readonly int _pseudoHashKeyLengthCount;
+    private int _activeProviderThreads; // For provider-mode: threads still processing seeds
+    private readonly bool _isProviderMode;
 
-    // Current Motely filters usually do not have a score provider. They just print and/or return a SEED e.g. "ALEEB"
     private readonly IMotelySeedScoreProvider? _scoreProvider;
 
-    /// <summary>
-    /// Sets the score provider, if it is provided.
-    /// </summary>
-    /// <param name="scoreProvider"></param>
-    /// <returns></returns>
-    private bool TryGetScoreProvider(
-        [NotNullWhen(true)] out IMotelySeedScoreProvider? scoreProvider
-    )
-    {
-        scoreProvider = _scoreProvider;
-        return scoreProvider != null;
-    }
-
-    private readonly int _pseudoHashKeyLengthCount;
+    // IInternalMotelySearch implementation
     int IInternalMotelySearch.PseudoHashKeyLengthCount => _pseudoHashKeyLengthCount;
     private readonly int* _pseudoHashKeyLengths;
     int* IInternalMotelySearch.PseudoHashKeyLengths => _pseudoHashKeyLengths;
@@ -373,22 +361,57 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private long _batchIndex;
     private long _matchingSeeds;
     private long _actualBatchesCompleted; // Aggregated from thread-local counters
+    private long _seedsSearched; // Provider-mode: actual seeds pulled (deterministic)
 
     public long BatchIndex => _batchIndex;
 
     // Batches actually completed (aggregated from thread-local counters)
-    public long CompletedBatchCount => _actualBatchesCompleted;
+    public long CompletedBatchCount
+    {
+        get
+        {
+            if (_isProviderMode)
+            {
+                long seeds = Interlocked.Read(ref _seedsSearched);
+                long perBatch = _threads.Length > 0 ? _threads[0].SeedsPerBatch : 0;
+                if (perBatch <= 0)
+                    return 0;
+                return (seeds + perBatch - 1) / perBatch;
+            }
+
+            return _actualBatchesCompleted;
+        }
+    }
 
     // Calculate total seeds searched from completed batches
     // Each batch processes SeedsPerBatch seeds
     // Sequential mode: 35^batchSize (e.g., 1225 for batchSize=2)
     // Provider mode: 8 (Vector512 width)
-    public long TotalSeedsSearched =>
-        CompletedBatchCount * (_threads.Length > 0 ? _threads[0].SeedsPerBatch : 0);
+    public long TotalSeedsSearched
+    {
+        get
+        {
+            if (_isProviderMode)
+            {
+                return Interlocked.Read(ref _seedsSearched);
+            }
+
+            return CompletedBatchCount * (_threads.Length > 0 ? _threads[0].SeedsPerBatch : 0);
+        }
+    }
     public long MatchingSeeds => _matchingSeeds;
     public long FilteredSeeds => Filters.MotelyJsonSeedScoreDesc.FilteredSeedCount;
 
     public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
+
+    /// <summary>
+    /// Tries to get the score provider if one was configured.
+    /// </summary>
+    public bool TryGetScoreProvider([NotNullWhen(true)] out IMotelySeedScoreProvider? scoreProvider)
+    {
+        scoreProvider = _scoreProvider;
+        return scoreProvider != null;
+    }
 
     private double _lastReportMS;
     private readonly double reportInterval = 2000; // Report every 2 seconds
@@ -402,6 +425,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     public MotelySearch(MotelySearchSettings<TBaseFilter> settings)
     {
+        _isProviderMode = settings.Mode == MotelySearchMode.Provider;
         _searchParameters = new() { Deck = settings.Deck, Stake = settings.Stake };
         _progressCallback = settings.ProgressCallback;
         _batchCharacterCount = settings.SequentialBatchCharacterCount;
@@ -448,8 +472,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         int[] pseudohashKeyLengths = [.. filterCreationContext.CachedPseudohashKeyLengths];
         _pseudoHashKeyLengthCount = pseudohashKeyLengths.Length;
-        _pseudoHashKeyLengths = (int*)Marshal.AllocHGlobal(sizeof(int) * _pseudoHashKeyLengthCount);
 
+        _pseudoHashKeyLengths = (int*)Marshal.AllocHGlobal(sizeof(int) * _pseudoHashKeyLengthCount);
         for (int i = 0; i < _pseudoHashKeyLengthCount; i++)
         {
             _pseudoHashKeyLengths[i] = pseudohashKeyLengths[i];
@@ -458,6 +482,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _pauseBarrier = new(settings.ThreadCount + 1);
         _unpauseBarrier = new(settings.ThreadCount + 1);
         _status = MotelySearchStatus.Paused;
+
+        // Initialize provider-mode thread counter
+        _activeProviderThreads = settings.Mode == MotelySearchMode.Provider ? settings.ThreadCount : 0;
 
         _threads = new MotelySearchThread[settings.ThreadCount];
         for (int i = 0; i < _threads.Length; i++)
@@ -520,7 +547,18 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         // Wait for all threads to reach the pause barrier
         // Threads check status in their loop and will signal when they see Paused
-        _pauseBarrier.SignalAndWait();
+        try
+        {
+            _pauseBarrier.SignalAndWait(TimeSpan.FromSeconds(2));
+        }
+        catch (BarrierPostPhaseException)
+        {
+            // Barrier already broken; treat pause as best-effort.
+        }
+        catch (TimeoutException)
+        {
+            // One or more threads didn't reach the pause barrier in time; treat pause as best-effort.
+        }
         
         _elapsedTime.Stop();
     }
@@ -537,7 +575,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // PERFORMANCE: Use calculated CompletedBatchCount (no extra state to maintain)
         long thisCompletedCount = CompletedBatchCount;
         long totalBatches = _threads[0].MaxBatch;
-        long seedsSearched = thisCompletedCount * _threads[0].SeedsPerBatch;
+        long seedsSearched = TotalSeedsSearched;
         
         // Calculate seeds per millisecond once (reuse for both callback and display)
         double seedsPerMs = elapsedMS > 1 ? seedsSearched / elapsedMS : 0;
@@ -719,6 +757,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         private readonly FilterSeedBatch* _filterSeedBatches;
 
+        // Provider-mode: this thread has exhausted the seed provider and should idle.
+        // IMPORTANT: keep the thread alive so Pause() barriers still work.
+        protected bool _providerExhausted;
+
         public MotelySearchThread(MotelySearch<TBaseFilter> search, int threadIndex)
         {
             Search = search;
@@ -800,11 +842,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         // OR the search was completed early (e.g., provider ran out of seeds)
                         // For provider-based searches, early completion is valid when NextSeed() returns empty
                         // Note: When provider exhausts, _batchIndex may be < MaxBatch, which is OK
-                        Debug.Assert(
-                            Search._batchIndex >= MaxBatch
-                                || Search._batchIndex >= Search._endBatchIndex
-                                || Search._status == MotelySearchStatus.Completed
-                        );
+                        if (!Search._isProviderMode)
+                        {
+                            Debug.Assert(
+                                Search._batchIndex >= MaxBatch
+                                    || Search._batchIndex >= Search._endBatchIndex
+                                    || Search._status == MotelySearchStatus.Completed
+                            );
+                        }
                         return;
 
                     case MotelySearchStatus.Disposed:
@@ -813,26 +858,42 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         return;
                 }
 
-                long batchIdx = Interlocked.Increment(ref Search._batchIndex);
-
-                // FIX: Check against BOTH MaxBatch AND _endBatchIndex
-                if (batchIdx >= Search._endBatchIndex || batchIdx >= MaxBatch)
+                // Provider-mode: threads that are exhausted should remain alive but idle.
+                // This prevents repeated decrements and keeps Pause() barriers consistent.
+                if (_providerExhausted)
                 {
-                    // Don't process this batch - we're done
-                    Search._status = MotelySearchStatus.Completed;
+                    Thread.Yield();
                     continue;
                 }
 
-                SearchBatch(batchIdx);
-                
-                // Check if SearchBatch detected provider exhaustion (early completion)
-                // If so, the status was set to Completed and we should continue to next iteration
-                // so the switch statement can handle the Completed status properly
-                if (Search._status == MotelySearchStatus.Completed)
+                if (Search._isProviderMode)
                 {
-                    // Provider ran out of seeds - continue to next iteration to handle Completed status
-                    continue;
+                    // Provider-mode: do NOT use global batch index or MaxBatch termination.
+                    // SeedProvider.NextSeed() determines exhaustion, and only the last exhausted
+                    // thread sets the search status to Completed.
+                    SearchBatch(0);
+
+                    if (_providerExhausted)
+                    {
+                        Thread.Yield();
+                        continue;
+                    }
                 }
+                else
+                {
+                    long batchIdx = Interlocked.Increment(ref Search._batchIndex);
+
+                    // FIX: Check against BOTH MaxBatch AND _endBatchIndex
+                    if (batchIdx >= Search._endBatchIndex || batchIdx >= MaxBatch)
+                    {
+                        // Don't process this batch - we're done
+                        Search._status = MotelySearchStatus.Completed;
+                        continue;
+                    }
+
+                    SearchBatch(batchIdx);
+                }
+
                 _localBatchesCompleted++; // Thread-local increment (no Interlocked!)
 
                 // PERFORMANCE: ALL batch-end processing happens HERE in sequence
@@ -1329,10 +1390,17 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 // If we get an empty span, we've run out of seeds to process
                 if (seed.IsEmpty)
                 {
-                    // If we have no seeds at all, mark as completed and return
+                    // If we have no seeds at all, this thread is exhausted
                     if (seedIdx == 0)
                     {
-                        Search._status = MotelySearchStatus.Completed;
+                        // Mark this thread exhausted so ThreadMain idles it (and we only decrement once)
+                        _providerExhausted = true;
+
+                        // Decrement active provider threads; if this was the last one, mark search completed
+                        if (Interlocked.Decrement(ref Search._activeProviderThreads) == 0)
+                        {
+                            Search._status = MotelySearchStatus.Completed;
+                        }
                         return;
                     }
                     // Otherwise, process the seeds we have so far
@@ -1376,7 +1444,32 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         ((double*)_seedCharacterMatrix)[matrixIndex] = seed[i];
                     }
                 }
+                for (int i = seedLen; i < Motely.MaxSeedLength; i++)
+                {
+                    int matrixIndex = i * Motely.MaxVectorWidth + seedIdx;
+                    if (matrixIndex >= 0 && matrixIndex < Motely.MaxSeedLength * Motely.MaxVectorWidth)
+                    {
+                        ((double*)_seedCharacterMatrix)[matrixIndex] = 0;
+                    }
+                }
                 actualSeedCount++;
+            }
+            if (actualSeedCount < Motely.MaxVectorWidth)
+            {
+                for (int lane = actualSeedCount; lane < Motely.MaxVectorWidth; lane++)
+                {
+                    for (int i = 0; i < Motely.MaxSeedLength; i++)
+                    {
+                        ((double*)_seedCharacterMatrix)[i * Motely.MaxVectorWidth + lane] = 0;
+                    }
+                }
+            }
+
+            // Provider-mode determinism: count actual seeds pulled, not (batches * vectorWidth).
+            // This avoids nondeterministic totals caused by variable partial batches across threads.
+            if (actualSeedCount > 0)
+            {
+                Interlocked.Add(ref Search._seedsSearched, actualSeedCount);
             }
 
             if (homogeneousSeedLength)

@@ -3,8 +3,10 @@ deck: Erratic
 stake: Black
 must:
   - joker: RoughGem
+    edition: Negative
     stickers:
       - Eternal
+  - soulJoker: Perkeo
 should:
   - joker: RoughGem
     score: 3

@@ -16,7 +16,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 
     // New: Support for string/object column values (for InlineLabel, AnteDisplay, ItemDisplay)
     // This is a managed array, so it's separate from the unsafe fixed array
-    private string[]? _columnValues;
+    private string?[]? _columnValues;
 
     public MotelySeedScoreTally(string seed, int score)
     {
@@ -41,7 +41,7 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     {
         if (_columnValues == null)
         {
-            _columnValues = new string[1024];
+            _columnValues = new string?[1024];
         }
 
         if (_tallyCount < 1024)
@@ -657,9 +657,20 @@ public struct MotelyJsonSeedScoreDesc(
             // Thread-safe auto cutoff: Start at 1, raise to highest score found
             if (mode == ScoreCutoffMode.AutoBest || mode == ScoreCutoffMode.AutoSmart)
             {
-                if (currentScore > state.LearnedCutoff)
+                // IMPORTANT: must be monotonic (max-only). A check-then-exchange can
+                // overwrite a higher cutoff with a lower value under contention.
+                int observed;
+                while (true)
                 {
-                    Interlocked.Exchange(ref state.LearnedCutoff, currentScore);
+                    observed = Volatile.Read(ref state.LearnedCutoff);
+                    if (currentScore <= observed)
+                        break;
+
+                    if (
+                        Interlocked.CompareExchange(ref state.LearnedCutoff, currentScore, observed)
+                        == observed
+                    )
+                        break;
                 }
             }
 

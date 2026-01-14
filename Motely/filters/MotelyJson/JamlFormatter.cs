@@ -115,8 +115,11 @@ public static class JamlFormatter
         if (string.IsNullOrWhiteSpace(jamlContent))
             return new MotelyJsonConfig();
 
+        // Use NullNamingConvention + WithCaseInsensitivePropertyMatching to match JamlConfigLoader
+        // This ensures round-trip compatibility with Format() which uses NullNamingConvention
         var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .WithNamingConvention(NullNamingConvention.Instance)
+            .WithCaseInsensitivePropertyMatching()
             .IgnoreUnmatchedProperties()
             .Build();
 

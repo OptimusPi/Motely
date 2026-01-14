@@ -1,0 +1,42 @@
+name: Perkeo Observatory (Enhanced!)
+author: Athuny & pifreak
+description: PerkeoObservatory classic setup, but Ante 1 super goopy! 
+deck: Ghost
+stake: White
+
+Must:  
+  - voucher: Telescope
+    antes: [1,2,3]
+  - voucher: Observatory
+    antes: [1,2,3]
+
+  - soulJoker: Perkeo
+    antes: [1,2,3]
+
+Should:
+
+
+  - jokers: [Blueprint, Brainstorm]
+    antes: [1,2,3]
+    score: 225
+  - jokers: [Astronomer, Constellation, HangingChad, Showman]
+    antes: [1,2,3]
+    score: 125
+  - jokers: [Astronomer, Constellation, Blueprint, Brainstorm, HangingChad, Showman]
+    antes: [1,2,3]
+    edition: Negative
+    score: 208
+
+
+  - jokers: [Blueprint, Brainstorm]
+    antes: [4,5,6,7]
+    score: 20
+  - jokers: [Astronomer, Constellation, HangingChad, Showman]
+    antes: [4,5,6,7]
+    score: 10
+
+  - jokers: [Astronomer, Constellation, Blueprint, Brainstorm, HangingChad, Showman]
+    antes: [4,5,6,7]
+    edition: Negative
+    score: 99
+  

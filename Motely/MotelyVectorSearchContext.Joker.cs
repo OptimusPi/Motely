@@ -156,6 +156,40 @@ unsafe partial struct MotelyVectorSearchContext
         );
     }
 
+    // ========== RAW SHOP JOKER STREAMS (FAST PRE-FILTER) ==========
+    // These directly access the underlying shop joker streams by rarity,
+    // bypassing the shop item type check for much faster filtering.
+
+    public MotelyVectorJokerFixedRarityStream CreateUncommonShopJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false)
+    {
+        return CreateJokerFixedRarityStream(
+            MotelyPrngKeys.ShopItemSource,
+            MotelyPrngKeys.DefaultJokerEternalPerishableSource,
+            MotelyPrngKeys.DefaultJokerRentalSource,
+            ante, flags, MotelyJokerRarity.Uncommon, isCached
+        );
+    }
+
+    public MotelyVectorJokerFixedRarityStream CreateRareShopJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false)
+    {
+        return CreateJokerFixedRarityStream(
+            MotelyPrngKeys.ShopItemSource,
+            MotelyPrngKeys.DefaultJokerEternalPerishableSource,
+            MotelyPrngKeys.DefaultJokerRentalSource,
+            ante, flags, MotelyJokerRarity.Rare, isCached
+        );
+    }
+
+    public MotelyVectorJokerFixedRarityStream CreateCommonShopJokerStream(int ante, MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default, bool isCached = false)
+    {
+        return CreateJokerFixedRarityStream(
+            MotelyPrngKeys.ShopItemSource,
+            MotelyPrngKeys.DefaultJokerEternalPerishableSource,
+            MotelyPrngKeys.DefaultJokerRentalSource,
+            ante, flags, MotelyJokerRarity.Common, isCached
+        );
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelyVectorJokerFixedRarityStream CreateJokerFixedRarityStream(string source, string eternalPerishableSource, string rentalSource, int ante, MotelyJokerFixedRarityStreamFlags flags, MotelyJokerRarity rarity, bool isCached)
     {

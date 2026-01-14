@@ -14,7 +14,9 @@ public sealed record class MotelySeedAnalysisConfig(
 /// </summary>
 public sealed record class MotelySeedAnalysis(
     string? Error,
-    IReadOnlyList<MotelyAnteAnalysis> Antes
+    IReadOnlyList<MotelyAnteAnalysis> Antes,
+    MotelyDeck? Deck = null,
+    string? StartingDeck = null
 )
 {
     public override string ToString()
@@ -26,10 +28,24 @@ public sealed record class MotelySeedAnalysis(
 
         StringBuilder sb = new();
 
+        // Add Erratic Deck info at the top if Erratic Deck is selected
+        if (Deck == MotelyDeck.Erratic && !string.IsNullOrEmpty(StartingDeck))
+        {
+            sb.AppendLine($"Starting Deck: {StartingDeck}");
+            sb.AppendLine();
+        }
+
         // Match TheSoul's format exactly
         foreach (var ante in Antes)
         {
             sb.AppendLine($"==ANTE {ante.Ante}==");
+            
+            // Add draw order for this ante (for all decks)
+            if (!string.IsNullOrEmpty(ante.DrawOrder))
+            {
+                sb.AppendLine($"Draw: {ante.DrawOrder}");
+            }
+            
             sb.AppendLine($"Boss: {FormatUtils.FormatBoss(ante.Boss)}");
             sb.AppendLine($"Voucher: {FormatUtils.FormatVoucher(ante.Voucher)}");
 
@@ -75,7 +91,8 @@ public sealed record class MotelyAnteAnalysis(
     MotelyTag SmallBlindTag,
     MotelyTag BigBlindTag,
     IReadOnlyList<MotelyItem> ShopQueue,
-    IReadOnlyList<MotelyBoosterPackAnalysis> Packs
+    IReadOnlyList<MotelyBoosterPackAnalysis> Packs,
+    string? DrawOrder = null
 );
 
 public sealed record class MotelyBoosterPackAnalysis(

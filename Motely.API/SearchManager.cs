@@ -200,7 +200,7 @@ public class SearchManager
     /// </summary>
     public (List<SearchResult> results, int progressPercent) GetSearchStatus(string searchId)
     {
-        var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
+        var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.db");
         var results = new List<SearchResult>();
         
         var progressPercent = 0;
@@ -287,7 +287,7 @@ public class SearchManager
         if (_activeSearches.TryGetValue(searchId, out var search) && search.ColumnNames.Count > 0)
             return new List<string>(search.ColumnNames);
 
-        var dbPath = Path.Combine(_searchResultsDir, $"{searchId}.db");
+        var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.db");
         return GetColumnNamesFromDb(dbPath);
     }
 
@@ -318,7 +318,7 @@ public class SearchManager
         }
         
         // If not in active searches, try to load from saved metadata file
-        var jamlPath = Path.Combine(_searchResultsDir, $"{searchId}.jaml");
+        var jamlPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.jaml");
         if (File.Exists(jamlPath))
         {
             try
@@ -483,7 +483,7 @@ public class SearchManager
                 isFastLane = runToCompletion
             }));
             
-            var dbPath = Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
+            var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{search.SearchId}.db");
             ReadResumeCursor(dbPath, search.ColumnNames, out var startBatch, out var batchSize);
             
             // For round-robin: limit to BatchesPerTurn batches
@@ -1216,7 +1216,7 @@ public class SearchManager
                 try
                 {
                     var dbPath = search.Database?.DatabasePath
-                                 ?? Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
+                                 ?? Path.Combine(MotelyPaths.SearchResultsDir, $"{search.SearchId}.db");
                     await ExportTopResultsToFertilizerAsync(dbPath, limit: 1000);
                 }
                 catch (Exception ex)
@@ -1290,7 +1290,7 @@ public class SearchManager
             search.StopReason = null;
             search.AssignedThreads = allocations.TryGetValue(id, out var t) ? Math.Max(1, t) : 1;
 
-            var dbPath = Path.Combine(_searchResultsDir, $"{search.SearchId}.db");
+            var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{search.SearchId}.db");
             ReadResumeCursor(dbPath, search.ColumnNames, out var startBatch, out var batchSize);
             search.ResumeStartBatch = startBatch;
             if (batchSize > 0)

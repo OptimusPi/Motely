@@ -1,4 +1,5 @@
 using Motely.Filters;
+using System.Linq;
 
 namespace Motely.Reporting;
 
@@ -78,6 +79,7 @@ public class ColumnDefinition : IColumnDefinition
                 ColumnType.InlineLabel => new FirstMatchStrategy(),
                 ColumnType.AnteDisplay => new FirstMatchStrategy(),
                 ColumnType.ItemDisplay => new FirstMatchStrategy(),
+                ColumnType.ValueFunction => new FirstMatchStrategy(), // ValueFunction uses first result
                 _ => new SumAllStrategy()
             };
         }
@@ -121,6 +123,7 @@ public class ColumnDefinition : IColumnDefinition
             ColumnType.InlineLabel => FormatInlineLabel(value),
             ColumnType.AnteDisplay => FormatAnteDisplay(value),
             ColumnType.ItemDisplay => FormatItemDisplay(value),
+            ColumnType.ValueFunction => FormatValueFunction(value),
             _ => value.ToString()
         };
     }
@@ -172,6 +175,28 @@ public class ColumnDefinition : IColumnDefinition
     {
         // ItemDisplay outputs string
         return value.ToString() ?? "";
+    }
+
+    private string FormatValueFunction(object value)
+    {
+        // ValueFunction columns output strings directly
+        // For multi-ante results, format as JSON object for CSV safety
+        if (value is Dictionary<int, string> multiAnteDict)
+        {
+            // Multiple antes: format as JSON object
+            var jsonEntries = multiAnteDict.OrderBy(kvp => kvp.Key)
+                .Select(kvp => $"\"Ante{kvp.Key}\":\"{EscapeJsonString(kvp.Value)}\"");
+            return "{" + string.Join(",", jsonEntries) + "}";
+        }
+        
+        // Single value: return as-is (already a string)
+        return value?.ToString() ?? "";
+    }
+
+    private string EscapeJsonString(string str)
+    {
+        // Escape quotes and backslashes for JSON
+        return str.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
     private static int? ConvertToInt(object? value)

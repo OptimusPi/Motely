@@ -31,6 +31,7 @@ namespace Motely.Filters.MotelyJson
             ["bigblindtag"] = "BigBlindTag",
             ["erraticrank"] = "ErraticRank",
             ["erraticsuit"] = "ErraticSuit",
+            ["erraticcard"] = "ErraticCard",
             ["event"] = "Event",
             ["and"] = "And",
             ["or"] = "Or"
