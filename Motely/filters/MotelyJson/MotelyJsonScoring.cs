@@ -1513,6 +1513,7 @@ public static class MotelyJsonScoring
                     : 0,
                 MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, clause.RankEnum!.Value),
                 MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, clause.SuitEnum!.Value),
+                MotelyFilterItemType.ErraticCard => CountErraticCardOccurrences(ref ctx, clause.ErraticCardRankEnum!.Value, clause.ErraticCardSuitEnum!.Value),
                 _ => 0,
             };
 
@@ -1615,6 +1616,31 @@ public static class MotelyJsonScoring
         {
             var card = ctx.GetNextErraticDeckCard(ref stream);
             if (card.PlayingCardSuit == suit)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Counts how many times a specific card (rank + suit) appears in the Erratic Deck's starting composition
+    /// </summary>
+    public static int CountErraticCardOccurrences(
+        ref MotelySingleSearchContext ctx,
+        MotelyPlayingCardRank rank,
+        MotelyPlayingCardSuit suit
+    )
+    {
+        var stream = ctx.CreateErraticDeckPrngStream(isCached: false);
+        int count = 0;
+
+        // Use the same method as the filter - GetNextErraticDeckCard
+        for (int i = 0; i < 52; i++)
+        {
+            var card = ctx.GetNextErraticDeckCard(ref stream);
+            if (card.PlayingCardRank == rank && card.PlayingCardSuit == suit)
             {
                 count++;
             }
@@ -1760,6 +1786,14 @@ public static class MotelyJsonScoring
             if (!clause.SuitEnum.HasValue)
                 return 0;
             return CountErraticSuitOccurrences(ref ctx, clause.SuitEnum.Value);
+        }
+
+        // Special case for ErraticCard - check starting deck composition (not ante-specific)
+        if (clause.ItemTypeEnum == MotelyFilterItemType.ErraticCard)
+        {
+            if (!clause.ErraticCardRankEnum.HasValue || !clause.ErraticCardSuitEnum.HasValue)
+                return 0;
+            return CountErraticCardOccurrences(ref ctx, clause.ErraticCardRankEnum.Value, clause.ErraticCardSuitEnum.Value);
         }
 
         // Special case for AND - gates with nested scoring
@@ -1917,6 +1951,7 @@ public static class MotelyJsonScoring
                             ), // Recursive for nested And/Or
                             MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, nestedClause.RankEnum!.Value),
                             MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, nestedClause.SuitEnum!.Value),
+                            MotelyFilterItemType.ErraticCard => CountErraticCardOccurrences(ref ctx, nestedClause.ErraticCardRankEnum!.Value, nestedClause.ErraticCardSuitEnum!.Value),
                             _ => 0,
                         };
                     }
@@ -2042,6 +2077,11 @@ public static class MotelyJsonScoring
         {
             // Count only once for the starting deck, not per-ante
             totalCount = CountErraticSuitOccurrences(ref ctx, clause.SuitEnum!.Value);
+        }
+        else if (clause.ItemTypeEnum == MotelyFilterItemType.ErraticCard)
+        {
+            // Count only once for the starting deck, not per-ante
+            totalCount = CountErraticCardOccurrences(ref ctx, clause.ErraticCardRankEnum!.Value, clause.ErraticCardSuitEnum!.Value);
         }
         // Soul jokers are special - they need to be counted across ALL antes with ONE stream
         else if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)

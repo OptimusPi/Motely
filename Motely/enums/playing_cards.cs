@@ -12,11 +12,11 @@ public enum MotelyPlayingCardRank
     Seven,
     Eight,
     Nine,
-    Ace,
-    Jack,
-    King,
-    Queen,
     Ten,
+    Jack,
+    Queen,
+    King,
+    Ace,
 }
 
 public static class MotelyPlayingCardRankExt

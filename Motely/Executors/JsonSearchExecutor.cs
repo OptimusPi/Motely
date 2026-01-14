@@ -307,7 +307,8 @@ namespace Motely.Executors
                                 CREATE TABLE seeds AS
                                 SELECT
                                     CAST(ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS BIGINT) AS id,
-                                    seed
+                                    seed,
+                                    LENGTH(seed) AS seed_len
                                 FROM results
                                 WHERE seed IS NOT NULL;
                             ";
@@ -519,7 +520,8 @@ namespace Motely.Executors
                             CREATE TABLE seeds AS
                             SELECT
                                 CAST(ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS BIGINT) AS id,
-                                seed
+                                seed,
+                                LENGTH(seed) AS seed_len
                             FROM seeds_old_id;
                         ";
                         cmd.ExecuteNonQuery();
@@ -528,6 +530,16 @@ namespace Motely.Executors
                         DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
 
                         DuckDBOperations.DropTableIfExists(conn, "seeds_old_id");
+                    }
+
+                    bool hasSeedLenColumn = DuckDBOperations.ColumnExists(conn, "seeds", "seed_len");
+                    if (!hasSeedLenColumn)
+                    {
+                        cmd.CommandText = @"
+                            ALTER TABLE seeds ADD COLUMN seed_len INTEGER;
+                            UPDATE seeds SET seed_len = LENGTH(seed);
+                        ";
+                        cmd.ExecuteNonQuery();
                     }
                     
                     // Step 2: Check for invalid seeds (contain comma, '0', invalid chars, or >8 chars)
@@ -583,13 +595,15 @@ namespace Motely.Executors
                             -- So we use the same schema structure inline for consistency
                             CREATE TABLE seeds (
                                 id BIGINT,
-                                seed VARCHAR(8)
+                                seed VARCHAR(8),
+                                seed_len INTEGER
                             );
                             
-                            INSERT INTO seeds (id, seed)
+                            INSERT INTO seeds (id, seed, seed_len)
                             SELECT 
                                 ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS id, 
-                                seed 
+                                seed,
+                                LENGTH(seed) AS seed_len
                             FROM seeds_temp;
                             
                         ";
@@ -1132,6 +1146,11 @@ namespace Motely.Executors
                     clause.SuitEnum!.Value,
                     clause.Min ?? 1
                 ),
+                MotelyFilterItemType.ErraticCard => new MotelyJsonErraticCardFilterDesc(
+                    clause.ErraticCardRankEnum!.Value,
+                    clause.ErraticCardSuitEnum!.Value,
+                    clause.Min ?? 1
+                ),
                 MotelyFilterItemType.And or MotelyFilterItemType.Or => new MotelyCompositeFilterDesc(singleClauseList),
                 _ => throw new ArgumentException($"Unsupported filter type: {clause.ItemTypeEnum}")
             };
@@ -1177,6 +1196,9 @@ namespace Motely.Executors
                 ),
                 MotelyFilterItemType.ErraticSuit => new MotelySearchSettings<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>(
                     (MotelyJsonErraticSuitFilterDesc)filterDesc
+                ),
+                MotelyFilterItemType.ErraticCard => new MotelySearchSettings<MotelyJsonErraticCardFilterDesc.MotelyJsonErraticCardFilter>(
+                    (MotelyJsonErraticCardFilterDesc)filterDesc
                 ),
                 MotelyFilterItemType.And or MotelyFilterItemType.Or => new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
                     (MotelyCompositeFilterDesc)filterDesc
@@ -1888,7 +1910,7 @@ namespace Motely.Executors
             if (wasCancelled)
             {
                 Console.WriteLine(
-                    $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {percentComplete}"
+                    $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F8}"
                 );
                 Console.WriteLine(new string('═', 60));
             }

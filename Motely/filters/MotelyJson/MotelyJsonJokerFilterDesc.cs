@@ -104,7 +104,10 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         clause.Sources?.Judgement is { Length: > 0 }
                         || clause.Sources?.RareTag is { Length: > 0 }
                         || clause.Sources?.UncommonTag is { Length: > 0 }
-                        || clause.Sources?.RiffRaff is { Length: > 0 };
+                        || clause.Sources?.RiffRaff is { Length: > 0 }
+                        || clause.Sources?.UncommonShopJokers is { Length: > 0 }
+                        || clause.Sources?.RareShopJokers is { Length: > 0 }
+                        || clause.Sources?.CommonShopJokers is { Length: > 0 };
 
                     if (hasShop) anyHasShop = true;
                     if (hasPack) anyHasPack = true;
@@ -353,6 +356,85 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                                 VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
                                 clauseMasks[c] |= (isActualJoker & matches);
                             }
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
+                        }
+                    }
+
+                    // ========== RAW SHOP JOKER STREAMS (FAST PRE-FILTER) ==========
+                    // Check Uncommon Shop Joker sources (direct stream access - no shop item type check)
+                    if (clause.Sources.UncommonShopJokers != null && clause.Sources.UncommonShopJokers.Length > 0)
+                    {
+                        var uncommonShopStream = ctx.CreateUncommonShopJokerStream(ante);
+                        var rollIndices = clause.Sources.UncommonShopJokers;
+
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+
+                        for (int r = 0; r <= maxRollIndex; r++)
+                        {
+                            var jokerItem = ctx.GetNextJoker(ref uncommonShopStream);
+                            if (r != nextWanted)
+                                continue;
+
+                            VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                            clauseMasks[c] |= matches;
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
+                        }
+                    }
+
+                    // Check Rare Shop Joker sources (direct stream access - no shop item type check)
+                    if (clause.Sources.RareShopJokers != null && clause.Sources.RareShopJokers.Length > 0)
+                    {
+                        var rareShopStream = ctx.CreateRareShopJokerStream(ante);
+                        var rollIndices = clause.Sources.RareShopJokers;
+
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+
+                        for (int r = 0; r <= maxRollIndex; r++)
+                        {
+                            var jokerItem = ctx.GetNextJoker(ref rareShopStream);
+                            if (r != nextWanted)
+                                continue;
+
+                            VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                            clauseMasks[c] |= matches;
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
+                        }
+                    }
+
+                    // Check Common Shop Joker sources (direct stream access - no shop item type check)
+                    if (clause.Sources.CommonShopJokers != null && clause.Sources.CommonShopJokers.Length > 0)
+                    {
+                        var commonShopStream = ctx.CreateCommonShopJokerStream(ante);
+                        var rollIndices = clause.Sources.CommonShopJokers;
+
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+
+                        for (int r = 0; r <= maxRollIndex; r++)
+                        {
+                            var jokerItem = ctx.GetNextJoker(ref commonShopStream);
+                            if (r != nextWanted)
+                                continue;
+
+                            VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                            clauseMasks[c] |= matches;
 
                             pos++;
                             if (pos >= rollIndices.Length)

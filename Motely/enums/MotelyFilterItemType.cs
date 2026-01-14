@@ -18,6 +18,7 @@ public enum MotelyFilterItemType
     Event, // Random events (Lucky, Wheel of Fortune, Bananas, Misprint)
     ErraticRank, // Erratic Deck starting composition - rank filter
     ErraticSuit, // Erratic Deck starting composition - suit filter
+    ErraticCard, // Erratic Deck starting composition - specific card filter (e.g., "K_C", "2_H")
     And, // Logical AND - all nested clauses must match
     Or, // Logical OR - at least one nested clause must match
 }

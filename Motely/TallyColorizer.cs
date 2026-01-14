@@ -275,7 +275,7 @@ public static class TallyColorizer
         if (!ColorEnabled)
             return $"{seed},{score},{string.Join(",", tallies)}";
 
-        return $"{seed},{score},{ColorizeTallies(tallies)}";
+        return $"{seed},{score},{ColorizeTallies(tallies)}{ResetColor}";
     }
 
     /// <summary>

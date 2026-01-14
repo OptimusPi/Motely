@@ -23,14 +23,33 @@ public static class ColumnDefinitionHelper
         foreach (var clause in config.Should)
         {
             var columnName = GetClauseColumnName(clause);
-            var scorer = new FilterClauseScorer(clause);
-            var column = new ColumnDefinition(
-                name: columnName,
-                type: ColumnType.ScoreTally,
-                scorers: new[] { scorer },
-                aggregationStrategy: new SumAllStrategy()
-            );
-            columns.Add(column);
+            
+            // Check if this is a ValueFunction column
+            var mode = clause.Mode?.ToLowerInvariant();
+            if (mode == "value" || mode == "function" || (!string.IsNullOrEmpty(clause.Function)))
+            {
+                // ValueFunction column
+                var scorer = new ValueFunctionScorer(clause);
+                var column = new ColumnDefinition(
+                    name: columnName,
+                    type: ColumnType.ValueFunction,
+                    scorers: new[] { scorer },
+                    aggregationStrategy: new SumAllStrategy() // Not used for ValueFunction, but required
+                );
+                columns.Add(column);
+            }
+            else
+            {
+                // Regular ScoreTally column
+                var scorer = new FilterClauseScorer(clause);
+                var column = new ColumnDefinition(
+                    name: columnName,
+                    type: ColumnType.ScoreTally,
+                    scorers: new[] { scorer },
+                    aggregationStrategy: new SumAllStrategy()
+                );
+                columns.Add(column);
+            }
         }
 
         return columns;

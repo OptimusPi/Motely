@@ -280,7 +280,15 @@ public enum MotelyScoreAggregationMode
 
         [JsonPropertyName("mode")]
         [YamlMember(Alias = "mode")]
-        public string? Mode { get; set; } // Per-clause scoring mode (for Or/And clauses)
+        public string? Mode { get; set; } // Per-clause scoring mode (for Or/And clauses), or "value"/"function" for ValueFunction columns
+
+        [JsonPropertyName("function")]
+        [YamlMember(Alias = "function")]
+        public string? Function { get; set; } // Function name for function mode (e.g., "StartingDeck", "CardDraw")
+
+        [JsonPropertyName("cards")]
+        [YamlMember(Alias = "cards")]
+        public int[]? Cards { get; set; } // Card positions for CardDraw function (0-indexed, e.g., [0,1,2,3,4] for first 5 cards)
 
         [JsonPropertyName("min")]
         [YamlMember(Alias = "min")]
@@ -458,6 +466,15 @@ public enum MotelyScoreAggregationMode
         [YamlIgnore]
         public MotelyPlayingCardRank? RankEnum { get; set; }
 
+        // ErraticCard stores both rank and suit (parsed from "K_C" format)
+        [JsonIgnore]
+        [YamlIgnore]
+        public MotelyPlayingCardRank? ErraticCardRankEnum { get; set; }
+
+        [JsonIgnore]
+        [YamlIgnore]
+        public MotelyPlayingCardSuit? ErraticCardSuitEnum { get; set; }
+
         [JsonIgnore]
         [YamlIgnore]
         public MotelyItemSeal? SealEnum { get; set; }
@@ -554,6 +571,60 @@ public enum MotelyScoreAggregationMode
                             // Parse suit from Value
                             if (Enum.TryParse<MotelyPlayingCardSuit>(Value, true, out var erraticSuit))
                                 SuitEnum = erraticSuit;
+                            break;
+                        case MotelyFilterItemType.ErraticCard:
+                            // Parse card from Value in format "K_C" (King of Clubs) or "2_H" (2 of Hearts)
+                            if (!string.IsNullOrEmpty(Value))
+                            {
+                                var parts = Value.Split('_');
+                                if (parts.Length == 2)
+                                {
+                                    // Parse rank (K, Q, J, A, 2-10)
+                                    var rankStr = parts[0].Trim();
+                                    MotelyPlayingCardRank? parsedRank = rankStr.ToUpperInvariant() switch
+                                    {
+                                        "A" or "ACE" => MotelyPlayingCardRank.Ace,
+                                        "K" or "KING" => MotelyPlayingCardRank.King,
+                                        "Q" or "QUEEN" => MotelyPlayingCardRank.Queen,
+                                        "J" or "JACK" => MotelyPlayingCardRank.Jack,
+                                        "10" or "TEN" => MotelyPlayingCardRank.Ten,
+                                        "9" or "NINE" => MotelyPlayingCardRank.Nine,
+                                        "8" or "EIGHT" => MotelyPlayingCardRank.Eight,
+                                        "7" or "SEVEN" => MotelyPlayingCardRank.Seven,
+                                        "6" or "SIX" => MotelyPlayingCardRank.Six,
+                                        "5" or "FIVE" => MotelyPlayingCardRank.Five,
+                                        "4" or "FOUR" => MotelyPlayingCardRank.Four,
+                                        "3" or "THREE" => MotelyPlayingCardRank.Three,
+                                        "2" or "TWO" => MotelyPlayingCardRank.Two,
+                                        _ => Enum.TryParse<MotelyPlayingCardRank>(rankStr, true, out var r) ? r : null
+                                    };
+
+                                    // Parse suit (C, D, H, S)
+                                    var suitStr = parts[1].Trim().ToUpperInvariant();
+                                    MotelyPlayingCardSuit? parsedSuit = suitStr switch
+                                    {
+                                        "C" or "CLUB" or "CLUBS" => MotelyPlayingCardSuit.Club,
+                                        "D" or "DIAMOND" or "DIAMONDS" => MotelyPlayingCardSuit.Diamond,
+                                        "H" or "HEART" or "HEARTS" => MotelyPlayingCardSuit.Heart,
+                                        "S" or "SPADE" or "SPADES" => MotelyPlayingCardSuit.Spade,
+                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(suitStr, true, out var s) ? s : null
+                                    };
+
+                                    if (parsedRank.HasValue && parsedSuit.HasValue)
+                                    {
+                                        ErraticCardRankEnum = parsedRank.Value;
+                                        ErraticCardSuitEnum = parsedSuit.Value;
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' (King of Clubs) or '2_H' (2 of Hearts). Rank: '{rankStr}', Suit: '{suitStr}'");
+                                    }
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' or '2_H' (rank_suit).");
+                                }
+                            }
                             break;
                         case MotelyFilterItemType.SmallBlindTag:
                         case MotelyFilterItemType.BigBlindTag:

@@ -30,5 +30,14 @@ public enum ColumnType
     /// Output: String.
     /// Example: Rare_Joker_Found: "Blueprint" (where filter was Rarity == Rare)
     /// </summary>
-    ItemDisplay
+    ItemDisplay,
+
+    /// <summary>
+    /// Outputs a string value directly (value mode) or from a function (function mode).
+    /// Output: String (CSV-safe, JSON for multi-ante).
+    /// Example: value mode: "Custom Label"
+    /// Example: function mode: "StartingDeck" -> "2_H,2_H,2_H,5_C"
+    /// Example: function mode: "CardDraw" with antes: [1], cards: [0,1,2,3,4] -> "5_H,6_C,7_D,8_S,9_H"
+    /// </summary>
+    ValueFunction
 }

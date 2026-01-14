@@ -37,6 +37,11 @@ namespace Motely
                 "Analyze a specific seed",
                 CommandOptionType.SingleValue
             );
+            var outputJsonOption = app.Option(
+                "--output-json",
+                "Output analysis as JSON (for --analyze mode)",
+                CommandOptionType.NoValue
+            );
             var nativeOption = app.Option<string>(
                 "-n|--native <FILTER>",
                 "Run built-in native filter",
@@ -84,12 +89,12 @@ namespace Motely
                 "Ending batch",
                 CommandOptionType.SingleValue
             );
-            var startPercentOption = app.Option<int>(
+            var startPercentOption = app.Option<double>(
                 "--startPercent <PCT>",
                 "Starting percent (0-100)",
                 CommandOptionType.SingleValue
             );
-            var endPercentOption = app.Option<int>(
+            var endPercentOption = app.Option<double>(
                 "--endPercent <PCT>",
                 "Ending percent (0-100)",
                 CommandOptionType.SingleValue
@@ -184,7 +189,7 @@ namespace Motely
                 var analyzeSeed = analyzeOption.Value();
                 if (!string.IsNullOrEmpty(analyzeSeed))
                 {
-                    return ExecuteAnalyze(analyzeSeed, deckOption.Value()!, stakeOption.Value()!);
+                    return ExecuteAnalyze(analyzeSeed, deckOption.Value()!, stakeOption.Value()!, outputJsonOption.HasValue());
                 }
 
                 // Handle --keyword option: generate seeds containing the keyword
@@ -233,13 +238,13 @@ namespace Motely
                 // Convert percent to batch if specified
                 if (startPercentOption.HasValue())
                 {
-                    int startPct = startPercentOption.ParsedValue;
+                    double startPct = startPercentOption.ParsedValue;
                     if (startPct < 0 || startPct > 100)
                     {
                         Console.WriteLine($"❌ Error: startPercent must be 0-100 (got {startPct})");
                         return 1;
                     }
-                    parameters.StartBatch = (ulong)(maxBatches * startPct / 100);
+                    parameters.StartBatch = (ulong)(maxBatches * startPct / 100.0);
                     if (!parameters.Quiet)
                     {
                         Console.WriteLine(
@@ -250,13 +255,13 @@ namespace Motely
 
                 if (endPercentOption.HasValue())
                 {
-                    int endPct = endPercentOption.ParsedValue;
+                    double endPct = endPercentOption.ParsedValue;
                     if (endPct < 0 || endPct > 100)
                     {
                         Console.WriteLine($"❌ Error: endPercent must be 0-100 (got {endPct})");
                         return 1;
                     }
-                    parameters.EndBatch = (ulong)(maxBatches * endPct / 100);
+                    parameters.EndBatch = (ulong)(maxBatches * endPct / 100.0);
                     if (!parameters.Quiet)
                     {
                         if (endPct == 0)
@@ -597,7 +602,7 @@ namespace Motely
             }
         }
 
-        private static int ExecuteAnalyze(string seed, string deckName, string stakeName)
+        private static int ExecuteAnalyze(string seed, string deckName, string stakeName, bool outputJson)
         {
             if (!Enum.TryParse<MotelyDeck>(deckName, true, out var deck))
             {
@@ -611,11 +616,52 @@ namespace Motely
                 return 1;
             }
 
-            Console.WriteLine($"🔍 Analyzing seed: '{seed}' with deck: {deck}, stake: {stake}");
             var analysis = MotelySeedAnalyzer.Analyze(
                 new MotelySeedAnalysisConfig(seed, deck, stake)
             );
-            Console.Write(analysis);
+
+            if (outputJson)
+            {
+                // Output as JSON for script consumption
+                var jsonOutput = new
+                {
+                    seed = seed,
+                    deck = deck.ToString(),
+                    stake = stake.ToString(),
+                    startingDeck = analysis.StartingDeck?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>(),
+                    twos = analysis.StartingDeck?.Split(',', StringSplitOptions.RemoveEmptyEntries).Count(c => c.StartsWith("2_")) ?? 0,
+                    error = analysis.Error,
+                    antes = analysis.Antes.Select(ante => new
+                    {
+                        ante = ante.Ante,
+                        boss = FormatUtils.FormatBoss(ante.Boss),
+                        voucher = FormatUtils.FormatVoucher(ante.Voucher),
+                        smallBlindTag = FormatUtils.FormatTag(ante.SmallBlindTag),
+                        bigBlindTag = FormatUtils.FormatTag(ante.BigBlindTag),
+                        drawOrder = ante.DrawOrder,
+                        shopQueue = ante.ShopQueue.Select(item => new
+                        {
+                            id = item.ToString(),
+                            name = FormatUtils.FormatItem(item)
+                        }).ToArray(),
+                        packs = ante.Packs.Select(pack => new
+                        {
+                            type = FormatUtils.FormatPackName(pack.Type),
+                            items = pack.Items.Select(item => FormatUtils.FormatItem(item)).ToArray()
+                        }).ToArray()
+                    }).ToArray()
+                };
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(jsonOutput, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"🔍 Analyzing seed: '{seed}' with deck: {deck}, stake: {stake}");
+                Console.Write(analysis);
+            }
             return 0;
         }
 
