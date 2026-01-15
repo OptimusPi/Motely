@@ -688,7 +688,7 @@ public class FilterBuilderWindow : Window
 
                 // Serialize to JAML - skip nulls and empty values for clean output
                 var serializer = new SerializerBuilder()
-                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .WithNamingConvention(NullNamingConvention.Instance)
                     .DisableAliases() // Prevent &o0/*o0 anchor/alias references
                     .ConfigureDefaultValuesHandling(
                         DefaultValuesHandling.OmitNull
@@ -770,7 +770,7 @@ public class FilterBuilderWindow : Window
 
         // Serialize to JAML - skip nulls and empty values for clean output
         var serializer = new SerializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .WithNamingConvention(NullNamingConvention.Instance)
             .DisableAliases() // Prevent &o0/*o0 anchor/alias references
             .ConfigureDefaultValuesHandling(
                 DefaultValuesHandling.OmitNull
