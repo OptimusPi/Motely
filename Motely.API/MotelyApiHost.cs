@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
 using System.Text.Json;
 using Motely;
 using Motely.Analysis;
 using Motely.API.Services;
 using Motely.API;
 using Motely.API.Hubs;
-using Motely.API.McpProtocol;
 using Motely.API.Models;
 
 // Request records
@@ -55,6 +55,14 @@ public static class MotelyApiHost
         }
         
         builder.Services.AddEndpointsApiExplorer();
+        
+        // Configure logging to use simple formatter (no ANSI colors)
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole(options =>
+        {
+            options.FormatterName = "Simple";
+        });
+
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("AllowAll", policy =>
@@ -65,41 +73,36 @@ public static class MotelyApiHost
             });
         });
 
-        // Configure logging to use simple formatter (no ANSI colors)
-        builder.Logging.ClearProviders();
-        builder.Logging.AddConsole(options =>
+        // Register services based on feature flags (modular registration)
+        // Note: builder.Configuration implements IConfiguration, so we can use it here
+        var features = new FeatureFlags(builder.Configuration);
+        
+        if (features.EnableSwagger)
         {
-            options.FormatterName = "Simple";
-        });
-
-        // Register search queue services
-        builder.Services.AddSingleton<SearchQueueService>();
-        builder.Services.AddHostedService<SearchQueueHostedService>();
-        builder.Services.AddSingleton<SearchService>();
+            builder.Services.AddSwaggerGen();
+        }
         
-        // Register MCP Server for JAML generation
-        builder.Services.AddScoped<McpServer>(sp =>
+        builder.Services.AddMotelyServices(builder.Configuration);
+        
+        // Register MCP services from Motely.MCP project (if enabled)
+        if (features.EnableMcp)
         {
-            var logger = sp.GetRequiredService<ILogger<McpServer>>();
-            var httpClient = new HttpClient();
-            var config = sp.GetRequiredService<IConfiguration>();
-            return new McpServer(logger, httpClient, config);
-        });
-        
-        // Register MCP Protocol Server (JSON-RPC 2.0 handler)
-        builder.Services.AddScoped<McpProtocolServer>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<McpProtocolServer>>();
-            var mcpServer = sp.GetRequiredService<McpServer>();
-            var searchManager = SearchManager.Instance;
-            return new McpProtocolServer(logger, mcpServer, searchManager);
-        });
-        
-        // Add SignalR
-        builder.Services.AddSignalR();
-        
-        // Register SearchBroadcaster
-        builder.Services.AddSingleton<ISearchBroadcaster, SearchBroadcaster>();
+            builder.Services.AddScoped<Motely.MCP.McpServer>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<Motely.MCP.McpServer>>();
+                var httpClient = new HttpClient();
+                var config = sp.GetRequiredService<IConfiguration>();
+                return new Motely.MCP.McpServer(logger, httpClient, config);
+            });
+            
+            builder.Services.AddScoped<Motely.MCP.McpProtocol.McpProtocolServer>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<Motely.MCP.McpProtocol.McpProtocolServer>>();
+                var mcpServer = sp.GetRequiredService<Motely.MCP.McpServer>();
+                var searchManager = SearchManager.Instance;
+                return new Motely.MCP.McpProtocol.McpProtocolServer(logger, mcpServer, searchManager);
+            });
+        }
 
         var app = builder.Build();
 
@@ -113,249 +116,146 @@ public static class MotelyApiHost
             SearchManager.Instance.SetMotelyRoot(motelyRootForSearchManager);
         }
         
-        // Wire up SearchBroadcaster to SearchManager
-        var broadcaster = app.Services.GetRequiredService<ISearchBroadcaster>();
-        SearchManager.Instance.SetBroadcaster(broadcaster);
+        // Get features again from app.Configuration (in case environment-specific configs were loaded)
+        var runtimeFeatures = new FeatureFlags(app.Configuration);
+        
+        // Wire up SearchBroadcaster to SearchManager (if SignalR is enabled)
+        if (runtimeFeatures.EnableSignalR)
+        {
+            var broadcaster = app.Services.GetRequiredService<ISearchBroadcaster>();
+            SearchManager.Instance.SetBroadcaster(broadcaster);
+        }
 
-        // Configure middleware
+        // Register shutdown handler to close SignalR connections quickly (if SignalR is enabled)
+        if (runtimeFeatures.EnableSignalR)
+        {
+            var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+            lifetime.ApplicationStopping.Register(() =>
+            {
+                try
+                {
+                    // Force close all SignalR connections immediately
+                    var hubContext = app.Services.GetService<IHubContext<SearchHub>>();
+                    if (hubContext != null)
+                    {
+                        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                        // Signal all clients to disconnect with very short timeout
+                        _ = hubContext.Clients.All.SendAsync("ServerShuttingDown", cts.Token);
+                    }
+                }
+                catch { }
+            });
+        }
+
+        // Configure middleware - STATIC FILES MUST COME BEFORE ROUTING
         app.UseCors("AllowAll");
         
-        // Add SignalR
-        app.MapHub<SearchHub>("/searchHub");
+        // Static file hosting - wwwroot is at Motely.API/wwwroot (not ContentRoot/wwwroot)
+        var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "Motely.API", "wwwroot");
+        if (Directory.Exists(wwwrootPath))
+        {
+            var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wwwrootPath);
+            app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = fileProvider,
+                OnPrepareResponse = ctx =>
+                {
+                    try
+                    {
+                        if (ctx.File?.Name != null)
+                        {
+                            var path = ctx.File.Name.ToLowerInvariant();
+                            if (path.EndsWith(".wasm"))
+                            {
+                                ctx.Context.Response.ContentType = "application/wasm";
+                            }
+                            else if (path.EndsWith(".br"))
+                            {
+                                ctx.Context.Response.ContentType = GetMimeType(path.Replace(".br", ""));
+                                ctx.Context.Response.Headers.Append("Content-Encoding", "br");
+                            }
+                            else if (path.EndsWith(".gz"))
+                            {
+                                ctx.Context.Response.ContentType = GetMimeType(path.Replace(".gz", ""));
+                                ctx.Context.Response.Headers.Append("Content-Encoding", "gzip");
+                            }
+                        }
+                        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                    }
+                    catch { }
+                }
+            });
+        }
+        else
+        {
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+        }
         
-        // Static file hosting
-        app.UseDefaultFiles();
-        app.UseStaticFiles();
-
-        // Basic endpoints (registered AFTER static files)
-        app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
-        app.MapGet("/routes", () => new { 
-            homepage = "/",
-            health = "/health", 
-            routes = "/routes",
-            analyze = "/analyze?seed=SEED[&deck=Red][&stake=White]",
-            filters = "/filters",
-            seed_sources = "/seed-sources",
-            searches = "/searches",
-            search_start = "POST /search",
-            search_status = "GET /search/{id}",
-            search_stop = "POST /search/stop"
-        });
-
-        // Analyze endpoint (quick seed analyzer)
-        // Example: GET /analyze?seed=MO4E11BR&deck=Ghost&stake=White
-        app.MapGet("/analyze", (HttpRequest req) =>
+        // Also serve static files from public folder (tracked by git, won't be wiped by build)
+        // Files in Motely.API/public/ will be accessible at /public/* URLs
+        var publicPath = Path.Combine(app.Environment.ContentRootPath, "Motely.API", "public");
+        if (Directory.Exists(publicPath))
         {
-            var seed = req.Query["seed"].ToString();
-            if (string.IsNullOrWhiteSpace(seed))
-                return Results.BadRequest(new { error = "Missing required query parameter: seed" });
-
-            var deckStr = req.Query["deck"].ToString();
-            if (string.IsNullOrWhiteSpace(deckStr)) deckStr = "Red";
-
-            var stakeStr = req.Query["stake"].ToString();
-            if (string.IsNullOrWhiteSpace(stakeStr)) stakeStr = "White";
-
-            if (!Enum.TryParse<MotelyDeck>(deckStr, true, out var deck))
-                return Results.BadRequest(new { error = $"Invalid deck: {deckStr}" });
-
-            if (!Enum.TryParse<MotelyStake>(stakeStr, true, out var stake))
-                return Results.BadRequest(new { error = $"Invalid stake: {stakeStr}" });
-
-            try
+            app.UseStaticFiles(new StaticFileOptions
             {
-                var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, deck, stake));
-                // Return as text (fast + easy to view/copy). Frontends can call /analyze/json if desired later.
-                return Results.Text(analysis.ToString(), "text/plain; charset=utf-8");
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
-        // Filter endpoints
-        app.MapGet("/filters", Endpoints.GetFilters);
-        app.MapPost("/filters/update", Endpoints.SaveFilter);
-        app.MapDelete("/filters/{id}", Endpoints.DeleteFilter);
-
-        // Seed sources endpoint
-        app.MapGet("/seed-sources", Endpoints.GetSeedSources);
-
-        // Searches endpoint
-        app.MapGet("/searches", Endpoints.GetSearches);
-
-        // Search endpoints
-        app.MapPost("/search", async (HttpRequest request) => 
-        {
-            try
-            {
-                var req = await request.ReadFromJsonAsync<SearchStartRequest>();
-                if (req == null)
-                    return Results.BadRequest(new { error = "Missing request body" });
-
-                var seedCount = req.SeedCount.HasValue ? (int)Math.Min(req.SeedCount.Value, int.MaxValue) : 0;
-                
-                var filterJaml = FilterService.GetFilterJaml(req.FilterId);
-                if (string.IsNullOrEmpty(filterJaml))
-                    return Results.BadRequest(new { error = "Filter not found" });
-                
-                var (immediateResults, searchId) = await SearchManager.Instance.StartSearchAsync(
-                    filterJaml,
-                    req.Deck ?? "Red",
-                    req.Stake ?? "White",  
-                    seedCount,
-                    req.StartBatch,
-                    req.Cutoff,
-                    req.SeedSource);
-                
-                return Results.Ok(new { 
-                    searchId = searchId, 
-                    status = "running",
-                    columns = SearchManager.Instance.GetColumnNames(searchId)
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
-        app.MapGet("/search/{id}", (string id) => 
-        {
-            try
-            {
-                var (results, progressPercent) = SearchManager.Instance.GetSearchStatus(id);
-                var isRunning = SearchManager.Instance.IsSearchRunning(id);
-                
-                return Results.Ok(new { 
-                    searchId = id, 
-                    status = isRunning ? "running" : "stopped",
-                    results = results,
-                    progressPercent = progressPercent,
-                    columns = SearchManager.Instance.GetColumnNames(id)
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
-        app.MapPost("/search/stop", async (HttpRequest request) => 
-        {
-            try
-            {
-                var req = await request.ReadFromJsonAsync<SearchStopRequest>();
-                var results = await SearchManager.Instance.StopSearchAsync(req?.SearchId ?? "");
-                return Results.Ok(new { 
-                    message = "Search stopped",
-                    results = results,
-                    isBackgroundRunning = false
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
-        // MCP endpoints for JAML generation
-        app.MapPost("/mcp/prompt", async (HttpRequest request, McpServer mcpServer) =>
-        {
-            try
-            {
-                var req = await request.ReadFromJsonAsync<McpPromptRequest>();
-                if (req?.Prompt == null)
-                    return Results.BadRequest(new { error = "Missing prompt" });
-
-                var response = await mcpServer.ProcessPromptAsync(req.Prompt);
-                
-                return Results.Ok(new
+                FileProvider = new PhysicalFileProvider(publicPath),
+                RequestPath = "/public",
+                OnPrepareResponse = ctx =>
                 {
-                    success = response.Success,
-                    jamlFilter = response.JamlFilter,
-                    reasoning = response.Reasoning,
-                    error = response.Success ? null : response.Message,
-                    searchId = response.SearchId,
-                    results = response.Results,
-                    columns = response.Columns,
-                    message = response.Message,
-                    searchUrl = response.SearchUrl
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
-        app.MapPost("/mcp/generate", async (HttpRequest request, McpServer mcpServer) =>
-        {
-            try
-            {
-                var req = await request.ReadFromJsonAsync<McpPromptRequest>();
-                if (req?.Prompt == null)
-                    return Results.BadRequest(new { error = "Missing prompt" });
-
-                // Generate JAML only (no search)
-                var (jaml, reasoning, error) = await mcpServer.GenerateJamlOnlyAsync(req.Prompt);
-                
-                return Results.Ok(new
-                {
-                    success = string.IsNullOrEmpty(error),
-                    jaml = jaml,
-                    reasoning = reasoning,
-                    error = error
-                });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
-        // MCP Protocol endpoint (JSON-RPC 2.0) for AI assistants (Claude Desktop, Cline, etc.)
-        app.MapPost("/mcp", async (HttpRequest request, McpProtocolServer mcpProtocolServer) =>
-        {
-            try
-            {
-                // Read request body
-                using var reader = new StreamReader(request.Body);
-                var body = await reader.ReadToEndAsync();
-                
-                if (string.IsNullOrWhiteSpace(body))
-                {
-                    return Results.BadRequest(new { error = "Request body is required" });
+                    try
+                    {
+                        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                    }
+                    catch { }
                 }
-
-                // Deserialize JSON-RPC request
-                var jsonRpcRequest = JsonSerializer.Deserialize<JsonRpcRequest>(body, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-                
-                if (jsonRpcRequest == null)
-                {
-                    return Results.BadRequest(new { error = "Invalid JSON-RPC request" });
-                }
-
-                // Handle request via MCP Protocol Server
-                var response = await mcpProtocolServer.HandleRequestAsync(jsonRpcRequest);
-                
-                // Return JSON-RPC response (respects JsonPropertyName attributes)
-                return Results.Json(response);
-            }
-            catch (JsonException ex)
+            });
+        }
+        
+        // Add Swagger/OpenAPI (if enabled)
+        if (features.EnableSwagger)
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
             {
-                return Results.BadRequest(new { error = $"Invalid JSON: {ex.Message}" });
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Motely API v1");
+                c.RoutePrefix = "swagger";
+            });
+            
+            // Serve OpenAPI JSON at /openapi/v1.json
+            app.MapGet("/openapi/v1.json", () => Results.Redirect("/swagger/v1/swagger.json", permanent: false));
+        }
+
+        // Register all endpoints based on feature flags (modular registration)
+        app.MapMotelyEndpoints(features);
 
         return app;
+    }
+
+    private static string GetMimeType(string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        return ext switch
+        {
+            ".html" => "text/html",
+            ".js" => "application/javascript",
+            ".css" => "text/css",
+            ".wasm" => "application/wasm",
+            ".json" => "application/json",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".ico" => "image/x-icon",
+            ".woff" => "font/woff",
+            ".woff2" => "font/woff2",
+            ".ttf" => "font/ttf",
+            ".otf" => "font/otf",
+            ".ogg" => "audio/ogg",
+            ".mp3" => "audio/mpeg",
+            ".webm" => "video/webm",
+            _ => "application/octet-stream"
+        };
     }
 }
