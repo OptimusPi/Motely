@@ -90,28 +90,70 @@ public static class JamlConfigLoader
         catch (Exception ex)
         {
             config = null;
-            // Include inner exception and stack trace for better debugging
             var innerMsg = ex.InnerException?.Message;
             var details = innerMsg != null ? $" -> {innerMsg}" : "";
             
-            // Try to extract line number from YAML parser exceptions
+            // Extract line number from YAML parser exceptions
             var lineInfo = "";
-            if (ex.Message.Contains("Line:") || ex.Message.Contains("at Line"))
+            var lineNumber = 0;
+            if (ex.Message.Contains("Line:") || ex.Message.Contains("at Line") || ex.Message.Contains("line"))
             {
-                var lineMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Line:\s*(\d+)");
-                if (lineMatch.Success)
+                var lineMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"[Ll]ine[:\s]+(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out lineNumber))
                 {
-                    lineInfo = $" (Line {lineMatch.Groups[1].Value})";
+                    lineInfo = $" (Line {lineNumber})";
                 }
             }
             
-            error = $"Failed to parse JAML{lineInfo}: {ex.Message}{details}\n" +
-                   $"💡 Common issues:\n" +
-                   $"  - Check YAML syntax (indentation, colons, brackets)\n" +
-                   $"  - Verify property names match schema\n" +
-                   $"  - Ensure array properties use [] brackets\n" +
-                   $"{ex.StackTrace}";
-
+            // Build helpful error message
+            var errorMsg = new System.Text.StringBuilder();
+            errorMsg.AppendLine($"Failed to parse JAML{lineInfo}: {ex.Message}{details}");
+            errorMsg.AppendLine();
+            errorMsg.AppendLine("💡 Common YAML syntax errors:");
+            
+            // Check for specific error patterns and provide targeted hints
+            var errorLower = ex.Message.ToLowerInvariant();
+            if (errorLower.Contains("did not find expected key") || errorLower.Contains("block mapping"))
+            {
+                errorMsg.AppendLine("  ❌ Missing space after colon (e.g., 'antes:[1]' should be 'antes: [1]')");
+                errorMsg.AppendLine("  ❌ Incorrect indentation (use 2 spaces, not tabs)");
+                errorMsg.AppendLine("  ❌ Missing colon after key");
+                
+                // Try to show the problematic line if we have a line number
+                if (lineNumber > 0)
+                {
+                    var lines = jamlContent.Split('\n');
+                    if (lineNumber <= lines.Length)
+                    {
+                        var problemLine = lines[lineNumber - 1];
+                        errorMsg.AppendLine($"  📍 Problematic line {lineNumber}: {problemLine.Trim()}");
+                    }
+                }
+            }
+            else if (errorLower.Contains("sequence") || errorLower.Contains("array"))
+            {
+                errorMsg.AppendLine("  ❌ Array syntax error - use brackets: [item1, item2]");
+                errorMsg.AppendLine("  ❌ Missing comma between array items");
+            }
+            else if (errorLower.Contains("indentation") || errorLower.Contains("indent"))
+            {
+                errorMsg.AppendLine("  ❌ Incorrect indentation - YAML requires consistent spacing");
+                errorMsg.AppendLine("  ❌ Use 2 spaces per indentation level (not tabs)");
+            }
+            else
+            {
+                errorMsg.AppendLine("  ❌ Check YAML syntax (indentation, colons, brackets)");
+                errorMsg.AppendLine("  ❌ Verify property names match schema");
+                errorMsg.AppendLine("  ❌ Ensure array properties use [] brackets");
+            }
+            
+            errorMsg.AppendLine();
+            errorMsg.AppendLine("💡 Quick fixes:");
+            errorMsg.AppendLine("  • Always put a space after colons: 'key: value' not 'key:value'");
+            errorMsg.AppendLine("  • Use consistent 2-space indentation");
+            errorMsg.AppendLine("  • Arrays: 'antes: [1, 2, 3]' not 'antes: 1, 2, 3'");
+            
+            error = errorMsg.ToString();
             return false;
         }
     }

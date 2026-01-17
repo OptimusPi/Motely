@@ -1,242 +1,34 @@
-name: oof
+name: GoldenBoi1111
 author: pifreak
-description: showmanthen oops skipper!
-deck: Ghost
-stake: Black
-mustNot:
-  - event: LuckyMult
-    antes:
-      - 1
-    rolls: [0]
+description: bruh so fast ez
+dateCreated: 2025-12-09T06:05:26.266Z
+deck: Anaglyph
+stake: White
 must:
-  - event: LuckyMoney
-    antes:
-      - 1
-    rolls: [0]
+  - Joker: Splash
+    shopSlots: [0,1]
+    antes: [1]
+  - Joker: Blueprint
+    antes: [1]
+    shopSlots: [0,1]
+  - Joker: MidasMask
+    antes: [1]
+    packSlots: [0]
+
 should:
-  - event: LuckyMoney
-    antes:
-      - 1
-    rolls: [0,1]
-  - event: LuckyMoney
-    antes:
-      - 2
-    rolls: [0,1]
-  - event: LuckyMoney
-    antes:
-      - 3
-    rolls: [0,1]
-  - event: LuckyMoney
-    antes:
-      - 4
-    rolls: [0,1]
-  - event: LuckyMoney
-    antes:
-      - 5
-    rolls: [0,1]
-  - event: LuckyMoney
-    antes:
-      - 6
-    rolls: [0,1]
-  - event: LuckyMoney
-    antes:
-      - 7
-    rolls: [0,1]
-  - event: LuckyMoney
-    antes:
-      - 8
-    rolls: [0,1]
+  - Joker: GoldenTicket
+    antes: [2,3,4,5]
+  - Joker: Vampire
+    antes: [2,3,4,5]
+
+  - joker: Blueprint
+    antes: [2,3,4]
+  - joker: Brainstorm
+    antes: [2,3,4]
+  - spectralCard: Immolate
+    antes: [2,3,4]
+  - spectralCard: Aura
+    antes: [2,3,4]
+  - spectralCard: DejaVu
+    antes: [2,3,4]
     
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [2]
-        score: 100
-      - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [2]
-            shopSlots: [2, 3]
-            score: 100
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [2]
-            shopSlots: [4, 5]
-            score: 100
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [3]
-      - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [3]
-            shopSlots: [2, 3]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [3]
-            shopSlots: [4, 5]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [4]
-      - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [4]
-            shopSlots: [2, 3, 4, 5]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [4]
-            shopSlots: [4, 5, 6, 7]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [5]
-      - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [5]
-            shopSlots: [2, 3, 4, 5, 6]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [5]
-            shopSlots: [4, 5, 6, 7, 8]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [5]
-            shopSlots: [6, 7, 8, 9, 10]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [6]
-      - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [6]
-            shopSlots: [2, 3, 4, 5, 6]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [6]
-            shopSlots: [4, 5, 6, 7, 8]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [6]
-            shopSlots: [6, 7, 8, 9, 10]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [7]
-      - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [2, 3, 4, 5, 6, 7, 8, 9, 10]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [4, 5, 6, 7, 8, 9, 10, 11, 12]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [6, 7, 8, 9, 10, 11, 12, 13, 14]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [8, 9, 10, 11, 12, 13, 14]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [8]
-      - or:
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [2, 3, 4, 5, 6, 7, 8, 9, 10]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [4, 5, 6, 7, 8, 9, 10]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [6, 7, 8, 9, 10, 11, 12]
-          - joker: OopsAll6s # [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [8, 9, 10, 11, 12, 13, 14]
-
-
-
-
-
-
-
-
-
-
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [2]
-        score: 1
-      - or:
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [2]
-            shopSlots: [2, 3]
-            score: 1
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [2]
-            shopSlots: [4, 5]
-            score: 1
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [3]
-      - or:
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [3]
-            shopSlots: [2, 3]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [3]
-            shopSlots: [4, 5]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [4]
-      - or:
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [4]
-            shopSlots: [2, 3, 4, 5]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [4]
-            shopSlots: [4, 5, 6, 7]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [5]
-      - or:
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [5]
-            shopSlots: [2, 3, 4, 5, 6]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [5]
-            shopSlots: [4, 5, 6, 7, 8]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [5]
-            shopSlots: [6, 7, 8, 9, 10]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [6]
-      - or:
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [6]
-            shopSlots: [2, 3, 4, 5, 6]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [6]
-            shopSlots: [4, 5, 6, 7, 8]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [6]
-            shopSlots: [6, 7, 8, 9, 10]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [7]
-      - or:
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [2, 3, 4, 5, 6, 7, 8, 9, 10]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [4, 5, 6, 7, 8, 9, 10, 11, 12]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [6, 7, 8, 9, 10, 11, 12, 13, 14]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [7]
-            shopSlots: [8, 9, 10, 11, 12, 13, 14]
-  - and:
-      - smallBlindTag: NegativeTag
-        antes: [8]
-      - or:
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [2, 3, 4, 5, 6, 7, 8, 9, 10]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [4, 5, 6, 7, 8, 9, 10]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [6, 7, 8, 9, 10, 11, 12]
-          - jokers: [Blueprint, Brainstorm, SockAndBuskin, HangingChad, Photograph, OopsAll6s]
-            antes: [8]
-            shopSlots: [8, 9, 10, 11, 12, 13, 14]
-

@@ -25,25 +25,6 @@ namespace Motely.Filters
             ValidateFilterItems(config.Should, "should", errors, warnings, stake, config.Deck);
             ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake, config.Deck);
             
-            // #region agent log
-            // Check for duplicate clauses between Must and Should
-            if (config.Must != null && config.Should != null)
-            {
-                foreach (var mustClause in config.Must)
-                {
-                    foreach (var shouldClause in config.Should)
-                    {
-                        bool isDuplicate = mustClause.Type == shouldClause.Type 
-                            && mustClause.Value == shouldClause.Value
-                            && mustClause.ItemTypeEnum == shouldClause.ItemTypeEnum;
-                        if (isDuplicate)
-                        {
-                            // Duplicate clause found - validator will handle it
-                        }
-                    }
-                }
-            }
-            // #endregion
 
             // Validate deck
             if (

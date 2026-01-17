@@ -460,7 +460,189 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             }
 
             DebugLogger.Log($"[JOKER VECTORIZED] Final result mask: {finalMask.Value:X}");
-            return finalMask;
+            
+            // Check if any clause has Min > 1, if not, return boolean result directly
+            bool hasMinThreshold = Clauses.Any(c => c.Min.HasValue && c.Min.Value > 1);
+            if (!hasMinThreshold)
+            {
+                return finalMask;
+            }
+            
+            // For Min thresholds, we need to count actual occurrences
+            // This is slower but necessary for accuracy
+            DebugLogger.Log($"[JOKER VECTORIZED] Checking Min thresholds");
+            // Copy struct fields to local variables for lambda (required for struct members)
+            var clauses = Clauses;
+            var minAnte = MinAnte;
+            var maxAnte = MaxAnte;
+            
+            return ctx.SearchIndividualSeeds(
+                finalMask,
+                (ref MotelySingleSearchContext singleCtx) =>
+                {
+                    // Check each clause's Min threshold
+                    foreach (var clause in clauses)
+                    {
+                        // Skip clauses without Min requirement or Min <= 1
+                        if (!clause.Min.HasValue || clause.Min.Value <= 1)
+                            continue;
+                            
+                        // Count total joker occurrences across ALL wanted antes and sources
+                        int totalCount = 0;
+                        
+                        for (int ante = minAnte; ante <= maxAnte; ante++)
+                        {
+                            if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                                continue; // Skip antes not wanted by this clause
+                                
+                            // Count jokers from all sources for this ante
+                            int anteCount = CountJokerOccurrences(ref singleCtx, clause, ante);
+                            totalCount += anteCount;
+                            
+                            // Early exit if we already exceed the threshold
+                            if (totalCount >= clause.Min.Value)
+                                break;
+                        }
+
+                        // Check Min threshold
+                        if (totalCount < clause.Min.Value)
+                            return false; // Doesn't meet minimum count
+                    }
+
+                    return true; // All Min thresholds satisfied
+                }
+            );
+        }
+
+        private static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante)
+        {
+            int count = 0;
+            
+            // Check Judgement sources
+            if (clause.Sources?.Judgement != null && clause.Sources.Judgement.Length > 0)
+            {
+                var judgementStream = ctx.CreateJudgementJokerStream(ante);
+                var rollIndices = clause.Sources.Judgement;
+                
+                int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                int pos = 0;
+                int nextWanted = rollIndices[0];
+                
+                for (int r = 0; r <= maxRollIndex; r++)
+                {
+                    var jokerItem = ctx.GetNextJoker(ref judgementStream);
+                    if (r != nextWanted)
+                        continue;
+                        
+                    if (jokerItem.TypeCategory == MotelyItemTypeCategory.Joker)
+                    {
+                        if (CheckJokerMatchesClause(jokerItem, clause))
+                            count++;
+                    }
+                    
+                    pos++;
+                    if (pos >= rollIndices.Length)
+                        break;
+                    nextWanted = rollIndices[pos];
+                }
+            }
+            
+            // Check Rare Tag sources
+            if (clause.Sources?.RareTag != null && clause.Sources.RareTag.Length > 0)
+            {
+                var rareTagStream = ctx.CreateRareTagJokerStream(ante);
+                var rollIndices = clause.Sources.RareTag;
+                
+                int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                int pos = 0;
+                int nextWanted = rollIndices[0];
+                
+                for (int r = 0; r <= maxRollIndex; r++)
+                {
+                    var jokerItem = ctx.GetNextJoker(ref rareTagStream);
+                    if (r != nextWanted)
+                        continue;
+                        
+                    if (jokerItem.TypeCategory == MotelyItemTypeCategory.Joker)
+                    {
+                        if (CheckJokerMatchesClause(jokerItem, clause))
+                            count++;
+                    }
+                    
+                    pos++;
+                    if (pos >= rollIndices.Length)
+                        break;
+                    nextWanted = rollIndices[pos];
+                }
+            }
+            
+            // Check Shop sources
+            if (clause.Sources?.ShopSlots != null && clause.Sources.ShopSlots.Length > 0)
+            {
+                var shopStream = ctx.CreateShopItemStream(ante);
+                
+                for (int slot = 0; slot < clause.Sources.ShopSlots.Length; slot++)
+                {
+                    if (clause.Sources.ShopSlots[slot] == 0)
+                        continue;
+                        
+                    // Skip to the wanted slot
+                    for (int skip = 0; skip < slot; skip++)
+                    {
+                        ctx.GetNextShopItem(ref shopStream);
+                    }
+                    
+                    var shopItem = ctx.GetNextShopItem(ref shopStream);
+                    if (shopItem.TypeCategory == MotelyItemTypeCategory.Joker)
+                    {
+                        if (CheckJokerMatchesClause(shopItem, clause))
+                            count++;
+                    }
+                }
+            }
+            
+            // Check Pack sources
+            if (clause.Sources?.PackSlots != null && clause.Sources.PackSlots.Length > 0)
+            {
+                var packStream = ctx.CreateBoosterPackStream(ante);
+                var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
+                
+                for (int packIndex = 0; packIndex < clause.Sources.PackSlots.Length; packIndex++)
+                {
+                    if (clause.Sources.PackSlots[packIndex] == 0)
+                        continue;
+                        
+                    var pack = ctx.GetNextBoosterPack(ref packStream);
+                    if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
+                    {
+                        var packSize = (int)pack.GetPackSize();
+                        for (int i = 0; i < packSize; i++)
+                        {
+                            var item = ctx.GetNextJoker(ref buffoonStream);
+                            if (item.TypeCategory == MotelyItemTypeCategory.Joker)
+                            {
+                                if (CheckJokerMatchesClause(item, clause))
+                                    count++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return count;
+        }
+
+        private static bool CheckJokerMatchesClause(MotelyItem item, MotelyJsonJokerFilterClause clause)
+        {
+            // Check joker type match
+            if (clause.JokerType.HasValue && item.Value != (int)clause.JokerType.Value)
+                return false;
+                
+            // Check edition match
+            if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
+                return false;
+                
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

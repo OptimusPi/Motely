@@ -40,17 +40,18 @@ public static class JamlFormatter
         return $"\"{escaped}\"";
     }
 
-    // Properties that should have inline numeric arrays (NOT string arrays - YamlDotNet can't parse inline quoted arrays)
     private static readonly HashSet<string> InlineArrayProperties = new(StringComparer.OrdinalIgnoreCase)
     {
         "antes",
-        "shopSlots",
-        "packSlots",
+        "values",
+        "wantedantes",
+        "wantedshopslots",
+        "wantedpackslots",
         "shopslots",
         "packslots",
         "shop_slots",
-        "pack_slots"
-        // NOTE: "stickers" removed - string arrays must stay multi-line for YamlDotNet compatibility
+        "pack_slots",
+        "stickers"
     };
 
     // Valid type names that can be used as keys (type-as-key format)
@@ -220,15 +221,7 @@ public static class JamlFormatter
                         {
                             // Remove quotes if present
                             var cleanValue = itemValue.Trim('\'', '"');
-                            if (int.TryParse(cleanValue, out var num))
-                            {
-                                values.Add(num.ToString());
-                            }
-                            else
-                            {
-                                // For string values, add them as-is
-                                values.Add(cleanValue);
-                            }
+                            values.Add(cleanValue);
                             j++;
                             continue;
                         }

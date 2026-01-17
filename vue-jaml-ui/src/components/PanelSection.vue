@@ -21,14 +21,7 @@
     >
       <span class="panel-tab-label">{{ label }}</span>
       <span v-if="badge" class="panel-tab-badge">{{ badge }}</span>
-      <button
-        v-if="canDuplicate"
-        class="panel-tab-button panel-tab-duplicate"
-        @click.stop="handleDuplicate"
-        aria-label="Duplicate panel"
-        title="Duplicate panel"
-      >+</button>
-      <button
+            <button
         v-if="canClose"
         class="panel-tab-button panel-tab-close"
         @click.stop="handleClose"
@@ -94,21 +87,13 @@ const props = defineProps({
     type: String,
     default: null
   },
-  canDuplicate: {
-    type: Boolean,
-    default: false
-  },
-  canClose: {
+    canClose: {
     type: Boolean,
     default: false
   }
 });
 
-const emit = defineEmits(['resize', 'collapse', 'top-drag', 'duplicate', 'move-to-side', 'close', 'drag-start']);
-
-const handleDuplicate = () => {
-  emit('duplicate')
-}
+const emit = defineEmits(['resize', 'collapse', 'top-drag', 'move-to-side', 'close', 'drag-start']);
 
 const handleClose = () => {
   emit('close')

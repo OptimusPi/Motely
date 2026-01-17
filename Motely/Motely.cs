@@ -61,4 +61,15 @@ public static partial class Motely
 
     public const double TarrotWheelChance = 4;
 
+    public static readonly MotelyItem[] StandardCardPool = 
+    [
+        // Spades
+        new(MotelyPlayingCard.S2), new(MotelyPlayingCard.S3), new(MotelyPlayingCard.S4), new(MotelyPlayingCard.S5), new(MotelyPlayingCard.S6), new(MotelyPlayingCard.S7), new(MotelyPlayingCard.S8), new(MotelyPlayingCard.S9), new(MotelyPlayingCard.S10), new(MotelyPlayingCard.SJ), new(MotelyPlayingCard.SQ), new(MotelyPlayingCard.SK), new(MotelyPlayingCard.SA),
+        // Hearts
+        new(MotelyPlayingCard.H2), new(MotelyPlayingCard.H3), new(MotelyPlayingCard.H4), new(MotelyPlayingCard.H5), new(MotelyPlayingCard.H6), new(MotelyPlayingCard.H7), new(MotelyPlayingCard.H8), new(MotelyPlayingCard.H9), new(MotelyPlayingCard.H10), new(MotelyPlayingCard.HJ), new(MotelyPlayingCard.HQ), new(MotelyPlayingCard.HK), new(MotelyPlayingCard.HA),
+        // Clubs
+        new(MotelyPlayingCard.C2), new(MotelyPlayingCard.C3), new(MotelyPlayingCard.C4), new(MotelyPlayingCard.C5), new(MotelyPlayingCard.C6), new(MotelyPlayingCard.C7), new(MotelyPlayingCard.C8), new(MotelyPlayingCard.C9), new(MotelyPlayingCard.C10), new(MotelyPlayingCard.CJ), new(MotelyPlayingCard.CQ), new(MotelyPlayingCard.CK), new(MotelyPlayingCard.CA),
+        // Diamonds
+        new(MotelyPlayingCard.D2), new(MotelyPlayingCard.D3), new(MotelyPlayingCard.D4), new(MotelyPlayingCard.D5), new(MotelyPlayingCard.D6), new(MotelyPlayingCard.D7), new(MotelyPlayingCard.D8), new(MotelyPlayingCard.D9), new(MotelyPlayingCard.D10), new(MotelyPlayingCard.DJ), new(MotelyPlayingCard.DQ), new(MotelyPlayingCard.DK), new(MotelyPlayingCard.DA),
+    ];
 }

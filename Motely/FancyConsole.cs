@@ -51,7 +51,41 @@ public partial class FancyConsoleImpl : IMotelyConsole
         WriteLine(message?.ToString() ?? null);
     }
 
-    // WriteBottomLine, ClearBottomLine, and WriteLine(string) are implemented in platform-specific partial files
+    [MethodImpl(MethodImplOptions.Synchronized)]
+    public void WriteLine(string? message)
+    {
+        if (!IsEnabled)
+        {
+            Console.WriteLine(message ?? "null");
+            return;
+        }
+
+        // Simple implementation - just write to console
+        // Platform-specific implementations can override this behavior
+        if (_bottomLine != null)
+        {
+            ClearBottomLine();
+        }
+        
+        Console.WriteLine(message ?? "null");
+        
+        if (_bottomLine != null)
+        {
+            WriteBottomLine(_bottomLine);
+        }
+    }
+
+    // WriteBottomLine and ClearBottomLine are implemented in platform-specific partial files
+    protected virtual void WriteBottomLine(string bottomLine)
+    {
+        // Default: just write to console (platform-specific can override)
+        Console.WriteLine(bottomLine);
+    }
+
+    protected virtual void ClearBottomLine()
+    {
+        // Default: no-op (platform-specific can override for cursor positioning)
+    }
 }
 
 /// <summary>
