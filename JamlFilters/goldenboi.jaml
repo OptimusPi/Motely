@@ -1,0 +1,35 @@
+name: GoldenBoi1111
+author: pifreak
+description: bruh so fast ez
+dateCreated: 2025-12-09T06:05:26.266Z
+deck: Anaglyph
+stake: White
+must:
+  - tarotCard: Justice
+    antes: [1]
+    packSlots: [1]
+    shopSlots: [0,1]
+    requireMega: true
+
+  - tarotCard: Justice
+    antes: [1]
+    packSlots: [1]
+
+should:
+  - joker: AnyRare
+    sources:
+      judgement: [0]
+    antes: [1]
+    score: 100
+  - joker: AnyUncommon
+    sources:
+      judgement: [0]
+    antes: [1]
+    score: 70
+  - joker: Any
+    edition: Negative
+    sources:
+      judgement: [0]
+    score: 67
+
+    

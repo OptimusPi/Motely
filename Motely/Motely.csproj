@@ -60,6 +60,12 @@
   <!-- Browser-specific settings -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
+    <!-- Enable WASM SIMD support for browser builds -->
+    <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
+    <!-- Enable WASM SIMD specifically -->
+    <WasmSIMD>true</WasmSIMD>
+    <!-- AOT compilation for better WASM SIMD performance -->
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
   <!-- Publish settings for Release builds - only for Exe output type (not Library) -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release' AND '$(OutputType)' == 'Exe'">
@@ -93,7 +99,7 @@
   <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-  <!-- Include Motely.DB files (moved from Motely/Motely.DuckDB to Motely/Motely.DB) -->
+  <!-- Include Motely DB layer sources - ONE TRUE IMPLEMENTATION -->
   <ItemGroup>
     <Compile Include="..\Motely.DB\**\*.cs" />
   </ItemGroup>
@@ -109,8 +115,7 @@
     <Compile Remove="Program.cs" />
     <!-- MotelySearch.cs has DuckDB classes - use browser stub instead -->
     <Compile Remove="MotelySearch.cs" />
-    <!-- DuckDB desktop implementation excluded - use DuckDBSeeds.Browser.cs instead -->
-    <!-- Note: DuckDBSeeds is partial, so DuckDBSeeds.Browser.cs provides the browser implementation -->
+    <!-- DuckDBSeeds.cs is cross-platform - works on all platforms via DuckDBConnectionFactory -->
     <!-- DuckDBSeedProvider removed - use DuckDBSeeds.Stream() with WithListSearch() instead -->
   </ItemGroup>
   <!-- Exclude browser stub from desktop build -->

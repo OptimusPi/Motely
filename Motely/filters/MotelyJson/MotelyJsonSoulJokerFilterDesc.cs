@@ -7,10 +7,14 @@ namespace Motely.Filters;
 /// 1. Pre-filter: Fast vectorized joker matching
 /// 2. Verify: Vectorized Soul card verification in packs
 /// </summary>
-public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCriteria criteria)
-    : IMotelySeedFilterDesc<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>
+public readonly struct MotelyJsonSoulJokerFilterDesc : IMotelySeedFilterDesc<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>
 {
-    private readonly MotelyJsonSoulJokerFilterCriteria _criteria = criteria;
+    private readonly MotelyJsonSoulJokerFilterCriteria _criteria;
+
+    public MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCriteria criteria)
+    {
+        _criteria = criteria;
+    }
 
     public MotelyJsonSoulJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
@@ -22,11 +26,16 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
         int minAnte = _criteria.MinAnte;
         int maxAnte = _criteria.MaxAnte;
 
+        // Cache global face stream (Ante 1)
+        ctx.CacheSoulJokerStream(1);
+
         // Cache all streams we'll need for BOTH vectorized and individual checks
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             // For vectorized pre-filter
             ctx.CacheSoulJokerStream(ante);
+            ctx.CacheArcanaPackTarotStream(ante, false);
+            ctx.CacheSpectralPackSpectralStream(ante, false);
         }
 
         return new MotelyJsonSoulJokerFilter(
@@ -37,18 +46,27 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
         );
     }
 
-    public struct MotelyJsonSoulJokerFilter(
-        MotelyJsonSoulJokerFilterClause clause,
-        int minAnte,
-        int maxAnte,
-        Dictionary<int, int> maxPackSlotsPerAnte
-    ) : IMotelySeedFilter
+    public readonly struct MotelyJsonSoulJokerFilter : IMotelySeedFilter
     {
-        private readonly MotelyJsonSoulJokerFilterClause Clause = clause;
-        private readonly int MinAnte = minAnte;
-        private readonly int MaxAnte = maxAnte;
-        private readonly Dictionary<int, int> MaxPackSlotsPerAnte = maxPackSlotsPerAnte;
-        private readonly int _minThreshold = clause.Min ?? 1; // Pre-calculate ONCE!
+        private readonly MotelyJsonSoulJokerFilterClause Clause;
+        private readonly int MinAnte;
+        private readonly int MaxAnte;
+        private readonly Dictionary<int, int> MaxPackSlotsPerAnte;
+        private readonly int _minThreshold;
+
+        public MotelyJsonSoulJokerFilter(
+            MotelyJsonSoulJokerFilterClause clause,
+            int minAnte,
+            int maxAnte,
+            Dictionary<int, int> maxPackSlotsPerAnte
+        )
+        {
+            Clause = clause;
+            MinAnte = minAnte;
+            MaxAnte = maxAnte;
+            MaxPackSlotsPerAnte = maxPackSlotsPerAnte;
+            _minThreshold = clause.Min ?? 1;
+        }
 
         [MethodImpl(
             MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
@@ -76,8 +94,8 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
 
                 // Create pack streams for this ante
                 var boosterPackStream = ctx.CreateBoosterPackStream(ante, ante > 1, false);
-                var tarotStream = ctx.CreateArcanaPackTarotStream(ante, false);
-                var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, false);
+                var tarotStream = ctx.CreateArcanaPackTarotStream(ante, true, false);
+                var spectralStream = ctx.CreateSpectralPackSpectralStream(ante, true, false);
                 bool tarotStreamInit = false,
                     spectralStreamInit = false;
 
@@ -158,9 +176,10 @@ public readonly struct MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterCr
                             ante > 1,
                             false
                         );
-                        var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, false);
+                        var tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true, false);
                         var spectralStream = singleCtx.CreateSpectralPackSpectralStream(
                             ante,
+                            true,
                             false
                         );
                         bool tarotStreamInit = false,

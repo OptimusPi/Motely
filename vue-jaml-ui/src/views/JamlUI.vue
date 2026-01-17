@@ -21,8 +21,7 @@
         :active-searches="activeSearches"
         :get-panel-label="getPanelLabel"
         :is-base-panel="isBasePanel"
-        :duplicate-panel="duplicatePanel"
-        :remove-panel="removePanel"
+                :remove-panel="removePanel"
         :move-panel-to-side="movePanelToSide"
         :on-panel-resize="onPanelResize"
         :on-panel-collapse="onPanelCollapse"
@@ -390,7 +389,6 @@ const onPanelCollapse = (id, collapsed) => {
   }
 }
 
-const duplicatePanel = (id) => duplicatePanelOp(id) && playDoubleClick()
 const movePanelToSide = (id, side) => movePanelToSideOp(id, side) && playClickSound('clack')
 const removePanel = (id) => {
   const r = removePanelOp(id)
