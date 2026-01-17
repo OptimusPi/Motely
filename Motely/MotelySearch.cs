@@ -137,15 +137,69 @@ public static partial class DuckDBSeeds
 /// <summary>
 /// Streams seeds from a DuckDB database table (in-memory database, backed by file).
 /// Queries DuckDB directly - no pre-loading into arrays!
-/// Platform-specific implementations:
-/// - Desktop: DuckDBSeedProvider.Desktop.cs (DuckDB.NET.Data with lock for thread-safety)
-/// - Browser: DuckDBSeedProvider.Browser.cs (DuckDB-WASM via JS interop)
-/// - Android: DuckDBSeedProvider.Android.cs (DuckDB.NET or native)
-/// - iOS: DuckDBSeedProvider.iOS.cs (DuckDB.NET or native)
+/// ONE TRUE IMPLEMENTATION using Motely.DuckDB
 /// </summary>
-public sealed partial class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
+public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
 {
-    // Implementation provided by platform-specific files
+    private readonly global::DuckDB.NET.Data.DuckDBConnection _connection;
+    private global::DuckDB.NET.Data.DuckDBDataReader? _reader;
+    private long _currentIndex = 0;
+    private readonly long _totalSeeds;
+    private readonly object _lock = new();
+    private bool _disposed = false;
+
+    public int SeedCount => (int)_totalSeeds;
+
+    public DuckDBSeedProvider(string dbPath)
+    {
+        _connection = global::Motely.DuckDB.DuckDBConnectionFactory.CreateConnection(dbPath);
+        
+        // Get total seed count
+        using var countCmd = _connection.CreateCommand();
+        countCmd.CommandText = "SELECT COUNT(*) FROM seeds";
+        _totalSeeds = Convert.ToInt64(countCmd.ExecuteScalar() ?? 0);
+    }
+
+    public ReadOnlySpan<char> NextSeed()
+    {
+        lock (_lock)
+        {
+            if (_disposed || _currentIndex >= _totalSeeds)
+                return ReadOnlySpan<char>.Empty;
+
+            // Query one seed at a time (ordered by length for vectorization)
+            var cmd = _connection.CreateCommand();
+            cmd.CommandText = $"SELECT seed FROM seeds ORDER BY seed_len, seed LIMIT 1 OFFSET {_currentIndex}";
+            
+            using var reader = cmd.ExecuteReader();
+            
+            if (!reader.Read())
+            {
+                cmd.Dispose();
+                return ReadOnlySpan<char>.Empty;
+            }
+
+            var seed = reader.GetString(0);
+            _currentIndex++;
+            
+            cmd.Dispose();
+            
+            return seed.AsSpan();
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_lock)
+        {
+            if (_disposed)
+                return;
+                
+            _disposed = true;
+            _connection?.Close();
+            _connection?.Dispose();
+        }
+    }
 }
 
 public sealed class MotelySearchSettings<TBaseFilter>(
@@ -1407,23 +1461,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     break;
                 }
 
-                // #region agent log
                 if (seed.Length > Motely.MaxSeedLength || seed.IndexOf('0') >= 0)
                 {
-                    AgentNdjsonLog.Log(
-                        hypothesisId: "A",
-                        location: "MotelySearch.cs:MotelyProviderSearchThread.SearchBatch",
-                        message: "seed_invalid_from_provider",
-                        data: new
-                        {
-                            seedIdx,
-                            seedLength = seed.Length,
-                            hasZero = seed.IndexOf('0') >= 0,
-                            snippet = seed.Length <= 80 ? new string(seed) : new string(seed[..80]),
-                        }
-                    );
+                    // Invalid seed - skip it
+                    continue;
                 }
-                // #endregion
 
                 // Bounds check for seedLengths array
                 if (seedIdx < Motely.MaxVectorWidth)

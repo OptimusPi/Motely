@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
+using System.Runtime.Intrinsics.Wasm;
 
 namespace Motely;
 
@@ -9,6 +10,7 @@ public unsafe static class MotelyVectorUtils
 {
     public static bool IsAccelerated => Vector512.IsHardwareAccelerated;
 
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<int> ConvertToVector256Int32(in Vector512<double> vector)
     {
@@ -26,6 +28,18 @@ public unsafe static class MotelyVectorUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<int> ShiftLeft(in Vector256<int> value, in Vector256<int> shiftCount)
     {
+        // Use WASM SIMD first (browser builds) - PackedSimd doesn't have ShiftLeftLogical
+        // Use multiplication by power of 2 as workaround for shift left
+        var lowerShift = shiftCount.GetLower()[0];
+        var upperShift = shiftCount.GetUpper()[0];
+        
+        var lowerMultiplier = Vector128.Create(lowerShift == 1 ? 2 : lowerShift == 2 ? 4 : lowerShift == 3 ? 8 : 1);
+        var upperMultiplier = Vector128.Create(upperShift == 1 ? 2 : upperShift == 2 ? 4 : upperShift == 3 ? 8 : 1);
+        
+        var lower = PackedSimd.Multiply(value.GetLower(), lowerMultiplier);
+        var upper = PackedSimd.Multiply(value.GetUpper(), upperMultiplier);
+        return Vector256.Create(lower, upper);
+
         if (AdvSimd.IsSupported)
         {
             return Vector256.Create(
@@ -57,6 +71,27 @@ public unsafe static class MotelyVectorUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector512<long> ShiftLeft(in Vector512<long> value, in Vector512<long> shiftCount)
     {
+        // Use WASM SIMD first (browser builds) - use multiplication as workaround
+        var lowerLowerShift = (int)shiftCount.GetLower().GetLower()[0];
+        var lowerUpperShift = (int)shiftCount.GetLower().GetUpper()[0];
+        var upperLowerShift = (int)shiftCount.GetUpper().GetLower()[0];
+        var upperUpperShift = (int)shiftCount.GetUpper().GetUpper()[0];
+        
+        var lowerLowerMultiplier = Vector128.Create(lowerLowerShift == 1 ? 2L : lowerLowerShift == 2 ? 4L : lowerLowerShift == 3 ? 8L : 1L);
+        var lowerUpperMultiplier = Vector128.Create(lowerUpperShift == 1 ? 2L : lowerUpperShift == 2 ? 4L : lowerUpperShift == 3 ? 8L : 1L);
+        var upperLowerMultiplier = Vector128.Create(upperLowerShift == 1 ? 2L : upperLowerShift == 2 ? 4L : upperLowerShift == 3 ? 8L : 1L);
+        var upperUpperMultiplier = Vector128.Create(upperUpperShift == 1 ? 2L : upperUpperShift == 2 ? 4L : upperUpperShift == 3 ? 8L : 1L);
+        
+        var lowerLower = PackedSimd.Multiply(value.GetLower().GetLower(), lowerLowerMultiplier);
+        var lowerUpper = PackedSimd.Multiply(value.GetLower().GetUpper(), lowerUpperMultiplier);
+        var upperLower = PackedSimd.Multiply(value.GetUpper().GetLower(), upperLowerMultiplier);
+        var upperUpper = PackedSimd.Multiply(value.GetUpper().GetUpper(), upperUpperMultiplier);
+        
+        return Vector512.Create(
+            Vector256.Create(lowerLower, lowerUpper),
+            Vector256.Create(upperLower, upperUpper)
+        );
+
         if (AdvSimd.IsSupported)
         {
             return Vector512.Create(
@@ -185,13 +220,19 @@ public unsafe static class MotelyVectorUtils
         
         // Shift right by lane index to get the bit for each lane in position 0
         Vector256<uint> shiftedMask;
+        
+        // Use WASM SIMD first (browser builds)
+        var lowerShift = PackedSimd.ShiftRightLogical(maskBits.GetLower().AsByte(), (sbyte)laneIndices.GetLower()[0]).AsUInt32();
+        var upperShift = PackedSimd.ShiftRightLogical(maskBits.GetUpper().AsByte(), (sbyte)laneIndices.GetUpper()[0]).AsUInt32();
+        shiftedMask = Vector256.Create(lowerShift, upperShift);
+        
         if (Avx2.IsSupported)
         {
             shiftedMask = Avx2.ShiftRightLogicalVariable(maskBits, laneIndices);
         }
         else
         {
-            // Fallback for non-AVX2 systems - still better than scalar loop
+            // Fallback for non-SIMD systems
             shiftedMask = Vector256.Create(
                 maskBits[0] >> (int)laneIndices[0],
                 maskBits[1] >> (int)laneIndices[1],

@@ -174,6 +174,46 @@ public ref struct MotelyFilterCreationContext
         }
     }
 
+    public readonly void CacheSpectralStream(
+        int ante,
+        string source,
+        bool cacheResample,
+        bool cacheSoul,
+        bool force
+    )
+    {
+        if (cacheResample)
+        {
+            CacheResampleStream(MotelyPrngKeys.Spectral + source + ante, force);
+        }
+        else
+        {
+            CachePseudoHash(MotelyPrngKeys.Spectral + source + ante, force);
+        }
+
+        if (cacheSoul)
+        {
+            CachePseudoHash(
+                MotelyPrngKeys.SpectralSoulBlackHole + MotelyPrngKeys.Spectral + ante,
+                force
+            );
+        }
+    }
+
+    public readonly void CacheSpectralPackSpectralStream(
+        int ante,
+        bool soulOnly = false,
+        bool force = false
+    )
+    {
+        CacheSpectralStream(ante, MotelyPrngKeys.SpectralPackItemSource, !soulOnly, true, force);
+    }
+
+    public readonly void CacheShopSpectralStream(int ante, bool force = false)
+    {
+        CacheSpectralStream(ante, MotelyPrngKeys.ShopItemSource, true, false, force);
+    }
+
 
     private readonly void CacheJokerStream(int ante,
         string source, string eternalPerishableSource, string rentalSource,

@@ -700,6 +700,14 @@ public class ApiServerWindow : Window
         {
             if (value == null)
                 return;
+            
+            // Strip ANSI escape codes that cause weird characters in TUI
+            value = StripAnsiCodes(value);
+            
+            // Filter out verbose API messages that clutter the TUI
+            if (ShouldFilterMessage(value))
+                return;
+                
             try
             {
                 MotelyTUI.App?.Invoke(() =>
@@ -715,17 +723,63 @@ public class ApiServerWindow : Window
 
         public override void WriteLine(string? value)
         {
+            if (value == null)
+                return;
+            
+            // Strip ANSI escape codes that cause weird characters in TUI
+            value = StripAnsiCodes(value);
+            
+            // Filter out verbose API messages that clutter the TUI
+            if (ShouldFilterMessage(value))
+                return;
+                
             try
             {
                 MotelyTUI.App?.Invoke(() =>
                 {
-                    _window?.LogMessage(value ?? string.Empty);
+                    _window?.LogMessage(value);
                 });
             }
             catch (ObjectDisposedException)
             {
                 // Window closed while writing - ignore
             }
+        }
+
+        private string StripAnsiCodes(string input)
+        {
+            // Remove ANSI escape sequences that cause display issues in TUI
+            // Pattern matches: \x1b[...m or \x1b[...H or similar ANSI codes
+            return System.Text.RegularExpressions.Regex.Replace(input, @"\x1b\[[0-9;]*[mHJK]", "");
+        }
+
+        private bool ShouldFilterMessage(string message)
+        {
+            // Filter out verbose API logging that clutters the TUI interface
+            var filters = new[]
+            {
+                "[Scheduler]",
+                "[SearchManager]",
+                "Error reading",
+                "Error deleting",
+                "Error canceling",
+                "Error waiting",
+                "Error exporting",
+                "Error checkpointing",
+                "Error disposing",
+                "Error saving",
+                "Failed to read",
+                "Failed to read from",
+                "Failed to dump",
+                "Error parsing",
+                "Warning: Failed",
+                "Search failed:",
+                "was cancelled",
+                "Checkpoint failed",
+                "SaveBatchPosition failed"
+            };
+
+            return filters.Any(filter => message.Contains(filter, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

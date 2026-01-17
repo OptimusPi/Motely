@@ -9,12 +9,10 @@
         :layout-mode="layoutMode"
         :fill-remaining="index === visiblePanels.length - 1"
         :panel-id="panel.id"
-        :can-duplicate="true"
         :can-close="visiblePanels.length > 1 && !isBasePanel(panel)"
         :tab-align="panel.side === 'left' ? 'left' : 'right'"
         @resize="onPanelResize(panel.id, $event)"
         @collapse="onPanelCollapse(panel.id, $event)"
-        @duplicate="duplicatePanel(panel.id)"
         @close="removePanel(panel.id)"
         @move-to-side="movePanelToSide"
         @drag-start="playClickSound('click')"
@@ -37,12 +35,10 @@
           :layout-mode="'stack'"
           :fill-remaining="index === leftPanels.length - 1"
           :panel-id="panel.id"
-          :can-duplicate="true"
-          :can-close="leftPanels.length > 1 && !isBasePanel(panel)"
+            :can-close="leftPanels.length > 1 && !isBasePanel(panel)"
           @resize="onPanelResize(panel.id, $event)"
           @collapse="onPanelCollapse(panel.id, $event)"
-          @duplicate="duplicatePanel(panel.id)"
-          @close="removePanel(panel.id)"
+            @close="removePanel(panel.id)"
           @move-to-side="movePanelToSide"
           @drag-start="playClickSound('click')"
           @top-drag="index > 0 && !isMobile ? startColumnResize('left', leftPanels[index - 1]?.id, $event) : null"
@@ -57,8 +53,8 @@
         class="jaml-badge"
         :class="[badgeSnapClass, { 'corner-resize-mode': leftPanels.length === 2 && rightPanels.length === 2 }]"
         :style="leftPanels.length === 2 && rightPanels.length === 2 && cornerHandleY > 0 
-          ? { top: cornerHandleY + 'px', transform: 'translateY(-50%)' } 
-          : { top: '50%', transform: 'translateY(-50%)' }"
+          ? { top: cornerHandleY + 'px' } 
+          : { top: '0px' }"
         @pointerdown="handleBadgePointerDown"
       >
         <GripVertical v-if="badgeSnapState !== 'left'" :size="16" />
@@ -81,12 +77,10 @@
           :layout-mode="'split'"
           :fill-remaining="index === rightPanels.length - 1"
           :panel-id="panel.id"
-          :can-duplicate="true"
-          :can-close="rightPanels.length > 1 && !isBasePanel(panel)"
+            :can-close="rightPanels.length > 1 && !isBasePanel(panel)"
           @resize="onPanelResize(panel.id, $event)"
           @collapse="onPanelCollapse(panel.id, $event)"
-          @duplicate="duplicatePanel(panel.id)"
-          @close="removePanel(panel.id)"
+            @close="removePanel(panel.id)"
           @move-to-side="movePanelToSide"
           @drag-start="playClickSound('click')"
           @top-drag="index > 0 && !isMobile ? startColumnResize('right', rightPanels[index - 1]?.id, $event) : null"
@@ -124,8 +118,7 @@ const props = defineProps({
   activeSearches: Array,
   getPanelLabel: Function,
   isBasePanel: Function,
-  duplicatePanel: Function,
-  removePanel: Function,
+    removePanel: Function,
   movePanelToSide: Function,
   onPanelResize: Function,
   onPanelCollapse: Function,

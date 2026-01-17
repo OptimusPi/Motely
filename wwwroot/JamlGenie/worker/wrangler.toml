@@ -10,6 +10,11 @@ compatibility_date = "2025-12-21"
 [ai]
 binding = "AI"
 
+# Vectorize binding for RAG
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "jaml-knowledge"
+
 # Optional: Set a custom route/domain
 # routes = [
 #   { pattern = "jamlgenie.yourdomain.com", custom_domain = true }

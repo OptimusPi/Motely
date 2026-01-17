@@ -1966,43 +1966,11 @@ public static class MotelyJsonScoring
                     anteCounts.Add((anteCount, nestedClause.Score));
                 }
 
-                // If ALL nested clauses matched for this ante, aggregate counts based on mode
+                // If ALL nested clauses matched for this ante, count it as 1 match for the And clause
                 if (allMatch)
                 {
-                    // Determine aggregation mode: "Sum" or "Max" (default)
-                    bool useSum =
-                        !string.IsNullOrEmpty(clause.Mode)
-                        && clause.Mode.Equals("Sum", StringComparison.OrdinalIgnoreCase);
-
-                    int anteTally = 0;
-                    if (useSum)
-                    {
-                        // Sum mode: add all non-gate clause counts
-                        foreach (var (count, score) in anteCounts)
-                        {
-                            if (score > 0)
-                                anteTally += count;
-                        }
-                    }
-                    else
-                    {
-                        // Max mode (default): take highest count from non-gate clauses
-                        foreach (var (count, score) in anteCounts)
-                        {
-                            if (score > 0 && count > anteTally)
-                                anteTally = count;
-                        }
-                    }
-
-                    // FIX: Apply mode to ante aggregation too!
-                    if (useSum)
-                    {
-                        andTotalCount += anteTally; // Sum mode: accumulate across antes
-                    }
-                    else
-                    {
-                        andTotalCount = Math.Max(andTotalCount, anteTally); // Max mode: take best ante
-                    }
+                    // Count the ante once for the And clause (not sum of individual clauses)
+                    andTotalCount += 1;
                 }
             }
 

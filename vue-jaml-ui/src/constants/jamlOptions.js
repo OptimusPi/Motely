@@ -91,18 +91,9 @@ export const voucherOptions = [
   'Tag Bag'
 ]
 
-export const editionOptions = ['Foil', 'Holographic', 'Polychrome', 'Negative']
 export const sealOptions = ['Red', 'Blue', 'Gold', 'Purple']
-export const enhancementOptions = [
-  'Bonus',
-  'Mult',
-  'Wild',
-  'Glass',
-  'Steel',
-  'Stone',
-  'Lucky',
-  'Gold'
-]
+export const editionOptions = ['None', 'Foil', 'Holographic', 'Polychrome', 'Negative']
+export const enhancementOptions = ['None', 'Bonus', 'Mult', 'Wild', 'Glass', 'Steel', 'Stone', 'Lucky', 'Gold']
 
 export const playingCardRanks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
 export const playingCardSuits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
