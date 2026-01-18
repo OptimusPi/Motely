@@ -1,5 +1,5 @@
-using System.Runtime.CompilerServices;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Motely.Utils;
 using static Motely.Utils.NullCheckExtensions;
 
@@ -53,8 +53,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
 
             // Check if ALL clauses in this category are inverted (mustNot)
             bool isInverted = clauses.All(c => c.IsInverted);
-            
-            DebugLogger.Log($"[COMPOSITE DESC] Category={category}, clauses.Count={clauses.Count}, isInverted={isInverted}, clause.IsInverted values=[{string.Join(",", clauses.Select(c => c.IsInverted))}]");
+
+            DebugLogger.Log(
+                $"[COMPOSITE DESC] Category={category}, clauses.Count={clauses.Count}, isInverted={isInverted}, clause.IsInverted values=[{string.Join(",", clauses.Select(c => c.IsInverted))}]"
+            );
 
             IMotelySeedFilter filter = category switch
             {
@@ -106,13 +108,13 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
                     MotelyJsonFilterClauseExtensions.CreateEventCriteria(clauses)
                 ).CreateFilter(ref ctx),
                 FilterCategory.ErraticRank => new MotelyJsonErraticRankFilterDesc(
-                        clauses[0].RankEnum!.Value,
-                        clauses[0].Min ?? 1
-                    ).CreateFilter(ref ctx),
+                    clauses[0].RankEnum!.Value,
+                    clauses[0].Min ?? 1
+                ).CreateFilter(ref ctx),
                 FilterCategory.ErraticSuit => new MotelyJsonErraticSuitFilterDesc(
-                        clauses[0].SuitEnum!.Value,
-                        clauses[0].Min ?? 1
-                    ).CreateFilter(ref ctx),
+                    clauses[0].SuitEnum!.Value,
+                    clauses[0].Min ?? 1
+                ).CreateFilter(ref ctx),
                 FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(clauses)
                 ).CreateFilter(ref ctx),
@@ -184,9 +186,11 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
         bool isAndClause
     )
     {
-        if (!parentClause.AntesWasExplicitlySet || 
-            parentClause.Antes.IsNullOrEmpty() ||
-            parentClause.Clauses.IsNullOrEmpty())
+        if (
+            !parentClause.AntesWasExplicitlySet
+            || parentClause.Antes.IsNullOrEmpty()
+            || parentClause.Clauses.IsNullOrEmpty()
+        )
         {
             return new List<IMotelySeedFilter>();
         }
@@ -212,7 +216,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
                 foreach (var child in parentClause.Clauses!)
                 {
                     var clonedChild = CloneClauseWithAnte(child, ante);
-                    var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { clonedChild };
+                    var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause>
+                    {
+                        clonedChild,
+                    };
                     var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                     anteSpecificFilters.Add(nestedComposite.CreateFilter(ref ctx));
                 }
@@ -320,11 +327,7 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
             return new OrFilter(nestedFilters); // Empty Or fails all
 
         // Check if parent OR clause has Antes EXPLICITLY SET
-        if (
-            orClause.AntesWasExplicitlySet
-            && orClause.Antes != null
-            && orClause.Antes.Length > 0
-        )
+        if (orClause.AntesWasExplicitlySet && orClause.Antes != null && orClause.Antes.Length > 0)
         {
             // Clone each child clause for each ante, then OR them all together
             foreach (var ante in orClause.Antes)
@@ -332,7 +335,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
                 foreach (var child in orClause.Clauses)
                 {
                     var clonedChild = CloneClauseWithAnte(child, ante);
-                    var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { clonedChild };
+                    var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause>
+                    {
+                        clonedChild,
+                    };
                     var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                     nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
                 }
@@ -343,7 +349,10 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
             // No antes array on parent - create separate filter for each child clause
             foreach (var individualClause in orClause.Clauses)
             {
-                var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { individualClause };
+                var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause>
+                {
+                    individualClause,
+                };
                 var nestedComposite = new MotelyCompositeFilterDesc(singleClauseList);
                 nestedFilters.Add(nestedComposite.CreateFilter(ref ctx));
             }
@@ -418,7 +427,9 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
                     var beforeInvert = filterMask.Value;
                     filterMask = ~filterMask;
                     var afterInvert = filterMask.Value;
-                    DebugLogger.Log($"[COMPOSITE FILTER] Inverted filter: before=0x{beforeInvert:X2}, after=0x{afterInvert:X2}");
+                    DebugLogger.Log(
+                        $"[COMPOSITE FILTER] Inverted filter: before=0x{beforeInvert:X2}, after=0x{afterInvert:X2}"
+                    );
                 }
 
                 result &= filterMask;

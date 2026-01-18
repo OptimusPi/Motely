@@ -13,7 +13,7 @@ namespace Motely.Executors
         private readonly string? _scoreConfig;
         private readonly JsonSearchParams _params;
         private bool _cancelled = false;
-        private List<string>? _searchSeeds = null;
+        private IEnumerable<string>? _searchSeeds = null;
 
         public NativeFilterExecutor(
             string filterName,
@@ -47,6 +47,10 @@ namespace Motely.Executors
             {
                 var now = DateTime.UtcNow;
                 var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+
+                // Throttle progress updates to every 2 seconds
+                if (timeSinceLastUpdate < 2000)
+                    return;
 
                 lastProgressUpdate = now;
 
@@ -106,7 +110,8 @@ namespace Motely.Executors
                 e.Cancel = true;
                 _cancelled = true;
                 Console.WriteLine("\n🛑 Stopping search...");
-                // Don't dispose here - let it finish gracefully
+                // Dispose immediately to stop all threads
+                search.Dispose();
             };
 
             var searchStopwatch = Stopwatch.StartNew();
@@ -125,20 +130,10 @@ namespace Motely.Executors
 
             search.Start();
 
-            // Wait for completion using polling instead of blocking
-            while (search.Status != MotelySearchStatus.Completed && !_cancelled)
-            {
-                System.Threading.Thread.Sleep(314);
-            }
+            // Wait for completion using Thread.Join (no polling)
+            search.AwaitCompletion();
 
-            // Stop the search gracefully (if cancelled)
-            if (_cancelled)
-            {
-                search.Dispose();
-            }
-
-            // Give threads a moment to finish printing any final results
-            System.Threading.Thread.Sleep(314);
+            // Note: Dispose() is now called immediately in the CTRL+C handler above
 
             searchStopwatch.Stop();
             PrintSummary(search, searchStopwatch.Elapsed);
@@ -173,7 +168,7 @@ namespace Motely.Executors
         private IMotelySearch BuildSearch<TFilter>(
             IMotelySeedFilterDesc<TFilter> filterDesc,
             Action<long, long, long, double>? progressCallback,
-            List<string>? seeds
+            IEnumerable<string>? seeds
         )
             where TFilter : struct, IMotelySeedFilter
         {
@@ -200,7 +195,7 @@ namespace Motely.Executors
 
             if (_params.RandomSeeds.HasValue)
                 return settings.WithRandomSearch(_params.RandomSeeds.Value).Start();
-            else if (seeds != null && seeds.Count > 0)
+            else if (seeds != null && seeds.Any())
                 return settings.WithListSearch(seeds).Start();
             else
                 return settings.WithSequentialSearch().Start();
@@ -242,7 +237,7 @@ namespace Motely.Executors
             // Track printed seeds to avoid duplicate console output
             var printedSeeds = new HashSet<string>();
             var printLock = new object();
-            
+
             // Create scoring provider with callbacks
             Action<MotelySeedScoreTally> onResultFound = (score) =>
             {
@@ -251,10 +246,10 @@ namespace Motely.Executors
                 {
                     if (printedSeeds.Contains(score.Seed))
                         return; // Already printed this seed
-                    
+
                     printedSeeds.Add(score.Seed);
                 }
-                
+
                 // Use original tally column format (CSV-style with colored numbers)
                 Console.WriteLine(
                     TallyColorizer.FormatResultLine(score.Seed, score.Score, score.TallyColumns)
@@ -282,7 +277,13 @@ namespace Motely.Executors
             {
                 if (configPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!JamlConfigLoader.TryLoadFromJaml(configPath, out var jamlConfig, out var error))
+                    if (
+                        !JamlConfigLoader.TryLoadFromJaml(
+                            configPath,
+                            out var jamlConfig,
+                            out var error
+                        )
+                    )
                         throw new InvalidOperationException($"JAML loading failed: {error}");
                     return jamlConfig!;
                 }
@@ -292,33 +293,49 @@ namespace Motely.Executors
             }
 
             // Try .jaml first (prefer JAML over JSON) - case-insensitive search
-            string jamlFileName = configPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) ? configPath : configPath + ".jaml";
+            string jamlFileName = configPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase)
+                ? configPath
+                : configPath + ".jaml";
             string jamlDir = "JamlFilters";
 
             // Case-insensitive file search
             if (Directory.Exists(jamlDir))
             {
-                var matchingJamlFiles = Directory.GetFiles(jamlDir, "*.jaml", SearchOption.TopDirectoryOnly)
-                    .Where(f => Path.GetFileName(f).Equals(jamlFileName, StringComparison.OrdinalIgnoreCase))
+                var matchingJamlFiles = Directory
+                    .GetFiles(jamlDir, "*.jaml", SearchOption.TopDirectoryOnly)
+                    .Where(f =>
+                        Path.GetFileName(f).Equals(jamlFileName, StringComparison.OrdinalIgnoreCase)
+                    )
                     .ToList();
 
                 if (matchingJamlFiles.Count > 0)
                 {
                     string jamlPath = matchingJamlFiles[0];
-                    if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out var jamlConfig, out var error))
+                    if (
+                        !JamlConfigLoader.TryLoadFromJaml(
+                            jamlPath,
+                            out var jamlConfig,
+                            out var error
+                        )
+                    )
                         throw new InvalidOperationException($"JAML loading failed: {error}");
                     return jamlConfig!;
                 }
             }
 
             // Fall back to .json - case-insensitive search
-            string jsonFileName = configPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? configPath : configPath + ".json";
+            string jsonFileName = configPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+                ? configPath
+                : configPath + ".json";
             string jsonDir = "JsonFilters";
 
             if (Directory.Exists(jsonDir))
             {
-                var matchingJsonFiles = Directory.GetFiles(jsonDir, "*.json", SearchOption.TopDirectoryOnly)
-                    .Where(f => Path.GetFileName(f).Equals(jsonFileName, StringComparison.OrdinalIgnoreCase))
+                var matchingJsonFiles = Directory
+                    .GetFiles(jsonDir, "*.json", SearchOption.TopDirectoryOnly)
+                    .Where(f =>
+                        Path.GetFileName(f).Equals(jsonFileName, StringComparison.OrdinalIgnoreCase)
+                    )
                     .ToList();
 
                 if (matchingJsonFiles.Count > 0)
@@ -345,11 +362,18 @@ namespace Motely.Executors
             Console.WriteLine(string.Join(",", quotedColumns));
         }
 
-        private List<string>? LoadSeeds()
+        private IEnumerable<string>? LoadSeeds()
         {
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
                 _searchSeeds = new List<string> { _params.SpecificSeed };
+                return _searchSeeds;
+            }
+
+            // Check for keyword-generated seeds (from --keyword)
+            if (_params.SeedList != null)
+            {
+                _searchSeeds = _params.SeedList;
                 return _searchSeeds;
             }
 
@@ -358,11 +382,12 @@ namespace Motely.Executors
                 var seedSourcePath = $"SeedSources/{_params.SeedSources}.txt";
                 if (!File.Exists(seedSourcePath))
                 {
-                    throw new FileNotFoundException($"Seed source file not found: {seedSourcePath}");
+                    throw new FileNotFoundException(
+                        $"Seed source file not found: {seedSourcePath}"
+                    );
                 }
-                _searchSeeds = File.ReadAllLines(seedSourcePath)
-                    .Where(line => !string.IsNullOrWhiteSpace(line))
-                    .ToList();
+                _searchSeeds = File.ReadLines(seedSourcePath)
+                    .Where(line => !string.IsNullOrWhiteSpace(line));
                 return _searchSeeds;
             }
 
@@ -380,8 +405,11 @@ namespace Motely.Executors
 
             if (_searchSeeds != null)
             {
-                // Wordlist or specific seed mode - use actual seed count
-                totalSeedsSearched = (ulong)_searchSeeds.Count;
+                // Wordlist or specific seed mode - use actual seed count if possible
+                if (_searchSeeds is ICollection<string> col)
+                    totalSeedsSearched = (ulong)col.Count;
+                else
+                    totalSeedsSearched = (ulong)search.TotalSeedsSearched;
             }
             else if (_params.RandomSeeds.HasValue)
             {
@@ -396,10 +424,7 @@ namespace Motely.Executors
             }
 
             // Calculate the actual last batch processed
-            var lastBatch =
-                _params.StartBatch > 0
-                    ? (long)_params.StartBatch + search.CompletedBatchCount - 1
-                    : search.CompletedBatchCount;
+            var lastBatch = search.CompletedBatchCount;
 
             Console.WriteLine($"   Batches completed: {search.CompletedBatchCount}");
             Console.WriteLine($"   Last batch: {lastBatch}");

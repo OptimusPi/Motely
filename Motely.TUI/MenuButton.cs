@@ -149,10 +149,7 @@ public class MenuButton : View
             textX = 0;
 
         // Create underline attribute for hotkey character
-        var hotKeyAttr = new Attribute(
-            attr.Foreground,
-            attr.Background
-        );
+        var hotKeyAttr = new Attribute(attr.Foreground, attr.Background);
 
         for (int i = 0; i < text.Length; i++)
         {

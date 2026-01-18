@@ -1,6 +1,6 @@
+using DuckDB.NET.Data;
 using Microsoft.Extensions.Configuration;
 using Motely.DuckDB;
-using DuckDB.NET.Data;
 
 namespace Motely.API;
 
@@ -16,7 +16,11 @@ public static class R2ConfigurationHelper
     /// <param name="configuration">IConfiguration instance (from appsettings.json)</param>
     /// <param name="secretName">Name for the secret (default: "r2")</param>
     /// <returns>True if R2 was configured, false if R2 is disabled or not configured</returns>
-    public static bool ConfigureR2FromConfig(DuckDBConnection connection, IConfiguration configuration, string secretName = "r2")
+    public static bool ConfigureR2FromConfig(
+        DuckDBConnection connection,
+        IConfiguration configuration,
+        string secretName = "r2"
+    )
     {
         if (connection == null)
             throw new ArgumentNullException(nameof(connection));
@@ -35,12 +39,16 @@ public static class R2ConfigurationHelper
         var endpoint = r2Section["Endpoint"];
 
         // Validate required fields
-        if (string.IsNullOrWhiteSpace(accessKeyId) ||
-            string.IsNullOrWhiteSpace(secretAccessKey) ||
-            string.IsNullOrWhiteSpace(endpoint))
+        if (
+            string.IsNullOrWhiteSpace(accessKeyId)
+            || string.IsNullOrWhiteSpace(secretAccessKey)
+            || string.IsNullOrWhiteSpace(endpoint)
+        )
         {
             // R2 is enabled but not fully configured - log warning but don't throw
-            System.Diagnostics.Debug.WriteLine("[R2ConfigurationHelper] R2 is enabled but credentials are missing. R2 features will not work.");
+            System.Diagnostics.Debug.WriteLine(
+                "[R2ConfigurationHelper] R2 is enabled but credentials are missing. R2 features will not work."
+            );
             return false;
         }
 
@@ -51,7 +59,7 @@ public static class R2ConfigurationHelper
         }
 
         // Configure R2 secret
-        CloudStorageHelper.ConfigureR2Secret(connection, accessKeyId, secretAccessKey, endpoint, secretName);
+        // CloudStorageHelper.ConfigureR2Secret(connection, accessKeyId, secretAccessKey, endpoint, secretName); // TODO: Implement R2 configuration
         return true;
     }
 

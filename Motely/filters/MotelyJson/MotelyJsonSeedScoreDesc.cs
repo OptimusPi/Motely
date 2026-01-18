@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Motely.Reporting;
 
 namespace Motely.Filters;
@@ -109,10 +109,10 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 
 public enum ScoreCutoffMode
 {
-    None = 0,       // No cutoff (0)
-    Manual = 1,     // User defined
-    AutoBest = 2,   // Strict High Score
-    AutoSmart = 3   // Smart (80% of High Score)
+    None = 0, // No cutoff (0)
+    Manual = 1, // User defined
+    AutoBest = 2, // Strict High Score
+    AutoSmart = 3, // Smart (80% of High Score)
 }
 
 public class SharedScoreState
@@ -146,9 +146,9 @@ public struct MotelyJsonSeedScoreDesc(
         var state = new SharedScoreState
         {
             LearnedCutoff = (Mode == ScoreCutoffMode.Manual) ? Cutoff : 0,
-            SeedsFiltered = 0
+            SeedsFiltered = 0,
         };
-        
+
         return new MotelyJsonSeedScoreProvider(Config, Cutoff, Mode, _onResultFound, state);
     }
 
@@ -188,7 +188,6 @@ public struct MotelyJsonSeedScoreDesc(
             var onResultFound = OnResultFound;
             var state = _state;
 
-
             // Score individual seeds that passed the base filter
             // NOTE: Scoring is intentionally SCALAR - we don't need vectorized performance here
             // Track filtered count locally to batch Interlocked operation
@@ -212,8 +211,6 @@ public struct MotelyJsonSeedScoreDesc(
 
                     // Use pre-computed MaxBossAnte from PostProcess()
                     int maxBossAnte = config.MaxBossAnte;
-
-
 
                     // Generate and cache all bosses if needed
                     // Game starts at Ante 1, so bosses are generated from ante 1 onwards
@@ -246,7 +243,6 @@ public struct MotelyJsonSeedScoreDesc(
                         // PERFORMANCE: Use pre-partitioned array (no filtering needed!)
                         foreach (var clause in config.MustVouchers)
                         {
-
                             bool clauseSatisfied = false;
 
                             // Check if voucher is already active from ActivateAllVouchers
@@ -287,7 +283,6 @@ public struct MotelyJsonSeedScoreDesc(
                         // PERFORMANCE: Use pre-partitioned array (no filtering needed!)
                         foreach (var clause in config.MustNonVouchers)
                         {
-
                             bool clauseSatisfied = false;
 
                             // Check if this requirement appears in ANY of its required antes
@@ -316,12 +311,12 @@ public struct MotelyJsonSeedScoreDesc(
 
                                     case MotelyFilterItemType.Joker:
                                         var mustCount = MotelyJsonScoring.CountJokerOccurrences(
-                                                ref singleCtx,
-                                                MotelyJsonJokerFilterClause.FromJsonClause(clause),
-                                                ante,
-                                                ref runState,
-                                                earlyExit: true,
-                                                originalClause: clause
+                                            ref singleCtx,
+                                            MotelyJsonJokerFilterClause.FromJsonClause(clause),
+                                            ante,
+                                            ref runState,
+                                            earlyExit: true,
+                                            originalClause: clause
                                         );
                                         if (mustCount > 0)
                                         {
@@ -365,7 +360,9 @@ public struct MotelyJsonSeedScoreDesc(
                                         if (
                                             MotelyJsonScoring.CountSpectralOccurrences(
                                                 ref singleCtx,
-                                                MotelyJsonSpectralFilterClause.FromJsonClause(clause),
+                                                MotelyJsonSpectralFilterClause.FromJsonClause(
+                                                    clause
+                                                ),
                                                 ante,
                                                 earlyExit: true
                                             ) > 0
@@ -425,7 +422,11 @@ public struct MotelyJsonSeedScoreDesc(
                                         // Need to verify minimum count requirement
                                         if (clause.RankEnum.HasValue)
                                         {
-                                            var count = MotelyJsonScoring.CountErraticRankOccurrences(ref singleCtx, clause.RankEnum.Value);
+                                            var count =
+                                                MotelyJsonScoring.CountErraticRankOccurrences(
+                                                    ref singleCtx,
+                                                    clause.RankEnum.Value
+                                                );
                                             clauseSatisfied = count >= (clause.Min ?? 0);
                                         }
                                         else
@@ -438,7 +439,11 @@ public struct MotelyJsonSeedScoreDesc(
                                         // Need to verify minimum count requirement
                                         if (clause.SuitEnum.HasValue)
                                         {
-                                            var count = MotelyJsonScoring.CountErraticSuitOccurrences(ref singleCtx, clause.SuitEnum.Value);
+                                            var count =
+                                                MotelyJsonScoring.CountErraticSuitOccurrences(
+                                                    ref singleCtx,
+                                                    clause.SuitEnum.Value
+                                                );
                                             clauseSatisfied = count >= (clause.Min ?? 0);
                                         }
                                         else
@@ -451,8 +456,8 @@ public struct MotelyJsonSeedScoreDesc(
                                         // Events should be handled by Event filters, not in per-ante scoring
                                         // If an Event clause appears here, it's a configuration error
                                         throw new InvalidOperationException(
-                                            $"Event clauses should not be in MustNonVouchers. " +
-                                            $"Event filtering is handled separately by Event filter system."
+                                            $"Event clauses should not be in MustNonVouchers. "
+                                                + $"Event filtering is handled separately by Event filter system."
                                         );
 
                                     case MotelyFilterItemType.And:
@@ -465,14 +470,14 @@ public struct MotelyJsonSeedScoreDesc(
                                     case MotelyFilterItemType.Voucher:
                                         // Vouchers should be in MustVouchers, not MustNonVouchers
                                         throw new InvalidOperationException(
-                                            $"Voucher clauses should be in MustVouchers, not MustNonVouchers. " +
-                                            $"This is a configuration error."
+                                            $"Voucher clauses should be in MustVouchers, not MustNonVouchers. "
+                                                + $"This is a configuration error."
                                         );
 
                                     default:
                                         throw new NotImplementedException(
-                                            $"MUST clause verification not implemented for type: {clause.ItemTypeEnum}. " +
-                                            $"Add a case to the switch in MotelyJsonSeedScoreDesc.cs (line ~231)"
+                                            $"MUST clause verification not implemented for type: {clause.ItemTypeEnum}. "
+                                                + $"Add a case to the switch in MotelyJsonSeedScoreDesc.cs (line ~231)"
                                         );
                                 }
 
@@ -519,13 +524,13 @@ public struct MotelyJsonSeedScoreDesc(
                         {
                             var column = columnDefinitions[i];
                             var shouldClause = config.Should[i];
-                            
+
                             // Create a copy of runState for each column evaluation
                             var columnRunState = runState;
-                            
+
                             // Evaluate the column
                             var columnValue = column.Evaluate(ref singleCtx, ref columnRunState);
-                            
+
                             // Add to score if it's a ScoreTally column
                             if (column.Type == ColumnType.ScoreTally)
                             {
@@ -534,7 +539,7 @@ public struct MotelyJsonSeedScoreDesc(
                                 {
                                     var scoreMultiplier = shouldClause.Score;
                                     totalScore += intValue * scoreMultiplier;
-                                    
+
                                     // Add as integer tally (backward compatibility)
                                     seedScore.AddTally(intValue);
                                 }
@@ -563,7 +568,7 @@ public struct MotelyJsonSeedScoreDesc(
                                     // runState is mutated by counting functions (e.g., AddOwnedJoker),
                                     // and this mutation was affecting subsequent clause evaluations!
                                     var clauseRunState = runState; // Struct copy - preserves original state
-                                    
+
                                     int count = MotelyJsonScoring.CountOccurrences(
                                         ref singleCtx,
                                         should,
@@ -571,7 +576,7 @@ public struct MotelyJsonSeedScoreDesc(
                                     );
                                     int score = count * should.Score;
                                     totalScore += score;
-                                    
+
                                     // DEBUG: Log what's being added
                                     // System.Console.WriteLine($"[DEBUG] Adding tally for {should.Type}/{should.Value}: {count}"); // DISABLED FOR PERFORMANCE
                                     seedScore.AddTally(count);
@@ -584,7 +589,7 @@ public struct MotelyJsonSeedScoreDesc(
                                 {
                                     // CRITICAL FIX: Create a COPY of runState for each clause evaluation
                                     var clauseRunState = runState; // Struct copy - preserves original state
-                                    
+
                                     int count = MotelyJsonScoring.CountOccurrences(
                                         ref singleCtx,
                                         should,
@@ -606,7 +611,7 @@ public struct MotelyJsonSeedScoreDesc(
                                 {
                                     // CRITICAL FIX: Create a COPY of runState for each clause evaluation
                                     var clauseRunState = runState; // Struct copy - preserves original state
-                                    
+
                                     int count = MotelyJsonScoring.CountOccurrences(
                                         ref singleCtx,
                                         should,
@@ -652,7 +657,12 @@ public struct MotelyJsonSeedScoreDesc(
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetCurrentCutoff(int currentScore, ScoreCutoffMode mode, int cutoff, SharedScoreState state)
+        private static int GetCurrentCutoff(
+            int currentScore,
+            ScoreCutoffMode mode,
+            int cutoff,
+            SharedScoreState state
+        )
         {
             // Thread-safe auto cutoff: Start at 1, raise to highest score found
             if (mode == ScoreCutoffMode.AutoBest || mode == ScoreCutoffMode.AutoSmart)
@@ -680,7 +690,7 @@ public struct MotelyJsonSeedScoreDesc(
                 ScoreCutoffMode.Manual => cutoff,
                 ScoreCutoffMode.AutoBest => state.LearnedCutoff,
                 ScoreCutoffMode.AutoSmart => GetSmartCutoff(state),
-                _ => 0
+                _ => 0,
             };
         }
 
@@ -690,7 +700,7 @@ public struct MotelyJsonSeedScoreDesc(
             // Smart Mode:
             // 1. Warmup: Keep cutoff 0 for first 1 second
             // 2. Filter: If best score > 0, set cutoff to at least 1 (or 80% of best)
-            
+
             long elapsedTicks = DateTime.UtcNow.Ticks - state.StartTime;
             if (elapsedTicks < TimeSpan.TicksPerSecond)
             {

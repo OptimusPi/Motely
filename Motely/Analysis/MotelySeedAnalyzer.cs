@@ -39,13 +39,13 @@ public sealed record class MotelySeedAnalysis(
         foreach (var ante in Antes)
         {
             sb.AppendLine($"==ANTE {ante.Ante}==");
-            
+
             // Add draw order for this ante (for all decks)
             if (!string.IsNullOrEmpty(ante.DrawOrder))
             {
                 sb.AppendLine($"Draw: {ante.DrawOrder}");
             }
-            
+
             sb.AppendLine($"Boss: {FormatUtils.FormatBoss(ante.Boss)}");
             sb.AppendLine($"Voucher: {FormatUtils.FormatVoucher(ante.Voucher)}");
 

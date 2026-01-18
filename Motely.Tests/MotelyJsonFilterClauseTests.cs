@@ -9,10 +9,10 @@ namespace Motely.Tests;
 public class MotelyJsonFilterClauseTests
 {
     [Theory]
-    [InlineData(new[] { 0, 5, 9 }, 10)]  // Highest slot 9 → need 10
-    [InlineData(new[] { 0, 1, 2 }, 3)]   // Highest slot 2 → need 3
-    [InlineData(new[] { 0 }, 1)]         // Highest slot 0 → need 1
-    [InlineData(new int[] { }, 8)]       // No slots → default 8
+    [InlineData(new[] { 0, 5, 9 }, 10)] // Highest slot 9 → need 10
+    [InlineData(new[] { 0, 1, 2 }, 3)] // Highest slot 2 → need 3
+    [InlineData(new[] { 0 }, 1)] // Highest slot 0 → need 1
+    [InlineData(new int[] { }, 8)] // No slots → default 8
     public void JokerClause_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
@@ -20,11 +20,8 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "Joker",
             Value = "Blueprint",
-            Sources = new SourcesConfig
-            {
-                ShopSlots = wantedSlots
-            },
-            Antes = new[] { 1 }
+            Sources = new SourcesConfig { ShopSlots = wantedSlots },
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
@@ -44,7 +41,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "Joker",
             Value = "Blueprint",
-            Antes = new[] { 1, 3, 7 }
+            Antes = new[] { 1, 3, 7 },
         };
         jsonClause.InitializeParsedEnums();
 
@@ -69,11 +66,8 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "Joker",
             Value = "Joker",
-            Sources = new SourcesConfig
-            {
-                ShopSlots = new[] { 0, 2, 5 }
-            },
-            Antes = new[] { 1 }
+            Sources = new SourcesConfig { ShopSlots = new[] { 0, 2, 5 } },
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
@@ -99,7 +93,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "Joker",
             Values = new[] { "Blueprint", "Brainstorm", "Showman" },
-            Antes = new[] { 1 }
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
@@ -124,7 +118,7 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "Joker",
             Value = "Blueprint",
-            Antes = new[] { 1 }
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
@@ -147,7 +141,7 @@ public class MotelyJsonFilterClauseTests
             Type = "Joker",
             Value = "Blueprint",
             Edition = "Negative",
-            Antes = new[] { 1 }
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
@@ -159,10 +153,10 @@ public class MotelyJsonFilterClauseTests
     }
 
     [Theory]
-    [InlineData(new[] { 0, 1, 8 }, 9)]   // Highest slot 8 → need 9
-    [InlineData(new[] { 0, 1, 2 }, 3)]   // Highest slot 2 → need 3
-    [InlineData(new[] { 0 }, 1)]         // Highest slot 0 → need 1
-    [InlineData(new int[] { }, 16)]      // No slots → default 16 for Tarot
+    [InlineData(new[] { 0, 1, 8 }, 9)] // Highest slot 8 → need 9
+    [InlineData(new[] { 0, 1, 2 }, 3)] // Highest slot 2 → need 3
+    [InlineData(new[] { 0 }, 1)] // Highest slot 0 → need 1
+    [InlineData(new int[] { }, 16)] // No slots → default 16 for Tarot
     public void TarotCriteria_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
@@ -170,16 +164,15 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "TarotCard",
             Value = "The Fool",
-            Sources = new SourcesConfig
-            {
-                ShopSlots = wantedSlots
-            },
-            Antes = new[] { 1 }
+            Sources = new SourcesConfig { ShopSlots = wantedSlots },
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
         // Convert to specialized clause - THIS is where pre-calculation happens
-        var clauses = MotelyJsonTarotFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause });
+        var clauses = MotelyJsonTarotFilterClause.ConvertClauses(
+            new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause }
+        );
         var criteria = MotelyJsonTarotFilterClause.CreateCriteria(clauses);
 
         // CRITICAL: MaxShopSlotsNeeded must be pre-calculated in criteria during CreateCriteria!
@@ -187,10 +180,10 @@ public class MotelyJsonFilterClauseTests
     }
 
     [Theory]
-    [InlineData(new[] { 0, 3 }, 4)]      // Highest slot 3 → need 4
-    [InlineData(new[] { 0, 1, 2 }, 3)]   // Highest slot 2 → need 3
-    [InlineData(new[] { 0 }, 1)]         // Highest slot 0 → need 1
-    [InlineData(new int[] { }, 6)]       // No slots → default 6 for Spectral
+    [InlineData(new[] { 0, 3 }, 4)] // Highest slot 3 → need 4
+    [InlineData(new[] { 0, 1, 2 }, 3)] // Highest slot 2 → need 3
+    [InlineData(new[] { 0 }, 1)] // Highest slot 0 → need 1
+    [InlineData(new int[] { }, 6)] // No slots → default 6 for Spectral
     public void SpectralCriteria_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
@@ -198,25 +191,24 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "SpectralCard",
             Value = "Ankh",
-            Sources = new SourcesConfig
-            {
-                ShopSlots = wantedSlots
-            },
-            Antes = new[] { 1 }
+            Sources = new SourcesConfig { ShopSlots = wantedSlots },
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
-        var clauses = MotelyJsonSpectralFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause });
+        var clauses = MotelyJsonSpectralFilterClause.ConvertClauses(
+            new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause }
+        );
         var criteria = MotelyJsonSpectralFilterClause.CreateCriteria(clauses);
 
         Assert.Equal(expected, criteria.MaxShopSlotsNeeded);
     }
 
     [Theory]
-    [InlineData(new[] { 2, 4, 6 }, 7)]   // Highest slot 6 → need 7
-    [InlineData(new[] { 0, 1, 2 }, 3)]   // Highest slot 2 → need 3
-    [InlineData(new[] { 0 }, 1)]         // Highest slot 0 → need 1
-    [InlineData(new int[] { }, 16)]      // No slots → default 16 for Planet
+    [InlineData(new[] { 2, 4, 6 }, 7)] // Highest slot 6 → need 7
+    [InlineData(new[] { 0, 1, 2 }, 3)] // Highest slot 2 → need 3
+    [InlineData(new[] { 0 }, 1)] // Highest slot 0 → need 1
+    [InlineData(new int[] { }, 16)] // No slots → default 16 for Planet
     public void PlanetCriteria_PreCalculatesMaxShopSlotsNeeded(int[] wantedSlots, int expected)
     {
         // Build a JSON clause with specified shop slots
@@ -224,15 +216,14 @@ public class MotelyJsonFilterClauseTests
         {
             Type = "PlanetCard",
             Value = "Pluto",
-            Sources = new SourcesConfig
-            {
-                ShopSlots = wantedSlots
-            },
-            Antes = new[] { 1 }
+            Sources = new SourcesConfig { ShopSlots = wantedSlots },
+            Antes = new[] { 1 },
         };
         jsonClause.InitializeParsedEnums();
 
-        var clauses = MotelyJsonPlanetFilterClause.ConvertClauses(new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause });
+        var clauses = MotelyJsonPlanetFilterClause.ConvertClauses(
+            new List<MotelyJsonConfig.MotelyJsonFilterClause> { jsonClause }
+        );
         var criteria = MotelyJsonPlanetFilterClause.CreateCriteria(clauses);
 
         Assert.Equal(expected, criteria.MaxShopSlotsNeeded);
@@ -247,8 +238,8 @@ public class MotelyJsonFilterClauseTests
             Type = "Joker",
             Values = new[] { "Blueprint", "InvisibleJoker" },
             Antes = new[] { 5 },
-            MinShopSlot = 2,  // Start at slot 2, NOT slot 0 or 1
-            MaxShopSlot = 10
+            MinShopSlot = 2, // Start at slot 2, NOT slot 0 or 1
+            MaxShopSlot = 10,
         };
         jsonClause.InitializeParsedEnums();
 

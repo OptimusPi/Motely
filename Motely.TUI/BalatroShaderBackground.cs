@@ -15,13 +15,12 @@ public class BalatroShaderBackground : View
     private static readonly (int R, int G, int B) Color3 = (55, 66, 68); // #374244 Black
 
     private const double Contrast = 1.8;
-    
+
     //private const double SpinAmount = 0.6;
     private const double SpinAmount = 0.6;
 
     //private const double SpinEase = 0.5;
     private const double SpinEase = 0.7;
-
 
     //private const double PixelSize = 750.0;
     private const double PixelSize = 128.0;
@@ -132,7 +131,8 @@ public class BalatroShaderBackground : View
                     continue;
 
                 var topColor = _frameBuffer[screenX, bufY];
-                var bottomColor = bufY + 1 < _bufferHeight ? _frameBuffer[screenX, bufY + 1] : topColor;
+                var bottomColor =
+                    bufY + 1 < _bufferHeight ? _frameBuffer[screenX, bufY + 1] : topColor;
 
                 driver.SetAttribute(new Attribute(topColor, bottomColor));
                 driver.Move(screenX, screenY);

@@ -1,7 +1,7 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Motely.API.Hubs;
-using System.Text.Json;
 
 namespace Motely.API;
 
@@ -42,17 +42,17 @@ public class SearchBroadcaster : ISearchBroadcaster
         try
         {
             var groupName = $"search_{searchId}";
-            
+
             // Parse JSON to determine event type and send as object (not string)
             try
             {
                 var jsonDoc = JsonDocument.Parse(json);
                 var rootElement = jsonDoc.RootElement;
-                
+
                 if (rootElement.TryGetProperty("type", out var typeElement))
                 {
                     var type = typeElement.GetString();
-                    
+
                     // Route based on message type - send parsed object, not JSON string
                     switch (type)
                     {
@@ -61,14 +61,22 @@ public class SearchBroadcaster : ISearchBroadcaster
                             if (rootElement.TryGetProperty("result", out var resultElement))
                             {
                                 // Deserialize the result object directly
-                                var resultObj = JsonSerializer.Deserialize<object>(resultElement.GetRawText());
-                                _hubContext.Clients.Group(groupName).SendAsync("Result", resultObj).Wait();
+                                var resultObj = JsonSerializer.Deserialize<object>(
+                                    resultElement.GetRawText()
+                                );
+                                _hubContext
+                                    .Clients.Group(groupName)
+                                    .SendAsync("Result", resultObj)
+                                    .Wait();
                             }
                             else
                             {
                                 // Fallback: send whole message as object
                                 var fullObj = JsonSerializer.Deserialize<object>(json);
-                                _hubContext.Clients.Group(groupName).SendAsync("Result", fullObj).Wait();
+                                _hubContext
+                                    .Clients.Group(groupName)
+                                    .SendAsync("Result", fullObj)
+                                    .Wait();
                             }
                             break;
                         case "progress":
@@ -78,7 +86,9 @@ public class SearchBroadcaster : ISearchBroadcaster
                             var progressDict = new Dictionary<string, object>();
                             if (rootElement.TryGetProperty("seedsSearched", out var seedsSearched))
                                 progressDict["processed"] = seedsSearched.GetInt64();
-                            if (rootElement.TryGetProperty("seedsPerSecond", out var seedsPerSecond))
+                            if (
+                                rootElement.TryGetProperty("seedsPerSecond", out var seedsPerSecond)
+                            )
                                 progressDict["speed"] = seedsPerSecond.GetDouble();
                             if (rootElement.TryGetProperty("seedsFound", out var seedsFound))
                                 progressDict["found"] = seedsFound.GetInt32();
@@ -88,19 +98,28 @@ public class SearchBroadcaster : ISearchBroadcaster
                                 progressDict["totalBatches"] = totalBatches.GetInt64();
                             if (rootElement.TryGetProperty("searchId", out var searchIdProp))
                                 progressDict["searchId"] = searchIdProp.GetString() ?? "";
-                            
-                            _hubContext.Clients.Group(groupName).SendAsync("Progress", progressDict).Wait();
+
+                            _hubContext
+                                .Clients.Group(groupName)
+                                .SendAsync("Progress", progressDict)
+                                .Wait();
                             break;
                         case "search_completed":
                         case "search_failed":
                         case "search_halted":
                             var updateObj = JsonSerializer.Deserialize<object>(json);
-                            _hubContext.Clients.Group(groupName).SendAsync("SearchUpdate", updateObj).Wait();
+                            _hubContext
+                                .Clients.Group(groupName)
+                                .SendAsync("SearchUpdate", updateObj)
+                                .Wait();
                             break;
                         default:
                             // Fallback to generic SearchUpdate
                             var defaultObj = JsonSerializer.Deserialize<object>(json);
-                            _hubContext.Clients.Group(groupName).SendAsync("SearchUpdate", defaultObj).Wait();
+                            _hubContext
+                                .Clients.Group(groupName)
+                                .SendAsync("SearchUpdate", defaultObj)
+                                .Wait();
                             break;
                     }
                 }
@@ -108,12 +127,19 @@ public class SearchBroadcaster : ISearchBroadcaster
                 {
                     // No type field, send as generic SearchUpdate
                     var genericObj = JsonSerializer.Deserialize<object>(json);
-                    _hubContext.Clients.Group(groupName).SendAsync("SearchUpdate", genericObj).Wait();
+                    _hubContext
+                        .Clients.Group(groupName)
+                        .SendAsync("SearchUpdate", genericObj)
+                        .Wait();
                 }
             }
             catch (JsonException ex)
             {
-                _logger.LogWarning(ex, "Failed to parse JSON for search {SearchId}, sending as string", searchId);
+                _logger.LogWarning(
+                    ex,
+                    "Failed to parse JSON for search {SearchId}, sending as string",
+                    searchId
+                );
                 // Not valid JSON or can't parse, send as string
                 _hubContext.Clients.Group(groupName).SendAsync("SearchUpdate", json).Wait();
             }
@@ -131,12 +157,19 @@ public class SearchBroadcaster : ISearchBroadcaster
     {
         try
         {
-            var json = JsonSerializer.Serialize(message, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            var json = JsonSerializer.Serialize(
+                message,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            );
             BroadcastToSearch(searchId, json);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error serializing and broadcasting to search {SearchId}", searchId);
+            _logger.LogError(
+                ex,
+                "Error serializing and broadcasting to search {SearchId}",
+                searchId
+            );
         }
     }
 }

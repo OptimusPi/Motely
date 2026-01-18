@@ -12,18 +12,18 @@ public sealed class JsonFilterTests
         {
             Must = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
             Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
         };
-        
+
         var json = JsonSerializer.Serialize(config);
         var deserialized = JsonSerializer.Deserialize<MotelyJsonConfig>(json);
-        
+
         Assert.NotNull(deserialized);
         Assert.NotNull(deserialized.Must);
         Assert.NotNull(deserialized.Should);
         Assert.NotNull(deserialized.MustNot);
     }
-    
+
     [Fact]
     public void MotelySeedScoreTally_NoAllocation()
     {
@@ -31,7 +31,7 @@ public sealed class JsonFilterTests
         tally.AddTally(1);
         tally.AddTally(2);
         tally.AddTally(3);
-        
+
         Assert.Equal("TEST", tally.Seed);
         Assert.Equal(100, tally.Score);
         Assert.Equal(3, tally.TallyCount);
@@ -39,7 +39,7 @@ public sealed class JsonFilterTests
         Assert.Equal(2, tally.GetTally(1));
         Assert.Equal(3, tally.GetTally(2));
     }
-    
+
     [Fact]
     public void MotelySeedScoreTally_TallyColumnsProperty()
     {
@@ -47,7 +47,7 @@ public sealed class JsonFilterTests
         tally.AddTally(10);
         tally.AddTally(20);
         tally.AddTally(30);
-        
+
         var columns = tally.TallyColumns;
         Assert.NotNull(columns);
         Assert.Equal(3, columns.Count);
@@ -55,7 +55,7 @@ public sealed class JsonFilterTests
         Assert.Equal(20, columns[1]);
         Assert.Equal(30, columns[2]);
     }
-    
+
     [Fact]
     public void MotelySeedScoreTally_MaxCapacity()
     {

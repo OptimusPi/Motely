@@ -280,7 +280,6 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     public bool RequireMega { get; init; } // Extracted from Sources for optimization
     public bool Satisfied { get; set; } // Track if this clause has been satisfied
 
-
     // Parameterless constructor for init syntax
     public MotelyJsonSoulJokerFilterClause() { }
 
@@ -293,8 +292,8 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     )
     {
         JokerType = jokerType;
-        JokerItemType = jokerType.HasValue 
-            ? (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType.Value) 
+        JokerItemType = jokerType.HasValue
+            ? (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType.Value)
             : null;
         IsWildcard = !jokerType.HasValue;
         RequireMega = requireMega;
@@ -356,7 +355,9 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             JokerType = jsonClause.JokerEnum,
             JokerTypes = jsonClause.JokerEnums?.Count > 0 ? jsonClause.JokerEnums : null,
             JokerItemType = jsonClause.JokerEnum.HasValue
-                ? (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jsonClause.JokerEnum.Value)
+                ? (MotelyItemType)(
+                    (int)MotelyItemTypeCategory.Joker | (int)jsonClause.JokerEnum.Value
+                )
                 : null,
             IsWildcard = jsonClause.IsWildcard,
             EditionEnum = jsonClause.EditionEnum,
@@ -367,7 +368,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
             MaxPackSlotsNeeded = maxPackSlotsNeeded,
             RequireMega = jsonClause.Sources?.RequireMega ?? false,
             Satisfied = false,
-            Min = jsonClause.Min
+            Min = jsonClause.Min,
         };
 
         return clause;
@@ -449,7 +450,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
 
             // If no pack slots specified by user, use game defaults
             if (maxSlots == 0)
-                maxSlots = shopPackSlots;  // 4 for ante 0/1, 6 for ante 2+
+                maxSlots = shopPackSlots; // 4 for ante 0/1, 6 for ante 2+
 
             maxPackSlotsPerAnte[ante] = maxSlots;
         }
@@ -1161,7 +1162,7 @@ public static partial class MotelyJsonFilterClauseExtensions
             throw new ArgumentException("Clauses cannot be null or empty");
 
         var eventClauses = new List<MotelyJsonEventFilterClause>();
-        
+
         // Recursively collect all event clauses, including from And/Or nested structures
         CollectEventClauses(clauses, eventClauses);
 
@@ -1183,15 +1184,17 @@ public static partial class MotelyJsonFilterClauseExtensions
         {
             if (clause.EventTypeEnum.HasValue)
             {
-                DebugLogger.Log($"[DEBUG] Found event clause: EventType={clause.EventTypeEnum}, EffectiveAntes=[{string.Join(",", clause.EffectiveAntes)}], Rolls=[{string.Join(",", clause.Rolls ?? [])}]");
-                
+                DebugLogger.Log(
+                    $"[DEBUG] Found event clause: EventType={clause.EventTypeEnum}, EffectiveAntes=[{string.Join(",", clause.EffectiveAntes)}], Rolls=[{string.Join(",", clause.Rolls ?? [])}]"
+                );
+
                 bool[] wantedAntes = new bool[40];
                 foreach (var ante in clause.EffectiveAntes)
                 {
                     if (ante >= 0 && ante < wantedAntes.Length)
                         wantedAntes[ante] = true;
                 }
-                
+
                 DebugLogger.Log($"[DEBUG] WantedAntes has {wantedAntes.Count(b => b)} true values");
 
                 eventClauses.Add(

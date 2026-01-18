@@ -10,48 +10,68 @@ public sealed class JsonFilterSlicedChainTests
     {
         // Load the test JSON configuration file from TestJsonConfigs
         var configFileName = "test-aleeb-unit.json";
-        var fullConfigPath = Path.Combine(AppContext.BaseDirectory, "TestJsonConfigs", configFileName);
+        var fullConfigPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "TestJsonConfigs",
+            configFileName
+        );
 
-        Assert.True(File.Exists(fullConfigPath), $"JSON config file not found at: {fullConfigPath}");
-        
-        var loadSuccess = MotelyJsonConfig.TryLoadFromJsonFile(fullConfigPath, out var config, out var error);
+        Assert.True(
+            File.Exists(fullConfigPath),
+            $"JSON config file not found at: {fullConfigPath}"
+        );
+
+        var loadSuccess = MotelyJsonConfig.TryLoadFromJsonFile(
+            fullConfigPath,
+            out var config,
+            out var error
+        );
         Assert.True(loadSuccess, $"Failed to load config: {error}");
         Assert.NotNull(config);
-        
+
         // Verify the config contains the expected Blueprint clause
         Assert.NotNull(config.Must);
         Assert.Single(config.Must);
         var blueprintClause = config.Must[0];
         Assert.Equal("joker", blueprintClause.Type);
         Assert.Equal("Blueprint", blueprintClause.Value);
-        
+
         // EXACTLY replicate JsonSearchExecutor.CreateSearch() logic
         // Step 1: Group clauses by category (PROPER SLICING)
-        var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotelyJsonFilterClause>();
+        var mustClauses =
+            config.Must?.ToList() ?? new List<MotelyJsonConfig.MotelyJsonFilterClause>();
         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
-        
+
         Assert.Single(clausesByCategory);
         Assert.True(clausesByCategory.ContainsKey(FilterCategory.Joker));
-        
+
         // Step 2: Create base filter with first category
         var categories = clausesByCategory.Keys.ToList();
         var primaryCategory = categories[0];
         var primaryClauses = clausesByCategory[primaryCategory];
-        
+
         // Step 3: Create specialized filter based on category (matching switch statement)
         IMotelySeedFilterDesc filterDesc = primaryCategory switch
         {
             FilterCategory.Joker => CreateJokerFilterDesc(primaryClauses),
-            _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
+            _ => throw new ArgumentException(
+                $"Specialized filter not implemented: {primaryCategory}"
+            ),
         };
-        
+
         // Step 4: Create search settings with explicit typing (NOT dynamic - that breaks method chaining!)
-        MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter> searchSettings = primaryCategory switch
-        {
-            FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
-            _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
-        };
-        
+        MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter> searchSettings =
+            primaryCategory switch
+            {
+                FilterCategory.Joker =>
+                    new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
+                        (MotelyJsonJokerFilterDesc)filterDesc
+                    ),
+                _ => throw new ArgumentException(
+                    $"Search settings not implemented: {primaryCategory}"
+                ),
+            };
+
         // Step 5: Chain additional filters (none in this case since we only have one category)
         for (int i = 1; i < categories.Count; i++)
         {
@@ -60,22 +80,22 @@ public sealed class JsonFilterSlicedChainTests
             var additionalFilter = CreateFilterForCategory(category, clauses);
             searchSettings = searchSettings.WithAdditionalFilter(additionalFilter);
         }
-        
+
         // Apply deck and stake
         searchSettings = searchSettings.WithDeck(MotelyDeck.Red);
         searchSettings = searchSettings.WithStake(MotelyStake.White);
-        
+
         // TEST THE FILTER AGAINST ALEEB - not analyze ALEEB!
         // Create a list search with just ALEEB (this LIMITS the search to only this seed)
         var seedsToTest = new List<string> { "ALEEB" };
         IMotelySearch search = searchSettings.WithListSearch(seedsToTest).Start();
-        
+
         // Wait for search to complete (with timeout to prevent hanging)
         search.AwaitCompletionWithTimeout(timeoutSeconds: 2);
-        
+
         // Verify ALEEB matched the filter
         Assert.Equal(MotelySearchStatus.Completed, search.Status);
-        
+
         // Verify the converted clause has the correct properties
         var convertedClauses = MotelyJsonJokerFilterClause.ConvertClauses(primaryClauses);
         Assert.Single(convertedClauses);
@@ -83,17 +103,28 @@ public sealed class JsonFilterSlicedChainTests
         Assert.Equal(MotelyJoker.Blueprint, jokerClause.JokerType);
         Assert.True(jokerClause.WantedAntes[2]); // Ante 2 should be set
     }
-    
+
     [Fact]
     public void SlicedFilterChain_RealJsonFile_RawShopJokerStreams_ParseAndMatchALEEB()
     {
         // Load the test JSON configuration file from TestJsonConfigs
         var configFileName = "test-aleeb-raw-shop-streams.json";
-        var fullConfigPath = Path.Combine(AppContext.BaseDirectory, "TestJsonConfigs", configFileName);
+        var fullConfigPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "TestJsonConfigs",
+            configFileName
+        );
 
-        Assert.True(File.Exists(fullConfigPath), $"JSON config file not found at: {fullConfigPath}");
+        Assert.True(
+            File.Exists(fullConfigPath),
+            $"JSON config file not found at: {fullConfigPath}"
+        );
 
-        var loadSuccess = MotelyJsonConfig.TryLoadFromJsonFile(fullConfigPath, out var config, out var error);
+        var loadSuccess = MotelyJsonConfig.TryLoadFromJsonFile(
+            fullConfigPath,
+            out var config,
+            out var error
+        );
         Assert.True(loadSuccess, $"Failed to load config: {error}");
         Assert.NotNull(config);
         Assert.NotNull(config.Must);
@@ -101,7 +132,8 @@ public sealed class JsonFilterSlicedChainTests
 
         // EXACTLY replicate JsonSearchExecutor.CreateSearch() logic
         // Step 1: Group clauses by category (PROPER SLICING)
-        var mustClauses = config.Must?.ToList() ?? new List<MotelyJsonConfig.MotelyJsonFilterClause>();
+        var mustClauses =
+            config.Must?.ToList() ?? new List<MotelyJsonConfig.MotelyJsonFilterClause>();
         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
 
         Assert.Single(clausesByCategory);
@@ -116,15 +148,23 @@ public sealed class JsonFilterSlicedChainTests
         IMotelySeedFilterDesc filterDesc = primaryCategory switch
         {
             FilterCategory.Joker => CreateJokerFilterDesc(primaryClauses),
-            _ => throw new ArgumentException($"Specialized filter not implemented: {primaryCategory}")
+            _ => throw new ArgumentException(
+                $"Specialized filter not implemented: {primaryCategory}"
+            ),
         };
 
         // Step 4: Create search settings with explicit typing (NOT dynamic - that breaks method chaining!)
-        MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter> searchSettings = primaryCategory switch
-        {
-            FilterCategory.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>((MotelyJsonJokerFilterDesc)filterDesc),
-            _ => throw new ArgumentException($"Search settings not implemented: {primaryCategory}")
-        };
+        MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter> searchSettings =
+            primaryCategory switch
+            {
+                FilterCategory.Joker =>
+                    new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
+                        (MotelyJsonJokerFilterDesc)filterDesc
+                    ),
+                _ => throw new ArgumentException(
+                    $"Search settings not implemented: {primaryCategory}"
+                ),
+            };
 
         // Step 5: Chain additional filters (none in this case since we only have one category)
         for (int i = 1; i < categories.Count; i++)
@@ -160,33 +200,64 @@ public sealed class JsonFilterSlicedChainTests
         Assert.NotNull(blueprintClause.Sources.RareShopJokers);
         Assert.True(blueprintClause.Sources.RareShopJokers.Length > 0);
     }
-    
+
     // Helper method matching JsonSearchExecutor.CreateJokerFilterDesc()
-    private static MotelyJsonJokerFilterDesc CreateJokerFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterClause> clauses)
+    private static MotelyJsonJokerFilterDesc CreateJokerFilterDesc(
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
+    )
     {
         var typedClauses = MotelyJsonJokerFilterClause.ConvertClauses(clauses);
         var criteria = MotelyJsonJokerFilterClause.CreateCriteria(typedClauses);
         return new MotelyJsonJokerFilterDesc(criteria);
     }
-    
+
     // Helper method for creating filters for additional categories
-    private static IMotelySeedFilterDesc CreateFilterForCategory(FilterCategory category, List<MotelyJsonConfig.MotelyJsonFilterClause> clauses)
+    private static IMotelySeedFilterDesc CreateFilterForCategory(
+        FilterCategory category,
+        List<MotelyJsonConfig.MotelyJsonFilterClause> clauses
+    )
     {
         return category switch
         {
-            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(MotelyJsonSoulJokerFilterClause.CreateCriteria(MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses))),
+            FilterCategory.SoulJoker => new MotelyJsonSoulJokerFilterDesc(
+                MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                    MotelyJsonSoulJokerFilterClause.ConvertClauses(clauses)
+                )
+            ),
             FilterCategory.Joker => CreateJokerFilterDesc(clauses),
-            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterClause.CreateCriteria(MotelyJsonVoucherFilterClause.ConvertClauses(clauses))),
-            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterClause.CreateCriteria(MotelyJsonPlanetFilterClause.ConvertClauses(clauses))),
-            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterClause.CreateCriteria(MotelyJsonTarotFilterClause.ConvertClauses(clauses))),
-            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterClause.CreateCriteria(MotelyJsonSpectralFilterClause.ConvertClauses(clauses))),
-            FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)),
-            FilterCategory.Boss => new MotelyJsonBossFilterDesc(MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)),
-            FilterCategory.Tag => new MotelyJsonTagFilterDesc(MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)),
-            _ => throw new ArgumentException($"Additional filter not implemented: {category}")
+            FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
+                MotelyJsonVoucherFilterClause.CreateCriteria(
+                    MotelyJsonVoucherFilterClause.ConvertClauses(clauses)
+                )
+            ),
+            FilterCategory.PlanetCard => new MotelyJsonPlanetFilterDesc(
+                MotelyJsonPlanetFilterClause.CreateCriteria(
+                    MotelyJsonPlanetFilterClause.ConvertClauses(clauses)
+                )
+            ),
+            FilterCategory.TarotCard => new MotelyJsonTarotCardFilterDesc(
+                MotelyJsonTarotFilterClause.CreateCriteria(
+                    MotelyJsonTarotFilterClause.ConvertClauses(clauses)
+                )
+            ),
+            FilterCategory.SpectralCard => new MotelyJsonSpectralCardFilterDesc(
+                MotelyJsonSpectralFilterClause.CreateCriteria(
+                    MotelyJsonSpectralFilterClause.ConvertClauses(clauses)
+                )
+            ),
+            FilterCategory.PlayingCard => new MotelyJsonPlayingCardFilterDesc(
+                MotelyJsonFilterClauseExtensions.CreatePlayingCardCriteria(clauses)
+            ),
+            FilterCategory.Boss => new MotelyJsonBossFilterDesc(
+                MotelyJsonFilterClauseExtensions.CreateBossCriteria(clauses)
+            ),
+            FilterCategory.Tag => new MotelyJsonTagFilterDesc(
+                MotelyJsonFilterClauseExtensions.CreateTagCriteria(clauses)
+            ),
+            _ => throw new ArgumentException($"Additional filter not implemented: {category}"),
         };
     }
-    
+
     [Fact]
     public void SlicedFilterChain_MultipleCategories_ProperlyChains()
     {
@@ -202,17 +273,14 @@ public sealed class JsonFilterSlicedChainTests
                     Type = "Joker",
                     Value = "Joker",
                     Antes = new int[] { 3 },
-                    Sources = new SourcesConfig
-                    {
-                        ShopSlots = new int[] { 0, 1, 2, 3, 4 }
-                    }
+                    Sources = new SourcesConfig { ShopSlots = new int[] { 0, 1, 2, 3, 4 } },
                 },
                 // Voucher clause
                 new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Voucher",
                     Value = "Observatory",
-                    Antes = new int[] { 2 }
+                    Antes = new int[] { 2 },
                 },
                 // Tarot clause
                 new MotelyJsonConfig.MotelyJsonFilterClause
@@ -220,62 +288,69 @@ public sealed class JsonFilterSlicedChainTests
                     Type = "TarotCard",
                     Value = "The Fool",
                     Antes = new int[] { 1 },
-                    Sources = new SourcesConfig
-                    {
-                        PackSlots = new int[] { 0, 1, 2 }
-                    }
-                }
+                    Sources = new SourcesConfig { PackSlots = new int[] { 0, 1, 2 } },
+                },
             },
             Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
         };
-        
+
         // Initialize parsed enums for all clauses
         foreach (var filterClause in config.Must)
         {
             filterClause.InitializeParsedEnums();
         }
-        
+
         // Test the slicing mechanism groups correctly
         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.Must);
-        
+
         Assert.Equal(3, clausesByCategory.Count);
         Assert.True(clausesByCategory.ContainsKey(FilterCategory.Joker));
         Assert.True(clausesByCategory.ContainsKey(FilterCategory.Voucher));
         Assert.True(clausesByCategory.ContainsKey(FilterCategory.TarotCard));
-        
+
         // Verify each category has the correct number of clauses
         Assert.Single(clausesByCategory[FilterCategory.Joker]);
         Assert.Single(clausesByCategory[FilterCategory.Voucher]);
         Assert.Single(clausesByCategory[FilterCategory.TarotCard]);
-        
+
         // Create specialized filters for each category
-        var jokerClauses = MotelyJsonJokerFilterClause.ConvertClauses(clausesByCategory[FilterCategory.Joker]);
+        var jokerClauses = MotelyJsonJokerFilterClause.ConvertClauses(
+            clausesByCategory[FilterCategory.Joker]
+        );
         var jokerCriteria = MotelyJsonJokerFilterClause.CreateCriteria(jokerClauses);
         var jokerFilterDesc = new MotelyJsonJokerFilterDesc(jokerCriteria);
 
-        var voucherClauses = MotelyJsonVoucherFilterClause.ConvertClauses(clausesByCategory[FilterCategory.Voucher]);
+        var voucherClauses = MotelyJsonVoucherFilterClause.ConvertClauses(
+            clausesByCategory[FilterCategory.Voucher]
+        );
         var voucherCriteria = MotelyJsonVoucherFilterClause.CreateCriteria(voucherClauses);
         var voucherFilterDesc = new MotelyJsonVoucherFilterDesc(voucherCriteria);
 
-        var tarotClauses = MotelyJsonTarotFilterClause.ConvertClauses(clausesByCategory[FilterCategory.TarotCard]);
+        var tarotClauses = MotelyJsonTarotFilterClause.ConvertClauses(
+            clausesByCategory[FilterCategory.TarotCard]
+        );
         var tarotCriteria = MotelyJsonTarotFilterClause.CreateCriteria(tarotClauses);
         var tarotFilterDesc = new MotelyJsonTarotCardFilterDesc(tarotCriteria);
-        
+
         // Create filter contexts
-        var searchParams = new MotelySearchParameters { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
+        var searchParams = new MotelySearchParameters
+        {
+            Deck = MotelyDeck.Red,
+            Stake = MotelyStake.White,
+        };
         var ctx1 = new MotelyFilterCreationContext(in searchParams);
         var ctx2 = new MotelyFilterCreationContext(in searchParams);
         var ctx3 = new MotelyFilterCreationContext(in searchParams);
-        
+
         // Verify filters can be created
         var jokerFilter = jokerFilterDesc.CreateFilter(ref ctx1);
         var voucherFilter = voucherFilterDesc.CreateFilter(ref ctx2);
         var tarotFilter = tarotFilterDesc.CreateFilter(ref ctx3);
-        
+
         // All filters created successfully (structs, so no null check needed)
     }
-    
+
     [Fact]
     public void SlicedFilterChain_OptimizedAnteExtraction()
     {
@@ -289,30 +364,30 @@ public sealed class JsonFilterSlicedChainTests
                 {
                     Type = "Joker",
                     Value = "Any",
-                    Antes = new int[] { 2, 4, 7 } // Sparse antes for optimization test
-                }
+                    Antes = new int[] { 2, 4, 7 }, // Sparse antes for optimization test
+                },
             },
             Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
         };
-        
+
         // Initialize parsed enums for all clauses
         foreach (var filterClause in config.Must)
         {
             filterClause.InitializeParsedEnums();
         }
-        
+
         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.Must);
         var jokerClauses = clausesByCategory[FilterCategory.Joker];
         var convertedClauses = MotelyJsonJokerFilterClause.ConvertClauses(jokerClauses);
-        
+
         var clause = convertedClauses[0];
-        
+
         // Check expected antes: 2, 4, 7
         Assert.True(clause.WantedAntes[2]); // Ante 2 should be set
         Assert.True(clause.WantedAntes[4]); // Ante 4 should be set
         Assert.True(clause.WantedAntes[7]); // Ante 7 should be set
-        
+
         // Extract antes from array to verify
         var extractedAntes = new List<int>();
         for (int ante = 1; ante <= 8; ante++)
@@ -322,13 +397,13 @@ public sealed class JsonFilterSlicedChainTests
                 extractedAntes.Add(ante);
             }
         }
-        
+
         Assert.Equal(3, extractedAntes.Count);
         Assert.Contains(2, extractedAntes);
         Assert.Contains(4, extractedAntes);
         Assert.Contains(7, extractedAntes);
     }
-    
+
     [Fact]
     public void SlicedFilterChain_SoulJokerFiltering()
     {
@@ -342,24 +417,24 @@ public sealed class JsonFilterSlicedChainTests
                 {
                     Type = "SoulJoker",
                     Value = "Perkeo",
-                    Antes = new int[] { 3 }
-                }
+                    Antes = new int[] { 3 },
+                },
             },
             Should = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
-            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>()
+            MustNot = new List<MotelyJsonConfig.MotelyJsonFilterClause>(),
         };
-        
+
         // Initialize parsed enums for all clauses
         foreach (var filterClause in config.Must)
         {
             filterClause.InitializeParsedEnums();
         }
-        
+
         var clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(config.Must);
-        
+
         Assert.Single(clausesByCategory);
         Assert.True(clausesByCategory.ContainsKey(FilterCategory.SoulJoker));
-        
+
         var soulJokerClauses = clausesByCategory[FilterCategory.SoulJoker];
         var convertedClauses = MotelyJsonSoulJokerFilterClause.ConvertClauses(soulJokerClauses);
 
@@ -371,10 +446,14 @@ public sealed class JsonFilterSlicedChainTests
         // Create the filter
         var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(convertedClauses);
         var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
-        var searchParams = new MotelySearchParameters { Deck = MotelyDeck.Red, Stake = MotelyStake.White };
+        var searchParams = new MotelySearchParameters
+        {
+            Deck = MotelyDeck.Red,
+            Stake = MotelyStake.White,
+        };
         var ctx = new MotelyFilterCreationContext(in searchParams);
         var filter = filterDesc.CreateFilter(ref ctx);
-        
+
         // Filter created successfully
     }
 }

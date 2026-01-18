@@ -68,7 +68,10 @@ ref partial struct MotelyVectorSearchContext
         CreateTarotStream(MotelyPrngKeys.SealPurple, ante, true, false, isCached);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public VectorMask GetNextArcanaPackHasTheSoul(ref MotelyVectorTarotStream tarotStream, MotelyBoosterPackSize size)
+    public VectorMask GetNextArcanaPackHasTheSoul(
+        ref MotelyVectorTarotStream tarotStream,
+        MotelyBoosterPackSize size
+    )
     {
         Debug.Assert(tarotStream.IsSoulable, "Tarot pack does not have the soul.");
         Debug.Assert(

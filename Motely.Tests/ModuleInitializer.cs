@@ -10,7 +10,7 @@ public static class ModuleInitializer
     {
         // // Configure Verify to use DiffPlex for better diff output
         // VerifyDiffPlex.Initialize();
-        
+
         // // Optional: Configure Verify settings
         // VerifierSettings.TreatAsString<StringBuilder>();
     }

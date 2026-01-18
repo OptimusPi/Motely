@@ -37,15 +37,16 @@ public sealed class ChainedMustClauseSeedTests
 
         var seedsToTest = new List<string> { "C7AOGOYY" };
 
-        IMotelySearch search = new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
-            baronFilterDesc
-        )
-            .WithAdditionalFilter(mimeFilterDesc)
-            .WithDeck(MotelyDeck.Ghost)
-            .WithStake(MotelyStake.Black)
-            .WithQuietMode(true)
-            .WithListSearch(seedsToTest)
-            .Start();
+        IMotelySearch search =
+            new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
+                baronFilterDesc
+            )
+                .WithAdditionalFilter(mimeFilterDesc)
+                .WithDeck(MotelyDeck.Ghost)
+                .WithStake(MotelyStake.Black)
+                .WithQuietMode(true)
+                .WithListSearch(seedsToTest)
+                .Start();
 
         // Wait for search to complete (with timeout to prevent hanging)
         search.AwaitCompletionWithTimeout(timeoutSeconds: 2);

@@ -33,9 +33,14 @@ public struct MotelyRunSeedScoreDesc(
     /// <summary>
     /// Adapter provider that simply forwards to the legacy provider until scoring is migrated.
     /// </summary>
-    public readonly struct MotelyRunSeedScoreProvider(IMotelySeedScoreProvider Legacy) : IMotelySeedScoreProvider
+    public readonly struct MotelyRunSeedScoreProvider(IMotelySeedScoreProvider Legacy)
+        : IMotelySeedScoreProvider
     {
-        public VectorMask Score(ref MotelyVectorSearchContext searchContext, MotelySeedScoreTally[] buffer, VectorMask baseFilterMask = default, int scoreThreshold = 0)
-            => Legacy.Score(ref searchContext, buffer, baseFilterMask, scoreThreshold);
+        public VectorMask Score(
+            ref MotelyVectorSearchContext searchContext,
+            MotelySeedScoreTally[] buffer,
+            VectorMask baseFilterMask = default,
+            int scoreThreshold = 0
+        ) => Legacy.Score(ref searchContext, buffer, baseFilterMask, scoreThreshold);
     }
 }

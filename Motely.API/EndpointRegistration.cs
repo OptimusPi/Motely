@@ -1,0 +1,263 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Motely;
+using Motely.Analysis;
+using Motely.API.Hubs;
+using Motely.API.Models;
+using Motely.API.Services;
+
+namespace Motely.API;
+
+/// <summary>
+/// Modular endpoint registration for different deployment scenarios.
+/// Allows enabling/disabling endpoints independently for testing and deployment.
+/// </summary>
+public static class EndpointRegistration
+{
+    /// <summary>
+    /// Register core API endpoints (filters, analyze, health, etc.)
+    /// </summary>
+    public static IEndpointRouteBuilder MapCoreApiEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        // Health and info endpoints
+        endpoints.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
+        endpoints.MapGet(
+            "/routes",
+            () =>
+                new
+                {
+                    homepage = "/",
+                    health = "/health",
+                    routes = "/routes",
+                    analyze = "/analyze?seed=SEED[&deck=Red][&stake=White]",
+                    filters = "/filters",
+                    seed_sources = "/seed-sources",
+                }
+        );
+
+        // Analyze endpoint (quick seed analyzer)
+        endpoints.MapGet(
+            "/analyze",
+            (string seed, string? deck = "Red", string? stake = "White") =>
+            {
+                if (string.IsNullOrWhiteSpace(seed))
+                    return Results.BadRequest(
+                        new { error = "Missing required query parameter: seed" }
+                    );
+
+                if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
+                    return Results.BadRequest(new { error = $"Invalid deck: {deck}" });
+
+                if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
+                    return Results.BadRequest(new { error = $"Invalid stake: {stake}" });
+
+                try
+                {
+                    var analysis = MotelySeedAnalyzer.Analyze(
+                        new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum)
+                    );
+                    return Results.Text(analysis.ToString(), "text/plain; charset=utf-8");
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            }
+        );
+
+        // Filter endpoints
+        endpoints.MapGet("/filters", Endpoints.GetFilters);
+        endpoints.MapPost(
+            "/filters/update",
+            async (FilterSaveRequest request) =>
+            {
+                if (request?.FilterJaml == null)
+                    return Results.BadRequest(new { error = "Missing filterJaml in request body" });
+
+                var jamlFiltersDir = MotelyPaths.JamlFiltersDir;
+                Directory.CreateDirectory(jamlFiltersDir);
+
+                string? name = null;
+                if (
+                    JamlConfigLoader.TryLoadFromJamlString(request.FilterJaml, out var cfg, out _)
+                    && cfg != null
+                )
+                {
+                    name = cfg.Name;
+                }
+
+                var fileName = $"{(name ?? "filter")}.jaml";
+                var fullPath = Path.Combine(jamlFiltersDir, fileName);
+                File.WriteAllText(fullPath, request.FilterJaml);
+
+                return Results.Ok(new { filePath = fileName });
+            }
+        );
+        endpoints.MapDelete("/filters/{id}", Endpoints.DeleteFilter);
+
+        // Seed sources endpoint
+        endpoints.MapGet("/seed-sources", Endpoints.GetSeedSources);
+
+        return endpoints;
+    }
+
+    /// <summary>
+    /// Register search queue endpoints (for multiplayer seed searches)
+    /// </summary>
+    public static IEndpointRouteBuilder MapSearchQueueEndpoints(
+        this IEndpointRouteBuilder endpoints
+    )
+    {
+        // Searches endpoint
+        endpoints.MapGet("/searches", Endpoints.GetSearches);
+
+        // Search endpoints
+        endpoints.MapPost(
+            "/search",
+            async (SearchStartRequest request) =>
+            {
+                try
+                {
+                    if (request == null)
+                        return Results.BadRequest(new { error = "Missing request body" });
+
+                    var seedCount = request.SeedCount.HasValue
+                        ? (int)Math.Min(request.SeedCount.Value, int.MaxValue)
+                        : 0;
+
+                    var filterJaml = FilterService.GetFilterJaml(request.FilterId);
+                    if (string.IsNullOrEmpty(filterJaml))
+                        return Results.BadRequest(new { error = "Filter not found" });
+
+                    var (immediateResults, searchId) =
+                        await SearchManager.Instance.StartSearchAsync(
+                            filterJaml,
+                            request.Deck ?? "Red",
+                            request.Stake ?? "White",
+                            seedCount,
+                            request.StartBatch,
+                            request.Cutoff,
+                            request.SeedSource
+                        );
+
+                    return Results.Ok(
+                        new
+                        {
+                            searchId = searchId,
+                            status = "running",
+                            columns = SearchManager.Instance.GetColumnNames(searchId),
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            }
+        );
+
+        endpoints.MapGet(
+            "/search/{id}",
+            (string id) =>
+            {
+                try
+                {
+                    var (results, progressPercent) = SearchManager.Instance.GetSearchStatus(id);
+                    var isRunning = SearchManager.Instance.IsSearchRunning(id);
+
+                    return Results.Ok(
+                        new
+                        {
+                            searchId = id,
+                            status = isRunning ? "running" : "stopped",
+                            results = results,
+                            progressPercent = progressPercent,
+                            columns = SearchManager.Instance.GetColumnNames(id),
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            }
+        );
+
+        endpoints.MapPost(
+            "/search/stop",
+            async (SearchStopRequest? request) =>
+            {
+                try
+                {
+                    var results = await SearchManager.Instance.StopSearchAsync(
+                        request?.SearchId ?? ""
+                    );
+                    return Results.Ok(
+                        new
+                        {
+                            message = "Search stopped",
+                            results = results,
+                            isBackgroundRunning = false,
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            }
+        );
+
+        return endpoints;
+    }
+
+    /// <summary>
+    /// Register SignalR hub (for real-time search updates)
+    /// </summary>
+    public static IEndpointRouteBuilder MapSignalREndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapHub<SearchHub>("/searchHub");
+        return endpoints;
+    }
+
+    /// <summary>
+    /// Register MCP endpoints (for AI assistant integration)
+    /// Note: MCP endpoints are registered via reflection when MCP feature is enabled
+    /// </summary>
+    public static IEndpointRouteBuilder MapMcpEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        // MCP endpoints are registered dynamically via MotelyApiHost when MCP feature is enabled
+        // This method is kept for API compatibility but does nothing when MCP is not referenced
+        return endpoints;
+    }
+
+    /// <summary>
+    /// Register all endpoints based on feature flags
+    /// </summary>
+    public static WebApplication MapMotelyEndpoints(this WebApplication app, FeatureFlags features)
+    {
+        // Core API endpoints (always enabled)
+        app.MapCoreApiEndpoints();
+
+        // Search queue endpoints
+        if (features.EnableSearchQueue)
+        {
+            app.MapSearchQueueEndpoints();
+        }
+
+        // SignalR endpoints
+        if (features.EnableSignalR)
+        {
+            app.MapSignalREndpoints();
+        }
+
+        // MCP endpoints
+        if (features.EnableMcp)
+        {
+            app.MapMcpEndpoints();
+        }
+
+        return app;
+    }
+}

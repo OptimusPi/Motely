@@ -12,13 +12,17 @@ public sealed class JsonFilterUnitTests
     [InlineData("aleeb-voucher-test.json", "voucher", "Hieroglyph")]
     [InlineData("aleeb-tag-test.json", "bigblindtag", "HandyTag")]
     [InlineData("aleeb-boss-test.json", "boss", "TheArm")]
-    public void JsonConfig_LoadsCorrectly_WithExpectedData(string fileName, string expectedType, string expectedValue)
+    public void JsonConfig_LoadsCorrectly_WithExpectedData(
+        string fileName,
+        string expectedType,
+        string expectedValue
+    )
     {
         // Simple test: just verify JSON files load and contain expected data
         var config = LoadTestConfig(fileName);
-        
+
         Assert.NotNull(config.Must);
-        
+
         if (fileName == "aleeb-boss-test.json")
         {
             // Boss test has multiple clauses, check for TheArm in the second clause
@@ -37,31 +41,35 @@ public sealed class JsonFilterUnitTests
             Assert.Equal(expectedValue, clause.Value);
         }
     }
-    
+
     [Fact]
     public void JsonConfig_Comprehensive_LoadsMultipleCategories()
     {
         // Test that comprehensive config loads with multiple categories
         var config = LoadTestConfig("comprehensive-test.json");
-        
+
         Assert.NotNull(config.Must);
         Assert.True(config.Must.Count > 1, "Comprehensive test should have multiple clauses");
-        
+
         // Just verify we can load it - don't test complex filter logic
         Assert.NotNull(config.Name);
         Assert.NotNull(config.Description);
     }
-    
+
     private static MotelyJsonConfig LoadTestConfig(string fileName)
     {
         var configPath = Path.Combine("TestJsonConfigs", fileName);
-        
+
         Assert.True(File.Exists(configPath), $"Test config file not found: {configPath}");
-        
-        var loadSuccess = MotelyJsonConfig.TryLoadFromJsonFile(configPath, out var config, out var error);
+
+        var loadSuccess = MotelyJsonConfig.TryLoadFromJsonFile(
+            configPath,
+            out var config,
+            out var error
+        );
         Assert.True(loadSuccess, $"Failed to load config {fileName}: {error}");
         Assert.NotNull(config);
-        
+
         return config;
     }
 }

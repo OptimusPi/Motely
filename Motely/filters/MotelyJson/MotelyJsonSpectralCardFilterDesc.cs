@@ -26,7 +26,9 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
 
         // SINGLE clause only - caller must chain multiple filters for multiple clauses
         if (_criteria.Clauses.Count != 1)
-            throw new ArgumentException($"MotelyJsonSpectralCardFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
+            throw new ArgumentException(
+                $"MotelyJsonSpectralCardFilter expects exactly 1 clause, got {_criteria.Clauses.Count}"
+            );
 
         return new MotelyJsonSpectralCardFilter(
             _criteria.Clauses[0],
@@ -123,8 +125,7 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                                 foreach (var spectralType in clause.SpectralTypes)
                                 {
                                     var targetType = (MotelyItemType)(
-                                        (int)MotelyItemTypeCategory.SpectralCard
-                                        | (int)spectralType
+                                        (int)MotelyItemTypeCategory.SpectralCard | (int)spectralType
                                     );
                                     anyTypeMatch |= VectorEnum256.Equals(
                                         spectralItem.Type,
@@ -139,10 +140,7 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                                     (int)MotelyItemTypeCategory.SpectralCard
                                     | (int)clause.SpectralType.Value
                                 );
-                                typeMatches = VectorEnum256.Equals(
-                                    spectralItem.Type,
-                                    targetType
-                                );
+                                typeMatches = VectorEnum256.Equals(spectralItem.Type, targetType);
                             }
                             else
                             {
@@ -164,8 +162,7 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                             }
 
                             // Combine: must be actual spectral AND match type AND match edition
-                            VectorMask matches =
-                                isActualSpectral & typeMatches & editionMatches;
+                            VectorMask matches = isActualSpectral & typeMatches & editionMatches;
                             clauseMask |= matches;
                         }
                     }
@@ -187,7 +184,9 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                     int maxRollIndex = rollIndices[rollIndices.Length - 1];
                     int pos = 0;
                     int nextWanted = rollIndices[0];
-                    var excludedValue = Vector256.Create((int)MotelyItemType.SpectralExcludedByStream);
+                    var excludedValue = Vector256.Create(
+                        (int)MotelyItemType.SpectralExcludedByStream
+                    );
 
                     for (int r = 0; r <= maxRollIndex; r++)
                     {
@@ -205,7 +204,8 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                             if (clause.SpectralType.HasValue)
                             {
                                 var targetType = (MotelyItemType)(
-                                    (int)MotelyItemTypeCategory.SpectralCard | (int)clause.SpectralType.Value
+                                    (int)MotelyItemTypeCategory.SpectralCard
+                                    | (int)clause.SpectralType.Value
                                 );
                                 typeMatches = VectorEnum256.Equals(spectralItem.Type, targetType);
                             }
@@ -249,7 +249,9 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                     int maxRollIndex = rollIndices[rollIndices.Length - 1];
                     int pos = 0;
                     int nextWanted = rollIndices[0];
-                    var excludedValue = Vector256.Create((int)MotelyItemType.SpectralExcludedByStream);
+                    var excludedValue = Vector256.Create(
+                        (int)MotelyItemType.SpectralExcludedByStream
+                    );
 
                     for (int r = 0; r <= maxRollIndex; r++)
                     {
@@ -267,7 +269,8 @@ public struct MotelyJsonSpectralCardFilterDesc(MotelyJsonSpectralFilterCriteria 
                             if (clause.SpectralType.HasValue)
                             {
                                 var targetType = (MotelyItemType)(
-                                    (int)MotelyItemTypeCategory.SpectralCard | (int)clause.SpectralType.Value
+                                    (int)MotelyItemTypeCategory.SpectralCard
+                                    | (int)clause.SpectralType.Value
                                 );
                                 typeMatches = VectorEnum256.Equals(spectralItem.Type, targetType);
                             }

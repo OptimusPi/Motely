@@ -1,4 +1,3 @@
-
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishTrimmed>false</PublishTrimmed>
@@ -34,5 +33,3 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 </Project>
-
-

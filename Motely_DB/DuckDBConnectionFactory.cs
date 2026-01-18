@@ -21,7 +21,10 @@ public static class DuckDBConnectionFactory
     /// <summary>
     /// Create a DuckDB connection with custom configuration
     /// </summary>
-    public static DuckDBConnection CreateConnectionWithConfig(string dbPath, Action<DuckDBConnection>? configure = null)
+    public static DuckDBConnection CreateConnectionWithConfig(
+        string dbPath,
+        Action<DuckDBConnection>? configure = null
+    )
     {
         var connection = new DuckDBConnection(dbPath);
         connection.Open();
@@ -35,15 +38,17 @@ public static class DuckDBConnectionFactory
     public static DuckDBConnection CreateConnectionWithDuckLake(
         string catalogPath,
         string dataPath,
-        string schemaName = "seed_source")
+        string schemaName = "seed_source"
+    )
     {
         var connection = new DuckDBConnection(":memory:");
         connection.Open();
 
         using var cmd = connection.CreateCommand();
-        
+
         // Attach DuckLake catalog
-        cmd.CommandText = $"ATTACH '{catalogPath}' AS {schemaName} (TYPE DUCKLAKE, CATALOG_PATH '{catalogPath}', DATA_PATH '{dataPath}')";
+        cmd.CommandText =
+            $"ATTACH '{catalogPath}' AS {schemaName} (TYPE DUCKLAKE, CATALOG_PATH '{catalogPath}', DATA_PATH '{dataPath}')";
         cmd.ExecuteNonQuery();
 
         return connection;

@@ -10,20 +10,14 @@ namespace Motely.Filters;
 /// </summary>
 public struct MotelyJsonErraticRankAndSuitFilterDesc(
     MotelyJsonErraticRankAndSuitFilterCriteria criteria
-)
-    : IMotelySeedFilterDesc<
-        MotelyJsonErraticRankAndSuitFilterDesc.MotelyJsonErraticRankAndSuitFilter
-    >
+) : IMotelySeedFilterDesc<MotelyJsonErraticRankAndSuitFilterDesc.MotelyJsonErraticRankAndSuitFilter>
 {
     private readonly MotelyJsonErraticRankAndSuitFilterCriteria _criteria = criteria;
 
     public MotelyJsonErraticRankAndSuitFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheErraticDeckPrngStream();
-        return new MotelyJsonErraticRankAndSuitFilter(
-            _criteria.RankClauses,
-            _criteria.SuitClauses
-        );
+        return new MotelyJsonErraticRankAndSuitFilter(_criteria.RankClauses, _criteria.SuitClauses);
     }
 
     public struct MotelyJsonErraticRankAndSuitFilter : IMotelySeedFilter

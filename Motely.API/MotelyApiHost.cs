@@ -1,23 +1,32 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.SignalR;
-using System.Text.Json;
 using Motely;
 using Motely.Analysis;
-using Motely.API.Services;
 using Motely.API;
 using Motely.API.Hubs;
 using Motely.API.Models;
+using Motely.API.Services;
 
 // Request records
-public record SearchStartRequest(string? FilterId, string? Deck, string? Stake, long? SeedCount, long? StartBatch, int? Cutoff, string? SeedSource);
+public record SearchStartRequest(
+    string? FilterId,
+    string? Deck,
+    string? Stake,
+    long? SeedCount,
+    long? StartBatch,
+    int? Cutoff,
+    string? SeedSource
+);
+
 public record SearchStopRequest(string? SearchId);
 
 public static class MotelyApiHost
@@ -27,7 +36,7 @@ public static class MotelyApiHost
         // Try to find the root by looking for JamlFilters directory
         var currentDir = Directory.GetCurrentDirectory();
         var dir = new DirectoryInfo(currentDir);
-        
+
         // Walk up the directory tree looking for JamlFilters
         while (dir != null)
         {
@@ -38,7 +47,7 @@ public static class MotelyApiHost
             }
             dir = dir.Parent;
         }
-        
+
         // Fallback: use current directory if we can't find it
         return currentDir;
     }
@@ -46,16 +55,16 @@ public static class MotelyApiHost
     public static WebApplication CreateHost(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        
+
         // Set ContentRoot to repo root for consistent path resolution
         var motelyRoot = FindMotelyRoot();
         if (!string.IsNullOrEmpty(motelyRoot))
         {
             builder.Host.UseContentRoot(motelyRoot);
         }
-        
+
         builder.Services.AddEndpointsApiExplorer();
-        
+
         // Configure logging to use simple formatter (no ANSI colors)
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole(options =>
@@ -65,44 +74,91 @@ public static class MotelyApiHost
 
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy =>
-            {
-                policy.AllowAnyOrigin()
-                      .AllowAnyMethod()
-                      .AllowAnyHeader();
-            });
+            options.AddPolicy(
+                "AllowAll",
+                policy =>
+                {
+                    policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                }
+            );
         });
 
         // Register services based on feature flags (modular registration)
         // Note: builder.Configuration implements IConfiguration, so we can use it here
         var features = new FeatureFlags(builder.Configuration);
-        
+
         if (features.EnableSwagger)
         {
             builder.Services.AddSwaggerGen();
         }
-        
+
         builder.Services.AddMotelyServices(builder.Configuration);
-        
+
         // Register MCP services from Motely.MCP project (if enabled)
+        // Note: MCP is optional and only available when Motely.MCP project is referenced
+        // For BSO library builds, MCP is disabled by default
+#if !BSO_LIBRARY
         if (features.EnableMcp)
         {
-            builder.Services.AddScoped<Motely.MCP.McpServer>(sp =>
+            try
             {
-                var logger = sp.GetRequiredService<ILogger<Motely.MCP.McpServer>>();
-                var httpClient = new HttpClient();
-                var config = sp.GetRequiredService<IConfiguration>();
-                return new Motely.MCP.McpServer(logger, httpClient, config);
-            });
-            
-            builder.Services.AddScoped<Motely.MCP.McpProtocol.McpProtocolServer>(sp =>
+                // Use reflection to avoid compile-time dependency on Motely.MCP
+                var mcpServerType = Type.GetType("Motely.MCP.McpServer, Motely.MCP");
+                var mcpProtocolServerType = Type.GetType(
+                    "Motely.MCP.McpProtocol.McpProtocolServer, Motely.MCP"
+                );
+
+                if (mcpServerType != null && mcpProtocolServerType != null)
+                {
+                    // Register HttpClientFactory if not already registered
+                    if (!builder.Services.Any(s => s.ServiceType == typeof(IHttpClientFactory)))
+                    {
+                        builder.Services.AddHttpClient();
+                    }
+
+                    // Register MCP services via reflection
+                    builder.Services.AddScoped(
+                        mcpServerType,
+                        sp =>
+                        {
+                            var logger = sp.GetRequiredService<ILoggerFactory>()
+                                .CreateLogger(mcpServerType);
+                            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                            var httpClient = httpClientFactory.CreateClient();
+                            var config = sp.GetRequiredService<IConfiguration>();
+                            return Activator.CreateInstance(
+                                mcpServerType,
+                                logger,
+                                httpClient,
+                                config
+                            )!;
+                        }
+                    );
+
+                    builder.Services.AddScoped(
+                        mcpProtocolServerType,
+                        sp =>
+                        {
+                            var logger = sp.GetRequiredService<ILoggerFactory>()
+                                .CreateLogger(mcpProtocolServerType);
+                            var mcpServer = sp.GetRequiredService(mcpServerType);
+                            var searchManager = SearchManager.Instance;
+                            return Activator.CreateInstance(
+                                mcpProtocolServerType,
+                                logger,
+                                mcpServer,
+                                searchManager
+                            )!;
+                        }
+                    );
+                }
+            }
+            catch
             {
-                var logger = sp.GetRequiredService<ILogger<Motely.MCP.McpProtocol.McpProtocolServer>>();
-                var mcpServer = sp.GetRequiredService<Motely.MCP.McpServer>();
-                var searchManager = SearchManager.Instance;
-                return new Motely.MCP.McpProtocol.McpProtocolServer(logger, mcpServer, searchManager);
-            });
+                // MCP assembly not available - silently skip
+            }
         }
+#endif
 
         var app = builder.Build();
 
@@ -115,10 +171,10 @@ public static class MotelyApiHost
         {
             SearchManager.Instance.SetMotelyRoot(motelyRootForSearchManager);
         }
-        
+
         // Get features again from app.Configuration (in case environment-specific configs were loaded)
         var runtimeFeatures = new FeatureFlags(app.Configuration);
-        
+
         // Wire up SearchBroadcaster to SearchManager (if SignalR is enabled)
         if (runtimeFeatures.EnableSignalR)
         {
@@ -138,7 +194,9 @@ public static class MotelyApiHost
                     var hubContext = app.Services.GetService<IHubContext<SearchHub>>();
                     if (hubContext != null)
                     {
-                        using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                        using var cts = new System.Threading.CancellationTokenSource(
+                            TimeSpan.FromMilliseconds(100)
+                        );
                         // Signal all clients to disconnect with very short timeout
                         _ = hubContext.Clients.All.SendAsync("ServerShuttingDown", cts.Token);
                     }
@@ -149,70 +207,73 @@ public static class MotelyApiHost
 
         // Configure middleware - STATIC FILES MUST COME BEFORE ROUTING
         app.UseCors("AllowAll");
-        
+
         // Static file hosting - wwwroot is at Motely.API/wwwroot (not ContentRoot/wwwroot)
         var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "Motely.API", "wwwroot");
         if (Directory.Exists(wwwrootPath))
         {
-            var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wwwrootPath);
+            var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+                wwwrootPath
+            );
             app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = fileProvider,
-                OnPrepareResponse = ctx =>
+            app.UseStaticFiles(
+                new StaticFileOptions
                 {
-                    try
+                    FileProvider = fileProvider,
+                    OnPrepareResponse = ctx =>
                     {
-                        if (ctx.File?.Name != null)
+                        try
                         {
-                            var path = ctx.File.Name.ToLowerInvariant();
-                            if (path.EndsWith(".wasm"))
+                            // Let ASP.NET Core handle MIME types automatically via FileExtensionContentTypeProvider
+                            // Only set content encoding headers for compressed files
+                            if (ctx.File?.Name != null)
                             {
-                                ctx.Context.Response.ContentType = "application/wasm";
+                                var path = ctx.File.Name.ToLowerInvariant();
+                                if (path.EndsWith(".br"))
+                                {
+                                    ctx.Context.Response.Headers.Append("Content-Encoding", "br");
+                                }
+                                else if (path.EndsWith(".gz"))
+                                {
+                                    ctx.Context.Response.Headers.Append("Content-Encoding", "gzip");
+                                }
                             }
-                            else if (path.EndsWith(".br"))
-                            {
-                                ctx.Context.Response.ContentType = GetMimeType(path.Replace(".br", ""));
-                                ctx.Context.Response.Headers.Append("Content-Encoding", "br");
-                            }
-                            else if (path.EndsWith(".gz"))
-                            {
-                                ctx.Context.Response.ContentType = GetMimeType(path.Replace(".gz", ""));
-                                ctx.Context.Response.Headers.Append("Content-Encoding", "gzip");
-                            }
+                            // CORS headers for all static files
+                            ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
                         }
-                        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-                    }
-                    catch { }
+                        catch { }
+                    },
                 }
-            });
+            );
         }
         else
         {
             app.UseDefaultFiles();
             app.UseStaticFiles();
         }
-        
+
         // Also serve static files from public folder (tracked by git, won't be wiped by build)
         // Files in Motely.API/public/ will be accessible at /public/* URLs
         var publicPath = Path.Combine(app.Environment.ContentRootPath, "Motely.API", "public");
         if (Directory.Exists(publicPath))
         {
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new PhysicalFileProvider(publicPath),
-                RequestPath = "/public",
-                OnPrepareResponse = ctx =>
+            app.UseStaticFiles(
+                new StaticFileOptions
                 {
-                    try
+                    FileProvider = new PhysicalFileProvider(publicPath),
+                    RequestPath = "/public",
+                    OnPrepareResponse = ctx =>
                     {
-                        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-                    }
-                    catch { }
+                        try
+                        {
+                            ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                        }
+                        catch { }
+                    },
                 }
-            });
+            );
         }
-        
+
         // Add Swagger/OpenAPI (if enabled)
         if (features.EnableSwagger)
         {
@@ -222,40 +283,17 @@ public static class MotelyApiHost
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Motely API v1");
                 c.RoutePrefix = "swagger";
             });
-            
+
             // Serve OpenAPI JSON at /openapi/v1.json
-            app.MapGet("/openapi/v1.json", () => Results.Redirect("/swagger/v1/swagger.json", permanent: false));
+            app.MapGet(
+                "/openapi/v1.json",
+                () => Results.Redirect("/swagger/v1/swagger.json", permanent: false)
+            );
         }
 
         // Register all endpoints based on feature flags (modular registration)
         app.MapMotelyEndpoints(features);
 
         return app;
-    }
-
-    private static string GetMimeType(string path)
-    {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        return ext switch
-        {
-            ".html" => "text/html",
-            ".js" => "application/javascript",
-            ".css" => "text/css",
-            ".wasm" => "application/wasm",
-            ".json" => "application/json",
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".gif" => "image/gif",
-            ".svg" => "image/svg+xml",
-            ".ico" => "image/x-icon",
-            ".woff" => "font/woff",
-            ".woff2" => "font/woff2",
-            ".ttf" => "font/ttf",
-            ".otf" => "font/otf",
-            ".ogg" => "audio/ogg",
-            ".mp3" => "audio/mpeg",
-            ".webm" => "video/webm",
-            _ => "application/octet-stream"
-        };
     }
 }

@@ -39,12 +39,17 @@ public static class DuckDBOperations
     /// <summary>
     /// Check if a column exists in a table
     /// </summary>
-    public static bool ColumnExists(DuckDBConnection connection, string tableName, string columnName)
+    public static bool ColumnExists(
+        DuckDBConnection connection,
+        string tableName,
+        string columnName
+    )
     {
         try
         {
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = $@"
+            cmd.CommandText =
+                $@"
                 SELECT COUNT(*) 
                 FROM information_schema.columns 
                 WHERE table_name = '{tableName}' AND column_name = '{columnName}'";
@@ -60,13 +65,16 @@ public static class DuckDBOperations
     /// <summary>
     /// Execute a query and return results
     /// </summary>
-    public static List<Dictionary<string, object?>> ExecuteQuery(DuckDBConnection connection, string sql)
+    public static List<Dictionary<string, object?>> ExecuteQuery(
+        DuckDBConnection connection,
+        string sql
+    )
     {
         var results = new List<Dictionary<string, object?>>();
         using var cmd = connection.CreateCommand();
         cmd.CommandText = sql;
         using var reader = cmd.ExecuteReader();
-        
+
         while (reader.Read())
         {
             var row = new Dictionary<string, object?>();
@@ -76,7 +84,7 @@ public static class DuckDBOperations
             }
             results.Add(row);
         }
-        
+
         return results;
     }
 

@@ -71,7 +71,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                         MotelyPlayingCardRank.Queen => "Q",
                         MotelyPlayingCardRank.King => "K",
                         MotelyPlayingCardRank.Ace => "A",
-                        _ => rank.ToString()
+                        _ => rank.ToString(),
                     };
                     var suitStr = suit switch
                     {
@@ -79,7 +79,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                         MotelyPlayingCardSuit.Diamond => "D",
                         MotelyPlayingCardSuit.Heart => "H",
                         MotelyPlayingCardSuit.Spade => "S",
-                        _ => suit.ToString()
+                        _ => suit.ToString(),
                     };
                     deckCards.Add($"{rankStr}_{suitStr}");
                 }
@@ -160,7 +160,11 @@ public sealed class MotelyAnalyzerFilterDesc()
         /// For Erratic Deck: order from starting deck
         /// For other decks: order from Standard Packs opened in this ante
         /// </summary>
-        private static string? GetDrawOrderForAnte(ref MotelySingleSearchContext ctx, int ante, ref AnteAnalysisState state)
+        private static string? GetDrawOrderForAnte(
+            ref MotelySingleSearchContext ctx,
+            int ante,
+            ref AnteAnalysisState state
+        )
         {
             var drawCards = new List<string>();
 
@@ -169,7 +173,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                 // For Erratic Deck, cards are drawn from the starting deck in order
                 // We need to track cumulative draws across all antes up to this point
                 var deckStream = ctx.CreateErraticDeckPrngStream(isCached: false);
-                
+
                 // Calculate cumulative cards drawn by this ante
                 // Each ante typically draws 5 cards per hand, but we'll show the deck order
                 // For simplicity, show first 52 cards (full deck) - the actual draw order
@@ -185,22 +189,27 @@ public sealed class MotelyAnalyzerFilterDesc()
                 // Recreate the pack stream to get cards in order
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 int maxPacks = ante == 1 ? 4 : 6;
-                
+
                 var standardStream = ctx.CreateStandardPackCardStream(ante);
-                
+
                 for (int i = 0; i < maxPacks; i++)
                 {
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() == MotelyBoosterPackType.Standard)
                     {
                         var packSize = pack.GetPackSize();
-                        var packContents = ctx.GetNextStandardPackContents(ref standardStream, packSize);
-                        
+                        var packContents = ctx.GetNextStandardPackContents(
+                            ref standardStream,
+                            packSize
+                        );
+
                         foreach (var item in packContents.AsArray())
                         {
                             if (item.TypeCategory == MotelyItemTypeCategory.PlayingCard)
                             {
-                                drawCards.Add(FormatCardString(item.PlayingCardRank, item.PlayingCardSuit));
+                                drawCards.Add(
+                                    FormatCardString(item.PlayingCardRank, item.PlayingCardSuit)
+                                );
                             }
                         }
                     }
@@ -213,7 +222,10 @@ public sealed class MotelyAnalyzerFilterDesc()
         /// <summary>
         /// Formats a card as "2_H" or "K_C" format
         /// </summary>
-        private static string FormatCardString(MotelyPlayingCardRank rank, MotelyPlayingCardSuit suit)
+        private static string FormatCardString(
+            MotelyPlayingCardRank rank,
+            MotelyPlayingCardSuit suit
+        )
         {
             var rankStr = rank switch
             {
@@ -230,7 +242,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                 MotelyPlayingCardRank.Queen => "Q",
                 MotelyPlayingCardRank.King => "K",
                 MotelyPlayingCardRank.Ace => "A",
-                _ => rank.ToString()
+                _ => rank.ToString(),
             };
             var suitStr = suit switch
             {
@@ -238,7 +250,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                 MotelyPlayingCardSuit.Diamond => "D",
                 MotelyPlayingCardSuit.Heart => "H",
                 MotelyPlayingCardSuit.Spade => "S",
-                _ => suit.ToString()
+                _ => suit.ToString(),
             };
             return $"{rankStr}_{suitStr}";
         }

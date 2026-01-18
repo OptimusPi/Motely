@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Motely.DuckDB;
 using Motely.Filters;
 using Motely.Utils;
 #if !BROWSER
 using DuckDB.NET.Data;
-using Motely.DuckDB;
 #endif
+
 
 namespace Motely.Executors
 {
@@ -22,7 +23,7 @@ namespace Motely.Executors
         private readonly Action<MotelySeedScoreTally>? _customCallback;
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
-        
+
         // Track printed seeds to avoid duplicate console output
         // (Database handles duplicates via PRIMARY KEY, but console should dedupe too)
         private readonly HashSet<string> _printedSeeds = new();
@@ -69,8 +70,9 @@ namespace Motely.Executors
         /// </summary>
         private static void InitializeClauseWithContext(
             MotelyJsonConfig.MotelyJsonFilterClause clause,
-            string sectionName,  // "MUST", "MUSTNOT", "SHOULD"
-            int index)
+            string sectionName, // "MUST", "MUSTNOT", "SHOULD"
+            int index
+        )
         {
             try
             {
@@ -81,9 +83,11 @@ namespace Motely.Executors
                 var typeText = string.IsNullOrEmpty(clause.Type) ? "<missing>" : clause.Type;
                 var valueText = !string.IsNullOrEmpty(clause.Value)
                     ? clause.Value
-                    : (clause.Values != null && clause.Values.Length > 0
-                        ? string.Join(", ", clause.Values)
-                        : "<none>");
+                    : (
+                        clause.Values != null && clause.Values.Length > 0
+                            ? string.Join(", ", clause.Values)
+                            : "<none>"
+                    );
                 throw new ArgumentException(
                     $"Config error in {sectionName}[{index}] — type: '{typeText}', value(s): '{valueText}'. {ex.Message}\nHint: Each clause needs a non-empty 'type' (e.g., 'Joker', 'TarotCard', 'PlayingCard'). If using multiple values, use 'values': [ ... ] not 'value'."
                 );
@@ -149,6 +153,8 @@ namespace Motely.Executors
                         {
                             Console.WriteLine("\n🛑 Stopping search...");
                         }
+                        // Dispose immediately to stop all threads
+                        search.Dispose();
                     };
                     Console.CancelKeyPress += cancelHandler;
                 }
@@ -157,27 +163,10 @@ namespace Motely.Executors
 
                 if (awaitCompletion)
                 {
-                    // Wait for completion - progress shown by MotelySearch.PrintReport() in FancyConsole bottom line
-                    while (search.Status != MotelySearchStatus.Completed && !_cancelled)
-                    {
-                        Thread.Sleep(100);
-                    }
+                    // Wait for completion using Thread.Join (no polling)
+                    search.AwaitCompletion();
 
-                    // Stop the search gracefully (if cancelled)
-                    if (_cancelled)
-                    {
-                        search.Dispose();
-
-                        // Wait for final batch to flush before showing stats
-                        // The search may have queued results that need to be written
-                        Console.Out.Flush();
-                        Thread.Sleep(500); // Give time for final batch flush
-                        Console.Out.Flush();
-                    }
-
-                    Console.Out.Flush();
-                    Thread.Sleep(100);
-                    Console.Out.Flush();
+                    // Note: Dispose() is now called immediately in the CTRL+C handler above
 
                     // Suppress summary in quiet mode
                     if (!_params.Quiet)
@@ -229,13 +218,14 @@ namespace Motely.Executors
             }
 
             // Direct seed list takes priority over wordlist file
-            if (_params.SeedList != null && _params.SeedList.Count > 0)
+            if (_params.SeedList != null)
             {
                 if (!_params.Quiet)
                 {
-                    Console.WriteLine($"🔍 Searching {_params.SeedList.Count} seeds from provided list");
+                    // Don't enumerate IEnumerable - just note we have a list
+                    Console.WriteLine($"🔍 Searching seeds from provided list");
                 }
-                // For small lists, return null to use in-memory
+                // Return null to use SeedList in CreateSearch
                 return null;
             }
 
@@ -289,47 +279,46 @@ namespace Motely.Executors
                         using var cmd = conn.CreateCommand();
                         // Use centralized operation for checking table existence
                         tableExists = DuckDBOperations.TableExists(conn, "seeds");
-                        
+
                         // Check if this is a results database (has "results" table instead of "seeds")
                         bool hasResultsTable = DuckDBOperations.TableExists(conn, "results");
-                        
+
                         if (hasResultsTable && !tableExists)
                         {
                             // This is a results database - convert it to a seed source
                             if (!_params.Quiet)
                             {
-                                Console.WriteLine($"📊 Detected results database, extracting seeds from results table...");
+                                Console.WriteLine(
+                                    $"📊 Detected results database, extracting seeds from results table..."
+                                );
                             }
-                            
+
                             // Extract seeds from results table (seed is PRIMARY KEY so already unique)
-                            // and create seeds table with id column for performance
-                            cmd.CommandText = @"
+                            cmd.CommandText =
+                                @"
                                 CREATE TABLE seeds AS
                                 SELECT
-                                    CAST(ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS BIGINT) AS id,
-                                    seed,
-                                    LENGTH(seed) AS seed_len
+                                    seed
                                 FROM results
                                 WHERE seed IS NOT NULL;
                             ";
                             cmd.ExecuteNonQuery();
-                            
-                            // Create index
-                            DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
-                            
+
                             long seedCount = DuckDBOperations.GetRowCount(conn, "seeds");
                             if (!_params.Quiet)
                             {
-                                Console.WriteLine($"✅ Extracted {seedCount} unique seeds from results database");
+                                Console.WriteLine(
+                                    $"✅ Extracted {seedCount} unique seeds from results database"
+                                );
                             }
-                            
+
                             tableExists = true;
                             dbIsValid = true;
                         }
                         else if (tableExists)
                         {
-                            // Validate and migrate schema (add id column, validate seed column, check for invalid seeds)
-                            dbIsValid = ValidateAndMigrateDuckDBSchema(dbPath, csvPath, txtPath);
+                            // Table exists with seed column - good to go
+                            dbIsValid = true;
                         }
                     } // IMPORTANT: dispose connection before touching the db file on disk
 
@@ -337,19 +326,26 @@ namespace Motely.Executors
                     {
                         // Table missing - check if CSV/TXT exists for re-import
                         string? sourcePath = null;
-                        if (File.Exists(csvPath)) sourcePath = csvPath;
-                        else if (File.Exists(txtPath)) sourcePath = txtPath;
+                        if (File.Exists(csvPath))
+                            sourcePath = csvPath;
+                        else if (File.Exists(txtPath))
+                            sourcePath = txtPath;
 
                         if (sourcePath != null)
                         {
                             if (!_params.Quiet)
                             {
-                                Console.Error.WriteLine($"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}");
-                                Console.Error.WriteLine($"   Backing up corrupted DB and re-importing from: {sourcePath}");
+                                Console.Error.WriteLine(
+                                    $"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}"
+                                );
+                                Console.Error.WriteLine(
+                                    $"   Backing up corrupted DB and re-importing from: {sourcePath}"
+                                );
                             }
 
                             string backupPath = dbPath + ".corrupted";
-                            if (File.Exists(backupPath)) File.Delete(backupPath);
+                            if (File.Exists(backupPath))
+                                File.Delete(backupPath);
 
                             try
                             {
@@ -369,15 +365,21 @@ namespace Motely.Executors
                             {
                                 ".csv" => ConvertCsvToDuckDB(sourcePath, dbPath),
                                 ".txt" => ConvertTextToDuckDB(sourcePath, dbPath),
-                                _ => throw new NotSupportedException($"Unsupported source extension: {extension}")
+                                _ => throw new NotSupportedException(
+                                    $"Unsupported source extension: {extension}"
+                                ),
                             };
                         }
 
                         // No source file found - delete corrupted DB and fall through
                         if (!_params.Quiet)
                         {
-                            Console.Error.WriteLine($"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}");
-                            Console.Error.WriteLine($"   No matching CSV/TXT source found. Deleting corrupted database...");
+                            Console.Error.WriteLine(
+                                $"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}"
+                            );
+                            Console.Error.WriteLine(
+                                $"   No matching CSV/TXT source found. Deleting corrupted database..."
+                            );
                         }
 
                         try
@@ -385,7 +387,9 @@ namespace Motely.Executors
                             File.Delete(dbPath);
                             if (!_params.Quiet)
                             {
-                                Console.Error.WriteLine($"   ✅ Deleted. Please provide a CSV/TXT source file.");
+                                Console.Error.WriteLine(
+                                    $"   ✅ Deleted. Please provide a CSV/TXT source file."
+                                );
                             }
                         }
                         catch (IOException deleteEx)
@@ -402,18 +406,25 @@ namespace Motely.Executors
                 catch (Exception ex) when (!(ex is InvalidOperationException))
                 {
                     // Connection/query error - check if table doesn't exist or file is locked
-                    bool isTableMissing = ex.Message.Contains("does not exist") || ex.Message.Contains("Table with name seeds");
-                    bool isLocked = ex.Message.Contains("locked") || ex.Message.Contains("being used");
-                    
+                    bool isTableMissing =
+                        ex.Message.Contains("does not exist")
+                        || ex.Message.Contains("Table with name seeds");
+                    bool isLocked =
+                        ex.Message.Contains("locked") || ex.Message.Contains("being used");
+
                     if (isTableMissing)
                     {
                         // Table missing - try to re-import from source
                         if (!_params.Quiet)
                         {
-                            Console.Error.WriteLine($"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}");
-                            Console.Error.WriteLine($"   Attempting to re-import from source file...");
+                            Console.Error.WriteLine(
+                                $"❌ DuckDB file exists but 'seeds' table is missing: {dbPath}"
+                            );
+                            Console.Error.WriteLine(
+                                $"   Attempting to re-import from source file..."
+                            );
                         }
-                        
+
                         // Try to delete the corrupted DB
                         try
                         {
@@ -424,27 +435,37 @@ namespace Motely.Executors
                         }
                         catch (IOException deleteEx)
                         {
-                            throw new IOException($"Cannot delete corrupted database file {dbPath}. File is locked by another process. Close any programs using this file and try again.", deleteEx);
+                            throw new IOException(
+                                $"Cannot delete corrupted database file {dbPath}. File is locked by another process. Close any programs using this file and try again.",
+                                deleteEx
+                            );
                         }
-                        
+
                         // Fall through to check for CSV/TXT and re-import
                         dbIsValid = false;
                     }
                     else if (isLocked)
                     {
-                        throw new IOException($"Cannot access database file {dbPath}. File is locked by another process. Close any programs using this file and try again.", ex);
+                        throw new IOException(
+                            $"Cannot access database file {dbPath}. File is locked by another process. Close any programs using this file and try again.",
+                            ex
+                        );
                     }
                     else
                     {
                         if (!_params.Quiet)
                         {
-                            Console.Error.WriteLine($"⚠️  Could not verify 'seeds' table in {dbPath}: {ex.Message}");
-                            Console.Error.WriteLine($"   Database may be corrupted. Consider deleting and re-importing.");
+                            Console.Error.WriteLine(
+                                $"⚠️  Could not verify 'seeds' table in {dbPath}: {ex.Message}"
+                            );
+                            Console.Error.WriteLine(
+                                $"   Database may be corrupted. Consider deleting and re-importing."
+                            );
                         }
                         dbIsValid = false;
                     }
                 }
-                
+
                 // Only return dbPath if it's valid
                 if (dbIsValid)
                 {
@@ -456,13 +477,13 @@ namespace Motely.Executors
                 }
                 // If invalid and deleted, fall through to check for CSV/TXT files
             }
-            
+
             // Check for CSV/TXT files (even if DB existed but was invalid/deleted)
             if (File.Exists(csvPath))
             {
                 return ConvertCsvToDuckDB(csvPath, dbPath);
             }
-            
+
             if (File.Exists(txtPath))
             {
                 return ConvertTextToDuckDB(txtPath, dbPath);
@@ -470,176 +491,29 @@ namespace Motely.Executors
             else
             {
                 // If none exist, try the original path as-is (in case user specified full path with extension)
-                string originalPath = Path.IsPathRooted(seedSource) ? seedSource : Path.Combine("SeedSources", seedSource);
+                string originalPath = Path.IsPathRooted(seedSource)
+                    ? seedSource
+                    : Path.Combine("SeedSources", seedSource);
                 if (File.Exists(originalPath))
                 {
                     string extension = Path.GetExtension(originalPath).ToLowerInvariant();
                     string originalDbPath = Path.ChangeExtension(originalPath, ".db");
-                    
+
                     return extension switch
                     {
                         ".db" => originalPath,
                         ".csv" => ConvertCsvToDuckDB(originalPath, originalDbPath),
                         ".txt" => ConvertTextToDuckDB(originalPath, originalDbPath),
-                        _ => throw new NotSupportedException($"Unsupported file extension: {extension}")
+                        _ => throw new NotSupportedException(
+                            $"Unsupported file extension: {extension}"
+                        ),
                     };
                 }
-                
-                throw new FileNotFoundException($"Seed source file not found. Checked: {dbPath}, {csvPath}, {txtPath}");
+
+                throw new FileNotFoundException(
+                    $"Seed source file not found. Checked: {dbPath}, {csvPath}, {txtPath}"
+                );
             }
-        }
-
-        /// <summary>
-        /// Validate and migrate DuckDB schema: ensure id column exists, seed column is VARCHAR(8), and seeds are valid.
-        /// If invalid seeds are found and source file exists, re-import from source.
-        /// </summary>
-        private bool ValidateAndMigrateDuckDBSchema(string dbPath, string? csvPath, string? txtPath)
-        {
-#if !BROWSER
-            try
-            {
-                using (var conn = DuckDBConnectionFactory.CreateConnection(dbPath))
-                {
-                    using var cmd = conn.CreateCommand();
-                    
-                    // Step 1: Check if 'id' column exists - use centralized operation
-                    bool hasIdColumn = DuckDBOperations.ColumnExists(conn, "seeds", "id");
-                    
-                    if (!hasIdColumn)
-                    {
-                        if (!_params.Quiet)
-                        {
-                            Console.WriteLine($"🔧 Adding missing 'id' column to {dbPath}...");
-                        }
-                        // DuckDB does not allow window functions in UPDATE, so rebuild the table instead.
-                        // Keep ordering stable so provider mode can seek by id deterministically.
-                        DuckDBOperations.DropTableIfExists(conn, "seeds_old_id");
-                        DuckDBOperations.RenameTable(conn, "seeds", "seeds_old_id");
-
-                        cmd.CommandText = @"
-                            CREATE TABLE seeds AS
-                            SELECT
-                                CAST(ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS BIGINT) AS id,
-                                seed,
-                                LENGTH(seed) AS seed_len
-                            FROM seeds_old_id;
-                        ";
-                        cmd.ExecuteNonQuery();
-
-                        // Use centralized index creation
-                        DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
-
-                        DuckDBOperations.DropTableIfExists(conn, "seeds_old_id");
-                    }
-
-                    bool hasSeedLenColumn = DuckDBOperations.ColumnExists(conn, "seeds", "seed_len");
-                    if (!hasSeedLenColumn)
-                    {
-                        cmd.CommandText = @"
-                            ALTER TABLE seeds ADD COLUMN seed_len INTEGER;
-                            UPDATE seeds SET seed_len = LENGTH(seed);
-                        ";
-                        cmd.ExecuteNonQuery();
-                    }
-                    
-                    // Step 2: Check for invalid seeds (contain comma, '0', invalid chars, or >8 chars)
-                    // Use centralized operation with custom query for invalid seed detection
-                    var invalidSeedQuery = @"
-                        SELECT COUNT(*) FROM seeds 
-                        WHERE seed LIKE '%,%' 
-                           OR seed LIKE '%0%' 
-                           OR regexp_matches(seed, '^[1-9A-Z]*$') IS NOT TRUE
-                           OR LENGTH(seed) > 8
-                           OR seed = '';
-                    ";
-                    int invalidSeedCount = (int)DuckDBOperations.ExecuteScalar<long>(conn, invalidSeedQuery);
-                    
-                    if (invalidSeedCount > 0)
-                    {
-                        // Invalid seeds found - fix in-place using SQL
-                        if (!_params.Quiet)
-                        {
-                            Console.WriteLine($"🔧 Found {invalidSeedCount} invalid seeds in {dbPath}, fixing in-place...");
-                        }
-                        
-                        // Rename old table, create new one with sanitized data
-                        DuckDBOperations.RenameTable(conn, "seeds", "seeds_old");
-                        
-                        cmd.CommandText = @"
-                            
-                            -- Create new table with sanitized seeds
-                            CREATE TABLE seeds_temp AS
-                            SELECT 
-                                -- Extract first field: split on comma, then whitespace, take first 8 chars
-                                UPPER(TRIM(SUBSTRING(
-                                    CASE 
-                                        WHEN INSTR(seed, ',') > 0 THEN SUBSTRING(seed, 1, INSTR(seed, ',') - 1)
-                                        WHEN INSTR(seed, ' ') > 0 THEN SUBSTRING(seed, 1, INSTR(seed, ' ') - 1)
-                                        ELSE seed
-                                    END,
-                                    1, 8
-                                ))) as seed
-                            FROM seeds_old
-                            WHERE seed IS NOT NULL AND trim(seed) != '';
-                            
-                            -- Remove invalid seeds
-                            DELETE FROM seeds_temp 
-                            WHERE seed = '' 
-                               OR seed LIKE '%0%' 
-                               OR regexp_matches(seed, '^[1-9A-Z]*$') IS NOT TRUE
-                               OR LENGTH(seed) > 8;
-                            
-                            -- Create final table with correct schema (using centralized schema)
-                            -- Note: We can't use DuckDBSchema.SeedSourcesTableSchema() directly here
-                            -- because it uses CREATE TABLE AS, but we need CREATE TABLE + INSERT
-                            -- So we use the same schema structure inline for consistency
-                            CREATE TABLE seeds (
-                                id BIGINT,
-                                seed VARCHAR(8),
-                                seed_len INTEGER
-                            );
-                            
-                            INSERT INTO seeds (id, seed, seed_len)
-                            SELECT 
-                                ROW_NUMBER() OVER (ORDER BY LENGTH(seed), seed) - 1 AS id, 
-                                seed,
-                                LENGTH(seed) AS seed_len
-                            FROM seeds_temp;
-                            
-                        ";
-                        cmd.ExecuteNonQuery();
-                        
-                        // Use centralized index creation
-                        DuckDBTableManager.CreateIndex(conn, DuckDBSchema.SeedSourcesIndexSchema());
-                        
-                        // Drop temp tables using centralized operations
-                        DuckDBOperations.DropTableIfExists(conn, "seeds_temp");
-                        DuckDBOperations.DropTableIfExists(conn, "seeds_old");
-                        
-                        if (!_params.Quiet)
-                        {
-                            Console.WriteLine($"✅ Fixed database: removed invalid seeds, sanitized remaining seeds");
-                        }
-                    }
-                    
-                    // Step 3: Check if seed column is VARCHAR(8) - DuckDB doesn't support ALTER COLUMN TYPE easily,
-                    // so we just validate that all seeds are ≤8 chars (enforced by our import code going forward)
-                    // For existing DBs, the runtime sanitization in DuckDBSeeds.Desktop.cs will handle it
-                    
-                    return true;
-                }
-            }
-            catch (Exception ex) when (!(ex is InvalidOperationException))
-            {
-                if (!_params.Quiet)
-                {
-                    Console.Error.WriteLine($"⚠️  Could not validate schema in {dbPath}: {ex.Message}");
-                }
-                return false;
-            }
-#else
-            return true; // Browser: assume valid
-#endif
         }
 
         /// <summary>
@@ -666,12 +540,12 @@ namespace Motely.Executors
             {
                 // Create DuckDB database and import CSV
                 DuckDBHelper.ConvertCsvToDuckDB(csvPath, dbPath);
-                
+
                 if (!_params.Quiet)
                 {
                     Console.WriteLine($"✅ Converted CSV to DuckDB: {dbPath}");
                 }
-                
+
                 // Keep source file - don't delete it! User may need it later.
                 return dbPath;
             }
@@ -701,21 +575,25 @@ namespace Motely.Executors
                 var fileInfo = new FileInfo(textPath);
                 var sizeMB = fileInfo.Length / (1024.0 * 1024.0);
                 Console.WriteLine($"🔄 Converting text file to DuckDB: {textPath} -> {dbPath}");
-                Console.WriteLine($"   File size: {sizeMB:F1} MB - this may take a minute for large files...");
+                Console.WriteLine(
+                    $"   File size: {sizeMB:F1} MB - this may take a minute for large files..."
+                );
             }
 
             try
             {
                 // Create DuckDB database and import text file
                 DuckDBHelper.ConvertTextToDuckDB(textPath, dbPath);
-                
+
                 if (!_params.Quiet)
                 {
                     var dbInfo = new FileInfo(dbPath);
                     var dbSizeMB = dbInfo.Length / (1024.0 * 1024.0);
-                    Console.WriteLine($"✅ Converted text file to DuckDB: {dbPath} ({dbSizeMB:F1} MB)");
+                    Console.WriteLine(
+                        $"✅ Converted text file to DuckDB: {dbPath} ({dbSizeMB:F1} MB)"
+                    );
                 }
-                
+
                 // Keep source file - don't delete it! User may need it later.
                 return dbPath;
             }
@@ -752,7 +630,10 @@ namespace Motely.Executors
                 }
             }
 
-            var relativeCandidate = Path.Combine(Directory.GetCurrentDirectory(), pathWithExtension);
+            var relativeCandidate = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                pathWithExtension
+            );
             if (File.Exists(relativeCandidate))
             {
                 return relativeCandidate;
@@ -846,22 +727,30 @@ namespace Motely.Executors
             scoringConfig.PostProcess();
 
             // Create callback for CSV output - use custom callback if provided, otherwise console output
-            Action<MotelySeedScoreTally> scoreCallback = _customCallback ?? ((MotelySeedScoreTally result) =>
-            {
-                // Deduplicate console output - same seed can be found in multiple batches/threads
-                lock (_printLock)
-                {
-                    if (_printedSeeds.Contains(result.Seed))
-                        return; // Already printed this seed
-                    
-                    _printedSeeds.Add(result.Seed);
-                }
-                
-                // Use original tally column format (CSV-style with colored numbers)
-                FancyConsole.WriteLine(
-                    TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns)
+            Action<MotelySeedScoreTally> scoreCallback =
+                _customCallback
+                ?? (
+                    (MotelySeedScoreTally result) =>
+                    {
+                        // Deduplicate console output - same seed can be found in multiple batches/threads
+                        lock (_printLock)
+                        {
+                            if (_printedSeeds.Contains(result.Seed))
+                                return; // Already printed this seed
+
+                            _printedSeeds.Add(result.Seed);
+                        }
+
+                        // Use original tally column format (CSV-style with colored numbers)
+                        FancyConsole.WriteLine(
+                            TallyColorizer.FormatResultLine(
+                                result.Seed,
+                                result.Score,
+                                result.TallyColumns
+                            )
+                        );
+                    }
                 );
-            });
 
             MotelyJsonSeedScoreDesc scoreDesc = new(
                 scoringConfig,
@@ -951,13 +840,19 @@ namespace Motely.Executors
                     if (_params.Quiet)
                         compositeSettings = compositeSettings.WithQuietMode(true);
                     if (_params.ProgressCallback != null)
-                        compositeSettings = compositeSettings.WithProgressCallback(_params.ProgressCallback);
+                        compositeSettings = compositeSettings.WithProgressCallback(
+                            _params.ProgressCallback
+                        );
 
                     // Configure search mode
                     if (_params.RandomSeeds.HasValue)
-                        compositeSettings = compositeSettings.WithRandomSearch(_params.RandomSeeds.Value);
+                        compositeSettings = compositeSettings.WithRandomSearch(
+                            _params.RandomSeeds.Value
+                        );
                     else if (!string.IsNullOrEmpty(duckDbPath))
-                        compositeSettings = compositeSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath));
+                        compositeSettings = compositeSettings.WithProviderSearch(
+                            new DuckDBSeedProvider(duckDbPath)
+                        );
                     else
                         compositeSettings = compositeSettings.WithSequentialSearch();
 
@@ -1007,13 +902,17 @@ namespace Motely.Executors
                 if (_params.Quiet)
                     passthroughSettings = passthroughSettings.WithQuietMode(true);
                 if (_params.ProgressCallback != null)
-                    passthroughSettings = passthroughSettings.WithProgressCallback(_params.ProgressCallback);
+                    passthroughSettings = passthroughSettings.WithProgressCallback(
+                        _params.ProgressCallback
+                    );
 
                 // Configure search mode
                 if (_params.RandomSeeds.HasValue)
                     return passthroughSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
                 else if (!string.IsNullOrEmpty(duckDbPath))
-                    return passthroughSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath)).Start();
+                    return passthroughSettings
+                        .WithProviderSearch(new DuckDBSeedProvider(duckDbPath))
+                        .Start();
                 else
                     return passthroughSettings.WithSequentialSearch().Start();
             }
@@ -1058,9 +957,15 @@ namespace Motely.Executors
             }
 
             // Apply all settings
-            if (!string.IsNullOrEmpty(config.Deck) && Enum.TryParse(config.Deck, true, out MotelyDeck deck))
+            if (
+                !string.IsNullOrEmpty(config.Deck)
+                && Enum.TryParse(config.Deck, true, out MotelyDeck deck)
+            )
                 searchSettings = searchSettings.WithDeck(deck);
-            if (!string.IsNullOrEmpty(config.Stake) && Enum.TryParse(config.Stake, true, out MotelyStake stake))
+            if (
+                !string.IsNullOrEmpty(config.Stake)
+                && Enum.TryParse(config.Stake, true, out MotelyStake stake)
+            )
                 searchSettings = searchSettings.WithStake(stake);
 
             searchSettings = searchSettings.WithThreadCount(_params.Threads);
@@ -1080,8 +985,15 @@ namespace Motely.Executors
             // Configure search mode
             if (_params.RandomSeeds.HasValue)
                 searchSettings = searchSettings.WithRandomSearch(_params.RandomSeeds.Value);
+            else if (_params.SeedList != null)
+                searchSettings = searchSettings.WithListSearch(
+                    _params.SeedList,
+                    alreadySorted: false
+                );
             else if (!string.IsNullOrEmpty(duckDbPath))
-                searchSettings = searchSettings.WithProviderSearch(new DuckDBSeedProvider(duckDbPath));
+                searchSettings = searchSettings.WithProviderSearch(
+                    new DuckDBSeedProvider(duckDbPath)
+                );
             else
                 searchSettings = searchSettings.WithSequentialSearch();
 
@@ -1090,7 +1002,9 @@ namespace Motely.Executors
         }
 
         // Helper: Create filter descriptor for a SINGLE clause
-        private static IMotelySeedFilterDesc CreateSingleClauseFilterDesc(MotelyJsonConfig.MotelyJsonFilterClause clause)
+        private static IMotelySeedFilterDesc CreateSingleClauseFilterDesc(
+            MotelyJsonConfig.MotelyJsonFilterClause clause
+        )
         {
             var singleClauseList = new List<MotelyJsonConfig.MotelyJsonFilterClause> { clause };
 
@@ -1132,9 +1046,10 @@ namespace Motely.Executors
                 MotelyFilterItemType.Boss => new MotelyJsonBossFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateBossCriteria(singleClauseList)
                 ),
-                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => new MotelyJsonTagFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateTagCriteria(singleClauseList)
-                ),
+                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag =>
+                    new MotelyJsonTagFilterDesc(
+                        MotelyJsonFilterClauseExtensions.CreateTagCriteria(singleClauseList)
+                    ),
                 MotelyFilterItemType.Event => new MotelyJsonEventFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateEventCriteria(singleClauseList)
                 ),
@@ -1151,66 +1066,94 @@ namespace Motely.Executors
                     clause.ErraticCardSuitEnum!.Value,
                     clause.Min ?? 1
                 ),
-                MotelyFilterItemType.And or MotelyFilterItemType.Or => new MotelyCompositeFilterDesc(singleClauseList),
-                _ => throw new ArgumentException($"Unsupported filter type: {clause.ItemTypeEnum}")
+                MotelyFilterItemType.And or MotelyFilterItemType.Or =>
+                    new MotelyCompositeFilterDesc(singleClauseList),
+                _ => throw new ArgumentException($"Unsupported filter type: {clause.ItemTypeEnum}"),
             };
         }
 
         // Helper: Create search settings for a filter (handles all filter types)
-        private static dynamic CreateSearchSettings(IMotelySeedFilterDesc filterDesc, MotelyFilterItemType itemType)
+        private static dynamic CreateSearchSettings(
+            IMotelySeedFilterDesc filterDesc,
+            MotelyFilterItemType itemType
+        )
         {
             return itemType switch
             {
-                MotelyFilterItemType.Joker => new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
-                    (MotelyJsonJokerFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.SoulJoker => new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(
-                    (MotelyJsonSoulJokerFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.Voucher => new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>(
-                    (MotelyJsonVoucherFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.TarotCard => new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>(
-                    (MotelyJsonTarotCardFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.PlanetCard => new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>(
-                    (MotelyJsonPlanetFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.SpectralCard => new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>(
-                    (MotelyJsonSpectralCardFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.PlayingCard => new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>(
-                    (MotelyJsonPlayingCardFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.Boss => new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>(
-                    (MotelyJsonBossFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag => new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>(
-                    (MotelyJsonTagFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.Event => new MotelySearchSettings<MotelyJsonEventFilterDesc.MotelyJsonEventFilter>(
-                    (MotelyJsonEventFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.ErraticRank => new MotelySearchSettings<MotelyJsonErraticRankFilterDesc.MotelyJsonErraticRankFilter>(
-                    (MotelyJsonErraticRankFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.ErraticSuit => new MotelySearchSettings<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>(
-                    (MotelyJsonErraticSuitFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.ErraticCard => new MotelySearchSettings<MotelyJsonErraticCardFilterDesc.MotelyJsonErraticCardFilter>(
-                    (MotelyJsonErraticCardFilterDesc)filterDesc
-                ),
-                MotelyFilterItemType.And or MotelyFilterItemType.Or => new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
-                    (MotelyCompositeFilterDesc)filterDesc
-                ),
-                _ => throw new ArgumentException($"Unsupported search settings type: {itemType}")
+                MotelyFilterItemType.Joker =>
+                    new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
+                        (MotelyJsonJokerFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.SoulJoker =>
+                    new MotelySearchSettings<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>(
+                        (MotelyJsonSoulJokerFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.Voucher =>
+                    new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>(
+                        (MotelyJsonVoucherFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.TarotCard =>
+                    new MotelySearchSettings<MotelyJsonTarotCardFilterDesc.MotelyJsonTarotCardFilter>(
+                        (MotelyJsonTarotCardFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.PlanetCard =>
+                    new MotelySearchSettings<MotelyJsonPlanetFilterDesc.MotelyJsonPlanetFilter>(
+                        (MotelyJsonPlanetFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.SpectralCard =>
+                    new MotelySearchSettings<MotelyJsonSpectralCardFilterDesc.MotelyJsonSpectralCardFilter>(
+                        (MotelyJsonSpectralCardFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.PlayingCard =>
+                    new MotelySearchSettings<MotelyJsonPlayingCardFilterDesc.MotelyJsonPlayingCardFilter>(
+                        (MotelyJsonPlayingCardFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.Boss =>
+                    new MotelySearchSettings<MotelyJsonBossFilterDesc.MotelyJsonBossFilter>(
+                        (MotelyJsonBossFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.SmallBlindTag or MotelyFilterItemType.BigBlindTag =>
+                    new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>(
+                        (MotelyJsonTagFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.Event =>
+                    new MotelySearchSettings<MotelyJsonEventFilterDesc.MotelyJsonEventFilter>(
+                        (MotelyJsonEventFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.ErraticRank =>
+                    new MotelySearchSettings<MotelyJsonErraticRankFilterDesc.MotelyJsonErraticRankFilter>(
+                        (MotelyJsonErraticRankFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.ErraticSuit =>
+                    new MotelySearchSettings<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>(
+                        (MotelyJsonErraticSuitFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.ErraticCard =>
+                    new MotelySearchSettings<MotelyJsonErraticCardFilterDesc.MotelyJsonErraticCardFilter>(
+                        (MotelyJsonErraticCardFilterDesc)filterDesc
+                    ),
+                MotelyFilterItemType.And or MotelyFilterItemType.Or =>
+                    new MotelySearchSettings<MotelyCompositeFilterDesc.MotelyCompositeFilter>(
+                        (MotelyCompositeFilterDesc)filterDesc
+                    ),
+                _ => throw new ArgumentException($"Unsupported search settings type: {itemType}"),
             };
         }
 
         // Keep old category-based code for now in case we need to revert
-        private IMotelySearch CreateSearchOLD_GROUPED(MotelyJsonConfig config, IEnumerable<string>? seeds, bool preSorted, MotelyJsonSeedScoreDesc scoreDesc, List<MotelyJsonConfig.MotelyJsonFilterClause> mustClauses, string? duckDbPath = null)
+        private IMotelySearch CreateSearchOLD_GROUPED(
+            MotelyJsonConfig config,
+            IEnumerable<string>? seeds,
+            bool preSorted,
+            MotelyJsonSeedScoreDesc scoreDesc,
+            List<MotelyJsonConfig.MotelyJsonFilterClause> mustClauses,
+            string? duckDbPath = null
+        )
         {
-            Dictionary<FilterCategory, List<MotelyJsonConfig.MotelyJsonFilterClause>> clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
+            Dictionary<
+                FilterCategory,
+                List<MotelyJsonConfig.MotelyJsonFilterClause>
+            > clausesByCategory = FilterCategoryMapper.GroupClausesByCategory(mustClauses);
             List<FilterCategory> categories = [.. clausesByCategory.Keys];
 
             if (categories.Count > 1)
@@ -1275,7 +1218,9 @@ namespace Motely.Executors
                 compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
                 compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
                 if (_params.EndBatch > 0)
-                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
+                    compositeSettings = compositeSettings.WithEndBatchIndex(
+                        (long)_params.EndBatch + 1
+                    );
 
                 // Always enable CSV output and scoring (score will be 0 if no SHOULD clauses)
                 compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
@@ -1287,14 +1232,17 @@ namespace Motely.Executors
                     compositeSettings = compositeSettings.WithQuietMode(true);
                 }
                 if (_params.ProgressCallback != null)
-                    compositeSettings = compositeSettings.WithProgressCallback(_params.ProgressCallback);
+                    compositeSettings = compositeSettings.WithProgressCallback(
+                        _params.ProgressCallback
+                    );
 
                 // Start search with composite filter (no chaining needed!)
                 if (_params.RandomSeeds.HasValue)
                     return (IMotelySearch)
                         compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
                 else if (seeds != null)
-                    return (IMotelySearch)compositeSettings.WithListSearch(seeds, preSorted).Start();
+                    return (IMotelySearch)
+                        compositeSettings.WithListSearch(seeds, preSorted).Start();
                 else
                     return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
             }
@@ -1366,7 +1314,9 @@ namespace Motely.Executors
                 compositeSettings = compositeSettings.WithBatchCharacterCount(_params.BatchSize);
                 compositeSettings = compositeSettings.WithStartBatchIndex((long)_params.StartBatch);
                 if (_params.EndBatch > 0)
-                    compositeSettings = compositeSettings.WithEndBatchIndex((long)_params.EndBatch + 1);
+                    compositeSettings = compositeSettings.WithEndBatchIndex(
+                        (long)_params.EndBatch + 1
+                    );
 
                 // Always enable CSV output and scoring (score will be 0 if no SHOULD clauses)
                 compositeSettings = compositeSettings.WithSeedScoreProvider(scoreDesc);
@@ -1375,14 +1325,17 @@ namespace Motely.Executors
                 if (_params.Quiet)
                     compositeSettings = compositeSettings.WithQuietMode(true);
                 if (_params.ProgressCallback != null)
-                    compositeSettings = compositeSettings.WithProgressCallback(_params.ProgressCallback);
+                    compositeSettings = compositeSettings.WithProgressCallback(
+                        _params.ProgressCallback
+                    );
 
                 // Start search with composite filter
                 if (_params.RandomSeeds.HasValue)
                     return (IMotelySearch)
                         compositeSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
                 else if (seeds != null)
-                    return (IMotelySearch)compositeSettings.WithListSearch(seeds, preSorted).Start();
+                    return (IMotelySearch)
+                        compositeSettings.WithListSearch(seeds, preSorted).Start();
                 else
                     return (IMotelySearch)compositeSettings.WithSequentialSearch().Start();
             }
@@ -1453,7 +1406,9 @@ namespace Motely.Executors
                     primaryClauses[0].Min ?? 1
                 ),
                 FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(primaryClauses)
+                    MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(
+                        primaryClauses
+                    )
                 ),
                 FilterCategory.And or FilterCategory.Or => new MotelyCompositeFilterDesc(
                     primaryClauses
@@ -1671,7 +1626,7 @@ namespace Motely.Executors
                 {
                     // Use centralized operation for getting row count
                     int seedCount = (int)DuckDBOperations.GetRowCount(conn, "seeds");
-                    
+
                     // Auto-detect: Use 25% of available physical memory for seed loading
                     // Estimate: ~20 bytes per seed (string overhead + array overhead)
                     int maxBatchSize;
@@ -1690,31 +1645,38 @@ namespace Motely.Executors
                         // Fallback: conservative 1M seeds if we can't detect memory
                         maxBatchSize = 1_000_000;
                     }
-                    
+
                     if (seedCount <= maxBatchSize)
                     {
                         // Load all seeds into memory - MUCH faster than streaming!
                         if (!_params.Quiet)
                         {
-                            Console.WriteLine($"📦 Loading {seedCount:N0} seeds into memory (faster than streaming, auto-detected max: {maxBatchSize:N0})...");
+                            Console.WriteLine(
+                                $"📦 Loading {seedCount:N0} seeds into memory (faster than streaming, auto-detected max: {maxBatchSize:N0})..."
+                            );
                         }
-                        
-                        var loadedSeeds = DuckDBSeeds.Stream(duckDbPath).ToArray();
+
+                        var loadedSeeds = DuckDBSeeds.Stream(duckDbPath);
                         if (!_params.Quiet)
                         {
-                            Console.WriteLine($"✅ Loaded {loadedSeeds.Length:N0} seeds into memory");
+                            Console.WriteLine($"✅ Streaming {seedCount:N0} seeds from database");
                         }
-                        
+
                         // Use list search with pre-sorted seeds (already sorted by length in DB)
-                        return (IMotelySearch)searchSettings.WithListSearch(loadedSeeds, alreadySorted: true).Start();
+                        var materializedSeeds = loadedSeeds.ToArray();
+                        return (IMotelySearch)
+                            searchSettings
+                                .WithListSearch(materializedSeeds, alreadySorted: true)
+                                .Start();
                     }
                     else if (!_params.Quiet)
                     {
-                        Console.WriteLine($"💡 Database has {seedCount:N0} seeds (>{maxBatchSize:N0}), using streaming mode (auto-detected)");
+                        Console.WriteLine(
+                            $"💡 Database has {seedCount:N0} seeds (>{maxBatchSize:N0}), using streaming mode (auto-detected)"
+                        );
                     }
                 }
 #endif
-                
                 // Provider search from DuckDB seed source (streaming mode).
                 // NOTE: Performance-critical: avoid any debug logging / file I/O in the hot path.
                 return (IMotelySearch)
@@ -1845,10 +1807,7 @@ namespace Motely.Executors
             Console.WriteLine(wasCancelled ? "🛑 SEARCH STOPPED" : "✅ SEARCH COMPLETED");
             Console.WriteLine(new string('═', 60));
 
-            long lastBatchIndex =
-                search.CompletedBatchCount > 0
-                    ? (long)_params.StartBatch + search.CompletedBatchCount
-                    : 0;
+            long lastBatchIndex = search.CompletedBatchCount;
 
             // Calculate percentage: for provider/list searches, use actual seed count
             // For sequential searches, use theoretical search space
@@ -1896,15 +1855,13 @@ namespace Motely.Executors
             // Note: FilteredSeeds is deprecated and always returns 0
             // MatchingSeeds represents seeds that passed all filters AND cutoff
 
-            
-                Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
-                Console.WriteLine(
-                    $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
-                );
-                double speed = (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds;
-                // Show 2 decimal places for precision (especially important for slow searches)
-                Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
-            
+            Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
+            Console.WriteLine(
+                $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
+            );
+            double speed = (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds;
+            // Show 2 decimal places for precision (especially important for slow searches)
+            Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
 
             // Only show "To continue" message if search was cancelled (interrupted)
             if (wasCancelled)
@@ -1930,22 +1887,27 @@ namespace Motely.Executors
         public bool NoFancy { get; set; }
         public bool Quiet { get; set; }
         public string? SpecificSeed { get; set; }
-        
+
         /// <summary>
         /// Unified seed source: can be .txt, .csv, or .db file
         /// Supports relative paths (SeedSources/file.db) or absolute paths (C:\path\file.db)
         /// Automatically detects type and handles accordingly
         /// </summary>
         public string? SeedSources { get; set; }
-        
-        public List<string>? SeedList { get; set; }
+
+        public IEnumerable<string>? SeedList { get; set; }
         public int? RandomSeeds { get; set; }
-        
+
         // REMOVED: SeedBatchSize parameter - always auto-detect based on available memory
-        
+
         /// <summary>
         /// Progress callback: (completedBatches, totalBatches, seedsSearched, seedsPerMs)
         /// </summary>
         public Action<long, long, long, double>? ProgressCallback { get; set; }
+
+        /// <summary>
+        /// Cancellation token to stop the search when CTRL+C is pressed
+        /// </summary>
+        public CancellationToken? CancellationToken { get; set; }
     }
 }

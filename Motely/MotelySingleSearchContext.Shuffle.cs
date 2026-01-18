@@ -2,10 +2,8 @@ namespace Motely;
 
 unsafe ref partial struct MotelySingleSearchContext
 {
-
     public void Shuffle(string seed, Span<MotelyItem> deck)
     {
-
         MotelySinglePrngStream stream = CreatePrngStream(seed);
         LuaRandom random = GetNextLuaRandom(ref stream);
 
@@ -14,6 +12,5 @@ unsafe ref partial struct MotelySingleSearchContext
             int j = random.RandInt(0, i + 1);
             (deck[i], deck[j]) = (deck[j], deck[i]);
         }
-
     }
 }

@@ -13,17 +13,17 @@ namespace Motely.Tests
         {
             // Use analyzer to get boss info
             var analysis = MotelySeedAnalyzer.Analyze(new(seed, MotelyDeck.Red, MotelyStake.White));
-            
+
             var output = new StringBuilder();
             output.AppendLine($"Boss generation for seed: {seed}");
             output.AppendLine("========================");
-            
+
             // Extract just the boss for each ante
             foreach (var ante in analysis.Antes)
             {
                 output.AppendLine($"Ante {ante.Ante}: {ante.Boss}");
             }
-            
+
             // Verify
             await Verify(output.ToString())
                 .UseParameters(seed)

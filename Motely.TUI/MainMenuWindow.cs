@@ -191,10 +191,7 @@ public class MainMenuWindow : View
 
         if (Directory.Exists(Path.Combine(currentDir, "JsonFilters")))
         {
-            var jsonFiles = Directory.GetFiles(
-                Path.Combine(currentDir, "JsonFilters"),
-                "*.json"
-            );
+            var jsonFiles = Directory.GetFiles(Path.Combine(currentDir, "JsonFilters"), "*.json");
             foreach (var file in jsonFiles)
             {
                 var name = Path.GetFileNameWithoutExtension(file);
@@ -205,10 +202,7 @@ public class MainMenuWindow : View
         // Check for JAML filters (new format)
         if (Directory.Exists(Path.Combine(currentDir, "JamlFilters")))
         {
-            var jamlFiles = Directory.GetFiles(
-                Path.Combine(currentDir, "JamlFilters"),
-                "*.jaml"
-            );
+            var jamlFiles = Directory.GetFiles(Path.Combine(currentDir, "JamlFilters"), "*.jaml");
             foreach (var file in jamlFiles)
             {
                 var name = Path.GetFileNameWithoutExtension(file);

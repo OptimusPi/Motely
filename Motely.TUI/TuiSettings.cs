@@ -91,10 +91,7 @@ public class SettingsService
                 ApiServerPort = TuiSettings.ApiServerPort,
             };
 
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-            };
+            var options = new JsonSerializerOptions { WriteIndented = true };
 
             var json = JsonSerializer.Serialize(settings, options);
             File.WriteAllText(_fileName, json);

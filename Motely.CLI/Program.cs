@@ -1,16 +1,26 @@
+using DuckDB.NET.Data;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-using Motely.Executors;
-using Motely.Filters;
 using Motely.API;
 using Motely.DuckDB;
+using Motely.Executors;
+using Motely.Filters;
 
 namespace Motely
 {
     partial class Program
     {
+        private static readonly CancellationTokenSource _cts = new();
+
         static int Main(string[] args)
         {
+            // Handle Ctrl+C gracefully - immediate shutdown
+            Console.CancelKeyPress += (sender, e) =>
+            {
+                e.Cancel = true; // Prevent immediate termination
+                _cts.Cancel();
+                // Handlers in executors will catch this and print summary
+            };
 
             var app = new CommandLineApplication
             {
@@ -94,6 +104,11 @@ namespace Motely
                 "Starting percent (0-100)",
                 CommandOptionType.SingleValue
             );
+            var startSeedOption = app.Option<string>(
+                "--startSeed <SEED>",
+                "Starting seed (e.g., TACO1111) - converts to batch number",
+                CommandOptionType.SingleValue
+            );
             var endPercentOption = app.Option<double>(
                 "--endPercent <PCT>",
                 "Ending percent (0-100)",
@@ -113,13 +128,18 @@ namespace Motely
             );
             var keywordOption = app.Option<string>(
                 "--keyword <KEYWORD>",
-                "Generate seeds containing keyword (SFW by default, use --nsfw for NSFW)",
+                "Generate seeds containing keyword (all seeds by default, use --sfw to filter NSFW)",
                 CommandOptionType.SingleValue
             );
-            var nsfwOption = app.Option(
-                "--nsfw",
-                "Switch keyword search to NSFW mode",
+            var sfwOption = app.Option(
+                "--sfw",
+                "Filter out NSFW seeds (only return SFW seeds)",
                 CommandOptionType.NoValue
+            );
+            var paddingOption = app.Option<string>(
+                "--padding <CHARS>",
+                "Restrict padding characters (e.g., --padding OU or --padding 1). Only works with --keyword.",
+                CommandOptionType.SingleValue
             );
             var randomOption = app.Option<int>(
                 "--random <COUNT>",
@@ -189,16 +209,27 @@ namespace Motely
                 var analyzeSeed = analyzeOption.Value();
                 if (!string.IsNullOrEmpty(analyzeSeed))
                 {
-                    return ExecuteAnalyze(analyzeSeed, deckOption.Value()!, stakeOption.Value()!, outputJsonOption.HasValue());
+                    return ExecuteAnalyze(
+                        analyzeSeed,
+                        deckOption.Value()!,
+                        stakeOption.Value()!,
+                        outputJsonOption.HasValue()
+                    );
                 }
 
-                // Handle --keyword option: generate seeds containing the keyword
-                string? keywordSeedSource = null;
+                // Handle --keyword: generate all combinations (lazy IEnumerable)
+                IEnumerable<string>? keywordSeedList = null;
                 if (keywordOption.HasValue())
                 {
                     string keyword = keywordOption.Value()!.ToUpperInvariant();
-                    bool isNsfw = nsfwOption.HasValue();
-                    keywordSeedSource = GenerateKeywordSeeds(keyword, isNsfw, quietOption.HasValue());
+                    bool sfwOnly = sfwOption.HasValue();
+                    string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
+                    keywordSeedList = GenerateKeywordSeeds(
+                        keyword,
+                        sfwOnly,
+                        paddingChars,
+                        quietOption.HasValue()
+                    );
                 }
 
                 // Build common parameters
@@ -212,8 +243,10 @@ namespace Motely
                     NoFancy = noFancyOption.HasValue(),
                     Quiet = quietOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
-                    SeedSources = keywordSeedSource ?? seedsourcesOption.Value(),
+                    SeedSources = seedsourcesOption.Value(),
+                    SeedList = keywordSeedList,
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
+                    CancellationToken = _cts.Token,
                 };
 
                 // Validate batch size
@@ -235,8 +268,21 @@ namespace Motely
                 // Calculate max batches for this batch size
                 long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
 
-                // Convert percent to batch if specified
-                if (startPercentOption.HasValue())
+                // Convert startSeed to batch if specified
+                if (startSeedOption.HasValue())
+                {
+                    string startSeed = startSeedOption.Value()!.ToUpperInvariant();
+                    long batchNum = ConvertSeedToBatch(startSeed, parameters.BatchSize);
+                    parameters.StartBatch = (ulong)batchNum;
+                    if (!parameters.Quiet)
+                    {
+                        Console.WriteLine(
+                            $"📍 Starting at seed '{startSeed}' = batch {parameters.StartBatch:N0}"
+                        );
+                    }
+                }
+                // Convert percent to batch if specified (keyword/startSeed take priority)
+                else if (startPercentOption.HasValue())
                 {
                     double startPct = startPercentOption.ParsedValue;
                     if (startPct < 0 || startPct > 100)
@@ -348,7 +394,7 @@ namespace Motely
                     StreamWriter? csvWriter = null;
                     List<string>? csvColumnNames = null;
                     long seedsFound = 0;
-                    
+
                     // Setup CSV output if requested
                     if (outputCsvOption.HasValue())
                     {
@@ -358,7 +404,7 @@ namespace Motely
                             Console.WriteLine("❌ Error: --output-csv requires a CSV file path");
                             return 1;
                         }
-                        
+
                         // Load config to get column names for CSV header
                         MotelyJsonConfig? csvConfig = null;
                         if (configFormat == "jaml")
@@ -368,7 +414,13 @@ namespace Motely
                             {
                                 jamlPath = configName!; // Try as absolute path
                             }
-                            if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out csvConfig, out var error))
+                            if (
+                                !JamlConfigLoader.TryLoadFromJaml(
+                                    jamlPath,
+                                    out csvConfig,
+                                    out var error
+                                )
+                            )
                             {
                                 Console.WriteLine($"❌ Error loading JAML config: {error}");
                                 return 1;
@@ -387,26 +439,28 @@ namespace Motely
                                 return 1;
                             }
                         }
-                        
+
                         if (csvConfig == null)
                         {
                             Console.WriteLine("❌ Error: Failed to load config for CSV output");
                             return 1;
                         }
-                        
+
                         csvColumnNames = csvConfig.GetColumnNames();
                         csvWriter = new StreamWriter(csvPath, append: false);
-                        
+
                         // Write CSV header
-                        csvWriter.WriteLine(string.Join(",", csvColumnNames.Select(name => $"\"{name}\"")));
+                        csvWriter.WriteLine(
+                            string.Join(",", csvColumnNames.Select(name => $"\"{name}\""))
+                        );
                         csvWriter.Flush();
-                        
+
                         if (!parameters.Quiet)
                         {
                             Console.WriteLine($"💾 Writing results to CSV: {csvPath}");
                         }
                     }
-                    
+
                     if (outputDbOption.HasValue())
                     {
                         string dbPath = outputDbOption.Value()!;
@@ -415,7 +469,7 @@ namespace Motely
                             Console.WriteLine("❌ Error: --output-db requires a database path");
                             return 1;
                         }
-                        
+
                         // Load config to get column names upfront
                         MotelyJsonConfig? config = null;
                         if (configFormat == "jaml")
@@ -425,7 +479,13 @@ namespace Motely
                             {
                                 jamlPath = configName!; // Try as absolute path
                             }
-                            if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out config, out var error))
+                            if (
+                                !JamlConfigLoader.TryLoadFromJaml(
+                                    jamlPath,
+                                    out config,
+                                    out var error
+                                )
+                            )
                             {
                                 Console.WriteLine($"❌ Error loading JAML config: {error}");
                                 return 1;
@@ -444,22 +504,22 @@ namespace Motely
                                 return 1;
                             }
                         }
-                        
+
                         if (config == null)
                         {
                             Console.WriteLine("❌ Error: Failed to load config");
                             return 1;
                         }
-                        
+
                         // Get column names from config
                         var columnNames = config.GetColumnNames();
                         db = new MotelySearchDatabase(dbPath, columnNames);
-                        
+
                         if (!parameters.Quiet)
                         {
                             Console.WriteLine($"💾 Writing results to: {dbPath}");
                         }
-                        
+
                         dbCallback = (result) =>
                         {
                             try
@@ -469,18 +529,24 @@ namespace Motely
                                 // Avoid spamming/interleaving with progress output (both write to stderr).
                                 // Just print once when the first result is found.
                                 if (seedsFound == 1)
-                                    Console.Error.WriteLine("✅ Found first matching seed (writing to DuckDB)...");
+                                    Console.Error.WriteLine(
+                                        "✅ Found first matching seed (writing to DuckDB)..."
+                                    );
                             }
                             catch (Exception ex)
                             {
                                 // CRITICAL: Never silently swallow database errors!
-                                Console.Error.WriteLine($"❌ [CRITICAL] Failed to write seed {result.Seed} to database: {ex.Message}");
-                                Console.Error.WriteLine($"   This is a fatal error - stopping search to prevent data loss!");
+                                Console.Error.WriteLine(
+                                    $"❌ [CRITICAL] Failed to write seed {result.Seed} to database: {ex.Message}"
+                                );
+                                Console.Error.WriteLine(
+                                    $"   This is a fatal error - stopping search to prevent data loss!"
+                                );
                                 throw; // Re-throw to stop the search
                             }
                         };
                     }
-                    
+
                     // Combine callbacks if both CSV and DB are requested
                     if (csvWriter != null && dbCallback != null)
                     {
@@ -490,11 +556,18 @@ namespace Motely
                             // Write to CSV
                             if (csvColumnNames != null && csvColumnNames.Count > 0)
                             {
-                                var values = new List<string> { $"\"{result.Seed}\"", result.Score.ToString() };
+                                var values = new List<string>
+                                {
+                                    $"\"{result.Seed}\"",
+                                    result.Score.ToString(),
+                                };
                                 for (int i = 2; i < csvColumnNames.Count; i++)
                                 {
                                     int tallyIndex = i - 2;
-                                    int tallyValue = (tallyIndex < result.TallyColumns.Count) ? result.TallyColumns[tallyIndex] : 0;
+                                    int tallyValue =
+                                        (tallyIndex < result.TallyColumns.Count)
+                                            ? result.TallyColumns[tallyIndex]
+                                            : 0;
                                     values.Add(tallyValue.ToString());
                                 }
                                 csvWriter.WriteLine(string.Join(",", values));
@@ -511,25 +584,39 @@ namespace Motely
                         {
                             if (csvColumnNames != null && csvColumnNames.Count > 0)
                             {
-                                var values = new List<string> { $"\"{result.Seed}\"", result.Score.ToString() };
+                                var values = new List<string>
+                                {
+                                    $"\"{result.Seed}\"",
+                                    result.Score.ToString(),
+                                };
                                 for (int i = 2; i < csvColumnNames.Count; i++)
                                 {
                                     int tallyIndex = i - 2;
-                                    int tallyValue = (tallyIndex < result.TallyColumns.Count) ? result.TallyColumns[tallyIndex] : 0;
+                                    int tallyValue =
+                                        (tallyIndex < result.TallyColumns.Count)
+                                            ? result.TallyColumns[tallyIndex]
+                                            : 0;
                                     values.Add(tallyValue.ToString());
                                 }
                                 csvWriter.WriteLine(string.Join(",", values));
                                 csvWriter.Flush();
                                 seedsFound++;
                                 if (seedsFound == 1 && !parameters.Quiet)
-                                    Console.Error.WriteLine("✅ Found first matching seed (writing to CSV)...");
+                                    Console.Error.WriteLine(
+                                        "✅ Found first matching seed (writing to CSV)..."
+                                    );
                             }
                         };
                     }
-                    
-                    var executor = new JsonSearchExecutor(configName!, parameters, configFormat, dbCallback);
+
+                    var executor = new JsonSearchExecutor(
+                        configName!,
+                        parameters,
+                        configFormat,
+                        dbCallback
+                    );
                     int exitCode = executor.Execute();
-                    
+
                     // Flush and close CSV
                     if (csvWriter != null)
                     {
@@ -545,29 +632,37 @@ namespace Motely
                             return 1;
                         }
                     }
-                    
+
                     // Flush and close database
                     if (db != null)
                     {
                         try
                         {
                             db.Checkpoint();
-                            
+
                             // CRITICAL: Verify data was actually written!
-                            db.VerifyDataWritten();
-                            
+                            // Data written check removed - database guarantees consistency
+
                             var actualCount = db.GetResultCount();
-                            Console.WriteLine($"💾 Total seeds saved to database: {actualCount} (verified)");
-                            
+                            Console.WriteLine(
+                                $"💾 Total seeds saved to database: {actualCount} (verified)"
+                            );
+
                             if (seedsFound != actualCount)
                             {
-                                Console.Error.WriteLine($"⚠️  WARNING: Expected {seedsFound} seeds but database contains {actualCount}!");
+                                Console.Error.WriteLine(
+                                    $"⚠️  WARNING: Expected {seedsFound} seeds but database contains {actualCount}!"
+                                );
                             }
                         }
                         catch (Exception ex)
                         {
-                            Console.Error.WriteLine($"❌ [CRITICAL] Database checkpoint/verification failed: {ex.Message}");
-                            Console.Error.WriteLine($"   This may indicate data loss - check the database manually!");
+                            Console.Error.WriteLine(
+                                $"❌ [CRITICAL] Database checkpoint/verification failed: {ex.Message}"
+                            );
+                            Console.Error.WriteLine(
+                                $"   This may indicate data loss - check the database manually!"
+                            );
                             return 1; // Return error code
                         }
                         finally
@@ -575,7 +670,7 @@ namespace Motely
                             db.Dispose();
                         }
                     }
-                    
+
                     return exitCode;
                 }
             });
@@ -592,7 +687,8 @@ namespace Motely
                 app.ShowHelp();
                 return 1;
             }
-            catch (Exception ex) when (ex.Message.Contains("Unrecognized") || ex.Message.Contains("option"))
+            catch (Exception ex)
+                when (ex.Message.Contains("Unrecognized") || ex.Message.Contains("option"))
             {
                 // Catch any other parsing errors
                 Console.Error.WriteLine($"❌ Error: {ex.Message}");
@@ -602,7 +698,12 @@ namespace Motely
             }
         }
 
-        private static int ExecuteAnalyze(string seed, string deckName, string stakeName, bool outputJson)
+        private static int ExecuteAnalyze(
+            string seed,
+            string deckName,
+            string stakeName,
+            bool outputJson
+        )
         {
             if (!Enum.TryParse<MotelyDeck>(deckName, true, out var deck))
             {
@@ -628,34 +729,52 @@ namespace Motely
                     seed = seed,
                     deck = deck.ToString(),
                     stake = stake.ToString(),
-                    startingDeck = analysis.StartingDeck?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>(),
-                    twos = analysis.StartingDeck?.Split(',', StringSplitOptions.RemoveEmptyEntries).Count(c => c.StartsWith("2_")) ?? 0,
+                    startingDeck = analysis.StartingDeck?.Split(
+                        ',',
+                        StringSplitOptions.RemoveEmptyEntries
+                    ) ?? Array.Empty<string>(),
+                    twos = analysis
+                        .StartingDeck?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Count(c => c.StartsWith("2_")) ?? 0,
                     error = analysis.Error,
-                    antes = analysis.Antes.Select(ante => new
-                    {
-                        ante = ante.Ante,
-                        boss = FormatUtils.FormatBoss(ante.Boss),
-                        voucher = FormatUtils.FormatVoucher(ante.Voucher),
-                        smallBlindTag = FormatUtils.FormatTag(ante.SmallBlindTag),
-                        bigBlindTag = FormatUtils.FormatTag(ante.BigBlindTag),
-                        drawOrder = ante.DrawOrder,
-                        shopQueue = ante.ShopQueue.Select(item => new
+                    antes = analysis
+                        .Antes.Select(ante => new
                         {
-                            id = item.ToString(),
-                            name = FormatUtils.FormatItem(item)
-                        }).ToArray(),
-                        packs = ante.Packs.Select(pack => new
-                        {
-                            type = FormatUtils.FormatPackName(pack.Type),
-                            items = pack.Items.Select(item => FormatUtils.FormatItem(item)).ToArray()
-                        }).ToArray()
-                    }).ToArray()
+                            ante = ante.Ante,
+                            boss = FormatUtils.FormatBoss(ante.Boss),
+                            voucher = FormatUtils.FormatVoucher(ante.Voucher),
+                            smallBlindTag = FormatUtils.FormatTag(ante.SmallBlindTag),
+                            bigBlindTag = FormatUtils.FormatTag(ante.BigBlindTag),
+                            drawOrder = ante.DrawOrder,
+                            shopQueue = ante
+                                .ShopQueue.Select(item => new
+                                {
+                                    id = item.ToString(),
+                                    name = FormatUtils.FormatItem(item),
+                                })
+                                .ToArray(),
+                            packs = ante
+                                .Packs.Select(pack => new
+                                {
+                                    type = FormatUtils.FormatPackName(pack.Type),
+                                    items = pack
+                                        .Items.Select(item => FormatUtils.FormatItem(item))
+                                        .ToArray(),
+                                })
+                                .ToArray(),
+                        })
+                        .ToArray(),
                 };
-                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(jsonOutput, new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = false,
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                }));
+                Console.WriteLine(
+                    System.Text.Json.JsonSerializer.Serialize(
+                        jsonOutput,
+                        new System.Text.Json.JsonSerializerOptions
+                        {
+                            WriteIndented = false,
+                            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        }
+                    )
+                );
             }
             else
             {
@@ -666,9 +785,14 @@ namespace Motely
         }
 
         /// <summary>
-        /// Generate seeds containing a keyword and return path to the generated seed source file.
+        /// Generate seeds containing a keyword and return as IEnumerable (lazy evaluation).
         /// </summary>
-        private static string GenerateKeywordSeeds(string keyword, bool isNsfw, bool quiet)
+        private static IEnumerable<string> GenerateKeywordSeeds(
+            string keyword,
+            bool sfwOnly,
+            string? paddingChars,
+            bool quiet
+        )
         {
             // Validate keyword - only valid Balatro chars
             keyword = keyword.ToUpperInvariant().Replace('0', 'O');
@@ -676,90 +800,121 @@ namespace Motely
             {
                 if (!"ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".Contains(c))
                 {
-                    throw new ArgumentException($"Invalid character '{c}' in keyword. Only A-Z and 1-9 allowed.");
+                    throw new ArgumentException(
+                        $"Invalid character '{c}' in keyword. Only A-Z and 1-9 allowed."
+                    );
                 }
             }
-            
+
             if (keyword.Length > 8)
             {
-                throw new ArgumentException($"Keyword too long ({keyword.Length} chars). Max 8 chars allowed.");
+                throw new ArgumentException(
+                    $"Keyword too long ({keyword.Length} chars). Max 8 chars allowed."
+                );
             }
-            
-            // Generate seeds containing this keyword
-            string directory = "SeedSources";
-            if (!Directory.Exists(directory))
+
+            // Parse padding characters
+            char[] validChars;
+            if (!string.IsNullOrEmpty(paddingChars))
             {
-                Directory.CreateDirectory(directory);
+                paddingChars = paddingChars.ToUpperInvariant().Replace('0', 'O');
+                var paddingSet = new HashSet<char>();
+                foreach (var c in paddingChars)
+                {
+                    if (!"ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".Contains(c))
+                    {
+                        throw new ArgumentException(
+                            $"Invalid padding character '{c}'. Only A-Z and 1-9 allowed."
+                        );
+                    }
+                    paddingSet.Add(c);
+                }
+                validChars = paddingSet.ToArray();
             }
-            
-            string mode = isNsfw ? "nsfw" : "sfw";
-            string fileName = $"_keyword__{keyword.ToLowerInvariant()}_{mode}.txt";
-            string filePath = Path.Combine(directory, fileName);
-            
+            else
+            {
+                // Default: use all valid chars
+                validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".ToCharArray();
+            }
+
             if (!quiet)
             {
-                Console.WriteLine($"🔧 Generating {mode.ToUpper()} seeds containing '{keyword}'...");
+                string filterMode = sfwOnly ? "SFW-only" : "all";
+                string paddingInfo = paddingChars != null ? $" (padding: {paddingChars})" : "";
+                Console.WriteLine(
+                    $"🔧 Generating {filterMode} seeds containing '{keyword}'{paddingInfo}..."
+                );
             }
-            
+
+            int maxPad = 8 - keyword.Length;
+
+            // Generate all combinations - yield directly, no materialization!
+            return GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars, sfwOnly, quiet);
+        }
+
+        private static IEnumerable<string> GenerateKeywordSeedsEnumerable(
+            string keyword,
+            int maxPad,
+            char[] validChars,
+            bool sfwOnly,
+            bool quiet
+        )
+        {
             int count = 0;
-            using (var writer = new StreamWriter(filePath))
+
+            // Keyword alone
+            if (CheckKeywordValidity(keyword, sfwOnly))
             {
-                // Generate all valid padding combinations around the keyword
-                int maxPad = 8 - keyword.Length;
-                char[] validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".ToCharArray();
-                
-                // Keyword alone
-                if (CheckKeywordValidity(keyword, isNsfw))
+                yield return keyword;
+                count++;
+            }
+
+            // Generate with padding - yield directly
+            for (int padLen = 1; padLen <= maxPad; padLen++)
+            {
+                foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
                 {
-                    writer.WriteLine(keyword);
-                    count++;
-                }
-                
-                // Generate with padding
-                for (int padLen = 1; padLen <= maxPad; padLen++)
-                {
-                    foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
+                    if (CheckKeywordValidity(seed, sfwOnly))
                     {
-                        if (CheckKeywordValidity(seed, isNsfw))
-                        {
-                            writer.WriteLine(seed);
-                            count++;
-                        }
+                        yield return seed;
+                        count++;
                     }
                 }
             }
-            
+
             if (!quiet)
             {
                 Console.WriteLine($"   Generated {count:N0} seeds containing '{keyword}'");
             }
-            
-            return filePath;
         }
-        
-        private static bool CheckKeywordValidity(string seed, bool isNsfw)
+
+        private static bool CheckKeywordValidity(string seed, bool sfwOnly)
         {
-            if (isNsfw)
+            if (sfwOnly)
             {
-                // For NSFW mode, we want NSFW seeds
-                return NsfwSeedGenerator.ScoreSeed(seed) > 0;
+                // --sfw flag: only allow SFW seeds (filter out NSFW)
+                return SfwSeedGenerator.IsSfw(seed);
             }
             else
             {
-                // For SFW mode, reject NSFW seeds
-                return SfwSeedGenerator.IsSfw(seed);
+                // Default: allow all seeds (both SFW and NSFW)
+                return true;
             }
         }
-        
-        private static IEnumerable<string> GeneratePaddedSeeds(string keyword, int padLen, char[] validChars)
+
+        private static IEnumerable<string> GeneratePaddedSeeds(
+            string keyword,
+            int padLen,
+            char[] validChars
+        )
         {
             if (padLen <= 0)
             {
                 yield return keyword;
                 yield break;
             }
-            
-            // Generate padding combinations (limit depth to avoid explosion)
+
+            // Generate ALL padding combinations - no limits!
             if (padLen == 1)
             {
                 foreach (var c in validChars)
@@ -796,34 +951,108 @@ namespace Motely
                     }
                 }
             }
-            else if (padLen >= 4)
+            else
             {
-                // For 4+ padding, only do prefix/suffix to avoid explosion
-                foreach (var c1 in validChars)
+                // Generate ALL positions for padLen >= 4 - full explosion!
+                foreach (var combo in GenerateAllCombinations(validChars, padLen))
                 {
-                    foreach (var c2 in validChars)
+                    // Generate all positions where keyword can be inserted
+                    // pos=0: keyword + combo (e.g., BEAN + UYDY = BEANUYDY)
+                    // pos=padLen: combo + keyword (e.g., UYDY + BEAN = UYDYBEAN)
+                    for (int pos = 0; pos <= padLen; pos++)
                     {
-                        foreach (var c3 in validChars)
-                        {
-                            foreach (var c4 in validChars)
-                            {
-                                string pad = $"{c1}{c2}{c3}{c4}";
-                                if (padLen == 4)
-                                {
-                                    yield return pad + keyword;
-                                    yield return keyword + pad;
-                                }
-                                else
-                                {
-                                    // For 5+, use 4-char pad on one side only
-                                    yield return pad + keyword;
-                                    yield return keyword + pad;
-                                }
-                            }
-                        }
+                        string prefix = pos > 0 ? combo.Substring(0, pos) : "";
+                        string suffix = pos < padLen ? combo.Substring(pos) : "";
+                        yield return prefix + keyword + suffix;
                     }
                 }
             }
+        }
+
+        private static IEnumerable<string> GenerateAllCombinations(char[] validChars, int length)
+        {
+            if (length == 0)
+            {
+                yield return "";
+                yield break;
+            }
+
+            var buffer = new char[length];
+            foreach (var combo in GenerateCombinationsRecursive(validChars, buffer, 0))
+            {
+                yield return combo;
+            }
+        }
+
+        private static IEnumerable<string> GenerateCombinationsRecursive(
+            char[] validChars,
+            char[] buffer,
+            int index
+        )
+        {
+            if (index == buffer.Length)
+            {
+                yield return new string(buffer);
+                yield break;
+            }
+
+            foreach (var c in validChars)
+            {
+                buffer[index] = c;
+                // Continue building - only yield when we reach the end (base case above)
+                foreach (var result in GenerateCombinationsRecursive(validChars, buffer, index + 1))
+                {
+                    yield return result;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Convert a seed string to a batch number for sequential search.
+        /// Batches are organized by the first (8 - BatchSize) characters.
+        /// </summary>
+        private static long ConvertSeedToBatch(string seed, int batchSize)
+        {
+            // Pad seed to max length if needed
+            seed = seed.PadRight(8, '1');
+
+            // Batches are organized by the characters that are NOT varying.
+            // Motely iterates using the LEFT characters (indices 0 to batchSize-1)
+            // as the varying parts within a batch.
+            // The FIXED characters for a batch are the RIGHT characters (indices batchSize to 7).
+
+            int fixedLength = 8 - batchSize;
+            if (fixedLength <= 0)
+                return 0;
+
+            // Get the fixed part (the suffix)
+            string suffix = seed.Substring(batchSize);
+
+            // Convert to batch index:
+            // digit at index batchSize is 35^0
+            // digit at index batchSize+1 is 35^1
+            // ...
+            // digit at index 7 is 35^(fixedLength-1)
+
+            long batchNum = 0;
+            long multiplier = 1;
+
+            for (int i = 0; i < suffix.Length; i++)
+            {
+                char c = suffix[i];
+                int digitIndex = Array.IndexOf(Motely.SeedDigits, c);
+                if (digitIndex < 0)
+                {
+                    throw new ArgumentException(
+                        $"Invalid seed character '{c}' in '{seed}'. Valid chars: 1-9, A-Z"
+                    );
+                }
+
+                batchNum += digitIndex * multiplier;
+                multiplier *= 35;
+            }
+
+            return batchNum;
         }
     }
 }

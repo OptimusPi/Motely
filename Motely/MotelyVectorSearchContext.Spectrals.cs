@@ -1,5 +1,5 @@
-using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
 namespace Motely;
@@ -60,8 +60,10 @@ ref partial struct MotelyVectorSearchContext
         );
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelyVectorSpectralStream CreateSixthSenseSpectralStream(int ante, bool isCached = false) =>
-        CreateSpectralStream(MotelyPrngKeys.JokerSixthSense, ante, true, false, isCached);
+    public MotelyVectorSpectralStream CreateSixthSenseSpectralStream(
+        int ante,
+        bool isCached = false
+    ) => CreateSpectralStream(MotelyPrngKeys.JokerSixthSense, ante, true, false, isCached);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelyVectorSpectralStream CreateSeanceSpectralStream(int ante, bool isCached = false) =>

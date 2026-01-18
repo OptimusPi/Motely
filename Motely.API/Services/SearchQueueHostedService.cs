@@ -1,9 +1,9 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Motely.API.Models;
 using Motely.Filters;
-using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace Motely.API.Services;
 
@@ -20,7 +20,8 @@ public class SearchQueueHostedService : BackgroundService
         SearchQueueService queue,
         SearchService searchService,
         ILogger<SearchQueueHostedService> logger,
-        int maxThreads = 15)
+        int maxThreads = 15
+    )
     {
         _queue = queue;
         _searchService = searchService;
@@ -53,7 +54,8 @@ public class SearchQueueHostedService : BackgroundService
                 for (int i = 0; i < available; i++)
                 {
                     var entry = _queue.DequeueNext();
-                    if (entry == null) break;
+                    if (entry == null)
+                        break;
                     entries.Add(entry);
                 }
 
@@ -63,7 +65,13 @@ public class SearchQueueHostedService : BackgroundService
                 }
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+            // Check cancellation before delay
+            if (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken).ConfigureAwait(false);
         }
     }
 
@@ -73,30 +81,40 @@ public class SearchQueueHostedService : BackgroundService
         var running = all.Where(e => e.Status == "running").ToList();
         foreach (var entry in running)
         {
-            _logger.LogInformation("Resuming search {SearchId} from batch {BatchMarker}", entry.SearchId, entry.BatchMarker);
+            _logger.LogInformation(
+                "Resuming search {SearchId} from batch {BatchMarker}",
+                entry.SearchId,
+                entry.BatchMarker
+            );
             StartSearch(entry, CancellationToken.None);
         }
     }
 
     private void StartSearch(SearchQueueEntry entry, CancellationToken ct)
     {
-        var task = Task.Run(async () =>
-        {
-            // Parse JAML filter (assume valid - validated at enqueue time)
-            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(entry.JamlFilter, options);
-
-            // Create criteria with batch limit (100 batches max)
-            var criteria = new SearchCriteriaDto
+        var task = Task.Run(
+            async () =>
             {
-                ThreadCount = entry.ThreadCount,
-                StartBatch = (ulong)entry.BatchMarker,
-                EndBatch = (ulong)Math.Min(entry.BatchMarker + 100, long.MaxValue)
-            };
+                // Parse JAML filter (assume valid - validated at enqueue time)
+                var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+                var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(
+                    entry.JamlFilter,
+                    options
+                );
 
-            // Run search using existing SearchService logic
-            await _searchService.RunQueuedSearchAsync(config!, entry, ct);
-        }, ct);
+                // Create criteria with batch limit (100 batches max)
+                var criteria = new SearchCriteriaDto
+                {
+                    ThreadCount = entry.ThreadCount,
+                    StartBatch = (ulong)entry.BatchMarker,
+                    EndBatch = (ulong)Math.Min(entry.BatchMarker + 100, long.MaxValue),
+                };
+
+                // Run search using existing SearchService logic
+                await _searchService.RunQueuedSearchAsync(config!, entry, ct);
+            },
+            ct
+        );
 
         _runningTasks.TryAdd(entry.SearchId, task);
         _logger.LogInformation("Started queued search {SearchId}", entry.SearchId);
@@ -123,6 +141,3 @@ public class SearchQueueHostedService : BackgroundService
         }
     }
 }
-
-
-
