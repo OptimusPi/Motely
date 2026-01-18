@@ -155,9 +155,9 @@ public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
         countCmd.CommandText = "SELECT COUNT(*) FROM seeds";
         SeedCount = (int)Convert.ToInt64(countCmd.ExecuteScalar() ?? 0);
         
-        // Stream ALL seeds ordered by length once at startup (O(n) instead of O(n²))
+        // Stream ALL seeds once at startup (O(n) instead of O(n²))
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT seed FROM seeds ORDER BY seed_len, seed";
+        cmd.CommandText = "SELECT seed FROM seeds ORDER BY seed";
         
         var reader = cmd.ExecuteReader();
         _seedEnumerator = GetSeedsFromReader(reader, conn, cmd);

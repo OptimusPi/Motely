@@ -13,8 +13,7 @@ public static class DuckDBSchema
         return @"
             CREATE TABLE IF NOT EXISTS seeds (
                 id BIGINT PRIMARY KEY,
-                seed VARCHAR NOT NULL,
-                seed_len INTEGER
+                seed VARCHAR NOT NULL
             )";
     }
 
@@ -25,8 +24,7 @@ public static class DuckDBSchema
     {
         return @"
             CREATE INDEX IF NOT EXISTS idx_seeds_id ON seeds(id);
-            CREATE INDEX IF NOT EXISTS idx_seeds_seed ON seeds(seed);
-            CREATE INDEX IF NOT EXISTS idx_seeds_len ON seeds(seed_len)";
+            CREATE INDEX IF NOT EXISTS idx_seeds_seed ON seeds(seed)";
     }
 
     /// <summary>
