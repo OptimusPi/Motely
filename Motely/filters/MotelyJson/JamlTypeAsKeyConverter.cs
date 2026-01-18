@@ -116,6 +116,11 @@ namespace Motely.Filters.MotelyJson
                         var clausesValue = objectFactory(reader, typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>));
                         entries[key] = clausesValue!;
                     }
+                    else if (string.Equals(key, "sources", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var sourcesValue = objectFactory(reader, typeof(SourcesConfig));
+                        entries[key] = sourcesValue!;
+                    }
                     else
                     {
                         var nodeValue = objectFactory(reader, typeof(object));
