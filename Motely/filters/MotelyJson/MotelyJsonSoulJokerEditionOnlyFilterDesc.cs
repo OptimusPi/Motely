@@ -20,8 +20,11 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(
         // Cache soul joker EDITION-ONLY streams for all antes (ultra-fast!)
         for (int ante = _criteria.MinAnte; ante <= _criteria.MaxAnte; ante++)
         {
-            ctx.CacheSoulJokerStream(ante,
-                MotelyJokerFixedRarityStreamFlags.ExcludeJokerType | MotelyJokerFixedRarityStreamFlags.ExcludeStickers);
+            ctx.CacheSoulJokerStream(
+                ante,
+                MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
+                    | MotelyJokerFixedRarityStreamFlags.ExcludeStickers
+            );
         }
 
         return new MotelyJsonSoulJokerEditionOnlyFilter(
@@ -77,8 +80,11 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(
 
                     // Create edition-ONLY stream for this ante (ULTRA FAST!)
                     // ExcludeJokerType + ExcludeStickers = only check edition PRNG (1 cheap call!)
-                    var editionStream = ctx.CreateSoulJokerStream(ante,
-                        MotelyJokerFixedRarityStreamFlags.ExcludeJokerType | MotelyJokerFixedRarityStreamFlags.ExcludeStickers);
+                    var editionStream = ctx.CreateSoulJokerStream(
+                        ante,
+                        MotelyJokerFixedRarityStreamFlags.ExcludeJokerType
+                            | MotelyJokerFixedRarityStreamFlags.ExcludeStickers
+                    );
 
                     // Check first soul joker edition
                     clauseMatched |= VectorEnum256.Equals(

@@ -1,41 +1,40 @@
-
 namespace Motely;
-
 
 ref partial struct MotelySingleSearchContext
 {
-
     #region Misprint
 
-    public MotelySinglePrngStream CreateMisprintPrngStream(bool isCached = false)
-        => CreatePrngStream(MotelyPrngKeys.JokerMisprint, isCached);
+    public MotelySinglePrngStream CreateMisprintPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerMisprint, isCached);
 
-    public int GetNextMisprintMult(ref MotelySinglePrngStream misprintStream)
-        => GetNextRandomInt(ref misprintStream, Motely.JokerMisprintMin, Motely.JokerMisprintMax + 1);
+    public int GetNextMisprintMult(ref MotelySinglePrngStream misprintStream) =>
+        GetNextRandomInt(ref misprintStream, Motely.JokerMisprintMin, Motely.JokerMisprintMax + 1);
     #endregion
 
     #region Lucky Cards
 
-    public MotelySinglePrngStream CreateLuckyCardMoneyStream(bool isCached = false)
-        => CreatePrngStream(MotelyPrngKeys.CardLuckyMoney, isCached);
+    public MotelySinglePrngStream CreateLuckyCardMoneyStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.CardLuckyMoney, isCached);
 
-    public bool GetNextLuckyMoney(ref MotelySinglePrngStream moneyStream, double baseLuck = 1)
-        => GetNextRandom(ref moneyStream) < baseLuck / Motely.EnhancementLuckyMoneyChance;
+    public bool GetNextLuckyMoney(ref MotelySinglePrngStream moneyStream, double baseLuck = 1) =>
+        GetNextRandom(ref moneyStream) < baseLuck / Motely.EnhancementLuckyMoneyChance;
 
+    public MotelySinglePrngStream CreateLuckyCardMultStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.CardLuckyMult, isCached);
 
-    public MotelySinglePrngStream CreateLuckyCardMultStream(bool isCached = false)
-        => CreatePrngStream(MotelyPrngKeys.CardLuckyMult, isCached);
-
-    public bool GetNextLuckyMult(ref MotelySinglePrngStream multStream, double baseLuck = 1)
-        => GetNextRandom(ref multStream) < baseLuck / Motely.EnhancementLuckyMultChance;
+    public bool GetNextLuckyMult(ref MotelySinglePrngStream multStream, double baseLuck = 1) =>
+        GetNextRandom(ref multStream) < baseLuck / Motely.EnhancementLuckyMultChance;
 
     #endregion
 
     #region Wheel of Fortune
-    public MotelySinglePrngStream CreateWheelOfFortuneStream(bool isCached = false)
-        => CreatePrngStream(MotelyPrngKeys.TarotWheelOfFortune, isCached);
+    public MotelySinglePrngStream CreateWheelOfFortuneStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.TarotWheelOfFortune, isCached);
 
-    public MotelyItemEdition GetNextWheelOfFortune(ref MotelySinglePrngStream wheelStream, double baseLuck = 1)
+    public MotelyItemEdition GetNextWheelOfFortune(
+        ref MotelySinglePrngStream wheelStream,
+        double baseLuck = 1
+    )
     {
         if (GetNextRandom(ref wheelStream) >= baseLuck / Motely.TarrotWheelChance)
             return MotelyItemEdition.None;
@@ -57,28 +56,31 @@ ref partial struct MotelySingleSearchContext
     #endregion
 
     #region Banannanas
-    public MotelySinglePrngStream CreateCavendishPrngStream(bool isCached = false)
-        => CreatePrngStream(MotelyPrngKeys.JokerCavendish, isCached);
+    public MotelySinglePrngStream CreateCavendishPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerCavendish, isCached);
 
-    public bool GetNextCavendishExtinct(ref MotelySinglePrngStream cavendishStream, double baseLuck = 1)
-        => GetNextRandom(ref cavendishStream) < baseLuck / Motely.JokerCavendishChance;
+    public bool GetNextCavendishExtinct(
+        ref MotelySinglePrngStream cavendishStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref cavendishStream) < baseLuck / Motely.JokerCavendishChance;
 
-    public MotelySinglePrngStream CreateGrosMichelPrngStream(bool isCached = false)
-        => CreatePrngStream(MotelyPrngKeys.JokerGrosMichel, isCached);
+    public MotelySinglePrngStream CreateGrosMichelPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.JokerGrosMichel, isCached);
 
-    public bool GetNextGrosMichelExtinct(ref MotelySinglePrngStream grosMichelStream, double baseLuck = 1)
-        => GetNextRandom(ref grosMichelStream) < baseLuck / Motely.JokerGrosMichelChance;
+    public bool GetNextGrosMichelExtinct(
+        ref MotelySinglePrngStream grosMichelStream,
+        double baseLuck = 1
+    ) => GetNextRandom(ref grosMichelStream) < baseLuck / Motely.JokerGrosMichelChance;
 
     #endregion
 
     #region Erratic
 
-    public MotelySinglePrngStream CreateErraticDeckPrngStream(bool isCached = false)
-        => CreatePrngStream(MotelyPrngKeys.DeckErratic, isCached);
+    public MotelySinglePrngStream CreateErraticDeckPrngStream(bool isCached = false) =>
+        CreatePrngStream(MotelyPrngKeys.DeckErratic, isCached);
 
-    public MotelyItem GetNextErraticDeckCard(ref MotelySinglePrngStream erraticDeckStream)
-        => new(GetNextRandomElement(ref erraticDeckStream, MotelyEnum<MotelyPlayingCard>.Values));
-        
+    public MotelyItem GetNextErraticDeckCard(ref MotelySinglePrngStream erraticDeckStream) =>
+        new(GetNextRandomElement(ref erraticDeckStream, MotelyEnum<MotelyPlayingCard>.Values));
+
     #endregion
-
 }

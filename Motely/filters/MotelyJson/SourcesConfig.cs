@@ -53,6 +53,11 @@ namespace Motely.Filters
         [YamlMember(Alias = "judgement")]
         public int[]? Judgement { get; set; }
 
+        /// <summary>Wraith spectral joker roll indices (e.g. [0] for first Wraith use)</summary>
+        [JsonPropertyName("wraith")]
+        [YamlMember(Alias = "wraith")]
+        public int[]? Wraith { get; set; }
+
         /// <summary>Rare tag joker roll indices (e.g. [0] for first rare tag)</summary>
         [JsonPropertyName("rareTag")]
         [YamlMember(Alias = "rareTag")]

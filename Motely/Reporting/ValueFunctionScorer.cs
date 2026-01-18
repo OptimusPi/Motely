@@ -1,5 +1,5 @@
-using Motely.Filters;
 using System.Linq;
+using Motely.Filters;
 
 namespace Motely.Reporting;
 
@@ -33,7 +33,7 @@ public class ValueFunctionScorer : IScorer
             {
                 "startingdeck" => GetStartingDeck(ref ctx),
                 "carddraw" => GetCardDraw(ref ctx, _clause),
-                _ => throw new ArgumentException($"Unknown function: {_clause.Function}")
+                _ => throw new ArgumentException($"Unknown function: {_clause.Function}"),
             };
         }
 
@@ -59,13 +59,13 @@ public class ValueFunctionScorer : IScorer
 
         var deckStream = ctx.CreateErraticDeckPrngStream(isCached: false);
         var deckCards = new List<string>();
-        
+
         for (int i = 0; i < 52; i++)
         {
             var card = ctx.GetNextErraticDeckCard(ref deckStream);
             deckCards.Add(FormatCardString(card.PlayingCardRank, card.PlayingCardSuit));
         }
-        
+
         return string.Join(",", deckCards);
     }
 
@@ -74,7 +74,10 @@ public class ValueFunctionScorer : IScorer
     /// Format: "5_H,6_C,7_D" (comma-separated card strings)
     /// For multiple antes, returns Dictionary keyed by ante number
     /// </summary>
-    private static object GetCardDraw(ref MotelySingleSearchContext ctx, MotelyJsonConfig.MotelyJsonFilterClause clause)
+    private static object GetCardDraw(
+        ref MotelySingleSearchContext ctx,
+        MotelyJsonConfig.MotelyJsonFilterClause clause
+    )
     {
         var antes = clause.Antes ?? new[] { 1, 2, 3, 4, 5, 6, 7, 8 }; // Default to all antes
         var cardPositions = clause.Cards; // Optional: if null, return all 52 cards
@@ -102,7 +105,11 @@ public class ValueFunctionScorer : IScorer
     /// <summary>
     /// Gets the card draw order for a specific ante
     /// </summary>
-    private static string GetCardDrawForAnte(ref MotelySingleSearchContext ctx, int ante, int[]? cardPositions)
+    private static string GetCardDrawForAnte(
+        ref MotelySingleSearchContext ctx,
+        int ante,
+        int[]? cardPositions
+    )
     {
         var drawCards = new List<string>();
 
@@ -110,7 +117,7 @@ public class ValueFunctionScorer : IScorer
         {
             // For Erratic Deck, cards are drawn from the starting deck in order
             var deckStream = ctx.CreateErraticDeckPrngStream(isCached: false);
-            
+
             if (cardPositions != null && cardPositions.Length > 0)
             {
                 // Get specific card positions
@@ -119,7 +126,7 @@ public class ValueFunctionScorer : IScorer
                 {
                     allCards.Add(ctx.GetNextErraticDeckCard(ref deckStream));
                 }
-                
+
                 foreach (var pos in cardPositions.OrderBy(p => p))
                 {
                     if (pos >= 0 && pos < allCards.Count)
@@ -144,10 +151,10 @@ public class ValueFunctionScorer : IScorer
             // For standard decks, cards come from Standard Packs opened in this ante
             var packStream = ctx.CreateBoosterPackStream(ante);
             int maxPacks = ante == 1 ? 4 : 6;
-            
+
             var standardStream = ctx.CreateStandardPackCardStream(ante);
             var allCards = new List<MotelyItem>();
-            
+
             // Collect all cards from Standard Packs in this ante
             for (int i = 0; i < maxPacks; i++)
             {
@@ -155,8 +162,11 @@ public class ValueFunctionScorer : IScorer
                 if (pack.GetPackType() == MotelyBoosterPackType.Standard)
                 {
                     var packSize = pack.GetPackSize();
-                    var packContents = ctx.GetNextStandardPackContents(ref standardStream, packSize);
-                    
+                    var packContents = ctx.GetNextStandardPackContents(
+                        ref standardStream,
+                        packSize
+                    );
+
                     foreach (var item in packContents.AsArray())
                     {
                         if (item.TypeCategory == MotelyItemTypeCategory.PlayingCard)
@@ -212,7 +222,7 @@ public class ValueFunctionScorer : IScorer
             MotelyPlayingCardRank.Queen => "Q",
             MotelyPlayingCardRank.King => "K",
             MotelyPlayingCardRank.Ace => "A",
-            _ => rank.ToString()
+            _ => rank.ToString(),
         };
         var suitStr = suit switch
         {
@@ -220,7 +230,7 @@ public class ValueFunctionScorer : IScorer
             MotelyPlayingCardSuit.Diamond => "D",
             MotelyPlayingCardSuit.Heart => "H",
             MotelyPlayingCardSuit.Spade => "S",
-            _ => suit.ToString()
+            _ => suit.ToString(),
         };
         return $"{rankStr}_{suitStr}";
     }

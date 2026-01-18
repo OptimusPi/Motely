@@ -39,19 +39,19 @@ public sealed class OrClauseAntesTests
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 1 },  // Individual ante constraint
-                            ShopSlots = new[] { 1 }
+                            Antes = new[] { 1 }, // Individual ante constraint
+                            ShopSlots = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 2 },  // Different ante constraint
-                            ShopSlots = new[] { 2 }
-                        }
-                    }
-                }
-            }
+                            Antes = new[] { 2 }, // Different ante constraint
+                            ShopSlots = new[] { 2 },
+                        },
+                    },
+                },
+            },
         };
 
         // Post-process to apply defaults and parse enums
@@ -81,24 +81,24 @@ public sealed class OrClauseAntesTests
                 new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
-                    Antes = new[] { 1, 2 },  // Helper prop - applies to all children
+                    Antes = new[] { 1, 2 }, // Helper prop - applies to all children
                     Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            ShopSlots = new[] { 1 }
+                            ShopSlots = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            ShopSlots = new[] { 2 }
-                        }
-                    }
-                }
-            }
+                            ShopSlots = new[] { 2 },
+                        },
+                    },
+                },
+            },
         };
 
         // Post-process to apply defaults and parse enums
@@ -130,23 +130,23 @@ public sealed class OrClauseAntesTests
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 1 }
+                            Antes = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Brainstorm",
-                            Antes = new[] { 2 }
+                            Antes = new[] { 2 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Mime",
-                            Antes = new[] { 3 }
-                        }
-                    }
-                }
-            }
+                            Antes = new[] { 3 },
+                        },
+                    },
+                },
+            },
         };
 
         // Post-process to apply defaults and parse enums
@@ -172,17 +172,17 @@ public sealed class OrClauseAntesTests
                 new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
-                    Antes = new[] { 1, 2 },  // Explicitly set
+                    Antes = new[] { 1, 2 }, // Explicitly set
                     Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
-                            Value = "Blueprint"
-                        }
-                    }
-                }
-            }
+                            Value = "Blueprint",
+                        },
+                    },
+                },
+            },
         };
 
         var configWithoutAntes = new MotelyJsonConfig
@@ -199,11 +199,11 @@ public sealed class OrClauseAntesTests
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 1 }  // Child has explicit Antes
-                        }
-                    }
-                }
-            }
+                            Antes = new[] { 1 }, // Child has explicit Antes
+                        },
+                    },
+                },
+            },
         };
 
         // Post-process both configs
@@ -212,18 +212,24 @@ public sealed class OrClauseAntesTests
 
         // Verify explicit Antes is tracked
         var orClauseWithExplicitAntes = configWithExplicitAntes.Must[0];
-        Assert.True(orClauseWithExplicitAntes.AntesWasExplicitlySet,
-            "Parent OR clause with explicit Antes=[1,2] should have AntesWasExplicitlySet=true");
+        Assert.True(
+            orClauseWithExplicitAntes.AntesWasExplicitlySet,
+            "Parent OR clause with explicit Antes=[1,2] should have AntesWasExplicitlySet=true"
+        );
 
         // Verify defaulted Antes is NOT marked as explicitly set
         var orClauseWithDefaultAntes = configWithoutAntes.Must[0];
-        Assert.False(orClauseWithDefaultAntes.AntesWasExplicitlySet,
-            "Parent OR clause with no Antes (defaulted to all) should have AntesWasExplicitlySet=false");
+        Assert.False(
+            orClauseWithDefaultAntes.AntesWasExplicitlySet,
+            "Parent OR clause with no Antes (defaulted to all) should have AntesWasExplicitlySet=false"
+        );
 
         // Verify child with explicit Antes is tracked
         var childClause = configWithoutAntes.Must[0].Clauses![0];
-        Assert.True(childClause.AntesWasExplicitlySet,
-            "Child clause with explicit Antes=[1] should have AntesWasExplicitlySet=true");
+        Assert.True(
+            childClause.AntesWasExplicitlySet,
+            "Child clause with explicit Antes=[1] should have AntesWasExplicitlySet=true"
+        );
     }
 
     [Fact]
@@ -240,17 +246,17 @@ public sealed class OrClauseAntesTests
                 new MotelyJsonConfig.MotelyJsonFilterClause
                 {
                     Type = "Or",
-                    Antes = new[] { 1, 2 },  // Helper
+                    Antes = new[] { 1, 2 }, // Helper
                     Clauses = new List<MotelyJsonConfig.MotelyJsonFilterClause>
                     {
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
-                            Value = "Blueprint"
-                        }
-                    }
-                }
-            }
+                            Value = "Blueprint",
+                        },
+                    },
+                },
+            },
         };
 
         // Pattern 2: Individual Antes on children
@@ -267,17 +273,17 @@ public sealed class OrClauseAntesTests
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 1 }
+                            Antes = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 2 }
-                        }
-                    }
-                }
-            }
+                            Antes = new[] { 2 },
+                        },
+                    },
+                },
+            },
         };
 
         // Post-process both
@@ -290,6 +296,5 @@ public sealed class OrClauseAntesTests
 
         var ctx2 = new MotelyFilterCreationContext();
         var filter2 = new MotelyCompositeFilterDesc(individualPattern.Must).CreateFilter(ref ctx2);
-
     }
 }

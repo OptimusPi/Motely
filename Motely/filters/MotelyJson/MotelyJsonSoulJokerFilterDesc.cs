@@ -7,7 +7,8 @@ namespace Motely.Filters;
 /// 1. Pre-filter: Fast vectorized joker matching
 /// 2. Verify: Vectorized Soul card verification in packs
 /// </summary>
-public readonly struct MotelyJsonSoulJokerFilterDesc : IMotelySeedFilterDesc<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>
+public readonly struct MotelyJsonSoulJokerFilterDesc
+    : IMotelySeedFilterDesc<MotelyJsonSoulJokerFilterDesc.MotelyJsonSoulJokerFilter>
 {
     private readonly MotelyJsonSoulJokerFilterCriteria _criteria;
 
@@ -20,7 +21,9 @@ public readonly struct MotelyJsonSoulJokerFilterDesc : IMotelySeedFilterDesc<Mot
     {
         // SINGLE-CLAUSE MODEL: Enforce exactly ONE clause per filter
         if (_criteria.Clauses.Count != 1)
-            throw new ArgumentException($"MotelyJsonSoulJokerFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
+            throw new ArgumentException(
+                $"MotelyJsonSoulJokerFilter expects exactly 1 clause, got {_criteria.Clauses.Count}"
+            );
 
         // Use pre-calculated values from criteria
         int minAnte = _criteria.MinAnte;
@@ -99,7 +102,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc : IMotelySeedFilterDesc<Mot
                 bool tarotStreamInit = false,
                     spectralStreamInit = false;
 
-                int maxPackSlot = maxPackSlotsPerAnte[ante];  // Dictionary always populated by CreateCriteria
+                int maxPackSlot = maxPackSlotsPerAnte[ante]; // Dictionary always populated by CreateCriteria
 
                 // Walk through each pack slot
                 for (int packIndex = 0; packIndex < maxPackSlot; packIndex++)
@@ -236,10 +239,7 @@ public readonly struct MotelyJsonSoulJokerFilterDesc : IMotelySeedFilterDesc<Mot
 
                                 // Check this joker against THE clause
                                 // Check if this ante is wanted
-                                if (
-                                    ante < clause.WantedAntes.Length
-                                    && clause.WantedAntes[ante]
-                                )
+                                if (ante < clause.WantedAntes.Length && clause.WantedAntes[ante])
                                 {
                                     // Check pack slot if specified
                                     if (
@@ -284,7 +284,9 @@ public readonly struct MotelyJsonSoulJokerFilterDesc : IMotelySeedFilterDesc<Mot
                                                         (int)MotelyItemTypeCategory.Joker
                                                         | (int)clause.JokerType.Value
                                                     );
-                                                    typeMatches = (soulJokerFace.Type == expectedType);
+                                                    typeMatches = (
+                                                        soulJokerFace.Type == expectedType
+                                                    );
                                                 }
                                             }
                                             // If IsWildcard is true (e.g., "Any"), typeMatches stays true
@@ -294,7 +296,8 @@ public readonly struct MotelyJsonSoulJokerFilterDesc : IMotelySeedFilterDesc<Mot
                                                 // Check edition using EDITION stream (ante-dependent)
                                                 if (
                                                     !clause.EditionEnum.HasValue
-                                                    || soulJokerEdition.Edition == clause.EditionEnum.Value
+                                                    || soulJokerEdition.Edition
+                                                        == clause.EditionEnum.Value
                                                 )
                                                 {
                                                     // This joker matches the clause!

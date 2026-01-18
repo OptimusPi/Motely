@@ -11,7 +11,7 @@ namespace Motely
             {
                 return MotelyTUI.Run();
             }
-            
+
             // If args provided, show message that CLI is separate
             Console.WriteLine("CLI functionality has been moved to Motely.CLI");
             Console.WriteLine("Run: dotnet run --project Motely.CLI -- [args]");

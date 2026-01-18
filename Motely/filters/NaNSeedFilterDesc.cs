@@ -11,63 +11,61 @@ public struct NaNSeedFilterDesc : IMotelySeedFilterDesc<NaNSeedFilterDesc.NaNSee
         var keys = new List<string>();
 
         // Simple keys (no concatenation needed)
-        keys.AddRange(
-            [
-                // Joker probability/RNG operations (VERIFIED FROM LUA)
-                "lucky_money", // Lucky Card money chance
-                "lucky_mult", // Lucky Card mult chance
-                "misprint", // Misprint joker random mult
-                "bloodstone", // Bloodstone probability
-                "parking", // Reserved Parking probability
-                "business", // Business Card probability
-                "space", // Space Joker probability
-                "8ball", // 8 Ball probability
-                // "halu" - needs ante suffix, handled below
-                "glass", // Glass Card break chance
-                // Boss blind effects (VERIFIED FROM LUA)
-                "boss", // Boss selection
-                "wheel", // The Wheel boss effect
-                "hook", // The Hook boss effect
-                "cerulean_bell", // Cerulean Bell boss effect
-                "crimson_heart", // Crimson Heart boss effect
-                // Card modifications (VERIFIED FROM LUA)
-                "wheel_of_fortune", // Wheel of Fortune tarot effect
-                "invisible", // Invisible Joker effect
-                "perkeo", // Perkeo consumable copy
-                "madness", // Madness joker destruction
-                "ankh_choice", // Ankh joker selection
-                "to_do", // To Do List poker hand selection
-                "marb_fr", // Marble Joker card creation
-                "cert_fr", // Certificate card front
-                "certsl", // Certificate card seal
-                // Tarot/Spectral card effects (VERIFIED FROM LUA)
-                "sigil", // Sigil suit selection
-                "ouija", // Ouija rank selection
-                "familiar_create", // Familiar card creation
-                "grim_create", // Grim card creation
-                "incantation_create", // Incantation card creation
-                "random_destroy", // Random card destruction
-                "spe_card", // Spectral card center selection
-                "immolate", // Immolate shuffle
-                // Pack/shop generation (VERIFIED FROM LUA)
-                "stdset", // Standard pack enhancement chance (ante suffix)
-                "stdseal", // Standard pack seal chance (ante suffix)
-                "stdsealtype", // Standard pack seal type (ante suffix)
-                "omen_globe", // Omen Globe voucher effect
-                "illusion", // Illusion voucher effect
-                "boss", // Boss selection (no ante)
-                "wheel", // The Wheel boss effect (with pseudoseed)
-                "hook", // The Hook boss effect (with pseudoseed)
-                "cerulean_bell", // Cerulean Bell boss effect (with pseudoseed)
-                "crimson_heart", // Crimson Heart boss effect (with pseudoseed)
-                "aura", // Aura spectral effect
-                "edition_generic", // Generic edition poll
-                "flipped_card", // Flipped card chance
-                "edition_deck", // Erratic deck edition selection
-                "erratic", // Erratic suit/rank selection
-                "orbital", // Orbital Tag planet selection
-            ]
-        );
+        keys.AddRange([
+            // Joker probability/RNG operations (VERIFIED FROM LUA)
+            "lucky_money", // Lucky Card money chance
+            "lucky_mult", // Lucky Card mult chance
+            "misprint", // Misprint joker random mult
+            "bloodstone", // Bloodstone probability
+            "parking", // Reserved Parking probability
+            "business", // Business Card probability
+            "space", // Space Joker probability
+            "8ball", // 8 Ball probability
+            // "halu" - needs ante suffix, handled below
+            "glass", // Glass Card break chance
+            // Boss blind effects (VERIFIED FROM LUA)
+            "boss", // Boss selection
+            "wheel", // The Wheel boss effect
+            "hook", // The Hook boss effect
+            "cerulean_bell", // Cerulean Bell boss effect
+            "crimson_heart", // Crimson Heart boss effect
+            // Card modifications (VERIFIED FROM LUA)
+            "wheel_of_fortune", // Wheel of Fortune tarot effect
+            "invisible", // Invisible Joker effect
+            "perkeo", // Perkeo consumable copy
+            "madness", // Madness joker destruction
+            "ankh_choice", // Ankh joker selection
+            "to_do", // To Do List poker hand selection
+            "marb_fr", // Marble Joker card creation
+            "cert_fr", // Certificate card front
+            "certsl", // Certificate card seal
+            // Tarot/Spectral card effects (VERIFIED FROM LUA)
+            "sigil", // Sigil suit selection
+            "ouija", // Ouija rank selection
+            "familiar_create", // Familiar card creation
+            "grim_create", // Grim card creation
+            "incantation_create", // Incantation card creation
+            "random_destroy", // Random card destruction
+            "spe_card", // Spectral card center selection
+            "immolate", // Immolate shuffle
+            // Pack/shop generation (VERIFIED FROM LUA)
+            "stdset", // Standard pack enhancement chance (ante suffix)
+            "stdseal", // Standard pack seal chance (ante suffix)
+            "stdsealtype", // Standard pack seal type (ante suffix)
+            "omen_globe", // Omen Globe voucher effect
+            "illusion", // Illusion voucher effect
+            "boss", // Boss selection (no ante)
+            "wheel", // The Wheel boss effect (with pseudoseed)
+            "hook", // The Hook boss effect (with pseudoseed)
+            "cerulean_bell", // Cerulean Bell boss effect (with pseudoseed)
+            "crimson_heart", // Crimson Heart boss effect (with pseudoseed)
+            "aura", // Aura spectral effect
+            "edition_generic", // Generic edition poll
+            "flipped_card", // Flipped card chance
+            "edition_deck", // Erratic deck edition selection
+            "erratic", // Erratic suit/rank selection
+            "orbital", // Orbital Tag planet selection
+        ]);
 
         // Keys that need ante suffix (1-8)
         for (int ante = 1; ante <= 8; ante++)

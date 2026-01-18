@@ -4,7 +4,6 @@ namespace Motely.Tests;
 
 public sealed class AnalyzerUnitTests
 {
-
     [Theory]
     [InlineData("1234567")]
     [InlineData("12345678")]
@@ -13,17 +12,23 @@ public sealed class AnalyzerUnitTests
     [InlineData("UNITTES")]
     [InlineData("UNITTEST")]
     [InlineData("KK1XD111", MotelyDeck.Ghost, MotelyStake.Black)]
-    public async Task TestAnalyzer(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
+    public async Task TestAnalyzer(
+        string seed,
+        MotelyDeck deck = MotelyDeck.Red,
+        MotelyStake stake = MotelyStake.White
+    )
     {
         string actualOutput = GetAnalyzerOutput(seed, deck, stake);
 
         // Assert using Verify - this will create a nice diff view
-        await Verify(actualOutput)
-            .UseFileName(seed)
-            .UseDirectory("seeds");
+        await Verify(actualOutput).UseFileName(seed).UseDirectory("seeds");
     }
 
-    private string GetAnalyzerOutput(string seed, MotelyDeck deck = MotelyDeck.Red, MotelyStake stake = MotelyStake.White)
+    private string GetAnalyzerOutput(
+        string seed,
+        MotelyDeck deck = MotelyDeck.Red,
+        MotelyStake stake = MotelyStake.White
+    )
     {
         return MotelySeedAnalyzer.Analyze(new(seed, deck, stake)).ToString();
     }
@@ -68,13 +73,15 @@ public sealed class AnalyzerUnitTests
             {
                 break;
             }
-            else if (inAnte1 && line.Trim().StartsWith("Buffoon Pack") ||
-                     line.Trim().StartsWith("Arcana Pack") ||
-                     line.Trim().StartsWith("Celestial Pack") ||
-                     line.Trim().StartsWith("Spectral Pack") ||
-                     line.Trim().StartsWith("Standard Pack") ||
-                     line.Trim().StartsWith("Jumbo") ||
-                     line.Trim().StartsWith("Mega"))
+            else if (
+                inAnte1 && line.Trim().StartsWith("Buffoon Pack")
+                || line.Trim().StartsWith("Arcana Pack")
+                || line.Trim().StartsWith("Celestial Pack")
+                || line.Trim().StartsWith("Spectral Pack")
+                || line.Trim().StartsWith("Standard Pack")
+                || line.Trim().StartsWith("Jumbo")
+                || line.Trim().StartsWith("Mega")
+            )
             {
                 packCount++;
             }

@@ -11,11 +11,14 @@ namespace Motely.Tests
     /// </summary>
     public class FormatConversionTests
     {
-        private readonly string _testConfigPath = Path.Combine("TestJsonConfigs", "ComplexFilter.json");
+        private readonly string _testConfigPath = Path.Combine(
+            "TestJsonConfigs",
+            "ComplexFilter.json"
+        );
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
         [Fact]
@@ -45,8 +48,14 @@ namespace Motely.Tests
             if (originalJoker?.Sources != null)
             {
                 Assert.NotNull(convertedJoker?.Sources);
-                Assert.Equal(originalJoker.Sources.ShopSlots?.Length, convertedJoker.Sources.ShopSlots?.Length);
-                Assert.Equal(originalJoker.Sources.PackSlots?.Length, convertedJoker.Sources.PackSlots?.Length);
+                Assert.Equal(
+                    originalJoker.Sources.ShopSlots?.Length,
+                    convertedJoker.Sources.ShopSlots?.Length
+                );
+                Assert.Equal(
+                    originalJoker.Sources.PackSlots?.Length,
+                    convertedJoker.Sources.PackSlots?.Length
+                );
                 Assert.Equal(originalJoker.Sources.MinShopSlot, convertedJoker.Sources.MinShopSlot);
                 Assert.Equal(originalJoker.Sources.MaxShopSlot, convertedJoker.Sources.MaxShopSlot);
             }
@@ -83,7 +92,8 @@ namespace Motely.Tests
         public void Test5_JamlAnchorsExpandToJsonCorrectly()
         {
             // Arrange - JAML with anchors (the &name/*name syntax - YAML feature)
-            var jamlWithAnchors = @"
+            var jamlWithAnchors =
+                @"
 name: AnchorTest
 deck: Red
 stake: White
@@ -107,7 +117,10 @@ should:
             var config = ConfigFormatConverter.LoadFromJamlString(jamlWithAnchors);
             Assert.NotNull(config);
             Assert.NotNull(config.Must);
-            Assert.True(config.Must.Count >= 2, $"Expected at least 2 Must clauses, got {config.Must.Count}");
+            Assert.True(
+                config.Must.Count >= 2,
+                $"Expected at least 2 Must clauses, got {config.Must.Count}"
+            );
 
             // Convert to JSON (anchors should expand to full values)
             var jsonString = config.SaveAsJson();
@@ -191,7 +204,11 @@ should:
             AssertConfigsEqual(config1, config4, "Config1 vs Config4");
         }
 
-        private void AssertConfigsEqual(MotelyJsonConfig expected, MotelyJsonConfig actual, string conversionPath)
+        private void AssertConfigsEqual(
+            MotelyJsonConfig expected,
+            MotelyJsonConfig actual,
+            string conversionPath
+        )
         {
             // Basic properties
             Assert.Equal(expected.Name, actual.Name);
@@ -240,7 +257,11 @@ should:
             }
         }
 
-        private void AssertClauseEqual(MotelyJsonConfig.MotelyJsonFilterClause expected, MotelyJsonConfig.MotelyJsonFilterClause actual, string path)
+        private void AssertClauseEqual(
+            MotelyJsonConfig.MotelyJsonFilterClause expected,
+            MotelyJsonConfig.MotelyJsonFilterClause actual,
+            string path
+        )
         {
             Assert.Equal(expected.Type, actual.Type);
             Assert.Equal(expected.Value, actual.Value);
@@ -261,8 +282,10 @@ should:
             else if (expected.Antes == null || expected.Antes.Length == 0)
             {
                 // Both should be null or empty
-                Assert.True(actual.Antes == null || actual.Antes.Length == 0, 
-                    $"{path}: Expected null/empty Antes, got {actual.Antes?.Length ?? 0} items");
+                Assert.True(
+                    actual.Antes == null || actual.Antes.Length == 0,
+                    $"{path}: Expected null/empty Antes, got {actual.Antes?.Length ?? 0} items"
+                );
             }
 
             if (expected.Values != null && expected.Values.Length > 0)
@@ -273,8 +296,10 @@ should:
             }
             else if (expected.Values == null || expected.Values.Length == 0)
             {
-                Assert.True(actual.Values == null || actual.Values.Length == 0,
-                    $"{path}: Expected null/empty Values, got {actual.Values?.Length ?? 0} items");
+                Assert.True(
+                    actual.Values == null || actual.Values.Length == 0,
+                    $"{path}: Expected null/empty Values, got {actual.Values?.Length ?? 0} items"
+                );
             }
 
             // Stickers - important: check if expected has stickers, actual should too
@@ -299,12 +324,18 @@ should:
             if (expected.Sources != null)
             {
                 Assert.NotNull(actual.Sources);
-                Assert.Equal(expected.Sources.ShopSlots?.Length ?? 0, actual.Sources.ShopSlots?.Length ?? 0);
+                Assert.Equal(
+                    expected.Sources.ShopSlots?.Length ?? 0,
+                    actual.Sources.ShopSlots?.Length ?? 0
+                );
                 if (expected.Sources.ShopSlots != null && expected.Sources.ShopSlots.Length > 0)
                 {
                     Assert.Equal(expected.Sources.ShopSlots, actual.Sources.ShopSlots);
                 }
-                Assert.Equal(expected.Sources.PackSlots?.Length ?? 0, actual.Sources.PackSlots?.Length ?? 0);
+                Assert.Equal(
+                    expected.Sources.PackSlots?.Length ?? 0,
+                    actual.Sources.PackSlots?.Length ?? 0
+                );
                 if (expected.Sources.PackSlots != null && expected.Sources.PackSlots.Length > 0)
                 {
                     Assert.Equal(expected.Sources.PackSlots, actual.Sources.PackSlots);
@@ -320,7 +351,11 @@ should:
                 Assert.Equal(expected.Clauses.Count, actual.Clauses.Count);
                 for (int i = 0; i < expected.Clauses.Count; i++)
                 {
-                    AssertClauseEqual(expected.Clauses[i], actual.Clauses[i], $"{path}.Clauses[{i}]");
+                    AssertClauseEqual(
+                        expected.Clauses[i],
+                        actual.Clauses[i],
+                        $"{path}.Clauses[{i}]"
+                    );
                 }
             }
         }

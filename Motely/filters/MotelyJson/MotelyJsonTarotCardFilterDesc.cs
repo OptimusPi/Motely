@@ -26,7 +26,9 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
 
         // SINGLE clause only - caller must chain multiple filters for multiple clauses
         if (_criteria.Clauses.Count != 1)
-            throw new ArgumentException($"MotelyJsonTarotCardFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
+            throw new ArgumentException(
+                $"MotelyJsonTarotCardFilter expects exactly 1 clause, got {_criteria.Clauses.Count}"
+            );
 
         return new MotelyJsonTarotCardFilter(
             _criteria.Clauses[0],
@@ -127,7 +129,10 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                 }
 
                 // Check Purple Seal / 8Ball tarot sources
-                if (clause.Sources?.PurpleSealOrEightBall != null && clause.Sources.PurpleSealOrEightBall.Length > 0)
+                if (
+                    clause.Sources?.PurpleSealOrEightBall != null
+                    && clause.Sources.PurpleSealOrEightBall.Length > 0
+                )
                 {
                     var purpleSealStream = ctx.CreatePurpleSealTarotStream(ante);
                     var rollIndices = clause.Sources.PurpleSealOrEightBall;
@@ -154,7 +159,8 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                             if (clause.TarotType.HasValue)
                             {
                                 var targetTarotType = (MotelyItemType)(
-                                    (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                                    (int)MotelyItemTypeCategory.TarotCard
+                                    | (int)clause.TarotType.Value
                                 );
                                 typeMatches = VectorEnum256.Equals(tarotItem.Type, targetTarotType);
                             }
@@ -204,7 +210,10 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                         var secondTarot = emperorTarots[1];
 
                         var isNotExcludedFirst = ~Vector256.Equals(firstTarot.Value, excludedValue);
-                        var isNotExcludedSecond = ~Vector256.Equals(secondTarot.Value, excludedValue);
+                        var isNotExcludedSecond = ~Vector256.Equals(
+                            secondTarot.Value,
+                            excludedValue
+                        );
                         VectorMask isActualTarotFirst = isNotExcludedFirst;
                         VectorMask isActualTarotSecond = isNotExcludedSecond;
 
@@ -215,9 +224,13 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                             if (clause.TarotType.HasValue)
                             {
                                 var targetTarotType = (MotelyItemType)(
-                                    (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                                    (int)MotelyItemTypeCategory.TarotCard
+                                    | (int)clause.TarotType.Value
                                 );
-                                typeMatchesFirst = VectorEnum256.Equals(firstTarot.Type, targetTarotType);
+                                typeMatchesFirst = VectorEnum256.Equals(
+                                    firstTarot.Type,
+                                    targetTarotType
+                                );
                             }
 
                             // Check edition match for first tarot
@@ -235,9 +248,13 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                             if (clause.TarotType.HasValue)
                             {
                                 var targetTarotType = (MotelyItemType)(
-                                    (int)MotelyItemTypeCategory.TarotCard | (int)clause.TarotType.Value
+                                    (int)MotelyItemTypeCategory.TarotCard
+                                    | (int)clause.TarotType.Value
                                 );
-                                typeMatchesSecond = VectorEnum256.Equals(secondTarot.Type, targetTarotType);
+                                typeMatchesSecond = VectorEnum256.Equals(
+                                    secondTarot.Type,
+                                    targetTarotType
+                                );
                             }
 
                             // Check edition match for second tarot
@@ -251,8 +268,9 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
                             }
 
                             // Match if either tarot matches
-                            VectorMask matches = (isActualTarotFirst & typeMatchesFirst & editionMatchesFirst)
-                                              | (isActualTarotSecond & typeMatchesSecond & editionMatchesSecond);
+                            VectorMask matches =
+                                (isActualTarotFirst & typeMatchesFirst & editionMatchesFirst)
+                                | (isActualTarotSecond & typeMatchesSecond & editionMatchesSecond);
                             clauseMask |= matches;
                         }
 
@@ -537,7 +555,7 @@ public partial struct MotelyJsonTarotCardFilterDesc(MotelyJsonTarotFilterCriteri
             int maxPackSlot = clause.MaxPackSlot.HasValue
                 ? clause.MaxPackSlot.Value + 1
                 : (ante == 1 ? 4 : 6);
-            
+
             // OPTIMIZATION: If we have specific slots, only check up to the max wanted slot
             // This avoids checking unnecessary slots when only early slots are needed
             if (hasSpecificSlots)

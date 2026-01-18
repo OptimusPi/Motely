@@ -1,3 +1,4 @@
+using System.Threading;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Motely.API.Hubs;
@@ -19,7 +20,7 @@ public class SearchHub : Hub
     {
         // Get a simple username from connection (could be enhanced with auth)
         var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
-        
+
         // Broadcast to all clients
         await Clients.All.SendAsync("ReceiveMessage", username, text, timestamp);
     }
@@ -33,8 +34,16 @@ public class SearchHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
-        await Clients.Others.SendAsync("UserLeft", username);
+        try
+        {
+            var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
+            // Fire and forget - don't wait for send to complete
+            _ = Clients
+                .Others.SendAsync("UserLeft", username)
+                .ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+        catch { }
+        // Always call base immediately, even if send fails
         await base.OnDisconnectedAsync(exception);
     }
 }

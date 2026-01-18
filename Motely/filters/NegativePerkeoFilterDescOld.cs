@@ -1,11 +1,10 @@
-
 namespace Motely;
 
 using System.Runtime.CompilerServices;
 
-public struct NegativePerkeoFilterDescOld() : IMotelySeedFilterDesc<NegativePerkeoFilterDescOld.FilterStruct>
+public struct NegativePerkeoFilterDescOld()
+    : IMotelySeedFilterDesc<NegativePerkeoFilterDescOld.FilterStruct>
 {
-
     public const int MinAnte = 1;
     public const int MaxAnte = 2;
 
@@ -26,57 +25,86 @@ public struct NegativePerkeoFilterDescOld() : IMotelySeedFilterDesc<NegativePerk
 
             for (int ante = MinAnte; ante <= MaxAnte; ante++)
             {
-                var jokerEditionSteam = searchContext.CreateSoulJokerStream(ante, MotelyJokerFixedRarityStreamFlags.ExcludeStickers, true);
+                var jokerEditionSteam = searchContext.CreateSoulJokerStream(
+                    ante,
+                    MotelyJokerFixedRarityStreamFlags.ExcludeStickers,
+                    true
+                );
 
                 var jokerVector = searchContext.GetNextJoker(ref jokerEditionSteam);
 
-                VectorMask negativePerkeoMask = VectorEnum256.Equals(jokerVector.Edition, MotelyItemEdition.Negative);
+                VectorMask negativePerkeoMask = VectorEnum256.Equals(
+                    jokerVector.Edition,
+                    MotelyItemEdition.Negative
+                );
                 negativePerkeoMask &= VectorEnum256.Equals(jokerVector.Type, MotelyItemType.Perkeo);
 
-                if (negativePerkeoMask.IsAllFalse()) continue;
+                if (negativePerkeoMask.IsAllFalse())
+                    continue;
 
-                seedMask |= searchContext.SearchIndividualSeeds(negativePerkeoMask, (ref MotelySingleSearchContext searchContext) =>
-                {
-                    // We need to check if this ante has the soul
-                    MotelySingleTarotStream tarotStream = default;
-                    MotelySingleSpectralStream spectralStream = default;
-                    bool tarotStreamInit = false, spectralStreamInit = false;
-
-                    MotelySingleBoosterPackStream boosterPackStream = searchContext.CreateBoosterPackStream(ante);
-
-                    for (int i = 0; i < 5; i++)
+                seedMask |= searchContext.SearchIndividualSeeds(
+                    negativePerkeoMask,
+                    (ref MotelySingleSearchContext searchContext) =>
                     {
-                        MotelyBoosterPack pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+                        // We need to check if this ante has the soul
+                        MotelySingleTarotStream tarotStream = default;
+                        MotelySingleSpectralStream spectralStream = default;
+                        bool tarotStreamInit = false,
+                            spectralStreamInit = false;
 
-                        if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                        MotelySingleBoosterPackStream boosterPackStream =
+                            searchContext.CreateBoosterPackStream(ante);
+
+                        for (int i = 0; i < 5; i++)
                         {
-                            if (!tarotStreamInit)
+                            MotelyBoosterPack pack = searchContext.GetNextBoosterPack(
+                                ref boosterPackStream
+                            );
+
+                            if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                             {
-                                tarotStreamInit = true;
-                                tarotStream = searchContext.CreateArcanaPackTarotStream(ante, true);
+                                if (!tarotStreamInit)
+                                {
+                                    tarotStreamInit = true;
+                                    tarotStream = searchContext.CreateArcanaPackTarotStream(
+                                        ante,
+                                        true
+                                    );
+                                }
+
+                                if (
+                                    searchContext.GetNextArcanaPackHasTheSoul(
+                                        ref tarotStream,
+                                        pack.GetPackSize()
+                                    )
+                                )
+                                    return true;
                             }
 
-                            if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
-                                return true;
-                        }
-
-                        if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                        {
-                            if (!spectralStreamInit)
+                            if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                             {
-                                spectralStreamInit = true;
-                                spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, true);
-                            }
+                                if (!spectralStreamInit)
+                                {
+                                    spectralStreamInit = true;
+                                    spectralStream = searchContext.CreateSpectralPackSpectralStream(
+                                        ante,
+                                        true
+                                    );
+                                }
 
-                            if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
-                                return true;
+                                if (
+                                    searchContext.GetNextSpectralPackHasTheSoul(
+                                        ref spectralStream,
+                                        pack.GetPackSize()
+                                    )
+                                )
+                                    return true;
+                            }
                         }
+
+                        return false;
                     }
-
-                    return false;
-
-                });
-
+                );
             }
 
             return seedMask;

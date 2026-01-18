@@ -73,7 +73,11 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                 bool canEarlyExit = true;
                 for (int c = 0; c < Clauses.Count; c++)
                 {
-                    if (_lastWantedAntes[c] >= 0 && ante > _lastWantedAntes[c] && clauseMasks[c].IsAllFalse())
+                    if (
+                        _lastWantedAntes[c] >= 0
+                        && ante > _lastWantedAntes[c]
+                        && clauseMasks[c].IsAllFalse()
+                    )
                     {
                         return VectorMask.NoBitsSet;
                     }
@@ -102,6 +106,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     bool hasPack = HasPackSlots(clause.WantedPackSlots);
                     bool hasJokerStreamSources =
                         clause.Sources?.Judgement is { Length: > 0 }
+                        || clause.Sources?.Wraith is { Length: > 0 }
                         || clause.Sources?.RareTag is { Length: > 0 }
                         || clause.Sources?.UncommonTag is { Length: > 0 }
                         || clause.Sources?.RiffRaff is { Length: > 0 }
@@ -109,19 +114,24 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         || clause.Sources?.RareShopJokers is { Length: > 0 }
                         || clause.Sources?.CommonShopJokers is { Length: > 0 };
 
-                    if (hasShop) anyHasShop = true;
-                    if (hasPack) anyHasPack = true;
-                    if (hasJokerStreamSources) anyHasJokerStreamSources = true;
+                    if (hasShop)
+                        anyHasShop = true;
+                    if (hasPack)
+                        anyHasPack = true;
+                    if (hasJokerStreamSources)
+                        anyHasJokerStreamSources = true;
 
                     if (hasShop)
                     {
                         int clauseMaxShop = FindMaxSlotIndex(clause.WantedShopSlots) + 1;
-                        if (clauseMaxShop > maxShopSlots) maxShopSlots = clauseMaxShop;
+                        if (clauseMaxShop > maxShopSlots)
+                            maxShopSlots = clauseMaxShop;
                     }
                     if (hasPack)
                     {
                         int clauseMaxPack = (clause.MaxPackSlot ?? 5) + 1;
-                        if (clauseMaxPack > maxPackSlots) maxPackSlots = clauseMaxPack;
+                        if (clauseMaxPack > maxPackSlots)
+                            maxPackSlots = clauseMaxPack;
                     }
                 }
 
@@ -170,7 +180,13 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                                 continue;
 
                             bool hasShop = HasShopSlots(clause.WantedShopSlots);
-                            bool wantsSlot = useDefaults || !hasShop || (slot < clause.WantedShopSlots.Length && clause.WantedShopSlots[slot]);
+                            bool wantsSlot =
+                                useDefaults
+                                || !hasShop
+                                || (
+                                    slot < clause.WantedShopSlots.Length
+                                    && clause.WantedShopSlots[slot]
+                                );
                             if (wantsSlot)
                             {
                                 VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
@@ -201,17 +217,30 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                             );
 
                             // Check each joker in the pack against ALL clauses
-                            for (int packJokerIndex = 0; packJokerIndex < maxPackSize; packJokerIndex++)
+                            for (
+                                int packJokerIndex = 0;
+                                packJokerIndex < maxPackSize;
+                                packJokerIndex++
+                            )
                             {
                                 var joker = packContents[packJokerIndex];
                                 for (int c = 0; c < Clauses.Count; c++)
                                 {
                                     var clause = Clauses[c];
-                                    if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
+                                    if (
+                                        ante >= clause.WantedAntes.Length
+                                        || !clause.WantedAntes[ante]
+                                    )
                                         continue;
 
                                     bool hasPack = HasPackSlots(clause.WantedPackSlots);
-                                    bool wantsSlot = useDefaults || !hasPack || (packSlot < clause.WantedPackSlots.Length && clause.WantedPackSlots[packSlot]);
+                                    bool wantsSlot =
+                                        useDefaults
+                                        || !hasPack
+                                        || (
+                                            packSlot < clause.WantedPackSlots.Length
+                                            && clause.WantedPackSlots[packSlot]
+                                        );
                                     if (wantsSlot)
                                     {
                                         VectorMask matches = CheckJokerMatchesClause(joker, clause);
@@ -241,11 +270,48 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
-                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+                        var excludedValue = Vector256.Create(
+                            (int)MotelyItemType.JokerExcludedByStream
+                        );
 
                         for (int r = 0; r <= maxRollIndex; r++)
                         {
                             var jokerItem = ctx.GetNextJoker(ref judgementStream);
+                            if (r != nextWanted)
+                                continue;
+
+                            var isNotExcluded = ~Vector256.Equals(jokerItem.Value, excludedValue);
+                            VectorMask isActualJoker = isNotExcluded;
+
+                            if (!isActualJoker.IsAllFalse())
+                            {
+                                VectorMask matches = CheckJokerMatchesClause(jokerItem, clause);
+                                clauseMasks[c] |= (isActualJoker & matches);
+                            }
+
+                            pos++;
+                            if (pos >= rollIndices.Length)
+                                break;
+                            nextWanted = rollIndices[pos];
+                        }
+                    }
+
+                    // Check Wraith spectral joker sources
+                    if (clause.Sources.Wraith != null && clause.Sources.Wraith.Length > 0)
+                    {
+                        var wraithStream = ctx.CreateWraithJokerStream(ante);
+                        var rollIndices = clause.Sources.Wraith;
+
+                        int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                        int pos = 0;
+                        int nextWanted = rollIndices[0];
+                        var excludedValue = Vector256.Create(
+                            (int)MotelyItemType.JokerExcludedByStream
+                        );
+
+                        for (int r = 0; r <= maxRollIndex; r++)
+                        {
+                            var jokerItem = ctx.GetNextJoker(ref wraithStream);
                             if (r != nextWanted)
                                 continue;
 
@@ -274,7 +340,9 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
-                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+                        var excludedValue = Vector256.Create(
+                            (int)MotelyItemType.JokerExcludedByStream
+                        );
 
                         for (int r = 0; r <= maxRollIndex; r++)
                         {
@@ -307,7 +375,9 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
-                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+                        var excludedValue = Vector256.Create(
+                            (int)MotelyItemType.JokerExcludedByStream
+                        );
 
                         for (int r = 0; r <= maxRollIndex; r++)
                         {
@@ -340,7 +410,9 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         int maxRollIndex = rollIndices[rollIndices.Length - 1];
                         int pos = 0;
                         int nextWanted = rollIndices[0];
-                        var excludedValue = Vector256.Create((int)MotelyItemType.JokerExcludedByStream);
+                        var excludedValue = Vector256.Create(
+                            (int)MotelyItemType.JokerExcludedByStream
+                        );
 
                         for (int r = 0; r <= maxRollIndex; r++)
                         {
@@ -366,7 +438,10 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
 
                     // ========== RAW SHOP JOKER STREAMS (FAST PRE-FILTER) ==========
                     // Check Uncommon Shop Joker sources (direct stream access - no shop item type check)
-                    if (clause.Sources.UncommonShopJokers != null && clause.Sources.UncommonShopJokers.Length > 0)
+                    if (
+                        clause.Sources.UncommonShopJokers != null
+                        && clause.Sources.UncommonShopJokers.Length > 0
+                    )
                     {
                         var uncommonShopStream = ctx.CreateUncommonShopJokerStream(ante);
                         var rollIndices = clause.Sources.UncommonShopJokers;
@@ -392,7 +467,10 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     }
 
                     // Check Rare Shop Joker sources (direct stream access - no shop item type check)
-                    if (clause.Sources.RareShopJokers != null && clause.Sources.RareShopJokers.Length > 0)
+                    if (
+                        clause.Sources.RareShopJokers != null
+                        && clause.Sources.RareShopJokers.Length > 0
+                    )
                     {
                         var rareShopStream = ctx.CreateRareShopJokerStream(ante);
                         var rollIndices = clause.Sources.RareShopJokers;
@@ -418,7 +496,10 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     }
 
                     // Check Common Shop Joker sources (direct stream access - no shop item type check)
-                    if (clause.Sources.CommonShopJokers != null && clause.Sources.CommonShopJokers.Length > 0)
+                    if (
+                        clause.Sources.CommonShopJokers != null
+                        && clause.Sources.CommonShopJokers.Length > 0
+                    )
                     {
                         var commonShopStream = ctx.CreateCommonShopJokerStream(ante);
                         var rollIndices = clause.Sources.CommonShopJokers;
@@ -460,14 +541,14 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             }
 
             DebugLogger.Log($"[JOKER VECTORIZED] Final result mask: {finalMask.Value:X}");
-            
+
             // Check if any clause has Min > 1, if not, return boolean result directly
             bool hasMinThreshold = Clauses.Any(c => c.Min.HasValue && c.Min.Value > 1);
             if (!hasMinThreshold)
             {
                 return finalMask;
             }
-            
+
             // For Min thresholds, we need to count actual occurrences
             // This is slower but necessary for accuracy
             DebugLogger.Log($"[JOKER VECTORIZED] Checking Min thresholds");
@@ -475,7 +556,7 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             var clauses = Clauses;
             var minAnte = MinAnte;
             var maxAnte = MaxAnte;
-            
+
             return ctx.SearchIndividualSeeds(
                 finalMask,
                 (ref MotelySingleSearchContext singleCtx) =>
@@ -486,19 +567,19 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                         // Skip clauses without Min requirement or Min <= 1
                         if (!clause.Min.HasValue || clause.Min.Value <= 1)
                             continue;
-                            
+
                         // Count total joker occurrences across ALL wanted antes and sources
                         int totalCount = 0;
-                        
+
                         for (int ante = minAnte; ante <= maxAnte; ante++)
                         {
                             if (ante >= clause.WantedAntes.Length || !clause.WantedAntes[ante])
                                 continue; // Skip antes not wanted by this clause
-                                
+
                             // Count jokers from all sources for this ante
                             int anteCount = CountJokerOccurrences(ref singleCtx, clause, ante);
                             totalCount += anteCount;
-                            
+
                             // Early exit if we already exceed the threshold
                             if (totalCount >= clause.Min.Value)
                                 break;
@@ -514,84 +595,117 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
             );
         }
 
-        private static int CountJokerOccurrences(ref MotelySingleSearchContext ctx, MotelyJsonJokerFilterClause clause, int ante)
+        private static int CountJokerOccurrences(
+            ref MotelySingleSearchContext ctx,
+            MotelyJsonJokerFilterClause clause,
+            int ante
+        )
         {
             int count = 0;
-            
+
             // Check Judgement sources
             if (clause.Sources?.Judgement != null && clause.Sources.Judgement.Length > 0)
             {
                 var judgementStream = ctx.CreateJudgementJokerStream(ante);
                 var rollIndices = clause.Sources.Judgement;
-                
+
                 int maxRollIndex = rollIndices[rollIndices.Length - 1];
                 int pos = 0;
                 int nextWanted = rollIndices[0];
-                
+
                 for (int r = 0; r <= maxRollIndex; r++)
                 {
                     var jokerItem = ctx.GetNextJoker(ref judgementStream);
                     if (r != nextWanted)
                         continue;
-                        
+
                     if (jokerItem.TypeCategory == MotelyItemTypeCategory.Joker)
                     {
                         if (CheckJokerMatchesClause(jokerItem, clause))
                             count++;
                     }
-                    
+
                     pos++;
                     if (pos >= rollIndices.Length)
                         break;
                     nextWanted = rollIndices[pos];
                 }
             }
-            
+
+            // Check Wraith sources
+            if (clause.Sources?.Wraith != null && clause.Sources.Wraith.Length > 0)
+            {
+                var wraithStream = ctx.CreateWraithJokerStream(ante);
+                var rollIndices = clause.Sources.Wraith;
+
+                int maxRollIndex = rollIndices[rollIndices.Length - 1];
+                int pos = 0;
+                int nextWanted = rollIndices[0];
+
+                for (int r = 0; r <= maxRollIndex; r++)
+                {
+                    var jokerItem = ctx.GetNextJoker(ref wraithStream);
+                    if (r != nextWanted)
+                        continue;
+
+                    if (jokerItem.TypeCategory == MotelyItemTypeCategory.Joker)
+                    {
+                        if (CheckJokerMatchesClause(jokerItem, clause))
+                            count++;
+                    }
+
+                    pos++;
+                    if (pos >= rollIndices.Length)
+                        break;
+                    nextWanted = rollIndices[pos];
+                }
+            }
+
             // Check Rare Tag sources
             if (clause.Sources?.RareTag != null && clause.Sources.RareTag.Length > 0)
             {
                 var rareTagStream = ctx.CreateRareTagJokerStream(ante);
                 var rollIndices = clause.Sources.RareTag;
-                
+
                 int maxRollIndex = rollIndices[rollIndices.Length - 1];
                 int pos = 0;
                 int nextWanted = rollIndices[0];
-                
+
                 for (int r = 0; r <= maxRollIndex; r++)
                 {
                     var jokerItem = ctx.GetNextJoker(ref rareTagStream);
                     if (r != nextWanted)
                         continue;
-                        
+
                     if (jokerItem.TypeCategory == MotelyItemTypeCategory.Joker)
                     {
                         if (CheckJokerMatchesClause(jokerItem, clause))
                             count++;
                     }
-                    
+
                     pos++;
                     if (pos >= rollIndices.Length)
                         break;
                     nextWanted = rollIndices[pos];
                 }
             }
-            
+
             // Check Shop sources
             if (clause.Sources?.ShopSlots != null && clause.Sources.ShopSlots.Length > 0)
             {
                 var shopStream = ctx.CreateShopItemStream(ante);
-                
+
                 for (int slot = 0; slot < clause.Sources.ShopSlots.Length; slot++)
                 {
                     if (clause.Sources.ShopSlots[slot] == 0)
                         continue;
-                        
+
                     // Skip to the wanted slot
                     for (int skip = 0; skip < slot; skip++)
                     {
                         ctx.GetNextShopItem(ref shopStream);
                     }
-                    
+
                     var shopItem = ctx.GetNextShopItem(ref shopStream);
                     if (shopItem.TypeCategory == MotelyItemTypeCategory.Joker)
                     {
@@ -600,18 +714,18 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     }
                 }
             }
-            
+
             // Check Pack sources
             if (clause.Sources?.PackSlots != null && clause.Sources.PackSlots.Length > 0)
             {
                 var packStream = ctx.CreateBoosterPackStream(ante);
                 var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
-                
+
                 for (int packIndex = 0; packIndex < clause.Sources.PackSlots.Length; packIndex++)
                 {
                     if (clause.Sources.PackSlots[packIndex] == 0)
                         continue;
-                        
+
                     var pack = ctx.GetNextBoosterPack(ref packStream);
                     if (pack.GetPackType() == MotelyBoosterPackType.Buffoon)
                     {
@@ -628,20 +742,23 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
                     }
                 }
             }
-            
+
             return count;
         }
 
-        private static bool CheckJokerMatchesClause(MotelyItem item, MotelyJsonJokerFilterClause clause)
+        private static bool CheckJokerMatchesClause(
+            MotelyItem item,
+            MotelyJsonJokerFilterClause clause
+        )
         {
             // Check joker type match
             if (clause.JokerType.HasValue && item.Value != (int)clause.JokerType.Value)
                 return false;
-                
+
             // Check edition match
             if (clause.EditionEnum.HasValue && item.Edition != clause.EditionEnum.Value)
                 return false;
-                
+
             return true;
         }
 

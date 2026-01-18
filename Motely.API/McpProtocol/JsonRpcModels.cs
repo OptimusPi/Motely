@@ -39,11 +39,7 @@ public class JsonRpcResponse
 
     public static JsonRpcResponse Success(object? id, object result)
     {
-        return new JsonRpcResponse
-        {
-            Id = id,
-            Result = result
-        };
+        return new JsonRpcResponse { Id = id, Result = result };
     }
 
     public static JsonRpcResponse Error(object? id, int code, string message, object? data = null)
@@ -55,8 +51,8 @@ public class JsonRpcResponse
             {
                 Code = code,
                 Message = message,
-                Data = data
-            }
+                Data = data,
+            },
         };
     }
 }
@@ -116,7 +112,9 @@ public class McpServerCapabilities
 }
 
 public class McpToolsCapability { }
+
 public class McpResourcesCapability { }
+
 public class McpPromptsCapability { }
 
 public class McpServerInfo
@@ -214,4 +212,3 @@ public class McpPromptGetParams
     [JsonPropertyName("arguments")]
     public Dictionary<string, string>? Arguments { get; set; }
 }
-

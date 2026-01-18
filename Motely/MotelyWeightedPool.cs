@@ -14,7 +14,6 @@ public struct MotelyWeightedPoolItem<T>(T value, double weight)
 public unsafe class MotelyWeightedPool<T> : IDisposable
     where T : unmanaged, Enum
 {
-
     private readonly MotelyWeightedPoolItem<T>* _pool;
     public readonly int Count;
     public readonly double WeightSum;
@@ -26,7 +25,8 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
         if (Count == 0)
             throw new ArgumentException("Weighted pool must have at least one item.");
 
-        _pool = (MotelyWeightedPoolItem<T>*)Marshal.AllocHGlobal(sizeof(MotelyWeightedPoolItem<T>) * Count);
+        _pool = (MotelyWeightedPoolItem<T>*)
+            Marshal.AllocHGlobal(sizeof(MotelyWeightedPoolItem<T>) * Count);
 
         double sum = 0;
 
@@ -92,7 +92,11 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
             );
 
             chosenMask &= ~finishedMask;
-            values = Vector256.ConditionalSelect(chosenMask, Vector256.Create(*(int*)(&current->Value)), values);
+            values = Vector256.ConditionalSelect(
+                chosenMask,
+                Vector256.Create(*(int*)(&current->Value)),
+                values
+            );
             finishedMask |= chosenMask;
 
             // AUDIT ISSUE #5: More efficient early exit - check if all lanes finished

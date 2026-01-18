@@ -29,7 +29,7 @@ public sealed class OrClauseTests
                             Rank = "King",
                             Seal = "Red",
                             Edition = "Polychrome",
-                            Antes = new[] { 1 }
+                            Antes = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
@@ -37,7 +37,7 @@ public sealed class OrClauseTests
                             Rank = "Queen",
                             Seal = "Red",
                             Edition = "Polychrome",
-                            Antes = new[] { 1 }
+                            Antes = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
@@ -45,11 +45,11 @@ public sealed class OrClauseTests
                             Rank = "Jack",
                             Seal = "Red",
                             Edition = "Polychrome",
-                            Antes = new[] { 1 }
-                        }
-                    }
-                }
-            }
+                            Antes = new[] { 1 },
+                        },
+                    },
+                },
+            },
         };
 
         // Initialize enum parsing
@@ -94,17 +94,17 @@ public sealed class OrClauseTests
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 1 }
+                            Antes = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Voucher",
                             Value = "Overstock",
-                            Antes = new[] { 1 }
-                        }
-                    }
-                }
-            }
+                            Antes = new[] { 1 },
+                        },
+                    },
+                },
+            },
         };
 
         // Initialize enum parsing
@@ -150,16 +150,16 @@ public sealed class OrClauseTests
                                 {
                                     Type = "SmallBlindTag",
                                     Value = "NegativeTag",
-                                    Antes = new[] { 2 }
+                                    Antes = new[] { 2 },
                                 },
                                 new MotelyJsonConfig.MotelyJsonFilterClause
                                 {
                                     Type = "Joker",
                                     Value = "Blueprint",
                                     Antes = new[] { 2 },
-                                    ShopSlots = new[] { 2, 4 }
-                                }
-                            }
+                                    ShopSlots = new[] { 2, 4 },
+                                },
+                            },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
@@ -170,7 +170,7 @@ public sealed class OrClauseTests
                                 {
                                     Type = "SmallBlindTag",
                                     Value = "CouponTag",
-                                    Antes = new[] { 1 }
+                                    Antes = new[] { 1 },
                                 },
                                 new MotelyJsonConfig.MotelyJsonFilterClause
                                 {
@@ -178,13 +178,13 @@ public sealed class OrClauseTests
                                     Value = "Blueprint",
                                     Antes = new[] { 1 },
                                     PackSlots = new[] { 0, 1 },
-                                    ShopSlots = new[] { 0, 1 }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                                    ShopSlots = new[] { 0, 1 },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         };
 
         // Initialize enum parsing
@@ -231,23 +231,23 @@ public sealed class OrClauseTests
                         {
                             Type = "Joker",
                             Value = "Blueprint",
-                            Antes = new[] { 1 }
+                            Antes = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Brainstorm",
-                            Antes = new[] { 1 }
+                            Antes = new[] { 1 },
                         },
                         new MotelyJsonConfig.MotelyJsonFilterClause
                         {
                             Type = "Joker",
                             Value = "Mime",
-                            Antes = new[] { 1 }
-                        }
-                    }
-                }
-            }
+                            Antes = new[] { 1 },
+                        },
+                    },
+                },
+            },
         };
 
         // Initialize enum parsing

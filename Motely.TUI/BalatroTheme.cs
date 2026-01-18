@@ -28,119 +28,121 @@ public static class BalatroTheme
     public static readonly Color Gray = new(128, 128, 128);
 
     // Red modal button (hover = DarkRed)
-    public static Scheme ModalButton => new()
-    {
-        Normal = new Attribute(White, Red),
-        Focus = new Attribute(White, DarkRed),
-        HotNormal = new Attribute(White, Red),
-        HotFocus = new Attribute(White, DarkRed),
-    };
+    public static Scheme ModalButton =>
+        new()
+        {
+            Normal = new Attribute(White, Red),
+            Focus = new Attribute(White, DarkRed),
+            HotNormal = new Attribute(White, Red),
+            HotFocus = new Attribute(White, DarkRed),
+        };
 
     // Orange Back button (hover = DarkOrange)
-    public static Scheme BackButton => new()
-    {
-        Normal = new Attribute(White, Orange),
-        Focus = new Attribute(White, DarkOrange),
-        HotNormal = new Attribute(White, Orange),
-        HotFocus = new Attribute(White, DarkOrange),
-    };
+    public static Scheme BackButton =>
+        new()
+        {
+            Normal = new Attribute(White, Orange),
+            Focus = new Attribute(White, DarkOrange),
+            HotNormal = new Attribute(White, Orange),
+            HotFocus = new Attribute(White, DarkOrange),
+        };
 
     // Blue button (hover = DarkBlue)
-    public static Scheme BlueButton => new()
-    {
-        Normal = new Attribute(White, Blue),
-        Focus = new Attribute(White, DarkBlue),
-        HotNormal = new Attribute(White, Blue),
-        HotFocus = new Attribute(White, DarkBlue),
-    };
+    public static Scheme BlueButton =>
+        new()
+        {
+            Normal = new Attribute(White, Blue),
+            Focus = new Attribute(White, DarkBlue),
+            HotNormal = new Attribute(White, Blue),
+            HotFocus = new Attribute(White, DarkBlue),
+        };
 
     // Green button (hover = DarkGreen)
-    public static Scheme GreenButton => new()
-    {
-        Normal = new Attribute(White, Green),
-        Focus = new Attribute(White, DarkGreen),
-        HotNormal = new Attribute(White, Green),
-        HotFocus = new Attribute(White, DarkGreen),
-    };
+    public static Scheme GreenButton =>
+        new()
+        {
+            Normal = new Attribute(White, Green),
+            Focus = new Attribute(White, DarkGreen),
+            HotNormal = new Attribute(White, Green),
+            HotFocus = new Attribute(White, DarkGreen),
+        };
 
     // Purple button (hover = DarkPurple)
-    public static Scheme PurpleButton => new()
-    {
-        Normal = new Attribute(White, Purple),
-        Focus = new Attribute(White, DarkPurple),
-        HotNormal = new Attribute(White, Purple),
-        HotFocus = new Attribute(White, DarkPurple),
-    };
+    public static Scheme PurpleButton =>
+        new()
+        {
+            Normal = new Attribute(White, Purple),
+            Focus = new Attribute(White, DarkPurple),
+            HotNormal = new Attribute(White, Purple),
+            HotFocus = new Attribute(White, DarkPurple),
+        };
 
     // Red button (hover = DarkRed)
-    public static Scheme RedButton => new()
-    {
-        Normal = new Attribute(White, Red),
-        Focus = new Attribute(White, DarkRed),
-        HotNormal = new Attribute(White, Red),
-        HotFocus = new Attribute(White, DarkRed),
-    };
+    public static Scheme RedButton =>
+        new()
+        {
+            Normal = new Attribute(White, Red),
+            Focus = new Attribute(White, DarkRed),
+            HotNormal = new Attribute(White, Red),
+            HotFocus = new Attribute(White, DarkRed),
+        };
 
     // Gray button
-    public static Scheme GrayButton => new()
-    {
-        Normal = new Attribute(White, SlateGray),
-        Focus = new Attribute(White, new Color(60, 70, 85)),
-        HotNormal = new Attribute(White, SlateGray),
-        HotFocus = new Attribute(White, new Color(60, 70, 85)),
-    };
+    public static Scheme GrayButton =>
+        new()
+        {
+            Normal = new Attribute(White, SlateGray),
+            Focus = new Attribute(White, new Color(60, 70, 85)),
+            HotNormal = new Attribute(White, SlateGray),
+            HotFocus = new Attribute(White, new Color(60, 70, 85)),
+        };
 
     // Modal window (grey background, light border)
-    public static Scheme Window => new()
-    {
-        Normal = new Attribute(White, ModalGrey),
-        Focus = new Attribute(White, ModalGrey),
-        HotNormal = new Attribute(White, ModalGrey),
-        HotFocus = new Attribute(White, ModalGrey),
-    };
+    public static Scheme Window =>
+        new()
+        {
+            Normal = new Attribute(White, ModalGrey),
+            Focus = new Attribute(White, ModalGrey),
+            HotNormal = new Attribute(White, ModalGrey),
+            HotFocus = new Attribute(White, ModalGrey),
+        };
 
     // Title text - transparent background to show shader through
-    public static Scheme Title => new()
-    {
-        Normal = new Attribute(White, Transparent),
-    };
+    public static Scheme Title => new() { Normal = new Attribute(White, Transparent) };
 
     // Hint text
-    public static Scheme Hint => new()
-    {
-        Normal = new Attribute(MediumGrey, Black),
-    };
+    public static Scheme Hint => new() { Normal = new Attribute(MediumGrey, Black) };
 
     // Error text
-    public static Scheme ErrorText => new()
-    {
-        Normal = new Attribute(Red, Black),
-    };
+    public static Scheme ErrorText => new() { Normal = new Attribute(Red, Black) };
 
     // Transparent window for shader background
-    public static Scheme TransparentWindow => new()
-    {
-        Normal = new Attribute(White, ModalGrey),
-        Focus = new Attribute(White, ModalGrey),
-        HotNormal = new Attribute(White, ModalGrey),
-        HotFocus = new Attribute(White, ModalGrey),
-    };
+    public static Scheme TransparentWindow =>
+        new()
+        {
+            Normal = new Attribute(White, ModalGrey),
+            Focus = new Attribute(White, ModalGrey),
+            HotNormal = new Attribute(White, ModalGrey),
+            HotFocus = new Attribute(White, ModalGrey),
+        };
 
     // Inner panel (slightly darker than modal background)
-    public static Scheme InnerPanel => new()
-    {
-        Normal = new Attribute(White, InnerPanelGrey),
-        Focus = new Attribute(White, InnerPanelGrey),
-        HotNormal = new Attribute(White, InnerPanelGrey),
-        HotFocus = new Attribute(White, InnerPanelGrey),
-    };
+    public static Scheme InnerPanel =>
+        new()
+        {
+            Normal = new Attribute(White, InnerPanelGrey),
+            Focus = new Attribute(White, InnerPanelGrey),
+            HotNormal = new Attribute(White, InnerPanelGrey),
+            HotFocus = new Attribute(White, InnerPanelGrey),
+        };
 
     // ListView - distinct highlight for selected row
-    public static Scheme ListView => new()
-    {
-        Normal = new Attribute(White, ModalGrey),
-        Focus = new Attribute(White, Blue),
-        HotNormal = new Attribute(White, ModalGrey),
-        HotFocus = new Attribute(White, Blue),
-    };
+    public static Scheme ListView =>
+        new()
+        {
+            Normal = new Attribute(White, ModalGrey),
+            Focus = new Attribute(White, Blue),
+            HotNormal = new Attribute(White, ModalGrey),
+            HotFocus = new Attribute(White, Blue),
+        };
 }

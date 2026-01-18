@@ -18,9 +18,14 @@ namespace Motely.Tests
                 new List<int> { 1 }, // Only ante 1
                 new List<int> { 0, 1, 2, 3 },
                 false // Don't require Mega
-            ) { Min = 1 };
+            )
+            {
+                Min = 1,
+            };
 
-            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                new List<MotelyJsonSoulJokerFilterClause> { clause }
+            );
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
 
             // The filter should have pre-computed that ante 1 is the last ante for this clause
@@ -49,7 +54,7 @@ namespace Motely.Tests
                     MotelyJoker.Triboulet,
                     new List<int> { 5 },
                     new List<int> { 0, 1, 2, 3 }
-                )
+                ),
             };
 
             var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(clauses);
@@ -88,9 +93,9 @@ namespace Motely.Tests
                     {
                         Type = "SoulJoker",
                         Value = "Perkeo", // Use real joker name
-                        Antes = new[] { 1 } // Only check ante 1
-                    }
-                }
+                        Antes = new[] { 1 }, // Only check ante 1
+                    },
+                },
             };
 
             var configWithLateAnte = new MotelyJsonConfig
@@ -105,9 +110,9 @@ namespace Motely.Tests
                     {
                         Type = "SoulJoker",
                         Value = "Triboulet", // Use real joker name
-                        Antes = new[] { 8 } // Only check ante 8
-                    }
-                }
+                        Antes = new[] { 8 }, // Only check ante 8
+                    },
+                },
             };
 
             // With early exit, the first config should fail faster
@@ -138,9 +143,14 @@ namespace Motely.Tests
                 new List<int> { 1, 2, 3, 4 },
                 new List<int> { 0, 1, 2, 3 },
                 false // Don't require Mega
-            ) { Min = 2 };
+            )
+            {
+                Min = 2,
+            };
 
-            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clauseMin2 });
+            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                new List<MotelyJsonSoulJokerFilterClause> { clauseMin2 }
+            );
 
             // With Min=2 and checking antes 1-4:
             // - Can't early exit until after ante 3 (need at least 2 chances left)
@@ -157,11 +167,13 @@ namespace Motely.Tests
             var clauses = new List<MotelyJsonSoulJokerFilterClause>();
             for (int i = 1; i <= 8; i++)
             {
-                clauses.Add(new MotelyJsonSoulJokerFilterClause(
-                    MotelyJoker.Perkeo,
-                    new List<int> { i }, // Each clause checks a different ante
-                    new List<int> { 0, 1, 2, 3 }
-                ));
+                clauses.Add(
+                    new MotelyJsonSoulJokerFilterClause(
+                        MotelyJoker.Perkeo,
+                        new List<int> { i }, // Each clause checks a different ante
+                        new List<int> { 0, 1, 2, 3 }
+                    )
+                );
             }
 
             var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(clauses);
@@ -207,9 +219,9 @@ namespace Motely.Tests
                         Type = "SoulJoker",
                         Value = "Perkeo",
                         Edition = "Negative",
-                        Antes = new[] { 1, 2, 3, 4, 5, 6, 7, 8 }
-                    }
-                }
+                        Antes = new[] { 1, 2, 3, 4, 5, 6, 7, 8 },
+                    },
+                },
             };
 
             var multiClauseConfig = new MotelyJsonConfig
@@ -224,21 +236,21 @@ namespace Motely.Tests
                         Type = "SoulJoker",
                         Value = "Perkeo",
                         Edition = "Negative",
-                        Antes = new[] { 1, 2, 3 }
+                        Antes = new[] { 1, 2, 3 },
                     },
                     new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Triboulet",
-                        Antes = new[] { 4, 5, 6 }
+                        Antes = new[] { 4, 5, 6 },
                     },
                     new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Chicot",
-                        Antes = new[] { 7, 8 }
-                    }
-                }
+                        Antes = new[] { 7, 8 },
+                    },
+                },
             };
 
             // With early exit optimization:

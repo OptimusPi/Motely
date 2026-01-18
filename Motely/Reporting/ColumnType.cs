@@ -39,5 +39,5 @@ public enum ColumnType
     /// Example: function mode: "StartingDeck" -> "2_H,2_H,2_H,5_C"
     /// Example: function mode: "CardDraw" with antes: [1], cards: [0,1,2,3,4] -> "5_H,6_C,7_D,8_S,9_H"
     /// </summary>
-    ValueFunction
+    ValueFunction,
 }

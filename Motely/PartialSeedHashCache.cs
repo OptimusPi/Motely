@@ -5,7 +5,6 @@ using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-
 internal unsafe struct PartialSeedHashCache : IDisposable
 {
     // A map of pseudohash key length => pointer to cached partial hash
@@ -22,15 +21,25 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public PartialSeedHashCache(IInternalMotelySearch search, Vector512<double>* partialSeedHashes)
     {
-        Cache = (Vector512<double>**)Marshal.AllocHGlobal(sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
-        InitialCache = (Vector512<double>**)Marshal.AllocHGlobal(sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
+        Cache = (Vector512<double>**)
+            Marshal.AllocHGlobal(sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
+        InitialCache = (Vector512<double>**)
+            Marshal.AllocHGlobal(sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
 
         // Initialize the dynamic cache
-        DynamicCacheMemory = (Vector512<double>*)Marshal.AllocHGlobal(sizeof(Vector512<double>) * (Motely.MaxCachedPseudoHashKeyLength - search.PseudoHashKeyLengthCount));
+        DynamicCacheMemory = (Vector512<double>*)
+            Marshal.AllocHGlobal(
+                sizeof(Vector512<double>)
+                    * (Motely.MaxCachedPseudoHashKeyLength - search.PseudoHashKeyLengthCount)
+            );
         DynamicCacheEntryCount = 0;
 
-        // Initialize the initial cache 
-        Unsafe.InitBlockUnaligned(InitialCache, 0, (uint)sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
+        // Initialize the initial cache
+        Unsafe.InitBlockUnaligned(
+            InitialCache,
+            0,
+            (uint)sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength
+        );
         for (int i = 0; i < search.PseudoHashKeyLengthCount; i++)
         {
             int pseudohashKeyLength = search.PseudoHashKeyLengths[i];
@@ -39,13 +48,16 @@ internal unsafe struct PartialSeedHashCache : IDisposable
 
         // Initialize the cache
         ResetCache();
-
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ResetCache()
     {
-        Unsafe.CopyBlock(Cache, InitialCache, (uint)sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength);
+        Unsafe.CopyBlock(
+            Cache,
+            InitialCache,
+            (uint)sizeof(Vector512<double>*) * Motely.MaxCachedPseudoHashKeyLength
+        );
         DynamicCacheEntryCount = 0;
     }
 

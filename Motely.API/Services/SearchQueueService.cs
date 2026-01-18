@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Logging;
-using Motely.API.Models;
 using System.Data;
 using DuckDB.NET.Data;
+using Microsoft.Extensions.Logging;
+using Motely.API.Models;
 using Motely.DuckDB;
 
 namespace Motely.API.Services;
@@ -25,11 +25,17 @@ public class SearchQueueService
         DuckDBTableManager.EnsureTableExists(conn, searchQueueSchema);
     }
 
-    public void Enqueue(string searchId, string jamlFilter, int threadCount = 1, bool isBurst = false)
+    public void Enqueue(
+        string searchId,
+        string jamlFilter,
+        int threadCount = 1,
+        bool isBurst = false
+    )
     {
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             INSERT OR REPLACE INTO SearchQueue 
             (searchId, jamlFilter, threadCount, isBurst, status, dateCreated, lastAccessed)
             VALUES (?, ?, ?, ?, 'queued', current_timestamp, current_timestamp);
@@ -46,7 +52,8 @@ public class SearchQueueService
     {
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             SELECT searchId, jamlFilter, dateCreated, lastAccessed, status,
                    batchMarker, seedsSearched, resultsFound, threadCount, isBurst
             FROM SearchQueue
@@ -55,7 +62,8 @@ public class SearchQueueService
             LIMIT 1;
         ";
         using var reader = cmd.ExecuteReader();
-        if (!reader.Read()) return null;
+        if (!reader.Read())
+            return null;
 
         var entry = new SearchQueueEntry
         {
@@ -68,7 +76,7 @@ public class SearchQueueService
             SeedsSearched = reader.IsDBNull("seedsSearched") ? 0 : reader.GetInt64("seedsSearched"),
             ResultsFound = reader.IsDBNull("resultsFound") ? 0 : reader.GetInt32("resultsFound"),
             ThreadCount = reader.IsDBNull("threadCount") ? 1 : reader.GetInt32("threadCount"),
-            IsBurst = reader.GetBoolean("isBurst")
+            IsBurst = reader.GetBoolean("isBurst"),
         };
 
         // Mark as running
@@ -86,7 +94,8 @@ public class SearchQueueService
     {
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             UPDATE SearchQueue
             SET status = 'completed',
                 seedsSearched = ?,
@@ -106,11 +115,17 @@ public class SearchQueueService
         Touch(searchId);
     }
 
-    public void UpdateProgress(string searchId, long seedsSearched, int resultsFound, long batchMarker = 0)
+    public void UpdateProgress(
+        string searchId,
+        long seedsSearched,
+        int resultsFound,
+        long batchMarker = 0
+    )
     {
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             UPDATE SearchQueue
             SET seedsSearched = ?,
                 resultsFound = ?,
@@ -129,7 +144,8 @@ public class SearchQueueService
     {
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             DELETE FROM SearchQueue
             WHERE lastAccessed < (current_timestamp - INTERVAL {olderThan.TotalSeconds} SECOND)
               AND status IN ('completed', 'error', 'cancelled');
@@ -144,7 +160,8 @@ public class SearchQueueService
         var list = new List<SearchQueueEntry>();
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             SELECT searchId, jamlFilter, dateCreated, lastAccessed, status,
                    batchMarker, seedsSearched, resultsFound, threadCount, isBurst
             FROM SearchQueue
@@ -153,19 +170,29 @@ public class SearchQueueService
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            list.Add(new SearchQueueEntry
-            {
-                SearchId = reader.GetString("searchId"),
-                JamlFilter = reader.GetString("jamlFilter"),
-                DateCreated = reader.GetDateTime("dateCreated"),
-                LastAccessed = reader.GetDateTime("lastAccessed"),
-                Status = reader.GetString("status"),
-                BatchMarker = reader.IsDBNull("batchMarker") ? 0 : reader.GetInt64("batchMarker"),
-                SeedsSearched = reader.IsDBNull("seedsSearched") ? 0 : reader.GetInt64("seedsSearched"),
-                ResultsFound = reader.IsDBNull("resultsFound") ? 0 : reader.GetInt32("resultsFound"),
-                ThreadCount = reader.IsDBNull("threadCount") ? 1 : reader.GetInt32("threadCount"),
-                IsBurst = reader.GetBoolean("isBurst")
-            });
+            list.Add(
+                new SearchQueueEntry
+                {
+                    SearchId = reader.GetString("searchId"),
+                    JamlFilter = reader.GetString("jamlFilter"),
+                    DateCreated = reader.GetDateTime("dateCreated"),
+                    LastAccessed = reader.GetDateTime("lastAccessed"),
+                    Status = reader.GetString("status"),
+                    BatchMarker = reader.IsDBNull("batchMarker")
+                        ? 0
+                        : reader.GetInt64("batchMarker"),
+                    SeedsSearched = reader.IsDBNull("seedsSearched")
+                        ? 0
+                        : reader.GetInt64("seedsSearched"),
+                    ResultsFound = reader.IsDBNull("resultsFound")
+                        ? 0
+                        : reader.GetInt32("resultsFound"),
+                    ThreadCount = reader.IsDBNull("threadCount")
+                        ? 1
+                        : reader.GetInt32("threadCount"),
+                    IsBurst = reader.GetBoolean("isBurst"),
+                }
+            );
         }
         return list;
     }
@@ -184,7 +211,8 @@ public class SearchQueueService
     {
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE SearchQueue SET lastAccessed = current_timestamp WHERE searchId = ?;";
+        cmd.CommandText =
+            "UPDATE SearchQueue SET lastAccessed = current_timestamp WHERE searchId = ?;";
         cmd.Parameters.Add(new DuckDBParameter(searchId));
         cmd.ExecuteNonQuery();
     }
@@ -193,7 +221,8 @@ public class SearchQueueService
     {
         using var conn = DuckDBConnectionFactory.CreateConnection(_dbPath);
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             UPDATE SearchQueue
             SET batchMarker = ?,
                 seedsSearched = ?,

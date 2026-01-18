@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Motely.API;
 
 namespace Motely.TUI;
@@ -42,10 +42,9 @@ public class ApiServerWindow : Window
             Y = 1,
             Text = "Starting...",
         };
-        _statusLabel.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey),
-        });
+        _statusLabel.SetScheme(
+            new Scheme() { Normal = new Attribute(BalatroTheme.Orange, BalatroTheme.ModalGrey) }
+        );
         Add(_statusLabel);
 
         // URL (clickable hint) - full width to show complete URL
@@ -56,10 +55,9 @@ public class ApiServerWindow : Window
             Width = Dim.Fill() - 2,
             Text = _serverUrl,
         };
-        _urlLabel.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.Blue, BalatroTheme.ModalGrey),
-        });
+        _urlLabel.SetScheme(
+            new Scheme() { Normal = new Attribute(BalatroTheme.Blue, BalatroTheme.ModalGrey) }
+        );
         _urlLabel.MouseClick += (s, e) =>
         {
             CopyToClipboard(_serverUrl);
@@ -76,10 +74,9 @@ public class ApiServerWindow : Window
             Width = Dim.Fill() - 2, // Full width minus margins
             Text = "",
         };
-        _tunnelLabel.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-        });
+        _tunnelLabel.SetScheme(
+            new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
+        );
         _tunnelLabel.MouseClick += (s, e) =>
         {
             if (!string.IsNullOrWhiteSpace(_tunnelLabel.Text.ToString()))
@@ -117,7 +114,7 @@ public class ApiServerWindow : Window
         Add(_tunnelButton);
 
         // Endpoints panel removed to make room for log
-        
+
         // Request log (expanded to fill space)
         var logFrame = new FrameView()
         {
@@ -138,22 +135,24 @@ public class ApiServerWindow : Window
             Text = "Copy Logs",
         };
         copyLogsButton.SetScheme(BalatroTheme.BackButton); // Orange
-        copyLogsButton.Accept += (s, e) => 
+        copyLogsButton.Accept += (s, e) =>
         {
             if (_logView?.Text != null)
             {
                 CopyToClipboard(_logView.Text.ToString());
                 // Flash message
-                 copyLogsButton.Text = "COPIED!";
-                 copyLogsButton.SetScheme(BalatroTheme.GreenButton);
-                 
-                 Task.Run(async () => {
-                     await Task.Delay(1000);
-                     MotelyTUI.App?.Invoke(() => {
-                         copyLogsButton.Text = "Copy Logs";
-                         copyLogsButton.SetScheme(BalatroTheme.BackButton);
-                     });
-                 });
+                copyLogsButton.Text = "COPIED!";
+                copyLogsButton.SetScheme(BalatroTheme.GreenButton);
+
+                Task.Run(async () =>
+                {
+                    await Task.Delay(1000);
+                    MotelyTUI.App?.Invoke(() =>
+                    {
+                        copyLogsButton.Text = "Copy Logs";
+                        copyLogsButton.SetScheme(BalatroTheme.BackButton);
+                    });
+                });
             }
         };
         logFrame.Add(copyLogsButton);
@@ -168,11 +167,13 @@ public class ApiServerWindow : Window
             WordWrap = true,
             CanFocus = true,
         };
-        _logView.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
-            Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
-        });
+        _logView.SetScheme(
+            new Scheme()
+            {
+                Normal = new Attribute(BalatroTheme.LightGrey, BalatroTheme.InnerPanelGrey),
+                Focus = new Attribute(BalatroTheme.White, BalatroTheme.InnerPanelGrey),
+            }
+        );
         logFrame.Add(_logView);
 
         // Stop Server button - red, above Back
@@ -215,7 +216,6 @@ public class ApiServerWindow : Window
         _serverTask = StartServerAsync(host, port);
     }
 
-
     private async Task StartServerAsync(string host, int port)
     {
         var originalOut = Console.Out;
@@ -237,19 +237,22 @@ public class ApiServerWindow : Window
             // Apply TUI thread budget to API search manager (multi-search allocator uses this budget)
             SearchManager.Instance.SetThreadBudget(TuiSettings.ThreadCount);
 
+            await _server.StartAsync(_cts.Token);
+
+            // Update status AFTER server actually starts
             App?.Invoke(() =>
             {
                 _statusLabel.Text = "Running";
-                _statusLabel.SetScheme(new Scheme()
-                {
-                    Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-                });
+                _statusLabel.SetScheme(
+                    new Scheme()
+                    {
+                        Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
+                    }
+                );
             });
 
             LogMessage($"Clean API started on {_serverUrl}");
             LogMessage("Web UI available at same URL");
-
-            await _server.StartAsync(_cts.Token);
             await _server.WaitForShutdownAsync(_cts.Token);
         }
         catch (OperationCanceledException)
@@ -262,10 +265,12 @@ public class ApiServerWindow : Window
             App?.Invoke(() =>
             {
                 _statusLabel.Text = "Failed";
-                _statusLabel.SetScheme(new Scheme()
-                {
-                    Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-                });
+                _statusLabel.SetScheme(
+                    new Scheme()
+                    {
+                        Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+                    }
+                );
             });
         }
         finally
@@ -274,25 +279,38 @@ public class ApiServerWindow : Window
             {
                 try
                 {
-                    using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    // Aggressive shutdown - only wait 1 second for graceful shutdown
+                    using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
                     await _server.StopAsync(stopCts.Token);
                 }
+                catch (OperationCanceledException)
+                {
+                    // Timeout - force dispose, this is expected
+                }
                 catch { }
-                try { await _server.DisposeAsync(); } catch { }
+
+                // Force dispose regardless
+                try
+                {
+                    await _server.DisposeAsync();
+                }
+                catch { }
             }
 
             // Restore original console output
             Console.SetOut(originalOut);
             Console.SetError(originalError);
-            
+
             _isRunning = false;
             App?.Invoke(() =>
             {
                 _statusLabel.Text = "Stopped";
-                _statusLabel.SetScheme(new Scheme()
-                {
-                    Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
-                });
+                _statusLabel.SetScheme(
+                    new Scheme()
+                    {
+                        Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
+                    }
+                );
                 _stopButton.Visible = false; // Hide when server stops (back button remains)
             });
 
@@ -325,17 +343,33 @@ public class ApiServerWindow : Window
                 _stopButton.Visible = false;
             });
 
-            try { cts?.Cancel(); } catch { }
+            try
+            {
+                cts?.Cancel();
+            }
+            catch { }
 
             if (server != null)
             {
                 try
                 {
-                    using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    // Aggressive shutdown - only wait 2 seconds for graceful shutdown
+                    using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                     await server.StopAsync(stopCts.Token);
                 }
+                catch (OperationCanceledException)
+                {
+                    // Timeout - force dispose
+                    LogMessage("[WARN] Server stop timed out, forcing shutdown...");
+                }
                 catch { }
-                try { await server.DisposeAsync(); } catch { }
+
+                // Force dispose regardless
+                try
+                {
+                    await server.DisposeAsync();
+                }
+                catch { }
             }
         }
     }
@@ -429,7 +463,9 @@ public class ApiServerWindow : Window
             {
                 var cloudflared = FindCloudflared();
                 if (string.IsNullOrEmpty(cloudflared))
-                    throw new FileNotFoundException("cloudflared not found. Install from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/");
+                    throw new FileNotFoundException(
+                        "cloudflared not found. Install from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
+                    );
 
                 LogMessage($"[TUNNEL] Found cloudflared: {cloudflared}");
                 LogMessage("[TUNNEL] Starting free trycloudflare.com tunnel...");
@@ -450,11 +486,19 @@ public class ApiServerWindow : Window
                 _tunnelProcess = new Process { StartInfo = psi };
                 _tunnelProcess.OutputDataReceived += (s, e) =>
                 {
-                    if (!string.IsNullOrEmpty(e.Data)) { LogMessage($"[TUNNEL] {e.Data}"); ParseTunnelOutput(e.Data); }
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        LogMessage($"[TUNNEL] {e.Data}");
+                        ParseTunnelOutput(e.Data);
+                    }
                 };
                 _tunnelProcess.ErrorDataReceived += (s, e) =>
                 {
-                    if (!string.IsNullOrEmpty(e.Data)) { LogMessage($"[TUNNEL] {e.Data}"); ParseTunnelOutput(e.Data); }
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        LogMessage($"[TUNNEL] {e.Data}");
+                        ParseTunnelOutput(e.Data);
+                    }
                 };
 
                 _tunnelProcess.Start();
@@ -506,26 +550,49 @@ public class ApiServerWindow : Window
         if (OperatingSystem.IsWindows())
         {
             candidates.Add("cloudflared.exe");
-            candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "cloudflared", "cloudflared.exe"));
-            candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "cloudflared", "cloudflared.exe"));
+            candidates.Add(
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "cloudflared",
+                    "cloudflared.exe"
+                )
+            );
+            candidates.Add(
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Programs",
+                    "cloudflared",
+                    "cloudflared.exe"
+                )
+            );
             foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
-                if (!string.IsNullOrEmpty(dir)) candidates.Add(Path.Combine(dir, "cloudflared.exe"));
+                if (!string.IsNullOrEmpty(dir))
+                    candidates.Add(Path.Combine(dir, "cloudflared.exe"));
         }
         else
         {
             candidates.Add("cloudflared");
             candidates.Add("/usr/local/bin/cloudflared");
             candidates.Add("/usr/bin/cloudflared");
-            candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin", "cloudflared"));
+            candidates.Add(
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".local",
+                    "bin",
+                    "cloudflared"
+                )
+            );
             foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':'))
-                if (!string.IsNullOrEmpty(dir)) candidates.Add(Path.Combine(dir, "cloudflared"));
+                if (!string.IsNullOrEmpty(dir))
+                    candidates.Add(Path.Combine(dir, "cloudflared"));
         }
 
         foreach (var candidate in candidates)
         {
             try
             {
-                if (File.Exists(candidate)) return candidate;
+                if (File.Exists(candidate))
+                    return candidate;
                 if (candidate == "cloudflared" || candidate == "cloudflared.exe")
                 {
                     var psi = new ProcessStartInfo
@@ -539,7 +606,8 @@ public class ApiServerWindow : Window
                     };
                     using var proc = Process.Start(psi);
                     proc?.WaitForExit(2000);
-                    if (proc?.ExitCode == 0) return candidate;
+                    if (proc?.ExitCode == 0)
+                        return candidate;
                 }
             }
             catch { }
@@ -578,36 +646,56 @@ public class ApiServerWindow : Window
                 var psi = new ProcessStartInfo
                 {
                     FileName = "cmd",
-                    Arguments = $"/c echo {text} | clip",
+                    Arguments = "/c clip",
                     UseShellExecute = false,
                     CreateNoWindow = true,
+                    RedirectStandardInput = true,
                     RedirectStandardOutput = true,
                 };
-                Process.Start(psi)?.WaitForExit();
+                var process = Process.Start(psi);
+                if (process != null)
+                {
+                    process.StandardInput.Write(text);
+                    process.StandardInput.Close();
+                    process.WaitForExit();
+                }
             }
             else if (OperatingSystem.IsMacOS())
             {
                 var psi = new ProcessStartInfo
                 {
                     FileName = "pbcopy",
-                    Arguments = text,
                     UseShellExecute = false,
                     CreateNoWindow = true,
+                    RedirectStandardInput = true,
                 };
-                Process.Start(psi)?.WaitForExit();
+                var process = Process.Start(psi);
+                if (process != null)
+                {
+                    process.StandardInput.Write(text);
+                    process.StandardInput.Close();
+                    process.WaitForExit();
+                }
             }
             else if (OperatingSystem.IsLinux())
             {
                 var psi = new ProcessStartInfo
                 {
                     FileName = "xclip",
-                    Arguments = "-selection clipboard " + text,
+                    Arguments = "-selection clipboard",
                     UseShellExecute = false,
                     CreateNoWindow = true,
+                    RedirectStandardInput = true,
                 };
                 try
                 {
-                    Process.Start(psi)?.WaitForExit();
+                    var process = Process.Start(psi);
+                    if (process != null)
+                    {
+                        process.StandardInput.Write(text);
+                        process.StandardInput.Close();
+                        process.WaitForExit();
+                    }
                 }
                 catch
                 {
@@ -700,14 +788,14 @@ public class ApiServerWindow : Window
         {
             if (value == null)
                 return;
-            
+
             // Strip ANSI escape codes that cause weird characters in TUI
             value = StripAnsiCodes(value);
-            
+
             // Filter out verbose API messages that clutter the TUI
             if (ShouldFilterMessage(value))
                 return;
-                
+
             try
             {
                 MotelyTUI.App?.Invoke(() =>
@@ -725,14 +813,14 @@ public class ApiServerWindow : Window
         {
             if (value == null)
                 return;
-            
+
             // Strip ANSI escape codes that cause weird characters in TUI
             value = StripAnsiCodes(value);
-            
+
             // Filter out verbose API messages that clutter the TUI
             if (ShouldFilterMessage(value))
                 return;
-                
+
             try
             {
                 MotelyTUI.App?.Invoke(() =>
@@ -776,10 +864,12 @@ public class ApiServerWindow : Window
                 "Search failed:",
                 "was cancelled",
                 "Checkpoint failed",
-                "SaveBatchPosition failed"
+                "SaveBatchPosition failed",
             };
 
-            return filters.Any(filter => message.Contains(filter, StringComparison.OrdinalIgnoreCase));
+            return filters.Any(filter =>
+                message.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            );
         }
     }
 }

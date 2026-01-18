@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+
 namespace Motely;
 
 public ref struct MotelySingleTagStream(MotelySingleResampleStream resampleStream, int ante)

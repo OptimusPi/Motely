@@ -63,6 +63,7 @@ public static class MotelyPrngKeys
     public const string TarotWheelOfFortune = "wheel_of_fortune";
     public const string TarotEmperor = "emp";
     public const string TarotJudgement = "jud";
+    public const string SpectralWraith = "wra";
 
     public const string TagRare = "rta";
     public const string TagUncommon = "uta";

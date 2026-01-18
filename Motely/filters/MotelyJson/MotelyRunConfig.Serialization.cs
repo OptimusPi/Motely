@@ -15,7 +15,7 @@ public static class MotelyRunConfigSerializationExtensions
         {
             WriteIndented = false,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
         return JsonSerializer.Serialize(config, options);
     }

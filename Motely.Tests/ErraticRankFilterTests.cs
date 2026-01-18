@@ -13,7 +13,7 @@ public sealed class ErraticRankFilterTests
         {
             Type = "ErraticRank",
             Value = "Two",
-            Min = 1
+            Min = 1,
         };
 
         // Act
@@ -37,7 +37,7 @@ public sealed class ErraticRankFilterTests
         var searchParams = new MotelySearchParameters
         {
             Deck = MotelyDeck.Erratic,
-            Stake = MotelyStake.White
+            Stake = MotelyStake.White,
         };
 
         var filterCreationCtx = new MotelyFilterCreationContext(in searchParams);

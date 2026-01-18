@@ -60,8 +60,10 @@ ref partial struct MotelySingleSearchContext
         CreateSpectralStream(MotelyPrngKeys.ShopItemSource, ante, true, false, isCached);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MotelySingleSpectralStream CreateSixthSenseSpectralStream(int ante, bool isCached = false) =>
-        CreateSpectralStream(MotelyPrngKeys.JokerSixthSense, ante, true, false, isCached);
+    public MotelySingleSpectralStream CreateSixthSenseSpectralStream(
+        int ante,
+        bool isCached = false
+    ) => CreateSpectralStream(MotelyPrngKeys.JokerSixthSense, ante, true, false, isCached);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MotelySingleSpectralStream CreateSeanceSpectralStream(int ante, bool isCached = false) =>

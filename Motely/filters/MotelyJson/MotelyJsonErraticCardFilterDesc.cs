@@ -7,8 +7,11 @@ namespace Motely.Filters;
 /// Filters seeds based on Erratic Deck starting composition - specific CARD (rank + suit).
 /// Counts how many times a specific card (e.g., "K_C" for King of Clubs, "2_H" for 2 of Hearts) appears in the 52-card starting deck.
 /// </summary>
-public struct MotelyJsonErraticCardFilterDesc(MotelyPlayingCardRank rank, MotelyPlayingCardSuit suit, int minCount)
-    : IMotelySeedFilterDesc<MotelyJsonErraticCardFilterDesc.MotelyJsonErraticCardFilter>
+public struct MotelyJsonErraticCardFilterDesc(
+    MotelyPlayingCardRank rank,
+    MotelyPlayingCardSuit suit,
+    int minCount
+) : IMotelySeedFilterDesc<MotelyJsonErraticCardFilterDesc.MotelyJsonErraticCardFilter>
 {
     private readonly MotelyPlayingCardRank _rank = rank;
     private readonly MotelyPlayingCardSuit _suit = suit;
@@ -26,7 +29,11 @@ public struct MotelyJsonErraticCardFilterDesc(MotelyPlayingCardRank rank, Motely
         private readonly MotelyPlayingCardSuit _suit;
         private readonly int _minCount;
 
-        public MotelyJsonErraticCardFilter(MotelyPlayingCardRank rank, MotelyPlayingCardSuit suit, int minCount)
+        public MotelyJsonErraticCardFilter(
+            MotelyPlayingCardRank rank,
+            MotelyPlayingCardSuit suit,
+            int minCount
+        )
         {
             _rank = rank;
             _suit = suit;
@@ -50,7 +57,7 @@ public struct MotelyJsonErraticCardFilterDesc(MotelyPlayingCardRank rank, Motely
                 var rankMatch = VectorEnum256.Equals(card.PlayingCardRank, _rank);
                 var suitMatch = VectorEnum256.Equals(card.PlayingCardSuit, _suit);
                 var bothMatch = Vector256.BitwiseAnd(rankMatch, suitMatch);
-                
+
                 count += Vector256.ConditionalSelect(
                     bothMatch,
                     Vector256<int>.One,

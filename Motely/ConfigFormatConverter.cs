@@ -21,7 +21,7 @@ public static class ConfigFormatConverter
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
     #region Load Methods
@@ -44,13 +44,13 @@ public static class ConfigFormatConverter
 
             var config = JsonSerializer.Deserialize<MotelyJsonConfig>(jsonContent, options);
             config?.PostProcess();
-            
+
             // Validate config just like JAML loader does
             if (config != null)
             {
                 MotelyJsonConfigValidator.ValidateConfig(config);
             }
-            
+
             return config;
         }
         catch (Exception ex)

@@ -7,12 +7,12 @@ public sealed class BuffoonPackJokerTests
     {
         // This test just verifies the method compiles and can be called
         // We'll create a minimal test context to verify the method signature
-        
+
         // The test passes if the code compiles - this verifies the method exists
         // and has the correct signature
         Assert.True(true);
     }
-    
+
     [Theory]
     [InlineData(MotelyJoker.Joker)]
     [InlineData(MotelyJoker.GreedyJoker)]

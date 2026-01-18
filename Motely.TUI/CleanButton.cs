@@ -104,7 +104,8 @@ public class CleanButton : View
                 break;
         }
 
-        if (textX < 0) textX = 0;
+        if (textX < 0)
+            textX = 0;
 
         for (int i = 0; i < text.Length && textX + i < viewport.Width; i++)
         {

@@ -9,7 +9,9 @@ namespace Motely.API;
 /// </summary>
 public sealed class FertilizerDatabase : IDisposable
 {
-    private static readonly Lazy<FertilizerDatabase> _lazyInstance = new(() => new FertilizerDatabase());
+    private static readonly Lazy<FertilizerDatabase> _lazyInstance = new(() =>
+        new FertilizerDatabase()
+    );
 
     public static FertilizerDatabase Instance => _lazyInstance.Value;
 
@@ -23,7 +25,7 @@ public sealed class FertilizerDatabase : IDisposable
         var dataDir = Environment.CurrentDirectory;
         _dbPath = Path.Combine(dataDir, "fertilizer.db");
         _txtPath = Path.Combine(dataDir, "fertilizer.txt");
-        
+
         Initialize();
     }
 
@@ -48,20 +50,23 @@ public sealed class FertilizerDatabase : IDisposable
 
     private void MigrateFromTxtIfNeeded()
     {
-        if (!File.Exists(_txtPath) || _connection == null) return;
+        if (!File.Exists(_txtPath) || _connection == null)
+            return;
 
         try
         {
             // Check if DB already has data - use centralized operation
             var count = DuckDBOperations.GetRowCount(_connection, "seeds");
 
-            if (count > 0) return; // DB already populated
+            if (count > 0)
+                return; // DB already populated
 
             Console.WriteLine($"Migrating fertilizer.txt to DuckDB...");
 
             // Use DuckDB's COPY command for efficient bulk import
             using var cmd = _connection.CreateCommand();
-            cmd.CommandText = $"COPY seeds(seed) FROM '{_txtPath.Replace("\\", "\\\\")}' (FORMAT CSV, HEADER false, DELIMITER '\n')";
+            cmd.CommandText =
+                $"COPY seeds(seed) FROM '{_txtPath.Replace("\\", "\\\\")}' (FORMAT CSV, HEADER false, DELIMITER '\n')";
             cmd.ExecuteNonQuery();
 
             // Get final count - use centralized operation
@@ -83,12 +88,14 @@ public sealed class FertilizerDatabase : IDisposable
     /// </summary>
     public Task AddSeedsAsync(IEnumerable<string> seeds)
     {
-        if (_connection == null) return Task.CompletedTask;
+        if (_connection == null)
+            return Task.CompletedTask;
 
         try
         {
             using var cmd = _connection.CreateCommand();
-            cmd.CommandText = @"
+            cmd.CommandText =
+                @"
                 INSERT INTO seeds (seed)
                 VALUES (?)
                 ON CONFLICT (seed) DO NOTHING";
@@ -111,30 +118,12 @@ public sealed class FertilizerDatabase : IDisposable
     }
 
     /// <summary>
-    /// Get top N seeds (arbitrary order)
-    /// </summary>
-    public List<string> GetTopSeeds(int limit = 1000)
-    {
-        if (_connection == null) return new List<string>();
-
-        try
-        {
-            // Use centralized query helper for getting seeds
-            return DuckDBQueryHelpers.GetAllSeeds(_connection, "seeds", "seed", $"LIMIT {limit}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to query fertilizer pile: {ex.Message}");
-            return new List<string>();
-        }
-    }
-
-    /// <summary>
     /// Get total seed count
     /// </summary>
     public long GetSeedCount()
     {
-        if (_connection == null) return 0;
+        if (_connection == null)
+            return 0;
 
         try
         {
@@ -150,7 +139,8 @@ public sealed class FertilizerDatabase : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
         try
         {

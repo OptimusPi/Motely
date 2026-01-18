@@ -1,0 +1,444 @@
+<?xml version="1.0"?>
+<doc>
+  <assembly>
+    <name>Motely.API</name>
+  </assembly>
+  <members>
+    <member name="T:Motely.API.EndpointRegistration">
+      <summary>
+            Modular endpoint registration for different deployment scenarios.
+            Allows enabling/disabling endpoints independently for testing and deployment.
+            </summary>
+    </member>
+    <member name="M:Motely.API.EndpointRegistration.MapCoreApiEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)">
+      <summary>
+            Register core API endpoints (filters, analyze, health, etc.)
+            </summary>
+    </member>
+    <member name="M:Motely.API.EndpointRegistration.MapSearchQueueEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)">
+      <summary>
+            Register search queue endpoints (for multiplayer seed searches)
+            </summary>
+    </member>
+    <member name="M:Motely.API.EndpointRegistration.MapSignalREndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)">
+      <summary>
+            Register SignalR hub (for real-time search updates)
+            </summary>
+    </member>
+    <member name="M:Motely.API.EndpointRegistration.MapMcpEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)">
+      <summary>
+            Register MCP endpoints (for AI assistant integration)
+            Note: MCP endpoints are registered via reflection when MCP feature is enabled
+            </summary>
+    </member>
+    <member name="M:Motely.API.EndpointRegistration.MapMotelyEndpoints(Microsoft.AspNetCore.Builder.WebApplication,Motely.API.FeatureFlags)">
+      <summary>
+            Register all endpoints based on feature flags
+            </summary>
+    </member>
+    <member name="T:Motely.API.FertilizerDatabase">
+      <summary>
+            Singleton DuckDB-based fertilizer pile for ranked seed storage
+            Handles migration from fertilizer.txt and provides top-K queries
+            </summary>
+    </member>
+    <member name="M:Motely.API.FertilizerDatabase.AddSeedsAsync(System.Collections.Generic.IEnumerable{System.String})">
+      <summary>
+            Add seeds to the fertilizer pile (ignore duplicates)
+            </summary>
+    </member>
+    <member name="M:Motely.API.FertilizerDatabase.GetTopSeeds(System.Int32)">
+      <summary>
+            Get top N seeds (arbitrary order)
+            </summary>
+    </member>
+    <member name="M:Motely.API.FertilizerDatabase.GetSeedCount">
+      <summary>
+            Get total seed count
+            </summary>
+    </member>
+    <member name="T:Motely.API.GenieFeedbackService">
+      <summary>
+            Feedback and learning system for JamlGenie
+            Stores failed attempts and user feedback for continuous improvement
+            </summary>
+    </member>
+    <member name="T:Motely.API.ISearchBroadcaster">
+      <summary>
+            Interface for broadcasting search updates to clients
+            </summary>
+    </member>
+    <member name="M:Motely.API.ISearchBroadcaster.Broadcast(System.String)">
+      <summary>
+            Broadcasts a message to all connected clients
+            </summary>
+    </member>
+    <member name="M:Motely.API.ISearchBroadcaster.BroadcastToSearch(System.String,System.String)">
+      <summary>
+            Broadcasts a message to clients subscribed to a specific search
+            </summary>
+    </member>
+    <member name="M:Motely.API.ISearchBroadcaster.BroadcastToSearch(System.String,System.Object)">
+      <summary>
+            Broadcasts an object to clients subscribed to a specific search (serializes automatically)
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.JsonRpcRequest">
+      <summary>
+            JSON-RPC 2.0 Request
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.JsonRpcResponse">
+      <summary>
+            JSON-RPC 2.0 Response
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.McpInitializeParams">
+      <summary>
+            MCP Initialize Parameters
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.McpInitializeResult">
+      <summary>
+            MCP Initialize Result
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.McpTool">
+      <summary>
+            MCP Tool Definition
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.McpToolCallParams">
+      <summary>
+            MCP Tool Call Parameters
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.McpResource">
+      <summary>
+            MCP Resource Definition
+            </summary>
+    </member>
+    <member name="T:Motely.API.McpProtocol.McpPrompt">
+      <summary>
+            MCP Prompt Definition
+            </summary>
+    </member>
+    <member name="T:Motely.API.Models.SearchRequest">
+      <summary>
+            Request to start a new Motely search
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchRequest.Config">
+      <summary>
+            MotelyJsonConfig filter configuration (MUST, SHOULD, MUSTNOT clauses)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchRequest.Criteria">
+      <summary>
+            Search criteria (threads, batch size, deck, stake, etc.)
+            </summary>
+    </member>
+    <member name="T:Motely.API.Models.SearchCriteriaDto">
+      <summary>
+            Search execution criteria
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.ThreadCount">
+      <summary>
+            Number of threads to use (default: CPU count)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.BatchSize">
+      <summary>
+            Batch character count (2 = 35^2 seeds per batch)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.Deck">
+      <summary>
+            Deck to use (Red, Blue, Yellow, Ghost, Abandoned, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic, Challenge)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.Stake">
+      <summary>
+            Stake level (White, Red, Green, Black, Blue, Purple, Orange, Gold)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.MinScore">
+      <summary>
+            Minimum score threshold for results (only applies if SHOULD clauses exist)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.StartBatch">
+      <summary>
+            Starting batch index (0 = beginning)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.EndBatch">
+      <summary>
+            Ending batch index (ulong.MaxValue = infinite)
+            </summary>
+    </member>
+    <member name="P:Motely.API.Models.SearchCriteriaDto.SourceType">
+      <summary>
+            Source type for burst-mode detection (single, wordlist, dblist, etc.)
+            </summary>
+    </member>
+    <member name="T:Motely.API.MotelyPaths">
+      <summary>
+            Centralized path resolver for Motely directories.
+            Uses ASP.NET Core ContentRootPath as the base, with optional config overrides.
+            </summary>
+    </member>
+    <member name="P:Motely.API.MotelyPaths.ContentRoot">
+      <summary>
+            Gets the content root path (typically the repo root).
+            </summary>
+    </member>
+    <member name="P:Motely.API.MotelyPaths.JamlFiltersDir">
+      <summary>
+            Gets the directory for JAML filter files.
+            Defaults to &lt;ContentRoot&gt;/JamlFilters, can be overridden via config.
+            </summary>
+    </member>
+    <member name="P:Motely.API.MotelyPaths.SeedSourcesDir">
+      <summary>
+            Gets the directory for seed source files (txt, csv, db).
+            Defaults to &lt;ContentRoot&gt;/SeedSources, can be overridden via config.
+            </summary>
+    </member>
+    <member name="P:Motely.API.MotelyPaths.SearchResultsDir">
+      <summary>
+            Gets the directory for search result databases and metadata.
+            Defaults to &lt;ContentRoot&gt;/SearchResults, can be overridden via config.
+            </summary>
+    </member>
+    <member name="M:Motely.API.MotelyPaths.Initialize(Microsoft.AspNetCore.Hosting.IWebHostEnvironment,Microsoft.Extensions.Configuration.IConfiguration)">
+      <summary>
+            Initializes MotelyPaths with the web host environment and configuration.
+            Should be called once at application startup.
+            </summary>
+    </member>
+    <member name="M:Motely.API.MotelyPaths.ResolvePath(System.String,System.String)">
+      <summary>
+            Resolves a path: if override is provided and is absolute, use it;
+            if override is relative, combine with ContentRoot;
+            otherwise use default relative to ContentRoot.
+            </summary>
+    </member>
+    <member name="T:Motely.API.R2ConfigurationHelper">
+      <summary>
+            R2 configuration helper for Motely.API - loads R2 credentials from appsettings.json.
+            </summary>
+    </member>
+    <member name="M:Motely.API.R2ConfigurationHelper.ConfigureR2FromConfig(DuckDB.NET.Data.DuckDBConnection,Microsoft.Extensions.Configuration.IConfiguration,System.String)">
+      <summary>
+            Configure R2 secret in DuckDB connection from appsettings.json configuration.
+            </summary>
+      <param name="connection">DuckDB connection</param>
+      <param name="configuration">IConfiguration instance (from appsettings.json)</param>
+      <param name="secretName">Name for the secret (default: "r2")</param>
+      <returns>True if R2 was configured, false if R2 is disabled or not configured</returns>
+    </member>
+    <member name="M:Motely.API.R2ConfigurationHelper.IsR2Enabled(Microsoft.Extensions.Configuration.IConfiguration)">
+      <summary>
+            Check if R2 is enabled in configuration.
+            </summary>
+    </member>
+    <member name="M:Motely.API.R2ConfigurationHelper.GetR2Bucket(Microsoft.Extensions.Configuration.IConfiguration)">
+      <summary>
+            Get R2 bucket name from configuration.
+            </summary>
+    </member>
+    <member name="T:Motely.API.SearchBroadcaster">
+      <summary>
+            Broadcasts search updates to clients via SignalR
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchBroadcaster.Broadcast(System.String)">
+      <summary>
+            Broadcasts a message to all connected clients
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchBroadcaster.BroadcastToSearch(System.String,System.String)">
+      <summary>
+            Broadcasts a message to clients subscribed to a specific search
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchBroadcaster.BroadcastToSearch(System.String,System.Object)">
+      <summary>
+            Broadcasts an object to clients subscribed to a specific search (serializes automatically)
+            </summary>
+    </member>
+    <member name="T:Motely.API.SearchManager">
+      <summary>
+            Manages search instances with DuckDB persistence and proper sequential searching
+            Follows BalatroSeedOracle patterns for search management
+            </summary>
+    </member>
+    <member name="P:Motely.API.SearchManager.BatchesPerTurn">
+      <summary>Batches to run per search turn before rotating. BatchSize=3 means ~4.3M seeds per turn.</summary>
+    </member>
+    <member name="P:Motely.API.SearchManager.DefaultBatchSize">
+      <summary>Default batch size for new searches (3 = ~43K seeds per batch)</summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.StartSearchAsync(System.String,System.String,System.String,System.Int32,System.Nullable{System.Int64},System.Nullable{System.Int32},System.String,System.Collections.Generic.List{System.String})">
+      <summary>
+            Start a new search.
+            Returns immediate results from existing DB if available
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.GetSearchStatus(System.String)">
+      <summary>
+            Get current top results and progress for a search
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.StartScheduler">
+      <summary>
+            Start the scheduler if not already running.
+            Called automatically when first search is enqueued.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.StopSchedulerAsync">
+      <summary>
+            Stop the scheduler gracefully.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.SchedulerLoopAsync(System.Threading.CancellationToken)">
+      <summary>
+            Main scheduler loop - fair round-robin with fast lane priority.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.RunSearchTurnAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+            Run one turn of a search (N batches for round-robin, or to completion for fast lane).
+            Returns true if search is complete.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.RunSearchTurnInternalAsync(System.Guid,Motely.API.SearchManager.ActiveSearch,System.Int64,System.Int64,System.Threading.CancellationToken)">
+      <summary>
+            Internal method to run search for specified batch range.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.IsFastLaneSearch(System.String,System.Collections.Generic.List{System.String})">
+      <summary>
+            Determines if a search should use the fast lane (small word list/DB searches).
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.EnqueueSearch(System.String)">
+      <summary>
+            Enqueue a search for the scheduler. Automatically determines fast lane vs round-robin.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.GetActiveSearchesStatus">
+      <summary>
+            Get status of all active searches for UI display.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.StopSearchAsync(System.String)">
+      <summary>
+            Stop a search and return final results 
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.GetTopResultsFromDb(System.String,System.Int32)">
+      <summary>
+            Get top results from a search DB
+            Uses centralized query helper for consistency.
+            </summary>
+    </member>
+    <member name="M:Motely.API.SearchManager.GetFilterIdFromFileName(System.String)">
+      <summary>
+            Gets a filter ID from a filename. The filter ID is the normalized filename without extension.
+            This is consistent across frontend and backend - filter ID = normalized filename (spaces and incompatible symbols -> underscores).
+            </summary>
+    </member>
+    <member name="T:Motely.API.SearchResult">
+      <summary>
+            Represents a search result with seed, score, and optional tallies.
+            </summary>
+    </member>
+    <member name="P:Motely.API.SearchResult.Seed">
+      <summary>
+            The seed string that was found.
+            </summary>
+    </member>
+    <member name="P:Motely.API.SearchResult.Score">
+      <summary>
+            The score for this seed.
+            </summary>
+    </member>
+    <member name="P:Motely.API.SearchResult.Tallies">
+      <summary>
+            Optional tallies for additional scoring data.
+            </summary>
+    </member>
+    <member name="T:Motely.API.SeedSourceHelper">
+      <summary>
+            Helper methods for seed source parsing and validation
+            </summary>
+    </member>
+    <member name="M:Motely.API.SeedSourceHelper.ParseCategoryFromFileName(System.String)">
+      <summary>
+            Parse category and display name from filename using _CATEGORY__filename.ext convention
+            </summary>
+    </member>
+    <member name="M:Motely.API.SeedSourceHelper.GetIconForFileType(System.String,System.String)">
+      <summary>
+            Get icon for file type
+            </summary>
+    </member>
+    <member name="M:Motely.API.SeedSourceHelper.ValidateAndNormalizeSeed(System.String)">
+      <summary>
+            Validate and normalize a seed string
+            Rules: 0-8 chars, dictionary only, convert 0→O, lowercase→uppercase
+            </summary>
+    </member>
+    <member name="M:Motely.API.SeedSourceHelper.ParseCsvSeeds(System.String)">
+      <summary>
+            Parse CSV file and extract valid seeds
+            </summary>
+    </member>
+    <member name="M:Motely.API.SeedSourceHelper.GenerateNsfwSeeds">
+      <summary>
+            Generate NSFW/funny seed names for testing the content filter.
+            Uses valid Balatro seed characters only (A-Z, 1-9).
+            </summary>
+    </member>
+    <member name="M:Motely.API.SeedSourceHelper.IsNsfwSeed(System.String)">
+      <summary>
+            Check if a seed contains NSFW content (for UI warnings)
+            </summary>
+    </member>
+    <member name="T:Motely.API.ServiceRegistration">
+      <summary>
+            Modular service registration for different deployment scenarios.
+            Allows enabling/disabling features independently for testing and deployment.
+            </summary>
+    </member>
+    <member name="M:Motely.API.ServiceRegistration.AddSearchQueueServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+      <summary>
+            Register search queue services (for multiplayer seed searches)
+            </summary>
+    </member>
+    <member name="M:Motely.API.ServiceRegistration.AddSignalRServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+      <summary>
+            Register SignalR services (for real-time search updates)
+            </summary>
+    </member>
+    <member name="M:Motely.API.ServiceRegistration.AddMcpServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+      <summary>
+            Register MCP services (for AI assistant integration)
+            NOTE: MCP services are now in Motely.MCP project - this is kept for backward compatibility
+            </summary>
+    </member>
+    <member name="M:Motely.API.ServiceRegistration.AddMotelyServices(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)">
+      <summary>
+            Register all services based on feature flags
+            </summary>
+    </member>
+    <member name="T:Motely.API.FeatureFlags">
+      <summary>
+            Feature flags for enabling/disabling features
+            </summary>
+    </member>
+  </members>
+</doc>

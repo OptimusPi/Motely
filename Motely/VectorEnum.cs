@@ -35,7 +35,10 @@ public static unsafe class VectorEnum
     public static SimdIntResult Equals<T>(in VectorEnum<T> a, T b)
         where T : unmanaged, Enum
     {
-        return SimdIntResult.Equals(a.HardwareVector, SimdIntResult.Create(Unsafe.As<T, int>(ref b)));
+        return SimdIntResult.Equals(
+            a.HardwareVector,
+            SimdIntResult.Create(Unsafe.As<T, int>(ref b))
+        );
     }
 
     public static SimdIntResult Equals<T>(in VectorEnum<T> a, in VectorEnum<T> b)
@@ -69,15 +72,19 @@ public unsafe struct VectorEnum<T>(SimdIntResult hardwareVector)
     {
         // ToString limited to MaxVectorWidth
         var sb = new System.Text.StringBuilder("<");
-        for(int i=0; i < Motely.MaxVectorWidth; i++)
+        for (int i = 0; i < Motely.MaxVectorWidth; i++)
         {
-            if (i > 0) sb.Append(", ");
+            if (i > 0)
+                sb.Append(", ");
             sb.Append(this[i]);
         }
         sb.Append(">");
         return sb.ToString();
     }
 
-    public static implicit operator VectorEnum<T>(VectorEnum256<T> v) => new(new SimdIntResult(v.HardwareVector));
-    public static implicit operator VectorEnum256<T>(VectorEnum<T> v) => new(v.HardwareVector.Value);
+    public static implicit operator VectorEnum<T>(VectorEnum256<T> v) =>
+        new(new SimdIntResult(v.HardwareVector));
+
+    public static implicit operator VectorEnum256<T>(VectorEnum<T> v) =>
+        new(v.HardwareVector.Value);
 }

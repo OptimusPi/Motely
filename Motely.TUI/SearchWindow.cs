@@ -39,11 +39,13 @@ public class ResultsTable : TableView
         Height = 13;
         FullRowSelect = true;
         CanFocus = true;
-        SetScheme(new Scheme
-        {
-            Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
-            Focus = new Attribute(BalatroTheme.Black, BalatroTheme.Red),
-        });
+        SetScheme(
+            new Scheme
+            {
+                Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+                Focus = new Attribute(BalatroTheme.Black, BalatroTheme.Red),
+            }
+        );
     }
 }
 
@@ -73,9 +75,8 @@ public class StatusBar : Label
         Width = Dim.Fill() - 2;
         Height = 1;
         Text = "Initializing search...";
-        SetScheme(new Scheme
-        {
-            Normal = new Attribute(BalatroTheme.White, BalatroTheme.ModalGrey),
-        });
+        SetScheme(
+            new Scheme { Normal = new Attribute(BalatroTheme.White, BalatroTheme.ModalGrey) }
+        );
     }
 }

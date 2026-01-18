@@ -1,9 +1,9 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using YamlDotNet.Serialization;
-using System.Numerics;
-using System.Diagnostics;
 
 namespace Motely.Filters;
 
@@ -74,15 +74,18 @@ public class MotelyFilterDefaults
             {
                 int count = 0;
                 foreach (var slot in PackSlots)
-                    if (slot <= 3) count++;
-                
-                if (count == 0) return [];
-                
+                    if (slot <= 3)
+                        count++;
+
+                if (count == 0)
+                    return [];
+
                 int[] result = new int[count];
                 int index = 0;
                 foreach (var slot in PackSlots)
-                    if (slot <= 3) result[index++] = slot;
-                
+                    if (slot <= 3)
+                        result[index++] = slot;
+
                 return result;
             }
             return PackSlots;
@@ -104,15 +107,18 @@ public class MotelyFilterDefaults
             {
                 int count = 0;
                 foreach (var slot in ShopSlots)
-                    if (slot <= 3) count++;
-                
-                if (count == 0) return [];
-                
+                    if (slot <= 3)
+                        count++;
+
+                if (count == 0)
+                    return [];
+
                 int[] result = new int[count];
                 int index = 0;
                 foreach (var slot in ShopSlots)
-                    if (slot <= 3) result[index++] = slot;
-                
+                    if (slot <= 3)
+                        result[index++] = slot;
+
                 return result;
             }
             return ShopSlots;
@@ -162,16 +168,16 @@ public enum MotelyScoreAggregationMode
 /// <summary>
 /// MongoDB compound Operator-style JSON configuration
 /// </summary>
-    /// <summary>
-    /// MongoDB compound Operator-style JSON configuration for Balatro seed filters.
-    /// 
-    /// NOTE: There is a naming inconsistency in this codebase:
-    /// - Class name: MotelyJsonConfig (correct spelling: "Motely")
-    /// - Nested class: MotelyJsonFilterClause (typo: "Motely" instead of "Motely")
-    /// </summary>
-    public class MotelyJsonConfig
-    {
-        // Metadata fields
+/// <summary>
+/// MongoDB compound Operator-style JSON configuration for Balatro seed filters.
+///
+/// NOTE: There is a naming inconsistency in this codebase:
+/// - Class name: MotelyJsonConfig (correct spelling: "Motely")
+/// - Nested class: MotelyJsonFilterClause (typo: "Motely" instead of "Motely")
+/// </summary>
+public class MotelyJsonConfig
+{
+    // Metadata fields
     [JsonPropertyName("name")]
     [YamlMember(Alias = "name")]
     public string? Name { get; set; }
@@ -222,19 +228,23 @@ public enum MotelyScoreAggregationMode
     // PERFORMANCE: Pre-partitioned clauses to avoid repeated iteration
     [JsonIgnore]
     [YamlIgnore]
-    public MotelyJsonFilterClause[] MustVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
+    public MotelyJsonFilterClause[] MustVouchers { get; private set; } =
+        Array.Empty<MotelyJsonFilterClause>();
 
     [JsonIgnore]
     [YamlIgnore]
-    public MotelyJsonFilterClause[] MustNonVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
+    public MotelyJsonFilterClause[] MustNonVouchers { get; private set; } =
+        Array.Empty<MotelyJsonFilterClause>();
 
     [JsonIgnore]
     [YamlIgnore]
-    public MotelyJsonFilterClause[] ShouldVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
+    public MotelyJsonFilterClause[] ShouldVouchers { get; private set; } =
+        Array.Empty<MotelyJsonFilterClause>();
 
     [JsonIgnore]
     [YamlIgnore]
-    public MotelyJsonFilterClause[] ShouldNonVouchers { get; private set; } = Array.Empty<MotelyJsonFilterClause>();
+    public MotelyJsonFilterClause[] ShouldNonVouchers { get; private set; } =
+        Array.Empty<MotelyJsonFilterClause>();
 
     public class MotelyJsonFilterClause
     {
@@ -523,7 +533,9 @@ public enum MotelyScoreAggregationMode
                             }
                             else
                             {
-                                throw new ArgumentException($"'{Value}' is not a valid Joker value.");
+                                throw new ArgumentException(
+                                    $"'{Value}' is not a valid Joker value."
+                                );
                             }
                             break;
                         case MotelyFilterItemType.SoulJoker:
@@ -537,7 +549,9 @@ public enum MotelyScoreAggregationMode
                             }
                             else
                             {
-                                throw new ArgumentException($"'{Value}' is not a valid Voucher value.");
+                                throw new ArgumentException(
+                                    $"'{Value}' is not a valid Voucher value."
+                                );
                             }
                             break;
                         case MotelyFilterItemType.TarotCard:
@@ -558,18 +572,32 @@ public enum MotelyScoreAggregationMode
                             break;
                         case MotelyFilterItemType.ErraticRank:
                             // Parse rank from Value
-                            if (Enum.TryParse<MotelyPlayingCardRank>(Value, true, out var erraticRank))
+                            if (
+                                Enum.TryParse<MotelyPlayingCardRank>(
+                                    Value,
+                                    true,
+                                    out var erraticRank
+                                )
+                            )
                             {
                                 RankEnum = erraticRank;
                             }
                             else
                             {
-                                Console.WriteLine($"[InitParsedEnums] ErraticRank: FAILED to parse '{Value}' as MotelyPlayingCardRank! Valid values include: Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two, or One.");
+                                Console.WriteLine(
+                                    $"[InitParsedEnums] ErraticRank: FAILED to parse '{Value}' as MotelyPlayingCardRank! Valid values include: Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two, or One."
+                                );
                             }
                             break;
                         case MotelyFilterItemType.ErraticSuit:
                             // Parse suit from Value
-                            if (Enum.TryParse<MotelyPlayingCardSuit>(Value, true, out var erraticSuit))
+                            if (
+                                Enum.TryParse<MotelyPlayingCardSuit>(
+                                    Value,
+                                    true,
+                                    out var erraticSuit
+                                )
+                            )
                                 SuitEnum = erraticSuit;
                             break;
                         case MotelyFilterItemType.ErraticCard:
@@ -581,33 +609,47 @@ public enum MotelyScoreAggregationMode
                                 {
                                     // Parse rank (K, Q, J, A, 2-10)
                                     var rankStr = parts[0].Trim();
-                                    MotelyPlayingCardRank? parsedRank = rankStr.ToUpperInvariant() switch
-                                    {
-                                        "A" or "ACE" => MotelyPlayingCardRank.Ace,
-                                        "K" or "KING" => MotelyPlayingCardRank.King,
-                                        "Q" or "QUEEN" => MotelyPlayingCardRank.Queen,
-                                        "J" or "JACK" => MotelyPlayingCardRank.Jack,
-                                        "10" or "TEN" => MotelyPlayingCardRank.Ten,
-                                        "9" or "NINE" => MotelyPlayingCardRank.Nine,
-                                        "8" or "EIGHT" => MotelyPlayingCardRank.Eight,
-                                        "7" or "SEVEN" => MotelyPlayingCardRank.Seven,
-                                        "6" or "SIX" => MotelyPlayingCardRank.Six,
-                                        "5" or "FIVE" => MotelyPlayingCardRank.Five,
-                                        "4" or "FOUR" => MotelyPlayingCardRank.Four,
-                                        "3" or "THREE" => MotelyPlayingCardRank.Three,
-                                        "2" or "TWO" => MotelyPlayingCardRank.Two,
-                                        _ => Enum.TryParse<MotelyPlayingCardRank>(rankStr, true, out var r) ? r : null
-                                    };
+                                    MotelyPlayingCardRank? parsedRank =
+                                        rankStr.ToUpperInvariant() switch
+                                        {
+                                            "A" or "ACE" => MotelyPlayingCardRank.Ace,
+                                            "K" or "KING" => MotelyPlayingCardRank.King,
+                                            "Q" or "QUEEN" => MotelyPlayingCardRank.Queen,
+                                            "J" or "JACK" => MotelyPlayingCardRank.Jack,
+                                            "10" or "TEN" => MotelyPlayingCardRank.Ten,
+                                            "9" or "NINE" => MotelyPlayingCardRank.Nine,
+                                            "8" or "EIGHT" => MotelyPlayingCardRank.Eight,
+                                            "7" or "SEVEN" => MotelyPlayingCardRank.Seven,
+                                            "6" or "SIX" => MotelyPlayingCardRank.Six,
+                                            "5" or "FIVE" => MotelyPlayingCardRank.Five,
+                                            "4" or "FOUR" => MotelyPlayingCardRank.Four,
+                                            "3" or "THREE" => MotelyPlayingCardRank.Three,
+                                            "2" or "TWO" => MotelyPlayingCardRank.Two,
+                                            _ => Enum.TryParse<MotelyPlayingCardRank>(
+                                                rankStr,
+                                                true,
+                                                out var r
+                                            )
+                                                ? r
+                                                : null,
+                                        };
 
                                     // Parse suit (C, D, H, S)
                                     var suitStr = parts[1].Trim().ToUpperInvariant();
                                     MotelyPlayingCardSuit? parsedSuit = suitStr switch
                                     {
                                         "C" or "CLUB" or "CLUBS" => MotelyPlayingCardSuit.Club,
-                                        "D" or "DIAMOND" or "DIAMONDS" => MotelyPlayingCardSuit.Diamond,
+                                        "D" or "DIAMOND" or "DIAMONDS" =>
+                                            MotelyPlayingCardSuit.Diamond,
                                         "H" or "HEART" or "HEARTS" => MotelyPlayingCardSuit.Heart,
                                         "S" or "SPADE" or "SPADES" => MotelyPlayingCardSuit.Spade,
-                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(suitStr, true, out var s) ? s : null
+                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(
+                                            suitStr,
+                                            true,
+                                            out var s
+                                        )
+                                            ? s
+                                            : null,
                                     };
 
                                     if (parsedRank.HasValue && parsedSuit.HasValue)
@@ -617,12 +659,16 @@ public enum MotelyScoreAggregationMode
                                     }
                                     else
                                     {
-                                        Console.WriteLine($"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' (King of Clubs) or '2_H' (2 of Hearts). Rank: '{rankStr}', Suit: '{suitStr}'");
+                                        Console.WriteLine(
+                                            $"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' (King of Clubs) or '2_H' (2 of Hearts). Rank: '{rankStr}', Suit: '{suitStr}'"
+                                        );
                                     }
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' or '2_H' (rank_suit).");
+                                    Console.WriteLine(
+                                        $"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' or '2_H' (rank_suit)."
+                                    );
                                 }
                             }
                             break;
@@ -881,7 +927,9 @@ public enum MotelyScoreAggregationMode
                 }
                 else
                 {
-                    throw new ArgumentException("Event clause missing Value property - cannot determine event type");
+                    throw new ArgumentException(
+                        "Event clause missing Value property - cannot determine event type"
+                    );
                 }
             }
         }
@@ -1205,7 +1253,7 @@ public enum MotelyScoreAggregationMode
         // CRITICAL FIX: When sources: is specified in JAML (even with empty arrays),
         // Sources should exist. The problem is that YamlDotNet might not create SourcesConfig
         // when all properties are null/empty, even if sources: was specified.
-        // 
+        //
         // SOLUTION: If Sources was explicitly specified (sourcesWasExplicitlySpecified = true),
         // ensure it exists. Then populate from min/max if needed.
         if (sourcesWasExplicitlySpecified && item.Sources == null)
@@ -1215,7 +1263,7 @@ public enum MotelyScoreAggregationMode
             // even though sources: was specified in JAML
             item.Sources = new SourcesConfig();
         }
-        
+
         if (item.Sources != null)
         {
             // Sources exists (either was deserialized or we just created it) - populate from min/max
@@ -1226,7 +1274,9 @@ public enum MotelyScoreAggregationMode
                 int count = maxSlot - minSlot + 1;
                 if (count > 0 && maxSlot <= MotelySlotLimits.MAX_SHOP_SLOT)
                 {
-                    int[] shopSlots = new int[Math.Min(count, MotelySlotLimits.MAX_SHOP_SLOT - minSlot + 1)];
+                    int[] shopSlots = new int[
+                        Math.Min(count, MotelySlotLimits.MAX_SHOP_SLOT - minSlot + 1)
+                    ];
                     int index = 0;
                     for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_SHOP_SLOT; i++)
                         shopSlots[index++] = i;
@@ -1246,9 +1296,13 @@ public enum MotelyScoreAggregationMode
             }
 
             // Same logic for packSlots - don't auto-populate if explicitly empty
-            bool packSlotsExplicitlyEmpty = item.Sources.PackSlots != null && item.Sources.PackSlots.Length == 0;
-            
-            if ((item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue) && !packSlotsExplicitlyEmpty)
+            bool packSlotsExplicitlyEmpty =
+                item.Sources.PackSlots != null && item.Sources.PackSlots.Length == 0;
+
+            if (
+                (item.Sources.MinPackSlot.HasValue || item.Sources.MaxPackSlot.HasValue)
+                && !packSlotsExplicitlyEmpty
+            )
             {
                 // Only populate if packSlots wasn't explicitly set to empty array
                 int minSlot = item.Sources.MinPackSlot ?? 0;
@@ -1256,7 +1310,9 @@ public enum MotelyScoreAggregationMode
                 int count = maxSlot - minSlot + 1;
                 if (count > 0 && maxSlot <= MotelySlotLimits.MAX_PACK_SLOT)
                 {
-                    int[] packSlots = new int[Math.Min(count, MotelySlotLimits.MAX_PACK_SLOT - minSlot + 1)];
+                    int[] packSlots = new int[
+                        Math.Min(count, MotelySlotLimits.MAX_PACK_SLOT - minSlot + 1)
+                    ];
                     int index = 0;
                     for (int i = minSlot; i <= maxSlot && i <= MotelySlotLimits.MAX_PACK_SLOT; i++)
                         packSlots[index++] = i;
@@ -1317,10 +1373,17 @@ public enum MotelyScoreAggregationMode
         DebugLogger.Log($"[PostProcess] About to process clauses");
 
         // Process all filter items recursively (handles nested And/Or clauses)
-        var sections = new[] { ("must", Must ?? []), ("should", Should ?? []), ("mustNot", MustNot ?? []) };
+        var sections = new[]
+        {
+            ("must", Must ?? []),
+            ("should", Should ?? []),
+            ("mustNot", MustNot ?? []),
+        };
         foreach (var (sectionName, items) in sections)
         {
-            DebugLogger.Log($"[PostProcess] Processing section: {sectionName}, count={items.Count}");
+            DebugLogger.Log(
+                $"[PostProcess] Processing section: {sectionName}, count={items.Count}"
+            );
             for (int i = 0; i < items.Count; i++)
             {
                 try
@@ -1334,12 +1397,16 @@ public enum MotelyScoreAggregationMode
             }
         }
 
-        DebugLogger.Log($"[PostProcess] Finished processing clauses. Starting voucher partitioning. Must.Count={Must?.Count}, Should.Count={Should?.Count}");
+        DebugLogger.Log(
+            $"[PostProcess] Finished processing clauses. Starting voucher partitioning. Must.Count={Must?.Count}, Should.Count={Should?.Count}"
+        );
 
         // PERFORMANCE: Pre-partition clauses by type to avoid repeated iteration in hot paths
         // Count first to avoid List reallocation
-        int mustVoucherCount = 0, mustNonVoucherCount = 0;
-        int shouldVoucherCount = 0, shouldNonVoucherCount = 0;
+        int mustVoucherCount = 0,
+            mustNonVoucherCount = 0;
+        int shouldVoucherCount = 0,
+            shouldNonVoucherCount = 0;
 
         foreach (var clause in Must ?? [])
         {
@@ -1363,7 +1430,10 @@ public enum MotelyScoreAggregationMode
         var shouldVouchers = new MotelyJsonFilterClause[shouldVoucherCount];
         var shouldNonVouchers = new MotelyJsonFilterClause[shouldNonVoucherCount];
 
-        int mvIdx = 0, mnvIdx = 0, svIdx = 0, snvIdx = 0;
+        int mvIdx = 0,
+            mnvIdx = 0,
+            svIdx = 0,
+            snvIdx = 0;
 
         foreach (var clause in Must ?? [])
         {
@@ -1386,7 +1456,9 @@ public enum MotelyScoreAggregationMode
         ShouldVouchers = shouldVouchers;
         ShouldNonVouchers = shouldNonVouchers;
 
-        DebugLogger.Log($"[PostProcess] Partitioned. MustVouchers={MustVouchers.Length}, ShouldVouchers={ShouldVouchers.Length}");
+        DebugLogger.Log(
+            $"[PostProcess] Partitioned. MustVouchers={MustVouchers.Length}, ShouldVouchers={ShouldVouchers.Length}"
+        );
 
         // Compute MaxVoucherAnte once during PostProcess (use pre-partitioned arrays!)
         int maxAnte = 0;
@@ -1414,14 +1486,18 @@ public enum MotelyScoreAggregationMode
         foreach (var clause in Must ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Boss)
-                maxBossAnte = Math.Max(maxBossAnte,
-                    clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
+                maxBossAnte = Math.Max(
+                    maxBossAnte,
+                    clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1
+                );
         }
         foreach (var clause in Should ?? [])
         {
             if (clause.ItemTypeEnum == MotelyFilterItemType.Boss)
-                maxBossAnte = Math.Max(maxBossAnte,
-                    clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1);
+                maxBossAnte = Math.Max(
+                    maxBossAnte,
+                    clause.EffectiveAntes.Length > 0 ? clause.EffectiveAntes.Max() : 1
+                );
         }
         MaxBossAnte = maxBossAnte;
 #if DEBUG
@@ -1434,14 +1510,22 @@ public enum MotelyScoreAggregationMode
             // For Event clauses, ensure EventTypeEnum is set
             if (clause.ItemTypeEnum == MotelyFilterItemType.Event && !clause.EventTypeEnum.HasValue)
             {
-                throw new ArgumentException($"CRITICAL: MUST Event clause failed to parse - missing EventTypeEnum. Type={clause.Type}, Value={clause.Value}");
+                throw new ArgumentException(
+                    $"CRITICAL: MUST Event clause failed to parse - missing EventTypeEnum. Type={clause.Type}, Value={clause.Value}"
+                );
             }
-            
+
             // For And/Or clauses, ensure they have nested clauses
-            if ((clause.ItemTypeEnum == MotelyFilterItemType.And || clause.ItemTypeEnum == MotelyFilterItemType.Or) 
-                && (clause.Clauses == null || clause.Clauses.Count == 0))
+            if (
+                (
+                    clause.ItemTypeEnum == MotelyFilterItemType.And
+                    || clause.ItemTypeEnum == MotelyFilterItemType.Or
+                ) && (clause.Clauses == null || clause.Clauses.Count == 0)
+            )
             {
-                throw new ArgumentException($"CRITICAL: MUST {clause.ItemTypeEnum} clause has no nested clauses");
+                throw new ArgumentException(
+                    $"CRITICAL: MUST {clause.ItemTypeEnum} clause has no nested clauses"
+                );
             }
         }
     }
@@ -1508,7 +1592,7 @@ public enum MotelyScoreAggregationMode
         var mustClauses = ConvertClauses(Must ?? [], false);
         var shouldClauses = ConvertClauses(Should ?? [], false);
         var mustNotClauses = ConvertClauses(MustNot ?? [], true);
-        
+
         return new MotelyRunConfig(
             name: Name ?? "",
             author: Author ?? "",
@@ -1522,8 +1606,11 @@ public enum MotelyScoreAggregationMode
             defaults: Defaults ?? new MotelyFilterDefaults()
         );
     }
-    
-    private static MotelyRunClause[] ConvertClauses(List<MotelyJsonFilterClause> clauses, bool invert)
+
+    private static MotelyRunClause[] ConvertClauses(
+        List<MotelyJsonFilterClause> clauses,
+        bool invert
+    )
     {
         var result = new MotelyRunClause[clauses.Count];
         for (int i = 0; i < clauses.Count; i++)
@@ -1532,11 +1619,11 @@ public enum MotelyScoreAggregationMode
         }
         return result;
     }
-    
+
     private static MotelyRunClause ConvertClause(MotelyJsonFilterClause c, bool invert)
     {
         Debug.Assert(!string.IsNullOrEmpty(c.Type), "Type must be set before conversion");
-        
+
         // Convert nested clauses for And/Or
         MotelyRunClause[]? nestedClauses = null;
         if (c.Clauses != null && c.Clauses.Count > 0)
@@ -1547,7 +1634,7 @@ public enum MotelyScoreAggregationMode
                 nestedClauses[i] = ConvertClause(c.Clauses[i], invert);
             }
         }
-        
+
         // Convert sources
         MotelyRunSources? sources = null;
         if (c.Sources != null)
@@ -1559,7 +1646,7 @@ public enum MotelyScoreAggregationMode
                 requireMega: c.Sources.RequireMega ?? false
             );
         }
-        
+
         return new MotelyRunClause(
             itemType: c.ItemTypeEnum,
             antes: c.Antes ?? [],
@@ -1769,7 +1856,7 @@ public enum MotelyScoreAggregationMode
             var clause = new MotelyJsonFilterClause
             {
                 Type = "LuckyMoney",
-                Value = shorthand.Substring("event:".Length).Trim()
+                Value = shorthand.Substring("event:".Length).Trim(),
             };
 
             Console.WriteLine($"Parsed clause: Type={clause.Type}, Value={clause.Value}"); // Debugging log
@@ -1782,11 +1869,15 @@ public enum MotelyScoreAggregationMode
     // Create a utility class for centralized parsing logic
     public static class MotelyEnumParser
     {
-        private static readonly Dictionary<string, MotelyJoker> JokerLookup = Enum.GetValues(typeof(MotelyJoker))
+        private static readonly Dictionary<string, MotelyJoker> JokerLookup = Enum.GetValues(
+                typeof(MotelyJoker)
+            )
             .Cast<MotelyJoker>()
             .ToDictionary(j => j.ToString(), j => j, StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, MotelyVoucher> VoucherLookup = Enum.GetValues(typeof(MotelyVoucher))
+        private static readonly Dictionary<string, MotelyVoucher> VoucherLookup = Enum.GetValues(
+                typeof(MotelyVoucher)
+            )
             .Cast<MotelyVoucher>()
             .ToDictionary(v => v.ToString(), v => v, StringComparer.OrdinalIgnoreCase);
 

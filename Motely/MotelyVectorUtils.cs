@@ -1,16 +1,15 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
-using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics.Wasm;
+using System.Runtime.Intrinsics.X86;
 
 namespace Motely;
 
-public unsafe static class MotelyVectorUtils
+public static unsafe class MotelyVectorUtils
 {
     public static bool IsAccelerated => Vector512.IsHardwareAccelerated;
 
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<int> ConvertToVector256Int32(in Vector512<double> vector)
     {
@@ -28,17 +27,10 @@ public unsafe static class MotelyVectorUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<int> ShiftLeft(in Vector256<int> value, in Vector256<int> shiftCount)
     {
-        // Use WASM SIMD first (browser builds) - PackedSimd doesn't have ShiftLeftLogical
-        // Use multiplication by power of 2 as workaround for shift left
-        var lowerShift = shiftCount.GetLower()[0];
-        var upperShift = shiftCount.GetUpper()[0];
-        
-        var lowerMultiplier = Vector128.Create(lowerShift == 1 ? 2 : lowerShift == 2 ? 4 : lowerShift == 3 ? 8 : 1);
-        var upperMultiplier = Vector128.Create(upperShift == 1 ? 2 : upperShift == 2 ? 4 : upperShift == 3 ? 8 : 1);
-        
-        var lower = PackedSimd.Multiply(value.GetLower(), lowerMultiplier);
-        var upper = PackedSimd.Multiply(value.GetUpper(), upperMultiplier);
-        return Vector256.Create(lower, upper);
+        if (Avx2.IsSupported)
+        {
+            return Avx2.ShiftLeftLogicalVariable(value, shiftCount.AsUInt32());
+        }
 
         if (AdvSimd.IsSupported)
         {
@@ -48,12 +40,31 @@ public unsafe static class MotelyVectorUtils
             );
         }
 
-        if (Avx2.IsSupported)
+        if (PackedSimd.IsSupported)
         {
-            return Avx2.ShiftLeftLogicalVariable(value, shiftCount.AsUInt32());
+            // Use multiplication by power of 2 as workaround for shift left in WASM
+            var lowerShift = shiftCount.GetLower()[0];
+            var upperShift = shiftCount.GetUpper()[0];
+
+            var lowerMultiplier = Vector128.Create(
+                lowerShift == 1 ? 2
+                : lowerShift == 2 ? 4
+                : lowerShift == 3 ? 8
+                : 1
+            );
+            var upperMultiplier = Vector128.Create(
+                upperShift == 1 ? 2
+                : upperShift == 2 ? 4
+                : upperShift == 3 ? 8
+                : 1
+            );
+
+            var lower = PackedSimd.Multiply(value.GetLower(), lowerMultiplier);
+            var upper = PackedSimd.Multiply(value.GetUpper(), upperMultiplier);
+            return Vector256.Create(lower, upper);
         }
 
-        // AUDIT ISSUE #2: Fixed correctness bug - was using & instead of <<
+        // Fallback: manual shift
         int* temp = stackalloc int[Vector256<int>.Count];
 
         temp[0] = value[0] << shiftCount[0];
@@ -71,41 +82,6 @@ public unsafe static class MotelyVectorUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector512<long> ShiftLeft(in Vector512<long> value, in Vector512<long> shiftCount)
     {
-        // Use WASM SIMD first (browser builds) - use multiplication as workaround
-        var lowerLowerShift = (int)shiftCount.GetLower().GetLower()[0];
-        var lowerUpperShift = (int)shiftCount.GetLower().GetUpper()[0];
-        var upperLowerShift = (int)shiftCount.GetUpper().GetLower()[0];
-        var upperUpperShift = (int)shiftCount.GetUpper().GetUpper()[0];
-        
-        var lowerLowerMultiplier = Vector128.Create(lowerLowerShift == 1 ? 2L : lowerLowerShift == 2 ? 4L : lowerLowerShift == 3 ? 8L : 1L);
-        var lowerUpperMultiplier = Vector128.Create(lowerUpperShift == 1 ? 2L : lowerUpperShift == 2 ? 4L : lowerUpperShift == 3 ? 8L : 1L);
-        var upperLowerMultiplier = Vector128.Create(upperLowerShift == 1 ? 2L : upperLowerShift == 2 ? 4L : upperLowerShift == 3 ? 8L : 1L);
-        var upperUpperMultiplier = Vector128.Create(upperUpperShift == 1 ? 2L : upperUpperShift == 2 ? 4L : upperUpperShift == 3 ? 8L : 1L);
-        
-        var lowerLower = PackedSimd.Multiply(value.GetLower().GetLower(), lowerLowerMultiplier);
-        var lowerUpper = PackedSimd.Multiply(value.GetLower().GetUpper(), lowerUpperMultiplier);
-        var upperLower = PackedSimd.Multiply(value.GetUpper().GetLower(), upperLowerMultiplier);
-        var upperUpper = PackedSimd.Multiply(value.GetUpper().GetUpper(), upperUpperMultiplier);
-        
-        return Vector512.Create(
-            Vector256.Create(lowerLower, lowerUpper),
-            Vector256.Create(upperLower, upperUpper)
-        );
-
-        if (AdvSimd.IsSupported)
-        {
-            return Vector512.Create(
-                Vector256.Create(
-                    AdvSimd.ShiftLogical(value.GetLower().GetLower(), shiftCount.GetLower().GetLower()),
-                    AdvSimd.ShiftLogical(value.GetLower().GetUpper(), shiftCount.GetLower().GetUpper())
-                ),
-                Vector256.Create(
-                    AdvSimd.ShiftLogical(value.GetUpper().GetLower(), shiftCount.GetUpper().GetLower()),
-                    AdvSimd.ShiftLogical(value.GetUpper().GetUpper(), shiftCount.GetUpper().GetUpper())
-                )
-            );
-        }
-
         if (Avx512F.IsSupported)
         {
             return Avx512F.ShiftLeftLogicalVariable(value, shiftCount.AsUInt64());
@@ -119,7 +95,77 @@ public unsafe static class MotelyVectorUtils
             );
         }
 
-        // AUDIT ISSUE #2: Fixed correctness bug - was using & instead of <<
+        if (AdvSimd.IsSupported)
+        {
+            return Vector512.Create(
+                Vector256.Create(
+                    AdvSimd.ShiftLogical(
+                        value.GetLower().GetLower(),
+                        shiftCount.GetLower().GetLower()
+                    ),
+                    AdvSimd.ShiftLogical(
+                        value.GetLower().GetUpper(),
+                        shiftCount.GetLower().GetUpper()
+                    )
+                ),
+                Vector256.Create(
+                    AdvSimd.ShiftLogical(
+                        value.GetUpper().GetLower(),
+                        shiftCount.GetUpper().GetLower()
+                    ),
+                    AdvSimd.ShiftLogical(
+                        value.GetUpper().GetUpper(),
+                        shiftCount.GetUpper().GetUpper()
+                    )
+                )
+            );
+        }
+
+        if (PackedSimd.IsSupported)
+        {
+            // Use multiplication by power of 2 as workaround for shift left in WASM
+            var lowerLowerShift = (int)shiftCount.GetLower().GetLower()[0];
+            var lowerUpperShift = (int)shiftCount.GetLower().GetUpper()[0];
+            var upperLowerShift = (int)shiftCount.GetUpper().GetLower()[0];
+            var upperUpperShift = (int)shiftCount.GetUpper().GetUpper()[0];
+
+            var lowerLowerMultiplier = Vector128.Create(
+                lowerLowerShift == 1 ? 2L
+                : lowerLowerShift == 2 ? 4L
+                : lowerLowerShift == 3 ? 8L
+                : 1L
+            );
+            var lowerUpperMultiplier = Vector128.Create(
+                lowerUpperShift == 1 ? 2L
+                : lowerUpperShift == 2 ? 4L
+                : lowerUpperShift == 3 ? 8L
+                : 1L
+            );
+            var upperLowerMultiplier = Vector128.Create(
+                upperLowerShift == 1 ? 2L
+                : upperLowerShift == 2 ? 4L
+                : upperLowerShift == 3 ? 8L
+                : 1L
+            );
+            var upperUpperMultiplier = Vector128.Create(
+                upperUpperShift == 1 ? 2L
+                : upperUpperShift == 2 ? 4L
+                : upperUpperShift == 3 ? 8L
+                : 1L
+            );
+
+            var lowerLower = PackedSimd.Multiply(value.GetLower().GetLower(), lowerLowerMultiplier);
+            var lowerUpper = PackedSimd.Multiply(value.GetLower().GetUpper(), lowerUpperMultiplier);
+            var upperLower = PackedSimd.Multiply(value.GetUpper().GetLower(), upperLowerMultiplier);
+            var upperUpper = PackedSimd.Multiply(value.GetUpper().GetUpper(), upperUpperMultiplier);
+
+            return Vector512.Create(
+                Vector256.Create(lowerLower, lowerUpper),
+                Vector256.Create(upperLower, upperUpper)
+            );
+        }
+
+        // Fallback: manual shift
         long* temp = stackalloc long[Vector512<long>.Count];
 
         temp[0] = value[0] << (int)shiftCount[0];
@@ -135,77 +181,86 @@ public unsafe static class MotelyVectorUtils
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector512<double> ExtendFloatMaskToDouble(in Vector256<float> smallMask)
-        => Extend32MaskTo64<float, double>(smallMask);
+    public static Vector512<double> ExtendFloatMaskToDouble(in Vector256<float> smallMask) =>
+        Extend32MaskTo64<float, double>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector512<long> ExtendIntMaskToLong(in Vector256<int> smallMask)
-        => Extend32MaskTo64<int, long>(smallMask);
+    public static Vector512<long> ExtendIntMaskToLong(in Vector256<int> smallMask) =>
+        Extend32MaskTo64<int, long>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector512<long> ExtendFloatMaskToLong(in Vector256<int> smallMask)
-        => Extend32MaskTo64<int, long>(smallMask);
+    public static Vector512<long> ExtendFloatMaskToLong(in Vector256<int> smallMask) =>
+        Extend32MaskTo64<int, long>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector512<double> ExtendIntMaskToDouble(in Vector256<int> smallMask)
-        => Extend32MaskTo64<int, double>(smallMask);
+    public static Vector512<double> ExtendIntMaskToDouble(in Vector256<int> smallMask) =>
+        Extend32MaskTo64<int, double>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector512<TTo> Extend32MaskTo64<TFrom, TTo>(in Vector256<TFrom> smallMask)
         where TFrom : unmanaged
         where TTo : unmanaged
     {
-        if (sizeof(TFrom) != 4) throw new InvalidOperationException();
-        if (sizeof(TTo) != 8) throw new InvalidOperationException();
+        if (sizeof(TFrom) != 4)
+            throw new InvalidOperationException();
+        if (sizeof(TTo) != 8)
+            throw new InvalidOperationException();
 
         (Vector256<long> low, Vector256<long> high) = Vector256.Widen(smallMask.AsInt32());
         return Vector512.Create(low, high).As<long, TTo>();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Vector256<float> ShrinkDoubleMaskToFloat(in Vector512<double> smallMask) =>
+        Shrink64MaskTo32<double, float>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector256<float> ShrinkDoubleMaskToFloat(in Vector512<double> smallMask)
-        => Shrink64MaskTo32<double, float>(smallMask);
+    public static Vector256<float> ShrinkLongMaskToFloat(in Vector512<long> smallMask) =>
+        Shrink64MaskTo32<long, float>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector256<float> ShrinkLongMaskToFloat(in Vector512<long> smallMask)
-        => Shrink64MaskTo32<long, float>(smallMask);
+    public static Vector256<int> ShrinkDoubleMaskToInt(in Vector512<double> smallMask) =>
+        Shrink64MaskTo32<double, int>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector256<int> ShrinkDoubleMaskToInt(in Vector512<double> smallMask)
-        => Shrink64MaskTo32<double, int>(smallMask);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector256<int> ShrinkLongMaskToInt(in Vector512<long> smallMask)
-        => Shrink64MaskTo32<long, int>(smallMask);
+    public static Vector256<int> ShrinkLongMaskToInt(in Vector512<long> smallMask) =>
+        Shrink64MaskTo32<long, int>(smallMask);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector256<TTo> Shrink64MaskTo32<TFrom, TTo>(in Vector512<TFrom> smallMask)
         where TFrom : unmanaged
         where TTo : unmanaged
     {
-        if (sizeof(TTo) != 4) throw new InvalidOperationException();
-        if (sizeof(TFrom) != 8) throw new InvalidOperationException();
+        if (sizeof(TTo) != 4)
+            throw new InvalidOperationException();
+        if (sizeof(TFrom) != 8)
+            throw new InvalidOperationException();
 
-        return Vector256.Narrow(smallMask.GetLower().AsUInt64(), smallMask.GetUpper().AsUInt64()).As<uint, TTo>();
+        return Vector256
+            .Narrow(smallMask.GetLower().AsUInt64(), smallMask.GetUpper().AsUInt64())
+            .As<uint, TTo>();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint VectorMaskToIntMask<T>(in Vector256<T> vector) where T : unmanaged
+    public static uint VectorMaskToIntMask<T>(in Vector256<T> vector)
+        where T : unmanaged
     {
-        if (sizeof(T) != 4) throw new InvalidOperationException();
+        if (sizeof(T) != 4)
+            throw new InvalidOperationException();
         return Vector256.ExtractMostSignificantBits(vector);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint VectorMaskToIntMask<T>(in Vector512<T> vector) where T : unmanaged
+    public static uint VectorMaskToIntMask<T>(in Vector512<T> vector)
+        where T : unmanaged
     {
-        if (sizeof(T) != 8) throw new InvalidOperationException();
+        if (sizeof(T) != 8)
+            throw new InvalidOperationException();
         return (uint)Vector512.ExtractMostSignificantBits(vector);
     }
 
     /// <summary>
-    /// Converts a VectorMask (uint bitmask) to Vector256&lt;int&gt; for ConditionalSelect.
+    /// Converts a VectorMask (uint bitmask) to Vector256<int> for ConditionalSelect.
     /// Each bit in the mask becomes either -1 (all bits set) or 0 (no bits set) in the corresponding lane.
     /// Replaces slow per-lane loops with single instruction.
     /// </summary>
@@ -214,21 +269,27 @@ public unsafe static class MotelyVectorUtils
     {
         // Create a vector with lane indices [0, 1, 2, 3, 4, 5, 6, 7] as shift amounts
         var laneIndices = Vector256.Create(0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u);
-        
+
         // Create a vector with the mask bits replicated
         var maskBits = Vector256.Create(mask.Value);
-        
+
         // Shift right by lane index to get the bit for each lane in position 0
         Vector256<uint> shiftedMask;
-        
-        // Use WASM SIMD first (browser builds)
-        var lowerShift = PackedSimd.ShiftRightLogical(maskBits.GetLower().AsByte(), (sbyte)laneIndices.GetLower()[0]).AsUInt32();
-        var upperShift = PackedSimd.ShiftRightLogical(maskBits.GetUpper().AsByte(), (sbyte)laneIndices.GetUpper()[0]).AsUInt32();
-        shiftedMask = Vector256.Create(lowerShift, upperShift);
-        
+
         if (Avx2.IsSupported)
         {
             shiftedMask = Avx2.ShiftRightLogicalVariable(maskBits, laneIndices);
+        }
+        else if (PackedSimd.IsSupported)
+        {
+            // Use WASM SIMD
+            var lowerShift = PackedSimd
+                .ShiftRightLogical(maskBits.GetLower().AsByte(), (sbyte)laneIndices.GetLower()[0])
+                .AsUInt32();
+            var upperShift = PackedSimd
+                .ShiftRightLogical(maskBits.GetUpper().AsByte(), (sbyte)laneIndices.GetUpper()[0])
+                .AsUInt32();
+            shiftedMask = Vector256.Create(lowerShift, upperShift);
         }
         else
         {
@@ -244,10 +305,10 @@ public unsafe static class MotelyVectorUtils
                 maskBits[7] >> (int)laneIndices[7]
             );
         }
-        
+
         // Extract bit 0 from each lane (0 or 1)
         var bitMask = Vector256.BitwiseAnd(shiftedMask, Vector256.Create(1u));
-        
+
         // Convert 0/1 to 0/-1: negate to get 0/0xFFFFFFFF, then cast to int
         return Vector256.Subtract(Vector256.Create(0u), bitMask).AsInt32();
     }

@@ -2,9 +2,9 @@ using System.Runtime.Intrinsics;
 
 namespace Motely;
 
-public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>
+public struct PerkeoObservatoryFilterDesc()
+    : IMotelySeedFilterDesc<PerkeoObservatoryFilterDesc.PerkeoObservatoryFilter>
 {
-
     public PerkeoObservatoryFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         ctx.CacheAnteFirstVoucher(1);
@@ -15,7 +15,6 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
     public struct PerkeoObservatoryFilter() : IMotelySeedFilter
     {
-
         public readonly VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
             VectorEnum256<MotelyVoucher> vouchers = searchContext.GetAnteFirstVoucher(1);
@@ -32,83 +31,119 @@ public struct PerkeoObservatoryFilterDesc() : IMotelySeedFilterDesc<PerkeoObserv
 
             matching &= VectorEnum256.Equals(vouchers, MotelyVoucher.Observatory);
 
-            return searchContext.SearchIndividualSeeds(matching, (ref MotelySingleSearchContext searchContext) =>
-            {
-                MotelySingleTarotStream tarotStream = default;
-                MotelySingleSpectralStream spectralStream = default;
-                MotelySingleJokerFixedRarityStream soulStream = default;
-
-                bool soulStreamInit = false;
-
-                MotelySingleBoosterPackStream boosterPackStream = searchContext.CreateBoosterPackStream(1, true, false);
-
-                MotelyBoosterPack pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
-
-                if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+            return searchContext.SearchIndividualSeeds(
+                matching,
+                (ref MotelySingleSearchContext searchContext) =>
                 {
-                    tarotStream = searchContext.CreateArcanaPackTarotStream(1, true);
+                    MotelySingleTarotStream tarotStream = default;
+                    MotelySingleSpectralStream spectralStream = default;
+                    MotelySingleJokerFixedRarityStream soulStream = default;
 
-                    if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
-                    {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(1);
-                        return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
-                    }
-                }
+                    bool soulStreamInit = false;
 
-                if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
-                {
-                    spectralStream = searchContext.CreateSpectralPackSpectralStream(1, false);
+                    MotelySingleBoosterPackStream boosterPackStream =
+                        searchContext.CreateBoosterPackStream(1, true, false);
 
-                    if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
-                    {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(1);
-                        return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
-                    }
-
-                }
-
-                boosterPackStream = searchContext.CreateBoosterPackStream(2);
-                bool tarotStreamInit = false, spectralStreamInit = false;
-                soulStreamInit = false;
-
-                for (int i = 0; i < 3; i++)
-                {
-                    pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+                    MotelyBoosterPack pack = searchContext.GetNextBoosterPack(
+                        ref boosterPackStream
+                    );
 
                     if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
                     {
-                        if (!tarotStreamInit)
-                        {
-                            tarotStreamInit = true;
-                            tarotStream = searchContext.CreateArcanaPackTarotStream(2, true);
-                        }
+                        tarotStream = searchContext.CreateArcanaPackTarotStream(1, true);
 
-                        if (searchContext.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                        if (
+                            searchContext.GetNextArcanaPackHasTheSoul(
+                                ref tarotStream,
+                                pack.GetPackSize()
+                            )
+                        )
                         {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(2);
-                            return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+                            if (!soulStreamInit)
+                                soulStream = searchContext.CreateSoulJokerStream(1);
+                            return searchContext.GetNextJoker(ref soulStream).Type
+                                == MotelyItemType.Perkeo;
                         }
                     }
 
                     if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
                     {
-                        if (!spectralStreamInit)
-                        {
-                            spectralStreamInit = true;
-                            spectralStream = searchContext.CreateSpectralPackSpectralStream(2, true);
-                        }
+                        spectralStream = searchContext.CreateSpectralPackSpectralStream(1, false);
 
-                        if (searchContext.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                        if (
+                            searchContext.GetNextSpectralPackHasTheSoul(
+                                ref spectralStream,
+                                pack.GetPackSize()
+                            )
+                        )
                         {
-                        if (!soulStreamInit) soulStream = searchContext.CreateSoulJokerStream(2);
-                            return searchContext.GetNextJoker(ref soulStream).Type == MotelyItemType.Perkeo;
+                            if (!soulStreamInit)
+                                soulStream = searchContext.CreateSoulJokerStream(1);
+                            return searchContext.GetNextJoker(ref soulStream).Type
+                                == MotelyItemType.Perkeo;
                         }
                     }
+
+                    boosterPackStream = searchContext.CreateBoosterPackStream(2);
+                    bool tarotStreamInit = false,
+                        spectralStreamInit = false;
+                    soulStreamInit = false;
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
+
+                        if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
+                        {
+                            if (!tarotStreamInit)
+                            {
+                                tarotStreamInit = true;
+                                tarotStream = searchContext.CreateArcanaPackTarotStream(2, true);
+                            }
+
+                            if (
+                                searchContext.GetNextArcanaPackHasTheSoul(
+                                    ref tarotStream,
+                                    pack.GetPackSize()
+                                )
+                            )
+                            {
+                                if (!soulStreamInit)
+                                    soulStream = searchContext.CreateSoulJokerStream(2);
+                                return searchContext.GetNextJoker(ref soulStream).Type
+                                    == MotelyItemType.Perkeo;
+                            }
+                        }
+
+                        if (pack.GetPackType() == MotelyBoosterPackType.Spectral)
+                        {
+                            if (!spectralStreamInit)
+                            {
+                                spectralStreamInit = true;
+                                spectralStream = searchContext.CreateSpectralPackSpectralStream(
+                                    2,
+                                    true
+                                );
+                            }
+
+                            if (
+                                searchContext.GetNextSpectralPackHasTheSoul(
+                                    ref spectralStream,
+                                    pack.GetPackSize()
+                                )
+                            )
+                            {
+                                if (!soulStreamInit)
+                                    soulStream = searchContext.CreateSoulJokerStream(2);
+                                return searchContext.GetNextJoker(ref soulStream).Type
+                                    == MotelyItemType.Perkeo;
+                            }
+                        }
+                    }
+
+                    return false;
                 }
-
-                return false;
-
-            });
+            );
         }
     }
 }
