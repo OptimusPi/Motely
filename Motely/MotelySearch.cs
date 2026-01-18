@@ -157,7 +157,7 @@ public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
         
         // Stream ALL seeds once at startup (O(n) instead of O(n²))
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT seed FROM seeds ORDER BY seed";
+        cmd.CommandText = "SELECT seed FROM seeds";
         
         var reader = cmd.ExecuteReader();
         _seedEnumerator = GetSeedsFromReader(reader, conn, cmd);
