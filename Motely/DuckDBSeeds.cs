@@ -3,9 +3,9 @@ using Motely.DuckDB;
 namespace Motely;
 
 /// <summary>
-/// Desktop implementation of DuckDBSeeds - streams seeds from DuckDB database
+/// Streams seeds from DuckDB database
 /// </summary>
-public static partial class DuckDBSeeds
+public static class DuckDBSeeds
 {
     /// <summary>
     /// Stream seeds from a DuckDB database
