@@ -141,64 +141,64 @@ public static partial class DuckDBSeeds
 /// </summary>
 public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
 {
-    private readonly global::DuckDB.NET.Data.DuckDBConnection _connection;
-    private global::DuckDB.NET.Data.DuckDBDataReader? _reader;
-    private long _currentIndex = 0;
-    private readonly long _totalSeeds;
-    private readonly object _lock = new();
+    private IEnumerator<string>? _seedEnumerator;
     private bool _disposed = false;
 
-    public int SeedCount => (int)_totalSeeds;
+    public int SeedCount { get; }
 
     public DuckDBSeedProvider(string dbPath)
     {
-        _connection = global::Motely.DuckDB.DuckDBConnectionFactory.CreateConnection(dbPath);
+        var conn = global::Motely.DuckDB.DuckDBConnectionFactory.CreateConnection(dbPath);
         
         // Get total seed count
-        using var countCmd = _connection.CreateCommand();
+        using var countCmd = conn.CreateCommand();
         countCmd.CommandText = "SELECT COUNT(*) FROM seeds";
-        _totalSeeds = Convert.ToInt64(countCmd.ExecuteScalar() ?? 0);
+        SeedCount = (int)Convert.ToInt64(countCmd.ExecuteScalar() ?? 0);
+        
+        // Stream ALL seeds ordered by length once at startup (O(n) instead of O(n²))
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT seed FROM seeds ORDER BY seed_len, seed";
+        
+        var reader = cmd.ExecuteReader();
+        _seedEnumerator = GetSeedsFromReader(reader, conn, cmd);
+    }
+
+    private IEnumerator<string> GetSeedsFromReader(global::DuckDB.NET.Data.DuckDBDataReader reader, global::DuckDB.NET.Data.DuckDBConnection conn, global::DuckDB.NET.Data.DuckDBCommand cmd)
+    {
+        try
+        {
+            while (reader.Read())
+            {
+                yield return reader.GetString(0);
+            }
+        }
+        finally
+        {
+            reader.Dispose();
+            cmd.Dispose();
+            conn.Close();
+            conn.Dispose();
+        }
     }
 
     public ReadOnlySpan<char> NextSeed()
     {
-        lock (_lock)
-        {
-            if (_disposed || _currentIndex >= _totalSeeds)
-                return ReadOnlySpan<char>.Empty;
+        if (_disposed || _seedEnumerator == null)
+            return ReadOnlySpan<char>.Empty;
 
-            // Query one seed at a time (ordered by length for vectorization)
-            var cmd = _connection.CreateCommand();
-            cmd.CommandText = $"SELECT seed FROM seeds ORDER BY seed_len, seed LIMIT 1 OFFSET {_currentIndex}";
-            
-            using var reader = cmd.ExecuteReader();
-            
-            if (!reader.Read())
-            {
-                cmd.Dispose();
-                return ReadOnlySpan<char>.Empty;
-            }
+        if (_seedEnumerator.MoveNext())
+            return _seedEnumerator.Current.AsSpan();
 
-            var seed = reader.GetString(0);
-            _currentIndex++;
-            
-            cmd.Dispose();
-            
-            return seed.AsSpan();
-        }
+        return ReadOnlySpan<char>.Empty;
     }
 
     public void Dispose()
     {
-        lock (_lock)
-        {
-            if (_disposed)
-                return;
-                
-            _disposed = true;
-            _connection?.Close();
-            _connection?.Dispose();
-        }
+        if (_disposed)
+            return;
+            
+        _disposed = true;
+        _seedEnumerator?.Dispose();
     }
 }
 
