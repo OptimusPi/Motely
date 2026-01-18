@@ -343,6 +343,13 @@ namespace Motely.Filters.MotelyJson
                     property.SetValue(target, convertedList);
                 }
             }
+            else if (property.PropertyType == typeof(SourcesConfig))
+            {
+                if (entryValue is SourcesConfig sourcesConfig)
+                {
+                    property.SetValue(target, sourcesConfig);
+                }
+            }
         }
     }
 }
