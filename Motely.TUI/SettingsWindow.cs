@@ -135,14 +135,16 @@ public class SettingsWindow : Window
             Text = "          ",
             Width = 12,
         };
-        secretButton.SetScheme(new Scheme()
-        {
-            // Invisible until focused - blends with window background
-            Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
-            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Purple),
-            HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
-            HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
-        });
+        secretButton.SetScheme(
+            new Scheme()
+            {
+                // Invisible until focused - blends with window background
+                Normal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
+                Focus = new Attribute(BalatroTheme.White, BalatroTheme.Purple),
+                HotNormal = new Attribute(BalatroTheme.ModalGrey, BalatroTheme.ModalGrey),
+                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkPurple),
+            }
+        );
         secretButton.Accept += (s, e) => ShowSecretDialog();
         Add(secretButton);
 
@@ -315,7 +317,8 @@ public class SettingsWindow : Window
         {
             X = Pos.Center(),
             Y = 1,
-            Text = "  .-\"\"\"-.\n /        \\\n|  O    O  |\n|    __    |\n \\  \\__/  /\n  '------'",
+            Text =
+                "  .-\"\"\"-.\n /        \\\n|  O    O  |\n|    __    |\n \\  \\__/  /\n  '------'",
             TextAlignment = Alignment.Center,
         };
         dialog.Add(jimboLabel);
@@ -330,7 +333,9 @@ public class SettingsWindow : Window
         crudeBtn.Accept += (s, e) =>
         {
             TuiSettings.CrudeSeedsEnabled = !TuiSettings.CrudeSeedsEnabled;
-            crudeBtn.Text = TuiSettings.CrudeSeedsEnabled ? " [X] Crude Seeds " : " [ ] Crude Seeds ";
+            crudeBtn.Text = TuiSettings.CrudeSeedsEnabled
+                ? " [X] Crude Seeds "
+                : " [ ] Crude Seeds ";
         };
         dialog.Add(crudeBtn);
 

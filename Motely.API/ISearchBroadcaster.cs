@@ -20,4 +20,3 @@ public interface ISearchBroadcaster
     /// </summary>
     void BroadcastToSearch(string searchId, object message);
 }
-

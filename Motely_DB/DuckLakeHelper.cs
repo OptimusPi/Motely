@@ -14,10 +14,10 @@ public static class DuckLakeHelper
     {
         if (string.IsNullOrWhiteSpace(path))
             return false;
-        
+
         // DuckLake catalogs have .ducklake extension
-        return path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase) ||
-               File.Exists(path + ".ducklake");
+        return path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase)
+            || File.Exists(path + ".ducklake");
     }
 
     /// <summary>
@@ -27,7 +27,7 @@ public static class DuckLakeHelper
     {
         if (path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase))
             return path;
-        
+
         return path + ".ducklake";
     }
 
@@ -39,7 +39,10 @@ public static class DuckLakeHelper
         var basePath = path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase)
             ? path.Substring(0, path.Length - 9)
             : path;
-        
-        return Path.Combine(Path.GetDirectoryName(basePath) ?? "", Path.GetFileNameWithoutExtension(basePath) + "_data");
+
+        return Path.Combine(
+            Path.GetDirectoryName(basePath) ?? "",
+            Path.GetFileNameWithoutExtension(basePath) + "_data"
+        );
     }
 }

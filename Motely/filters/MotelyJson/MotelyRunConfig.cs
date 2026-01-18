@@ -5,7 +5,7 @@ namespace Motely.Filters;
 /// <summary>
 /// Fully validated, typed runtime configuration for seed filtering.
 /// NO NULLABLE FIELDS - if this object exists, it's guaranteed runnable.
-/// 
+///
 /// Flow: JAML Text → MotelyJamlConfig (DTO) → Validate → MotelyRunConfig (this)
 /// </summary>
 public sealed class MotelyRunConfig
@@ -17,22 +17,22 @@ public sealed class MotelyRunConfig
     public string Deck { get; }
     public string Stake { get; }
     public MotelyScoreAggregationMode ScoreAggregationMode { get; }
-    
+
     // Filter clauses - arrays, never null, may be empty
     public MotelyRunClause[] Must { get; }
     public MotelyRunClause[] Should { get; }
     public MotelyRunClause[] MustNot { get; }
-    
+
     // Pre-partitioned for performance (computed once at construction)
     public MotelyRunClause[] MustVouchers { get; }
     public MotelyRunClause[] MustNonVouchers { get; }
     public MotelyRunClause[] ShouldVouchers { get; }
     public MotelyRunClause[] ShouldNonVouchers { get; }
-    
+
     // Pre-computed expensive calculations
     public int MaxVoucherAnte { get; }
     public int MaxBossAnte { get; }
-    
+
     // Defaults for clauses that don't specify their own
     public MotelyFilterDefaults Defaults { get; }
 
@@ -46,7 +46,8 @@ public sealed class MotelyRunConfig
         MotelyRunClause[] must,
         MotelyRunClause[] should,
         MotelyRunClause[] mustNot,
-        MotelyFilterDefaults defaults)
+        MotelyFilterDefaults defaults
+    )
     {
         Name = name;
         Author = author;
@@ -55,30 +56,34 @@ public sealed class MotelyRunConfig
         Stake = stake;
         ScoreAggregationMode = scoreAggregationMode;
         Defaults = defaults;
-        
+
         Must = must ?? [];
         Should = should ?? [];
         MustNot = mustNot ?? [];
-        
+
         // Partition clauses by type for performance
         (MustVouchers, MustNonVouchers) = PartitionByVoucher(Must);
         (ShouldVouchers, ShouldNonVouchers) = PartitionByVoucher(Should);
-        
+
         // Compute max antes
         MaxVoucherAnte = ComputeMaxAnte(MustVouchers, ShouldVouchers);
         MaxBossAnte = ComputeMaxBossAnte(Must, Should);
     }
-    
-    private static (MotelyRunClause[] vouchers, MotelyRunClause[] nonVouchers) PartitionByVoucher(MotelyRunClause[] clauses)
+
+    private static (MotelyRunClause[] vouchers, MotelyRunClause[] nonVouchers) PartitionByVoucher(
+        MotelyRunClause[] clauses
+    )
     {
         int voucherCount = 0;
         foreach (var c in clauses)
-            if (c.ItemType == MotelyFilterItemType.Voucher) voucherCount++;
-        
+            if (c.ItemType == MotelyFilterItemType.Voucher)
+                voucherCount++;
+
         var vouchers = new MotelyRunClause[voucherCount];
         var nonVouchers = new MotelyRunClause[clauses.Length - voucherCount];
-        int vi = 0, nvi = 0;
-        
+        int vi = 0,
+            nvi = 0;
+
         foreach (var c in clauses)
         {
             if (c.ItemType == MotelyFilterItemType.Voucher)
@@ -86,20 +91,25 @@ public sealed class MotelyRunConfig
             else
                 nonVouchers[nvi++] = c;
         }
-        
+
         return (vouchers, nonVouchers);
     }
-    
-    private static int ComputeMaxAnte(MotelyRunClause[] mustVouchers, MotelyRunClause[] shouldVouchers)
+
+    private static int ComputeMaxAnte(
+        MotelyRunClause[] mustVouchers,
+        MotelyRunClause[] shouldVouchers
+    )
     {
         int max = 0;
         foreach (var c in mustVouchers)
-            if (c.Antes.Length > 0) max = Math.Max(max, c.Antes.Max());
+            if (c.Antes.Length > 0)
+                max = Math.Max(max, c.Antes.Max());
         foreach (var c in shouldVouchers)
-            if (c.Antes.Length > 0) max = Math.Max(max, c.Antes.Max());
+            if (c.Antes.Length > 0)
+                max = Math.Max(max, c.Antes.Max());
         return max;
     }
-    
+
     private static int ComputeMaxBossAnte(MotelyRunClause[] must, MotelyRunClause[] should)
     {
         int max = 0;
@@ -121,15 +131,15 @@ public sealed class MotelyRunClause
 {
     // Core identification - TYPED, not string!
     public MotelyFilterItemType ItemType { get; }
-    
+
     // Scope
     public int[] Antes { get; }
     public int Score { get; }
     public bool IsInverted { get; }
-    
+
     // Label for output columns
     public string Label { get; }
-    
+
     // Item-specific typed values (check ItemType to know which is valid)
     public MotelyJoker Joker { get; }
     public MotelyJoker[] Jokers { get; }
@@ -147,7 +157,7 @@ public sealed class MotelyRunClause
     public MotelyBossBlind Boss { get; }
     public MotelyBossBlind[] Bosses { get; }
     public MotelyEventType EventType { get; }
-    
+
     // Card properties
     public MotelyPlayingCardSuit Suit { get; }
     public MotelyPlayingCardRank Rank { get; }
@@ -155,17 +165,17 @@ public sealed class MotelyRunClause
     public MotelyItemEnhancement Enhancement { get; }
     public MotelyItemEdition Edition { get; }
     public MotelyJokerSticker[] Stickers { get; }
-    
+
     // Wildcard support
     public bool IsWildcard { get; }
     public MotelyJsonConfigWildcards Wildcard { get; }
-    
+
     // Sources - typed, never null
     public MotelyRunSources Sources { get; }
-    
+
     // Nested clauses for And/Or
     public MotelyRunClause[] NestedClauses { get; }
-    
+
     // Event-specific
     public int[] Rolls { get; }
     public int? Min { get; }
@@ -203,14 +213,15 @@ public sealed class MotelyRunClause
         MotelyRunSources? sources = null,
         MotelyRunClause[]? nestedClauses = null,
         int[]? rolls = null,
-        int? min = null)
+        int? min = null
+    )
     {
         ItemType = itemType;
         Antes = antes;
         Score = score;
         IsInverted = isInverted;
         Label = label;
-        
+
         Joker = joker;
         Jokers = jokers ?? [];
         Voucher = voucher;
@@ -227,17 +238,17 @@ public sealed class MotelyRunClause
         Boss = boss;
         Bosses = bosses ?? [];
         EventType = eventType;
-        
+
         Suit = suit;
         Rank = rank;
         Seal = seal;
         Enhancement = enhancement;
         Edition = edition;
         Stickers = stickers ?? [];
-        
+
         IsWildcard = isWildcard;
         Wildcard = wildcard;
-        
+
         Sources = sources ?? MotelyRunSources.Default;
         NestedClauses = nestedClauses ?? [];
         Rolls = rolls ?? [];
@@ -254,20 +265,20 @@ public sealed class MotelyRunSources
     public int[] ShopSlots { get; }
     public bool Tags { get; }
     public bool RequireMega { get; }
-    
+
     // Pre-computed min/max for fast filtering
     public int MinPackSlot { get; }
     public int MaxPackSlot { get; }
     public int MinShopSlot { get; }
     public int MaxShopSlot { get; }
-    
+
     public static readonly MotelyRunSources Default = new(
         packSlots: [0, 1, 2, 3],
         shopSlots: [0, 1, 2, 3],
         tags: true,
         requireMega: false
     );
-    
+
     public static readonly MotelyRunSources Empty = new(
         packSlots: [],
         shopSlots: [],
@@ -281,7 +292,7 @@ public sealed class MotelyRunSources
         ShopSlots = shopSlots;
         Tags = tags;
         RequireMega = requireMega;
-        
+
         MinPackSlot = PackSlots.Length > 0 ? PackSlots.Min() : 0;
         MaxPackSlot = PackSlots.Length > 0 ? PackSlots.Max() : -1;
         MinShopSlot = ShopSlots.Length > 0 ? ShopSlots.Min() : 0;

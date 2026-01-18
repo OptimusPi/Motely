@@ -40,6 +40,30 @@
 - **Works with:** Claude Desktop (command mode)
 - **Auto-detected:** When stdin is redirected
 
+## Local Test First
+
+Before any public deployment or registry listing, verify the local MCP endpoint:
+
+```bash
+# 1) Start the API (from repo root)
+dotnet run --project external/Motely/Motely.API/Motely.API.csproj
+
+# 2) Initialize
+curl -X POST http://localhost:3141/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}'
+
+# 3) Tools list
+curl -X POST http://localhost:3141/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+# 4) Tool call (generate JAML)
+curl -X POST http://localhost:3141/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"generate_jaml_filter","arguments":{"prompt":"Perkeo in Ante 1"}}}'
+```
+
 ## Configuration Examples
 
 ### Claude Desktop (stdio)

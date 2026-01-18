@@ -122,11 +122,11 @@ public static class TallyColorizer
             // If explicitly set, use that value
             if (_colorEnabled.HasValue)
                 return _colorEnabled.Value;
-            
+
             // Check if NO_COLOR is set (standard way to disable colors)
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR")))
                 return false;
-            
+
             // For Windows, be more aggressive - Windows 10+ supports ANSI colors
             // Even if TERM=dumb, modern Windows terminals (PowerShell, Windows Terminal) support colors
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
@@ -139,23 +139,29 @@ public static class TallyColorizer
                     return true;
                 }
             }
-            
+
             // Check environment variables for modern terminals
             var wtSession = Environment.GetEnvironmentVariable("WT_SESSION");
             var termProgram = Environment.GetEnvironmentVariable("TERM_PROGRAM");
             var term = Environment.GetEnvironmentVariable("TERM");
-            
+
             if (!string.IsNullOrEmpty(wtSession)) // Windows Terminal
                 return true;
             if (termProgram?.Contains("vscode", StringComparison.OrdinalIgnoreCase) == true) // VS Code
                 return true;
-            if (!string.IsNullOrEmpty(term) && (term.Contains("color") || term.Contains("256") || term.Contains("xterm")))
+            if (
+                !string.IsNullOrEmpty(term)
+                && (term.Contains("color") || term.Contains("256") || term.Contains("xterm"))
+            )
                 return true;
-            
+
             // Unix-like systems usually support colors
-            if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+            if (
+                Environment.OSVersion.Platform == PlatformID.Unix
+                || Environment.OSVersion.Platform == PlatformID.MacOSX
+            )
                 return true;
-            
+
             // Default: enable colors (let terminal handle it - most modern terminals support ANSI)
             // If the terminal doesn't support colors, ANSI codes will just be ignored
             return true;
@@ -203,7 +209,8 @@ public static class TallyColorizer
 
             foreach (var tally in collection)
             {
-                if (!first) writer.Write(',');
+                if (!first)
+                    writer.Write(',');
                 first = false;
 
                 int colorKey = Math.Max(0, Math.Min(8, tally));
@@ -283,7 +290,12 @@ public static class TallyColorizer
     /// Shows tallies as colored Unicode block characters (░▒▓█) for easy visualization.
     /// Perfect for visualizing seed search results at a glance!
     /// </summary>
-    public static string FormatResultLineWithBlocks(string seed, int score, IEnumerable<int> tallies, int maxBlockWidth = 40)
+    public static string FormatResultLineWithBlocks(
+        string seed,
+        int score,
+        IEnumerable<int> tallies,
+        int maxBlockWidth = 40
+    )
     {
         bool useColor = ColorEnabled;
         var blockBar = FormatTallyBlocks(tallies, maxBlockWidth, useColor);
@@ -330,7 +342,7 @@ public static class TallyColorizer
                 2 => blockMedium,
                 3 => blockFull,
                 4 => blockFull,
-                _ => blockEmpty
+                _ => blockEmpty,
             };
 
             if (useColor)

@@ -355,8 +355,8 @@ Return JSON with success: true and jaml: "<YAML string>". The jaml value should 
 // RAG: Retrieve similar JAML examples from Vectorize
 async function retrieveSimilarExamples(query: string, env: Env): Promise<string> {
 	try {
-		// Skip if Vectorize not configured
 		if (!env.VECTORIZE) {
+			console.warn('Vectorize not configured, skipping RAG');
 			return '';
 		}
 
@@ -366,14 +366,15 @@ async function retrieveSimilarExamples(query: string, env: Env): Promise<string>
 		});
 
 		const queryVector = (embeddingResult as any).data?.[0];
-		if (!queryVector) {
+		if (!queryVector || !Array.isArray(queryVector)) {
+			console.warn('Failed to generate embedding');
 			return '';
 		}
 
 		// Query Vectorize for similar examples
 		const results = await env.VECTORIZE.query(queryVector, {
 			topK: 3,
-			returnMetadata: 'all'
+			returnMetadata: true
 		});
 
 		if (!results.matches || results.matches.length === 0) {
@@ -386,7 +387,9 @@ async function retrieveSimilarExamples(query: string, env: Env): Promise<string>
 		for (const match of results.matches as VectorMatch[]) {
 			if (match.metadata?.jaml) {
 				context += `\n### Example: ${match.metadata.filename || 'unknown'}\n`;
-				context += `Description: ${match.metadata.description || ''}\n`;
+				if (match.metadata.description) {
+					context += `Description: ${match.metadata.description}\n`;
+				}
 				context += '```yaml\n' + match.metadata.jaml + '\n```\n';
 			}
 		}

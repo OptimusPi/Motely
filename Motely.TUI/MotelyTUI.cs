@@ -1,5 +1,5 @@
-using Terminal.Gui;
 using Motely.API;
+using Terminal.Gui;
 
 namespace Motely.TUI;
 

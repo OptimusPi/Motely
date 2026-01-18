@@ -134,7 +134,6 @@ public class FilterBuilderWindow : Window
         shouldRemoveBtn.Accept += (s, e) => RemoveItem("should");
         scorePanel.Add(shouldRemoveBtn);
 
-
         // Action buttons row (above Back)
         // Start Search button - initially disabled until filter is saved
         _startSearchBtn = new CleanButton()
@@ -144,13 +143,15 @@ public class FilterBuilderWindow : Window
             Text = " save first... ",
             Enabled = false,
         };
-        _startSearchBtn.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
-            Focus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
-            HotNormal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
-            HotFocus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
-        });
+        _startSearchBtn.SetScheme(
+            new Scheme()
+            {
+                Normal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+                Focus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+                HotNormal = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+                HotFocus = new Attribute(BalatroTheme.Red, BalatroTheme.DarkGrey),
+            }
+        );
         _startSearchBtn.Accept += (s, e) => StartSearch();
         Add(_startSearchBtn);
 
@@ -460,7 +461,10 @@ public class FilterBuilderWindow : Window
 
         if (filters.Count == 0)
         {
-            ShowErrorDialog("No Filters Found", "No filter files found in JamlFilters/ or JsonFilters/");
+            ShowErrorDialog(
+                "No Filters Found",
+                "No filter files found in JamlFilters/ or JsonFilters/"
+            );
             return;
         }
 
@@ -491,13 +495,15 @@ public class FilterBuilderWindow : Window
             AllowsMarking = false,
             CanFocus = true,
         };
-        filterList.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
-            Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-            HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
-            HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
-        });
+        filterList.SetScheme(
+            new Scheme()
+            {
+                Normal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+                Focus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+                HotNormal = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey),
+                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.Blue),
+            }
+        );
         filterList.SetSource(new ObservableCollection<string>(filterStrings));
         filterList.SelectedItem = 0;
 
@@ -740,7 +746,9 @@ public class FilterBuilderWindow : Window
         // If we loaded a filter directly, use that file
         if (!string.IsNullOrEmpty(_loadedFilterPath) && File.Exists(_loadedFilterPath))
         {
-            var format = _loadedFilterPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) ? "jaml" : "json";
+            var format = _loadedFilterPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase)
+                ? "jaml"
+                : "json";
             _statusLabel.Text = $"Starting search with loaded filter...";
             var searchWindow = new SearchWindow(_loadedFilterPath, format);
             App?.Run(searchWindow);

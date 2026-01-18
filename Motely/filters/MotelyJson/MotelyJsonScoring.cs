@@ -156,7 +156,10 @@ public static class MotelyJsonScoring
         }
 
         // Check Purple Seal / 8Ball tarot sources if specified
-        if (clause.Sources?.PurpleSealOrEightBall != null && clause.Sources.PurpleSealOrEightBall.Length > 0)
+        if (
+            clause.Sources?.PurpleSealOrEightBall != null
+            && clause.Sources.PurpleSealOrEightBall.Length > 0
+        )
         {
             var purpleSealStream = ctx.CreatePurpleSealTarotStream(ante);
             foreach (var rollIndex in clause.Sources.PurpleSealOrEightBall)
@@ -189,7 +192,10 @@ public static class MotelyJsonScoring
                     matches = true;
                 }
 
-                if (matches && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value))
+                if (
+                    matches
+                    && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value)
+                )
                 {
                     tally++;
                     if (earlyExit)
@@ -216,7 +222,7 @@ public static class MotelyJsonScoring
 
                 // Emperor gives 2 tarot cards - check both
                 var (firstTarot, secondTarot) = ctx.GetNextEmperorTarots(ref tarotStream);
-                
+
                 // Check first tarot
                 bool matchesFirst = false;
                 if (!clause.TarotType.HasValue)
@@ -233,7 +239,12 @@ public static class MotelyJsonScoring
                     matchesFirst = true;
                 }
 
-                if (matchesFirst && (clause.EditionEnum == null || firstTarot.Edition == clause.EditionEnum.Value))
+                if (
+                    matchesFirst
+                    && (
+                        clause.EditionEnum == null || firstTarot.Edition == clause.EditionEnum.Value
+                    )
+                )
                 {
                     tally++;
                     if (earlyExit)
@@ -256,7 +267,13 @@ public static class MotelyJsonScoring
                     matchesSecond = true;
                 }
 
-                if (matchesSecond && (clause.EditionEnum == null || secondTarot.Edition == clause.EditionEnum.Value))
+                if (
+                    matchesSecond
+                    && (
+                        clause.EditionEnum == null
+                        || secondTarot.Edition == clause.EditionEnum.Value
+                    )
+                )
                 {
                     tally++;
                     if (earlyExit)
@@ -587,7 +604,10 @@ public static class MotelyJsonScoring
                     matches = true;
                 }
 
-                if (matches && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value))
+                if (
+                    matches
+                    && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value)
+                )
                 {
                     tally++;
                     if (earlyExit)
@@ -631,7 +651,10 @@ public static class MotelyJsonScoring
                     matches = true;
                 }
 
-                if (matches && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value))
+                if (
+                    matches
+                    && (clause.EditionEnum == null || item.Edition == clause.EditionEnum.Value)
+                )
                 {
                     tally++;
                     if (earlyExit)
@@ -777,6 +800,7 @@ public static class MotelyJsonScoring
         bool hasPackSlots = clause.HasPackSlots;
         bool hasJokerStreamSources =
             clause.Sources?.Judgement is { Length: > 0 }
+            || clause.Sources?.Wraith is { Length: > 0 }
             || clause.Sources?.RareTag is { Length: > 0 }
             || clause.Sources?.UncommonTag is { Length: > 0 }
             || clause.Sources?.RiffRaff is { Length: > 0 };
@@ -991,7 +1015,9 @@ public static class MotelyJsonScoring
                     {
                         foreach (var jokerType in clause.JokerTypes)
                         {
-                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                            var targetType = (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)jokerType
+                            );
                             if (item.Type == targetType)
                             {
                                 matches = true;
@@ -1001,12 +1027,81 @@ public static class MotelyJsonScoring
                     }
                     else if (clause.JokerType.HasValue)
                     {
-                        matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                        matches =
+                            item.Type
+                            == (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value
+                            );
                     }
                 }
                 else
                 {
-                    matches = CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                    matches = CheckWildcardMatch(
+                        (MotelyJoker)item.Type,
+                        originalClause?.WildcardEnum ?? clause.WildcardEnum
+                    );
+                }
+
+                if (matches && CheckEditionAndStickers(item, clause))
+                {
+                    runState.AddOwnedJoker((MotelyJoker)item.Type);
+                    tally++;
+                    if (earlyExit)
+                        return tally;
+                }
+            }
+        }
+
+        // Check Wraith spectral joker sources if specified
+        if (clause.Sources?.Wraith != null && clause.Sources.Wraith.Length > 0)
+        {
+            var wraithStream = ctx.CreateWraithJokerStream(ante);
+            foreach (var rollIndex in clause.Sources.Wraith)
+            {
+                if (rollIndex < 0)
+                    continue;
+
+                // Advance stream to the specified roll index
+                var jokerStream = wraithStream;
+                for (int i = 0; i < rollIndex; i++)
+                {
+                    ctx.GetNextJoker(ref jokerStream);
+                }
+
+                var item = ctx.GetNextJoker(ref jokerStream);
+                bool matches = false;
+
+                if (!clause.IsWildcard)
+                {
+                    if (clause.JokerTypes != null && clause.JokerTypes.Count > 0)
+                    {
+                        foreach (var jokerType in clause.JokerTypes)
+                        {
+                            var targetType = (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)jokerType
+                            );
+                            if (item.Type == targetType)
+                            {
+                                matches = true;
+                                break;
+                            }
+                        }
+                    }
+                    else if (clause.JokerType.HasValue)
+                    {
+                        matches =
+                            item.Type
+                            == (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value
+                            );
+                    }
+                }
+                else
+                {
+                    matches = CheckWildcardMatch(
+                        (MotelyJoker)item.Type,
+                        originalClause?.WildcardEnum ?? clause.WildcardEnum
+                    );
                 }
 
                 if (matches && CheckEditionAndStickers(item, clause))
@@ -1042,7 +1137,9 @@ public static class MotelyJsonScoring
                     {
                         foreach (var jokerType in clause.JokerTypes)
                         {
-                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                            var targetType = (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)jokerType
+                            );
                             if (item.Type == targetType)
                             {
                                 matches = true;
@@ -1052,12 +1149,19 @@ public static class MotelyJsonScoring
                     }
                     else if (clause.JokerType.HasValue)
                     {
-                        matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                        matches =
+                            item.Type
+                            == (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value
+                            );
                     }
                 }
                 else
                 {
-                    matches = CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                    matches = CheckWildcardMatch(
+                        (MotelyJoker)item.Type,
+                        originalClause?.WildcardEnum ?? clause.WildcardEnum
+                    );
                 }
 
                 if (matches && CheckEditionAndStickers(item, clause))
@@ -1093,7 +1197,9 @@ public static class MotelyJsonScoring
                     {
                         foreach (var jokerType in clause.JokerTypes)
                         {
-                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                            var targetType = (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)jokerType
+                            );
                             if (item.Type == targetType)
                             {
                                 matches = true;
@@ -1103,12 +1209,19 @@ public static class MotelyJsonScoring
                     }
                     else if (clause.JokerType.HasValue)
                     {
-                        matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                        matches =
+                            item.Type
+                            == (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value
+                            );
                     }
                 }
                 else
                 {
-                    matches = CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                    matches = CheckWildcardMatch(
+                        (MotelyJoker)item.Type,
+                        originalClause?.WildcardEnum ?? clause.WildcardEnum
+                    );
                 }
 
                 if (matches && CheckEditionAndStickers(item, clause))
@@ -1146,7 +1259,9 @@ public static class MotelyJsonScoring
                     {
                         foreach (var jokerType in clause.JokerTypes)
                         {
-                            var targetType = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)jokerType);
+                            var targetType = (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)jokerType
+                            );
                             if (item.Type == targetType)
                             {
                                 matches = true;
@@ -1156,12 +1271,19 @@ public static class MotelyJsonScoring
                     }
                     else if (clause.JokerType.HasValue)
                     {
-                        matches = item.Type == (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value);
+                        matches =
+                            item.Type
+                            == (MotelyItemType)(
+                                (int)MotelyItemTypeCategory.Joker | (int)clause.JokerType.Value
+                            );
                     }
                 }
                 else
                 {
-                    matches = CheckWildcardMatch((MotelyJoker)item.Type, originalClause?.WildcardEnum ?? clause.WildcardEnum);
+                    matches = CheckWildcardMatch(
+                        (MotelyJoker)item.Type,
+                        originalClause?.WildcardEnum ?? clause.WildcardEnum
+                    );
                 }
 
                 if (matches && CheckEditionAndStickers(item, clause))
@@ -1511,9 +1633,19 @@ public static class MotelyJsonScoring
                 )
                     ? 1
                     : 0,
-                MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, clause.RankEnum!.Value),
-                MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, clause.SuitEnum!.Value),
-                MotelyFilterItemType.ErraticCard => CountErraticCardOccurrences(ref ctx, clause.ErraticCardRankEnum!.Value, clause.ErraticCardSuitEnum!.Value),
+                MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(
+                    ref ctx,
+                    clause.RankEnum!.Value
+                ),
+                MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(
+                    ref ctx,
+                    clause.SuitEnum!.Value
+                ),
+                MotelyFilterItemType.ErraticCard => CountErraticCardOccurrences(
+                    ref ctx,
+                    clause.ErraticCardRankEnum!.Value,
+                    clause.ErraticCardSuitEnum!.Value
+                ),
                 _ => 0,
             };
 
@@ -1720,7 +1852,10 @@ public static class MotelyJsonScoring
         if (!clause.BossEnum.HasValue)
             return false;
 
-        Debug.Assert(runState.CachedBosses != null, "Boss cache should be initialized when boss clauses exist");
+        Debug.Assert(
+            runState.CachedBosses != null,
+            "Boss cache should be initialized when boss clauses exist"
+        );
 
         if (ante < 0 || ante >= runState.CachedBosses!.Length)
             return false;
@@ -1793,7 +1928,11 @@ public static class MotelyJsonScoring
         {
             if (!clause.ErraticCardRankEnum.HasValue || !clause.ErraticCardSuitEnum.HasValue)
                 return 0;
-            return CountErraticCardOccurrences(ref ctx, clause.ErraticCardRankEnum.Value, clause.ErraticCardSuitEnum.Value);
+            return CountErraticCardOccurrences(
+                ref ctx,
+                clause.ErraticCardRankEnum.Value,
+                clause.ErraticCardSuitEnum.Value
+            );
         }
 
         // Special case for AND - gates with nested scoring
@@ -1949,9 +2088,19 @@ public static class MotelyJsonScoring
                                 nestedClause,
                                 ref runState
                             ), // Recursive for nested And/Or
-                            MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(ref ctx, nestedClause.RankEnum!.Value),
-                            MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(ref ctx, nestedClause.SuitEnum!.Value),
-                            MotelyFilterItemType.ErraticCard => CountErraticCardOccurrences(ref ctx, nestedClause.ErraticCardRankEnum!.Value, nestedClause.ErraticCardSuitEnum!.Value),
+                            MotelyFilterItemType.ErraticRank => CountErraticRankOccurrences(
+                                ref ctx,
+                                nestedClause.RankEnum!.Value
+                            ),
+                            MotelyFilterItemType.ErraticSuit => CountErraticSuitOccurrences(
+                                ref ctx,
+                                nestedClause.SuitEnum!.Value
+                            ),
+                            MotelyFilterItemType.ErraticCard => CountErraticCardOccurrences(
+                                ref ctx,
+                                nestedClause.ErraticCardRankEnum!.Value,
+                                nestedClause.ErraticCardSuitEnum!.Value
+                            ),
                             _ => 0,
                         };
                     }
@@ -2049,7 +2198,11 @@ public static class MotelyJsonScoring
         else if (clause.ItemTypeEnum == MotelyFilterItemType.ErraticCard)
         {
             // Count only once for the starting deck, not per-ante
-            totalCount = CountErraticCardOccurrences(ref ctx, clause.ErraticCardRankEnum!.Value, clause.ErraticCardSuitEnum!.Value);
+            totalCount = CountErraticCardOccurrences(
+                ref ctx,
+                clause.ErraticCardRankEnum!.Value,
+                clause.ErraticCardSuitEnum!.Value
+            );
         }
         // Soul jokers are special - they need to be counted across ALL antes with ONE stream
         else if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)

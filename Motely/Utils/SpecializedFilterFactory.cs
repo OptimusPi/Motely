@@ -123,11 +123,17 @@ public static class SpecializedFilterFactory
             MotelyJsonTagFilterDesc tagDesc =>
                 new MotelySearchSettings<MotelyJsonTagFilterDesc.MotelyJsonTagFilter>(tagDesc),
             MotelyJsonErraticRankFilterDesc erraticRankDesc =>
-                new MotelySearchSettings<MotelyJsonErraticRankFilterDesc.MotelyJsonErraticRankFilter>(erraticRankDesc),
+                new MotelySearchSettings<MotelyJsonErraticRankFilterDesc.MotelyJsonErraticRankFilter>(
+                    erraticRankDesc
+                ),
             MotelyJsonErraticSuitFilterDesc erraticSuitDesc =>
-                new MotelySearchSettings<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>(erraticSuitDesc),
+                new MotelySearchSettings<MotelyJsonErraticSuitFilterDesc.MotelyJsonErraticSuitFilter>(
+                    erraticSuitDesc
+                ),
             MotelyJsonErraticRankAndSuitFilterDesc erraticRankAndSuitDesc =>
-                new MotelySearchSettings<MotelyJsonErraticRankAndSuitFilterDesc.MotelyJsonErraticRankAndSuitFilter>(erraticRankAndSuitDesc),
+                new MotelySearchSettings<MotelyJsonErraticRankAndSuitFilterDesc.MotelyJsonErraticRankAndSuitFilter>(
+                    erraticRankAndSuitDesc
+                ),
             _ => throw new ArgumentException(
                 $"Search settings not implemented for: {filterDesc.GetType()}"
             ),

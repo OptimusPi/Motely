@@ -21,10 +21,17 @@ namespace Motely.Filters
             }
 
             // Validate all filter items
-            ValidateFilterItems(config.Must, "must", errors, warnings, stake, config.Deck, isMust: true);
+            ValidateFilterItems(
+                config.Must,
+                "must",
+                errors,
+                warnings,
+                stake,
+                config.Deck,
+                isMust: true
+            );
             ValidateFilterItems(config.Should, "should", errors, warnings, stake, config.Deck);
             ValidateFilterItems(config.MustNot, "mustNot", errors, warnings, stake, config.Deck);
-            
 
             // Validate deck
             if (
@@ -751,15 +758,21 @@ namespace Motely.Filters
                 {
                     bool typeSupportsEdition =
                         item.Type?.Equals("joker", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("souljoker", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("souljoker", StringComparison.OrdinalIgnoreCase)
+                            == true
+                        || item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase)
+                            == true
+                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase)
+                            == true
                         || item.Type?.Equals("tarot", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("tarotcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("tarotcard", StringComparison.OrdinalIgnoreCase)
+                            == true
                         || item.Type?.Equals("spectral", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("spectralcard", StringComparison.OrdinalIgnoreCase) == true
+                        || item.Type?.Equals("spectralcard", StringComparison.OrdinalIgnoreCase)
+                            == true
                         || item.Type?.Equals("planet", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("planetcard", StringComparison.OrdinalIgnoreCase) == true;
+                        || item.Type?.Equals("planetcard", StringComparison.OrdinalIgnoreCase)
+                            == true;
                     if (!typeSupportsEdition)
                     {
                         errors.Add(
@@ -783,7 +796,8 @@ namespace Motely.Filters
                 {
                     bool typeSupportsEnhancement =
                         item.Type?.Equals("playingcard", StringComparison.OrdinalIgnoreCase) == true
-                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase) == true;
+                        || item.Type?.Equals("standardcard", StringComparison.OrdinalIgnoreCase)
+                            == true;
                     if (!typeSupportsEnhancement)
                     {
                         errors.Add(
@@ -1065,6 +1079,12 @@ namespace Motely.Filters
                 item.Sources.Judgement = NormalizeRollIndices(
                     item.Sources.Judgement,
                     $"{prefix}.sources.judgement",
+                    errors,
+                    warnings
+                );
+                item.Sources.Wraith = NormalizeRollIndices(
+                    item.Sources.Wraith,
+                    $"{prefix}.sources.wraith",
                     errors,
                     warnings
                 );

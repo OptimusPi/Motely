@@ -15,7 +15,8 @@ namespace Motely.Tests
             // Define cluster pattern ONCE with anchor (no antes needed)
             // Parent And clause has antes array [2,3,4,5,6,7,8,9,10,11,12]
             // Children inherit those antes automatically!
-            var jaml = @"
+            var jaml =
+                @"
 name: AnchorAntesTest
 deck: Red
 stake: White
@@ -48,13 +49,18 @@ should:
             Assert.Equal("and", andClause.Type.ToLowerInvariant());
             Assert.NotNull(andClause.Antes);
             Assert.Equal(11, andClause.Antes!.Length); // [2,3,4,5,6,7,8,9,10,11,12]
-            Assert.True(andClause.AntesWasExplicitlySet, "Antes should be explicitly set on parent And clause");
+            Assert.True(
+                andClause.AntesWasExplicitlySet,
+                "Antes should be explicitly set on parent And clause"
+            );
 
             // Verify the Or clause exists
             Assert.NotNull(andClause.Clauses);
             Assert.True(andClause.Clauses!.Count >= 2); // NegativeTag + Or
 
-            var orClause = andClause.Clauses.FirstOrDefault(c => c.Type.Equals("or", StringComparison.OrdinalIgnoreCase));
+            var orClause = andClause.Clauses.FirstOrDefault(c =>
+                c.Type.Equals("or", StringComparison.OrdinalIgnoreCase)
+            );
             Assert.NotNull(orClause);
             Assert.NotNull(orClause!.Clauses);
             Assert.Equal(3, orClause.Clauses!.Count); // 3 jokers in cluster
@@ -71,7 +77,8 @@ should:
         {
             // Test the exact scenario: antes 2-12, cluster pattern defined once
             // NO ANCHOR NEEDED - just define the pattern once, parent antes applies to all!
-            var jaml = @"
+            var jaml =
+                @"
 name: MultiAnteTest
 deck: Red
 stake: White

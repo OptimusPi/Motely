@@ -1,5 +1,5 @@
-using Motely.Filters;
 using System.Linq;
+using Motely.Filters;
 
 namespace Motely.Reporting;
 
@@ -80,7 +80,7 @@ public class ColumnDefinition : IColumnDefinition
                 ColumnType.AnteDisplay => new FirstMatchStrategy(),
                 ColumnType.ItemDisplay => new FirstMatchStrategy(),
                 ColumnType.ValueFunction => new FirstMatchStrategy(), // ValueFunction uses first result
-                _ => new SumAllStrategy()
+                _ => new SumAllStrategy(),
             };
         }
 
@@ -124,7 +124,7 @@ public class ColumnDefinition : IColumnDefinition
             ColumnType.AnteDisplay => FormatAnteDisplay(value),
             ColumnType.ItemDisplay => FormatItemDisplay(value),
             ColumnType.ValueFunction => FormatValueFunction(value),
-            _ => value.ToString()
+            _ => value.ToString(),
         };
     }
 
@@ -137,7 +137,7 @@ public class ColumnDefinition : IColumnDefinition
     private string FormatInlineLabel(object value)
     {
         var str = value.ToString() ?? DefaultValue ?? " ";
-        
+
         // Apply prefix/suffix
         if (!string.IsNullOrEmpty(Prefix))
             str = Prefix + str;
@@ -155,7 +155,7 @@ public class ColumnDefinition : IColumnDefinition
             AnteDisplayFormat.FirstFound => ConvertToInt(value)?.ToString() ?? "",
             AnteDisplayFormat.AllList => FormatAnteList(value),
             AnteDisplayFormat.BestFound => ConvertToInt(value)?.ToString() ?? "",
-            _ => value.ToString() ?? ""
+            _ => value.ToString() ?? "",
         };
     }
 
@@ -184,11 +184,12 @@ public class ColumnDefinition : IColumnDefinition
         if (value is Dictionary<int, string> multiAnteDict)
         {
             // Multiple antes: format as JSON object
-            var jsonEntries = multiAnteDict.OrderBy(kvp => kvp.Key)
+            var jsonEntries = multiAnteDict
+                .OrderBy(kvp => kvp.Key)
                 .Select(kvp => $"\"Ante{kvp.Key}\":\"{EscapeJsonString(kvp.Value)}\"");
             return "{" + string.Join(",", jsonEntries) + "}";
         }
-        
+
         // Single value: return as-is (already a string)
         return value?.ToString() ?? "";
     }
@@ -209,7 +210,7 @@ public class ColumnDefinition : IColumnDefinition
             double d => (int)Math.Round(d),
             decimal dec => (int)dec,
             string s when int.TryParse(s, out var parsed) => parsed,
-            _ => null
+            _ => null,
         };
     }
 }
@@ -232,5 +233,5 @@ public enum AnteDisplayFormat
     /// <summary>
     /// Returns pipe-delimited list (e.g., "2|5|8")
     /// </summary>
-    AllList
+    AllList,
 }

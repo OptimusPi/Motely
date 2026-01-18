@@ -2,11 +2,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Motely;
-using Motely.Filters;
 using Motely.Analysis;
+using Motely.API;
 using Motely.Executors;
+using Motely.Filters;
 
-namespace Motely.API.McpProtocol;
+namespace Motely.MCP.McpProtocol;
 
 public class McpProtocolServer
 {
@@ -18,13 +19,13 @@ public class McpProtocolServer
     private const string MCP_METHOD_RESOURCES_READ = "resources/read";
     private const string MCP_METHOD_PROMPTS_LIST = "prompts/list";
     private const string MCP_METHOD_PROMPTS_GET = "prompts/get";
-    
+
     private const string TOOL_GENERATE_JAML_FILTER = "generate_jaml_filter";
     private const string TOOL_SEARCH_SEEDS = "search_seeds";
     private const string TOOL_GET_SEARCH_STATUS = "get_search_status";
     private const string TOOL_ANALYZE_SEED = "analyze_seed";
     private const string TOOL_VERIFY_SEED = "verify_seed";
-    
+
     private readonly ILogger<McpProtocolServer> _logger;
     private readonly McpServer _mcpServer;
     private readonly SearchManager _searchManager;
@@ -32,16 +33,14 @@ public class McpProtocolServer
     public McpProtocolServer(
         ILogger<McpProtocolServer> logger,
         McpServer mcpServer,
-        SearchManager searchManager)
+        SearchManager searchManager
+    )
     {
         _logger = logger;
         _mcpServer = mcpServer;
         _searchManager = searchManager;
     }
 
-    /// <summary>
-    /// Handle MCP JSON-RPC 2.0 request
-    /// </summary>
     public async Task<JsonRpcResponse> HandleRequestAsync(JsonRpcRequest request)
     {
         try
@@ -55,7 +54,11 @@ public class McpProtocolServer
                 MCP_METHOD_RESOURCES_READ => await HandleResourceRead(request),
                 MCP_METHOD_PROMPTS_LIST => HandlePromptsList(request),
                 MCP_METHOD_PROMPTS_GET => await HandlePromptGet(request),
-                _ => JsonRpcResponse.Error(request.Id, -32601, $"Method not found: {request.Method}")
+                _ => JsonRpcResponse.Error(
+                    request.Id,
+                    -32601,
+                    $"Method not found: {request.Method}"
+                ),
             };
         }
         catch (Exception ex)
@@ -65,13 +68,12 @@ public class McpProtocolServer
         }
     }
 
-    /// <summary>
-    /// MCP Initialize - Handshake with client
-    /// </summary>
     private JsonRpcResponse HandleInitialize(JsonRpcRequest request)
     {
-        var initParams = JsonSerializer.Deserialize<McpInitializeParams>(request.Params?.ToString() ?? "{}");
-        
+        var initParams = JsonSerializer.Deserialize<McpInitializeParams>(
+            request.Params?.ToString() ?? "{}"
+        );
+
         var response = new McpInitializeResult
         {
             ProtocolVersion = "2024-11-05",
@@ -79,13 +81,9 @@ public class McpProtocolServer
             {
                 Tools = new McpToolsCapability(),
                 Resources = new McpResourcesCapability(),
-                Prompts = new McpPromptsCapability()
+                Prompts = new McpPromptsCapability(),
             },
-            ServerInfo = new McpServerInfo
-            {
-                Name = "balatro-seed-oracle",
-                Version = "1.0.0"
-            }
+            ServerInfo = new McpServerInfo { Name = "balatro-seed-oracle", Version = "1.0.0" },
         };
 
         return JsonRpcResponse.Success(request.Id, response);
@@ -101,7 +99,8 @@ public class McpProtocolServer
             new McpTool
             {
                 Name = TOOL_GENERATE_JAML_FILTER,
-                Description = "Generate a JAML (Joker Artifact Markup Language) filter from natural language prompt. Returns ONLY the JAML config (no seed search). Use search_seeds tool separately to find seeds.",
+                Description =
+                    "Generate a JAML (Joker Artifact Markup Language) filter from natural language prompt. Returns ONLY the JAML config (no seed search). Use search_seeds tool separately to find seeds.",
                 InputSchema = new
                 {
                     type = "object",
@@ -110,28 +109,53 @@ public class McpProtocolServer
                         prompt = new
                         {
                             type = "string",
-                            description = "Natural language description of desired Balatro seed (e.g., 'Blueprint and Brainstorm in Ante 1', 'Negative Perkeo with Observatory voucher')"
+                            description = "Natural language description of desired Balatro seed (e.g., 'Blueprint and Brainstorm in Ante 1', 'Negative Perkeo with Observatory voucher')",
                         },
                         deck = new
                         {
                             type = "string",
                             description = "Optional: Deck name (Red, Blue, Yellow, Green, Black, Ghost, Abandoned, Checkered, Anaglyph, Plasma, Erratic). Defaults to Red.",
-                            @enum = new[] { "Red", "Blue", "Yellow", "Green", "Black", "Ghost", "Abandoned", "Checkered", "Anaglyph", "Plasma", "Erratic" }
+                            @enum = new[]
+                            {
+                                "Red",
+                                "Blue",
+                                "Yellow",
+                                "Green",
+                                "Black",
+                                "Ghost",
+                                "Abandoned",
+                                "Checkered",
+                                "Anaglyph",
+                                "Plasma",
+                                "Erratic",
+                            },
                         },
                         stake = new
                         {
                             type = "string",
                             description = "Optional: Stake level (White, Yellow, Orange, Red, Green, Blue, Purple, Gold, Black). Defaults to White.",
-                            @enum = new[] { "White", "Yellow", "Orange", "Red", "Green", "Blue", "Purple", "Gold", "Black" }
-                        }
+                            @enum = new[]
+                            {
+                                "White",
+                                "Yellow",
+                                "Orange",
+                                "Red",
+                                "Green",
+                                "Blue",
+                                "Purple",
+                                "Gold",
+                                "Black",
+                            },
+                        },
                     },
-                    required = new[] { "prompt" }
-                }
+                    required = new[] { "prompt" },
+                },
             },
             new McpTool
             {
                 Name = "search_seeds",
-                Description = "Search for Balatro seeds matching a JAML filter. Returns search ID and initial results. Use get_search_status to check progress.",
+                Description =
+                    "Search for Balatro seeds matching a JAML filter. Returns search ID and initial results. Use get_search_status to check progress.",
                 InputSchema = new
                 {
                     type = "object",
@@ -140,26 +164,26 @@ public class McpProtocolServer
                         jaml = new
                         {
                             type = "string",
-                            description = "JAML filter configuration (from generate_jaml_filter or user-provided)"
+                            description = "JAML filter configuration (from generate_jaml_filter or user-provided)",
                         },
                         deck = new
                         {
                             type = "string",
-                            description = "Deck name (defaults to filter's deck or Red)"
+                            description = "Deck name (defaults to filter's deck or Red)",
                         },
                         stake = new
                         {
                             type = "string",
-                            description = "Stake level (defaults to filter's stake or White)"
+                            description = "Stake level (defaults to filter's stake or White)",
                         },
                         seedCount = new
                         {
                             type = "integer",
-                            description = "Optional: Number of random seeds to search (default: 1,000,000). Set to 0 for unlimited sequential search."
-                        }
+                            description = "Optional: Number of random seeds to search (default: 1,000,000). Set to 0 for unlimited sequential search.",
+                        },
                     },
-                    required = new[] { "jaml" }
-                }
+                    required = new[] { "jaml" },
+                },
             },
             new McpTool
             {
@@ -173,16 +197,17 @@ public class McpProtocolServer
                         searchId = new
                         {
                             type = "string",
-                            description = "Search ID returned from search_seeds"
-                        }
+                            description = "Search ID returned from search_seeds",
+                        },
                     },
-                    required = new[] { "searchId" }
-                }
+                    required = new[] { "searchId" },
+                },
             },
             new McpTool
             {
                 Name = "analyze_seed",
-                Description = "Analyze a specific Balatro seed to see all items (jokers, vouchers, tags, packs, etc.) across all antes.",
+                Description =
+                    "Analyze a specific Balatro seed to see all items (jokers, vouchers, tags, packs, etc.) across all antes.",
                 InputSchema = new
                 {
                     type = "object",
@@ -191,26 +216,27 @@ public class McpProtocolServer
                         seed = new
                         {
                             type = "string",
-                            description = "Balatro seed string (e.g., 'ALEEB', '12345678')"
+                            description = "Balatro seed string (e.g., 'ALEEB', '12345678')",
                         },
                         deck = new
                         {
                             type = "string",
-                            description = "Optional: Deck name (defaults to Red)"
+                            description = "Optional: Deck name (defaults to Red)",
                         },
                         stake = new
                         {
                             type = "string",
-                            description = "Optional: Stake level (defaults to White)"
-                        }
+                            description = "Optional: Stake level (defaults to White)",
+                        },
                     },
-                    required = new[] { "seed" }
-                }
+                    required = new[] { "seed" },
+                },
             },
             new McpTool
             {
                 Name = TOOL_VERIFY_SEED,
-                Description = "Verify if a specific Balatro seed matches a JAML filter. Returns whether it matches, the score, and detailed tallies.",
+                Description =
+                    "Verify if a specific Balatro seed matches a JAML filter. Returns whether it matches, the score, and detailed tallies.",
                 InputSchema = new
                 {
                     type = "object",
@@ -219,39 +245,38 @@ public class McpProtocolServer
                         seed = new
                         {
                             type = "string",
-                            description = "Balatro seed string to verify (e.g., 'UQP1JJ11', 'ALEEB')"
+                            description = "Balatro seed string to verify (e.g., 'UQP1JJ11', 'ALEEB')",
                         },
                         jaml = new
                         {
                             type = "string",
-                            description = "JAML filter configuration to verify against (can be JAML string or path to .jaml file)"
+                            description = "JAML filter configuration to verify against (can be JAML string or path to .jaml file)",
                         },
                         deck = new
                         {
                             type = "string",
-                            description = "Optional: Deck name (defaults to filter's deck or Red)"
+                            description = "Optional: Deck name (defaults to filter's deck or Red)",
                         },
                         stake = new
                         {
                             type = "string",
-                            description = "Optional: Stake level (defaults to filter's stake or White)"
-                        }
+                            description = "Optional: Stake level (defaults to filter's stake or White)",
+                        },
                     },
-                    required = new[] { "seed", "jaml" }
-                }
-            }
+                    required = new[] { "seed", "jaml" },
+                },
+            },
         };
 
         return JsonRpcResponse.Success(request.Id, new { tools });
     }
 
-    /// <summary>
-    /// Call an MCP tool
-    /// </summary>
     private async Task<JsonRpcResponse> HandleToolCall(JsonRpcRequest request)
     {
-        var callParams = JsonSerializer.Deserialize<McpToolCallParams>(request.Params?.ToString() ?? "{}");
-        
+        var callParams = JsonSerializer.Deserialize<McpToolCallParams>(
+            request.Params?.ToString() ?? "{}"
+        );
+
         if (callParams == null || string.IsNullOrEmpty(callParams.Name))
         {
             return JsonRpcResponse.Error(request.Id, -32602, "Invalid tool call parameters");
@@ -269,15 +294,28 @@ public class McpProtocolServer
                 TOOL_GET_SEARCH_STATUS => HandleGetSearchStatus(arguments),
                 TOOL_ANALYZE_SEED => HandleAnalyzeSeed(arguments),
                 TOOL_VERIFY_SEED => HandleVerifySeed(arguments),
-                _ => throw new ArgumentException($"Unknown tool: {toolName}")
+                _ => throw new ArgumentException($"Unknown tool: {toolName}"),
             };
 
-            return JsonRpcResponse.Success(request.Id, new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(result) } } });
+            return JsonRpcResponse.Success(
+                request.Id,
+                new
+                {
+                    content = new[]
+                    {
+                        new { type = "text", text = JsonSerializer.Serialize(result) },
+                    },
+                }
+            );
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error calling tool: {toolName}");
-            return JsonRpcResponse.Error(request.Id, -32603, $"Tool execution failed: {ex.Message}");
+            return JsonRpcResponse.Error(
+                request.Id,
+                -32603,
+                $"Tool execution failed: {ex.Message}"
+            );
         }
     }
 
@@ -289,7 +327,7 @@ public class McpProtocolServer
         }
 
         var (jaml, reasoning, error) = await _mcpServer.GenerateJamlOnlyAsync(prompt);
-        
+
         if (!string.IsNullOrEmpty(error))
         {
             throw new InvalidOperationException(error);
@@ -304,7 +342,7 @@ public class McpProtocolServer
         {
             jaml = jaml,
             reasoning = reasoning,
-            message = $"Generated JAML filter for: {prompt}"
+            message = $"Generated JAML filter for: {prompt}",
         };
     }
 
@@ -316,18 +354,24 @@ public class McpProtocolServer
         }
 
         // Validate JAML first
-        if (!JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out var error) || config == null)
+        if (
+            !JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out var error)
+            || config == null
+        )
         {
             throw new ArgumentException($"Invalid JAML: {error}");
         }
 
-            var deck = args.TryGetValue("deck", out var deckObj) ? deckObj?.ToString() : null;
-            var deckValue = deck ?? config.Deck ?? "Red";
-            var stake = args.TryGetValue("stake", out var stakeObj) ? stakeObj?.ToString() : null;
-            var stakeValue = stake ?? config.Stake ?? "White";
-        var seedCount = args.TryGetValue("seedCount", out var countObj) && countObj is JsonElement countElem && countElem.ValueKind == JsonValueKind.Number
-            ? countElem.GetInt32()
-            : 0;
+        var deck = args.TryGetValue("deck", out var deckObj) ? deckObj?.ToString() : null;
+        var deckValue = deck ?? config.Deck ?? "Red";
+        var stake = args.TryGetValue("stake", out var stakeObj) ? stakeObj?.ToString() : null;
+        var stakeValue = stake ?? config.Stake ?? "White";
+        var seedCount =
+            args.TryGetValue("seedCount", out var countObj)
+            && countObj is JsonElement countElem
+            && countElem.ValueKind == JsonValueKind.Number
+                ? countElem.GetInt32()
+                : 0;
 
         var seedSource = seedCount > 0 ? $"random:{seedCount}" : "random:1000000";
 
@@ -342,8 +386,16 @@ public class McpProtocolServer
         var columns = _searchManager.GetColumnNames(searchId);
         var searchUrl = $"/JAML/?search={Uri.EscapeDataString(searchId)}";
 
-        var resultList = results?.Select(r => new { Seed = r.Seed, Score = r.Score, Tallies = r.Tallies }).ToList<object>() ?? new List<object>();
-        
+        var resultList =
+            results
+                ?.Select(r => new
+                {
+                    Seed = r.Seed,
+                    Score = r.Score,
+                    Tallies = r.Tallies,
+                })
+                .ToList<object>() ?? new List<object>();
+
         return new
         {
             searchId,
@@ -351,13 +403,15 @@ public class McpProtocolServer
             results = resultList,
             columns,
             status = "running",
-            message = $"Search started with ID: {searchId}. Found {results?.Count ?? 0} initial results."
+            message = $"Search started with ID: {searchId}. Found {results?.Count ?? 0} initial results.",
         };
     }
 
     private object HandleGetSearchStatus(Dictionary<string, object> args)
     {
-        if (!args.TryGetValue("searchId", out var searchIdObj) || searchIdObj is not string searchId)
+        if (
+            !args.TryGetValue("searchId", out var searchIdObj) || searchIdObj is not string searchId
+        )
         {
             throw new ArgumentException("Missing or invalid 'searchId' parameter");
         }
@@ -375,8 +429,16 @@ public class McpProtocolServer
             out var seedsPerSecond
         );
 
-        var resultList = results?.Select(r => new { Seed = r.Seed, Score = r.Score, Tallies = r.Tallies }).ToList<object>() ?? new List<object>();
-        
+        var resultList =
+            results
+                ?.Select(r => new
+                {
+                    Seed = r.Seed,
+                    Score = r.Score,
+                    Tallies = r.Tallies,
+                })
+                .ToList<object>() ?? new List<object>();
+
         return new
         {
             searchId,
@@ -390,8 +452,8 @@ public class McpProtocolServer
                 currentBatch,
                 totalBatches,
                 seedsSearched,
-                seedsPerSecond
-            }
+                seedsPerSecond,
+            },
         };
     }
 
@@ -421,7 +483,7 @@ public class McpProtocolServer
             seed,
             deck = deckValue,
             stake = stakeValue,
-            analysis = analysis.ToString()
+            analysis = analysis.ToString(),
         };
     }
 
@@ -440,8 +502,9 @@ public class McpProtocolServer
         // Determine if jaml is a file path or JAML content
         string jamlContent;
         string configPath;
-        bool isJamlFile = jaml.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) && 
-                         (File.Exists(jaml) || File.Exists(Path.Combine("JamlFilters", jaml)));
+        bool isJamlFile =
+            jaml.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase)
+            && (File.Exists(jaml) || File.Exists(Path.Combine("JamlFilters", jaml)));
 
         if (isJamlFile)
         {
@@ -459,7 +522,10 @@ public class McpProtocolServer
             configPath = "inline";
         }
 
-        if (!JamlConfigLoader.TryLoadFromJamlString(jamlContent, out var config, out var error) || config == null)
+        if (
+            !JamlConfigLoader.TryLoadFromJamlString(jamlContent, out var config, out var error)
+            || config == null
+        )
         {
             throw new ArgumentException($"Invalid JAML: {error}");
         }
@@ -477,7 +543,7 @@ public class McpProtocolServer
             SpecificSeed = seed,
             Quiet = true, // Suppress console output
             Cutoff = 0, // No cutoff - we want to see the actual score
-            Threads = 1
+            Threads = 1,
         };
 
         var executor = new JsonSearchExecutor(
@@ -488,7 +554,7 @@ public class McpProtocolServer
                 results.Add(result);
             }
         );
-        
+
         var exitCode = executor.Execute(awaitCompletion: true);
 
         // Determine if seed matched (exit code 0 and has results)
@@ -518,7 +584,7 @@ public class McpProtocolServer
             exitCode,
             message = matched
                 ? $"✅ Seed '{seed}' MATCHES the filter (score: {result?.Score ?? 0})"
-                : $"❌ Seed '{seed}' does NOT match the filter"
+                : $"❌ Seed '{seed}' does NOT match the filter",
         };
     }
 
@@ -531,34 +597,44 @@ public class McpProtocolServer
                 Uri = "jaml://templates",
                 Name = "JAML Templates",
                 Description = "Example JAML filter templates",
-                MimeType = "application/yaml"
+                MimeType = "application/yaml",
             },
             new McpResource
             {
                 Uri = "jaml://game-mechanics",
                 Name = "Game Mechanics",
                 Description = "Balatro game mechanics and rules documentation",
-                MimeType = "text/markdown"
-            }
+                MimeType = "text/markdown",
+            },
         };
 
         // Add filter files as resources
         try
         {
-            var filtersDir = Path.Combine(_searchManager.GetSearchResultsDir(), "..", "JamlFilters");
+            var filtersDir = Path.Combine(
+                _searchManager.GetSearchResultsDir(),
+                "..",
+                "JamlFilters"
+            );
             if (Directory.Exists(filtersDir))
             {
-                var filterFiles = Directory.GetFiles(filtersDir, "*.jaml", SearchOption.TopDirectoryOnly);
+                var filterFiles = Directory.GetFiles(
+                    filtersDir,
+                    "*.jaml",
+                    SearchOption.TopDirectoryOnly
+                );
                 foreach (var filterFile in filterFiles)
                 {
                     var fileName = Path.GetFileNameWithoutExtension(filterFile);
-                    resources.Add(new McpResource
-                    {
-                        Uri = $"jaml://filter/{fileName}",
-                        Name = fileName,
-                        Description = $"JAML filter: {fileName}",
-                        MimeType = "text/yaml"
-                    });
+                    resources.Add(
+                        new McpResource
+                        {
+                            Uri = $"jaml://filter/{fileName}",
+                            Name = fileName,
+                            Description = $"JAML filter: {fileName}",
+                            MimeType = "text/yaml",
+                        }
+                    );
                 }
             }
         }
@@ -572,8 +648,10 @@ public class McpProtocolServer
 
     private async Task<JsonRpcResponse> HandleResourceRead(JsonRpcRequest request)
     {
-        var readParams = JsonSerializer.Deserialize<McpResourceReadParams>(request.Params?.ToString() ?? "{}");
-        
+        var readParams = JsonSerializer.Deserialize<McpResourceReadParams>(
+            request.Params?.ToString() ?? "{}"
+        );
+
         if (readParams == null || string.IsNullOrEmpty(readParams.Uri))
         {
             return JsonRpcResponse.Error(request.Id, -32602, "Invalid resource read parameters");
@@ -583,12 +661,13 @@ public class McpProtocolServer
         {
             string content = "";
             string mimeType = "text/plain";
-            
+
             // Handle different resource URIs
             if (readParams.Uri == "jaml://templates")
             {
                 // Return example JAML templates
-                content = @"# Example JAML Filter Templates
+                content =
+                    @"# Example JAML Filter Templates
 
 ## Basic Joker Search
 name: ""Example Filter""
@@ -622,7 +701,8 @@ vouchers:
             else if (readParams.Uri == "jaml://game-mechanics")
             {
                 // Return game mechanics documentation
-                content = @"# Balatro Game Mechanics
+                content =
+                    @"# Balatro Game Mechanics
 
 ## Antes
 - Ante 1-3: Early game
@@ -643,16 +723,20 @@ Tarot cards provide one-time effects when used.";
             {
                 // Read a specific filter file
                 var filterName = readParams.Uri.Replace("jaml://filter/", "");
-                
+
                 // Try multiple paths
                 var motelyRoot = _searchManager.GetSearchResultsDir();
                 var possiblePaths = new[]
                 {
                     Path.Combine(motelyRoot, "..", "JamlFilters", $"{filterName}.jaml"),
                     Path.Combine("JamlFilters", $"{filterName}.jaml"),
-                    Path.Combine(Directory.GetCurrentDirectory(), "JamlFilters", $"{filterName}.jaml")
+                    Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "JamlFilters",
+                        $"{filterName}.jaml"
+                    ),
                 };
-                
+
                 string? filterPath = null;
                 foreach (var path in possiblePaths)
                 {
@@ -663,7 +747,7 @@ Tarot cards provide one-time effects when used.";
                         break;
                     }
                 }
-                
+
                 if (filterPath != null && File.Exists(filterPath))
                 {
                     content = await File.ReadAllTextAsync(filterPath);
@@ -671,31 +755,46 @@ Tarot cards provide one-time effects when used.";
                 }
                 else
                 {
-                    return JsonRpcResponse.Error(request.Id, -32602, $"Filter not found: {filterName}");
+                    return JsonRpcResponse.Error(
+                        request.Id,
+                        -32602,
+                        $"Filter not found: {filterName}"
+                    );
                 }
             }
             else
             {
-                return JsonRpcResponse.Error(request.Id, -32602, $"Unknown resource URI: {readParams.Uri}");
+                return JsonRpcResponse.Error(
+                    request.Id,
+                    -32602,
+                    $"Unknown resource URI: {readParams.Uri}"
+                );
             }
 
-            return JsonRpcResponse.Success(request.Id, new
-            {
-                contents = new[]
+            return JsonRpcResponse.Success(
+                request.Id,
+                new
                 {
-                    new
+                    contents = new[]
                     {
-                        uri = readParams.Uri,
-                        mimeType = mimeType,
-                        text = content
-                    }
+                        new
+                        {
+                            uri = readParams.Uri,
+                            mimeType = mimeType,
+                            text = content,
+                        },
+                    },
                 }
-            });
+            );
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error reading resource: {Uri}", readParams.Uri);
-            return JsonRpcResponse.Error(request.Id, -32603, $"Error reading resource: {ex.Message}");
+            return JsonRpcResponse.Error(
+                request.Id,
+                -32603,
+                $"Error reading resource: {ex.Message}"
+            );
         }
     }
 
@@ -712,31 +811,35 @@ Tarot cards provide one-time effects when used.";
                     new McpPromptArgument
                     {
                         Name = "jokers",
-                        Description = "Comma-separated list of joker names (e.g., 'Blueprint, Brainstorm, Perkeo')",
-                        Required = true
+                        Description =
+                            "Comma-separated list of joker names (e.g., 'Blueprint, Brainstorm, Perkeo')",
+                        Required = true,
                     },
                     new McpPromptArgument
                     {
                         Name = "antes",
-                        Description = "Optional: Antes to search in (e.g., '1-3' or '1,2,3'). Defaults to all antes.",
-                        Required = false
-                    }
-                }
+                        Description =
+                            "Optional: Antes to search in (e.g., '1-3' or '1,2,3'). Defaults to all antes.",
+                        Required = false,
+                    },
+                },
             },
             new McpPrompt
             {
                 Name = "find_economy_build",
-                Description = "Find Balatro seeds with economy items (money-generating jokers, vouchers, tarot cards)",
+                Description =
+                    "Find Balatro seeds with economy items (money-generating jokers, vouchers, tarot cards)",
                 Arguments = new[]
                 {
                     new McpPromptArgument
                     {
                         Name = "focus",
-                        Description = "Optional: Focus area - 'early' (antes 1-3), 'mid' (antes 4-6), or 'late' (antes 7-8). Defaults to early.",
-                        Required = false
-                    }
-                }
-            }
+                        Description =
+                            "Optional: Focus area - 'early' (antes 1-3), 'mid' (antes 4-6), or 'late' (antes 7-8). Defaults to early.",
+                        Required = false,
+                    },
+                },
+            },
         };
 
         return JsonRpcResponse.Success(request.Id, new { prompts });
@@ -744,8 +847,10 @@ Tarot cards provide one-time effects when used.";
 
     private async Task<JsonRpcResponse> HandlePromptGet(JsonRpcRequest request)
     {
-        var getParams = JsonSerializer.Deserialize<McpPromptGetParams>(request.Params?.ToString() ?? "{}");
-        
+        var getParams = JsonSerializer.Deserialize<McpPromptGetParams>(
+            request.Params?.ToString() ?? "{}"
+        );
+
         if (getParams == null || string.IsNullOrEmpty(getParams.Name))
         {
             return JsonRpcResponse.Error(request.Id, -32602, "Invalid prompt get parameters");
@@ -755,7 +860,7 @@ Tarot cards provide one-time effects when used.";
         {
             // Build prompt based on prompt name and arguments
             string promptText = "";
-            
+
             if (getParams.Name == "find_joker_build")
             {
                 string? jokers = null;
@@ -764,12 +869,12 @@ Tarot cards provide one-time effects when used.";
                 getParams.Arguments?.TryGetValue("antes", out antes);
                 var jokersStr = jokers ?? "";
                 var antesStr = antes ?? "";
-                
+
                 if (string.IsNullOrEmpty(jokersStr))
                 {
                     return JsonRpcResponse.Error(request.Id, -32602, "jokers argument is required");
                 }
-                
+
                 promptText = $"Find Balatro seeds with these jokers: {jokersStr}";
                 if (!string.IsNullOrEmpty(antesStr))
                 {
@@ -781,54 +886,64 @@ Tarot cards provide one-time effects when used.";
                 string? focus = null;
                 getParams.Arguments?.TryGetValue("focus", out focus);
                 var focusStr = focus ?? "early";
-                var antes = focusStr == "early" ? "1-3" : focusStr == "mid" ? "4-6" : "7-8";
-                
-                promptText = $"Find Balatro seeds with economy items (money-generating jokers, vouchers, tarot cards) in antes {antes}";
+                var antes =
+                    focusStr == "early" ? "1-3"
+                    : focusStr == "mid" ? "4-6"
+                    : "7-8";
+
+                promptText =
+                    $"Find Balatro seeds with economy items (money-generating jokers, vouchers, tarot cards) in antes {antes}";
             }
             else
             {
-                return JsonRpcResponse.Error(request.Id, -32602, $"Unknown prompt: {getParams.Name}");
+                return JsonRpcResponse.Error(
+                    request.Id,
+                    -32602,
+                    $"Unknown prompt: {getParams.Name}"
+                );
             }
 
             // Generate JAML using the prompt
             var (jaml, reasoning, error) = await _mcpServer.GenerateJamlOnlyAsync(promptText);
-            
+
             if (!string.IsNullOrEmpty(error))
             {
-                return JsonRpcResponse.Error(request.Id, -32603, $"Failed to generate JAML: {error}");
+                return JsonRpcResponse.Error(
+                    request.Id,
+                    -32603,
+                    $"Failed to generate JAML: {error}"
+                );
             }
 
-            return JsonRpcResponse.Success(request.Id, new
-            {
-                description = $"Generated JAML filter for: {promptText}",
-                messages = new[]
+            return JsonRpcResponse.Success(
+                request.Id,
+                new
                 {
-                    new
+                    description = $"Generated JAML filter for: {promptText}",
+                    messages = new[]
                     {
-                        role = "user",
-                        content = new
+                        new { role = "user", content = new { type = "text", text = promptText } },
+                        new
                         {
-                            type = "text",
-                            text = promptText
-                        }
+                            role = "assistant",
+                            content = new
+                            {
+                                type = "text",
+                                text = $"Generated JAML filter:\n\n{jaml}\n\nReasoning: {reasoning}",
+                            },
+                        },
                     },
-                    new
-                    {
-                        role = "assistant",
-                        content = new
-                        {
-                            type = "text",
-                            text = $"Generated JAML filter:\n\n{jaml}\n\nReasoning: {reasoning}"
-                        }
-                    }
                 }
-            });
+            );
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating prompt: {Name}", getParams.Name);
-            return JsonRpcResponse.Error(request.Id, -32603, $"Error generating prompt: {ex.Message}");
+            return JsonRpcResponse.Error(
+                request.Id,
+                -32603,
+                $"Error generating prompt: {ex.Message}"
+            );
         }
     }
 }
-

@@ -27,10 +27,9 @@ public class ItemSelectorDialog : Dialog
             Width = Dim.Fill() - 2,
             Text = $"Selected: {items[0]}",
         };
-        selectionLabel.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-        });
+        selectionLabel.SetScheme(
+            new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
+        );
         Add(selectionLabel);
 
         var listView = new ListView()
@@ -77,13 +76,15 @@ public class ItemSelectorDialog : Dialog
             Y = Pos.AnchorEnd(5),
             Text = " [ ] Ban Item (B) ",
         };
-        banBtn.SetScheme(new Scheme()
-        {
-            Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-            Focus = new Attribute(BalatroTheme.White, BalatroTheme.DarkRed),
-            HotNormal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
-            HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkRed),
-        });
+        banBtn.SetScheme(
+            new Scheme()
+            {
+                Normal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+                Focus = new Attribute(BalatroTheme.White, BalatroTheme.DarkRed),
+                HotNormal = new Attribute(BalatroTheme.Red, BalatroTheme.ModalGrey),
+                HotFocus = new Attribute(BalatroTheme.White, BalatroTheme.DarkRed),
+            }
+        );
         banBtn.Accept += (s, e) =>
         {
             banToggled = !banToggled;

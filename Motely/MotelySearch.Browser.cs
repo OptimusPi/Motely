@@ -211,7 +211,10 @@ public sealed class MotelySearchSettings<TBaseFilter>
         return this;
     }
 
-    public MotelySearchSettings<TBaseFilter> WithListSearch(IEnumerable<string> seeds, bool alreadySorted = false)
+    public MotelySearchSettings<TBaseFilter> WithListSearch(
+        IEnumerable<string> seeds,
+        bool alreadySorted = false
+    )
     {
         return WithProviderSearch(new MotelySeedListProvider(seeds, alreadySorted));
     }
@@ -317,7 +320,7 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     public long BatchIndex => _batchIndex;
     public long CompletedBatchCount => _completedBatchCount;
-    
+
     // In sequential mode: 35^batchSize
     // In provider mode: 8 (Vector Width)
     public long TotalSeedsSearched => CompletedBatchCount * _seedsPerBatch;
@@ -331,14 +334,14 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private readonly Action<long, long, long, double>? _progressCallback;
     private readonly Stopwatch _elapsedTime = new();
-    
+
     private Task? _searchTask;
     private CancellationTokenSource _cts = new();
 
     // Fields for Search Execution
     private readonly long _maxBatch;
     private readonly long _seedsPerBatch;
-    
+
     // Result Buffer
     private readonly MotelySeedScoreTally[] _resultBuffer = new MotelySeedScoreTally[8];
 
@@ -398,7 +401,7 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _settings = settings;
         _searchParameters = new() { Deck = settings.Deck, Stake = settings.Stake };
         _progressCallback = settings.ProgressCallback;
-        
+
         // Initialize result buffer
         for (int i = 0; i < _resultBuffer.Length; i++)
             _resultBuffer[i] = new MotelySeedScoreTally("", 0);
@@ -420,7 +423,9 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             for (int i = 0; i < _additionalFilters.Length; i++)
             {
                 filterCreationContext.IsAdditionalFilter = true;
-                _additionalFilters[i] = settings.AdditionalFilters[i].CreateFilter(ref filterCreationContext);
+                _additionalFilters[i] = settings
+                    .AdditionalFilters[i]
+                    .CreateFilter(ref filterCreationContext);
             }
         }
 
@@ -445,13 +450,17 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Initialize Filter Batches
         if (_additionalFilters.Length != 0)
         {
-            _filterSeedBatches = (FilterSeedBatch*)Marshal.AllocHGlobal(sizeof(FilterSeedBatch) * _additionalFilters.Length);
+            _filterSeedBatches = (FilterSeedBatch*)
+                Marshal.AllocHGlobal(sizeof(FilterSeedBatch) * _additionalFilters.Length);
             for (int i = 0; i < _additionalFilters.Length; i++)
             {
                 FilterSeedBatch* batch = &_filterSeedBatches[i];
                 *batch = new()
                 {
-                    SeedHashes = (Vector512<double>*)Marshal.AllocHGlobal(sizeof(Vector512<double>) * Motely.MaxCachedPseudoHashKeyLength),
+                    SeedHashes = (Vector512<double>*)
+                        Marshal.AllocHGlobal(
+                            sizeof(Vector512<double>) * Motely.MaxCachedPseudoHashKeyLength
+                        ),
                 };
                 batch->SeedHashCache = new(this, batch->SeedHashes);
             }
@@ -468,38 +477,50 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             if (_pseudoHashKeyLengthCount > 0)
             {
-                _hashes = (Vector512<double>*)Marshal.AllocHGlobal(
-                    sizeof(Vector512<double>) * _pseudoHashKeyLengthCount * (_batchCharCount + 1)
-                );
-                _hashCache = (PartialSeedHashCache*)Marshal.AllocHGlobal(sizeof(PartialSeedHashCache));
+                _hashes = (Vector512<double>*)
+                    Marshal.AllocHGlobal(
+                        sizeof(Vector512<double>)
+                            * _pseudoHashKeyLengthCount
+                            * (_batchCharCount + 1)
+                    );
+                _hashCache = (PartialSeedHashCache*)
+                    Marshal.AllocHGlobal(sizeof(PartialSeedHashCache));
                 *_hashCache = new PartialSeedHashCache(this, &_hashes[0]);
             }
         }
         else // Provider
         {
-            if (settings.SeedProvider == null) throw new ArgumentException("SeedProvider required");
+            if (settings.SeedProvider == null)
+                throw new ArgumentException("SeedProvider required");
             _seedProvider = settings.SeedProvider;
-            _maxBatch = (_seedProvider.SeedCount + (long)(Motely.MaxVectorWidth - 1)) / (long)Motely.MaxVectorWidth;
+            _maxBatch =
+                (_seedProvider.SeedCount + (long)(Motely.MaxVectorWidth - 1))
+                / (long)Motely.MaxVectorWidth;
             _seedsPerBatch = (long)Motely.MaxVectorWidth;
 
             if (_pseudoHashKeyLengthCount > 0)
             {
-                _hashes = (Vector512<double>*)Marshal.AllocHGlobal(sizeof(Vector512<double>) * _pseudoHashKeyLengthCount);
-                _hashCache = (PartialSeedHashCache*)Marshal.AllocHGlobal(sizeof(PartialSeedHashCache));
+                _hashes = (Vector512<double>*)
+                    Marshal.AllocHGlobal(sizeof(Vector512<double>) * _pseudoHashKeyLengthCount);
+                _hashCache = (PartialSeedHashCache*)
+                    Marshal.AllocHGlobal(sizeof(PartialSeedHashCache));
                 *_hashCache = new PartialSeedHashCache(this, _hashes);
             }
-            _seedCharacterMatrix = (Vector512<double>*)Marshal.AllocHGlobal(sizeof(Vector512<double>) * Motely.MaxSeedLength);
+            _seedCharacterMatrix = (Vector512<double>*)
+                Marshal.AllocHGlobal(sizeof(Vector512<double>) * Motely.MaxSeedLength);
         }
     }
 
     public void Start()
     {
-        if (_status == MotelySearchStatus.Disposed) throw new ObjectDisposedException(nameof(MotelySearch<TBaseFilter>));
-        if (_status == MotelySearchStatus.Running) return;
+        if (_status == MotelySearchStatus.Disposed)
+            throw new ObjectDisposedException(nameof(MotelySearch<TBaseFilter>));
+        if (_status == MotelySearchStatus.Running)
+            return;
 
         _status = MotelySearchStatus.Running;
         _elapsedTime.Start();
-        
+
         // Start the background task
         _cts = new CancellationTokenSource();
         _searchTask = Task.Run(() => SearchLoopAsync(_cts.Token));
@@ -507,8 +528,10 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     public void Pause()
     {
-        if (_status == MotelySearchStatus.Disposed) throw new ObjectDisposedException(nameof(MotelySearch<TBaseFilter>));
-        if (_status != MotelySearchStatus.Running) return;
+        if (_status == MotelySearchStatus.Disposed)
+            throw new ObjectDisposedException(nameof(MotelySearch<TBaseFilter>));
+        if (_status != MotelySearchStatus.Running)
+            return;
 
         _status = MotelySearchStatus.Paused;
         _elapsedTime.Stop();
@@ -534,18 +557,27 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 {
                     _status = MotelySearchStatus.Completed;
                     // Finish processing any pending filter batches
-                    unsafe { ProcessPendingFilterBatches(); }
+                    unsafe
+                    {
+                        ProcessPendingFilterBatches();
+                    }
                     PrintReport(force: true);
                     return;
                 }
 
                 if (_settings.Mode == MotelySearchMode.Sequential)
                 {
-                    unsafe { SearchSequentialBatch(batchIdx); }
+                    unsafe
+                    {
+                        SearchSequentialBatch(batchIdx);
+                    }
                 }
                 else
                 {
-                    unsafe { SearchProviderBatch(batchIdx); }
+                    unsafe
+                    {
+                        SearchProviderBatch(batchIdx);
+                    }
                 }
 
                 _completedBatchCount++;
@@ -554,7 +586,10 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 PrintReport();
 
                 // Ensure any partially filled filter batches advance to the next filter
-                unsafe { ProcessPendingFilterBatches(); }
+                unsafe
+                {
+                    ProcessPendingFilterBatches();
+                }
 
                 // Time-Slicing: Yield to UI thread every ~16ms (60fps)
                 // We check elapsed time of the stopwatch to see if we should yield
@@ -569,14 +604,17 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 // Optimization: Yield only if > 16ms passed since last yield.
                 // But _elapsedTime counts TOTAL search time.
                 // We'll trust the OS scheduler for now, but explicit yield helps WASM.
-                
+
                 await Task.Delay(1, token);
             }
         }
         catch (TaskCanceledException)
         {
             // Expected on Pause/Stop
-            unsafe { ProcessPendingFilterBatches(); }
+            unsafe
+            {
+                ProcessPendingFilterBatches();
+            }
         }
         catch (Exception ex)
         {
@@ -597,14 +635,22 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         Vector512<double>* hashes = &_hashes[_batchCharCount * _pseudoHashKeyLengthCount];
 
-        for (int pseudohashKeyIdx = 0; pseudohashKeyIdx < _pseudoHashKeyLengthCount; pseudohashKeyIdx++)
+        for (
+            int pseudohashKeyIdx = 0;
+            pseudohashKeyIdx < _pseudoHashKeyLengthCount;
+            pseudohashKeyIdx++
+        )
         {
             int pseudohashKeyLength = _pseudoHashKeyLengths[pseudohashKeyIdx];
             double num = 1;
 
             for (int i = Motely.MaxSeedLength - 1; i > _batchCharCount - 1; i--)
             {
-                num = (1.1239285023 / num * _digits[i] * Math.PI + (i + pseudohashKeyLength + 1) * Math.PI) % 1;
+                num =
+                    (
+                        1.1239285023 / num * _digits[i] * Math.PI
+                        + (i + pseudohashKeyLength + 1) * Math.PI
+                    ) % 1;
             }
             *(double*)&hashes[pseudohashKeyIdx] = num;
         }
@@ -615,19 +661,34 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
     }
 
-    private unsafe void SearchSequentialVector(int i, Vector512<double> seedDigitVector, Vector512<double>* nums, int numsLaneIndex)
+    private unsafe void SearchSequentialVector(
+        int i,
+        Vector512<double> seedDigitVector,
+        Vector512<double>* nums,
+        int numsLaneIndex
+    )
     {
-        if (_status != MotelySearchStatus.Running) return;
+        if (_status != MotelySearchStatus.Running)
+            return;
 
         Vector512<double>* hashes = &_hashes[i * _pseudoHashKeyLengthCount];
 
-        for (int pseudohashKeyIdx = 0; pseudohashKeyIdx < _pseudoHashKeyLengthCount; pseudohashKeyIdx++)
+        for (
+            int pseudohashKeyIdx = 0;
+            pseudohashKeyIdx < _pseudoHashKeyLengthCount;
+            pseudohashKeyIdx++
+        )
         {
             int pseudohashKeyLength = _pseudoHashKeyLengths[pseudohashKeyIdx];
-            Vector512<double> calcVector = Vector512.Create(1.1239285023 / ((double*)&nums[pseudohashKeyIdx])[numsLaneIndex]);
+            Vector512<double> calcVector = Vector512.Create(
+                1.1239285023 / ((double*)&nums[pseudohashKeyIdx])[numsLaneIndex]
+            );
             calcVector = Vector512.Multiply(calcVector, seedDigitVector);
             calcVector = Vector512.Multiply(calcVector, Math.PI);
-            calcVector = Vector512.Add(calcVector, Vector512.Create((i + pseudohashKeyLength + 1) * Math.PI));
+            calcVector = Vector512.Add(
+                calcVector,
+                Vector512.Create((i + pseudohashKeyLength + 1) * Math.PI)
+            );
             Vector512<double> intPart = Vector512.Floor(calcVector);
             calcVector = Vector512.Subtract(calcVector, intPart);
             hashes[pseudohashKeyIdx] = calcVector;
@@ -648,7 +709,8 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             for (int lane = 0; lane < Motely.MaxVectorWidth; lane++)
             {
-                if (seedDigitVector[lane] == 0) break;
+                if (seedDigitVector[lane] == 0)
+                    break;
                 _digits[i] = (char)seedDigitVector[lane];
                 for (int vectorIndex = 0; vectorIndex < SeedDigitVectors.Length; vectorIndex++)
                 {
@@ -660,7 +722,8 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private unsafe void SearchProviderBatch(long batchIdx)
     {
-        if (_seedProvider == null) return;
+        if (_seedProvider == null)
+            return;
 
         long seedsProcessedSoFar = batchIdx * Motely.MaxVectorWidth;
         long seedsRemaining = Math.Max(0, _seedProvider.SeedCount - seedsProcessedSoFar);
@@ -681,10 +744,12 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         for (int seedIdx = 0; seedIdx < Motely.MaxVectorWidth; seedIdx++)
         {
             ReadOnlySpan<char> seed = _seedProvider.NextSeed();
-            if (seed.IsEmpty) break;
+            if (seed.IsEmpty)
+                break;
 
             seedLengths[seedIdx] = seed.Length;
-            if (seedLengths[0] != seed.Length) homogeneous = false;
+            if (seedLengths[0] != seed.Length)
+                homogeneous = false;
 
             for (int i = 0; i < seed.Length; i++)
             {
@@ -705,14 +770,23 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     numVector = Vector512.Divide(Vector512.Create(1.1239285023), numVector);
                     numVector = Vector512.Multiply(numVector, _seedCharacterMatrix[i]);
                     numVector = Vector512.Multiply(numVector, Math.PI);
-                    numVector = Vector512.Add(numVector, Vector512.Create((i + pLen + 1) * Math.PI));
+                    numVector = Vector512.Add(
+                        numVector,
+                        Vector512.Create((i + pLen + 1) * Math.PI)
+                    );
                     Vector512<double> intPart = Vector512.Floor(numVector);
                     numVector = Vector512.Subtract(numVector, intPart);
                 }
                 _hashes[k] = numVector;
             }
 
-            MotelySearchContextParams ctx = new(_hashCache, seedLength, 0, null, _seedCharacterMatrix);
+            MotelySearchContextParams ctx = new(
+                _hashCache,
+                seedLength,
+                0,
+                null,
+                _seedCharacterMatrix
+            );
             SearchSeeds(in ctx);
         }
         else
@@ -730,9 +804,10 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private unsafe void SearchSingleSeed(ReadOnlySpan<char> seed)
     {
-        if (seed.IsEmpty) return;
+        if (seed.IsEmpty)
+            return;
         char* seedLastChars = stackalloc char[Motely.MaxSeedLength - 1];
-        
+
         for (int k = 0; k < _pseudoHashKeyLengthCount; k++)
         {
             int pLen = _pseudoHashKeyLengths[k];
@@ -744,10 +819,17 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             _hashes[k] = Vector512.Create(num);
         }
 
-        for (int i = 0; i < seed.Length - 1; i++) seedLastChars[i] = seed[i + 1];
+        for (int i = 0; i < seed.Length - 1; i++)
+            seedLastChars[i] = seed[i + 1];
         Vector512<double> firstCharVec = Vector512.CreateScalar((double)seed[0]);
 
-        MotelySearchContextParams ctx = new(_hashCache, seed.Length, seed.Length - 1, seedLastChars, &firstCharVec);
+        MotelySearchContextParams ctx = new(
+            _hashCache,
+            seed.Length,
+            seed.Length - 1,
+            seedLastChars,
+            &firstCharVec
+        );
         SearchSeeds(in ctx);
     }
 
@@ -767,7 +849,7 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 BatchSeeds(0, mask, in paramsIn);
             }
         }
-        
+
         paramsIn.SeedHashCache->Reset();
     }
 
@@ -776,15 +858,16 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Simple reporting for now - matching Desktop behavior
         if (_scoreProvider != null)
         {
-             MotelyVectorSearchContext ctx = new(in _searchParameters, in paramsIn);
-             VectorMask scoredMask = _scoreProvider.Score(ref ctx, _resultBuffer, mask, 0);
-             if (scoredMask.IsPartiallyTrue())
-             {
-                 for (int i = 0; i < Motely.MaxVectorWidth; i++)
-                 {
-                     if (scoredMask[i] && paramsIn.IsLaneValid(i)) _matchingSeeds++;
-                 }
-             }
+            MotelyVectorSearchContext ctx = new(in _searchParameters, in paramsIn);
+            VectorMask scoredMask = _scoreProvider.Score(ref ctx, _resultBuffer, mask, 0);
+            if (scoredMask.IsPartiallyTrue())
+            {
+                for (int i = 0; i < Motely.MaxVectorWidth; i++)
+                {
+                    if (scoredMask[i] && paramsIn.IsLaneValid(i))
+                        _matchingSeeds++;
+                }
+            }
         }
         else
         {
@@ -797,7 +880,7 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     if (!_settings.QuietMode)
                     {
                         int len = paramsIn.GetSeed(i, seed);
-                        // In Browser, Console.WriteLine might log to dev tools. 
+                        // In Browser, Console.WriteLine might log to dev tools.
                         // But usually progress callback is what matters.
                     }
                 }
@@ -805,10 +888,14 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
     }
 
-    private unsafe void BatchSeeds(int filterIdx, VectorMask mask, in MotelySearchContextParams paramsIn)
+    private unsafe void BatchSeeds(
+        int filterIdx,
+        VectorMask mask,
+        in MotelySearchContextParams paramsIn
+    )
     {
         FilterSeedBatch* batch = &_filterSeedBatches[filterIdx];
-        
+
         for (int lane = 0; lane < Vector512<double>.Count; lane++)
         {
             if (mask[lane] && paramsIn.IsLaneValid(lane))
@@ -827,17 +914,21 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
 
                 batch->SeedCount++;
-                
+
                 // Copy digits
                 for (int i = 0; i < paramsIn.SeedLastCharactersLength; i++)
-                    ((double*)&batch->SeedCharacters)[i * Vector512<double>.Count + idx] = 
-                        ((double*)paramsIn.SeedLastCharacters)[i * Vector512<double>.Count + lane];
-                
-                for (int firstCharIndex = 0;
+                    ((double*)&batch->SeedCharacters)[i * Vector512<double>.Count + idx] = (
+                        (double*)paramsIn.SeedLastCharacters
+                    )[i * Vector512<double>.Count + lane];
+
+                for (
+                    int firstCharIndex = 0;
                     firstCharIndex < paramsIn.SeedFirstCharactersLength;
-                    firstCharIndex++)
+                    firstCharIndex++
+                )
                     ((double*)&batch->SeedCharacters)[
-                        (paramsIn.SeedLastCharactersLength + firstCharIndex) * Vector512<double>.Count
+                        (paramsIn.SeedLastCharactersLength + firstCharIndex)
+                            * Vector512<double>.Count
                             + idx
                     ] = paramsIn.SeedFirstCharacters[firstCharIndex];
 
@@ -845,8 +936,9 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 for (int i = 0; i < _pseudoHashKeyLengthCount; i++)
                 {
                     int pLen = _pseudoHashKeyLengths[i];
-                    ((double*)batch->SeedHashes)[i * Vector512<double>.Count + idx] = 
-                        ((double*)paramsIn.SeedHashCache->Cache[pLen])[lane];
+                    ((double*)batch->SeedHashes)[i * Vector512<double>.Count + idx] = (
+                        (double*)paramsIn.SeedHashCache->Cache[pLen]
+                    )[lane];
                 }
 
                 if (idx == Vector512<double>.Count - 1)
@@ -859,12 +951,13 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private unsafe void SearchFilterBatch(int filterIdx, FilterSeedBatch* batch)
     {
-        if (batch->SeedCount == 0) return;
+        if (batch->SeedCount == 0)
+            return;
 
         // Clear unused lanes
         for (int i = batch->SeedCount; i < Vector512<double>.Count; i++)
-            for (int j = 0; j < batch->SeedLength; j++)
-                ((double*)&batch->SeedCharacters)[j * Vector512<double>.Count + i] = 0;
+        for (int j = 0; j < batch->SeedLength; j++)
+            ((double*)&batch->SeedCharacters)[j * Vector512<double>.Count + i] = 0;
 
         MotelySearchContextParams ctxParams = new(
             &batch->SeedHashCache,
@@ -892,7 +985,8 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private unsafe void ProcessPendingFilterBatches()
     {
-        if (_filterSeedBatches == null) return;
+        if (_filterSeedBatches == null)
+            return;
         for (int i = 0; i < _additionalFilters.Length; i++)
         {
             if (_filterSeedBatches[i].SeedCount > 0)
@@ -902,14 +996,16 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private void PrintReport(bool force = false)
     {
-        if (_progressCallback == null) return;
+        if (_progressCallback == null)
+            return;
         double elapsed = _elapsedTime.ElapsedMilliseconds;
-        if (!force && elapsed - _lastReportMS < reportInterval) return;
-        
+        if (!force && elapsed - _lastReportMS < reportInterval)
+            return;
+
         _lastReportMS = elapsed;
         long seedsSearched = _completedBatchCount * _seedsPerBatch;
         double speed = elapsed > 1 ? seedsSearched / elapsed : 0;
-        
+
         _progressCallback(_completedBatchCount, _maxBatch, seedsSearched, speed);
     }
 
@@ -917,9 +1013,9 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
     {
         Pause();
         _status = MotelySearchStatus.Disposed;
-        
+
         Marshal.FreeHGlobal((nint)_pseudoHashKeyLengths);
-        
+
         if (_filterSeedBatches != null)
         {
             for (int i = 0; i < _additionalFilters.Length; i++)
@@ -931,14 +1027,17 @@ public sealed class MotelySearch<TBaseFilter> : IInternalMotelySearch
             Marshal.FreeHGlobal((nint)_filterSeedBatches);
         }
 
-        if (_digits != null) Marshal.FreeHGlobal((nint)_digits);
-        if (_hashes != null) Marshal.FreeHGlobal((nint)_hashes);
+        if (_digits != null)
+            Marshal.FreeHGlobal((nint)_digits);
+        if (_hashes != null)
+            Marshal.FreeHGlobal((nint)_hashes);
         if (_hashCache != null)
         {
             _hashCache->Dispose();
             Marshal.FreeHGlobal((nint)_hashCache);
         }
-        if (_seedCharacterMatrix != null) Marshal.FreeHGlobal((nint)_seedCharacterMatrix);
+        if (_seedCharacterMatrix != null)
+            Marshal.FreeHGlobal((nint)_seedCharacterMatrix);
 
         GC.SuppressFinalize(this);
     }

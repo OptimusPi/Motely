@@ -3,7 +3,7 @@ author: pifreak
 deck: Ghost
 stake: White
 
-Must:  
+must:  
   - smallBlindTag: CouponTag
     antes: [1]
 
@@ -27,7 +27,7 @@ Must:
     antes: [1]
     packSlots: [1]  
 
-Should:
+should:
   - soulJoker: Perkeo
     score: 100
   - joker: Showman

@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Text;
 using SixLabors.ImageSharp.PixelFormats;
-using SLImage = SixLabors.ImageSharp.Image;
 using Color = Terminal.Gui.Drawing.Color;
+using SLImage = SixLabors.ImageSharp.Image;
 
 namespace Motely.TUI;
 
@@ -26,7 +26,7 @@ public class JimboView : View
         // Scale down dimensions
         var scaledWidth = (int)(_pixelWidth * _scale);
         var scaledHeight = (int)(_pixelHeight * _scale);
-        
+
         // Each character cell shows 2 vertical pixels using half-block
         Width = scaledWidth;
         Height = (scaledHeight + 1) / 2;
@@ -45,8 +45,8 @@ public class JimboView : View
             // Fallback: return a small placeholder
             var placeholder = new Color[8, 8];
             for (int x = 0; x < 8; x++)
-                for (int y = 0; y < 8; y++)
-                    placeholder[x, y] = new Color(255, 0, 255); // Magenta = missing
+            for (int y = 0; y < 8; y++)
+                placeholder[x, y] = new Color(255, 0, 255); // Magenta = missing
             return (placeholder, 8, 8);
         }
 
@@ -73,7 +73,7 @@ public class JimboView : View
         var transparent = new Color(0, 0, 0, 0);
         var shader = MotelyTUI.ShaderBackground;
         var screenRect = ViewportToScreen(viewport);
-        
+
         var scaledWidth = (int)(_pixelWidth * _scale);
         var scaledHeight = (int)(_pixelHeight * _scale);
 
@@ -85,21 +85,22 @@ public class JimboView : View
                 int srcX = (int)(charX / _scale);
                 int srcTopY = (int)((charY * 2) / _scale);
                 int srcBottomY = (int)((charY * 2 + 1) / _scale);
-                
+
                 // Clamp to valid pixel bounds
                 srcX = Math.Clamp(srcX, 0, _pixelWidth - 1);
                 srcTopY = Math.Clamp(srcTopY, 0, _pixelHeight - 1);
                 srcBottomY = Math.Clamp(srcBottomY, 0, _pixelHeight - 1);
 
                 var topColor = _pixels[srcX, srcTopY];
-                var bottomColor = srcBottomY < _pixelHeight ? _pixels[srcX, srcBottomY] : transparent;
+                var bottomColor =
+                    srcBottomY < _pixelHeight ? _pixels[srcX, srcBottomY] : transparent;
 
                 bool topTransparent = topColor.A == 0;
                 bool bottomTransparent = bottomColor.A == 0;
 
                 // Get shader background color at this screen position
-                var bgColor = shader?.GetColorAt(screenRect.X + charX, screenRect.Y + charY)
-                    ?? Color.Black;
+                var bgColor =
+                    shader?.GetColorAt(screenRect.X + charX, screenRect.Y + charY) ?? Color.Black;
 
                 if (topTransparent && bottomTransparent)
                 {

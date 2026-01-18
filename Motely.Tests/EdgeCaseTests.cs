@@ -1,5 +1,5 @@
-using Motely.Filters;
 using System.Linq;
+using Motely.Filters;
 
 namespace Motely.Tests
 {
@@ -11,7 +11,8 @@ namespace Motely.Tests
         [Fact]
         public void Test_EmptyArrays_Defaulted()
         {
-            var jaml = @"
+            var jaml =
+                @"
 name: EmptyArrayTest
 must:
 - joker: Blueprint
@@ -24,7 +25,7 @@ must:
             config!.PostProcess(); // Apply defaults
             Assert.NotNull(config);
             var clause = config.Must![0];
-            
+
             // Empty arrays get defaulted to all antes (expected behavior)
             Assert.NotNull(clause.Antes);
             Assert.True(clause.Antes!.Length > 0); // Defaulted to all antes
@@ -36,7 +37,8 @@ must:
         [Fact]
         public void Test_NullValues_Handled()
         {
-            var jaml = @"
+            var jaml =
+                @"
 name: NullTest
 must:
 - joker: Blueprint
@@ -46,7 +48,7 @@ must:
             config!.PostProcess(); // Apply defaults
             Assert.NotNull(config);
             var clause = config.Must![0];
-            
+
             // Null values should be handled gracefully
             // Value should be set from type-as-key
             Assert.Equal("Blueprint", clause.Value);
@@ -84,17 +86,17 @@ must:
                                             {
                                                 Type = "Joker",
                                                 Value = "Blueprint",
-                                                Antes = new[] { 1 }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                                                Antes = new[] { 1 },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             };
-            
+
             config.PostProcess();
             var andClause = config.Must![0];
             Assert.NotNull(andClause.Clauses);
@@ -132,27 +134,29 @@ must:
                                     new MotelyJsonConfig.MotelyJsonFilterClause
                                     {
                                         Type = "Joker",
-                                        Value = "Blueprint"
+                                        Value = "Blueprint",
                                     },
                                     new MotelyJsonConfig.MotelyJsonFilterClause
                                     {
                                         Type = "Joker",
-                                        Value = "Showman"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                                        Value = "Showman",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             };
-            
+
             config.PostProcess(); // Apply defaults and track explicit antes
             var andClause = config.Should![0];
             Assert.True(andClause.AntesWasExplicitlySet);
             Assert.Equal(3, andClause.Antes!.Length);
-            
+
             // Antes should propagate to deeply nested clauses
-            var orClause = andClause.Clauses!.FirstOrDefault(c => c.Type.Equals("or", StringComparison.OrdinalIgnoreCase));
+            var orClause = andClause.Clauses!.FirstOrDefault(c =>
+                c.Type.Equals("or", StringComparison.OrdinalIgnoreCase)
+            );
             Assert.NotNull(orClause);
             Assert.NotNull(orClause!.Clauses);
         }
@@ -176,19 +180,19 @@ must:
                             new MotelyJsonConfig.MotelyJsonFilterClause
                             {
                                 Type = "SmallBlindTag",
-                                Value = "NegativeTag"
+                                Value = "NegativeTag",
                             },
                             new MotelyJsonConfig.MotelyJsonFilterClause
                             {
                                 Type = "Joker",
                                 Value = "OopsAll6s",
-                                ShopSlots = new[] { 2, 3, 4 }
-                            }
-                        }
-                    }
-                }
+                                ShopSlots = new[] { 2, 3, 4 },
+                            },
+                        },
+                    },
+                },
             };
-            
+
             config.PostProcess(); // Apply defaults and track explicit antes
             var andClause = config.Should![0];
             Assert.NotNull(andClause);
@@ -199,7 +203,8 @@ must:
         [Fact]
         public void Test_SourcesConfig_EmptyArrays()
         {
-            var jaml = @"
+            var jaml =
+                @"
 name: SourcesTest
 must:
 - joker: Blueprint
@@ -212,7 +217,7 @@ must:
 
             var config = ConfigFormatConverter.LoadFromJamlString(jaml);
             Assert.NotNull(config);
-            
+
             config.PostProcess();
             var clause = config.Must![0];
             Assert.NotNull(clause.Sources);

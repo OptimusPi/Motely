@@ -19,10 +19,10 @@ public partial class FancyConsoleImpl : IMotelyConsole
     public static FancyConsoleImpl Instance => _instance;
 
     // IMotelyConsole implementation
-    bool IMotelyConsole.IsEnabled 
-    { 
-        get => IsEnabled; 
-        set => IsEnabled = value; 
+    bool IMotelyConsole.IsEnabled
+    {
+        get => IsEnabled;
+        set => IsEnabled = value;
     }
 
     private FancyConsoleImpl() { } // Private constructor for singleton
@@ -66,9 +66,9 @@ public partial class FancyConsoleImpl : IMotelyConsole
         {
             ClearBottomLine();
         }
-        
+
         Console.WriteLine(message ?? "null");
-        
+
         if (_bottomLine != null)
         {
             WriteBottomLine(_bottomLine);

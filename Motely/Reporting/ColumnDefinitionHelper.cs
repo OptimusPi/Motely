@@ -11,9 +11,7 @@ public static class ColumnDefinitionHelper
     /// Create column definitions from a config's Should clauses
     /// Each Should clause becomes a ScoreTally column
     /// </summary>
-    public static List<IColumnDefinition> CreateFromShouldClauses(
-        MotelyJsonConfig config
-    )
+    public static List<IColumnDefinition> CreateFromShouldClauses(MotelyJsonConfig config)
     {
         var columns = new List<IColumnDefinition>();
 
@@ -23,7 +21,7 @@ public static class ColumnDefinitionHelper
         foreach (var clause in config.Should)
         {
             var columnName = GetClauseColumnName(clause);
-            
+
             // Check if this is a ValueFunction column
             var mode = clause.Mode?.ToLowerInvariant();
             if (mode == "value" || mode == "function" || (!string.IsNullOrEmpty(clause.Function)))
@@ -66,7 +64,11 @@ public static class ColumnDefinitionHelper
             return clause.Label;
 
         // Handle OR/AND clauses with compact notation
-        if ((clause.Type?.ToLower() == "or" || clause.Type?.ToLower() == "and") && clause.Clauses != null && clause.Clauses.Count > 0)
+        if (
+            (clause.Type?.ToLower() == "or" || clause.Type?.ToLower() == "and")
+            && clause.Clauses != null
+            && clause.Clauses.Count > 0
+        )
         {
             var clauseType = clause.Type.ToUpper();
             var count = clause.Clauses.Count;

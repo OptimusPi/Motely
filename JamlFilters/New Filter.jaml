@@ -1,0 +1,11 @@
+name: New Filter
+description: 
+author: 
+deck: Erratic
+stake: White
+
+defaults:
+  antes: [1, 2, 3, 4, 5, 6, 7, 8]
+  packSlots: [1, 2, 3, 4, 5]
+  shopSlots: [1, 2, 3, 4, 5]
+  score: 1

@@ -1,8 +1,8 @@
 using Motely.Filters;
+using Motely.Filters.MotelyJson;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using YamlDotNet.Core;
-using Motely.Filters.MotelyJson;
 
 namespace Motely;
 
@@ -67,7 +67,11 @@ public static class JamlConfigLoader
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(NullNamingConvention.Instance)
                 .WithCaseInsensitivePropertyMatching()
-                .WithNodeDeserializer(new JamlTypeAsKeyNodeDeserializer(), s => s.Before<YamlDotNet.Serialization.NodeDeserializers.ObjectNodeDeserializer>())
+                .WithNodeDeserializer(
+                    new JamlTypeAsKeyNodeDeserializer(),
+                    s =>
+                        s.Before<YamlDotNet.Serialization.NodeDeserializers.ObjectNodeDeserializer>()
+                )
                 .IgnoreUnmatchedProperties()
                 .Build();
 
@@ -92,33 +96,46 @@ public static class JamlConfigLoader
             config = null;
             var innerMsg = ex.InnerException?.Message;
             var details = innerMsg != null ? $" -> {innerMsg}" : "";
-            
+
             // Extract line number from YAML parser exceptions
             var lineInfo = "";
             var lineNumber = 0;
-            if (ex.Message.Contains("Line:") || ex.Message.Contains("at Line") || ex.Message.Contains("line"))
+            if (
+                ex.Message.Contains("Line:")
+                || ex.Message.Contains("at Line")
+                || ex.Message.Contains("line")
+            )
             {
-                var lineMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"[Ll]ine[:\s]+(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var lineMatch = System.Text.RegularExpressions.Regex.Match(
+                    ex.Message,
+                    @"[Ll]ine[:\s]+(\d+)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                );
                 if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out lineNumber))
                 {
                     lineInfo = $" (Line {lineNumber})";
                 }
             }
-            
+
             // Build helpful error message
             var errorMsg = new System.Text.StringBuilder();
             errorMsg.AppendLine($"Failed to parse JAML{lineInfo}: {ex.Message}{details}");
             errorMsg.AppendLine();
             errorMsg.AppendLine("💡 Common YAML syntax errors:");
-            
+
             // Check for specific error patterns and provide targeted hints
             var errorLower = ex.Message.ToLowerInvariant();
-            if (errorLower.Contains("did not find expected key") || errorLower.Contains("block mapping"))
+            if (
+                errorLower.Contains("did not find expected key")
+                || errorLower.Contains("block mapping")
+            )
             {
-                errorMsg.AppendLine("  ❌ Missing space after colon (e.g., 'antes:[1]' should be 'antes: [1]')");
+                errorMsg.AppendLine(
+                    "  ❌ Missing space after colon (e.g., 'antes:[1]' should be 'antes: [1]')"
+                );
                 errorMsg.AppendLine("  ❌ Incorrect indentation (use 2 spaces, not tabs)");
                 errorMsg.AppendLine("  ❌ Missing colon after key");
-                
+
                 // Try to show the problematic line if we have a line number
                 if (lineNumber > 0)
                 {
@@ -126,7 +143,9 @@ public static class JamlConfigLoader
                     if (lineNumber <= lines.Length)
                     {
                         var problemLine = lines[lineNumber - 1];
-                        errorMsg.AppendLine($"  📍 Problematic line {lineNumber}: {problemLine.Trim()}");
+                        errorMsg.AppendLine(
+                            $"  📍 Problematic line {lineNumber}: {problemLine.Trim()}"
+                        );
                     }
                 }
             }
@@ -146,13 +165,15 @@ public static class JamlConfigLoader
                 errorMsg.AppendLine("  ❌ Verify property names match schema");
                 errorMsg.AppendLine("  ❌ Ensure array properties use [] brackets");
             }
-            
+
             errorMsg.AppendLine();
             errorMsg.AppendLine("💡 Quick fixes:");
-            errorMsg.AppendLine("  • Always put a space after colons: 'key: value' not 'key:value'");
+            errorMsg.AppendLine(
+                "  • Always put a space after colons: 'key: value' not 'key:value'"
+            );
             errorMsg.AppendLine("  • Use consistent 2-space indentation");
             errorMsg.AppendLine("  • Arrays: 'antes: [1, 2, 3]' not 'antes: 1, 2, 3'");
-            
+
             error = errorMsg.ToString();
             return false;
         }
@@ -166,30 +187,53 @@ public static class JamlConfigLoader
     {
         var lines = jamlContent.Split('\n');
         var result = new System.Text.StringBuilder();
-        
+
         // Support clean type-as-key syntax: "joker: Blueprint" instead of "type: Joker, value: Blueprint"
         // Support plural values arrays: "jokers: [Blueprint, Brainstorm]" expands to multiple clauses
         // Singular type keys (case-insensitive matching handled via ToLowerInvariant)
-        var typeKeys = new[] {
-            "joker", "souljoker", "voucher",
-            "tarot", "tarotcard",
-            "planet", "planetcard",
-            "spectral", "spectralcard",
+        var typeKeys = new[]
+        {
+            "joker",
+            "souljoker",
+            "voucher",
+            "tarot",
+            "tarotcard",
+            "planet",
+            "planetcard",
+            "spectral",
+            "spectralcard",
             "standardcard",
-            "boss", "tag", "smallblindtag", "bigblindtag",
-            "erraticrank", "erraticsuit",
-            "event", "and", "or"
+            "boss",
+            "tag",
+            "smallblindtag",
+            "bigblindtag",
+            "erraticrank",
+            "erraticsuit",
+            "event",
+            "and",
+            "or",
         };
 
         // Plural type keys for array syntax (case-insensitive)
-        var pluralTypeKeys = new[] {
-            "jokers", "souljokers", "vouchers",
-            "tarots", "tarotcards",
-            "planets", "planetcards",
-            "spectrals", "spectralcards",
+        var pluralTypeKeys = new[]
+        {
+            "jokers",
+            "souljokers",
+            "vouchers",
+            "tarots",
+            "tarotcards",
+            "planets",
+            "planetcards",
+            "spectrals",
+            "spectralcards",
             "standardcards",
-            "bosses", "tags", "smallblindtags", "bigblindtags",
-            "erraticranks", "erraticsuits", "events"
+            "bosses",
+            "tags",
+            "smallblindtags",
+            "bigblindtags",
+            "erraticranks",
+            "erraticsuits",
+            "events",
         };
 
         for (int i = 0; i < lines.Length; i++)
@@ -207,7 +251,7 @@ public static class JamlConfigLoader
                 if (colonIndex > 2)
                 {
                     var keyPart = trimmed.Substring(2, colonIndex - 2).Trim().ToLowerInvariant();
-                    
+
                     // Handle plural arrays (jokers: [Blueprint, Brainstorm])
                     foreach (var pluralKey in pluralTypeKeys)
                     {
@@ -217,7 +261,7 @@ public static class JamlConfigLoader
                             var singularType = GetSingularTypeName(pluralKey);
                             var normalizedType = NormalizeTypeName(singularType);
                             var arrayContent = trimmed.Substring(colonIndex + 1).Trim();
-                            
+
                             // Convert jokers: [Blueprint, Brainstorm] to type: Joker + values: [Blueprint, Brainstorm]
                             result.AppendLine($"{indent}- type: {normalizedType}");
                             result.AppendLine($"{indent}  values: {arrayContent}");
@@ -225,7 +269,7 @@ public static class JamlConfigLoader
                             break;
                         }
                     }
-                    
+
                     // Then check for singular type-as-key patterns
                     if (!matched)
                     {
@@ -243,8 +287,10 @@ public static class JamlConfigLoader
                                 // Special handling for or/and - they use "clauses:" not "value:"
                                 // This allows shorthand: "- or:" followed by nested items
                                 // instead of requiring explicit "clauses:" keyword
-                                if (typeKey.Equals("or", StringComparison.OrdinalIgnoreCase) ||
-                                    typeKey.Equals("and", StringComparison.OrdinalIgnoreCase))
+                                if (
+                                    typeKey.Equals("or", StringComparison.OrdinalIgnoreCase)
+                                    || typeKey.Equals("and", StringComparison.OrdinalIgnoreCase)
+                                )
                                 {
                                     // "null" comes from js-yaml formatter quirk - treat as empty
                                     // User already has explicit "clauses:" on next line, don't add another
@@ -276,7 +322,7 @@ public static class JamlConfigLoader
                     }
                 }
             }
-            
+
             // Also handle type-as-key in nested clauses (indented, no "- " prefix)
             // Pattern: "    smallblindtag: NegativeTag" (inside clauses array)
             if (!matched && trimmed.Length > 0 && !trimmed.StartsWith("- "))
@@ -285,7 +331,7 @@ public static class JamlConfigLoader
                 if (colonIndex > 0)
                 {
                     var keyPart = trimmed.Substring(0, colonIndex).Trim();
-                    
+
                     // Check plural keys
                     foreach (var pluralKey in pluralTypeKeys)
                     {
@@ -295,14 +341,14 @@ public static class JamlConfigLoader
                             var singularType = GetSingularTypeName(pluralKey);
                             var normalizedType = NormalizeTypeName(singularType);
                             var arrayContent = trimmed.Substring(colonIndex + 1).Trim();
-                            
+
                             result.AppendLine($"{indent}type: {normalizedType}");
                             result.AppendLine($"{indent}values: {arrayContent}");
                             matched = true;
                             break;
                         }
                     }
-                    
+
                     // Check singular keys
                     if (!matched)
                     {
@@ -313,7 +359,7 @@ public static class JamlConfigLoader
                                 var indent = line.Substring(0, line.Length - trimmed.Length);
                                 var value = trimmed.Substring(colonIndex + 1).Trim();
                                 var normalizedType = NormalizeTypeName(typeKey);
-                                
+
                                 result.AppendLine($"{indent}type: {normalizedType}");
                                 result.AppendLine($"{indent}value: {value}");
                                 matched = true;
@@ -337,17 +383,16 @@ public static class JamlConfigLoader
         }
 
         var processed = result.ToString();
-        
+
         // DEBUG: Log preprocessed output if it changed
-        #if DEBUG
+#if DEBUG
         if (processed != jamlContent)
         {
             System.Diagnostics.Debug.WriteLine("=== PREPROCESSOR OUTPUT ===");
             System.Diagnostics.Debug.WriteLine(processed);
             System.Diagnostics.Debug.WriteLine("=== END PREPROCESSOR ===");
         }
-        #endif
-        
+#endif
         return processed;
     }
 
@@ -370,7 +415,7 @@ public static class JamlConfigLoader
             "events" => "event",
             "erraticranks" => "erraticRank",
             "erraticsuits" => "erraticSuit",
-            _ => pluralKey.TrimEnd('s') // fallback: remove 's'
+            _ => pluralKey.TrimEnd('s'), // fallback: remove 's'
         };
     }
 
@@ -394,7 +439,7 @@ public static class JamlConfigLoader
             "erraticsuit" => "ErraticSuit",
             "and" => "And",
             "or" => "Or",
-            _ => typeKey
+            _ => typeKey,
         };
     }
 }

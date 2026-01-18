@@ -95,7 +95,8 @@ public class SpeechBubble : View
         {
             string line = lines[i];
             int lineX = 1 + (textAreaWidth - line.Length) / 2;
-            if (lineX < 1) lineX = 1;
+            if (lineX < 1)
+                lineX = 1;
 
             for (int j = 0; j < line.Length && lineX + j < viewport.Width - 1; j++)
             {

@@ -1,11 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net10.0;net10.0-browser;net10.0-android;net10.0-ios</TargetFrameworks>
-    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">21</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'"
+      >21</SupportedOSPlatformVersion
+    >
     <!-- <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks> -->
-    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0'">win-x64;linux-x64;osx-x64;osx-arm64;android-arm64;android-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0'"
+      >win-x64;linux-x64;osx-x64;osx-arm64;android-arm64;android-x64</RuntimeIdentifiers
+    >
     <!-- Exclude Android from build matrix - Motely is a desktop CLI tool -->
-    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0-browser'">browser-wasm</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="'$(TargetFramework)' == 'net10.0-browser'"
+      >browser-wasm</RuntimeIdentifiers
+    >
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -17,8 +23,14 @@
     <!-- Multi-targeting (net10.0 + browser) means building for BSO -> always Library -->
     <OutputType Condition="$(TargetFrameworks.Contains(';'))">Library</OutputType>
     <!-- Single-targeting: Exe by default, Library if BSO_LIBRARY config -->
-    <OutputType Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' == 'BSO_LIBRARY'">Library</OutputType>
-    <OutputType Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' != 'BSO_LIBRARY'">Exe</OutputType>
+    <OutputType
+      Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' == 'BSO_LIBRARY'"
+      >Library</OutputType
+    >
+    <OutputType
+      Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' != 'BSO_LIBRARY'"
+      >Exe</OutputType
+    >
   </PropertyGroup>
   <PropertyGroup>
     <!-- Performance optimizations -->
@@ -133,7 +145,7 @@
     <AndroidSdkDirectory>$(LOCALAPPDATA)\Android\android-sdk</AndroidSdkDirectory>
     <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
   </PropertyGroup>
-  
+
   <!-- Exclude desktop-only files from Android/iOS builds -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android' OR '$(TargetFramework)' == 'net10.0-ios'">
     <!-- TUI uses Terminal.Gui - not mobile compatible -->

@@ -25,7 +25,9 @@ public struct MotelyJsonPlanetFilterDesc(MotelyJsonPlanetFilterCriteria criteria
 
         // SINGLE clause only - caller must chain multiple filters for multiple clauses
         if (_criteria.Clauses.Count != 1)
-            throw new ArgumentException($"MotelyJsonPlanetFilter expects exactly 1 clause, got {_criteria.Clauses.Count}");
+            throw new ArgumentException(
+                $"MotelyJsonPlanetFilter expects exactly 1 clause, got {_criteria.Clauses.Count}"
+            );
 
         return new MotelyJsonPlanetFilter(
             _criteria.Clauses[0],

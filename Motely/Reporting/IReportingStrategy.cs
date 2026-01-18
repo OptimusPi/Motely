@@ -43,7 +43,7 @@ public class MaxOfStrategy : IReportingStrategy
             double d => d,
             decimal dec => (double)dec,
             string s when double.TryParse(s, out var parsed) => parsed,
-            _ => null
+            _ => null,
         };
     }
 }
@@ -61,7 +61,8 @@ public class SumAllStrategy : IReportingStrategy
 
         foreach (var result in results)
         {
-            if (result == null) continue;
+            if (result == null)
+                continue;
 
             var num = ConvertToNumber(result);
             if (num.HasValue)
@@ -84,7 +85,7 @@ public class SumAllStrategy : IReportingStrategy
             double d => d,
             decimal dec => (double)dec,
             string s when double.TryParse(s, out var parsed) => parsed,
-            _ => null
+            _ => null,
         };
     }
 }
@@ -99,7 +100,8 @@ public class FirstMatchStrategy : IReportingStrategy
     {
         foreach (var result in results)
         {
-            if (result == null) continue;
+            if (result == null)
+                continue;
 
             // For numeric values, treat 0 as null
             if (IsNumericZero(result))
@@ -124,7 +126,7 @@ public class FirstMatchStrategy : IReportingStrategy
             float f => Math.Abs(f) < float.Epsilon,
             double d => Math.Abs(d) < double.Epsilon,
             decimal dec => dec == 0,
-            _ => false
+            _ => false,
         };
     }
 }

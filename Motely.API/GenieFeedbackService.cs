@@ -23,7 +23,13 @@ public class GenieFeedbackService
         _feedbackFile = Path.Combine(_feedbackDir, "feedback.jsonl");
     }
 
-    public void LogFailure(string prompt, string generatedJaml, string aiReasoning, string error, object? context = null)
+    public void LogFailure(
+        string prompt,
+        string generatedJaml,
+        string aiReasoning,
+        string error,
+        object? context = null
+    )
     {
         var failure = new
         {
@@ -32,7 +38,7 @@ public class GenieFeedbackService
             generatedJaml = generatedJaml,
             aiReasoning = aiReasoning,
             error = error,
-            context = context
+            context = context,
         };
 
         var json = JsonSerializer.Serialize(failure);
@@ -48,7 +54,7 @@ public class GenieFeedbackService
             prompt = prompt,
             searchId = searchId,
             success = success,
-            feedback = feedback
+            feedback = feedback,
         };
 
         var json = JsonSerializer.Serialize(feedbackEntry);
@@ -59,8 +65,9 @@ public class GenieFeedbackService
     public List<GenieFailure> GetRecentFailures(int count = 50)
     {
         var failures = new List<GenieFailure>();
-        
-        if (!File.Exists(_failuresFile)) return failures;
+
+        if (!File.Exists(_failuresFile))
+            return failures;
 
         var lines = File.ReadAllLines(_failuresFile);
         var recentLines = lines.TakeLast(count).Reverse();
@@ -85,8 +92,9 @@ public class GenieFeedbackService
     public List<GenieFeedback> GetRecentFeedback(int count = 50)
     {
         var feedbacks = new List<GenieFeedback>();
-        
-        if (!File.Exists(_feedbackFile)) return feedbacks;
+
+        if (!File.Exists(_feedbackFile))
+            return feedbacks;
 
         var lines = File.ReadAllLines(_feedbackFile);
         var recentLines = lines.TakeLast(count).Reverse();
@@ -111,11 +119,12 @@ public class GenieFeedbackService
     public string GetFailureContextForPrompt(int recentFailureCount = 5)
     {
         var failures = GetRecentFailures(recentFailureCount);
-        if (failures.Count == 0) return string.Empty;
+        if (failures.Count == 0)
+            return string.Empty;
 
         var context = new System.Text.StringBuilder();
         context.AppendLine("\n--- PAST FAILURES TO LEARN FROM ---");
-        
+
         foreach (var failure in failures)
         {
             context.AppendLine($"\nFAILED REQUEST: {failure.Prompt}");
@@ -125,8 +134,10 @@ public class GenieFeedbackService
                 context.AppendLine($"AI REASONING: {failure.AiReasoning}");
             context.AppendLine("---");
         }
-        
-        context.AppendLine("\nDO NOT repeat these mistakes. Analyze what went wrong and generate correct JAML.");
+
+        context.AppendLine(
+            "\nDO NOT repeat these mistakes. Analyze what went wrong and generate correct JAML."
+        );
         return context.ToString();
     }
 }

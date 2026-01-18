@@ -5,13 +5,13 @@ dateCreated: 2025-12-09T06:05:26.266Z
 deck: Anaglyph
 stake: White
 must:
-  - Joker: Splash
+  - joker: Splash
     shopSlots: [0,1]
     antes: [1]
-  - Joker: Blueprint
+  - joker: Blueprint
     antes: [1]
     shopSlots: [0,1]
-  - Joker: MidasMask
+  - joker: MidasMask
     antes: [1]
     packSlots: [0]
 

@@ -25,7 +25,7 @@ namespace Motely.Filters.MotelyJson
             { typeof(int), new IntHandler() },
             { typeof(int?), new NullableIntHandler() },
             { typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>), new ClausesListHandler() },
-            { typeof(SourcesConfig), new SourcesConfigHandler() }
+            { typeof(SourcesConfig), new SourcesConfigHandler() },
         };
 
         public static IPropertyTypeHandler? GetHandler(Type propertyType)
@@ -35,9 +35,11 @@ namespace Motely.Filters.MotelyJson
                 return handler;
 
             // Check for List<T> where T is string
-            if (propertyType.IsGenericType && 
-                propertyType.GetGenericTypeDefinition() == typeof(List<>) &&
-                propertyType.GetGenericArguments()[0] == typeof(string))
+            if (
+                propertyType.IsGenericType
+                && propertyType.GetGenericTypeDefinition() == typeof(List<>)
+                && propertyType.GetGenericArguments()[0] == typeof(string)
+            )
             {
                 return _handlers[typeof(List<string>)];
             }
@@ -49,6 +51,7 @@ namespace Motely.Filters.MotelyJson
     internal class StringHandler : IPropertyTypeHandler
     {
         public bool CanHandle(Type propertyType) => propertyType == typeof(string);
+
         public void SetValue(PropertyInfo property, object target, object? value) =>
             property.SetValue(target, value?.ToString());
     }
@@ -56,6 +59,7 @@ namespace Motely.Filters.MotelyJson
     internal class IntArrayHandler : IPropertyTypeHandler
     {
         public bool CanHandle(Type propertyType) => propertyType == typeof(int[]);
+
         public void SetValue(PropertyInfo property, object target, object? value)
         {
             int[]? intArray = null;
@@ -71,6 +75,7 @@ namespace Motely.Filters.MotelyJson
     internal class StringArrayHandler : IPropertyTypeHandler
     {
         public bool CanHandle(Type propertyType) => propertyType == typeof(string[]);
+
         public void SetValue(PropertyInfo property, object target, object? value)
         {
             string[]? stringArray = null;
@@ -85,12 +90,14 @@ namespace Motely.Filters.MotelyJson
 
     internal class StringListHandler : IPropertyTypeHandler
     {
-        public bool CanHandle(Type propertyType) => 
-            propertyType == typeof(List<string>) ||
-            (propertyType.IsGenericType && 
-             propertyType.GetGenericTypeDefinition() == typeof(List<>) &&
-             propertyType.GetGenericArguments()[0] == typeof(string));
-        
+        public bool CanHandle(Type propertyType) =>
+            propertyType == typeof(List<string>)
+            || (
+                propertyType.IsGenericType
+                && propertyType.GetGenericTypeDefinition() == typeof(List<>)
+                && propertyType.GetGenericArguments()[0] == typeof(string)
+            );
+
         public void SetValue(PropertyInfo property, object target, object? value)
         {
             List<string>? stringList = null;
@@ -106,6 +113,7 @@ namespace Motely.Filters.MotelyJson
     internal class IntHandler : IPropertyTypeHandler
     {
         public bool CanHandle(Type propertyType) => propertyType == typeof(int);
+
         public void SetValue(PropertyInfo property, object target, object? value)
         {
             if (int.TryParse(value?.ToString(), out var intValue))
@@ -116,6 +124,7 @@ namespace Motely.Filters.MotelyJson
     internal class NullableIntHandler : IPropertyTypeHandler
     {
         public bool CanHandle(Type propertyType) => propertyType == typeof(int?);
+
         public void SetValue(PropertyInfo property, object target, object? value)
         {
             if (value == null)
@@ -127,9 +136,9 @@ namespace Motely.Filters.MotelyJson
 
     internal class ClausesListHandler : IPropertyTypeHandler
     {
-        public bool CanHandle(Type propertyType) => 
+        public bool CanHandle(Type propertyType) =>
             propertyType == typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>);
-        
+
         public void SetValue(PropertyInfo property, object target, object? value)
         {
             if (value is List<MotelyJsonConfig.MotelyJsonFilterClause> clausesList)
@@ -149,9 +158,8 @@ namespace Motely.Filters.MotelyJson
 
     internal class SourcesConfigHandler : IPropertyTypeHandler
     {
-        public bool CanHandle(Type propertyType) => 
-            propertyType == typeof(SourcesConfig);
-        
+        public bool CanHandle(Type propertyType) => propertyType == typeof(SourcesConfig);
+
         public void SetValue(PropertyInfo property, object target, object? value)
         {
             if (value is SourcesConfig sourcesConfig)

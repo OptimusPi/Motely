@@ -87,7 +87,8 @@ public readonly struct MotelyJsonJokerRarityEditionPreFilterDesc(
                     // Create shop joker stream with RARITY+EDITION only (ExcludeJokerType!)
                     var shopJokerStream = ctx.CreateShopJokerStream(
                         ante,
-                        MotelyJokerStreamFlags.ExcludeJokerType | MotelyJokerStreamFlags.ExcludeStickers
+                        MotelyJokerStreamFlags.ExcludeJokerType
+                            | MotelyJokerStreamFlags.ExcludeStickers
                     );
 
                     // Walk shop slots and peek rarity + edition

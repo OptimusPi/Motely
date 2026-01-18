@@ -1,12 +1,12 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using Motely;
+using Motely.API.Hubs;
 using Motely.API.Models;
 using Motely.Filters;
 using Motely.Utils;
-using System.Collections.Concurrent;
-using Motely;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
-using Motely.API.Hubs;
-using System.Text.Json;
 
 namespace Motely.API.Services;
 
@@ -21,7 +21,11 @@ public class SearchService
     public event Action<string>? SearchCompleted;
     public event Action<string, string>? SearchError;
 
-    public SearchService(ILogger<SearchService> logger, SearchQueueService queue, IHubContext<SearchHub> hubContext)
+    public SearchService(
+        ILogger<SearchService> logger,
+        SearchQueueService queue,
+        IHubContext<SearchHub> hubContext
+    )
     {
         _logger = logger;
         _hubContext = hubContext;
@@ -37,7 +41,10 @@ public class SearchService
         // Validate criteria to prevent unlimited writes
         if (criteria == null)
         {
-            throw new ArgumentNullException(nameof(criteria), "Search criteria must be provided to prevent unlimited seed generation.");
+            throw new ArgumentNullException(
+                nameof(criteria),
+                "Search criteria must be provided to prevent unlimited seed generation."
+            );
         }
 
         // Detect burst mode: single-seed/seedsources sources
@@ -52,7 +59,7 @@ public class SearchService
                 Config = config,
                 Status = "running",
                 FilterName = config.Name ?? "Burst Filter",
-                CancellationTokenSource = new CancellationTokenSource()
+                CancellationTokenSource = new CancellationTokenSource(),
             };
 
             _searches[searchId] = state;
@@ -86,12 +93,17 @@ public class SearchService
     {
         if (_hubContext != null)
         {
-            await _hubContext.Clients.Group($"search_{searchId}").SendAsync("SearchQueued", new
-            {
-                searchId = searchId,
-                status = "queued",
-                filterName = filterName
-            });
+            await _hubContext
+                .Clients.Group($"search_{searchId}")
+                .SendAsync(
+                    "SearchQueued",
+                    new
+                    {
+                        searchId = searchId,
+                        status = "queued",
+                        filterName = filterName,
+                    }
+                );
         }
     }
 
@@ -122,17 +134,28 @@ public class SearchService
         }
     }
 
-    public async Task RunQueuedSearchAsync(MotelyJsonConfig config, SearchQueueEntry entry, CancellationToken ct)
+    public async Task RunQueuedSearchAsync(
+        MotelyJsonConfig config,
+        SearchQueueEntry entry,
+        CancellationToken ct
+    )
     {
         if (ct.IsCancellationRequested)
         {
-            _logger.LogInformation("Search {SearchId} was cancelled before starting.", entry.SearchId);
+            _logger.LogInformation(
+                "Search {SearchId} was cancelled before starting.",
+                entry.SearchId
+            );
             return;
         }
 
         try
         {
-            _logger.LogInformation("Starting queued search {SearchId} from batch {BatchMarker}", entry.SearchId, entry.BatchMarker);
+            _logger.LogInformation(
+                "Starting queued search {SearchId} from batch {BatchMarker}",
+                entry.SearchId,
+                entry.BatchMarker
+            );
 
             // Initialize search state
             var state = new SearchState
@@ -141,24 +164,36 @@ public class SearchService
                 Config = config,
                 Status = "running",
                 FilterName = config.Name ?? "Queued Filter",
-                CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct)
+                CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct),
             };
 
             _searches[entry.SearchId] = state;
 
             // Simulate search logic (replace with actual implementation)
-            for (ulong batch = (ulong)entry.BatchMarker; batch < (ulong)entry.BatchMarker + 100; batch++)
+            for (
+                ulong batch = (ulong)entry.BatchMarker;
+                batch < (ulong)entry.BatchMarker + 100;
+                batch++
+            )
             {
                 if (ct.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Search {SearchId} was cancelled at batch {Batch}", entry.SearchId, batch);
+                    _logger.LogInformation(
+                        "Search {SearchId} was cancelled at batch {Batch}",
+                        entry.SearchId,
+                        batch
+                    );
                     state.Status = "cancelled";
                     return;
                 }
 
                 // Simulate batch processing
                 await Task.Delay(100, ct);
-                _logger.LogInformation("Processed batch {Batch} for search {SearchId}", batch, entry.SearchId);
+                _logger.LogInformation(
+                    "Processed batch {Batch} for search {SearchId}",
+                    batch,
+                    entry.SearchId
+                );
 
                 // Update batch marker in queue
                 entry.BatchMarker = (long)batch;

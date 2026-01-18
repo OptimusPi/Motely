@@ -21,7 +21,7 @@ namespace Motely.Tests
                 WantedAntes = new bool[40],
                 WantedPackSlots = new bool[6],
                 EditionEnum = MotelyItemEdition.Negative, // Require Negative edition
-                RequireMega = false
+                RequireMega = false,
             };
             // Set ante 5
             clause.WantedAntes[5] = true;
@@ -29,7 +29,9 @@ namespace Motely.Tests
             for (int i = 0; i <= 3; i++)
                 clause.WantedPackSlots[i] = true;
 
-            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(new List<MotelyJsonSoulJokerFilterClause> { clause });
+            var criteria = MotelyJsonSoulJokerFilterClause.CreateCriteria(
+                new List<MotelyJsonSoulJokerFilterClause> { clause }
+            );
             var filterDesc = new MotelyJsonSoulJokerFilterDesc(criteria);
 
             // The edition should be properly set
@@ -58,9 +60,9 @@ namespace Motely.Tests
                         Type = "SoulJoker",
                         Value = "Triboulet",
                         Edition = "Negative",
-                        Antes = new[] { 5 } // Check ante 5 specifically
-                    }
-                }
+                        Antes = new[] { 5 }, // Check ante 5 specifically
+                    },
+                },
             };
 
             // Initialize enums
@@ -94,15 +96,15 @@ namespace Motely.Tests
                         Type = "SoulJoker",
                         Value = "Perkeo",
                         Edition = "Negative",
-                        Antes = new[] { 1, 2, 3 }
+                        Antes = new[] { 1, 2, 3 },
                     },
                     new MotelyJsonConfig.MotelyJsonFilterClause
                     {
                         Type = "SoulJoker",
                         Value = "Triboulet",
-                        Antes = new[] { 4, 5, 6 }
-                    }
-                }
+                        Antes = new[] { 4, 5, 6 },
+                    },
+                },
             };
 
             // Initialize enums
@@ -153,9 +155,9 @@ namespace Motely.Tests
                         Value = "Perkeo",
                         Edition = "Negative",
                         Antes = new[] { 5 },
-                        Score = 100 // Scoring points for Negative Perkeo
-                    }
-                }
+                        Score = 100, // Scoring points for Negative Perkeo
+                    },
+                },
             };
 
             // Initialize enums
@@ -178,7 +180,8 @@ namespace Motely.Tests
             // The fix ensures editions are calculated with the ante where the joker appears
 
             // Create JSON config that tests the exact scenario
-            var jsonConfig = @"{
+            var jsonConfig =
+                @"{
                 ""name"": ""Regression Test"",
                 ""description"": ""Test for soul joker edition bug"",
                 ""deck"": ""Red"",
@@ -194,13 +197,18 @@ namespace Motely.Tests
                 ""should"": []
             }";
 
-            var testConfigPath = Path.Combine(Path.GetTempPath(), "soul-edition-regression-test.json");
+            var testConfigPath = Path.Combine(
+                Path.GetTempPath(),
+                "soul-edition-regression-test.json"
+            );
             File.WriteAllText(testConfigPath, jsonConfig);
 
             try
             {
                 // Parse and validate the config
-                var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(jsonConfig);
+                var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(
+                    jsonConfig
+                );
                 Assert.NotNull(config);
 
                 foreach (var clause in config.Must)
