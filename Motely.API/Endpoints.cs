@@ -113,7 +113,6 @@ public static class Endpoints
         if (request?.FilterJaml == null) return Results.BadRequest();
         
         var jamlFiltersDir = MotelyPaths.JamlFiltersDir;
-        Directory.CreateDirectory(jamlFiltersDir);
         
         // Use id from route, or extract name from JAML
         string? name = id;
