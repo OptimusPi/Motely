@@ -40,7 +40,8 @@ public class MotelyPathsSecurityTests
                    dangerousPath.StartsWith("/sbin") ||
                    dangerousPath.StartsWith("/usr/bin") ||
                    dangerousPath.StartsWith("/usr/sbin") ||
-                   dangerousPath.StartsWith("/lib"),
+                   dangerousPath.StartsWith("/lib") ||
+                   dangerousPath.StartsWith("/lib64"),
                    $"Path {dangerousPath} should be recognized as a Unix system directory");
     }
 
@@ -87,24 +88,27 @@ public class MotelyPathsSecurityTests
         // These absolute paths are outside system directories and should be accepted
         var normalizedPath = safePath.Replace('\\', '/');
         
-        // Unix system paths to avoid
-        var isUnixSystemPath = normalizedPath.StartsWith("/etc") ||
-                              normalizedPath.StartsWith("/sys") ||
-                              normalizedPath.StartsWith("/proc") ||
-                              normalizedPath.StartsWith("/dev") ||
-                              normalizedPath.StartsWith("/boot") ||
-                              normalizedPath.StartsWith("/root") ||
-                              normalizedPath == "/bin" ||
-                              normalizedPath == "/sbin" ||
-                              normalizedPath == "/usr/bin" ||
-                              normalizedPath == "/usr/sbin" ||
-                              normalizedPath == "/lib" ||
-                              normalizedPath == "/lib64";
+        // Unix system paths to avoid (using StartsWith to match actual implementation)
+        var isUnixSystemPath = normalizedPath.StartsWith("/etc/") || normalizedPath == "/etc" ||
+                              normalizedPath.StartsWith("/sys/") || normalizedPath == "/sys" ||
+                              normalizedPath.StartsWith("/proc/") || normalizedPath == "/proc" ||
+                              normalizedPath.StartsWith("/dev/") || normalizedPath == "/dev" ||
+                              normalizedPath.StartsWith("/boot/") || normalizedPath == "/boot" ||
+                              normalizedPath.StartsWith("/root/") || normalizedPath == "/root" ||
+                              normalizedPath.StartsWith("/bin/") || normalizedPath == "/bin" ||
+                              normalizedPath.StartsWith("/sbin/") || normalizedPath == "/sbin" ||
+                              normalizedPath.StartsWith("/usr/bin/") || normalizedPath == "/usr/bin" ||
+                              normalizedPath.StartsWith("/usr/sbin/") || normalizedPath == "/usr/sbin" ||
+                              normalizedPath.StartsWith("/lib/") || normalizedPath == "/lib" ||
+                              normalizedPath.StartsWith("/lib64/") || normalizedPath == "/lib64";
         
-        // Windows system paths to avoid
-        var isWindowsSystemPath = normalizedPath.StartsWith("C:/Windows", StringComparison.OrdinalIgnoreCase) ||
-                                 normalizedPath.StartsWith("C:/Program Files", StringComparison.OrdinalIgnoreCase) ||
-                                 normalizedPath.StartsWith("C:/ProgramData", StringComparison.OrdinalIgnoreCase);
+        // Windows system paths to avoid (using StartsWith to match actual implementation)
+        var isWindowsSystemPath = normalizedPath.StartsWith("C:/Windows/", StringComparison.OrdinalIgnoreCase) || 
+                                 normalizedPath.Equals("C:/Windows", StringComparison.OrdinalIgnoreCase) ||
+                                 normalizedPath.StartsWith("C:/Program Files/", StringComparison.OrdinalIgnoreCase) ||
+                                 normalizedPath.Equals("C:/Program Files", StringComparison.OrdinalIgnoreCase) ||
+                                 normalizedPath.StartsWith("C:/ProgramData/", StringComparison.OrdinalIgnoreCase) ||
+                                 normalizedPath.Equals("C:/ProgramData", StringComparison.OrdinalIgnoreCase);
         
         Assert.False(isUnixSystemPath || isWindowsSystemPath,
                     $"Path {safePath} should be outside system directories");
