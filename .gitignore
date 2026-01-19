@@ -1,2 +1,62 @@
 bin
 obj
+bin/
+obj/
+*.pdb
+*.swp
+*.editorconfig
+*.wal
+*.db
+*.csv
+
+# Node
+node_modules/
+
+# VS Code / Editors
+.vscode/
+.claude/
+
+# Build / Publish
+/publish/
+/Motely.API/bin/
+/Motely.API/obj/
+/Motely.Tests/bin/
+/Motely.Tests/obj/
+/Motely.TUI/bin/
+/Motely.TUI/obj/
+/Motely/bin/
+/Motely/obj/
+
+# Web
+/Motely.API/wwwroot/
+/Motely.API/cloudflare-worker-jamlgenie/
+
+# Data / Filters / Lists
+/WordLists/
+/SearchResults/
+/JsonFilters/
+/JsonItemFilters/
+/JamlFilters-old/
+/Motely/JsonFilters/
+/Motely/JsonFiltersArchive/
+/Motely/JsonItemFilters/
+/Motely/JsonItemFiltersArchive/
+/Motely/JamlFilters/
+/Motely.TUI/SearchResults/
+
+# Specific files
+Motely/filters/NegativeScore=2.ini
+Motely/JsonFilters/perkeo-test.json
+Motely/fertilizer.txt
+Motely/tui.json
+/Terminal.Gui-2_develop/
+/JamlFilters-old
+/Motely.API/wwwroot/BSO
+.cursor/debug.log
+/Motely.API/wwwroot/
+/Motely.API/wwwroot/JamlUI3/node_modules
+/publish/api/wwwroot/JamlUI3/dist
+/publish
+/wwwroot
+/SeedSources
+/vue-jaml-ui/node_modules
