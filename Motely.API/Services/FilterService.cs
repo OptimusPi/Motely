@@ -36,10 +36,10 @@ public static class FilterService
             return string.Empty;
         }
         
-        if (!File.Exists(filterPath))
+        if (!File.Exists(fullFilterPath))
             return string.Empty;
             
-        return File.ReadAllText(filterPath);
+        return File.ReadAllText(fullFilterPath);
     }
 
     public static List<object> LoadFiltersFromDisk(string filtersPath, Func<global::Motely.Filters.MotelyJsonConfig?, bool> hasErraticFilters)
