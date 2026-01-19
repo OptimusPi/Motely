@@ -123,6 +123,9 @@ public static class Endpoints
         }
         
         // Sanitize name to prevent path traversal attacks
+        if (!FilterService.TrySanitizeFilterName(name, out var safeName))
+            return Results.BadRequest("Invalid filter name");
+        
         // Extract just the filename stem (no path separators, no extension)
         var safeName = Path.GetFileNameWithoutExtension(name);
         if (string.IsNullOrWhiteSpace(safeName))
@@ -144,8 +147,12 @@ public static class Endpoints
     
     public static IResult DeleteFilter(string id)
     {
-        var safeName = Path.GetFileName(id);
-        var fullPath = Path.Combine(MotelyPaths.JamlFiltersDir, safeName);
+        // Sanitize id to prevent path traversal attacks
+        if (!FilterService.TrySanitizeFilterName(id, out var safeName))
+            return Results.BadRequest("Invalid filter name");
+        
+        var fileName = $"{safeName}.jaml";
+        var fullPath = Path.Combine(MotelyPaths.JamlFiltersDir, fileName);
         
         if (File.Exists(fullPath))
         {
