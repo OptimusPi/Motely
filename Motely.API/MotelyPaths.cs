@@ -6,6 +6,8 @@ namespace Motely.API;
 /// <summary>
 /// Centralized path resolver for Motely directories.
 /// Uses ASP.NET Core ContentRootPath as the base, with optional config overrides.
+/// IMPORTANT: Must call Initialize(IWebHostEnvironment, IConfiguration?) at application startup
+/// before accessing any path properties. Accessing paths before initialization will throw InvalidOperationException.
 /// </summary>
 public static class MotelyPaths
 {
@@ -13,29 +15,58 @@ public static class MotelyPaths
     private static string? _jamlFiltersOverride;
     private static string? _seedSourcesOverride;
     private static string? _searchResultsOverride;
+    private static bool _isInitialized = false;
 
     /// <summary>
     /// Gets the content root path (typically the repo root).
     /// </summary>
-    public static string ContentRoot => _contentRoot;
+    public static string ContentRoot
+    {
+        get
+        {
+            EnsureInitialized();
+            return _contentRoot;
+        }
+    }
 
     /// <summary>
     /// Gets the directory for JAML filter files.
     /// Defaults to ContentRoot/JamlFilters, can be overridden via config.
     /// </summary>
-    public static string JamlFiltersDir => ResolvePath(_jamlFiltersOverride, "JamlFilters");
+    public static string JamlFiltersDir
+    {
+        get
+        {
+            EnsureInitialized();
+            return ResolvePath(_jamlFiltersOverride, "JamlFilters");
+        }
+    }
 
     /// <summary>
     /// Gets the directory for seed source files (txt, csv, db).
     /// Defaults to ContentRoot/SeedSources, can be overridden via config.
     /// </summary>
-    public static string SeedSourcesDir => ResolvePath(_seedSourcesOverride, "SeedSources");
+    public static string SeedSourcesDir
+    {
+        get
+        {
+            EnsureInitialized();
+            return ResolvePath(_seedSourcesOverride, "SeedSources");
+        }
+    }
 
     /// <summary>
     /// Gets the directory for search result databases and metadata.
     /// Defaults to ContentRoot/SearchResults, can be overridden via config.
     /// </summary>
-    public static string SearchResultsDir => ResolvePath(_searchResultsOverride, "SearchResults");
+    public static string SearchResultsDir
+    {
+        get
+        {
+            EnsureInitialized();
+            return ResolvePath(_searchResultsOverride, "SearchResults");
+        }
+    }
 
     /// <summary>
     /// Initializes MotelyPaths with the web host environment and configuration.
@@ -52,10 +83,25 @@ public static class MotelyPaths
             _searchResultsOverride = config["Motely:Paths:SearchResultsDir"];
         }
 
+        _isInitialized = true;
+
         // Ensure directories exist
         Directory.CreateDirectory(JamlFiltersDir);
         Directory.CreateDirectory(SeedSourcesDir);
         Directory.CreateDirectory(SearchResultsDir);
+    }
+
+    /// <summary>
+    /// Ensures that Initialize has been called before accessing path properties.
+    /// </summary>
+    private static void EnsureInitialized()
+    {
+        if (!_isInitialized)
+        {
+            throw new InvalidOperationException(
+                "MotelyPaths.Initialize must be called before accessing path properties. " +
+                "Call MotelyPaths.Initialize(IWebHostEnvironment, IConfiguration?) at application startup.");
+        }
     }
 
     /// <summary>
