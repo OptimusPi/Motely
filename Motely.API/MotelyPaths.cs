@@ -11,11 +11,11 @@ namespace Motely.API;
 /// </summary>
 public static class MotelyPaths
 {
-    private static string _contentRoot = Directory.GetCurrentDirectory();
+    private static volatile string _contentRoot = Directory.GetCurrentDirectory();
     private static string? _jamlFiltersOverride;
     private static string? _seedSourcesOverride;
     private static string? _searchResultsOverride;
-    private static bool _isInitialized = false;
+    private static volatile bool _isInitialized = false;
 
     /// <summary>
     /// Gets the content root path (typically the repo root).
