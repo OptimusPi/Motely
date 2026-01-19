@@ -25,6 +25,17 @@ public static class FilterService
         }
         
         var filterPath = Path.Combine(MotelyPaths.JamlFiltersDir, $"{safeName}.jaml");
+        
+        // Validate that the resolved path is within the expected directory
+        var fullFilterPath = Path.GetFullPath(filterPath);
+        var fullJamlFiltersDir = Path.GetFullPath(MotelyPaths.JamlFiltersDir);
+        
+        if (!fullFilterPath.StartsWith(fullJamlFiltersDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+            !fullFilterPath.Equals(fullJamlFiltersDir, StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+        
         if (!File.Exists(filterPath))
             return string.Empty;
             
