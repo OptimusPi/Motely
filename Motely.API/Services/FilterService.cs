@@ -30,8 +30,10 @@ public static class FilterService
         var fullFilterPath = Path.GetFullPath(filterPath);
         var fullJamlFiltersDir = Path.GetFullPath(MotelyPaths.JamlFiltersDir);
         
-        if (!fullFilterPath.StartsWith(fullJamlFiltersDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
-            !fullFilterPath.Equals(fullJamlFiltersDir, StringComparison.OrdinalIgnoreCase))
+        // Use GetRelativePath to check if the resolved path is within the expected directory
+        // If the relative path starts with "..", it means the path is outside the directory
+        var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
         {
             return string.Empty;
         }
