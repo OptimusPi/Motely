@@ -113,9 +113,9 @@ public static class MotelyPaths
     }
 
     /// <summary>
-    /// Ensures that Initialize has been called before accessing path properties.
-    /// This method checks the volatile _isInitialized flag for proper memory ordering.
-    /// It assumes initialization has already completed safely via the Initialize method's locking mechanism.
+    /// Verifies that Initialize has been called before accessing path properties.
+    /// Throws InvalidOperationException if initialization has not yet completed.
+    /// The volatile _isInitialized flag ensures proper memory ordering across threads.
     /// </summary>
     private static void EnsureInitialized()
     {
