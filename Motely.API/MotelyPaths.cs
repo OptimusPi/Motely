@@ -83,12 +83,13 @@ public static class MotelyPaths
             _searchResultsOverride = config["Motely:Paths:SearchResultsDir"];
         }
 
-        _isInitialized = true;
+        // Ensure directories exist (using ResolvePath directly to avoid EnsureInitialized check)
+        Directory.CreateDirectory(ResolvePath(_jamlFiltersOverride, "JamlFilters"));
+        Directory.CreateDirectory(ResolvePath(_seedSourcesOverride, "SeedSources"));
+        Directory.CreateDirectory(ResolvePath(_searchResultsOverride, "SearchResults"));
 
-        // Ensure directories exist
-        Directory.CreateDirectory(JamlFiltersDir);
-        Directory.CreateDirectory(SeedSourcesDir);
-        Directory.CreateDirectory(SearchResultsDir);
+        // Mark as initialized after all setup is complete
+        _isInitialized = true;
     }
 
     /// <summary>
