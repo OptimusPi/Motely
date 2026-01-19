@@ -72,15 +72,16 @@ public static class MotelyPaths
     /// Initializes MotelyPaths with the web host environment and configuration.
     /// Should be called once at application startup.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when a configured path points to a sensitive system directory</exception>
     public static void Initialize(IWebHostEnvironment env, IConfiguration? config = null)
     {
         _contentRoot = env.ContentRootPath;
 
         if (config != null)
         {
-            _jamlFiltersOverride = config["Motely:Paths:JamlFiltersDir"];
-            _seedSourcesOverride = config["Motely:Paths:SeedSourcesDir"];
-            _searchResultsOverride = config["Motely:Paths:SearchResultsDir"];
+            _jamlFiltersOverride = ValidateConfiguredPath(config["Motely:Paths:JamlFiltersDir"], "JamlFiltersDir");
+            _seedSourcesOverride = ValidateConfiguredPath(config["Motely:Paths:SeedSourcesDir"], "SeedSourcesDir");
+            _searchResultsOverride = ValidateConfiguredPath(config["Motely:Paths:SearchResultsDir"], "SearchResultsDir");
         }
 
         // Ensure directories exist (using ResolvePath directly to avoid EnsureInitialized check)
@@ -105,6 +106,79 @@ public static class MotelyPaths
                 "MotelyPaths.Initialize must be called before accessing path properties. " +
                 "Call MotelyPaths.Initialize(IWebHostEnvironment, IConfiguration?) at application startup.");
         }
+    }
+
+    /// <summary>
+    /// Validates a configured path to ensure it doesn't point to sensitive system directories.
+    /// </summary>
+    /// <param name="configuredPath">The path from configuration</param>
+    /// <param name="pathName">The name of the path configuration (for error messages)</param>
+    /// <returns>The validated path, or null if the path is null/empty</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the path points to a sensitive system directory</exception>
+    private static string? ValidateConfiguredPath(string? configuredPath, string pathName)
+    {
+        if (string.IsNullOrWhiteSpace(configuredPath))
+            return null;
+
+        // For absolute paths, ensure they don't point to sensitive system directories
+        if (Path.IsPathRooted(configuredPath))
+        {
+            var normalizedPath = Path.GetFullPath(configuredPath);
+            
+            if (IsSensitiveSystemPath(normalizedPath))
+            {
+                throw new InvalidOperationException(
+                    $"Security: Configured path '{pathName}' points to a sensitive system directory: {normalizedPath}. " +
+                    "Configured paths must not point to system directories like /etc, /sys, /proc, C:\\Windows, etc.");
+            }
+        }
+
+        return configuredPath;
+    }
+
+    /// <summary>
+    /// Checks if a path points to a sensitive system directory.
+    /// </summary>
+    private static bool IsSensitiveSystemPath(string fullPath)
+    {
+        // Normalize path separators for consistent comparison
+        var normalizedPath = fullPath.Replace('\\', '/').TrimEnd('/');
+        
+        // Common sensitive Unix/Linux directories
+        string[] unixSensitivePaths = new[]
+        {
+            "/etc", "/sys", "/proc", "/dev", "/boot", "/root",
+            "/bin", "/sbin", "/usr/bin", "/usr/sbin", "/lib", "/lib64"
+        };
+        
+        // Common sensitive Windows directories
+        string[] windowsSensitivePaths = new[]
+        {
+            "C:/Windows", "C:/Windows/System32", "C:/Program Files",
+            "C:/Program Files (x86)", "C:/ProgramData"
+        };
+        
+        // Check Unix paths (case-sensitive)
+        foreach (var sensitivePath in unixSensitivePaths)
+        {
+            if (normalizedPath.Equals(sensitivePath, StringComparison.Ordinal) ||
+                normalizedPath.StartsWith(sensitivePath + "/", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        
+        // Check Windows paths (case-insensitive)
+        foreach (var sensitivePath in windowsSensitivePaths)
+        {
+            if (normalizedPath.Equals(sensitivePath, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith(sensitivePath + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /// <summary>
