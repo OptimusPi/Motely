@@ -107,10 +107,9 @@ public static class MotelyApiHost
         MotelyPaths.Initialize(app.Environment, app.Configuration);
 
         // Initialize SearchManager with motely root path (for SaveFilterToEcosystem compatibility)
-        var motelyRootForSearchManager = FindMotelyRoot();
-        if (!string.IsNullOrEmpty(motelyRootForSearchManager))
+        if (!string.IsNullOrEmpty(motelyRoot))
         {
-            SearchManager.Instance.SetMotelyRoot(motelyRootForSearchManager);
+            SearchManager.Instance.SetMotelyRoot(motelyRoot);
         }
         
         // Wire up SearchBroadcaster to SearchManager
