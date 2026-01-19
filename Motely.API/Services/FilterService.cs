@@ -6,23 +6,40 @@ namespace Motely.API.Services;
 
 public static class FilterService
 {
-    public static string GetFilterJaml(string? filterId)
+    /// <summary>
+    /// Sanitizes a filter name to prevent path traversal attacks.
+    /// Extracts just the filename stem (no path separators, no extension) and replaces invalid characters.
+    /// </summary>
+    /// <param name="name">The filter name to sanitize</param>
+    /// <param name="safeName">The sanitized filename stem, or null if the name is invalid</param>
+    /// <returns>True if the name is valid and was sanitized, false otherwise</returns>
+    public static bool TrySanitizeFilterName(string? name, out string? safeName)
     {
-        if (string.IsNullOrEmpty(filterId))
-            return string.Empty;
+        safeName = null;
         
-        // Sanitize filterId to prevent path traversal attacks
+        if (string.IsNullOrEmpty(name))
+            return false;
+        
         // Extract just the filename stem (no path separators, no extension)
-        var safeName = Path.GetFileNameWithoutExtension(filterId);
-        if (string.IsNullOrWhiteSpace(safeName))
-            return string.Empty;
+        var sanitized = Path.GetFileNameWithoutExtension(name);
+        if (string.IsNullOrWhiteSpace(sanitized))
+            return false;
         
         // Remove any remaining path separators or invalid characters
         var invalidChars = Path.GetInvalidFileNameChars();
         foreach (var c in invalidChars)
         {
-            safeName = safeName.Replace(c, '_');
+            sanitized = sanitized.Replace(c, '_');
         }
+        
+        safeName = sanitized;
+        return true;
+    }
+    
+    public static string GetFilterJaml(string? filterId)
+    {
+        if (!TrySanitizeFilterName(filterId, out var safeName) || string.IsNullOrWhiteSpace(safeName))
+            return string.Empty;
         
         var filterPath = Path.Combine(MotelyPaths.JamlFiltersDir, $"{safeName}.jaml");
         if (!File.Exists(filterPath))

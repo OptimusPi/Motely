@@ -123,17 +123,8 @@ public static class Endpoints
         }
         
         // Sanitize name to prevent path traversal attacks
-        // Extract just the filename stem (no path separators, no extension)
-        var safeName = Path.GetFileNameWithoutExtension(name);
-        if (string.IsNullOrWhiteSpace(safeName))
+        if (!FilterService.TrySanitizeFilterName(name, out var safeName) || string.IsNullOrWhiteSpace(safeName))
             return Results.BadRequest("Invalid filter name");
-        
-        // Remove any remaining path separators or invalid characters
-        var invalidChars = Path.GetInvalidFileNameChars();
-        foreach (var c in invalidChars)
-        {
-            safeName = safeName.Replace(c, '_');
-        }
         
         var fileName = $"{safeName}.jaml";
         var fullPath = Path.Combine(jamlFiltersDir, fileName);
@@ -145,17 +136,8 @@ public static class Endpoints
     public static IResult DeleteFilter(string id)
     {
         // Sanitize id to prevent path traversal attacks
-        // Extract just the filename stem (no path separators, no extension)
-        var safeName = Path.GetFileNameWithoutExtension(id);
-        if (string.IsNullOrWhiteSpace(safeName))
+        if (!FilterService.TrySanitizeFilterName(id, out var safeName) || string.IsNullOrWhiteSpace(safeName))
             return Results.BadRequest("Invalid filter name");
-        
-        // Remove any remaining path separators or invalid characters
-        var invalidChars = Path.GetInvalidFileNameChars();
-        foreach (var c in invalidChars)
-        {
-            safeName = safeName.Replace(c, '_');
-        }
         
         var fileName = $"{safeName}.jaml";
         var fullPath = Path.Combine(MotelyPaths.JamlFiltersDir, fileName);
