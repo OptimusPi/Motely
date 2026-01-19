@@ -123,7 +123,7 @@ public static class Endpoints
         }
         
         // Sanitize name to prevent path traversal attacks
-        if (!FilterService.TrySanitizeFilterName(name, out var safeName) || string.IsNullOrWhiteSpace(safeName))
+        if (!FilterService.TrySanitizeFilterName(name, out var safeName))
             return Results.BadRequest("Invalid filter name");
         
         var fileName = $"{safeName}.jaml";
@@ -136,7 +136,7 @@ public static class Endpoints
     public static IResult DeleteFilter(string id)
     {
         // Sanitize id to prevent path traversal attacks
-        if (!FilterService.TrySanitizeFilterName(id, out var safeName) || string.IsNullOrWhiteSpace(safeName))
+        if (!FilterService.TrySanitizeFilterName(id, out var safeName))
             return Results.BadRequest("Invalid filter name");
         
         var fileName = $"{safeName}.jaml";

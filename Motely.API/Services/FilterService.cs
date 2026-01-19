@@ -38,7 +38,7 @@ public static class FilterService
     
     public static string GetFilterJaml(string? filterId)
     {
-        if (!TrySanitizeFilterName(filterId, out var safeName) || string.IsNullOrWhiteSpace(safeName))
+        if (!TrySanitizeFilterName(filterId, out var safeName))
             return string.Empty;
         
         var filterPath = Path.Combine(MotelyPaths.JamlFiltersDir, $"{safeName}.jaml");
