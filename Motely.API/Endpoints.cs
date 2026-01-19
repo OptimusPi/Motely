@@ -122,7 +122,20 @@ public static class Endpoints
             name = cfg.Name ?? id;
         }
         
-        var fileName = $"{name}.jaml";
+        // Sanitize name to prevent path traversal attacks
+        // Extract just the filename stem (no path separators, no extension)
+        var safeName = Path.GetFileNameWithoutExtension(name);
+        if (string.IsNullOrWhiteSpace(safeName))
+            return Results.BadRequest("Invalid filter name");
+        
+        // Remove any remaining path separators or invalid characters
+        var invalidChars = Path.GetInvalidFileNameChars();
+        foreach (var c in invalidChars)
+        {
+            safeName = safeName.Replace(c, '_');
+        }
+        
+        var fileName = $"{safeName}.jaml";
         var fullPath = Path.Combine(jamlFiltersDir, fileName);
         File.WriteAllText(fullPath, request.FilterJaml);
         
