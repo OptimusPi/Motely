@@ -126,21 +126,20 @@ public static class Endpoints
         if (!FilterService.TrySanitizeFilterName(name, out var safeName))
             return Results.BadRequest("Invalid filter name");
         
-        // Extract just the filename stem (no path separators, no extension)
-        var safeName = Path.GetFileNameWithoutExtension(name);
-        if (string.IsNullOrWhiteSpace(safeName))
-            return Results.BadRequest("Invalid filter name");
-        
-        // Remove any remaining path separators or invalid characters
-        var invalidChars = Path.GetInvalidFileNameChars();
-        foreach (var c in invalidChars)
-        {
-            safeName = safeName.Replace(c, '_');
-        }
-        
         var fileName = $"{safeName}.jaml";
         var fullPath = Path.Combine(jamlFiltersDir, fileName);
-        File.WriteAllText(fullPath, request.FilterJaml);
+        
+        // Validate that the resolved path is within the expected directory
+        var fullFilterPath = Path.GetFullPath(fullPath);
+        var fullJamlFiltersDir = Path.GetFullPath(jamlFiltersDir);
+        
+        // Use GetRelativePath to check if the resolved path is within the expected directory
+        var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
+        {
+            return Results.BadRequest("Invalid filter path");
+        }
+        File.WriteAllText(fullFilterPath, request.FilterJaml);
         
         return Results.Ok(new { filePath = fileName });
     }
@@ -154,9 +153,20 @@ public static class Endpoints
         var fileName = $"{safeName}.jaml";
         var fullPath = Path.Combine(MotelyPaths.JamlFiltersDir, fileName);
         
-        if (File.Exists(fullPath))
+        // Validate that the resolved path is within the expected directory
+        var fullFilterPath = Path.GetFullPath(fullPath);
+        var fullJamlFiltersDir = Path.GetFullPath(MotelyPaths.JamlFiltersDir);
+        
+        // Use GetRelativePath to check if the resolved path is within the expected directory
+        var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
         {
-            File.Delete(fullPath);
+            return Results.BadRequest("Invalid filter path");
+        }
+        
+        if (File.Exists(fullFilterPath))
+        {
+            File.Delete(fullFilterPath);
             return Results.Ok();
         }
         
