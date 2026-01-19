@@ -115,8 +115,8 @@ namespace Motely.Executors
                 e.Cancel = true;
                 _cancelled = true;
                 Console.WriteLine("\n🛑 Stopping search...");
-                // Dispose to set status to Disposed - cancellation token is already signaled by Program.cs handler
-                search.Dispose();
+                // Use fast-path cancel to return immediately without waiting for threads
+                search.Cancel();
             };
 
             var searchStopwatch = Stopwatch.StartNew();

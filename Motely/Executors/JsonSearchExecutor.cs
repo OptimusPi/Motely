@@ -167,10 +167,10 @@ namespace Motely.Executors
                             // Token is from CancellationTokenSource in Program.cs, it will be signaled there
                             // But we also need to signal it here if we have access
                             // Actually, Program.cs handler already signals _cts.Cancel(), so token should be signaled
-                            // Just dispose to set status to Disposed
+                            // Use fast-path cancellation to return immediately without waiting for threads
                         }
-                        // Dispose to set status to Disposed and stop threads
-                        search.Dispose();
+                        // Use fast-path cancel to signal threads without blocking on Dispose()
+                        search.Cancel();
                     };
                     Console.CancelKeyPress += cancelHandler;
                 }
