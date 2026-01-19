@@ -94,6 +94,8 @@ public static class MotelyPaths
 
     /// <summary>
     /// Ensures that Initialize has been called before accessing path properties.
+    /// Thread-safe: uses volatile _isInitialized field for proper memory ordering.
+    /// Initialization should complete before any concurrent path access begins.
     /// </summary>
     private static void EnsureInitialized()
     {
