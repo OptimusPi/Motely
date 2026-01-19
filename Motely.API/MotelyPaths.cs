@@ -18,6 +18,8 @@ public static class MotelyPaths
     private static volatile bool _isInitialized = false;
 
     // Common sensitive Unix/Linux directories
+    // Note: This list focuses on critical system directories. It's not exhaustive
+    // but covers the most sensitive locations where data directories should not be placed.
     private static readonly string[] UnixSensitivePaths = new[]
     {
         "/etc", "/sys", "/proc", "/dev", "/boot", "/root",
@@ -25,6 +27,8 @@ public static class MotelyPaths
     };
     
     // Common sensitive Windows directories
+    // Note: This list focuses on the most critical Windows system directories on C: drive.
+    // Additional drives or custom system paths can be added if needed for specific deployments.
     private static readonly string[] WindowsSensitivePaths = new[]
     {
         "C:/Windows", "C:/Windows/System32", "C:/Program Files",
