@@ -5,6 +5,7 @@ using Motely.API;
 using Motely.DuckDB;
 using Motely.Executors;
 using Motely.Filters;
+using System.Text;
 
 namespace Motely
 {
@@ -141,6 +142,11 @@ namespace Motely
                 "Restrict padding characters (e.g., --padding OU or --padding 1). Only works with --keyword.",
                 CommandOptionType.SingleValue
             );
+            var regenerateKeywordDbOption = app.Option(
+                "--regenerate-keyword-db",
+                "Force regeneration of keyword DB even if it exists",
+                CommandOptionType.NoValue
+            );
             var randomOption = app.Option<int>(
                 "--random <COUNT>",
                 "Test with random seeds",
@@ -217,22 +223,7 @@ namespace Motely
                     );
                 }
 
-                // Handle --keyword: generate all combinations (lazy IEnumerable)
-                IEnumerable<string>? keywordSeedList = null;
-                if (keywordOption.HasValue())
-                {
-                    string keyword = keywordOption.Value()!.ToUpperInvariant();
-                    bool sfwOnly = sfwOption.HasValue();
-                    string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
-                    keywordSeedList = GenerateKeywordSeeds(
-                        keyword,
-                        sfwOnly,
-                        paddingChars,
-                        quietOption.HasValue()
-                    );
-                }
-
-                // Build common parameters
+                // Build common parameters first
                 var parameters = new JsonSearchParams
                 {
                     Threads = threadsOption.ParsedValue,
@@ -244,10 +235,55 @@ namespace Motely
                     Quiet = quietOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
                     SeedSources = seedsourcesOption.Value(),
-                    SeedList = keywordSeedList,
+                    SeedList = null, // Will be set by keyword handling below
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
                     CancellationToken = _cts.Token,
                 };
+
+                // Handle --keyword: auto-detect existing DB or generate new
+                if (keywordOption.HasValue())
+                {
+                    string keyword = keywordOption.Value()!.ToUpperInvariant();
+                    string dbPath = Path.Combine("SeedSources", $"_keyword_{keyword}.db");
+                    
+                    // AUTO-DETECT: If DB exists and not regenerating, use it directly!
+                    if (File.Exists(dbPath) && !regenerateKeywordDbOption.HasValue())
+                    {
+                        if (!parameters.Quiet)
+                            Console.WriteLine($"✅ Found existing keyword DB: {dbPath}");
+                        
+                        // Use DuckDB file directly - no generation needed!
+                        parameters.SeedSources = $"_keyword_{keyword}";
+                        parameters.SeedList = null;
+                    }
+                    else
+                    {
+                        // Generate seeds and save to DuckDB
+                        bool sfwOnly = sfwOption.HasValue();
+                        string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
+                        
+                        if (!parameters.Quiet)
+                            Console.WriteLine($"🔧 Generating seeds for keyword '{keyword}'...");
+                        
+                        var keywordSeedList = GenerateKeywordSeeds(
+                            keyword,
+                            sfwOnly,
+                            paddingChars,
+                            parameters.Quiet
+                        );
+                        
+                        // Ensure SeedSources directory exists
+                        Directory.CreateDirectory("SeedSources");
+                        
+                        // Save seeds to DuckDB (only delete if explicitly regenerating)
+                        bool isRegenerating = regenerateKeywordDbOption.HasValue();
+                        SaveSeedsToDuckDB(keywordSeedList, dbPath, parameters.Quiet, isRegenerating);
+                        
+                        // Use DuckDB file instead of IEnumerable
+                        parameters.SeedSources = $"_keyword_{keyword}";
+                        parameters.SeedList = null; // Clear IEnumerable, use DuckDB instead
+                    }
+                }
 
                 // Validate batch size
                 if (parameters.BatchSize < 1 || parameters.BatchSize >= 8)
@@ -615,61 +651,60 @@ namespace Motely
                         configFormat,
                         dbCallback
                     );
-                    int exitCode = executor.Execute();
-
-                    // Flush and close CSV
-                    if (csvWriter != null)
+                    int exitCode = 0;
+                    try
                     {
-                        try
-                        {
-                            csvWriter.Flush();
-                            csvWriter.Close();
-                            Console.WriteLine($"💾 Total seeds saved to CSV: {seedsFound}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.Error.WriteLine($"❌ [CRITICAL] CSV write failed: {ex.Message}");
-                            return 1;
-                        }
+                        exitCode = executor.Execute();
                     }
-
-                    // Flush and close database
-                    if (db != null)
+                    finally
                     {
-                        try
+                        // CRITICAL: Always flush DuckDB on exit (normal or cancelled) to prevent WAL files
+                        if (db != null)
                         {
-                            db.Checkpoint();
-
-                            // CRITICAL: Verify data was actually written!
-                            // Data written check removed - database guarantees consistency
-
-                            var actualCount = db.GetResultCount();
-                            Console.WriteLine(
-                                $"💾 Total seeds saved to database: {actualCount} (verified)"
-                            );
-
-                            if (seedsFound != actualCount)
+                            try
                             {
-                                Console.Error.WriteLine(
-                                    $"⚠️  WARNING: Expected {seedsFound} seeds but database contains {actualCount}!"
-                                );
+                                db.Checkpoint();
+                                if (!parameters.Quiet)
+                                {
+                                    var actualCount = db.GetResultCount();
+                                    Console.WriteLine(
+                                        $"💾 Total seeds saved to database: {actualCount} (verified)"
+                                    );
+                                    if (seedsFound != actualCount)
+                                    {
+                                        Console.Error.WriteLine(
+                                            $"⚠️  WARNING: Expected {seedsFound} seeds but database contains {actualCount}!"
+                                        );
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine($"❌ [CRITICAL] DuckDB checkpoint failed: {ex.Message}");
                             }
                         }
-                        catch (Exception ex)
+
+                        // Flush and close CSV
+                        if (csvWriter != null)
                         {
-                            Console.Error.WriteLine(
-                                $"❌ [CRITICAL] Database checkpoint/verification failed: {ex.Message}"
-                            );
-                            Console.Error.WriteLine(
-                                $"   This may indicate data loss - check the database manually!"
-                            );
-                            return 1; // Return error code
-                        }
-                        finally
-                        {
-                            db.Dispose();
+                            try
+                            {
+                                csvWriter.Flush();
+                                csvWriter.Close();
+                                if (!parameters.Quiet)
+                                {
+                                    Console.WriteLine($"💾 Total seeds saved to CSV: {seedsFound}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine($"❌ [CRITICAL] CSV write failed: {ex.Message}");
+                            }
                         }
                     }
+                    
+                    // Dispose database connection
+                    db?.Dispose();
 
                     return exitCode;
                 }
@@ -1053,6 +1088,74 @@ namespace Motely
             }
 
             return batchNum;
+        }
+
+        /// <summary>
+        /// Save generated seeds to DuckDB file
+        /// </summary>
+        private static void SaveSeedsToDuckDB(IEnumerable<string> seeds, string dbPath, bool quiet, bool isRegenerating = false)
+        {
+            if (!quiet)
+                Console.WriteLine($"💾 Saving seeds to {dbPath}...");
+            
+            // Only delete existing file if we're explicitly regenerating
+            if (isRegenerating && File.Exists(dbPath))
+                File.Delete(dbPath);
+            
+            using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
+            using var cmd = conn.CreateCommand();
+            
+            // Create table
+            cmd.CommandText = @"
+                CREATE TABLE seeds (
+                    id BIGINT,
+                    seed VARCHAR
+                );
+                CREATE INDEX idx_seeds_id ON seeds(id);
+            ";
+            cmd.ExecuteNonQuery();
+            
+            // Insert seeds in batches (DuckDB is fast!)
+            const int batchSize = 100000;
+            var batch = new List<string>(batchSize);
+            long id = 0;
+            
+            foreach (var seed in seeds)
+            {
+                batch.Add(seed);
+                if (batch.Count >= batchSize)
+                {
+                    InsertBatch(cmd, batch, ref id);
+                    batch.Clear();
+                }
+            }
+            
+            // Insert remaining
+            if (batch.Count > 0)
+                InsertBatch(cmd, batch, ref id);
+            
+            if (!quiet)
+                Console.WriteLine($"✅ Saved {id:N0} seeds to {dbPath}");
+        }
+
+        /// <summary>
+        /// Insert a batch of seeds into DuckDB
+        /// </summary>
+        private static void InsertBatch(DuckDBCommand cmd, List<string> batch, ref long startId)
+        {
+            // Build INSERT statement with VALUES clause
+            var values = new StringBuilder();
+            for (int i = 0; i < batch.Count; i++)
+            {
+                if (i > 0) values.Append(',');
+                var seed = batch[i].Replace("'", "''"); // SQL escape
+                values.Append($"({startId + i}, '{seed}')");
+            }
+            
+            cmd.CommandText = $"INSERT INTO seeds (id, seed) VALUES {values}";
+            cmd.ExecuteNonQuery();
+            
+            startId += batch.Count;
         }
     }
 }
