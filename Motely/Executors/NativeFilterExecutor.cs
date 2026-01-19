@@ -43,37 +43,42 @@ namespace Motely.Executors
 
             DateTime lastProgressUpdate = DateTime.UtcNow;
             DateTime progressStartTime = DateTime.UtcNow;
+            object progressLock = new object();
+            
             progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
             {
-                var now = DateTime.UtcNow;
-                var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
-
-                // Throttle progress updates to every 2 seconds
-                if (timeSinceLastUpdate < 2000)
-                    return;
-
-                lastProgressUpdate = now;
-
-                var elapsedMS = (now - progressStartTime).TotalMilliseconds;
-                string timeLeftFormatted = "calculating...";
-                if (total > 0 && completed > 0)
+                lock (progressLock)
                 {
-                    double portionFinished = (double)completed / total;
-                    double timeLeft = elapsedMS / portionFinished - elapsedMS;
-                    TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(
-                        Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds)
-                    );
-                    if (timeLeftSpan.Days == 0)
-                        timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-                    else
-                        timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                    var now = DateTime.UtcNow;
+                    var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+
+                    // Throttle progress updates to every 2 seconds
+                    if (timeSinceLastUpdate < 2000)
+                        return;
+
+                    lastProgressUpdate = now;
+
+                    var elapsedMS = (now - progressStartTime).TotalMilliseconds;
+                    string timeLeftFormatted = "calculating...";
+                    if (total > 0 && completed > 0)
+                    {
+                        double portionFinished = (double)completed / total;
+                        double timeLeft = elapsedMS / portionFinished - elapsedMS;
+                        TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(
+                            Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds)
+                        );
+                        if (timeLeftSpan.Days == 0)
+                            timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
+                        else
+                            timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                    }
+                    double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
+                    string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+                    var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
+                    string progressLine =
+                        $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
+                    Console.Write($"\r{progressLine}                    \r{progressLine}");
                 }
-                double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
-                string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
-                var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
-                string progressLine =
-                    $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
-                Console.Write($"\r{progressLine}                    \r{progressLine}");
             };
 
             // Create the appropriate filter
@@ -110,7 +115,7 @@ namespace Motely.Executors
                 e.Cancel = true;
                 _cancelled = true;
                 Console.WriteLine("\n🛑 Stopping search...");
-                // Dispose immediately to stop all threads
+                // Dispose to set status to Disposed - cancellation token is already signaled by Program.cs handler
                 search.Dispose();
             };
 
@@ -129,16 +134,33 @@ namespace Motely.Executors
             }
 
             search.Start();
+            
+            // Wire up cancellation token BEFORE starting search
+            if (_params.CancellationToken != null)
+            {
+                var setTokenMethod = search.GetType().GetMethod("SetCancellationToken", 
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                setTokenMethod?.Invoke(search, [_params.CancellationToken.Value]);
+            }
 
-            // Wait for completion using Thread.Join (no polling)
-            search.AwaitCompletion();
+            try
+            {
+                // Wait for completion - will exit early if cancellation token is signaled
+                search.AwaitCompletion();
 
-            // Note: Dispose() is now called immediately in the CTRL+C handler above
+                searchStopwatch.Stop();
+                PrintSummary(search, searchStopwatch.Elapsed);
 
-            searchStopwatch.Stop();
-            PrintSummary(search, searchStopwatch.Elapsed);
-
-            return 0;
+                return 0;
+            }
+            finally
+            {
+                // Always dispose, but avoid double-dispose if cancelled and handler already disposed
+                if (!_cancelled)
+                {
+                    search.Dispose();
+                }
+            }
         }
 
         private IMotelySearch CreateFilterSearch(
@@ -252,7 +274,7 @@ namespace Motely.Executors
 
                 // Use original tally column format (CSV-style with colored numbers)
                 Console.WriteLine(
-                    TallyColorizer.FormatResultLine(score.Seed, score.Score, score.TallyColumns)
+                    TallyColorizer.FormatResultLine(score.Seed, score.Score, score.TallyValuesSpan)
                 );
             };
 
@@ -400,28 +422,8 @@ namespace Motely.Executors
                 _cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed"
             );
 
-            // Calculate actual seeds searched
-            ulong totalSeedsSearched;
-
-            if (_searchSeeds != null)
-            {
-                // Wordlist or specific seed mode - use actual seed count if possible
-                if (_searchSeeds is ICollection<string> col)
-                    totalSeedsSearched = (ulong)col.Count;
-                else
-                    totalSeedsSearched = (ulong)search.TotalSeedsSearched;
-            }
-            else if (_params.RandomSeeds.HasValue)
-            {
-                // Random mode - use the actual random seed count
-                totalSeedsSearched = (ulong)_params.RandomSeeds.Value;
-            }
-            else
-            {
-                // Sequential batch mode - calculate from batches
-                ulong seedsPerBatch = (ulong)Math.Pow(35, _params.BatchSize);
-                totalSeedsSearched = (ulong)search.CompletedBatchCount * seedsPerBatch;
-            }
+            // Calculate actual seeds searched - always use TotalSeedsSearched for accuracy
+            ulong totalSeedsSearched = (ulong)search.TotalSeedsSearched;
 
             // Calculate the actual last batch processed
             var lastBatch = search.CompletedBatchCount;

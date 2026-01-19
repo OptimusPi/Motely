@@ -395,6 +395,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly Barrier _unpauseBarrier;
     private volatile MotelySearchStatus _status;
     public MotelySearchStatus Status => _status;
+    
+    internal CancellationToken _cancellationToken = CancellationToken.None;
+
+    public void SetCancellationToken(CancellationToken cancellationToken)
+    {
+        _cancellationToken = cancellationToken;
+    }
 
     private readonly TBaseFilter _baseFilter;
     private readonly IMotelySeedFilter[] _additionalFilters;
@@ -587,10 +594,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // Wait with timeout to check status periodically
             while (!searchThread.Thread.Join(timeoutMs))
             {
-                // Check if search was cancelled or disposed
-                if (_status == MotelySearchStatus.Disposed || _status == MotelySearchStatus.Paused)
+                // Check if search was cancelled, disposed, or cancellation token was signaled
+                // If cancelled, break immediately - threads will exit due to cancellation check in ThreadMain
+                if (_status == MotelySearchStatus.Disposed 
+                    || _status == MotelySearchStatus.Paused
+                    || _cancellationToken.IsCancellationRequested)
                 {
-                    // Search was cancelled, break out and let threads exit
+                    // Search was cancelled - don't wait for threads, they'll exit cleanly
                     return;
                 }
             }
@@ -655,13 +665,19 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         if (_quietMode)
             return;
 
+        // Calculate progress relative to the work done since start (not absolute position)
+        long batchesSinceStart = thisCompletedCount - _startBatchIndex;
+        long totalBatchesToDo = _threads[0].MaxBatch - _startBatchIndex;
+        
         double totalPortionFinished = (double)thisCompletedCount / (double)_threads[0].MaxBatch;
-        double thisPortionFinished = thisCompletedCount / (double)_threads[0].MaxBatch;
+        double thisPortionFinished = totalBatchesToDo > 0 
+            ? (double)batchesSinceStart / (double)totalBatchesToDo 
+            : 0.0;
 
         string timeLeftFormatted;
         // Guard against unrealistic estimates early in search (when progress is < 0.01%)
         // Also guard against division by zero or near-zero
-        if (thisPortionFinished < 0.0001 || thisCompletedCount == 0)
+        if (thisPortionFinished < 0.0001 || batchesSinceStart == 0)
         {
             timeLeftFormatted = "calculating...";
         }
@@ -889,7 +905,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         private void ThreadMain()
         {
-            while (true)
+            while (!Search._cancellationToken.IsCancellationRequested)
             {
                 switch (Search._status)
                 {
@@ -1007,6 +1023,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 // Ensure any partially filled filter batches progress to downstream filters
                 FlushPendingFilterBatches();
             }
+            
+            // Loop exited due to cancellation - flush any remaining state
+            FlushLocalCounters();
         }
 
         protected abstract void SearchBatch(long batchIdx);
