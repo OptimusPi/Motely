@@ -25,10 +25,23 @@ public static class FilterService
         }
         
         var filterPath = Path.Combine(MotelyPaths.JamlFiltersDir, $"{safeName}.jaml");
-        if (!File.Exists(filterPath))
+        
+        // Validate that the resolved path is within the expected directory
+        var fullFilterPath = Path.GetFullPath(filterPath);
+        var fullJamlFiltersDir = Path.GetFullPath(MotelyPaths.JamlFiltersDir);
+        
+        // Use GetRelativePath to check if the resolved path is within the expected directory
+        // If the relative path starts with "..", it means the path is outside the directory
+        var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
+        {
+            return string.Empty;
+        }
+        
+        if (!File.Exists(fullFilterPath))
             return string.Empty;
             
-        return File.ReadAllText(filterPath);
+        return File.ReadAllText(fullFilterPath);
     }
 
     public static List<object> LoadFiltersFromDisk(string filtersPath, Func<global::Motely.Filters.MotelyJsonConfig?, bool> hasErraticFilters)
