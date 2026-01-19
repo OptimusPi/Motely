@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Motely.Reporting;
 
@@ -73,6 +74,18 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 
     public int TallyCount => _tallyCount;
 
+    /// <summary>
+    /// Zero-allocation span over tally values (for .NET 10+ performance)
+    /// </summary>
+    public ReadOnlySpan<int> TallyValuesSpan
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new ReadOnlySpan<int>((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
+    }
+
+    /// <summary>
+    /// Get tally values as a list. Consider TallyValuesSpan for zero-allocation access.
+    /// </summary>
     public List<int> TallyColumns
     {
         get

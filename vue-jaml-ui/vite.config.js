@@ -100,7 +100,7 @@ export default defineConfig(({ mode }) => ({
     port: 4173
   },
   build: {
-    outDir: '../wwwroot/JAML',
+    outDir: '../Motely.API/wwwroot/JAML',
     emptyOutDir: true, // Clean output directory for proper cache busting
     assetsDir: 'assets',
     chunkSizeWarningLimit: 4000,

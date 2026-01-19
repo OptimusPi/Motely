@@ -136,6 +136,14 @@ namespace Motely.Executors
                 {
                     return 1;
                 }
+                
+                // Wire up cancellation token BEFORE starting search
+                if (_params.CancellationToken != null)
+                {
+                    var setTokenMethod = search.GetType().GetMethod("SetCancellationToken", 
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                    setTokenMethod?.Invoke(search, [_params.CancellationToken.Value]);
+                }
 
                 // Print CSV header (even for filters with no SHOULD clauses, output seed with score 0)
                 PrintResultsHeader(config);
@@ -153,7 +161,15 @@ namespace Motely.Executors
                         {
                             Console.WriteLine("\n🛑 Stopping search...");
                         }
-                        // Dispose immediately to stop all threads
+                        // Signal cancellation token first so threads exit cleanly
+                        if (_params.CancellationToken != null)
+                        {
+                            // Token is from CancellationTokenSource in Program.cs, it will be signaled there
+                            // But we also need to signal it here if we have access
+                            // Actually, Program.cs handler already signals _cts.Cancel(), so token should be signaled
+                            // Just dispose to set status to Disposed
+                        }
+                        // Dispose to set status to Disposed and stop threads
                         search.Dispose();
                     };
                     Console.CancelKeyPress += cancelHandler;
@@ -163,15 +179,21 @@ namespace Motely.Executors
 
                 if (awaitCompletion)
                 {
-                    // Wait for completion using Thread.Join (no polling)
-                    search.AwaitCompletion();
-
-                    // Note: Dispose() is now called immediately in the CTRL+C handler above
-
-                    // Suppress summary in quiet mode
-                    if (!_params.Quiet)
+                    try
                     {
+                        // Wait for completion - will exit early if cancellation token is signaled
+                        search.AwaitCompletion();
+
+                        // Always print final summary, even in quiet mode
                         PrintResultsSummary(search, _cancelled);
+                    }
+                    finally
+                    {
+                        // Always dispose, but avoid double-dispose if cancelled and handler already disposed
+                        if (!_cancelled)
+                        {
+                            search.Dispose();
+                        }
                     }
                 }
                 else

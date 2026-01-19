@@ -192,6 +192,53 @@ public static class TallyColorizer
     /// <summary>
     /// Colorize a list of tally values for CSV output
     /// </summary>
+    public static string ColorizeTallies(ReadOnlySpan<int> tallies)
+    {
+        if (!ColorEnabled)
+        {
+            // No colors - format as CSV
+            if (tallies.Length == 0)
+                return string.Empty;
+
+            var sb = new StringBuilder(tallies.Length * 3);
+            for (int i = 0; i < tallies.Length; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append(tallies[i]);
+            }
+            return sb.ToString();
+        }
+
+        // Zero-allocation path using stack-allocated span
+        if (tallies.Length == 0)
+            return string.Empty;
+
+        Span<char> buffer = stackalloc char[tallies.Length * 16]; // 16 chars per value max
+        var writer = new SpanWriter(buffer);
+        bool first = true;
+
+        foreach (var tally in tallies)
+        {
+            if (!first)
+                writer.Write(',');
+            first = false;
+
+            int colorKey = Math.Max(0, Math.Min(8, tally));
+            if (TallyColors.TryGetValue(colorKey, out var color))
+            {
+                writer.Write(color);
+                writer.Write(tally);
+                writer.Write(ResetColor);
+            }
+            else
+            {
+                writer.Write(tally);
+            }
+        }
+
+        return writer.ToString();
+    }
+
     public static string ColorizeTallies(IEnumerable<int> tallies)
     {
         if (!ColorEnabled)
@@ -275,7 +322,29 @@ public static class TallyColorizer
     }
 
     /// <summary>
-    /// Format a complete result line with colored tallies
+    /// Format a complete result line with colored tallies (zero-allocation span version for .NET 10+)
+    /// </summary>
+    public static string FormatResultLine(string seed, int score, ReadOnlySpan<int> tallies)
+    {
+        if (!ColorEnabled)
+        {
+            // No colors - format as CSV
+            var sb = new StringBuilder(seed.Length + 10 + tallies.Length * 3);
+            sb.Append(seed).Append(',').Append(score).Append(',');
+            for (int i = 0; i < tallies.Length; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append(tallies[i]);
+            }
+            return sb.ToString();
+        }
+
+        // Use ColorizeTallies for colored output
+        return $"{seed},{score},{ColorizeTallies(tallies)}{ResetColor}";
+    }
+
+    /// <summary>
+    /// Format a complete result line with colored tallies (legacy List version)
     /// </summary>
     public static string FormatResultLine(string seed, int score, IEnumerable<int> tallies)
     {
