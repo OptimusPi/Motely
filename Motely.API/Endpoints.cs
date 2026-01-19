@@ -133,7 +133,18 @@ public static class Endpoints
         var fullFilterPath = Path.GetFullPath(fullPath);
         var fullJamlFiltersDir = Path.GetFullPath(jamlFiltersDir);
         
-        // Use GetRelativePath to check if the resolved path is within the expected directory
+        // Ensure the directory path ends with a separator to prevent false positives
+        if (!fullJamlFiltersDir.EndsWith(Path.DirectorySeparatorChar))
+        {
+            fullJamlFiltersDir += Path.DirectorySeparatorChar;
+        }
+        
+        // Defense in depth: Check using both StartsWith and GetRelativePath
+        if (!fullFilterPath.StartsWith(fullJamlFiltersDir, StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest("Invalid filter path");
+        }
+        
         var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
         if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
         {
@@ -157,7 +168,18 @@ public static class Endpoints
         var fullFilterPath = Path.GetFullPath(fullPath);
         var fullJamlFiltersDir = Path.GetFullPath(MotelyPaths.JamlFiltersDir);
         
-        // Use GetRelativePath to check if the resolved path is within the expected directory
+        // Ensure the directory path ends with a separator to prevent false positives
+        if (!fullJamlFiltersDir.EndsWith(Path.DirectorySeparatorChar))
+        {
+            fullJamlFiltersDir += Path.DirectorySeparatorChar;
+        }
+        
+        // Defense in depth: Check using both StartsWith and GetRelativePath
+        if (!fullFilterPath.StartsWith(fullJamlFiltersDir, StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest("Invalid filter path");
+        }
+        
         var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
         if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
         {

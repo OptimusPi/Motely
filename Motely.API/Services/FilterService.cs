@@ -47,8 +47,21 @@ public static class FilterService
         var fullFilterPath = Path.GetFullPath(filterPath);
         var fullJamlFiltersDir = Path.GetFullPath(MotelyPaths.JamlFiltersDir);
         
-        // Use GetRelativePath to check if the resolved path is within the expected directory
-        // If the relative path starts with "..", it means the path is outside the directory
+        // Ensure the directory path ends with a separator to prevent false positives
+        // e.g., "/app/JamlFilters" vs "/app/JamlFiltersEvil"
+        if (!fullJamlFiltersDir.EndsWith(Path.DirectorySeparatorChar))
+        {
+            fullJamlFiltersDir += Path.DirectorySeparatorChar;
+        }
+        
+        // Defense in depth: Check using both StartsWith and GetRelativePath
+        // StartsWith check: Verify the full path is within the expected directory
+        if (!fullFilterPath.StartsWith(fullJamlFiltersDir, StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+        
+        // GetRelativePath check: Verify no ".." path traversal attempts
         var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
         if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
         {
