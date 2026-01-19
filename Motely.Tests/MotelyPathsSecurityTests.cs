@@ -29,19 +29,8 @@ public class MotelyPathsSecurityTests
         // The actual validation happens in MotelyPaths.Initialize()
         // which throws InvalidOperationException for these paths.
         
-        // Verify the path is recognized as a Unix system path
-        Assert.True(dangerousPath.StartsWith("/etc") ||
-                   dangerousPath.StartsWith("/sys") ||
-                   dangerousPath.StartsWith("/proc") ||
-                   dangerousPath.StartsWith("/dev") ||
-                   dangerousPath.StartsWith("/boot") ||
-                   dangerousPath.StartsWith("/root") ||
-                   dangerousPath.StartsWith("/bin") ||
-                   dangerousPath.StartsWith("/sbin") ||
-                   dangerousPath.StartsWith("/usr/bin") ||
-                   dangerousPath.StartsWith("/usr/sbin") ||
-                   dangerousPath.StartsWith("/lib") ||
-                   dangerousPath.StartsWith("/lib64"),
+        // All these paths should start with a known Unix system directory
+        Assert.True(IsUnixSystemPath(dangerousPath),
                    $"Path {dangerousPath} should be recognized as a Unix system directory");
     }
 
@@ -57,11 +46,8 @@ public class MotelyPathsSecurityTests
         // The actual validation happens in MotelyPaths.Initialize()
         // which throws InvalidOperationException for these paths.
         
-        // Verify the path is recognized as a Windows system path
-        var normalizedPath = dangerousPath.Replace('\\', '/');
-        Assert.True(normalizedPath.StartsWith("C:/Windows", StringComparison.OrdinalIgnoreCase) ||
-                   normalizedPath.StartsWith("C:/Program Files", StringComparison.OrdinalIgnoreCase) ||
-                   normalizedPath.StartsWith("C:/ProgramData", StringComparison.OrdinalIgnoreCase),
+        // All these paths should start with a known Windows system directory
+        Assert.True(IsWindowsSystemPath(dangerousPath),
                    $"Path {dangerousPath} should be recognized as a Windows system directory");
     }
 
@@ -86,31 +72,52 @@ public class MotelyPathsSecurityTests
     public void PathValidation_ShouldAcceptSafeAbsolutePaths(string safePath)
     {
         // These absolute paths are outside system directories and should be accepted
-        var normalizedPath = safePath.Replace('\\', '/');
-        
-        // Unix system paths to avoid (using StartsWith to match actual implementation)
-        var isUnixSystemPath = normalizedPath.StartsWith("/etc/") || normalizedPath == "/etc" ||
-                              normalizedPath.StartsWith("/sys/") || normalizedPath == "/sys" ||
-                              normalizedPath.StartsWith("/proc/") || normalizedPath == "/proc" ||
-                              normalizedPath.StartsWith("/dev/") || normalizedPath == "/dev" ||
-                              normalizedPath.StartsWith("/boot/") || normalizedPath == "/boot" ||
-                              normalizedPath.StartsWith("/root/") || normalizedPath == "/root" ||
-                              normalizedPath.StartsWith("/bin/") || normalizedPath == "/bin" ||
-                              normalizedPath.StartsWith("/sbin/") || normalizedPath == "/sbin" ||
-                              normalizedPath.StartsWith("/usr/bin/") || normalizedPath == "/usr/bin" ||
-                              normalizedPath.StartsWith("/usr/sbin/") || normalizedPath == "/usr/sbin" ||
-                              normalizedPath.StartsWith("/lib/") || normalizedPath == "/lib" ||
-                              normalizedPath.StartsWith("/lib64/") || normalizedPath == "/lib64";
-        
-        // Windows system paths to avoid (using StartsWith to match actual implementation)
-        var isWindowsSystemPath = normalizedPath.StartsWith("C:/Windows/", StringComparison.OrdinalIgnoreCase) || 
-                                 normalizedPath.Equals("C:/Windows", StringComparison.OrdinalIgnoreCase) ||
-                                 normalizedPath.StartsWith("C:/Program Files/", StringComparison.OrdinalIgnoreCase) ||
-                                 normalizedPath.Equals("C:/Program Files", StringComparison.OrdinalIgnoreCase) ||
-                                 normalizedPath.StartsWith("C:/ProgramData/", StringComparison.OrdinalIgnoreCase) ||
-                                 normalizedPath.Equals("C:/ProgramData", StringComparison.OrdinalIgnoreCase);
-        
-        Assert.False(isUnixSystemPath || isWindowsSystemPath,
+        Assert.False(IsUnixSystemPath(safePath) || IsWindowsSystemPath(safePath),
                     $"Path {safePath} should be outside system directories");
+    }
+
+    // Helper methods that mirror the logic in MotelyPaths.IsSensitiveSystemPath
+    private static bool IsUnixSystemPath(string path)
+    {
+        var normalizedPath = path.Replace('\\', '/').TrimEnd('/');
+        
+        string[] sensitiveRoots = new[]
+        {
+            "/etc", "/sys", "/proc", "/dev", "/boot", "/root",
+            "/bin", "/sbin", "/usr/bin", "/usr/sbin", "/lib", "/lib64"
+        };
+
+        foreach (var root in sensitiveRoots)
+        {
+            if (normalizedPath.Equals(root, StringComparison.Ordinal) ||
+                normalizedPath.StartsWith(root + "/", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private static bool IsWindowsSystemPath(string path)
+    {
+        var normalizedPath = path.Replace('\\', '/').TrimEnd('/');
+        
+        string[] sensitiveRoots = new[]
+        {
+            "C:/Windows", "C:/Windows/System32", "C:/Program Files",
+            "C:/Program Files (x86)", "C:/ProgramData"
+        };
+
+        foreach (var root in sensitiveRoots)
+        {
+            if (normalizedPath.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

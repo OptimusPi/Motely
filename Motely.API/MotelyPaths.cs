@@ -17,6 +17,20 @@ public static class MotelyPaths
     private static volatile string? _searchResultsOverride;
     private static volatile bool _isInitialized = false;
 
+    // Common sensitive Unix/Linux directories
+    private static readonly string[] UnixSensitivePaths = new[]
+    {
+        "/etc", "/sys", "/proc", "/dev", "/boot", "/root",
+        "/bin", "/sbin", "/usr/bin", "/usr/sbin", "/lib", "/lib64"
+    };
+    
+    // Common sensitive Windows directories
+    private static readonly string[] WindowsSensitivePaths = new[]
+    {
+        "C:/Windows", "C:/Windows/System32", "C:/Program Files",
+        "C:/Program Files (x86)", "C:/ProgramData"
+    };
+
     /// <summary>
     /// Gets the content root path (typically the repo root).
     /// </summary>
@@ -144,22 +158,8 @@ public static class MotelyPaths
         // Normalize path separators for consistent comparison
         var normalizedPath = fullPath.Replace('\\', '/').TrimEnd('/');
         
-        // Common sensitive Unix/Linux directories
-        string[] unixSensitivePaths = new[]
-        {
-            "/etc", "/sys", "/proc", "/dev", "/boot", "/root",
-            "/bin", "/sbin", "/usr/bin", "/usr/sbin", "/lib", "/lib64"
-        };
-        
-        // Common sensitive Windows directories
-        string[] windowsSensitivePaths = new[]
-        {
-            "C:/Windows", "C:/Windows/System32", "C:/Program Files",
-            "C:/Program Files (x86)", "C:/ProgramData"
-        };
-        
         // Check Unix paths (case-sensitive)
-        foreach (var sensitivePath in unixSensitivePaths)
+        foreach (var sensitivePath in UnixSensitivePaths)
         {
             if (normalizedPath.Equals(sensitivePath, StringComparison.Ordinal) ||
                 normalizedPath.StartsWith(sensitivePath + "/", StringComparison.Ordinal))
@@ -169,7 +169,7 @@ public static class MotelyPaths
         }
         
         // Check Windows paths (case-insensitive)
-        foreach (var sensitivePath in windowsSensitivePaths)
+        foreach (var sensitivePath in WindowsSensitivePaths)
         {
             if (normalizedPath.Equals(sensitivePath, StringComparison.OrdinalIgnoreCase) ||
                 normalizedPath.StartsWith(sensitivePath + "/", StringComparison.OrdinalIgnoreCase))
