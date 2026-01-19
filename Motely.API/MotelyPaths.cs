@@ -11,6 +11,7 @@ namespace Motely.API;
 /// </summary>
 public static class MotelyPaths
 {
+    private static readonly object _initLock = new object();
     private static volatile string _contentRoot = Directory.GetCurrentDirectory();
     private static volatile string? _jamlFiltersOverride;
     private static volatile string? _seedSourcesOverride;
@@ -71,25 +72,42 @@ public static class MotelyPaths
     /// <summary>
     /// Initializes MotelyPaths with the web host environment and configuration.
     /// Should be called once at application startup.
+    /// Thread-safe: uses a lock to ensure only one thread completes initialization.
+    /// Subsequent calls are safely ignored if initialization is already complete.
     /// </summary>
     public static void Initialize(IWebHostEnvironment env, IConfiguration? config = null)
     {
-        _contentRoot = env.ContentRootPath;
-
-        if (config != null)
+        // Fast path: if already initialized, return immediately
+        if (_isInitialized)
         {
-            _jamlFiltersOverride = config["Motely:Paths:JamlFiltersDir"];
-            _seedSourcesOverride = config["Motely:Paths:SeedSourcesDir"];
-            _searchResultsOverride = config["Motely:Paths:SearchResultsDir"];
+            return;
         }
 
-        // Ensure directories exist (using ResolvePath directly to avoid EnsureInitialized check)
-        Directory.CreateDirectory(ResolvePath(_jamlFiltersOverride, "JamlFilters"));
-        Directory.CreateDirectory(ResolvePath(_seedSourcesOverride, "SeedSources"));
-        Directory.CreateDirectory(ResolvePath(_searchResultsOverride, "SearchResults"));
+        lock (_initLock)
+        {
+            // Double-check pattern: verify initialization is still needed after acquiring lock
+            if (_isInitialized)
+            {
+                return;
+            }
 
-        // Mark as initialized after all setup is complete
-        _isInitialized = true;
+            _contentRoot = env.ContentRootPath;
+
+            if (config != null)
+            {
+                _jamlFiltersOverride = config["Motely:Paths:JamlFiltersDir"];
+                _seedSourcesOverride = config["Motely:Paths:SeedSourcesDir"];
+                _searchResultsOverride = config["Motely:Paths:SearchResultsDir"];
+            }
+
+            // Ensure directories exist (using ResolvePath directly to avoid EnsureInitialized check)
+            Directory.CreateDirectory(ResolvePath(_jamlFiltersOverride, "JamlFilters"));
+            Directory.CreateDirectory(ResolvePath(_seedSourcesOverride, "SeedSources"));
+            Directory.CreateDirectory(ResolvePath(_searchResultsOverride, "SearchResults"));
+
+            // Mark as initialized after all setup is complete
+            _isInitialized = true;
+        }
     }
 
     /// <summary>
