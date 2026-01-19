@@ -127,15 +127,15 @@ public static class Endpoints
             return Results.BadRequest("Invalid filter name");
         
         var fileName = $"{safeName}.jaml";
-        var fullPath = Path.Combine(jamlFiltersDir, fileName);
+        var filePath = Path.Combine(jamlFiltersDir, fileName);
         
         // Validate that the resolved path is within the expected directory
-        if (!FilterService.IsPathWithinDirectory(fullPath, jamlFiltersDir))
+        if (!FilterService.IsPathWithinDirectory(filePath, jamlFiltersDir, out var fullFilePath))
         {
             return Results.BadRequest("Invalid filter path");
         }
         
-        File.WriteAllText(fullPath, request.FilterJaml);
+        File.WriteAllText(fullFilePath, request.FilterJaml);
         
         return Results.Ok(new { filePath = fileName });
     }
@@ -147,17 +147,17 @@ public static class Endpoints
             return Results.BadRequest("Invalid filter name");
         
         var fileName = $"{safeName}.jaml";
-        var fullPath = Path.Combine(MotelyPaths.JamlFiltersDir, fileName);
+        var filePath = Path.Combine(MotelyPaths.JamlFiltersDir, fileName);
         
         // Validate that the resolved path is within the expected directory
-        if (!FilterService.IsPathWithinDirectory(fullPath, MotelyPaths.JamlFiltersDir))
+        if (!FilterService.IsPathWithinDirectory(filePath, MotelyPaths.JamlFiltersDir, out var fullFilePath))
         {
             return Results.BadRequest("Invalid filter path");
         }
         
-        if (File.Exists(fullPath))
+        if (File.Exists(fullFilePath))
         {
-            File.Delete(fullPath);
+            File.Delete(fullFilePath);
             return Results.Ok();
         }
         

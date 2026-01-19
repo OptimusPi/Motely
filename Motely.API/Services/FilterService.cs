@@ -10,12 +10,13 @@ public static class FilterService
     /// Validates that a file path is within the expected base directory.
     /// Uses defense-in-depth with both StartsWith and GetRelativePath checks.
     /// </summary>
-    /// <param name="filePath">The full file path to validate</param>
+    /// <param name="filePath">The file path to validate</param>
     /// <param name="baseDirectory">The base directory that the file must be within</param>
+    /// <param name="fullFilePath">The normalized full file path if validation succeeds</param>
     /// <returns>True if the file path is within the base directory, false otherwise</returns>
-    public static bool IsPathWithinDirectory(string filePath, string baseDirectory)
+    public static bool IsPathWithinDirectory(string filePath, string baseDirectory, out string fullFilePath)
     {
-        var fullFilePath = Path.GetFullPath(filePath);
+        fullFilePath = Path.GetFullPath(filePath);
         var fullBaseDir = Path.GetFullPath(baseDirectory);
         
         // Normalize the directory path to end with a separator for accurate StartsWith check
@@ -78,15 +79,15 @@ public static class FilterService
         var filterPath = Path.Combine(MotelyPaths.JamlFiltersDir, $"{safeName}.jaml");
         
         // Validate that the resolved path is within the expected directory
-        if (!IsPathWithinDirectory(filterPath, MotelyPaths.JamlFiltersDir))
+        if (!IsPathWithinDirectory(filterPath, MotelyPaths.JamlFiltersDir, out var fullFilterPath))
         {
             return string.Empty;
         }
         
-        if (!File.Exists(filterPath))
+        if (!File.Exists(fullFilterPath))
             return string.Empty;
             
-        return File.ReadAllText(filterPath);
+        return File.ReadAllText(fullFilterPath);
     }
 
     public static List<object> LoadFiltersFromDisk(string filtersPath, Func<global::Motely.Filters.MotelyJsonConfig?, bool> hasErraticFilters)
