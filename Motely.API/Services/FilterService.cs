@@ -7,6 +7,40 @@ namespace Motely.API.Services;
 public static class FilterService
 {
     /// <summary>
+    /// Validates that a file path is within the expected base directory.
+    /// Uses defense-in-depth with both StartsWith and GetRelativePath checks.
+    /// </summary>
+    /// <param name="filePath">The full file path to validate</param>
+    /// <param name="baseDirectory">The base directory that the file must be within</param>
+    /// <returns>True if the file path is within the base directory, false otherwise</returns>
+    public static bool IsPathWithinDirectory(string filePath, string baseDirectory)
+    {
+        var fullFilePath = Path.GetFullPath(filePath);
+        var fullBaseDir = Path.GetFullPath(baseDirectory);
+        
+        // Normalize the directory path to end with a separator for accurate StartsWith check
+        // This prevents false positives like "/app/JamlFilters" matching "/app/JamlFiltersEvil"
+        fullBaseDir = Path.TrimEndingDirectorySeparator(fullBaseDir) + Path.DirectorySeparatorChar;
+        
+        // Defense in depth: Check using both StartsWith and GetRelativePath
+        // StartsWith check: Verify the full path is within the expected directory
+        // Using Ordinal comparison for case-sensitive security on case-sensitive file systems
+        if (!fullFilePath.StartsWith(fullBaseDir, StringComparison.Ordinal))
+        {
+            return false;
+        }
+        
+        // GetRelativePath check: Verify no ".." path traversal attempts
+        var relativePath = Path.GetRelativePath(fullBaseDir, fullFilePath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
+        {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /// <summary>
     /// Sanitizes a filter name to prevent path traversal attacks.
     /// Extracts just the filename stem (no path separators, no extension) and replaces invalid characters.
     /// </summary>
@@ -44,34 +78,15 @@ public static class FilterService
         var filterPath = Path.Combine(MotelyPaths.JamlFiltersDir, $"{safeName}.jaml");
         
         // Validate that the resolved path is within the expected directory
-        var fullFilterPath = Path.GetFullPath(filterPath);
-        var fullJamlFiltersDir = Path.GetFullPath(MotelyPaths.JamlFiltersDir);
-        
-        // Ensure the directory path ends with a separator to prevent false positives
-        // e.g., "/app/JamlFilters" vs "/app/JamlFiltersEvil"
-        if (!fullJamlFiltersDir.EndsWith(Path.DirectorySeparatorChar))
-        {
-            fullJamlFiltersDir += Path.DirectorySeparatorChar;
-        }
-        
-        // Defense in depth: Check using both StartsWith and GetRelativePath
-        // StartsWith check: Verify the full path is within the expected directory
-        if (!fullFilterPath.StartsWith(fullJamlFiltersDir, StringComparison.OrdinalIgnoreCase))
+        if (!IsPathWithinDirectory(filterPath, MotelyPaths.JamlFiltersDir))
         {
             return string.Empty;
         }
         
-        // GetRelativePath check: Verify no ".." path traversal attempts
-        var relativePath = Path.GetRelativePath(fullJamlFiltersDir, fullFilterPath);
-        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
-        {
-            return string.Empty;
-        }
-        
-        if (!File.Exists(fullFilterPath))
+        if (!File.Exists(filterPath))
             return string.Empty;
             
-        return File.ReadAllText(fullFilterPath);
+        return File.ReadAllText(filterPath);
     }
 
     public static List<object> LoadFiltersFromDisk(string filtersPath, Func<global::Motely.Filters.MotelyJsonConfig?, bool> hasErraticFilters)
