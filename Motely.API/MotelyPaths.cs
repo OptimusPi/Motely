@@ -12,9 +12,9 @@ namespace Motely.API;
 public static class MotelyPaths
 {
     private static volatile string _contentRoot = Directory.GetCurrentDirectory();
-    private static string? _jamlFiltersOverride;
-    private static string? _seedSourcesOverride;
-    private static string? _searchResultsOverride;
+    private static volatile string? _jamlFiltersOverride;
+    private static volatile string? _seedSourcesOverride;
+    private static volatile string? _searchResultsOverride;
     private static volatile bool _isInitialized = false;
 
     /// <summary>
