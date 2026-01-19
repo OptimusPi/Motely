@@ -126,6 +126,18 @@ public static class Endpoints
         if (!FilterService.TrySanitizeFilterName(name, out var safeName))
             return Results.BadRequest("Invalid filter name");
         
+        // Extract just the filename stem (no path separators, no extension)
+        var safeName = Path.GetFileNameWithoutExtension(name);
+        if (string.IsNullOrWhiteSpace(safeName))
+            return Results.BadRequest("Invalid filter name");
+        
+        // Remove any remaining path separators or invalid characters
+        var invalidChars = Path.GetInvalidFileNameChars();
+        foreach (var c in invalidChars)
+        {
+            safeName = safeName.Replace(c, '_');
+        }
+        
         var fileName = $"{safeName}.jaml";
         var fullPath = Path.Combine(jamlFiltersDir, fileName);
         File.WriteAllText(fullPath, request.FilterJaml);
