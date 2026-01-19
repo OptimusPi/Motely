@@ -100,7 +100,9 @@ public static class MotelyPaths
                 _searchResultsOverride = config["Motely:Paths:SearchResultsDir"];
             }
 
-            // Ensure directories exist (using ResolvePath directly to avoid EnsureInitialized check)
+            // Ensure directories exist before marking as initialized.
+            // Kept inside the lock to ensure atomic initialization: if directory creation fails,
+            // _isInitialized remains false, allowing retry on next Initialize call.
             Directory.CreateDirectory(ResolvePath(_jamlFiltersOverride, "JamlFilters"));
             Directory.CreateDirectory(ResolvePath(_seedSourcesOverride, "SeedSources"));
             Directory.CreateDirectory(ResolvePath(_searchResultsOverride, "SearchResults"));
@@ -112,8 +114,8 @@ public static class MotelyPaths
 
     /// <summary>
     /// Ensures that Initialize has been called before accessing path properties.
-    /// Thread-safe: uses volatile _isInitialized field for proper memory ordering.
-    /// Initialization should complete before any concurrent path access begins.
+    /// This method checks the volatile _isInitialized flag for proper memory ordering.
+    /// It assumes initialization has already completed safely via the Initialize method's locking mechanism.
     /// </summary>
     private static void EnsureInitialized()
     {
