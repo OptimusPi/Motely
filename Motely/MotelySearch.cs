@@ -363,6 +363,7 @@ public interface IMotelySearch : IDisposable
     public void Start();
     public void AwaitCompletion();
     public void Pause();
+    public void Cancel();
 }
 
 internal unsafe interface IInternalMotelySearch : IMotelySearch
@@ -728,6 +729,21 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 $"{totalPortionFinished * 100:F8}% ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)"
             );
         }
+    }
+
+    /// <summary>
+    /// Fast-path cancellation for Ctrl+C: signal token and set status without waiting for threads.
+    /// Used for immediate responsiveness on Ctrl+C. Threads will exit cleanly on next status check.
+    /// Call Dispose() later for full cleanup if needed.
+    /// </summary>
+    public void Cancel()
+    {
+        // Atomically mark as disposed to signal threads to exit
+        Interlocked.Exchange(ref _status, MotelySearchStatus.Disposed);
+        
+        // The cancellation token is already set by Program.cs via SetCancellationToken,
+        // so threads will see _cancellationToken.IsCancellationRequested = true.
+        // This returns immediately without waiting for threads.
     }
 
     public void Dispose()

@@ -430,6 +430,11 @@ namespace Motely
                     StreamWriter? csvWriter = null;
                     List<string>? csvColumnNames = null;
                     long seedsFound = 0;
+                    
+                    // Queue-based DB writer to avoid concurrent write conflicts
+                    var dbWriteQueue = new System.Collections.Concurrent.BlockingCollection<MotelySeedScoreTally>();
+                    Task? dbWriterTask = null;
+                    CancellationTokenSource? dbWriterCts = null;
 
                     // Setup CSV output if requested
                     if (outputCsvOption.HasValue())
@@ -556,30 +561,42 @@ namespace Motely
                             Console.WriteLine($"💾 Writing results to: {dbPath}");
                         }
 
+                        // Start dedicated DB writer thread
+                        dbWriterCts = new CancellationTokenSource();
+                        dbWriterTask = Task.Run(() =>
+                        {
+                            foreach (var result in dbWriteQueue.GetConsumingEnumerable(dbWriterCts.Token))
+                            {
+                                try
+                                {
+                                    db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
+                                    seedsFound++;
+                                    // Only print once when first result is found
+                                    if (seedsFound == 1)
+                                        Console.Error.WriteLine(
+                                            "✅ Found first matching seed (writing to DuckDB)..."
+                                        );
+                                }
+                                catch (Exception ex)
+                                {
+                                    // CRITICAL: Stop on DB errors to prevent data corruption
+                                    Console.Error.WriteLine(
+                                        $"❌ [CRITICAL] Failed to write seed {result.Seed} to database: {ex.Message}"
+                                    );
+                                    Console.Error.WriteLine(
+                                        $"   This is a fatal error - stopping search to prevent data loss!"
+                                    );
+                                    // Signal cancellation to stop the search
+                                    _cts.Cancel();
+                                    throw;
+                                }
+                            }
+                        });
+
+                        // Callback pushes to queue instead of writing directly
                         dbCallback = (result) =>
                         {
-                            try
-                            {
-                                db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
-                                seedsFound++;
-                                // Avoid spamming/interleaving with progress output (both write to stderr).
-                                // Just print once when the first result is found.
-                                if (seedsFound == 1)
-                                    Console.Error.WriteLine(
-                                        "✅ Found first matching seed (writing to DuckDB)..."
-                                    );
-                            }
-                            catch (Exception ex)
-                            {
-                                // CRITICAL: Never silently swallow database errors!
-                                Console.Error.WriteLine(
-                                    $"❌ [CRITICAL] Failed to write seed {result.Seed} to database: {ex.Message}"
-                                );
-                                Console.Error.WriteLine(
-                                    $"   This is a fatal error - stopping search to prevent data loss!"
-                                );
-                                throw; // Re-throw to stop the search
-                            }
+                            dbWriteQueue.Add(result);
                         };
                     }
 
@@ -658,12 +675,38 @@ namespace Motely
                     }
                     finally
                     {
+                        // CRITICAL: Drain queue and wait for DB writer to complete
+                        if (dbWriteQueue != null && dbWriterTask != null)
+                        {
+                            try
+                            {
+                                // Signal no more items will be added
+                                dbWriteQueue.CompleteAdding();
+                                
+                                // Wait for writer task to process remaining items (with timeout)
+                                if (!dbWriterTask.Wait(TimeSpan.FromSeconds(30)))
+                                {
+                                    Console.Error.WriteLine("⚠️  DB writer task did not complete within 30 seconds");
+                                    dbWriterCts?.Cancel();
+                                    dbWriterTask?.Wait(TimeSpan.FromSeconds(5));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine($"❌ Error draining DB queue: {ex.Message}");
+                            }
+                        }
+                        
                         // CRITICAL: Always flush DuckDB on exit (normal or cancelled) to prevent WAL files
                         if (db != null)
                         {
                             try
                             {
                                 db.Checkpoint();
+                                
+                                // Create indexes after search completes (deferred to avoid write conflicts)
+                                db.CreateIndexes();
+                                
                                 if (!parameters.Quiet)
                                 {
                                     var actualCount = db.GetResultCount();
@@ -897,43 +940,23 @@ namespace Motely
         {
             int count = 0;
 
-            // Keyword alone
-            if (CheckKeywordValidity(keyword, sfwOnly))
-            {
-                yield return keyword;
-                count++;
-            }
+            // Keyword alone - always generate (no SFW check during generation)
+            yield return keyword;
+            count++;
 
-            // Generate with padding - yield directly
+            // Generate with padding - yield directly (NO SFW filtering during generation)
             for (int padLen = 1; padLen <= maxPad; padLen++)
             {
                 foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
                 {
-                    if (CheckKeywordValidity(seed, sfwOnly))
-                    {
-                        yield return seed;
-                        count++;
-                    }
+                    yield return seed;
+                    count++;
                 }
             }
 
             if (!quiet)
             {
-                Console.WriteLine($"   Generated {count:N0} seeds containing '{keyword}'");
-            }
-        }
-
-        private static bool CheckKeywordValidity(string seed, bool sfwOnly)
-        {
-            if (sfwOnly)
-            {
-                // --sfw flag: only allow SFW seeds (filter out NSFW)
-                return SfwSeedGenerator.IsSfw(seed);
-            }
-            else
-            {
-                // Default: allow all seeds (both SFW and NSFW)
-                return true;
+                Console.WriteLine($"   Generated {count:N0} seeds containing '{keyword}' (SFW filter applied at search time)");
             }
         }
 
