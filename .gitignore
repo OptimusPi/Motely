@@ -4,7 +4,6 @@ obj/
 *.swp
 *.editorconfig
 *.wal
-*.db
 *.csv
 
 # Node
@@ -40,7 +39,7 @@ node_modules/
 /Motely/JsonItemFilters/
 /Motely/JsonItemFiltersArchive/
 /Motely/JamlFilters/
-/Motely.TUI/SearchResults/
+/Motely.TUI/SearchDBResults/
 
 # Specific files
 Motely/filters/NegativeScore=2.ini
