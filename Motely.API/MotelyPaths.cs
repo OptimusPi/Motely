@@ -21,19 +21,19 @@ public static class MotelyPaths
 
     /// <summary>
     /// Gets the directory for JAML filter files.
-    /// Defaults to &lt;ContentRoot&gt;/JamlFilters, can be overridden via config.
+    /// Defaults to ContentRoot/JamlFilters, can be overridden via config.
     /// </summary>
     public static string JamlFiltersDir => ResolvePath(_jamlFiltersOverride, "JamlFilters");
 
     /// <summary>
     /// Gets the directory for seed source files (txt, csv, db).
-    /// Defaults to &lt;ContentRoot&gt;/SeedSources, can be overridden via config.
+    /// Defaults to ContentRoot/SeedSources, can be overridden via config.
     /// </summary>
     public static string SeedSourcesDir => ResolvePath(_seedSourcesOverride, "SeedSources");
 
     /// <summary>
     /// Gets the directory for search result databases and metadata.
-    /// Defaults to &lt;ContentRoot&gt;/SearchResults, can be overridden via config.
+    /// Defaults to ContentRoot/SearchResults, can be overridden via config.
     /// </summary>
     public static string SearchResultsDir => ResolvePath(_searchResultsOverride, "SearchResults");
 
