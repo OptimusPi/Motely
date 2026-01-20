@@ -1,0 +1,19 @@
+# Minimal YAML ("JAML v1") config for `negative_tag_skipper.exe`
+#
+# Goal: Ante 2 small-blind tag = Negative, then find "Oops! All 6s" in the shop joker stream.
+#
+# Notes:
+# - Set `min` to 1 if you just want "at least one" OopsAll6s anywhere in the next `jokerRolls`.
+# - Set `min` higher (e.g. 2..6) if you want multiple OopsAll6s hits close together (rerolls/shops).
+# - `endBatch`: Omit or set to -1 to search all seeds. Set a value to limit search range.
+
+ante: 2
+min: 1
+jokerRolls: 8
+joker: OopsAll6s
+
+batchChars: 4
+startBatch: 0
+endBatch: 200000
+
+tag: Negative

@@ -16,6 +16,34 @@ namespace Motely.Executors
     /// </summary>
     public sealed class JsonSearchExecutor
     {
+        /// <summary>
+        /// Enum for seed source type - used to determine which search mode to use
+        /// </summary>
+        private enum SeedSourceType
+        {
+            /// <summary>Specific seed lookup or in-memory IEnumerable list</summary>
+            SeedList,
+            /// <summary>DuckDB file (streamed or loaded into memory)</summary>
+            DuckDatabase,
+            /// <summary>No seed source provided - use sequential search</summary>
+            Sequential,
+        }
+
+        /// <summary>
+        /// Result of LoadSeeds() - explicitly indicates which search mode to use
+        /// </summary>
+        private readonly struct SeedSourceResult
+        {
+            public SeedSourceType SourceType { get; }
+            public string? DbPath { get; } // Only populated for DuckDatabase type
+
+            public SeedSourceResult(SeedSourceType sourceType, string? dbPath = null)
+            {
+                SourceType = sourceType;
+                DbPath = dbPath;
+            }
+        }
+
         private readonly string? _configPath;
         private readonly MotelyJsonConfig? _config;
         private readonly JsonSearchParams _params;
@@ -101,7 +129,7 @@ namespace Motely.Executors
             // Gate colored output based on --nofancy
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 
-            string? duckDbPath = LoadSeeds();
+            SeedSourceResult seedSource = LoadSeeds();
 
             // Suppress startup messages in quiet mode
             if (!_params.Quiet)
@@ -131,7 +159,7 @@ namespace Motely.Executors
             try
             {
                 MotelyJsonConfig config = LoadConfig();
-                IMotelySearch search = CreateSearch(config, duckDbPath);
+                IMotelySearch search = CreateSearch(config, seedSource.DbPath);
                 if (search == null)
                 {
                     return 1;
@@ -223,11 +251,15 @@ namespace Motely.Executors
         }
 
         /// <summary>
-        /// Load seeds from the configured source.
-        /// Returns duckDbPath if we have a file-based source (converts txt/csv to db first).
-        /// Returns null for sequential search or in-memory lists.
+        /// Load seeds from the configured source and determine which search mode to use.
+        /// 
+        /// Priority:
+        /// 1. SpecificSeed → SeedList mode (search for one seed)
+        /// 2. SeedList → SeedList mode (use provided IEnumerable directly)
+        /// 3. SeedSources → DuckDatabase mode (load from .db/.csv/.txt file)
+        /// 4. (none) → Sequential mode (full seed space scan)
         /// </summary>
-        private string? LoadSeeds()
+        private SeedSourceResult LoadSeeds()
         {
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
@@ -235,8 +267,7 @@ namespace Motely.Executors
                 {
                     Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
                 }
-                // For specific seed, return null to use in-memory list
-                return null;
+                return new SeedSourceResult(SeedSourceType.SeedList);
             }
 
             // Direct seed list takes priority over wordlist file
@@ -247,22 +278,30 @@ namespace Motely.Executors
                     // Don't enumerate IEnumerable - just note we have a list
                     Console.WriteLine($"🔍 Searching seeds from provided list");
                 }
-                // Return null to use SeedList in CreateSearch
-                return null;
+                return new SeedSourceResult(SeedSourceType.SeedList);
             }
 
             // Unified SeedSources parameter - handles both relative and absolute paths
             if (!string.IsNullOrEmpty(_params.SeedSources))
             {
-                return LoadSeedSources(_params.SeedSources);
+                string? dbPath = LoadSeedSources(_params.SeedSources);
+                if (dbPath != null)
+                {
+                    return new SeedSourceResult(SeedSourceType.DuckDatabase, dbPath);
+                }
+                // If LoadSeedSources returns null, fall through to sequential
             }
 
-            return null; // Sequential search
+            // No seed source provided - use sequential search
+            return new SeedSourceResult(SeedSourceType.Sequential);
         }
 
         /// <summary>
-        /// Load seed sources - ALWAYS converts to DuckDB first, then returns dbPath.
-        /// ONE TRUE WAY: DuckDB streaming for performance and safety!
+        /// Load seed sources from file (.db/.csv/.txt).
+        /// Converts CSV/TXT to DuckDB if needed, returns the dbPath.
+        /// 
+        /// For IEnumerable sources (--keyword, --seedlist), use SeedList directly instead - faster!
+        /// DuckDB is primarily for caching/reuse of pre-generated seed lists.
         /// </summary>
         private string? LoadSeedSources(string seedSource)
         {
@@ -287,7 +326,7 @@ namespace Motely.Executors
             string csvPath = Path.Combine(directory, baseName + ".csv");
             string txtPath = Path.Combine(directory, baseName + ".txt");
 
-            // ONE TRUE WAY: Always use DuckDB! Convert if needed.
+            // ONE TRUE WAY: Use DuckDB for file-based sources! Convert if needed.
             if (File.Exists(dbPath))
             {
                 // Sanity check: verify 'seeds' table exists
@@ -729,6 +768,9 @@ namespace Motely.Executors
             return config;
         }
 
+        /// <summary>
+        /// Create a search with the appropriate seed source (Random, SeedList, DuckDB, or Sequential)
+        /// </summary>
         private IMotelySearch CreateSearch(MotelyJsonConfig config, string? duckDbPath = null)
         {
             if (!_params.Quiet)
@@ -866,11 +908,13 @@ namespace Motely.Executors
                             _params.ProgressCallback
                         );
 
-                    // Configure search mode
+                    // Configure search mode based on seed source
                     if (_params.RandomSeeds.HasValue)
                         compositeSettings = compositeSettings.WithRandomSearch(
                             _params.RandomSeeds.Value
                         );
+                    else if (_params.SeedList != null)
+                        compositeSettings = compositeSettings.WithListSearch(_params.SeedList, alreadySorted: false);
                     else if (!string.IsNullOrEmpty(duckDbPath))
                         compositeSettings = compositeSettings.WithProviderSearch(
                             new DuckDBSeedProvider(duckDbPath)
@@ -928,9 +972,11 @@ namespace Motely.Executors
                         _params.ProgressCallback
                     );
 
-                // Configure search mode
+                // Configure search mode based on seed source
                 if (_params.RandomSeeds.HasValue)
                     return passthroughSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                else if (_params.SeedList != null)
+                    return passthroughSettings.WithListSearch(_params.SeedList, alreadySorted: false).Start();
                 else if (!string.IsNullOrEmpty(duckDbPath))
                     return passthroughSettings
                         .WithProviderSearch(new DuckDBSeedProvider(duckDbPath))
@@ -1004,7 +1050,7 @@ namespace Motely.Executors
             if (_params.ProgressCallback != null)
                 searchSettings = searchSettings.WithProgressCallback(_params.ProgressCallback);
 
-            // Configure search mode
+            // Configure search mode based on seed source
             if (_params.RandomSeeds.HasValue)
                 searchSettings = searchSettings.WithRandomSearch(_params.RandomSeeds.Value);
             else if (_params.SeedList != null)
@@ -1633,16 +1679,26 @@ namespace Motely.Executors
                 searchSettings = searchSettings.WithEndBatchIndex((long)_params.EndBatch);
             }
 
-            // Start search - ONE TRUE WAY: DuckDB provider!
+            // Configure seed search mode based on source
+            // Priority: Random → SeedList → DuckDatabase → Sequential
             if (_params.RandomSeeds.HasValue)
             {
                 // Use random seed provider for testing
                 return (IMotelySearch)
                     searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
             }
+            else if (_params.SeedList != null)
+            {
+                // Use in-memory IEnumerable (direct, no DuckDB overhead)
+                if (!_params.Quiet)
+                    Console.WriteLine($"📋 Streaming seeds from provided list");
+                
+                return (IMotelySearch)
+                    searchSettings.WithListSearch(_params.SeedList, alreadySorted: false).Start();
+            }
             else if (!string.IsNullOrEmpty(duckDbPath))
             {
-                // Auto-detect: Check if we should load seeds into memory for better performance
+                // Use DuckDB seed source (check if we should pre-load into memory)
 #if !BROWSER
                 using (var conn = DuckDBConnectionFactory.CreateConnection(duckDbPath))
                 {
@@ -1707,6 +1763,9 @@ namespace Motely.Executors
             else
             {
                 // Use sequential search (no seed list or DuckDB path provided)
+                if (!_params.Quiet)
+                    Console.WriteLine($"🔄 Scanning full seed space sequentially");
+                
                 return (IMotelySearch)searchSettings.WithSequentialSearch().Start();
             }
         }

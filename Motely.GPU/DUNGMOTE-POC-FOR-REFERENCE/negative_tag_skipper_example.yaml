@@ -1,0 +1,31 @@
+# Minimal YAML ("JAML v1") config for `negative_tag_skipper.exe`
+#
+# Supported keys (case-insensitive-ish):
+# - ante: 1..8
+# - min: minimum hit group length
+# - jokerRolls: how many shop joker pulls to scan
+# - joker: single joker name
+# - jokers: [JokerA, JokerB, ...] or "JokerA,JokerB"
+# - batchChars / startBatch / endBatch: batch enumeration controls
+# - tag / smallBlindTag: optional (this searcher always enforces Negative Tag)
+#
+# Notes:
+# - This parser is intentionally tiny; it's not full Motely JAML.
+
+ante: 8
+min: 4
+jokerRolls: 120
+
+# You can do a single joker:
+joker: Brainstorm
+
+# Or multiple:
+# jokers: [Brainstorm, OopsAll6s]
+
+batchChars: 4
+startBatch: 0
+endBatch: 50
+
+tag: Negative
+
+
