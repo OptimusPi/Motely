@@ -14,13 +14,13 @@ namespace Motely
     {
         private static readonly CancellationTokenSource _cts = new();
 
-        static int Main(string[] args)
+        static async Task<int> Main(string[] args)
         {
             // Wire up Ctrl+C to CancellationTokenSource for proper async/await cancellation
-            Console.CancelKeyPress += (sender, e) =>
+            Console.CancelKeyPress += async (sender, e) =>
             {
                 e.Cancel = true; // Suppress default termination (allow graceful shutdown)
-                _cts.Cancel(); // Signal cancellation token to all subscribers (search threads, etc)
+                await _cts.CancelAsync(); // Signal cancellation token to all subscribers asynchronously
             };
 
             var app = new CommandLineApplication
