@@ -1,0 +1,41 @@
+# CUDA intermediate files
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+
+# Build artifacts
+*.exe
+*.obj
+*.o
+*.lib
+*.exp
+*.a
+*.so
+*.dll
+*.dylib
+
+# Output directories
+ranks/
+suits/
+
+# IDE files
+.vs/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Debug files
+*.pdb
+*.ilk
+/Balatro
+.cursorignore
+
+
+# Result files
+*.csv
+*.txt
