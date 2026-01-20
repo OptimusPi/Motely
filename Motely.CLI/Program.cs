@@ -1071,15 +1071,42 @@ namespace Motely
             }
             else
             {
-                foreach (var c1 in validChars)
+                // For padLen > 3, generate all positions
+                foreach (var seed in GenerateLargePaddedSeeds(keyword, padLen, validChars))
                 {
-                    foreach (var c2 in validChars)
-                    {
-                        foreach (var c3 in validChars)
-                        {
-                            yield return $"{c1}{c2}{c3}{keyword}";
-                        }
-                    }
+                    yield return seed;
+                }
+            }
+        }
+
+        private static IEnumerable<string> GenerateLargePaddedSeeds(string keyword, int padLen, char[] validChars)
+        {
+            var padding = new char[padLen];
+            return GenerateLargePaddedSeedsRec(keyword, validChars, padding, 0);
+        }
+
+        private static IEnumerable<string> GenerateLargePaddedSeedsRec(string keyword, char[] validChars, char[] padding, int depth)
+        {
+            if (depth == padding.Length)
+            {
+                // Generate all positions for keyword within padding
+                for (int pos = 0; pos <= padding.Length; pos++)
+                {
+                    var builder = new System.Text.StringBuilder(8);
+                    builder.Append(padding, 0, pos);
+                    builder.Append(keyword);
+                    builder.Append(padding, pos, padding.Length - pos);
+                    yield return builder.ToString();
+                }
+                yield break;
+            }
+
+            foreach (var c in validChars)
+            {
+                padding[depth] = c;
+                foreach (var seed in GenerateLargePaddedSeedsRec(keyword, validChars, padding, depth + 1))
+                {
+                    yield return seed;
                 }
             }
         }
