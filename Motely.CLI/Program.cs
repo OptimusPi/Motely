@@ -1002,8 +1002,6 @@ namespace Motely
         )
         {
             int count = 0;
-
-            // Keyword alone - always generate (no SFW check during generation)
             yield return keyword;
             count++;
 
@@ -1019,7 +1017,7 @@ namespace Motely
 
             if (!quiet)
             {
-                Console.WriteLine($"   Generated {count:N0} seeds containing '{keyword}' (SFW filter applied at search time)");
+                Console.WriteLine($"   Generated {count:N0} seeds containing '{keyword}'");
             }
         }
 
@@ -1035,7 +1033,6 @@ namespace Motely
                 yield break;
             }
 
-            // Generate ALL padding combinations - no limits!
             if (padLen == 1)
             {
                 foreach (var c in validChars)
@@ -1074,17 +1071,14 @@ namespace Motely
             }
             else
             {
-                // Generate ALL positions for padLen >= 4 - full explosion!
-                foreach (var combo in GenerateAllCombinations(validChars, padLen))
+                foreach (var c1 in validChars)
                 {
-                    // Generate all positions where keyword can be inserted
-                    // pos=0: keyword + combo (e.g., BEAN + UYDY = BEANUYDY)
-                    // pos=padLen: combo + keyword (e.g., UYDY + BEAN = UYDYBEAN)
-                    for (int pos = 0; pos <= padLen; pos++)
+                    foreach (var c2 in validChars)
                     {
-                        string prefix = pos > 0 ? combo.Substring(0, pos) : "";
-                        string suffix = pos < padLen ? combo.Substring(pos) : "";
-                        yield return prefix + keyword + suffix;
+                        foreach (var c3 in validChars)
+                        {
+                            yield return $"{c1}{c2}{c3}{keyword}";
+                        }
                     }
                 }
             }
