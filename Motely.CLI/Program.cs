@@ -5,6 +5,7 @@ using Motely.API;
 using Motely.DuckDB;
 using Motely.Executors;
 using Motely.Filters;
+using Motely.GPU;
 using System.Text;
 
 namespace Motely
@@ -15,12 +16,11 @@ namespace Motely
 
         static int Main(string[] args)
         {
-            // Handle Ctrl+C gracefully - immediate shutdown
+            // Wire up Ctrl+C to CancellationTokenSource for proper async/await cancellation
             Console.CancelKeyPress += (sender, e) =>
             {
-                e.Cancel = true; // Prevent immediate termination
-                _cts.Cancel();
-                // Handlers in executors will catch this and print summary
+                e.Cancel = true; // Suppress default termination (allow graceful shutdown)
+                _cts.Cancel(); // Signal cancellation token to all subscribers (search threads, etc)
             };
 
             var app = new CommandLineApplication
@@ -188,6 +188,18 @@ namespace Motely
                 "Enable debug output",
                 CommandOptionType.NoValue
             );
+            
+            // GPU acceleration options
+            var dungmotOption = app.Option(
+                "--dungmot",
+                "Use GPU-accelerated dungmot as seed pre-filter",
+                CommandOptionType.NoValue
+            );
+            var dungmotPathOption = app.Option<string>(
+                "--dungmot-path <PATH>",
+                "Path to dungmot executable (default: auto-detect based on filter type)",
+                CommandOptionType.SingleValue
+            );
             var noFancyOption = app.Option(
                 "--nofancy",
                 "Suppress fancy output",
@@ -240,49 +252,32 @@ namespace Motely
                     CancellationToken = _cts.Token,
                 };
 
-                // Handle --keyword: auto-detect existing DB or generate new
+                // Handle --keyword: Use IEnumerable directly for fast keyword generation
                 if (keywordOption.HasValue())
                 {
                     string keyword = keywordOption.Value()!.ToUpperInvariant();
-                    string dbPath = Path.Combine("SeedSources", $"_keyword_{keyword}.db");
                     
-                    // AUTO-DETECT: If DB exists and not regenerating, use it directly!
-                    if (File.Exists(dbPath) && !regenerateKeywordDbOption.HasValue())
-                    {
-                        if (!parameters.Quiet)
-                            Console.WriteLine($"✅ Found existing keyword DB: {dbPath}");
-                        
-                        // Use DuckDB file directly - no generation needed!
-                        parameters.SeedSources = $"_keyword_{keyword}";
-                        parameters.SeedList = null;
-                    }
-                    else
-                    {
-                        // Generate seeds and save to DuckDB
-                        bool sfwOnly = sfwOption.HasValue();
-                        string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
-                        
-                        if (!parameters.Quiet)
-                            Console.WriteLine($"🔧 Generating seeds for keyword '{keyword}'...");
-                        
-                        var keywordSeedList = GenerateKeywordSeeds(
-                            keyword,
-                            sfwOnly,
-                            paddingChars,
-                            parameters.Quiet
-                        );
-                        
-                        // Ensure SeedSources directory exists
-                        Directory.CreateDirectory("SeedSources");
-                        
-                        // Save seeds to DuckDB (only delete if explicitly regenerating)
-                        bool isRegenerating = regenerateKeywordDbOption.HasValue();
-                        SaveSeedsToDuckDB(keywordSeedList, dbPath, parameters.Quiet, isRegenerating);
-                        
-                        // Use DuckDB file instead of IEnumerable
-                        parameters.SeedSources = $"_keyword_{keyword}";
-                        parameters.SeedList = null; // Clear IEnumerable, use DuckDB instead
-                    }
+                    if (!parameters.Quiet)
+                        Console.WriteLine($"🔧 Generating seeds for keyword '{keyword}'...");
+                    
+                    bool sfwOnly = sfwOption.HasValue();
+                    string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
+                    
+                    // Generate seeds as IEnumerable (lazy, no allocation)
+                    var keywordSeedList = GenerateKeywordSeeds(
+                        keyword,
+                        sfwOnly,
+                        paddingChars,
+                        parameters.Quiet
+                    );
+                    
+                    // FAST PATH: Use IEnumerable directly (no DuckDB overhead)
+                    // This skips all file I/O and locks - perfect for in-memory searching
+                    parameters.SeedList = keywordSeedList;
+                    parameters.SeedSources = null; // Don't use DuckDB for keywords
+                    
+                    if (!parameters.Quiet)
+                        Console.WriteLine($"✅ Seeds ready for search (streaming mode)");
                 }
 
                 // Validate batch size
@@ -662,6 +657,71 @@ namespace Motely
                         };
                     }
 
+                    // Handle dungmot GPU acceleration if requested
+                    DungmotSeedProvider? dungmotProvider = null;
+                    if (dungmotOption.HasValue() && configFormat == "jaml")
+                    {
+                        // Load JAML to get MotelyRunConfig for translation
+                        string jamlPath = Path.Combine("JamlFilters", configName! + ".jaml");
+                        if (!File.Exists(jamlPath))
+                            jamlPath = configName!;
+
+                        if (JamlConfigLoader.TryLoadFromJaml(jamlPath, out var jamlConfig, out var jamlError) && jamlConfig != null)
+                        {
+                            var runConfig = jamlConfig.ToRunConfig();
+                            var dungmotOptions = new DungmotOptions
+                            {
+                                ExecutablePath = dungmotPathOption.HasValue() ? dungmotPathOption.Value() : null,
+                                StartBatch = (long)parameters.StartBatch,
+                                EndBatch = (long)parameters.EndBatch,
+                                BatchChars = parameters.BatchSize
+                            };
+
+                            var dungmotConfig = DungmotFilterTranslator.TryTranslate(runConfig, dungmotOptions);
+                            if (dungmotConfig != null)
+                            {
+                                if (!parameters.Quiet)
+                                {
+                                    Console.WriteLine($"🚀 GPU Mode: {DungmotFilterTranslator.DescribeFilter(dungmotConfig)}");
+                                    Console.WriteLine($"   Executable: {dungmotConfig.ExecutablePath}");
+                                    Console.WriteLine($"   Args: {dungmotConfig.ToArgumentString()}");
+                                }
+
+                                try
+                                {
+                                    dungmotProvider = new DungmotSeedProvider(dungmotConfig);
+                                    // NOTE: For now, dungmot streams seeds but we don't yet pipe them to the search
+                                    // Future: parameters.SeedProvider = dungmotProvider or similar
+                                    Console.WriteLine("⚠️  GPU streaming mode not yet fully integrated with search pipeline.");
+                                    Console.WriteLine("   Seeds will be generated but not fed to scoring (coming soon!)");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.Error.WriteLine($"❌ Failed to start dungmot: {ex.Message}");
+                                    Console.Error.WriteLine("   Falling back to CPU-only search...");
+                                    dungmotProvider = null;
+                                }
+                            }
+                            else
+                            {
+                                if (!parameters.Quiet)
+                                {
+                                    Console.WriteLine("⚠️  No dungmot-compatible filter found in JAML.");
+                                    Console.WriteLine("   Dungmot supports: negative jokers, soul jokers, negative tags.");
+                                    Console.WriteLine("   Falling back to CPU-only search...");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Console.Error.WriteLine($"❌ Failed to load JAML for dungmot translation: {jamlError}");
+                        }
+                    }
+                    else if (dungmotOption.HasValue() && configFormat != "jaml")
+                    {
+                        Console.Error.WriteLine("⚠️  --dungmot currently only supports JAML configs (not JSON)");
+                    }
+
                     var executor = new JsonSearchExecutor(
                         configName!,
                         parameters,
@@ -744,6 +804,9 @@ namespace Motely
                                 Console.Error.WriteLine($"❌ [CRITICAL] CSV write failed: {ex.Message}");
                             }
                         }
+
+                        // Clean up dungmot provider
+                        dungmotProvider?.Dispose();
                     }
                     
                     // Dispose database connection

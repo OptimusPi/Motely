@@ -1,0 +1,40 @@
+name: Negative Trickeo-glyph
+author: qcom
+description: Negative perkeo ante 1, canio ante 8, both hieroglyph vouchers and magic trick before ante 8
+deck: Red
+stake: White
+
+must:  
+  - soulJoker: Any
+    edition: Negative
+    packSlots: [0]
+    antes: [8]
+
+  - soulJoker: Perkeo
+    antes: [1]
+    edition: Negative 
+    packSlots: [1]
+  
+
+
+should:
+  - soulJoker: Any
+    antes: [8]
+    edition: Negative
+    score: 1
+
+  - soulJoker: canio
+    antes: [1,2,3,4,5,6,7,8]
+    score: 100
+
+  - voucher: MagicTrick
+    antes: [1, 2, 3, 4]
+    score: 1
+  
+  - voucher: Hieroglyph
+    antes: [1, 2, 3, 4]
+    score: 1
+  
+  - voucher: Petroglyph
+    antes: [1, 2, 3, 4]
+    score: 1
