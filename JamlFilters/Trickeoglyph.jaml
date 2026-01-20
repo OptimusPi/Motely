@@ -5,27 +5,63 @@ deck: Red
 stake: White
 
 must:  
-  - soulJoker: Any
+  - soulJoker: Perkeo
+    antes: [1]
+    edition: Negative
+  - soulJoker: Canio
+    antes: [8]
+
+  - soulJoker: Perkeo
+    antes: [1]
+  - soulJoker: Canio
+    antes: [1,2,3,4,5,6,7,8]
+
+  - voucher: MagicTrick
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 1
+  
+  - voucher: Hieroglyph
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 1
+  
+  - voucher: Petroglyph
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 1
 
 
 should:
   - soulJoker: Any
-    antes: [8]
     edition: Negative
     score: 1
 
-  - soulJoker: canio
-    antes: [1,2,3,4,5,6,7,8]
-    score: 100
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [1]
+    score: 10
 
-  - voucher: MagicTrick
-    antes: [1, 2, 3, 4]
-    score: 1
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [2]
+    score: 10
+
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [3]
+    score: 10
   
-  - voucher: Hieroglyph
-    antes: [1, 2, 3, 4]
-    score: 1
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [4]
+    score: 5
+
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [5]
+    score: 4
   
-  - voucher: Petroglyph
-    antes: [1, 2, 3, 4]
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [6]
+    score: 3
+  
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [7]
+    score: 2
+  
+  - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
+    antes: [8]
     score: 1

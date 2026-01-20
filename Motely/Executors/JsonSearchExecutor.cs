@@ -267,6 +267,8 @@ namespace Motely.Executors
                 {
                     Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
                 }
+                // Create a single-seed list from SpecificSeed
+                _params.SeedList = new[] { _params.SpecificSeed };
                 return new SeedSourceResult(SeedSourceType.SeedList);
             }
 
