@@ -1104,10 +1104,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     BatchSeeds(0, searchResultMask, in searchContextParams);
                 }
             }
-            else
-            {
-                DebugLogger.Log($"[BASE FILTER] No partial results - nothing to process");
-            }
 
             searchContextParams.SeedHashCache->Reset();
         }
@@ -1384,14 +1380,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             Debug.Assert(filterBatch->SeedCount != 0);
 
-            // Clear ALL characters in unused lanes to prevent garbage data
-            for (int i = filterBatch->SeedCount; i < Vector512<double>.Count; i++)
-            {
-                for (int j = 0; j < filterBatch->SeedLength; j++)
-                {
-                    ((double*)&filterBatch->SeedCharacters)[j * Vector512<double>.Count + i] = 0;
-                }
-            }
+
 
             MotelySearchContextParams searchParams = new(
                 &filterBatch->SeedHashCache,
