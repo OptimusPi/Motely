@@ -16,11 +16,13 @@ namespace Motely
 
         static async Task<int> Main(string[] args)
         {
-            // Wire up Ctrl+C to CancellationTokenSource for proper async/await cancellation
-            Console.CancelKeyPress += async (sender, e) =>
+            // Wire up Ctrl+C to CancellationTokenSource for immediate cancellation
+            // NOTE: Console.CancelKeyPress handlers are synchronous, so we must use Cancel()
+            // not CancelAsync(). The cancellation token propagates to all awaiting tasks immediately.
+            Console.CancelKeyPress += (sender, e) =>
             {
                 e.Cancel = true; // Suppress default termination (allow graceful shutdown)
-                await _cts.CancelAsync(); // Signal cancellation token to all subscribers asynchronously
+                _cts.Cancel(); // Signal cancellation token synchronously - propagates to all subscribers immediately
             };
 
             var app = new CommandLineApplication
