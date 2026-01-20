@@ -252,6 +252,59 @@ namespace Motely
                     CancellationToken = _cts.Token,
                 };
 
+                // Smart progress reporting: batch 1, then 0.01%-0.1%, then 1% increments
+                if (!parameters.Quiet)
+                {
+                    parameters.ProgressCallback = CreateSmartProgressCallback();
+                }
+
+                static Action<long, long, long, double> CreateSmartProgressCallback()
+                {
+                    var lastReportedPercent = -1.0;
+                    var batchOneReported = false;
+                    var lockObj = new object();
+
+                    return (batchIndex, completedBatches, totalBatches, elapsedSeconds) =>
+                    {
+                        lock (lockObj) // Only report from one thread at a time
+                        {
+                            // Report after batch 1
+                            if (!batchOneReported && completedBatches >= 1)
+                            {
+                                Console.WriteLine($"   ✓ Batch 1 complete");
+                                batchOneReported = true;
+                                lastReportedPercent = 0;
+                            }
+
+                            if (totalBatches <= 0) return;
+
+                            double progressPercent = (completedBatches * 100.0) / totalBatches;
+
+                            // Determine reporting threshold based on progress
+                            double threshold;
+                            if (progressPercent < 0.1)
+                                threshold = 0.01; // Report every 0.01% from 0-0.1%
+                            else if (progressPercent < 1.0)
+                                threshold = 0.1; // Report every 0.1% from 0.1%-1%
+                            else
+                                threshold = 1.0; // Report every 1% from 1% onwards
+
+                            // Check if we've crossed a reporting threshold
+                            double nextThreshold = (Math.Floor(lastReportedPercent / threshold) + 1) * threshold;
+
+                            if (progressPercent >= nextThreshold)
+                            {
+                                var timeStr = elapsedSeconds < 60 
+                                    ? $"{elapsedSeconds:F1}s"
+                                    : $"{elapsedSeconds / 60:F1}m";
+                                
+                                Console.WriteLine($"   ◸ {progressPercent:F2}% complete ({completedBatches:N0}/{totalBatches:N0} batches) - {timeStr} elapsed");
+                                lastReportedPercent = progressPercent;
+                            }
+                        }
+                    };
+                }
+
                 // Handle --keyword: Use IEnumerable directly for fast keyword generation
                 if (keywordOption.HasValue())
                 {
