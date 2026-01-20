@@ -6,15 +6,6 @@ stake: White
 
 must:  
   - soulJoker: Any
-    edition: Negative
-    packSlots: [0]
-    antes: [8]
-
-  - soulJoker: Perkeo
-    antes: [1]
-    edition: Negative 
-    packSlots: [1]
-  
 
 
 should:
