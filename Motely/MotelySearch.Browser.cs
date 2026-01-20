@@ -100,23 +100,34 @@ public sealed class MotelyRandomSeedProvider(int count) : IMotelySeedProvider
 
 public sealed class MotelySeedListProvider : IMotelySeedProvider
 {
-    public readonly string[] Seeds;
+    // Keep seeds as enumerable - don't materialize! DuckDB returns pre-sorted by length.
+    // For keyword generation, enumerable is lazy and avoids massive allocations.
+    private readonly IEnumerator<string> _seedEnumerator;
+    private string? _currentSeed;
+    private long _seedIndex = -1;
 
-    public int SeedCount => Seeds.Length;
-
-    private long _currentSeed = -1;
+    public int SeedCount { get; private set; } = -1; // Unknown for enumerables
 
     public MotelySeedListProvider(IEnumerable<string> seeds, bool alreadySorted = false)
     {
-        Seeds = alreadySorted ? [.. seeds] : [.. seeds.OrderBy(seed => seed.Length)];
+        // Don't sort or materialize! Assume DuckDB returns pre-sorted, keyword generation is already ordered
+        _seedEnumerator = seeds.GetEnumerator();
     }
 
     public ReadOnlySpan<char> NextSeed()
     {
-        long index = Interlocked.Increment(ref _currentSeed);
-        if (index >= Seeds.Length)
-            return ReadOnlySpan<char>.Empty;
-        return Seeds[index];
+        _seedIndex++;
+        if (_seedEnumerator.MoveNext())
+        {
+            _currentSeed = _seedEnumerator.Current;
+            return _currentSeed.AsSpan();
+        }
+        return ReadOnlySpan<char>.Empty;
+    }
+
+    public void Dispose()
+    {
+        _seedEnumerator?.Dispose();
     }
 }
 
