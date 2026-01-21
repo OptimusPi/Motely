@@ -247,10 +247,10 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public bool QuietMode { get; set; } = false;
 
     /// <summary>
-    /// Callback for progress updates - useful for UI progress bars
-    /// Parameters: (batchesProcessed, totalBatches, seedsFound, elapsedMs)
+    /// Callback for progress updates - useful for UI progress bars and logging
+    /// Receives MotelyProgress object with all progress data
     /// </summary>
-    public Action<long, long, long, double>? ProgressCallback { get; set; }
+    public Action<MotelyProgress>? ProgressCallback { get; set; }
 
     public MotelySearchSettings<TBaseFilter> WithThreadCount(int threadCount)
     {
@@ -331,7 +331,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     }
 
     public MotelySearchSettings<TBaseFilter> WithProgressCallback(
-        Action<long, long, long, double> callback
+        Action<MotelyProgress> callback
     )
     {
         ProgressCallback = callback;
@@ -484,7 +484,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private double _lastReportMS;
     private readonly double reportInterval = 2000; // Report every 2 seconds
 
-    private readonly Action<long, long, long, double>? _progressCallback;
+    private readonly Action<MotelyProgress>? _progressCallback;
     private readonly int _batchCharacterCount;
     private readonly bool _csvOutput;
     private readonly bool _quietMode;
@@ -669,7 +669,16 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // ALWAYS invoke progress callback if set (even in quiet mode) - needed for API speed stats
         if (_progressCallback != null)
         {
-            _progressCallback(thisCompletedCount, totalBatches, seedsSearched, seedsPerMs);
+            var progress = new MotelyProgress
+            {
+                CompletedBatchCount = thisCompletedCount,
+                TotalBatchCount = totalBatches,
+                SeedsSearched = seedsSearched,
+                SeedsPerMillisecond = seedsPerMs,
+                PercentComplete = totalBatches > 0 ? (thisCompletedCount * 100.0 / totalBatches) : 0,
+                ElapsedTime = TimeSpan.FromMilliseconds(elapsedMS)
+            };
+            _progressCallback(progress);
         }
 
         // Suppress console progress output in quiet mode

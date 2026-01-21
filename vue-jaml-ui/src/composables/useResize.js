@@ -144,8 +144,34 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
 
     let newHeight = stackStartHeight + deltaY
     
+    // Allow full collapse to 0
+    if (newHeight < 0 && resizeIndex > 0) {
+      // Dragging up past 0: shrink panel above, then allow full collapse
+      const panelAbove = stackPanels[resizeIndex - 1]
+      if (panelAbove) {
+        const currentHeight = panelAbove.defaultHeight || panelAbove.minHeight
+        const shrinkAmount = Math.min(Math.abs(newHeight), currentHeight - panelAbove.minHeight)
+        if (shrinkAmount > 0) {
+          panelAbove.defaultHeight = Math.max(panelAbove.minHeight, currentHeight - shrinkAmount)
+          newHeight = stackStartHeight + (deltaY + shrinkAmount)
+          
+          if (panelAbove.defaultHeight <= panelAbove.minHeight) {
+            panelAbove.collapsed = true
+          }
+        }
+      }
+      
+      // Continue collapsing the current panel to 0
+      if (newHeight < 0) {
+        resizingPanel.defaultHeight = 0
+        resizingPanel.collapsed = true
+        moveEvent.preventDefault?.()
+        return
+      }
+    }
+    
     // Collision detection: if dragging up, shrink panels above
-    if (deltaY < 0 && resizeIndex > 0) {
+    if (deltaY < 0 && resizeIndex > 0 && newHeight >= 0) {
       const panelAbove = stackPanels[resizeIndex - 1]
       if (panelAbove) {
         const currentHeight = panelAbove.defaultHeight || panelAbove.minHeight
@@ -177,7 +203,7 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
       }
     }
 
-    newHeight = Math.max(resizingPanel.minHeight, newHeight)
+    newHeight = Math.max(0, newHeight)
     resizingPanel.defaultHeight = newHeight
 
     moveEvent.preventDefault?.()
@@ -246,7 +272,14 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
         return
       }
       const desired = startHeight + (moveEvent.clientY - startY)
-      currentPanel.defaultHeight = Math.max(currentPanel.minHeight, desired)
+      
+      // Allow full collapse to 0
+      if (desired < 0) {
+        currentPanel.defaultHeight = 0
+        currentPanel.collapsed = true
+      } else {
+        currentPanel.defaultHeight = Math.max(0, desired)
+      }
     }
 
     const onUp = () => {

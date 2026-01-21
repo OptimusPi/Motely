@@ -12,7 +12,10 @@
     <div
       class="panel-tab"
       :class="[`panel-tab-${tabAlign}`]"
-      :style="{ '--panel-color': `var(--balatro-${color})` }"
+      :style="{ 
+        '--panel-color': `var(--balatro-${color})`,
+        '--panel-color-dark': `var(--balatro-dark-${color})`
+      }"
       draggable="true"
       @dragstart="handleTabDragStart"
       @dragend="handleTabDragEnd"
@@ -146,7 +149,8 @@ const panelStyle = computed(() => {
   return {
     flex: `0 0 ${height.value}px`,
     height: `${height.value}px`,
-    '--panel-color': `var(--balatro-${props.color})`
+    '--panel-color': `var(--balatro-${props.color})`,
+    '--panel-color-dark': `var(--balatro-dark-${props.color})`
   };
 });
 
@@ -201,6 +205,22 @@ watch(
   flex-direction: column;
   min-height: 0;
   max-height: 100vh;
+}
+
+.panel-section:hover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  cursor: row-resize;
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.15s;
+}
+
+.panel-section:hover::before:hover {
+  background: var(--panel-color-dark);
 }
 
 .panel-tab {

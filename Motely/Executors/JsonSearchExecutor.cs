@@ -1933,7 +1933,7 @@ namespace Motely.Executors
                 if (maxBatches > 0)
                     precisePercent = (double)lastBatchIndex * 100.0 / (double)maxBatches;
             }
-            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F8}%)");
+            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
             Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
             // Note: FilteredSeeds is deprecated and always returns 0
             // MatchingSeeds represents seeds that passed all filters AND cutoff
@@ -1950,7 +1950,7 @@ namespace Motely.Executors
             if (wasCancelled)
             {
                 Console.WriteLine(
-                    $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F8}"
+                    $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F4}"
                 );
                 Console.WriteLine(new string('═', 60));
             }
@@ -1984,9 +1984,9 @@ namespace Motely.Executors
         // REMOVED: SeedBatchSize parameter - always auto-detect based on available memory
 
         /// <summary>
-        /// Progress callback: (completedBatches, totalBatches, seedsSearched, seedsPerMs)
+        /// Progress callback: receives MotelyProgress object with all progress data
         /// </summary>
-        public Action<long, long, long, double>? ProgressCallback { get; set; }
+        public Action<MotelyProgress>? ProgressCallback { get; set; }
 
         /// <summary>
         /// Cancellation token to stop the search when CTRL+C is pressed

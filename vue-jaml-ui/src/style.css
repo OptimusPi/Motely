@@ -479,6 +479,92 @@ html, body {
   }
 }
 
+/* Collapsed tab row */
+.collapsed-tab-row {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(20, 20, 30, 0.8);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  min-height: 32px;
+  align-items: center;
+}
+
+.collapsed-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--panel-color);
+  border-radius: 3px;
+  color: #fff;
+  font-family: 'm6x11plus', monospace;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: move;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  opacity: 0.8;
+}
+
+.collapsed-tab:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.collapsed-tab.dragging {
+  opacity: 0.4;
+}
+
+/* Color variants for collapsed tabs */
+.collapsed-tab-red { background: var(--balatro-red); }
+.collapsed-tab-blue { background: var(--balatro-blue); }
+.collapsed-tab-green { background: var(--balatro-green); }
+.collapsed-tab-purple { background: var(--balatro-purple); }
+.collapsed-tab-orange { background: var(--balatro-orange); }
+
+/* Drop zones */
+.drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border: 2px solid transparent;
+  background: rgba(0, 150, 255, 0.05);
+  transition: all 0.2s;
+  cursor: grab;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  font-weight: bold;
+  font-family: 'm6x11plus', monospace;
+  opacity: 0;
+}
+
+.drop-zone.active {
+  opacity: 1;
+  border-color: #ffffff;
+  background: rgba(0, 150, 255, 0.15);
+  color: #ffffff;
+  animation: pulse 0.6s ease-in-out infinite;
+}
+
+.drop-zone-content {
+  user-select: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* Smooth transitions - flat 2D style, no transforms */
 .btn, .nav-link button, .top-bar button, .chip, .pill {
   transition: background-color 0.15s, border-color 0.15s;

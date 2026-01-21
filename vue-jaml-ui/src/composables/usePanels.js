@@ -27,6 +27,7 @@ export function usePanels(initialPanelsFactory) {
   const visiblePanels = computed(() => panels.filter(p => !p.collapsed))
   const leftPanels = computed(() => panels.filter(p => p.side === 'left' && !p.collapsed))
   const rightPanels = computed(() => panels.filter(p => p.side === 'right' && !p.collapsed))
+  const collapsedPanels = computed(() => panels.filter(p => p.collapsed))
 
   // Panel label helper
   const getPanelLabel = (panel) => {
@@ -191,6 +192,7 @@ export function usePanels(initialPanelsFactory) {
     visiblePanels,
     leftPanels,
     rightPanels,
+    collapsedPanels,
     
     // Helpers
     getPanelLabel,

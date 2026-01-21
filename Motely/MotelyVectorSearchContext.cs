@@ -144,9 +144,9 @@ internal static class MotelyVectorConstants
     // PRNG iteration constants
     public static readonly Vector512<double> PrngMultiplier = Vector512.Create(1.72431234);
     public static readonly Vector512<double> PrngAddend = Vector512.Create(2.134453429141);
-    public static readonly Vector512<double> PrngRoundingFactor = Vector512.Create(
-        10000000000000.0
-    );
+    public static readonly Vector512<double> PrngRoundingFactor = Vector512.Create(1e13);
+    // Magic number for accurate rounding: 2^52 aligns binary point for ties-to-even
+    public static readonly Vector512<double> PrngMagicNumber = Vector512.Create(4503599627370496.0);
 
     // Pseudo-hash constants
     public static readonly Vector512<double> HashConstant = Vector512.Create(1.1239285023);
@@ -402,6 +402,7 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     //     }
 
     // AUDIT ISSUE #3 & #4: Always inline critical hot paths + use hoisted constants
+    // Mukundan314's fix: Use FMA with magic number for accurate rounding matching LuaJIT
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static Vector512<double> IteratePRNG(Vector512<double> state)
     {
@@ -411,8 +412,14 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
         Vector512<double> intPart = Vector512.Floor(state);
         state = Vector512.Subtract(state, intPart);
 
-        state = Vector512.Multiply(state, MotelyVectorConstants.PrngRoundingFactor);
-        state = Vector512.Round(state, MidpointRounding.AwayFromZero);
+        // Round to 13 decimals using FMA + magic number for exact tie-breaking
+        // FMA(state, 1e13, 2^52) maintains infinite precision, avoiding intermediate rounding
+        state = Vector512.FusedMultiplyAdd(
+            state,
+            MotelyVectorConstants.PrngRoundingFactor,
+            MotelyVectorConstants.PrngMagicNumber
+        );
+        state = Vector512.Subtract(state, MotelyVectorConstants.PrngMagicNumber);
         state = Vector512.Divide(state, MotelyVectorConstants.PrngRoundingFactor);
 
         return state;
