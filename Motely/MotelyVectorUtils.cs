@@ -260,7 +260,7 @@ public static unsafe class MotelyVectorUtils
     }
 
     /// <summary>
-    /// Converts a VectorMask (uint bitmask) to Vector256<int> for ConditionalSelect.
+    /// Converts a VectorMask (uint bitmask) to Vector256&lt;int&gt; for ConditionalSelect.
     /// Each bit in the mask becomes either -1 (all bits set) or 0 (no bits set) in the corresponding lane.
     /// Replaces slow per-lane loops with single instruction.
     /// </summary>
