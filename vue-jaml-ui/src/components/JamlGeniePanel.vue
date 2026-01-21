@@ -149,6 +149,11 @@ const recognition = ref(null)
 
 const recentFilters = ref([])
 
+const getTypingDelay = () => {
+  // Random delay between 500-1500ms for natural typing feel
+  return 500 + Math.random() * 1000
+}
+
 const sendMessage = async () => {
   if (!userInput.value.trim() || isTyping.value) return
 

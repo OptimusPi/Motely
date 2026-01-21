@@ -63,11 +63,8 @@ public sealed class FertilizerDatabase : IDisposable
 
             Console.WriteLine($"Migrating fertilizer.txt to DuckDB...");
 
-            // Use DuckDB's COPY command for efficient bulk import
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText =
-                $"COPY seeds(seed) FROM '{_txtPath.Replace("\\", "\\\\")}' (FORMAT CSV, HEADER false, DELIMITER '\n')";
-            cmd.ExecuteNonQuery();
+            // Use DuckDB helper for efficient bulk import
+            DuckDBFertilizerOperations.MigrateSeedsFromTextFile(_connection, _txtPath);
 
             // Get final count - use centralized operation
             var finalCount = DuckDBOperations.GetRowCount(_connection, "seeds");
@@ -93,22 +90,7 @@ public sealed class FertilizerDatabase : IDisposable
 
         try
         {
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText =
-                @"
-                INSERT INTO seeds (seed)
-                VALUES (?)
-                ON CONFLICT (seed) DO NOTHING";
-
-            foreach (var seed in seeds)
-            {
-                if (string.IsNullOrWhiteSpace(seed))
-                    continue;
-
-                cmd.Parameters.Clear();
-                cmd.Parameters.Add(new DuckDBParameter(seed));
-                cmd.ExecuteNonQuery();
-            }
+            DuckDBFertilizerOperations.AddSeeds(_connection, seeds);
         }
         catch (Exception ex)
         {

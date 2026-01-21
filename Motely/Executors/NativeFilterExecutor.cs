@@ -39,13 +39,12 @@ namespace Motely.Executors
 
             // Progress callback - only used in silent mode or when fancy console is disabled
             // Otherwise FancyConsole handles progress display at the bottom line
-            Action<long, long, long, double>? progressCallback = null;
+            Action<MotelyProgress>? progressCallback = null;
 
             DateTime lastProgressUpdate = DateTime.UtcNow;
-            DateTime progressStartTime = DateTime.UtcNow;
             object progressLock = new object();
             
-            progressCallback = (completed, total, seedsSearched, seedsPerMs) =>
+            progressCallback = (progress) =>
             {
                 lock (progressLock)
                 {
@@ -58,25 +57,23 @@ namespace Motely.Executors
 
                     lastProgressUpdate = now;
 
-                    var elapsedMS = (now - progressStartTime).TotalMilliseconds;
                     string timeLeftFormatted = "calculating...";
-                    if (total > 0 && completed > 0)
+                    if (progress.TotalBatchCount > 0 && progress.CompletedBatchCount > 0)
                     {
-                        double portionFinished = (double)completed / total;
-                        double timeLeft = elapsedMS / portionFinished - elapsedMS;
-                        TimeSpan timeLeftSpan = TimeSpan.FromMilliseconds(
-                            Math.Min(timeLeft, TimeSpan.MaxValue.TotalMilliseconds)
-                        );
-                        if (timeLeftSpan.Days == 0)
-                            timeLeftFormatted = $"{timeLeftSpan:hh\\:mm\\:ss}";
-                        else
-                            timeLeftFormatted = $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                        if (progress.EstimatedTimeRemaining.HasValue)
+                        {
+                            var timeLeftSpan = progress.EstimatedTimeRemaining.Value;
+                            timeLeftFormatted = timeLeftSpan.Days == 0 
+                                ? $"{timeLeftSpan:hh\\:mm\\:ss}" 
+                                : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                        }
                     }
-                    double pct = total > 0 ? Math.Clamp(((double)completed / total) * 100, 0, 100) : 0;
+                    double pct = progress.PercentComplete;
+                    double elapsedMS = progress.ElapsedTime.TotalMilliseconds;
                     string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
                     var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
                     string progressLine =
-                        $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerMs)} seeds/ms";
+                        $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(progress.SeedsPerMillisecond)} seeds/ms";
                     Console.Write($"\r{progressLine}                    \r{progressLine}");
                 }
             };
@@ -165,7 +162,7 @@ namespace Motely.Executors
 
         private IMotelySearch CreateFilterSearch(
             string filterName,
-            Action<long, long, long, double>? progressCallback
+            Action<MotelyProgress>? progressCallback
         )
         {
             var seeds = LoadSeeds();
@@ -189,7 +186,7 @@ namespace Motely.Executors
         // Single method that builds the search with ALL the common settings
         private IMotelySearch BuildSearch<TFilter>(
             IMotelySeedFilterDesc<TFilter> filterDesc,
-            Action<long, long, long, double>? progressCallback,
+            Action<MotelyProgress>? progressCallback,
             IEnumerable<string>? seeds
         )
             where TFilter : struct, IMotelySeedFilter

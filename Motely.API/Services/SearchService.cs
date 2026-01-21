@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Motely;
 using Motely.API.Hubs;
 using Motely.API.Models;
+using Motely.DuckDB;
 using Motely.Filters;
 using Motely.Utils;
 
@@ -48,7 +49,9 @@ public class SearchService
         }
 
         // Detect burst mode: single-seed/seedsources sources
-        var isBurst = criteria.SourceType == "single" || criteria.SourceType == "seedsources";
+        var isBurst =
+            criteria.SourceType == SearchSourceType.Single
+            || criteria.SourceType == SearchSourceType.SeedSources;
 
         if (isBurst)
         {

@@ -14,7 +14,6 @@ must:
   - soulJoker: Canio
     antes: [1,2,3,4,5,6,7,8]
 
-should:
   - voucher: Hieroglyph
     antes: [1,2,3,4,5,6,7,8]
     score: 1  
@@ -24,7 +23,7 @@ should:
   - voucher: MagicTrick
     antes: [1, 2, 3, 4, 5, 6, 7, 8]
     score: 1
-
+should:
   - tarotCard: Judgement
     antes: [1]
     shopSlots: [0,1]
@@ -34,6 +33,15 @@ should:
       judgement: [0,1]
     antes: [1]
     score: 1
+
+  - soulJoker: Any
+    antes: [8]
+    edition: Negative
+    score: 1
+
+  - soulJoker: Canio
+    antes: [1,2,3,4,5,6,7,8]
+    score: 10
 
   - vouchers: [MagicTrick, Hieroglyph, Petroglyph]
     antes: [1]

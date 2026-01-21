@@ -150,7 +150,7 @@ public static class Endpoints
 
         var fileName = $"{name}.jaml";
         var fullPath = Path.Combine(jamlFiltersDir, fileName);
-        File.WriteAllText(fullPath, request.FilterJaml);
+        await File.WriteAllTextAsync(fullPath, request.FilterJaml);
 
         return Results.Ok(new { filePath = fileName });
     }

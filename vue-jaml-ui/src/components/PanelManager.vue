@@ -25,6 +25,27 @@
 
   <div v-else ref="splitContainer" class="layout-split" style="position: relative;">
     <div ref="leftColumnContainer" class="split-column split-left" :style="{ width: splitLeftWidth + '%' }">
+      <div v-if="collapsedLeftPanels.length > 0" class="collapsed-tab-row">
+        <div
+          v-for="panel in collapsedLeftPanels"
+          :key="panel.id"
+          class="collapsed-tab"
+          :class="[`collapsed-tab-${panel.color}`]"
+          draggable="true"
+          @dragstart="startDragFromCollapsed(panel, $event)"
+          @dragend="endDragFromCollapsed"
+        >
+          {{ getPanelLabel(panel) }}
+        </div>
+      </div>
+      <div 
+        class="drop-zone drop-zone-top" 
+        @dragover.prevent="onDropZoneOver" 
+        @dragleave="onDropZoneLeave"
+        @drop="onDropZoneTop('left', $event)"
+      >
+        <div class="drop-zone-content">↓ DROP HERE ↓</div>
+      </div>
       <template v-for="(panel, index) in leftPanels" :key="panel.id">
         <PanelSection
           :color="panel.color"
@@ -46,6 +67,14 @@
           <component :is="panel.component" v-bind="getPanelProps(panel)" v-on="getPanelEvents(panel)" />
         </PanelSection>
       </template>
+      <div 
+        class="drop-zone drop-zone-bottom" 
+        @dragover.prevent="onDropZoneOver" 
+        @dragleave="onDropZoneLeave"
+        @drop="onDropZoneBottom('left', $event)"
+      >
+        <div class="drop-zone-content">↓ DROP HERE ↓</div>
+      </div>
     </div>
 
     <div v-if="!isMobile" class="split-divider" @pointerdown="startSplitResize" role="separator">
@@ -67,6 +96,27 @@
     </div>
 
     <div ref="rightColumnContainer" class="split-column split-right" :style="{ width: (100 - splitLeftWidth) + '%' }">
+      <div v-if="collapsedRightPanels.length > 0" class="collapsed-tab-row">
+        <div
+          v-for="panel in collapsedRightPanels"
+          :key="panel.id"
+          class="collapsed-tab"
+          :class="[`collapsed-tab-${panel.color}`]"
+          draggable="true"
+          @dragstart="startDragFromCollapsed(panel, $event)"
+          @dragend="endDragFromCollapsed"
+        >
+          {{ getPanelLabel(panel) }}
+        </div>
+      </div>
+      <div 
+        class="drop-zone drop-zone-top" 
+        @dragover.prevent="onDropZoneOver" 
+        @dragleave="onDropZoneLeave"
+        @drop="onDropZoneTop('right', $event)"
+      >
+        <div class="drop-zone-content">↓ DROP HERE ↓</div>
+      </div>
       <template v-for="(panel, index) in rightPanels" :key="panel.id">
         <PanelSection
           :color="panel.color"
@@ -88,6 +138,14 @@
           <component :is="panel.component" v-bind="getPanelProps(panel)" v-on="getPanelEvents(panel)" />
         </PanelSection>
       </template>
+      <div 
+        class="drop-zone drop-zone-bottom" 
+        @dragover.prevent="onDropZoneOver" 
+        @dragleave="onDropZoneLeave"
+        @drop="onDropZoneBottom('right', $event)"
+      >
+        <div class="drop-zone-content">↓ DROP HERE ↓</div>
+      </div>
     </div>
   </div>
 </template>
@@ -103,6 +161,8 @@ const props = defineProps({
   visiblePanels: Array,
   leftPanels: Array,
   rightPanels: Array,
+  collapsedLeftPanels: Array,
+  collapsedRightPanels: Array,
   splitLeftWidth: Number,
   badgeSnapState: String,
   cornerHandleY: Number,
@@ -122,6 +182,7 @@ const props = defineProps({
   movePanelToSide: Function,
   onPanelResize: Function,
   onPanelCollapse: Function,
+  expandPanel: Function,
   startSplitResize: Function,
   startStackResize: Function,
   startColumnResize: Function,
@@ -136,7 +197,9 @@ const props = defineProps({
   exportResults: Function,
   handleStopSpecificSearch: Function,
   updateJamlContent: Function,
-  handleLoadJamlFromGenie: Function
+  handleLoadJamlFromGenie: Function,
+  startDragFromCollapsed: Function,
+  endDragFromCollapsed: Function
 })
 
 const { playClickSound } = useSound()
@@ -173,6 +236,29 @@ const handleBadgePointerDown = (event) => {
   if (props.leftPanels.length !== 2 || props.rightPanels.length !== 2) return
   if (event.target.closest('.icon-btn') || event.target.closest('button') || event.target.closest('svg')) return
   props.startCornerResize(event)
+}
+
+const onDropZoneOver = (event) => {
+  event.dataTransfer.dropEffect = 'move'
+  event.currentTarget.classList.add('active')
+}
+
+const onDropZoneLeave = (event) => {
+  event.currentTarget.classList.remove('active')
+}
+
+const onDropZoneTop = (side, event) => {
+  onDropZoneLeave(event)
+  const panelId = event.dataTransfer.getData('collapsed-panel-id')
+  if (!panelId) return
+  props.expandPanel?.(panelId)
+}
+
+const onDropZoneBottom = (side, event) => {
+  onDropZoneLeave(event)
+  const panelId = event.dataTransfer.getData('collapsed-panel-id')
+  if (!panelId) return
+  props.expandPanel?.(panelId)
 }
 </script>
 

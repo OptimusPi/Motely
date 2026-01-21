@@ -33,13 +33,17 @@ public static class DuckDBSchema
     public static string SearchQueueTableSchema()
     {
         return @"
-            CREATE TABLE IF NOT EXISTS search_queue (
-                id INTEGER PRIMARY KEY,
-                filter_name VARCHAR NOT NULL,
-                status VARCHAR NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                started_at TIMESTAMP,
-                completed_at TIMESTAMP
+            CREATE TABLE IF NOT EXISTS SearchQueue (
+                searchId VARCHAR PRIMARY KEY,
+                jamlFilter TEXT NOT NULL,
+                threadCount INTEGER DEFAULT 1,
+                isBurst BOOLEAN DEFAULT false,
+                status VARCHAR NOT NULL DEFAULT 'queued',
+                dateCreated TIMESTAMP DEFAULT current_timestamp,
+                lastAccessed TIMESTAMP DEFAULT current_timestamp,
+                batchMarker BIGINT DEFAULT 0,
+                seedsSearched BIGINT DEFAULT 0,
+                resultsFound INTEGER DEFAULT 0
             )";
     }
 

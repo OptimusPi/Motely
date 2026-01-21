@@ -22,11 +22,11 @@ public class SearchBroadcaster : ISearchBroadcaster
     /// <summary>
     /// Broadcasts a message to all connected clients
     /// </summary>
-    public void Broadcast(string message)
+    public async Task BroadcastAsync(string message)
     {
         try
         {
-            _hubContext.Clients.All.SendAsync("SearchUpdate", message).Wait();
+            await _hubContext.Clients.All.SendAsync("SearchUpdate", message);
         }
         catch (Exception ex)
         {
@@ -37,7 +37,7 @@ public class SearchBroadcaster : ISearchBroadcaster
     /// <summary>
     /// Broadcasts a message to clients subscribed to a specific search
     /// </summary>
-    public void BroadcastToSearch(string searchId, string json)
+    public async Task BroadcastToSearchAsync(string searchId, string json)
     {
         try
         {
@@ -64,19 +64,17 @@ public class SearchBroadcaster : ISearchBroadcaster
                                 var resultObj = JsonSerializer.Deserialize<object>(
                                     resultElement.GetRawText()
                                 );
-                                _hubContext
+                                await _hubContext
                                     .Clients.Group(groupName)
-                                    .SendAsync("Result", resultObj)
-                                    .Wait();
+                                    .SendAsync("Result", resultObj);
                             }
                             else
                             {
                                 // Fallback: send whole message as object
                                 var fullObj = JsonSerializer.Deserialize<object>(json);
-                                _hubContext
+                                await _hubContext
                                     .Clients.Group(groupName)
-                                    .SendAsync("Result", fullObj)
-                                    .Wait();
+                                    .SendAsync("Result", fullObj);
                             }
                             break;
                         case "progress":
@@ -99,27 +97,24 @@ public class SearchBroadcaster : ISearchBroadcaster
                             if (rootElement.TryGetProperty("searchId", out var searchIdProp))
                                 progressDict["searchId"] = searchIdProp.GetString() ?? "";
 
-                            _hubContext
+                            await _hubContext
                                 .Clients.Group(groupName)
-                                .SendAsync("Progress", progressDict)
-                                .Wait();
+                                .SendAsync("Progress", progressDict);
                             break;
                         case "search_completed":
                         case "search_failed":
                         case "search_halted":
                             var updateObj = JsonSerializer.Deserialize<object>(json);
-                            _hubContext
+                            await _hubContext
                                 .Clients.Group(groupName)
-                                .SendAsync("SearchUpdate", updateObj)
-                                .Wait();
+                                .SendAsync("SearchUpdate", updateObj);
                             break;
                         default:
                             // Fallback to generic SearchUpdate
                             var defaultObj = JsonSerializer.Deserialize<object>(json);
-                            _hubContext
+                            await _hubContext
                                 .Clients.Group(groupName)
-                                .SendAsync("SearchUpdate", defaultObj)
-                                .Wait();
+                                .SendAsync("SearchUpdate", defaultObj);
                             break;
                     }
                 }
@@ -127,10 +122,9 @@ public class SearchBroadcaster : ISearchBroadcaster
                 {
                     // No type field, send as generic SearchUpdate
                     var genericObj = JsonSerializer.Deserialize<object>(json);
-                    _hubContext
+                    await _hubContext
                         .Clients.Group(groupName)
-                        .SendAsync("SearchUpdate", genericObj)
-                        .Wait();
+                        .SendAsync("SearchUpdate", genericObj);
                 }
             }
             catch (JsonException ex)
@@ -141,7 +135,7 @@ public class SearchBroadcaster : ISearchBroadcaster
                     searchId
                 );
                 // Not valid JSON or can't parse, send as string
-                _hubContext.Clients.Group(groupName).SendAsync("SearchUpdate", json).Wait();
+                await _hubContext.Clients.Group(groupName).SendAsync("SearchUpdate", json);
             }
         }
         catch (Exception ex)
@@ -153,7 +147,7 @@ public class SearchBroadcaster : ISearchBroadcaster
     /// <summary>
     /// Broadcasts an object to clients subscribed to a specific search (serializes automatically)
     /// </summary>
-    public void BroadcastToSearch(string searchId, object message)
+    public async Task BroadcastToSearchAsync(string searchId, object message)
     {
         try
         {
@@ -161,7 +155,7 @@ public class SearchBroadcaster : ISearchBroadcaster
                 message,
                 new JsonSerializerOptions(JsonSerializerDefaults.Web)
             );
-            BroadcastToSearch(searchId, json);
+            await BroadcastToSearchAsync(searchId, json);
         }
         catch (Exception ex)
         {
