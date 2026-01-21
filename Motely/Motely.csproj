@@ -56,8 +56,6 @@
     <EnableBMI2>true</EnableBMI2>
     <EnableLZCNT>true</EnableLZCNT>
     <EnablePOPCNT>true</EnablePOPCNT>
-    <!-- FMA disabled: Fused Multiply-Add changes floating-point rounding, breaking deterministic PRNG -->
-    <EnableFMA>false</EnableFMA>
     <!-- Additional performance settings -->
     <DebugType>none</DebugType>
     <PublishReadyToRun>false</PublishReadyToRun>
