@@ -134,11 +134,6 @@ namespace Motely
                 "Generate seeds containing keyword (all seeds by default, use --sfw to filter NSFW)",
                 CommandOptionType.SingleValue
             );
-            var sfwOption = app.Option(
-                "--sfw",
-                "Filter out NSFW seeds (only return SFW seeds)",
-                CommandOptionType.NoValue
-            );
             var paddingOption = app.Option<string>(
                 "--padding <CHARS>",
                 "Restrict padding characters (e.g., --padding OU or --padding 1). Only works with --keyword.",
@@ -176,7 +171,7 @@ namespace Motely
 
             // Output options
             var saveOption = app.Option<string>(
-                "--save [duckdb|csv]",
+                "--save <TYPE>",
                 "Save results to SearchResults/. Optional: 'duckdb' (default) or 'csv' (skip database)",
                 CommandOptionType.SingleOrNoValue
             );
@@ -321,13 +316,11 @@ namespace Motely
                     if (!parameters.Quiet)
                         Console.WriteLine($"🔧 Generating seeds for keyword '{keyword}'...");
                     
-                    bool sfwOnly = sfwOption.HasValue();
                     string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
                     
                     // Generate seeds as IEnumerable (lazy, no allocation)
                     var keywordSeedList = GenerateKeywordSeeds(
                         keyword,
-                        sfwOnly,
                         paddingChars,
                         parameters.Quiet
                     );
@@ -1048,7 +1041,6 @@ namespace Motely
         /// </summary>
         private static IEnumerable<string> GenerateKeywordSeeds(
             string keyword,
-            bool sfwOnly,
             string? paddingChars,
             bool quiet
         )
@@ -1098,10 +1090,9 @@ namespace Motely
 
             if (!quiet)
             {
-                string filterMode = sfwOnly ? "SFW-only" : "all";
                 string paddingInfo = paddingChars != null ? $" (padding: {paddingChars})" : "";
                 Console.WriteLine(
-                    $"🔧 Generating {filterMode} seeds containing '{keyword}'{paddingInfo}..."
+                    $"🔧 Generating seeds containing '{keyword}'{paddingInfo}..."
                 );
             }
 
