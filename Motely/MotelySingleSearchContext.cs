@@ -177,18 +177,27 @@ public readonly unsafe ref partial struct MotelySingleSearchContext
         return Unsafe.As<ulong, double>(ref res);
     }
 
-    // Magic number for accurate rounding to 13 decimal places
-    // Uses FMA (Fused Multiply-Add) to maintain precision during rounding
-    // Credit: Mukundan314's fix for exact tie-breaking behavior matching LuaJIT
-    private static readonly double Magic = 4503599627370496.0; // 2^52
-    private static readonly double InvPrec = 1e13;
+    private static readonly double InvPrec = Math.Pow(10.0, 13);
+    private static readonly double TwoInvPrec = Math.Pow(2.0, 13);
+    private static readonly double FiveInvPrec = Math.Pow(5.0, 13);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double Round13(double x)
     {
-        // FMA maintains infinite precision during multiply-add, avoiding intermediate rounding
-        // Adding 2^52 aligns the binary point so fractional parts round with ties-to-even
-        return (Math.FusedMultiplyAdd(x, InvPrec, Magic) - Magic) / InvPrec;
+        double normalCase = Math.Round(x * InvPrec, MidpointRounding.AwayFromZero) / InvPrec;
+
+        if (
+            normalCase
+            == Math.Round(Math.BitDecrement(x) * InvPrec, MidpointRounding.AwayFromZero) / InvPrec
+        )
+            return normalCase;
+
+        double truncated = Fract(x * TwoInvPrec) * FiveInvPrec;
+
+        if (Fract(truncated) >= 0.5)
+            return (Math.Floor(x * InvPrec) + 1) / InvPrec;
+
+        return Math.Floor(x * InvPrec) / InvPrec;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
