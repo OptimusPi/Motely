@@ -89,7 +89,7 @@ public static class EndpointRegistration
 
                 var fileName = $"{(name ?? "filter")}.jaml";
                 var fullPath = Path.Combine(jamlFiltersDir, fileName);
-                File.WriteAllText(fullPath, request.FilterJaml);
+                await File.WriteAllTextAsync(fullPath, request.FilterJaml);
 
                 return Results.Ok(new { filePath = fileName });
             }
@@ -232,32 +232,4 @@ public static class EndpointRegistration
         return endpoints;
     }
 
-    /// <summary>
-    /// Register all endpoints based on feature flags
-    /// </summary>
-    public static WebApplication MapMotelyEndpoints(this WebApplication app, FeatureFlags features)
-    {
-        // Core API endpoints (always enabled)
-        app.MapCoreApiEndpoints();
-
-        // Search queue endpoints
-        if (features.EnableSearchQueue)
-        {
-            app.MapSearchQueueEndpoints();
-        }
-
-        // SignalR endpoints
-        if (features.EnableSignalR)
-        {
-            app.MapSignalREndpoints();
-        }
-
-        // MCP endpoints
-        if (features.EnableMcp)
-        {
-            app.MapMcpEndpoints();
-        }
-
-        return app;
-    }
 }

@@ -53,52 +53,18 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Register all services based on feature flags
+    /// Register all services (always enabled - no feature flags)
     /// </summary>
     public static IServiceCollection AddMotelyServices(
         this IServiceCollection services,
         IConfiguration configuration
     )
     {
-        var features = new FeatureFlags(configuration);
-
-        if (features.EnableSearchQueue)
-        {
-            services.AddSearchQueueServices();
-        }
-
-        if (features.EnableSignalR)
-        {
-            services.AddSignalRServices();
-        }
-
-        if (features.EnableMcp)
-        {
-            services.AddMcpServices();
-        }
+        // Always enable all services - no feature flags needed
+        services.AddSearchQueueServices();
+        services.AddSignalRServices();
+        services.AddMcpServices();
 
         return services;
-    }
-}
-
-/// <summary>
-/// Feature flags for enabling/disabling features
-/// </summary>
-public class FeatureFlags
-{
-    public bool EnableSearchQueue { get; }
-    public bool EnableSignalR { get; }
-    public bool EnableMcp { get; }
-    public bool EnableSwagger { get; }
-
-    public FeatureFlags(IConfiguration configuration)
-    {
-        var featuresSection = configuration.GetSection("Features");
-
-        // Default to enabled for backward compatibility
-        EnableSearchQueue = featuresSection.GetValue<bool>("EnableSearchQueue", true);
-        EnableSignalR = featuresSection.GetValue<bool>("EnableSignalR", true);
-        EnableMcp = featuresSection.GetValue<bool>("EnableMcp", true);
-        EnableSwagger = featuresSection.GetValue<bool>("EnableSwagger", true);
     }
 }

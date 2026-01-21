@@ -83,22 +83,15 @@ public static class MotelyApiHost
             );
         });
 
-        // Register services based on feature flags (modular registration)
-        // Note: builder.Configuration implements IConfiguration, so we can use it here
-        var features = new FeatureFlags(builder.Configuration);
-
-        if (features.EnableSwagger)
-        {
-            builder.Services.AddSwaggerGen();
-        }
+        // Always enable Swagger
+        builder.Services.AddSwaggerGen();
 
         builder.Services.AddMotelyServices(builder.Configuration);
 
-        // Register MCP services from Motely.MCP project (if enabled)
+        // Register MCP services from Motely.MCP project
         // Note: MCP is optional and only available when Motely.MCP project is referenced
         // For BSO library builds, MCP is disabled by default
 #if !BSO_LIBRARY
-        if (features.EnableMcp)
         {
             try
             {
@@ -172,18 +165,11 @@ public static class MotelyApiHost
             SearchManager.Instance.SetMotelyRoot(motelyRootForSearchManager);
         }
 
-        // Get features again from app.Configuration (in case environment-specific configs were loaded)
-        var runtimeFeatures = new FeatureFlags(app.Configuration);
+        // Wire up SearchBroadcaster to SearchManager (always enabled)
+        var broadcaster = app.Services.GetRequiredService<ISearchBroadcaster>();
+        SearchManager.Instance.SetBroadcaster(broadcaster);
 
-        // Wire up SearchBroadcaster to SearchManager (if SignalR is enabled)
-        if (runtimeFeatures.EnableSignalR)
-        {
-            var broadcaster = app.Services.GetRequiredService<ISearchBroadcaster>();
-            SearchManager.Instance.SetBroadcaster(broadcaster);
-        }
-
-        // Register shutdown handler to close SignalR connections quickly (if SignalR is enabled)
-        if (runtimeFeatures.EnableSignalR)
+        // Register shutdown handler to close SignalR connections quickly
         {
             var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             lifetime.ApplicationStopping.Register(() =>
@@ -274,25 +260,25 @@ public static class MotelyApiHost
             );
         }
 
-        // Add Swagger/OpenAPI (if enabled)
-        if (features.EnableSwagger)
+        // Add Swagger/OpenAPI (always enabled)
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
         {
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Motely API v1");
-                c.RoutePrefix = "swagger";
-            });
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Motely API v1");
+            c.RoutePrefix = "swagger";
+        });
 
-            // Serve OpenAPI JSON at /openapi/v1.json
-            app.MapGet(
-                "/openapi/v1.json",
-                () => Results.Redirect("/swagger/v1/swagger.json", permanent: false)
-            );
-        }
+        // Serve OpenAPI JSON at /openapi/v1.json
+        app.MapGet(
+            "/openapi/v1.json",
+            () => Results.Redirect("/swagger/v1/swagger.json", permanent: false)
+        );
 
-        // Register all endpoints based on feature flags (modular registration)
-        app.MapMotelyEndpoints(features);
+        // Register all endpoints (always enabled)
+        app.MapCoreApiEndpoints();
+        app.MapSearchQueueEndpoints();
+        app.MapSignalREndpoints();
+        app.MapMcpEndpoints();
 
         return app;
     }

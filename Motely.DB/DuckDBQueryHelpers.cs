@@ -10,6 +10,27 @@ namespace Motely.DuckDB;
 public static class DuckDBQueryHelpers
 {
     /// <summary>
+    /// Get all column names from a table in order
+    /// </summary>
+    public static List<string> GetColumnNames(
+        DuckDBConnection connection,
+        string tableName
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            $"SELECT column_name FROM information_schema.columns WHERE table_name='{tableName.ToLower()}' ORDER BY ordinal_position";
+        using var reader = cmd.ExecuteReader();
+
+        var columns = new List<string>();
+        while (reader.Read())
+        {
+            columns.Add(reader.GetString(0));
+        }
+        return columns;
+    }
+
+    /// <summary>
     /// Get all seeds from a table
     /// </summary>
     public static List<string> GetAllSeeds(

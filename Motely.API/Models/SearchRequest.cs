@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Motely.Filters;
 
 namespace Motely.API.Models;
@@ -18,6 +19,21 @@ public class SearchRequest
     /// Search criteria (threads, batch size, deck, stake, etc.)
     /// </summary>
     public SearchCriteriaDto? Criteria { get; set; }
+}
+
+/// <summary>
+/// Source type for search criteria (used for burst-mode detection)
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum SearchSourceType
+{
+    Unknown = 0,
+    Single,
+    SeedSources,
+    Wordlist,
+    DbList,
+    Random,
+    Sequential,
 }
 
 /// <summary>
@@ -63,7 +79,7 @@ public class SearchCriteriaDto
     /// <summary>
     /// Source type for burst-mode detection (single, wordlist, dblist, etc.)
     /// </summary>
-    public string? SourceType { get; set; }
+    public SearchSourceType SourceType { get; set; } = SearchSourceType.Unknown;
 }
 
 public class SearchResponse

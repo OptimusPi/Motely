@@ -193,7 +193,7 @@ public class SearchManager
             await RebalanceAndRestartAllSearchesAsync();
 
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            _broadcaster?.Broadcast(
+            _ = _broadcaster?.BroadcastAsync(
                 JsonSerializer.Serialize(new { type = "filters_changed" }, options)
             );
 
@@ -511,7 +511,7 @@ public class SearchManager
         try
         {
             // Broadcast that this search is now active
-            _broadcaster?.BroadcastToSearch(
+            _ = _broadcaster?.BroadcastToSearchAsync(
                 searchId,
                 JsonSerializer.Serialize(
                     new
@@ -630,18 +630,13 @@ public class SearchManager
         else
             ApplySeedSource(searchParams, search.SeedSource);
 
-        searchParams.ProgressCallback = (
-            completedBatches,
-            totalBatches,
-            seedsSearched,
-            seedsPerMs
-        ) =>
+        searchParams.ProgressCallback = (progress) =>
         {
-            search.CompletedBatches = (long)searchParams.StartBatch + completedBatches;
+            search.CompletedBatches = (long)searchParams.StartBatch + progress.CompletedBatchCount;
             search.TotalBatches =
-                totalBatches > 0 ? (long)searchParams.StartBatch + totalBatches : 0;
-            search.SeedsSearched = seedsSearched;
-            search.SeedsPerSecond = seedsPerMs * 1000.0;
+                progress.TotalBatchCount > 0 ? (long)searchParams.StartBatch + progress.TotalBatchCount : 0;
+            search.SeedsSearched = progress.SeedsSearched;
+            search.SeedsPerSecond = progress.SeedsPerMillisecond * 1000.0;
 
             // Save batch position
             try
@@ -656,7 +651,7 @@ public class SearchManager
             }
 
             // Broadcast progress
-            _broadcaster?.BroadcastToSearch(
+            _ = _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -681,7 +676,7 @@ public class SearchManager
                 search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
                 search.TotalResults++;
 
-                _broadcaster?.BroadcastToSearch(
+                _ = _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -718,7 +713,7 @@ public class SearchManager
 
         if (naturallyComplete)
         {
-            _broadcaster?.BroadcastToSearch(
+            _ = _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -865,15 +860,7 @@ public class SearchManager
             using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
             conn.Open();
 
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText =
-                "SELECT column_name FROM information_schema.columns WHERE table_name='results' ORDER BY ordinal_position";
-            using var reader = cmd.ExecuteReader();
-
-            var cols = new List<string>();
-            while (reader.Read())
-                cols.Add(reader.GetString(0));
-
+            var cols = DuckDBQueryHelpers.GetColumnNames(conn, "results");
             return cols.Count > 0 ? cols : new List<string> { "seed", "score" };
         }
         catch (Exception ex)
@@ -907,7 +894,7 @@ public class SearchManager
             await RebalanceAndRestartAllSearchesAsync();
 
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            _broadcaster?.Broadcast(
+            _ = _broadcaster?.BroadcastAsync(
                 JsonSerializer.Serialize(new { type = "filters_changed" }, options)
             );
 
@@ -937,7 +924,7 @@ public class SearchManager
                 }
             }
 
-            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+            _ = _broadcaster?.BroadcastAsync(JsonSerializer.Serialize(new { type = "filters_changed" }));
         }
         finally
         {
@@ -981,7 +968,7 @@ public class SearchManager
             }
 
             // Broadcast clear event
-            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "results_cleared" }));
+            _ = _broadcaster?.BroadcastAsync(JsonSerializer.Serialize(new { type = "results_cleared" }));
         }
         finally
         {
@@ -991,7 +978,7 @@ public class SearchManager
 
     private async Task<bool> StopSearchInternalAsync(ActiveSearch search, string reason)
     {
-        _broadcaster?.BroadcastToSearch(
+        _ = _broadcaster?.BroadcastToSearchAsync(
             search.SearchId,
             JsonSerializer.Serialize(
                 new
@@ -1276,7 +1263,7 @@ public class SearchManager
             {
                 var errText = parseError ?? "Invalid filter";
                 _lastErrors[search.SearchId] = errText;
-                _broadcaster?.BroadcastToSearch(
+                _ = _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -1312,21 +1299,16 @@ public class SearchManager
                 ApplySeedSource(searchParams, search.SeedSource);
             }
 
-            searchParams.ProgressCallback = (
-                completedBatches,
-                totalBatches,
-                seedsSearched,
-                seedsPerMs
-            ) =>
+            searchParams.ProgressCallback = (progress) =>
             {
-                search.CompletedBatches = completedBatches;
-                search.TotalBatches = totalBatches;
-                search.SeedsSearched = seedsSearched;
-                search.SeedsPerSecond = seedsPerMs * 1000.0;
+                search.CompletedBatches = progress.CompletedBatchCount;
+                search.TotalBatches = progress.TotalBatchCount;
+                search.SeedsSearched = progress.SeedsSearched;
+                search.SeedsPerSecond = progress.SeedsPerMillisecond * 1000.0;
 
                 try
                 {
-                    var absoluteBatch = (long)searchParams.StartBatch + completedBatches;
+                    var absoluteBatch = (long)searchParams.StartBatch + progress.CompletedBatchCount;
                     search.Database?.SaveBatchPosition(absoluteBatch, searchParams.BatchSize);
                 }
                 catch (Exception ex)
@@ -1337,9 +1319,9 @@ public class SearchManager
                 }
 
                 // Check if search is complete (all batches done)
-                bool isComplete = totalBatches > 0 && completedBatches >= totalBatches;
+                bool isComplete = progress.TotalBatchCount > 0 && progress.CompletedBatchCount >= progress.TotalBatchCount;
 
-                _broadcaster?.BroadcastToSearch(
+                _ = _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -1367,7 +1349,7 @@ public class SearchManager
                     search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
                     search.TotalResults++;
 
-                    _broadcaster?.BroadcastToSearch(
+                    _ = _broadcaster?.BroadcastToSearchAsync(
                         search.SearchId,
                         JsonSerializer.Serialize(
                             new
@@ -1404,7 +1386,7 @@ public class SearchManager
         {
             var err = ex.ToString();
             _lastErrors[search.SearchId] = err;
-            _broadcaster?.BroadcastToSearch(
+            _ = _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -1423,7 +1405,7 @@ public class SearchManager
             if (search.StopReason == null && search.RunInstanceId == runId)
             {
                 // Broadcast search completion if it finished naturally (not cancelled)
-                _broadcaster?.BroadcastToSearch(
+                _ = _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -1474,7 +1456,7 @@ public class SearchManager
                 }
 
                 _activeSearches.TryRemove(search.SearchId, out _);
-                _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+                _ = _broadcaster?.BroadcastAsync(JsonSerializer.Serialize(new { type = "filters_changed" }));
             }
         }
     }
@@ -1529,7 +1511,7 @@ public class SearchManager
 
             search.Database = new MotelySearchDatabase(dbPath, search.ColumnNames);
 
-            _broadcaster?.BroadcastToSearch(
+            _ = _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -1621,7 +1603,7 @@ public class SearchManager
         }
     }
 
-    private async void DumpToFertilizerAndDeleteDb(string dbPath)
+    private async Task DumpToFertilizerAndDeleteDbAsync(string dbPath)
     {
         // Get top 1000 seeds from search DB and add to fertilizer pile
         // Then delete the search DB file
@@ -1715,7 +1697,7 @@ public class SearchManager
             }
 
             File.WriteAllText(fullPath, filterJaml);
-            _broadcaster?.Broadcast(JsonSerializer.Serialize(new { type = "filters_changed" }));
+            _ = _broadcaster?.BroadcastAsync(JsonSerializer.Serialize(new { type = "filters_changed" }));
         }
         catch (Exception ex)
         {

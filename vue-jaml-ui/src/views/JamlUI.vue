@@ -6,6 +6,8 @@
         :visible-panels="visiblePanels"
         :left-panels="leftPanels"
         :right-panels="rightPanels"
+        :collapsed-left-panels="collapsedLeftPanels"
+        :collapsed-right-panels="collapsedRightPanels"
         :split-left-width="splitLeftWidth"
         :badge-snap-state="badgeSnapState"
         :corner-handle-y="cornerHandleY"
@@ -25,6 +27,7 @@
         :move-panel-to-side="movePanelToSide"
         :on-panel-resize="onPanelResize"
         :on-panel-collapse="onPanelCollapse"
+        :expand-panel="expandPanel"
         :start-split-resize="startSplitResize"
         :start-stack-resize="startStackResize"
         :start-column-resize="startColumnResize"
@@ -40,6 +43,8 @@
         :handle-stop-specific-search="handleStopSpecificSearch"
         :update-jaml-content="updateJamlContent"
         :handle-load-jaml-from-genie="handleLoadJamlFromGenie"
+        :start-drag-from-collapsed="startDragFromCollapsed"
+        :end-drag-from-collapsed="endDragFromCollapsed"
       />
     </div>
 
@@ -190,6 +195,7 @@ const {
   visiblePanels,
   leftPanels,
   rightPanels,
+  collapsedPanels,
   getPanelLabel,
   isBasePanel,
   duplicatePanel: duplicatePanelOp,
@@ -201,6 +207,9 @@ const {
   resetPanels,
   loadPanelState
 } = usePanels(createInitialPanels)
+
+const collapsedLeftPanels = computed(() => collapsedPanels.value.filter(p => p.side === 'left'))
+const collapsedRightPanels = computed(() => collapsedPanels.value.filter(p => p.side === 'right'))
 
 const showSettings = ref(false)
 const savingFilter = ref(false)
@@ -226,6 +235,7 @@ const {
 
 const { toasts, showToast, removeToast } = useToasts()
 const badgeSnapClass = computed(() => `badge-snap-${badgeSnapState.value}`)
+const { playClickSound, playSnap } = useSound()
 
 // Mobile detection
 const { windowWidth } = useLayout()
@@ -416,6 +426,17 @@ const handleKeydown = (e) => {
   if (mod && e.key === 'r') { e.preventDefault(); resetLayout(); return }
   if (mod && e.key === 'c' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName) && jamlContent.value) { e.preventDefault(); copyJamlToClipboard(); return }
   if (e.key === 'Escape' && showSettings.value) showSettings.value = false
+}
+
+const startDragFromCollapsed = (panel, event) => {
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('collapsed-panel-id', panel.id)
+  event.currentTarget.classList.add('dragging')
+  playClickSound('click')
+}
+
+const endDragFromCollapsed = (event) => {
+  event.currentTarget.classList.remove('dragging')
 }
 
 watch([leftPanels, rightPanels], () => {

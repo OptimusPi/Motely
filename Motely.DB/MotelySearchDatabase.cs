@@ -40,10 +40,17 @@ public sealed class MotelySearchDatabase : IDisposable
         CreateResultsTable();
     }
 
+    private static string QuoteColumn(string name)
+    {
+        return $"\"{name.Replace("\"", "\"\"")}\"";
+    }
+
     private void CreateResultsTable()
     {
         var columns = new List<string> { "seed VARCHAR PRIMARY KEY", "score INTEGER" };
-        columns.AddRange(_columnNames.Skip(2).Select(col => $"{col} INTEGER"));
+        
+        // Wrap dynamic columns in double quotes to handle spaces/special chars in JAML filter names
+        columns.AddRange(_columnNames.Skip(2).Select(col => $"{QuoteColumn(col)} INTEGER"));
 
         var createTableSql =
             $@"
@@ -61,7 +68,7 @@ public sealed class MotelySearchDatabase : IDisposable
 
     /// <summary>
     /// Insert a search result row
-    /// Uses INSERT OR IGNORE to avoid conflicts. Since seed/score is deterministic, we don't need to UPDATE.
+    /// Uses INSERT OR REPLACE so re-runs update existing seed rows.
     /// </summary>
     public void InsertRow(string seed, int score, List<int>? tallies = null)
     {
@@ -75,7 +82,7 @@ public sealed class MotelySearchDatabase : IDisposable
         {
             for (int i = 0; i < _columnNames.Count - 2; i++)
             {
-                columns.Add(_columnNames[i + 2]);
+                columns.Add(QuoteColumn(_columnNames[i + 2]));
                 values.Add(tallies.Count > i ? tallies[i].ToString() : "0");
             }
         }
@@ -83,15 +90,15 @@ public sealed class MotelySearchDatabase : IDisposable
         {
             foreach (var col in _columnNames.Skip(2))
             {
-                columns.Add(col);
+                columns.Add(QuoteColumn(col));
                 values.Add("0");
             }
         }
 
-        // Use INSERT OR IGNORE to avoid updating indexed columns during concurrent writes
+        // Use INSERT OR REPLACE to update existing rows with new scores
         var sql =
             $@"
-            INSERT OR IGNORE INTO results ({string.Join(", ", columns)})
+            INSERT OR REPLACE INTO results ({string.Join(", ", columns)})
             VALUES ({string.Join(", ", values)})";
 
         ExecuteNonQuery(sql);
@@ -107,7 +114,7 @@ public sealed class MotelySearchDatabase : IDisposable
 
         var sql =
             $@"
-            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2))}
+            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2).Select(QuoteColumn))}
             FROM results
             ORDER BY score DESC
             LIMIT {limit}";
@@ -154,7 +161,7 @@ public sealed class MotelySearchDatabase : IDisposable
         var order = ascending ? "ASC" : "DESC";
         var sql =
             $@"
-            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2))}
+            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2).Select(QuoteColumn))}
             FROM results
             ORDER BY {orderBy} {order}
             LIMIT {limit} OFFSET {offset}";
@@ -177,7 +184,7 @@ public sealed class MotelySearchDatabase : IDisposable
         var order = ascending ? "ASC" : "DESC";
         var sql =
             $@"
-            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2))}
+            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2).Select(QuoteColumn))}
             FROM results
             ORDER BY {orderBy} {order}
             LIMIT {limit}";

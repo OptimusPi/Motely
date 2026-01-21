@@ -175,6 +175,11 @@ namespace Motely
             );
 
             // Output options
+            var saveOption = app.Option<string>(
+                "--save [duckdb|csv]",
+                "Save results to SearchResults/. Optional: 'duckdb' (default) or 'csv' (skip database)",
+                CommandOptionType.SingleOrNoValue
+            );
             var outputDbOption = app.Option<string>(
                 "--output-db <PATH>",
                 "Write results to DuckDB database file (instead of CSV to console)",
@@ -260,48 +265,49 @@ namespace Motely
                     parameters.ProgressCallback = CreateSmartProgressCallback();
                 }
 
-                static Action<long, long, long, double> CreateSmartProgressCallback()
+                static Action<MotelyProgress> CreateSmartProgressCallback()
                 {
                     var lastReportedPercent = -1.0;
                     var batchOneReported = false;
+                    var lastReportTime = DateTime.MinValue;
                     var lockObj = new object();
 
-                    return (batchIndex, completedBatches, totalBatches, elapsedSeconds) =>
+                    return (progress) =>
                     {
-                        lock (lockObj) // Only report from one thread at a time
+                        var now = DateTime.UtcNow;
+                        lock (lockObj)
                         {
+                            // Throttle: Max one update every 2 seconds
+                            if ((now - lastReportTime).TotalSeconds < 2.0 && batchOneReported)
+                                return;
+
                             // Report after batch 1
-                            if (!batchOneReported && completedBatches >= 1)
+                            if (!batchOneReported && progress.CompletedBatchCount >= 1)
                             {
                                 Console.WriteLine($"   ✓ Batch 1 complete");
                                 batchOneReported = true;
                                 lastReportedPercent = 0;
+                                lastReportTime = now;
                             }
 
-                            if (totalBatches <= 0) return;
+                            if (progress.TotalBatchCount <= 0) return;
 
-                            double progressPercent = (completedBatches * 100.0) / totalBatches;
+                            double progressPercent = progress.PercentComplete;
+                            if (progressPercent > 100.0) progressPercent = 100.0;
 
-                            // Determine reporting threshold based on progress
-                            double threshold;
-                            if (progressPercent < 0.1)
-                                threshold = 0.01; // Report every 0.01% from 0-0.1%
-                            else if (progressPercent < 1.0)
-                                threshold = 0.1; // Report every 0.1% from 0.1%-1%
-                            else
-                                threshold = 1.0; // Report every 1% from 1% onwards
-
-                            // Check if we've crossed a reporting threshold
+                            // Determine reporting threshold
+                            double threshold = progressPercent < 0.1 ? 0.001 : progressPercent < 1.0 ? 0.01 : 0.1;
                             double nextThreshold = (Math.Floor(lastReportedPercent / threshold) + 1) * threshold;
 
-                            if (progressPercent >= nextThreshold)
+                            if (progressPercent >= nextThreshold || (now - lastReportTime).TotalSeconds > 10.0)
                             {
-                                var timeStr = elapsedSeconds < 60 
-                                    ? $"{elapsedSeconds:F1}s"
-                                    : $"{elapsedSeconds / 60:F1}m";
-                                
-                                Console.WriteLine($"   ◸ {progressPercent:F2}% complete ({completedBatches:N0}/{totalBatches:N0} batches) - {timeStr} elapsed");
+                                var timeStr = progress.ElapsedTime.TotalSeconds < 60
+                                    ? $"{progress.ElapsedTime.TotalSeconds:F1}s"
+                                    : $"{progress.ElapsedTime.TotalMinutes:F1}m";
+
+                                Console.WriteLine($"   ◸ {progressPercent:F4}% complete ({progress.CompletedBatchCount:N0}/{progress.TotalBatchCount:N0} batches) - {timeStr} elapsed");
                                 lastReportedPercent = progressPercent;
+                                lastReportTime = now;
                             }
                         }
                     };
@@ -481,15 +487,69 @@ namespace Motely
                     List<string>? csvColumnNames = null;
                     long seedsFound = 0;
                     
+                    // Handle --save flag: auto-generate filenames in SearchResults/
+                    string? dbPath = outputDbOption.Value();
+                    string? csvPath = outputCsvOption.Value();
+                    
+                    if (saveOption.HasValue())
+                    {
+                        // Create SearchResults directory if needed
+                        Directory.CreateDirectory("SearchResults");
+                        
+                        // Use filter name as ID (same as SearchManager does)
+                        var filterId = System.Text.RegularExpressions.Regex.Replace(
+                            configName ?? "search",
+                            "[^a-zA-Z0-9_-]",
+                            "_"
+                        ).ToLowerInvariant();
+                        
+                        // Get the save type: "csv" skips DB, anything else or no value defaults to "duckdb"
+                        var saveType = saveOption.Value() ?? "duckdb";
+                        
+                        // Only set DB path if not explicitly skipping with --save csv
+                        if (!saveType.Equals("csv", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dbPath = $"SearchResults/{filterId}.db";
+                        }
+                        
+                        // Always save CSV when using --save
+                        csvPath = $"SearchResults/{filterId}.csv";
+                    }
+
+                    // Always keep console output when saving (dedupe by seed)
+                    var printedSeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var printLock = new object();
+                    Action<MotelySeedScoreTally> consoleCallback = (result) =>
+                    {
+                        if (parameters.Quiet)
+                            return;
+
+                        lock (printLock)
+                        {
+                            if (!printedSeeds.Add(result.Seed))
+                                return;
+                        }
+
+                        FancyConsole.WriteLine(
+                            TallyColorizer.FormatResultLine(
+                                result.Seed,
+                                result.Score,
+                                result.TallyColumns
+                            )
+                        );
+                    };
+                    
                     // Queue-based DB writer to avoid concurrent write conflicts
                     var dbWriteQueue = new System.Collections.Concurrent.BlockingCollection<MotelySeedScoreTally>();
                     Task? dbWriterTask = null;
                     CancellationTokenSource? dbWriterCts = null;
 
                     // Setup CSV output if requested
-                    if (outputCsvOption.HasValue())
+                    if (outputCsvOption.HasValue() || (saveOption.HasValue() && csvPath != null))
                     {
-                        string csvPath = outputCsvOption.Value()!;
+                        if (outputCsvOption.HasValue())
+                            csvPath = outputCsvOption.Value()!;
+                            
                         if (string.IsNullOrWhiteSpace(csvPath))
                         {
                             Console.WriteLine("❌ Error: --output-csv requires a CSV file path");
@@ -552,9 +612,11 @@ namespace Motely
                         }
                     }
 
-                    if (outputDbOption.HasValue())
+                    if (outputDbOption.HasValue() || (saveOption.HasValue() && dbPath != null))
                     {
-                        string dbPath = outputDbOption.Value()!;
+                        if (outputDbOption.HasValue())
+                            dbPath = outputDbOption.Value()!;
+                            
                         if (string.IsNullOrWhiteSpace(dbPath))
                         {
                             Console.WriteLine("❌ Error: --output-db requires a database path");
@@ -646,6 +708,7 @@ namespace Motely
                         // Callback pushes to queue instead of writing directly
                         dbCallback = (result) =>
                         {
+                            consoleCallback(result);
                             dbWriteQueue.Add(result);
                         };
                     }
@@ -656,6 +719,7 @@ namespace Motely
                         var originalDbCallback = dbCallback;
                         dbCallback = (result) =>
                         {
+                            consoleCallback(result);
                             // Write to CSV
                             if (csvColumnNames != null && csvColumnNames.Count > 0)
                             {
@@ -685,6 +749,7 @@ namespace Motely
                         // CSV only
                         dbCallback = (result) =>
                         {
+                            consoleCallback(result);
                             if (csvColumnNames != null && csvColumnNames.Count > 0)
                             {
                                 var values = new List<string>
@@ -849,10 +914,8 @@ namespace Motely
                             {
                                 csvWriter.Flush();
                                 csvWriter.Close();
-                                if (!parameters.Quiet)
-                                {
-                                    Console.WriteLine($"💾 Total seeds saved to CSV: {seedsFound}");
-                                }
+                                Console.WriteLine($"💾 Total seeds saved to CSV: {seedsFound}");
+                                
                             }
                             catch (Exception ex)
                             {
