@@ -55,11 +55,7 @@ public class Program
 
         var app = builder.Build();
 
-        var motelyRoot = FindMotelyRoot();
-        if (!string.IsNullOrEmpty(motelyRoot))
-        {
-            global::Motely.API.MotelyPaths.Initialize(app.Environment, app.Configuration);
-        }
+        global::Motely.API.MotelyPaths.Initialize(app.Environment, app.Configuration);
 
         app.UseCors("AllowAll");
         app.UseSwagger();
@@ -77,21 +73,4 @@ public class Program
         app.Run();
     }
 
-    private static string? FindMotelyRoot()
-    {
-        var currentDir = Directory.GetCurrentDirectory();
-        var dir = new DirectoryInfo(currentDir);
-
-        while (dir != null)
-        {
-            var jamlFiltersPath = Path.Combine(dir.FullName, "JamlFilters");
-            if (Directory.Exists(jamlFiltersPath))
-            {
-                return dir.FullName;
-            }
-            dir = dir.Parent;
-        }
-
-        return currentDir;
-    }
 }
