@@ -834,7 +834,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private abstract class MotelySearchThread : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 50000;
+        public const int MAX_SEED_WAIT_MS = 5000;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
@@ -945,14 +945,12 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 switch (Search._status)
                 {
                     case MotelySearchStatus.Paused:
-                        FlushPendingFilterBatches();
                         Search._pauseBarrier.SignalAndWait();
                         // ...Paused
                         Search._unpauseBarrier.SignalAndWait();
                         continue;
 
                     case MotelySearchStatus.Completed:
-                        FlushPendingFilterBatches();
 
                         // PERFORMANCE: Flush any remaining thread-local counts and buffers on completion
                         FlushLocalCounters();
@@ -979,8 +977,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                 // Provider-mode: threads that are exhausted should remain alive but idle.
                 // This prevents repeated decrements and keeps Pause() barriers consistent.
+                // BUT: Still check cancellation token to allow proper shutdown
                 if (_providerExhausted)
                 {
+                    if (Search._cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
                     Thread.Yield();
                     continue;
                 }
@@ -994,6 +997,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                     if (_providerExhausted)
                     {
+                        if (Search._cancellationToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
                         Thread.Yield();
                         continue;
                     }
@@ -1040,23 +1047,18 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
 
-                // 2. Flush counters periodically (not every batch!) to reduce Interlocked contention
-                if (_localBatchesCompleted >= BATCH_COUNT_FLUSH_THRESHOLD)
+                // 2. Flush counters periodically
+                if (_localMatchingSeeds > 0)
                 {
-                    if (_localMatchingSeeds > 0)
-                    {
-                        Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
-                        _localMatchingSeeds = 0;
-                    }
-                    Interlocked.Add(ref Search._actualBatchesCompleted, _localBatchesCompleted);
-                    _localBatchesCompleted = 0;
+                    Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
+                    _localMatchingSeeds = 0;
                 }
+                Interlocked.Add(ref Search._actualBatchesCompleted, _localBatchesCompleted);
+                _localBatchesCompleted = 0;
+                
 
                 // 3. Report progress (uses aggregated state from above)
                 Search.PrintReport();
-
-                // Ensure any partially filled filter batches progress to downstream filters
-                FlushPendingFilterBatches();
             }
             
             // Loop exited due to cancellation - flush any remaining state
@@ -1181,25 +1183,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 if (resultMask[lane] && searchParams.IsLaneValid(lane))
                 {
                     _localMatchingSeeds++;
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe void FlushPendingFilterBatches()
-        {
-            if (_filterSeedBatches == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < Search._additionalFilters.Length; i++)
-            {
-                FilterSeedBatch* batch = &_filterSeedBatches[i];
-
-                if (batch->SeedCount != 0)
-                {
-                    SearchFilterBatch(i, batch);
                 }
             }
         }

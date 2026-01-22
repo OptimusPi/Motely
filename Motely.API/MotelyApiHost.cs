@@ -31,37 +31,9 @@ public record SearchStopRequest(string? SearchId);
 
 public static class MotelyApiHost
 {
-    private static string? FindMotelyRoot()
-    {
-        // Try to find the root by looking for JamlFilters directory
-        var currentDir = Directory.GetCurrentDirectory();
-        var dir = new DirectoryInfo(currentDir);
-
-        // Walk up the directory tree looking for JamlFilters
-        while (dir != null)
-        {
-            var jamlFiltersPath = Path.Combine(dir.FullName, "JamlFilters");
-            if (Directory.Exists(jamlFiltersPath))
-            {
-                return dir.FullName;
-            }
-            dir = dir.Parent;
-        }
-
-        // Fallback: use current directory if we can't find it
-        return currentDir;
-    }
-
     public static WebApplication CreateHost(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
-        // Set ContentRoot to repo root for consistent path resolution
-        var motelyRoot = FindMotelyRoot();
-        if (!string.IsNullOrEmpty(motelyRoot))
-        {
-            builder.Host.UseContentRoot(motelyRoot);
-        }
 
         builder.Services.AddEndpointsApiExplorer();
 
@@ -89,69 +61,46 @@ public static class MotelyApiHost
         builder.Services.AddMotelyServices(builder.Configuration);
 
         // Register MCP services from Motely.MCP project
-        // Note: MCP is optional and only available when Motely.MCP project is referenced
-        // For BSO library builds, MCP is disabled by default
-#if !BSO_LIBRARY
+        // Register MCP services via reflection to avoid circular dependency
+        builder.Services.AddHttpClient();
+        try
         {
-            try
+            var mcpServerType = Type.GetType("Motely.MCP.McpServer, Motely.MCP");
+            var mcpProtocolServerType = Type.GetType("Motely.MCP.McpProtocol.McpProtocolServer, Motely.MCP");
+            
+            if (mcpServerType != null)
             {
-                // Use reflection to avoid compile-time dependency on Motely.MCP
-                var mcpServerType = Type.GetType("Motely.MCP.McpServer, Motely.MCP");
-                var mcpProtocolServerType = Type.GetType(
-                    "Motely.MCP.McpProtocol.McpProtocolServer, Motely.MCP"
-                );
-
-                if (mcpServerType != null && mcpProtocolServerType != null)
+                builder.Services.AddScoped(mcpServerType, sp =>
                 {
-                    // Register HttpClientFactory if not already registered
-                    if (!builder.Services.Any(s => s.ServiceType == typeof(IHttpClientFactory)))
-                    {
-                        builder.Services.AddHttpClient();
-                    }
-
-                    // Register MCP services via reflection
-                    builder.Services.AddScoped(
-                        mcpServerType,
-                        sp =>
-                        {
-                            var logger = sp.GetRequiredService<ILoggerFactory>()
-                                .CreateLogger(mcpServerType);
-                            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                            var httpClient = httpClientFactory.CreateClient();
-                            var config = sp.GetRequiredService<IConfiguration>();
-                            return Activator.CreateInstance(
-                                mcpServerType,
-                                logger,
-                                httpClient,
-                                config
-                            )!;
-                        }
-                    );
-
-                    builder.Services.AddScoped(
-                        mcpProtocolServerType,
-                        sp =>
-                        {
-                            var logger = sp.GetRequiredService<ILoggerFactory>()
-                                .CreateLogger(mcpProtocolServerType);
-                            var mcpServer = sp.GetRequiredService(mcpServerType);
-                            var searchManager = SearchManager.Instance;
-                            return Activator.CreateInstance(
-                                mcpProtocolServerType,
-                                logger,
-                                mcpServer,
-                                searchManager
-                            )!;
-                        }
-                    );
-                }
+                    var loggerType = typeof(ILogger<>).MakeGenericType(mcpServerType);
+                    var logger = sp.GetRequiredService(loggerType);
+                    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                    var httpClient = httpClientFactory.CreateClient();
+                    var config = sp.GetRequiredService<IConfiguration>();
+                    var searchManager = sp.GetRequiredService<SearchManager>();
+                    var feedbackService = sp.GetService<GenieFeedbackService>();
+                    
+                    return Activator.CreateInstance(mcpServerType, logger, httpClient, config, searchManager, feedbackService)!;
+                });
             }
-            catch
+            
+            if (mcpProtocolServerType != null && mcpServerType != null)
             {
-                // MCP assembly not available - silently skip
+                builder.Services.AddScoped(mcpProtocolServerType, sp =>
+                {
+                    var loggerType = typeof(ILogger<>).MakeGenericType(mcpProtocolServerType);
+                    var logger = sp.GetRequiredService(loggerType);
+                    var mcpServer = sp.GetRequiredService(mcpServerType);
+                    var searchManager = sp.GetRequiredService<SearchManager>();
+                    
+                    return Activator.CreateInstance(mcpProtocolServerType, logger, mcpServer, searchManager)!;
+                });
             }
         }
-#endif
+        catch
+        {
+            // MCP assembly not available - silently skip
+        }
 
         var app = builder.Build();
 
@@ -159,11 +108,7 @@ public static class MotelyApiHost
         MotelyPaths.Initialize(app.Environment, app.Configuration);
 
         // Initialize SearchManager with motely root path (for SaveFilterToEcosystem compatibility)
-        var motelyRootForSearchManager = FindMotelyRoot();
-        if (!string.IsNullOrEmpty(motelyRootForSearchManager))
-        {
-            SearchManager.Instance.SetMotelyRoot(motelyRootForSearchManager);
-        }
+        SearchManager.Instance.SetMotelyRoot(app.Environment.ContentRootPath);
 
         // Wire up SearchBroadcaster to SearchManager (always enabled)
         var broadcaster = app.Services.GetRequiredService<ISearchBroadcaster>();
@@ -277,8 +222,23 @@ public static class MotelyApiHost
         // Register all endpoints (always enabled)
         app.MapCoreApiEndpoints();
         app.MapSearchQueueEndpoints();
-        app.MapSignalREndpoints();
-        app.MapMcpEndpoints();
+        app.MapHub<SearchHub>("/searchHub");
+        
+        // Register MCP endpoints via reflection to avoid circular dependency
+        try
+        {
+            var mcpEndpointsType = Type.GetType("Motely.MCP.McpEndpoints, Motely.MCP");
+            if (mcpEndpointsType != null)
+            {
+                var mapMethod = mcpEndpointsType.GetMethod("MapMcpEndpoints", 
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                mapMethod?.Invoke(null, new object[] { app });
+            }
+        }
+        catch
+        {
+            // MCP assembly not available - silently skip
+        }
 
         return app;
     }
