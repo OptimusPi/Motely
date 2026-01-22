@@ -91,7 +91,7 @@ export function useChat() {
         connect().catch(err => {
           console.error('Retry connection failed:', err)
         })
-      }, 5000)
+      }, 3141)
     }
   }
 

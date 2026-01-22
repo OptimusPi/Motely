@@ -26,6 +26,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.API\Motely.API.csproj" />
+    <ProjectReference Include="..\Motely.API\Motely.API.csproj" PrivateAssets="All" />
   </ItemGroup>
 </Project>

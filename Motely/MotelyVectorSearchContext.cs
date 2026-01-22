@@ -13,9 +13,7 @@ public struct MotelyVectorPrngStream(Vector512<double> state)
 
     public readonly MotelySinglePrngStream CreateSingleStream(int lane)
     {
-        if (IsInvalid)
-            return new MotelySinglePrngStream(State[0]);
-
+        Debug.Assert(!IsInvalid, "Invalid PRNG stream - cursor setup failed");
         return new MotelySinglePrngStream(State[lane]);
     }
 }
@@ -43,9 +41,8 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
 
     public readonly MotelySingleResampleStream CreateSingleStream(int lane)
     {
-        if (IsInvalid)
-            return MotelySingleResampleStream.Invalid;
-
+        Debug.Assert(!IsInvalid, "Invalid resample stream - cursor setup failed");
+        
         MotelySingleResampleStream stream = new()
         {
             InitialPrngStream = InitialPrngStream.CreateSingleStream(lane),

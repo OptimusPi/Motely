@@ -45,28 +45,15 @@ public static class McpStdioEntryPoint
             options.SingleLine = true;
         });
 
+        builder.Services.AddSingleton(SearchManager.Instance);
         builder.Services.AddSingleton<GenieFeedbackService>(sp =>
         {
             var logger = sp.GetRequiredService<ILogger<GenieFeedbackService>>();
             return new GenieFeedbackService(logger);
         });
-
-        builder.Services.AddScoped<McpServer>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<McpServer>>();
-            var httpClient = new HttpClient();
-            var config = sp.GetRequiredService<IConfiguration>();
-            var feedbackService = sp.GetService<GenieFeedbackService>();
-            return new McpServer(logger, httpClient, config, feedbackService);
-        });
-
-        builder.Services.AddScoped<McpProtocolServer>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<McpProtocolServer>>();
-            var mcpServer = sp.GetRequiredService<McpServer>();
-            var searchManager = SearchManager.Instance;
-            return new McpProtocolServer(logger, mcpServer, searchManager);
-        });
+        builder.Services.AddHttpClient();
+        builder.Services.AddScoped<McpServer>();
+        builder.Services.AddScoped<McpProtocolServer>();
 
         builder.Services.AddScoped<McpStdioServer>();
 

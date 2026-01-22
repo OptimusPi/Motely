@@ -212,24 +212,6 @@ public static class EndpointRegistration
         return endpoints;
     }
 
-    /// <summary>
-    /// Register SignalR hub (for real-time search updates)
-    /// </summary>
-    public static IEndpointRouteBuilder MapSignalREndpoints(this IEndpointRouteBuilder endpoints)
-    {
-        endpoints.MapHub<SearchHub>("/searchHub");
-        return endpoints;
-    }
 
-    /// <summary>
-    /// Register MCP endpoints (for AI assistant integration)
-    /// Note: MCP endpoints are registered via reflection when MCP feature is enabled
-    /// </summary>
-    public static IEndpointRouteBuilder MapMcpEndpoints(this IEndpointRouteBuilder endpoints)
-    {
-        // MCP endpoints are registered dynamically via MotelyApiHost when MCP feature is enabled
-        // This method is kept for API compatibility but does nothing when MCP is not referenced
-        return endpoints;
-    }
 
 }

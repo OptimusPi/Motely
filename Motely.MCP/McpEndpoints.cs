@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Motely.MCP.McpProtocol;
 using McpPromptRequest = global::Motely.API.Models.McpPromptRequest;
 
@@ -7,6 +9,19 @@ namespace Motely.MCP;
 
 public static class McpEndpoints
 {
+    /// <summary>
+    /// Register MCP endpoints - called by Motely.API via reflection to avoid circular dependency
+    /// </summary>
+    public static IEndpointRouteBuilder MapMcpEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapPost("/mcp/generate", async (McpPromptRequest request, McpServer mcpServer) =>
+            await GenerateJaml(request, mcpServer));
+        endpoints.MapPost("/mcp/prompt", async (McpPromptRequest request, McpServer mcpServer) =>
+            await ProcessPrompt(request, mcpServer));
+        endpoints.MapPost("/mcp/protocol", async (HttpRequest request, McpProtocolServer mcpProtocolServer) =>
+            await HandleMcpProtocol(request, mcpProtocolServer));
+        return endpoints;
+    }
     public static async Task<IResult> ProcessPrompt(McpPromptRequest request, McpServer mcpServer)
     {
         try

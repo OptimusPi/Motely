@@ -60,6 +60,9 @@ public static class ServiceRegistration
         IConfiguration configuration
     )
     {
+        // Register SearchManager as singleton (manages thread pool for queued searches)
+        services.AddSingleton(_ => SearchManager.Instance);
+        
         // Always enable all services - no feature flags needed
         services.AddSearchQueueServices();
         services.AddSignalRServices();
