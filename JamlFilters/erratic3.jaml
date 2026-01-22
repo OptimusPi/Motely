@@ -1,0 +1,16 @@
+name: Erratic Deck Best
+author: pifreak
+description: suits
+deck: Erratic
+stake: White
+
+must:
+  - joker: Any
+    antes: [1]
+    packSlots: [0]
+
+should:
+  - erraticSuit: Hearts
+  - erraticSuit: Diamonds
+  - erraticSuit: Clubs
+  - erraticSuit: Spades

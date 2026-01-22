@@ -1,0 +1,37 @@
+name: Erratic Deck Best
+author: pifreak
+description: Rank 2 (25% of the deck!)
+deck: Erratic
+stake: White
+
+must:
+  - joker: Any
+    antes: [1]
+    packSlots: [0]
+
+should:
+  - erraticRank: Two
+
+  - erraticRank: Three
+
+  - erraticRank: Four
+
+  - erraticRank: Five
+
+  - erraticRank: Six
+
+  - erraticRank: Seven
+
+  - erraticRank: Eight
+
+  - erraticRank: Nine
+
+  - erraticRank: Ten
+
+  - erraticRank: Jack
+
+  - erraticRank: Queen
+
+  - erraticRank: King
+
+  - erraticRank: Ace

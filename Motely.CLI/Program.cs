@@ -6,6 +6,9 @@ using Motely.DuckDB;
 using Motely.Executors;
 using Motely.Filters;
 using Motely.GPU;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
 using System.Text;
 
 namespace Motely
@@ -33,6 +36,8 @@ namespace Motely
             };
 
             app.HelpOption("-?|-h|--help");
+
+            var noArgsProvided = args.Length == 0;
 
             // Core options
             var jsonOption = app.Option<string>(
@@ -164,17 +169,18 @@ namespace Motely
 
             // JSON specific
             var cutoffOption = app.Option<string>(
-                "--cutoff <SCORE|auto|best>",
-                "Min score threshold: number (0=no cutoff, 1+=manual), 'auto' (AutoSmart), or 'best' (AutoBest)",
+                "--cutoff <MODE>",
+                "Min score threshold: number (0=no cutoff, 1+=manual), or specify 'auto' (AutoSmart) / 'best' (AutoBest)",
                 CommandOptionType.SingleValue
             );
 
             // Output options
-            var saveOption = app.Option<string>(
-                "--save <TYPE>",
-                "Save results to SearchResults/. Optional: 'duckdb' (default) or 'csv' (skip database)",
-                CommandOptionType.SingleOrNoValue
+            var saveOption = app.Option(
+                "--save",
+                "Save results to SearchResults/ (DuckDB)",
+                CommandOptionType.NoValue
             );
+
             var outputDbOption = app.Option<string>(
                 "--output-db <PATH>",
                 "Write results to DuckDB database file (instead of CSV to console)",
@@ -225,6 +231,12 @@ namespace Motely
 
             app.OnExecute(() =>
             {
+                if (noArgsProvided)
+                {
+                    app.ShowHelp();
+                    return 0;
+                }
+
                 // Analyze mode takes priority
                 var analyzeSeed = analyzeOption.Value();
                 if (!string.IsNullOrEmpty(analyzeSeed))
@@ -249,6 +261,8 @@ namespace Motely
                     Quiet = quietOption.HasValue(),
                     SpecificSeed = seedOption.Value(),
                     SeedSources = seedsourcesOption.Value(),
+                    Deck = deckOption.Value(),
+                    Stake = stakeOption.Value(),
                     SeedList = null, // Will be set by keyword handling below
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
                     CancellationToken = _cts.Token,
@@ -275,15 +289,6 @@ namespace Motely
                             // Throttle: Max one update every 2 seconds
                             if ((now - lastReportTime).TotalSeconds < 2.0 && batchOneReported)
                                 return;
-
-                            // Report after batch 1
-                            if (!batchOneReported && progress.CompletedBatchCount >= 1)
-                            {
-                                Console.WriteLine($"   ✓ Batch 1 complete");
-                                batchOneReported = true;
-                                lastReportedPercent = 0;
-                                lastReportTime = now;
-                            }
 
                             if (progress.TotalBatchCount <= 0) return;
 
@@ -442,12 +447,13 @@ namespace Motely
                         if (cutoffStr == "auto")
                         {
                             parameters.AutoCutoff = true;
+                            parameters.CutoffMode = ScoreCutoffMode.AutoSmart;
                             parameters.Cutoff = 0;
                         }
                         else if (cutoffStr == "best")
                         {
                             parameters.AutoCutoff = true;
-                            parameters.CutoffMode = "best";
+                            parameters.CutoffMode = ScoreCutoffMode.AutoBest;
                             parameters.Cutoff = 0;
                         }
                         else if (int.TryParse(cutoffStr, out var c))
@@ -472,13 +478,13 @@ namespace Motely
                     if (cutoffStr == "auto")
                     {
                         parameters.AutoCutoff = true;
-                        parameters.CutoffMode = "auto";
+                        parameters.CutoffMode = ScoreCutoffMode.AutoSmart;
                         parameters.Cutoff = 0;
                     }
                     else if (cutoffStr == "best")
                     {
                         parameters.AutoCutoff = true;
-                        parameters.CutoffMode = "best";
+                        parameters.CutoffMode = ScoreCutoffMode.AutoBest;
                         parameters.Cutoff = 0;
                     }
                     else if (int.TryParse(cutoffStr, out var c))
@@ -509,6 +515,7 @@ namespace Motely
 
                     // Setup output (DuckDB and/or CSV)
                     Action<MotelySeedScoreTally>? dbCallback = null;
+                    Action<MotelySeedScoreTally>? bulkCallback = null;
                     MotelySearchDatabase? db = null;
                     StreamWriter? csvWriter = null;
                     List<string>? csvColumnNames = null;
@@ -530,32 +537,14 @@ namespace Motely
                             "_"
                         ).ToLowerInvariant();
 
-                        // Get the save type: "csv" skips DB, anything else or no value defaults to "duckdb"
-                        var saveType = saveOption.Value() ?? "duckdb";
-
-                        // Only set DB path if not explicitly skipping with --save csv
-                        if (!saveType.Equals("csv", StringComparison.OrdinalIgnoreCase))
-                        {
-                            dbPath = $"SearchResults/{filterId}.db";
-                        }
-
-                        // Always save CSV when using --save
-                        csvPath = $"SearchResults/{filterId}.csv";
+                        dbPath = $"SearchResults/{filterId}.db";
                     }
 
-                    // Always keep console output when saving (dedupe by seed)
-                    var printedSeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    var printLock = new object();
+                    // Console output (no dedupe needed—batches are disjoint)
                     Action<MotelySeedScoreTally> consoleCallback = (result) =>
                     {
                         if (parameters.Quiet)
                             return;
-
-                        lock (printLock)
-                        {
-                            if (!printedSeeds.Add(result.Seed))
-                                return;
-                        }
 
                         FancyConsole.WriteLine(
                             TallyColorizer.FormatResultLine(
@@ -566,80 +555,8 @@ namespace Motely
                         );
                     };
 
-                    // Queue-based DB writer to avoid concurrent write conflicts
-                    var dbWriteQueue = new System.Collections.Concurrent.BlockingCollection<MotelySeedScoreTally>();
-                    Task? dbWriterTask = null;
-                    CancellationTokenSource? dbWriterCts = null;
-
-                    // Setup CSV output if requested
-                    if (outputCsvOption.HasValue() || (saveOption.HasValue() && csvPath != null))
-                    {
-                        if (outputCsvOption.HasValue())
-                            csvPath = outputCsvOption.Value()!;
-
-                        if (string.IsNullOrWhiteSpace(csvPath))
-                        {
-                            Console.WriteLine("❌ Error: --output-csv requires a CSV file path");
-                            return 1;
-                        }
-
-                        // Load config to get column names for CSV header
-                        MotelyJsonConfig? csvConfig = null;
-                        if (configFormat == "jaml")
-                        {
-                            string jamlPath = Path.Combine("JamlFilters", configName! + ".jaml");
-                            if (!File.Exists(jamlPath))
-                            {
-                                jamlPath = configName!; // Try as absolute path
-                            }
-                            if (
-                                !JamlConfigLoader.TryLoadFromJaml(
-                                    jamlPath,
-                                    out csvConfig,
-                                    out var error
-                                )
-                            )
-                            {
-                                Console.WriteLine($"❌ Error loading JAML config: {error}");
-                                return 1;
-                            }
-                        }
-                        else
-                        {
-                            string jsonPath = Path.Combine("JsonFilters", configName! + ".json");
-                            if (!File.Exists(jsonPath))
-                            {
-                                jsonPath = configName!; // Try as absolute path
-                            }
-                            if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonPath, out csvConfig))
-                            {
-                                Console.WriteLine($"❌ Error loading JSON config: {jsonPath}");
-                                return 1;
-                            }
-                        }
-
-                        if (csvConfig == null)
-                        {
-                            Console.WriteLine("❌ Error: Failed to load config for CSV output");
-                            return 1;
-                        }
-
-                        csvColumnNames = csvConfig.GetColumnNames();
-                        csvWriter = new StreamWriter(csvPath, append: false);
-
-                        // Write CSV header
-                        csvWriter.WriteLine(
-                            string.Join(",", csvColumnNames.Select(name => $"\"{name}\""))
-                        );
-                        csvWriter.Flush();
-
-                        if (!parameters.Quiet)
-                        {
-                            Console.WriteLine($"💾 Writing results to CSV: {csvPath}");
-                        }
-                    }
-
-                    if (outputDbOption.HasValue() || (saveOption.HasValue() && dbPath != null))
+                    // Setup DB output if requested
+                    if (outputDbOption.HasValue() || dbPath != null)
                     {
                         if (outputDbOption.HasValue())
                             dbPath = outputDbOption.Value()!;
@@ -700,43 +617,46 @@ namespace Motely
                             Console.WriteLine($"💾 Writing results to: {dbPath}");
                         }
 
-                        // Start dedicated DB writer thread
-                        dbWriterCts = new CancellationTokenSource();
-                        dbWriterTask = Task.Run(() =>
-                        {
-                            foreach (var result in dbWriteQueue.GetConsumingEnumerable(dbWriterCts.Token))
-                            {
-                                try
-                                {
-                                    db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
-                                    seedsFound++;
-                                    // Only print once when first result is found
-                                    if (seedsFound == 1)
-                                        Console.Error.WriteLine(
-                                            "✅ Found first matching seed (writing to DuckDB)..."
-                                        );
-                                }
-                                catch (Exception ex)
-                                {
-                                    // CRITICAL: Stop on DB errors to prevent data corruption
-                                    Console.Error.WriteLine(
-                                        $"❌ [CRITICAL] Failed to write seed {result.Seed} to database: {ex.Message}"
-                                    );
-                                    Console.Error.WriteLine(
-                                        $"   This is a fatal error - stopping search to prevent data loss!"
-                                    );
-                                    // Signal cancellation to stop the search
-                                    _cts.Cancel();
-                                    throw;
-                                }
-                            }
-                        });
-
-                        // Callback pushes to queue instead of writing directly
+                        // Direct DB callback (no queue)
                         dbCallback = (result) =>
                         {
                             consoleCallback(result);
-                            dbWriteQueue.Add(result);
+                            try
+                            {
+                                db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
+                                seedsFound++;
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine($"❌ Failed to write seed {result.Seed} to database: {ex.Message}");
+                                throw;
+                            }
+                        };
+
+                        // Bulk insert buffer for SpannableArray
+                        var bulkBuffer = new List<(string seed, int score)>();
+                        const int BULK_SIZE = 1000;
+
+                        bulkCallback = (result) =>
+                        {
+                            consoleCallback(result);
+                            bulkBuffer.Add((result.Seed, result.Score));
+                            seedsFound++;
+
+                            if (bulkBuffer.Count >= BULK_SIZE)
+                            {
+                                try
+                                {
+                                    var array = bulkBuffer.ToArray();
+                                    db?.InsertBulk(array.AsSpan());
+                                    bulkBuffer.Clear();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.Error.WriteLine($"❌ Failed bulk insert: {ex.Message}");
+                                    throw;
+                                }
+                            }
                         };
                     }
 
@@ -873,7 +793,7 @@ namespace Motely
                         configName!,
                         parameters,
                         configFormat,
-                        dbCallback
+                        bulkCallback ?? dbCallback
                     );
                     int exitCode = 0;
                     try
@@ -882,28 +802,6 @@ namespace Motely
                     }
                     finally
                     {
-                        // CRITICAL: Drain queue and wait for DB writer to complete
-                        if (dbWriteQueue != null && dbWriterTask != null)
-                        {
-                            try
-                            {
-                                // Signal no more items will be added
-                                dbWriteQueue.CompleteAdding();
-
-                                // Wait for writer task to process remaining items (with timeout)
-                                if (!dbWriterTask.Wait(TimeSpan.FromSeconds(30)))
-                                {
-                                    Console.Error.WriteLine("⚠️  DB writer task did not complete within 30 seconds");
-                                    dbWriterCts?.Cancel();
-                                    dbWriterTask?.Wait(TimeSpan.FromSeconds(5));
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.Error.WriteLine($"❌ Error draining DB queue: {ex.Message}");
-                            }
-                        }
-
                         // CRITICAL: Always flush DuckDB on exit (normal or cancelled) to prevent WAL files
                         if (db != null)
                         {

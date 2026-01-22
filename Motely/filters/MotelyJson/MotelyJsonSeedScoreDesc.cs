@@ -31,7 +31,9 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     {
         if (_tallyCount < 1024)
         {
-            _tallyValues[_tallyCount++] = value;
+            _tallyValues[_tallyCount] = value;
+            if (_columnValues != null) _columnValues[_tallyCount] = null;
+            _tallyCount++;
         }
     }
 
@@ -47,10 +49,9 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 
         if (_tallyCount < 1024)
         {
-            // _columnValues is guaranteed to be non-null here due to check above
-            _columnValues![_tallyCount] = value;
-            // Also add 0 to tally for backward compatibility (so TallyCount matches)
-            _tallyValues[_tallyCount++] = 0;
+            _columnValues[_tallyCount] = value;
+            _tallyValues[_tallyCount] = 0;
+            _tallyCount++;
         }
     }
 

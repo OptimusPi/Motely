@@ -47,61 +47,60 @@ public sealed class MotelySearchDatabase : IDisposable
 
     private void CreateResultsTable()
     {
-        var columns = new List<string> { "seed VARCHAR PRIMARY KEY", "score INTEGER" };
-        
-        // Wrap dynamic columns in double quotes to handle spaces/special chars in JAML filter names
-        columns.AddRange(_columnNames.Skip(2).Select(col => $"{QuoteColumn(col)} INTEGER"));
-
-        var createTableSql =
-            $@"
+        var createTableSql = @"
             CREATE TABLE IF NOT EXISTS results (
-                {string.Join(",\n                ", columns)}
+                seed VARCHAR PRIMARY KEY, 
+                score INTEGER
             )";
 
         ExecuteNonQuery(createTableSql);
-
-        // Create seed index (seed is primary key, so it's automatically indexed)
-        // Defer score index until after search completes to avoid conflicts during concurrent writes
-        // ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_results_score ON results(score DESC)");
-        // ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_results_seed ON results(seed)");
     }
 
     /// <summary>
-    /// Insert a search result row
-    /// Uses INSERT OR REPLACE so re-runs update existing seed rows.
+    /// Insert a search result row - real DuckDB way
     /// </summary>
     public void InsertRow(string seed, int score, List<int>? tallies = null)
     {
         if (_disposed)
             return;
 
-        var columns = new List<string> { "seed", "score" };
-        var values = new List<string> { $"'{seed.Replace("'", "''")}'", score.ToString() };
-
-        if (tallies != null && tallies.Count >= _columnNames.Count - 2)
+        try
         {
-            for (int i = 0; i < _columnNames.Count - 2; i++)
+            using var cmd = _connection.CreateCommand();
+            cmd.CommandText = "INSERT OR REPLACE INTO results (seed, score) VALUES (?, ?)";
+            cmd.Parameters.Add(new DuckDBParameter(seed));
+            cmd.Parameters.Add(new DuckDBParameter(score));
+            cmd.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            _logCallback?.Invoke($"Failed to insert row: {ex.Message}");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Bulk insert seeds using simple INSERT statements
+    /// </summary>
+    public void InsertBulk(ReadOnlySpan<(string seed, int score)> results)
+    {
+        if (_disposed || results.IsEmpty)
+            return;
+
+        try
+        {
+            foreach (var (seed, score) in results)
             {
-                columns.Add(QuoteColumn(_columnNames[i + 2]));
-                values.Add(tallies.Count > i ? tallies[i].ToString() : "0");
+                using var cmd = _connection.CreateCommand();
+                cmd.CommandText = $"INSERT OR REPLACE INTO results (seed, score) VALUES ('{seed.Replace("'", "''")}', {score})";
+                cmd.ExecuteNonQuery();
             }
         }
-        else
+        catch (Exception ex)
         {
-            foreach (var col in _columnNames.Skip(2))
-            {
-                columns.Add(QuoteColumn(col));
-                values.Add("0");
-            }
+            _logCallback?.Invoke($"Failed to bulk insert {results.Length} rows: {ex.Message}");
+            throw;
         }
-
-        // Use INSERT OR REPLACE to update existing rows with new scores
-        var sql =
-            $@"
-            INSERT OR REPLACE INTO results ({string.Join(", ", columns)})
-            VALUES ({string.Join(", ", values)})";
-
-        ExecuteNonQuery(sql);
     }
 
     /// <summary>
@@ -112,12 +111,7 @@ public sealed class MotelySearchDatabase : IDisposable
         if (_disposed)
             return new List<SearchResultRow>();
 
-        var sql =
-            $@"
-            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2).Select(QuoteColumn))}
-            FROM results
-            ORDER BY score DESC
-            LIMIT {limit}";
+        var sql = $"SELECT seed, score FROM results ORDER BY score DESC LIMIT {limit}";
 
         var results = new List<SearchResultRow>();
         using var cmd = _connection.CreateCommand();
@@ -126,20 +120,9 @@ public sealed class MotelySearchDatabase : IDisposable
 
         while (reader.Read())
         {
-            var tallies = new List<int>();
-            for (int i = 2; i < reader.FieldCount; i++)
-            {
-                tallies.Add(reader.IsDBNull(i) ? 0 : reader.GetInt32(i));
-            }
-
-            results.Add(
-                new SearchResultRow
-                {
-                    Seed = reader.GetString(0),
-                    Score = reader.GetInt32(1),
-                    Tallies = tallies.Count > 0 ? tallies : null,
-                }
-            );
+            var seed = reader.GetString(0);
+            var score = reader.GetInt32(1);
+            results.Add(new SearchResultRow { Seed = seed, Score = score });
         }
 
         return results;
