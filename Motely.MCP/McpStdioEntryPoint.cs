@@ -46,11 +46,7 @@ public static class McpStdioEntryPoint
         });
 
         builder.Services.AddSingleton(SearchManager.Instance);
-        builder.Services.AddSingleton<GenieFeedbackService>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<GenieFeedbackService>>();
-            return new GenieFeedbackService(logger);
-        });
+        builder.Services.AddSingleton<GenieFeedbackService>();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<McpServer>();
         builder.Services.AddScoped<McpProtocolServer>();

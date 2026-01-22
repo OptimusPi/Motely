@@ -4,7 +4,7 @@ namespace Motely;
 
 public struct ErraticFinderDesc() : IMotelySeedFilterDesc<ErraticFinderDesc.FilterStruct>
 {
-    public const MotelyPlayingCardSuit CardSuit = MotelyPlayingCardSuit.Heart;
+    public const MotelyPlayingCardSuit CardSuit = MotelyPlayingCardSuit.Hearts;
     public const int RequiredCount = 28;
 
     public FilterStruct CreateFilter(ref MotelyFilterCreationContext ctx)
