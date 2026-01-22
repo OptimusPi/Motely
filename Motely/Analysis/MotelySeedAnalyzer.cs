@@ -28,8 +28,8 @@ public sealed record class MotelySeedAnalysis(
 
         StringBuilder sb = new();
 
-        // Add Erratic Deck info at the top if Erratic Deck is selected
-        if (Deck == MotelyDeck.Erratic && !string.IsNullOrEmpty(StartingDeck))
+        // Add starting deck at the top if available
+        if (!string.IsNullOrEmpty(StartingDeck))
         {
             sb.AppendLine($"Starting Deck: {StartingDeck}");
             sb.AppendLine();

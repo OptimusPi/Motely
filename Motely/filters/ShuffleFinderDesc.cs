@@ -81,16 +81,16 @@ public struct ShuffleFinderFilterDesc()
             {
                 switch (hand[i].PlayingCardSuit)
                 {
-                    case MotelyPlayingCardSuit.Club:
+                    case MotelyPlayingCardSuit.Clubs:
                         ++clubSuitCount;
                         break;
-                    case MotelyPlayingCardSuit.Diamond:
+                    case MotelyPlayingCardSuit.Diamonds:
                         ++diamondSuitCount;
                         break;
-                    case MotelyPlayingCardSuit.Heart:
+                    case MotelyPlayingCardSuit.Hearts:
                         ++heartSuitCount;
                         break;
-                    case MotelyPlayingCardSuit.Spade:
+                    case MotelyPlayingCardSuit.Spades:
                         ++spadeSuitCount;
                         break;
                 }
@@ -223,13 +223,13 @@ public struct ShuffleFinderFilterDesc()
             }
 
             if (clubSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Club);
+                ScoreFlush(hand, MotelyPlayingCardSuit.Clubs);
             if (diamondSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Diamond);
+                ScoreFlush(hand, MotelyPlayingCardSuit.Diamonds);
             if (heartSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Heart);
+                ScoreFlush(hand, MotelyPlayingCardSuit.Hearts);
             if (spadeSuitCount >= 5)
-                ScoreFlush(hand, MotelyPlayingCardSuit.Spade);
+                ScoreFlush(hand, MotelyPlayingCardSuit.Spades);
 
             void SearchForStraightFlush(Span<MotelyItem> hand, MotelyPlayingCardSuit suit)
             {
@@ -278,13 +278,13 @@ public struct ShuffleFinderFilterDesc()
             if (hasStraight)
             {
                 if (clubSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Club);
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Clubs);
                 if (diamondSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Diamond);
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Diamonds);
                 if (heartSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Heart);
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Hearts);
                 if (spadeSuitCount >= 5)
-                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Spade);
+                    SearchForStraightFlush(hand, MotelyPlayingCardSuit.Spades);
             }
 
             {

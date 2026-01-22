@@ -140,25 +140,26 @@ public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
     private IEnumerator<string>? _seedEnumerator;
     private bool _disposed = false;
     private readonly object _lock = new();
-
-    public int SeedCount { get; }
+    private int _seedCount;
 
     public DuckDBSeedProvider(string dbPath)
     {
         var conn = global::Motely.DuckDB.DuckDBConnectionFactory.CreateConnection(dbPath);
 
-        // Get total seed count
+        // Get seed count for interface compliance (minimal overhead)
         using var countCmd = conn.CreateCommand();
         countCmd.CommandText = "SELECT COUNT(*) FROM seeds";
-        SeedCount = (int)Convert.ToInt64(countCmd.ExecuteScalar() ?? 0);
+        _seedCount = (int)Convert.ToInt64(countCmd.ExecuteScalar() ?? 0);
 
-        // Stream ALL seeds once at startup (O(n) instead of O(n²))
+        // Simple direct streaming - no counting, no over-engineering!
         var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT seed FROM seeds";
 
         var reader = cmd.ExecuteReader();
         _seedEnumerator = GetSeedsFromReader(reader, conn, cmd);
     }
+
+    public int SeedCount => _seedCount;
 
     private IEnumerator<string> GetSeedsFromReader(
         global::DuckDB.NET.Data.DuckDBDataReader reader,

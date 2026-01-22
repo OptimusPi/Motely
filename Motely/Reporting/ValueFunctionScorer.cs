@@ -226,10 +226,10 @@ public class ValueFunctionScorer : IScorer
         };
         var suitStr = suit switch
         {
-            MotelyPlayingCardSuit.Club => "C",
-            MotelyPlayingCardSuit.Diamond => "D",
-            MotelyPlayingCardSuit.Heart => "H",
-            MotelyPlayingCardSuit.Spade => "S",
+            MotelyPlayingCardSuit.Clubs => "C",
+            MotelyPlayingCardSuit.Diamonds => "D",
+            MotelyPlayingCardSuit.Hearts => "H",
+            MotelyPlayingCardSuit.Spades => "S",
             _ => suit.ToString(),
         };
         return $"{rankStr}_{suitStr}";

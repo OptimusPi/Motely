@@ -638,11 +638,11 @@ public class MotelyJsonConfig
                                     var suitStr = parts[1].Trim().ToUpperInvariant();
                                     MotelyPlayingCardSuit? parsedSuit = suitStr switch
                                     {
-                                        "C" or "CLUB" or "CLUBS" => MotelyPlayingCardSuit.Club,
+                                        "C" or "CLUB" or "CLUBS" => MotelyPlayingCardSuit.Clubs,
                                         "D" or "DIAMOND" or "DIAMONDS" =>
-                                            MotelyPlayingCardSuit.Diamond,
-                                        "H" or "HEART" or "HEARTS" => MotelyPlayingCardSuit.Heart,
-                                        "S" or "SPADE" or "SPADES" => MotelyPlayingCardSuit.Spade,
+                                            MotelyPlayingCardSuit.Diamonds,
+                                        "H" or "HEART" or "HEARTS" => MotelyPlayingCardSuit.Hearts,
+                                        "S" or "SPADE" or "SPADES" => MotelyPlayingCardSuit.Spades,
                                         _ => Enum.TryParse<MotelyPlayingCardSuit>(
                                             suitStr,
                                             true,
@@ -724,10 +724,10 @@ public class MotelyJsonConfig
                                     // Parse suit
                                     var suitEnum = suitStr switch
                                     {
-                                        "Clubs" => MotelyPlayingCardSuit.Club,
-                                        "Diamonds" => MotelyPlayingCardSuit.Diamond,
-                                        "Hearts" => MotelyPlayingCardSuit.Heart,
-                                        "Spades" => MotelyPlayingCardSuit.Spade,
+                                        "Clubs" => MotelyPlayingCardSuit.Clubs,
+                                        "Diamonds" => MotelyPlayingCardSuit.Diamonds,
+                                        "Hearts" => MotelyPlayingCardSuit.Hearts,
+                                        "Spades" => MotelyPlayingCardSuit.Spades,
                                         _ => (MotelyPlayingCardSuit?)null,
                                     };
 
@@ -1752,7 +1752,7 @@ public class MotelyJsonConfig
                 anteSuffix = minAnte == maxAnte ? $" A{minAnte}" : $" A{minAnte}-{maxAnte}";
             }
 
-            return $"{count} {clauseType}{anteSuffix}";
+            return $"{count}_{clauseType}{anteSuffix}";
         }
 
         // Handle AND clauses
@@ -1769,7 +1769,7 @@ public class MotelyJsonConfig
                 anteSuffix = minAnte == maxAnte ? $" A{minAnte}" : $" A{minAnte}-{maxAnte}";
             }
 
-            return $"{count} {clauseType}{anteSuffix}";
+            return $"{count}_{clauseType}{anteSuffix}";
         }
 
         // Build name from value/type

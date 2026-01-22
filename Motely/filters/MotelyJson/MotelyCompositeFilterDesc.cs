@@ -108,15 +108,30 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
                     MotelyJsonFilterClauseExtensions.CreateEventCriteria(clauses)
                 ).CreateFilter(ref ctx),
                 FilterCategory.ErraticRank => new MotelyJsonErraticRankFilterDesc(
-                    clauses[0].RankEnum!.Value,
+                    clauses[0].RankEnum
+                        ?? throw new InvalidOperationException(
+                            $"erraticRank requires a rank value (clause: {clauses[0].Value ?? "<none>"})"
+                        ),
                     clauses[0].Min ?? 1
                 ).CreateFilter(ref ctx),
                 FilterCategory.ErraticSuit => new MotelyJsonErraticSuitFilterDesc(
-                    clauses[0].SuitEnum!.Value,
+                    clauses[0].SuitEnum
+                        ?? throw new InvalidOperationException(
+                            $"erraticSuit requires a suit value (clause: {clauses[0].Value ?? "<none>"})"
+                        ),
                     clauses[0].Min ?? 1
                 ).CreateFilter(ref ctx),
                 FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
-                    MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(clauses)
+                    MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(
+                        clauses.Select(c =>
+                        {
+                            if (c.RankEnum == null && c.SuitEnum == null)
+                                throw new InvalidOperationException(
+                                    "erraticRankAndSuit requires rank and/or suit values"
+                                );
+                            return c;
+                        }).ToList()
+                    )
                 ).CreateFilter(ref ctx),
                 _ => throw new ArgumentException($"Unsupported filter category: {category}"),
             };

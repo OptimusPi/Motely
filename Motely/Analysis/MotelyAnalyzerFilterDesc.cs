@@ -44,47 +44,17 @@ public sealed class MotelyAnalyzerFilterDesc()
             MotelyRunState voucherState = new();
             MotelySingleBossStream bossStream = ctx.CreateBossStream();
 
-            // Get starting deck composition for Erratic Deck
-            string? startingDeck = null;
-            if (ctx.Deck == MotelyDeck.Erratic)
+            // Get starting deck composition for all decks using high-level API
+            var deckStream = ctx.CreateErraticDeckPrngStream(isCached: false);
+            var deckCards = new List<string>();
+
+            for (int i = 0; i < 52; i++)
             {
-                var deckStream = ctx.CreateErraticDeckPrngStream(isCached: false);
-                var deckCards = new List<string>();
-                for (int i = 0; i < 52; i++)
-                {
-                    var card = ctx.GetNextErraticDeckCard(ref deckStream);
-                    var rank = card.PlayingCardRank;
-                    var suit = card.PlayingCardSuit;
-                    // Format as "2_H" (2 of Hearts) or "K_C" (King of Clubs)
-                    var rankStr = rank switch
-                    {
-                        MotelyPlayingCardRank.Two => "2",
-                        MotelyPlayingCardRank.Three => "3",
-                        MotelyPlayingCardRank.Four => "4",
-                        MotelyPlayingCardRank.Five => "5",
-                        MotelyPlayingCardRank.Six => "6",
-                        MotelyPlayingCardRank.Seven => "7",
-                        MotelyPlayingCardRank.Eight => "8",
-                        MotelyPlayingCardRank.Nine => "9",
-                        MotelyPlayingCardRank.Ten => "10",
-                        MotelyPlayingCardRank.Jack => "J",
-                        MotelyPlayingCardRank.Queen => "Q",
-                        MotelyPlayingCardRank.King => "K",
-                        MotelyPlayingCardRank.Ace => "A",
-                        _ => rank.ToString(),
-                    };
-                    var suitStr = suit switch
-                    {
-                        MotelyPlayingCardSuit.Club => "C",
-                        MotelyPlayingCardSuit.Diamond => "D",
-                        MotelyPlayingCardSuit.Heart => "H",
-                        MotelyPlayingCardSuit.Spade => "S",
-                        _ => suit.ToString(),
-                    };
-                    deckCards.Add($"{rankStr}_{suitStr}");
-                }
-                startingDeck = string.Join(",", deckCards);
+                var card = ctx.GetNextErraticDeckCard(ref deckStream);
+                deckCards.Add(FormatCardString(card.PlayingCardRank, card.PlayingCardSuit));
             }
+
+            string startingDeck = string.Join(",", deckCards);
 
             List<MotelyAnteAnalysis> antes = [];
 
@@ -246,10 +216,10 @@ public sealed class MotelyAnalyzerFilterDesc()
             };
             var suitStr = suit switch
             {
-                MotelyPlayingCardSuit.Club => "C",
-                MotelyPlayingCardSuit.Diamond => "D",
-                MotelyPlayingCardSuit.Heart => "H",
-                MotelyPlayingCardSuit.Spade => "S",
+                MotelyPlayingCardSuit.Clubs => "C",
+                MotelyPlayingCardSuit.Diamonds => "D",
+                MotelyPlayingCardSuit.Hearts => "H",
+                MotelyPlayingCardSuit.Spades => "S",
                 _ => suit.ToString(),
             };
             return $"{rankStr}_{suitStr}";

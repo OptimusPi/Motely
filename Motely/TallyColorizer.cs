@@ -57,6 +57,7 @@ public static class TallyColorizer
         { 6, "\u001b[38;5;51m" }, // Cyan for 6
         { 7, "\u001b[38;5;201m" }, // Magenta for 7
         { 8, "\u001b[38;5;231m" }, // White for 8+
+        { 9, "\u001b[38;5;202m" }, // Pink for other
     };
 
     private const string ResetColor = "\u001b[0m";
@@ -213,7 +214,7 @@ public static class TallyColorizer
         if (tallies.Length == 0)
             return string.Empty;
 
-        Span<char> buffer = stackalloc char[tallies.Length * 16]; // 16 chars per value max
+        Span<char> buffer = stackalloc char[tallies.Length * 64]; // 64 chars per value to safely fit ANSI codes
         var writer = new SpanWriter(buffer);
         bool first = true;
 
@@ -223,7 +224,7 @@ public static class TallyColorizer
                 writer.Write(',');
             first = false;
 
-            int colorKey = Math.Max(0, Math.Min(8, tally));
+            int colorKey = Math.Max(0, Math.Min(7, tally));
             if (TallyColors.TryGetValue(colorKey, out var color))
             {
                 writer.Write(color);
@@ -250,7 +251,7 @@ public static class TallyColorizer
             if (collection.Count == 0)
                 return string.Empty;
 
-            Span<char> buffer = stackalloc char[collection.Count * 16]; // 16 chars per value max
+            Span<char> buffer = stackalloc char[collection.Count * 64]; // 64 chars per value to safely fit ANSI codes
             var writer = new SpanWriter(buffer);
             bool first = true;
 
