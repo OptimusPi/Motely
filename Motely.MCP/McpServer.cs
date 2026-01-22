@@ -19,11 +19,13 @@ public class McpServer
     private readonly string _workerUrl;
     private readonly string _model;
     private readonly GenieFeedbackService? _feedbackService;
+    private readonly SearchManager _searchManager;
 
     public McpServer(
         ILogger<McpServer> logger,
         HttpClient httpClient,
         IConfiguration configuration,
+        SearchManager searchManager,
         GenieFeedbackService? feedbackService = null
     )
     {
@@ -31,6 +33,7 @@ public class McpServer
         _httpClient = httpClient;
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
         _configuration = configuration;
+        _searchManager = searchManager;
         _feedbackService = feedbackService;
 
         var cfConfig = _configuration.GetSection("Cloudflare:WorkersAI");
@@ -214,7 +217,7 @@ public class McpServer
             var seedSource = "random:1000000";
 
             // Execute search via SearchManager (validation already passed)
-            var (results, searchId) = await SearchManager.Instance.StartSearchAsync(
+            var (results, searchId) = await _searchManager.StartSearchAsync(
                 jamlFilter,
                 deck: deck,
                 stake: stake,
@@ -222,7 +225,7 @@ public class McpServer
                 seedSource: seedSource
             );
 
-            var columns = SearchManager.Instance.GetColumnNames(searchId);
+            var columns = _searchManager.GetColumnNames(searchId);
 
             // Generate search URL for linking to JAML UI
             var searchUrl = $"/JAML/?search={Uri.EscapeDataString(searchId)}";

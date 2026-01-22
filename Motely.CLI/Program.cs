@@ -14,7 +14,7 @@ namespace Motely
     {
         private static readonly CancellationTokenSource _cts = new();
 
-        static async Task<int> Main(string[] args)
+        static int Main(string[] args)
         {
             // Wire up Ctrl+C to CancellationTokenSource for immediate cancellation
             // NOTE: Console.CancelKeyPress handlers are synchronous, so we must use Cancel()
@@ -164,8 +164,8 @@ namespace Motely
 
             // JSON specific
             var cutoffOption = app.Option<string>(
-                "--cutoff <SCORE>",
-                "Min score threshold",
+                "--cutoff <SCORE|auto|best>",
+                "Min score threshold: number (0=no cutoff, 1+=manual), 'auto' (AutoSmart), or 'best' (AutoBest)",
                 CommandOptionType.SingleValue
             );
 
@@ -190,7 +190,7 @@ namespace Motely
                 "Enable debug output",
                 CommandOptionType.NoValue
             );
-            
+
             // GPU acceleration options
             var dungmotOption = app.Option(
                 "--dungmot",
@@ -312,24 +312,24 @@ namespace Motely
                 if (keywordOption.HasValue())
                 {
                     string keyword = keywordOption.Value()!.ToUpperInvariant();
-                    
+
                     if (!parameters.Quiet)
                         Console.WriteLine($"🔧 Generating seeds for keyword '{keyword}'...");
-                    
+
                     string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
-                    
+
                     // Generate seeds as IEnumerable (lazy, no allocation)
                     var keywordSeedList = GenerateKeywordSeeds(
                         keyword,
                         paddingChars,
                         parameters.Quiet
                     );
-                    
+
                     // FAST PATH: Use IEnumerable directly (no DuckDB overhead)
                     // This skips all file I/O and locks - perfect for in-memory searching
                     parameters.SeedList = keywordSeedList;
                     parameters.SeedSources = null; // Don't use DuckDB for keywords
-                    
+
                     if (!parameters.Quiet)
                         Console.WriteLine($"✅ Seeds ready for search (streaming mode)");
                 }
@@ -438,11 +438,28 @@ namespace Motely
                     // Parse cutoff for native filters with scoring or CSV scoring
                     if (!string.IsNullOrEmpty(scoreConfig))
                     {
-                        var cutoffStr = cutoffOption.Value() ?? "0";
-                        parameters.AutoCutoff = cutoffStr.ToLowerInvariant() == "auto";
-                        parameters.Cutoff = parameters.AutoCutoff
-                            ? 1
-                            : (int.TryParse(cutoffStr, out var c) ? c : 0);
+                        var cutoffStr = (cutoffOption.Value() ?? "0").ToLowerInvariant();
+                        if (cutoffStr == "auto")
+                        {
+                            parameters.AutoCutoff = true;
+                            parameters.Cutoff = 0;
+                        }
+                        else if (cutoffStr == "best")
+                        {
+                            parameters.AutoCutoff = true;
+                            parameters.CutoffMode = "best";
+                            parameters.Cutoff = 0;
+                        }
+                        else if (int.TryParse(cutoffStr, out var c))
+                        {
+                            parameters.AutoCutoff = false;
+                            parameters.Cutoff = c;
+                        }
+                        else
+                        {
+                            parameters.AutoCutoff = false;
+                            parameters.Cutoff = 0;
+                        }
                     }
 
                     var executor = new NativeFilterExecutor(nativeFilter, parameters, scoreConfig);
@@ -451,12 +468,29 @@ namespace Motely
                 else
                 {
                     // Config file mode (JSON/JAML)
-                    var cutoffStr = cutoffOption.Value() ?? "0";
-                    bool autoCutoff = cutoffStr.ToLowerInvariant() == "auto";
-                    parameters.Cutoff = autoCutoff
-                        ? 0
-                        : (int.TryParse(cutoffStr, out var c) ? c : 0);
-                    parameters.AutoCutoff = autoCutoff;
+                    var cutoffStr = (cutoffOption.Value() ?? "0").ToLowerInvariant();
+                    if (cutoffStr == "auto")
+                    {
+                        parameters.AutoCutoff = true;
+                        parameters.CutoffMode = "auto";
+                        parameters.Cutoff = 0;
+                    }
+                    else if (cutoffStr == "best")
+                    {
+                        parameters.AutoCutoff = true;
+                        parameters.CutoffMode = "best";
+                        parameters.Cutoff = 0;
+                    }
+                    else if (int.TryParse(cutoffStr, out var c))
+                    {
+                        parameters.AutoCutoff = false;
+                        parameters.Cutoff = c;
+                    }
+                    else
+                    {
+                        parameters.AutoCutoff = false;
+                        parameters.Cutoff = 0;
+                    }
 
                     // Determine which config format
                     string? configName = null;
@@ -479,32 +513,32 @@ namespace Motely
                     StreamWriter? csvWriter = null;
                     List<string>? csvColumnNames = null;
                     long seedsFound = 0;
-                    
+
                     // Handle --save flag: auto-generate filenames in SearchResults/
                     string? dbPath = outputDbOption.Value();
                     string? csvPath = outputCsvOption.Value();
-                    
+
                     if (saveOption.HasValue())
                     {
                         // Create SearchResults directory if needed
                         Directory.CreateDirectory("SearchResults");
-                        
+
                         // Use filter name as ID (same as SearchManager does)
                         var filterId = System.Text.RegularExpressions.Regex.Replace(
                             configName ?? "search",
                             "[^a-zA-Z0-9_-]",
                             "_"
                         ).ToLowerInvariant();
-                        
+
                         // Get the save type: "csv" skips DB, anything else or no value defaults to "duckdb"
                         var saveType = saveOption.Value() ?? "duckdb";
-                        
+
                         // Only set DB path if not explicitly skipping with --save csv
                         if (!saveType.Equals("csv", StringComparison.OrdinalIgnoreCase))
                         {
                             dbPath = $"SearchResults/{filterId}.db";
                         }
-                        
+
                         // Always save CSV when using --save
                         csvPath = $"SearchResults/{filterId}.csv";
                     }
@@ -531,7 +565,7 @@ namespace Motely
                             )
                         );
                     };
-                    
+
                     // Queue-based DB writer to avoid concurrent write conflicts
                     var dbWriteQueue = new System.Collections.Concurrent.BlockingCollection<MotelySeedScoreTally>();
                     Task? dbWriterTask = null;
@@ -542,7 +576,7 @@ namespace Motely
                     {
                         if (outputCsvOption.HasValue())
                             csvPath = outputCsvOption.Value()!;
-                            
+
                         if (string.IsNullOrWhiteSpace(csvPath))
                         {
                             Console.WriteLine("❌ Error: --output-csv requires a CSV file path");
@@ -609,7 +643,7 @@ namespace Motely
                     {
                         if (outputDbOption.HasValue())
                             dbPath = outputDbOption.Value()!;
-                            
+
                         if (string.IsNullOrWhiteSpace(dbPath))
                         {
                             Console.WriteLine("❌ Error: --output-db requires a database path");
@@ -855,7 +889,7 @@ namespace Motely
                             {
                                 // Signal no more items will be added
                                 dbWriteQueue.CompleteAdding();
-                                
+
                                 // Wait for writer task to process remaining items (with timeout)
                                 if (!dbWriterTask.Wait(TimeSpan.FromSeconds(30)))
                                 {
@@ -869,17 +903,17 @@ namespace Motely
                                 Console.Error.WriteLine($"❌ Error draining DB queue: {ex.Message}");
                             }
                         }
-                        
+
                         // CRITICAL: Always flush DuckDB on exit (normal or cancelled) to prevent WAL files
                         if (db != null)
                         {
                             try
                             {
                                 db.Checkpoint();
-                                
+
                                 // Create indexes after search completes (deferred to avoid write conflicts)
                                 db.CreateIndexes();
-                                
+
                                 if (!parameters.Quiet)
                                 {
                                     var actualCount = db.GetResultCount();
@@ -908,7 +942,7 @@ namespace Motely
                                 csvWriter.Flush();
                                 csvWriter.Close();
                                 Console.WriteLine($"💾 Total seeds saved to CSV: {seedsFound}");
-                                
+
                             }
                             catch (Exception ex)
                             {
@@ -919,7 +953,7 @@ namespace Motely
                         // Clean up dungmot provider
                         dungmotProvider?.Dispose();
                     }
-                    
+
                     // Dispose database connection
                     db?.Dispose();
 
@@ -1099,14 +1133,13 @@ namespace Motely
             int maxPad = 8 - keyword.Length;
 
             // Generate all combinations - yield directly, no materialization!
-            return GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars, sfwOnly, quiet);
+            return GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars, quiet);
         }
 
         private static IEnumerable<string> GenerateKeywordSeedsEnumerable(
             string keyword,
             int maxPad,
             char[] validChars,
-            bool sfwOnly,
             bool quiet
         )
         {

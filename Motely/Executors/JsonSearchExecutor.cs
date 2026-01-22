@@ -1,12 +1,7 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using Motely.DuckDB;
 using Motely.Filters;
 using Motely.Utils;
-#if !BROWSER
-using DuckDB.NET.Data;
-#endif
+
 
 
 namespace Motely.Executors
@@ -51,11 +46,6 @@ namespace Motely.Executors
         private readonly Action<MotelySeedScoreTally>? _customCallback;
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
-
-        // Track printed seeds to avoid duplicate console output
-        // (Database handles duplicates via PRIMARY KEY, but console should dedupe too)
-        private readonly HashSet<string> _printedSeeds = new();
-        private readonly object _printLock = new();
 
         public JsonSearchExecutor(
             string configPath,
@@ -189,15 +179,7 @@ namespace Motely.Executors
                         {
                             Console.WriteLine("\n🛑 Stopping search...");
                         }
-                        // Signal cancellation token first so threads exit cleanly
-                        if (_params.CancellationToken != null)
-                        {
-                            // Token is from CancellationTokenSource in Program.cs, it will be signaled there
-                            // But we also need to signal it here if we have access
-                            // Actually, Program.cs handler already signals _cts.Cancel(), so token should be signaled
-                            // Use fast-path cancellation to return immediately without waiting for threads
-                        }
-                        // Use fast-path cancel to signal threads without blocking on Dispose()
+                        // Cancel search - cancellation token is already wired up and will be signaled by Program.cs handler
                         search.Cancel();
                     };
                     Console.CancelKeyPress += cancelHandler;
@@ -798,15 +780,6 @@ namespace Motely.Executors
                 ?? (
                     (MotelySeedScoreTally result) =>
                     {
-                        // Deduplicate console output - same seed can be found in multiple batches/threads
-                        lock (_printLock)
-                        {
-                            if (_printedSeeds.Contains(result.Seed))
-                                return; // Already printed this seed
-
-                            _printedSeeds.Add(result.Seed);
-                        }
-
                         // Use original tally column format (CSV-style with colored numbers)
                         FancyConsole.WriteLine(
                             TallyColorizer.FormatResultLine(
@@ -818,10 +791,14 @@ namespace Motely.Executors
                     }
                 );
 
+            ScoreCutoffMode cutoffMode = _params.AutoCutoff
+                ? (_params.CutoffMode == "best" ? ScoreCutoffMode.AutoBest : ScoreCutoffMode.AutoSmart)
+                : (_params.Cutoff == 0 ? ScoreCutoffMode.None : ScoreCutoffMode.Manual);
+            
             MotelyJsonSeedScoreDesc scoreDesc = new(
                 scoringConfig,
                 _params.Cutoff,
-                _params.AutoCutoff ? ScoreCutoffMode.AutoSmart : ScoreCutoffMode.Manual,
+                cutoffMode,
                 scoreCallback
             );
 
@@ -1966,6 +1943,7 @@ namespace Motely.Executors
         public ulong EndBatch { get; set; }
         public int Cutoff { get; set; }
         public bool AutoCutoff { get; set; }
+        public string? CutoffMode { get; set; } // "auto" for AutoSmart, "best" for AutoBest
         public bool EnableDebug { get; set; }
         public bool NoFancy { get; set; }
         public bool Quiet { get; set; }
@@ -1980,8 +1958,6 @@ namespace Motely.Executors
 
         public IEnumerable<string>? SeedList { get; set; }
         public int? RandomSeeds { get; set; }
-
-        // REMOVED: SeedBatchSize parameter - always auto-detect based on available memory
 
         /// <summary>
         /// Progress callback: receives MotelyProgress object with all progress data

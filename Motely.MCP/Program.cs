@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Motely.MCP;
+using GenieFeedbackService = global::Motely.API.GenieFeedbackService;
 
 namespace Motely.MCP;
 
@@ -37,21 +38,10 @@ public class Program
             options.FormatterName = "Simple";
         });
 
-        builder.Services.AddScoped<McpServer>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<McpServer>>();
-            var httpClient = new HttpClient();
-            var config = sp.GetRequiredService<IConfiguration>();
-            return new McpServer(logger, httpClient, config);
-        });
-
-        builder.Services.AddScoped<McpProtocol.McpProtocolServer>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILogger<McpProtocol.McpProtocolServer>>();
-            var mcpServer = sp.GetRequiredService<McpServer>();
-            var searchManager = global::Motely.API.SearchManager.Instance;
-            return new McpProtocol.McpProtocolServer(logger, mcpServer, searchManager);
-        });
+        builder.Services.AddSingleton(global::Motely.API.SearchManager.Instance);
+        builder.Services.AddHttpClient();
+        builder.Services.AddScoped<McpServer>();
+        builder.Services.AddScoped<McpProtocol.McpProtocolServer>();
 
         var app = builder.Build();
 
