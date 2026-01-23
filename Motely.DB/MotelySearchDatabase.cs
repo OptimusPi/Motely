@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using DuckDB.NET.Data;
@@ -15,6 +16,7 @@ public sealed class MotelySearchDatabase : IDisposable
     private readonly string _dbPath;
     private readonly List<string> _columnNames;
     private readonly Action<string>? _logCallback;
+    private readonly DuckDBAppender _appender; // Keep appender open for entire session!
     private bool _disposed = false;
 
     public string DatabasePath => _dbPath;
@@ -38,6 +40,9 @@ public sealed class MotelySearchDatabase : IDisposable
 
         // Create results table with dynamic columns
         CreateResultsTable();
+        
+        // Initialize appender for the entire session
+        _appender = _connection.CreateAppender("results");
     }
 
     private static string QuoteColumn(string name)
@@ -47,30 +52,60 @@ public sealed class MotelySearchDatabase : IDisposable
 
     private void CreateResultsTable()
     {
-        var createTableSql = @"
-            CREATE TABLE IF NOT EXISTS results (
-                seed VARCHAR PRIMARY KEY, 
-                score INTEGER
-            )";
-
+        // Build full table schema upfront - NO ALTER TABLE!
+        var columnDefs = new List<string> { "seed VARCHAR PRIMARY KEY", "score INTEGER" };
+        
+        // Add all tally columns with proper types
+        for (int i = 2; i < _columnNames.Count; i++)
+        {
+            var columnName = _columnNames[i];
+            var quotedName = QuoteColumn(columnName);
+            
+            // Determine column type based on name pattern
+            var isStringColumn = columnName.Contains("Label") || 
+                               columnName.Contains("Display") || 
+                               columnName.Contains("Text");
+            
+            var columnType = isStringColumn ? "VARCHAR" : "INTEGER";
+            columnDefs.Add($"{quotedName} {columnType}");
+        }
+        
+        var createTableSql = $"CREATE TABLE IF NOT EXISTS results ({string.Join(", ", columnDefs)})";
         ExecuteNonQuery(createTableSql);
     }
 
     /// <summary>
     /// Insert a search result row - real DuckDB way
     /// </summary>
-    public void InsertRow(string seed, int score, List<int>? tallies = null)
+    public void InsertRow(string seed, int score, List<int> tallies, List<string?>? columnValues = null)
     {
         if (_disposed)
             return;
 
         try
         {
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText = "INSERT OR REPLACE INTO results (seed, score) VALUES (?, ?)";
-            cmd.Parameters.Add(new DuckDBParameter(seed));
-            cmd.Parameters.Add(new DuckDBParameter(score));
-            cmd.ExecuteNonQuery();
+            // FAST PATH: Use open appender for maximum performance
+            var row = _appender.CreateRow();
+            
+            // Append seed and score
+            row.AppendValue(seed);
+            row.AppendValue(score);
+            
+            // Append tally values - support both int and string columns
+            for (int i = 0; i < Math.Min(tallies.Count, _columnNames.Count - 2); i++)
+            {
+                // Check if this column has a string value
+                if (columnValues != null && i < columnValues.Count && columnValues[i] != null)
+                {
+                    row.AppendValue(columnValues[i]!); // String value
+                }
+                else
+                {
+                    row.AppendValue(tallies[i]); // Integer value
+                }
+            }
+            
+            row.EndRow();
         }
         catch (Exception ex)
         {
@@ -366,6 +401,7 @@ public sealed class MotelySearchDatabase : IDisposable
         if (_disposed)
             return;
         _disposed = true;
+        _appender?.Dispose();
         _connection?.Dispose();
     }
 

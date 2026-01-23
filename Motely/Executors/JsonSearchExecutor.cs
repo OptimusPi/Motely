@@ -47,6 +47,7 @@ namespace Motely.Executors
         private global::DuckDB.NET.Data.DuckDBAppender? _resultsAppender;
         private string? _resultsDbPath;
         private MotelyJsonConfig? _sequentialSearchConfig;
+        private MotelySearchDatabase? _fallbackDatabase;
 
         public JsonSearchExecutor(
             string configPath,
@@ -677,39 +678,10 @@ namespace Motely.Executors
             }
             else
             {
-                // Default fallback if no callback provided (e.g. testing)
-                // Use sequential local DB only if we really have no other output
-                if (string.IsNullOrEmpty(duckDbPath) && string.IsNullOrEmpty(_params.SeedSources) && _params.SeedList == null)
-                {
-                    string resultsDbPath = "sequential_search_results.db";
-                    _resultsDbPath = resultsDbPath; // Assign field to suppress warning and enable cleanup
-                    if (!_params.Quiet) Console.WriteLine($"💾 Storing results in temporary DB: {resultsDbPath}");
-                    
-                    // Init table FIRST
-                     using (var conn = global::Motely.DuckDB.DuckDBConnectionFactory.CreateConnection(resultsDbPath)) {
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText = "CREATE TABLE IF NOT EXISTS results (seed VARCHAR, score INTEGER)";
-                        cmd.ExecuteNonQuery();
-                     }
-
-                    var resultsAppender = global::Motely.DuckDB.DuckDBConnectionFactory.CreateConnection(resultsDbPath).CreateAppender("results");
-                    _resultsAppender = resultsAppender;
-
-                    scoreCallback = (result) => {
-                        var row = resultsAppender.CreateRow();
-                        row.AppendValue(result.Seed);
-                        row.AppendValue(result.Score);
-                        row.EndRow();
-                        
-                        if (!_params.Quiet) FancyConsole.WriteLine(TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns));
-                    };
-                }
-                else
-                {
-                     scoreCallback = (result) => {
-                        FancyConsole.WriteLine(TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns));
-                     };
-                }
+                // Default fallback - console output only
+                scoreCallback = (result) => {
+                    FancyConsole.WriteLine(TallyColorizer.FormatResultLine(result.Seed, result.Score, result.TallyColumns));
+                };
             }
 
             ScoreCutoffMode cutoffMode = _params.AutoCutoff
@@ -1797,6 +1769,20 @@ namespace Motely.Executors
                     var columnCount = _sequentialSearchConfig.GetColumnNames().Count - 2; // Subtract seed and score
                     Console.WriteLine($"💾 Sequential Search results saved to: {_resultsDbPath}");
                     Console.WriteLine($"   Schema: seed, score, +{columnCount} tally columns from JAML config");
+                    Console.WriteLine($"   Query results with: SELECT * FROM results ORDER BY score DESC;");
+                }
+            }
+            
+            // Cleanup MotelySearchDatabase fallback
+            if (_fallbackDatabase != null)
+            {
+                _fallbackDatabase.Checkpoint();
+                _fallbackDatabase.Dispose();
+                _fallbackDatabase = null;
+                
+                if (!_params.Quiet && !string.IsNullOrEmpty(_resultsDbPath))
+                {
+                    Console.WriteLine($"💾 Search results saved to: {_resultsDbPath}");
                     Console.WriteLine($"   Query results with: SELECT * FROM results ORDER BY score DESC;");
                 }
             }

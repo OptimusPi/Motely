@@ -1741,18 +1741,33 @@ public class MotelyJsonConfig
         {
             Debug.Assert(clause.Clauses != null);
             Debug.Assert(clause.Clauses.Count > 0);
-            var clauseType = clause.Type.ToUpper();
-            var count = clause.Clauses.Count;
-            var anteSuffix = "";
+            
+            // Build name from actual values: "Blueprint or Brainstorm"
+            var values = clause.Clauses
+                .Where(c => !string.IsNullOrEmpty(c.Value))
+                .Select(c => c.Value!)
+                .ToArray();
+                
+            if (values.Length > 0)
+            {
+                name = string.Join(" or ", values);
+            }
+            else
+            {
+                // Fallback to generic name
+                var count = clause.Clauses.Count;
+                name = $"{count}_OR";
+            }
+            
+            // Add ante suffix if specified
             if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
             {
-                // Human-readable ante range: A1-3 instead of A1A2A3
                 var minAnte = clause.Antes.Min();
                 var maxAnte = clause.Antes.Max();
-                anteSuffix = minAnte == maxAnte ? $" A{minAnte}" : $" A{minAnte}-{maxAnte}";
+                name += minAnte == maxAnte ? $" A{minAnte}" : $" A{minAnte}-{maxAnte}";
             }
 
-            return $"{count}_{clauseType}{anteSuffix}";
+            return name;
         }
 
         // Handle AND clauses
