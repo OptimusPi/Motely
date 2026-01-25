@@ -49,19 +49,85 @@ public static class DungmotFilterTranslator
     /// <summary>
     /// Translate a single clause into DungmotConfig if compatible.
     /// </summary>
-    private static DungmotConfig? TryTranslateClause(MotelyRunClause clause, DungmotOptions options)
+    private static DungmotConfig? TryTranslateClause(MotelyJsonFilterClause clause, DungmotOptions options)
+    {
+        // Handle Generic (Raw) clauses - delegate to raw logic
+        if (clause is MotelyJsonGenericFilterClause generic)
+        {
+            return TryTranslateRawClause(generic.Raw, options);
+        }
+
+        // Handle Typed Joker Clause
+        if (clause is MotelyJsonJokerFilterClause jokerClause)
+        {
+            // Negative edition joker (shop)
+            if (jokerClause.EditionEnum == MotelyItemEdition.Negative)
+            {
+                var antes = ConvertWantedAntes(jokerClause.WantedAntes);
+                return new DungmotConfig
+                {
+                    ExecutablePath = options.ExecutablePath ?? "negative_joker_prefilter.exe",
+                    FilterType = "negative-joker",
+                    Joker = jokerClause.JokerType.HasValue ? jokerClause.JokerType.ToString() : null,
+                    Edition = "negative",
+                    Antes = antes.Length > 0 ? antes : [1, 2, 3, 4],
+                    StartBatch = options.StartBatch,
+                    EndBatch = options.EndBatch,
+                    BatchChars = options.BatchChars,
+                    Stream = true
+                };
+            }
+        }
+
+        // Handle Typed Soul Joker Clause
+        if (clause is MotelyJsonSoulJokerFilterClause soulClause)
+        {
+            // Soul joker (legendary from Soul card) - always negative for pre-filtering sake or explicit check?
+            // Original logic checked ItemType == SoulJoker.
+            
+            var antes = ConvertWantedAntes(soulClause.WantedAntes);
+            return new DungmotConfig
+            {
+                ExecutablePath = options.ExecutablePath ?? "negative_legendary_prefilter.exe",
+                FilterType = "negative-legendary",
+                Joker = soulClause.JokerType.HasValue ? soulClause.JokerType.ToString() : null,
+                Antes = antes.Length > 0 ? antes : [1, 2, 3, 4],
+                StartBatch = options.StartBatch,
+                EndBatch = options.EndBatch,
+                BatchChars = options.BatchChars,
+                Stream = true
+            };
+        }
+
+        return null;
+    }
+
+    private static int[] ConvertWantedAntes(bool[] wanted)
+    {
+        var list = new List<int>();
+        for(int i=0; i<wanted.Length; i++)
+        {
+            if (wanted[i]) list.Add(i);
+        }
+        return list.ToArray();
+    }
+
+    /// <summary>
+    /// Translate a single raw clause into DungmotConfig.
+    /// </summary>
+    private static DungmotConfig? TryTranslateRawClause(MotelyJsonConfig.MotelyJsonFilterClause clause, DungmotOptions options)
     {
         // Negative edition joker (shop)
-        if (clause.ItemType == MotelyFilterItemType.Joker && 
-            clause.Edition == MotelyItemEdition.Negative)
+        if (clause.ItemTypeEnum == MotelyFilterItemType.Joker && 
+            clause.EditionEnum == MotelyItemEdition.Negative)
         {
             return new DungmotConfig
             {
                 ExecutablePath = options.ExecutablePath ?? "negative_joker_prefilter.exe",
                 FilterType = "negative-joker",
-                Joker = clause.Joker != default ? clause.Joker.ToString() : null,
+                Joker = clause.JokerEnum.HasValue ? clause.JokerEnum.ToString() : null,
                 Edition = "negative",
-                Antes = clause.Antes.Length > 0 ? clause.Antes : [1, 2, 3, 4],
+                Antes = clause.Antes != null && clause.Antes.Length > 0 ? clause.Antes : [1, 2, 3, 4],
                 StartBatch = options.StartBatch,
                 EndBatch = options.EndBatch,
                 BatchChars = options.BatchChars,
@@ -70,14 +136,14 @@ public static class DungmotFilterTranslator
         }
 
         // Soul joker (legendary from Soul card) - always negative
-        if (clause.ItemType == MotelyFilterItemType.SoulJoker)
+        if (clause.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
         {
             return new DungmotConfig
             {
                 ExecutablePath = options.ExecutablePath ?? "negative_legendary_prefilter.exe",
                 FilterType = "negative-legendary",
-                Joker = clause.Joker != default ? clause.Joker.ToString() : null,
-                Antes = clause.Antes.Length > 0 ? clause.Antes : [1, 2, 3, 4],
+                Joker = clause.JokerEnum.HasValue ? clause.JokerEnum.ToString() : null,
+                Antes = clause.Antes != null && clause.Antes.Length > 0 ? clause.Antes : [1, 2, 3, 4],
                 StartBatch = options.StartBatch,
                 EndBatch = options.EndBatch,
                 BatchChars = options.BatchChars,
@@ -86,14 +152,14 @@ public static class DungmotFilterTranslator
         }
 
         // Negative tag
-        if (clause.ItemType == MotelyFilterItemType.SmallBlindTag && 
-            clause.Tag == MotelyTag.NegativeTag)
+        if (clause.ItemTypeEnum == MotelyFilterItemType.SmallBlindTag && 
+            clause.TagEnum == MotelyTag.NegativeTag)
         {
             return new DungmotConfig
             {
                 ExecutablePath = options.ExecutablePath ?? "negative_tag_skipper.exe",
                 FilterType = "negative-tag",
-                Antes = clause.Antes.Length > 0 ? clause.Antes : [1, 2, 3, 4],
+                Antes = clause.Antes != null && clause.Antes.Length > 0 ? clause.Antes : [1, 2, 3, 4],
                 StartBatch = options.StartBatch,
                 EndBatch = options.EndBatch,
                 BatchChars = options.BatchChars,

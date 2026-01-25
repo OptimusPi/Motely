@@ -56,6 +56,38 @@ public abstract class MotelyJsonFilterClause
 
         return (minAnte, maxAnte);
     }
+
+    /// <summary>
+    /// Generic conversion from raw JSON config clause to typed execution clause
+    /// </summary>
+    public static MotelyJsonFilterClause Convert(MotelyJsonConfig.MotelyJsonFilterClause raw)
+    {
+        return raw.ItemTypeEnum switch
+        {
+            MotelyFilterItemType.Joker => MotelyJsonJokerFilterClause.FromJsonClause(raw),
+            MotelyFilterItemType.SoulJoker => MotelyJsonSoulJokerFilterClause.FromJsonClause(raw),
+            MotelyFilterItemType.Voucher => MotelyJsonVoucherFilterClause.FromJsonClause(raw),
+            MotelyFilterItemType.TarotCard => MotelyJsonTarotFilterClause.FromJsonClause(raw),
+            MotelyFilterItemType.PlanetCard => MotelyJsonPlanetFilterClause.FromJsonClause(raw),
+            MotelyFilterItemType.SpectralCard => MotelyJsonSpectralFilterClause.FromJsonClause(raw),
+            // Fallback for types that don't have specialized classes yet but should still be in the typed list
+            _ => new MotelyJsonGenericFilterClause(raw)
+        };
+    }
+
+    public static List<MotelyJsonFilterClause> ConvertAll(IEnumerable<MotelyJsonConfig.MotelyJsonFilterClause>? raw)
+    {
+        if (raw == null) return new();
+        return raw.Select(Convert).ToList();
+    }
+}
+
+/// <summary>
+/// Fallback for types that don't need a specialized class yet
+/// </summary>
+public class MotelyJsonGenericFilterClause(MotelyJsonConfig.MotelyJsonFilterClause raw) : MotelyJsonFilterClause
+{
+    public MotelyJsonConfig.MotelyJsonFilterClause Raw { get; } = raw;
 }
 
 /// <summary>

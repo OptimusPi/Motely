@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using DuckDB.NET.Data;
+using Motely.Filters;
+using Motely.Reporting;
 
 namespace Motely.DuckDB;
 
@@ -14,7 +16,7 @@ public sealed class MotelySearchDatabase : IDisposable
 {
     private readonly DuckDBConnection _connection;
     private readonly string _dbPath;
-    private readonly List<string> _columnNames;
+    private readonly MotelyRunConfig _runConfig;
     private readonly Action<string>? _logCallback;
     private readonly DuckDBAppender _appender; // Keep appender open for entire session!
     private bool _disposed = false;
@@ -23,12 +25,12 @@ public sealed class MotelySearchDatabase : IDisposable
 
     public MotelySearchDatabase(
         string dbPath,
-        List<string> columnNames,
+        MotelyRunConfig runConfig,
         Action<string>? logCallback = null
     )
     {
         _dbPath = dbPath ?? throw new ArgumentNullException(nameof(dbPath));
-        _columnNames = columnNames ?? throw new ArgumentNullException(nameof(columnNames));
+        _runConfig = runConfig ?? throw new ArgumentNullException(nameof(runConfig));
         _logCallback = logCallback;
 
         // Ensure directory exists
@@ -55,18 +57,13 @@ public sealed class MotelySearchDatabase : IDisposable
         // Build full table schema upfront - NO ALTER TABLE!
         var columnDefs = new List<string> { "seed VARCHAR PRIMARY KEY", "score INTEGER" };
         
-        // Add all tally columns with proper types
-        for (int i = 2; i < _columnNames.Count; i++)
+        // Add all columns from the config
+        foreach (var col in _runConfig.Columns)
         {
-            var columnName = _columnNames[i];
-            var quotedName = QuoteColumn(columnName);
+            var quotedName = QuoteColumn(col.Name);
             
-            // Determine column type based on name pattern
-            var isStringColumn = columnName.Contains("Label") || 
-                               columnName.Contains("Display") || 
-                               columnName.Contains("Text");
-            
-            var columnType = isStringColumn ? "VARCHAR" : "INTEGER";
+            // Determine column type
+            var columnType = col.Type == ColumnType.ScoreTally ? "INTEGER" : "VARCHAR";
             columnDefs.Add($"{quotedName} {columnType}");
         }
         
@@ -91,17 +88,25 @@ public sealed class MotelySearchDatabase : IDisposable
             row.AppendValue(seed);
             row.AppendValue(score);
             
-            // Append tally values - support both int and string columns
-            for (int i = 0; i < Math.Min(tallies.Count, _columnNames.Count - 2); i++)
+            // Append values based on column definitions
+            int tallyIndex = 0;
+            int stringIndex = 0;
+
+            foreach (var col in _runConfig.Columns)
             {
-                // Check if this column has a string value
-                if (columnValues != null && i < columnValues.Count && columnValues[i] != null)
+                if (col.Type == ColumnType.ScoreTally)
                 {
-                    row.AppendValue(columnValues[i]!); // String value
+                    if (tallies != null && tallyIndex < tallies.Count)
+                        row.AppendValue(tallies[tallyIndex++]);
+                    else
+                        row.AppendValue(0);
                 }
                 else
                 {
-                    row.AppendValue(tallies[i]); // Integer value
+                    if (columnValues != null && stringIndex < columnValues.Count)
+                        row.AppendValue(columnValues[stringIndex++] ?? "");
+                    else
+                        row.AppendValue("");
                 }
             }
             
@@ -179,7 +184,7 @@ public sealed class MotelySearchDatabase : IDisposable
         var order = ascending ? "ASC" : "DESC";
         var sql =
             $@"
-            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2).Select(QuoteColumn))}
+            SELECT seed, score, {string.Join(", ", _runConfig.Columns.Select(c => QuoteColumn(c.Name)))}
             FROM results
             ORDER BY {orderBy} {order}
             LIMIT {limit} OFFSET {offset}";
@@ -202,7 +207,7 @@ public sealed class MotelySearchDatabase : IDisposable
         var order = ascending ? "ASC" : "DESC";
         var sql =
             $@"
-            SELECT seed, score, {string.Join(", ", _columnNames.Skip(2).Select(QuoteColumn))}
+            SELECT seed, score, {string.Join(", ", _runConfig.Columns.Select(c => QuoteColumn(c.Name)))}
             FROM results
             ORDER BY {orderBy} {order}
             LIMIT {limit}";
@@ -269,6 +274,40 @@ public sealed class MotelySearchDatabase : IDisposable
         }
 
         return (batch, batchSize);
+    }
+
+    /// <summary>
+    /// Save last scanned seed for precise resume
+    /// </summary>
+    public void SaveLastSeed(string seed)
+    {
+        if (_disposed) return;
+
+        ExecuteNonQuery(
+            @"CREATE TABLE IF NOT EXISTS search_meta (key VARCHAR PRIMARY KEY, value VARCHAR)"
+        );
+        
+        // Upsert last_seed
+        ExecuteNonQuery(
+            $"INSERT INTO search_meta (key, value) VALUES ('last_seed', '{seed}') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
+        );
+    }
+
+    /// <summary>
+    /// Get last scanned seed
+    /// </summary>
+    public string? GetLastSeed()
+    {
+        if (_disposed) return null;
+
+        try
+        {
+            return ExecuteScalar<string>("SELECT value FROM search_meta WHERE key = 'last_seed'");
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -403,6 +442,49 @@ public sealed class MotelySearchDatabase : IDisposable
         _disposed = true;
         _appender?.Dispose();
         _connection?.Dispose();
+    }
+
+    /// <summary>
+    /// Check if an existing database has a schema compatible with the current run configuration
+    /// </summary>
+    public static bool IsSchemaCompatible(string dbPath, MotelyRunConfig runConfig)
+    {
+        try
+        {
+            using var connection = DuckDBConnectionFactory.CreateConnection(dbPath);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            
+            // Get columns from 'results' table
+            command.CommandText = "PRAGMA table_info('results')";
+            using var reader = command.ExecuteReader();
+            
+            var dbColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            while (reader.Read())
+            {
+                var name = reader.GetString(1); // 'name' column is index 1
+                dbColumns.Add(name);
+            }
+            
+            // Check essential structure
+            if (!dbColumns.Contains("seed") || !dbColumns.Contains("score"))
+                return false;
+                
+            // Check that all config columns exist in DB
+            // (It's okay if DB has EXTRA columns, but it must have all required ones for this run)
+            foreach (var col in runConfig.Columns)
+            {
+                if (!dbColumns.Contains(col.Name))
+                    return false;
+            }
+
+            return true;
+        }
+        catch
+        {
+            // If we can't open DB or query schema, assume incompatible/corrupt
+            return false;
+        }
     }
 
     public class SearchResultRow

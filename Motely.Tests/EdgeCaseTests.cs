@@ -21,7 +21,7 @@ must:
   stickers: []
 ";
 
-            var config = ConfigFormatConverter.LoadFromJamlString(jaml);
+            JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out _);
             config!.PostProcess(); // Apply defaults
             Assert.NotNull(config);
             var clause = config.Must![0];
@@ -44,7 +44,7 @@ must:
 - joker: Blueprint
 ";
 
-            var config = ConfigFormatConverter.LoadFromJamlString(jaml);
+            JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out _);
             config!.PostProcess(); // Apply defaults
             Assert.NotNull(config);
             var clause = config.Must![0];
@@ -215,10 +215,10 @@ must:
     maxShopSlot: 0
 ";
 
-            var config = ConfigFormatConverter.LoadFromJamlString(jaml);
+            JamlConfigLoader.TryLoadFromJamlString(jaml, out var config, out _);
             Assert.NotNull(config);
 
-            config.PostProcess();
+            config!.PostProcess();
             var clause = config.Must![0];
             Assert.NotNull(clause.Sources);
             // When minShopSlot and maxShopSlot are explicitly set to 0, ProcessClause creates a range [0]

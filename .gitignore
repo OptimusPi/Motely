@@ -57,3 +57,5 @@ Motely/tui.json
 /wwwroot
 /SeedSources
 /vue-jaml-ui/node_modules
+mcp-config.json
+*.txt

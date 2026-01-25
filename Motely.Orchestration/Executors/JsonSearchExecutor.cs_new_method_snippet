@@ -1,0 +1,16 @@
+        private void PrintResultRow(MotelySeedScoreTally result, MotelyJsonConfig config)
+        {
+            var parts = new List<string>();
+            parts.Add($"\"{result.Seed}\"");
+            parts.Add(result.Score.ToString());
+
+            if (result.ColumnValues != null)
+            {
+                foreach (var val in result.ColumnValues)
+                {
+                    parts.Add(val == null ? "" : $"\"{val}\"");
+                }
+            }
+
+            Console.WriteLine(string.Join(",", parts));
+        }

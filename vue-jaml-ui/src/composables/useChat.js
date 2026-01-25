@@ -4,46 +4,59 @@ import { useSignalR } from './useSignalR'
 export function useChat() {
   const messages = ref([])
   const isConnected = ref(false)
-  // Create a separate SignalR connection for chat (or reuse existing one)
-  const { connection, connect: connectSignalR, disconnect: disconnectSignalR } = useSignalR()
+  // Define callbacks that interact with local state
+  const onReceiveMessage = (author, text, timestamp) => {
+    messages.value.push({
+      author,
+      text,
+      timestamp: timestamp || Date.now(),
+      isOwn: false
+    })
+  }
+
+  const onUserJoined = (username) => {
+    messages.value.push({
+      author: 'System',
+      text: `${username} joined the chat`,
+      timestamp: Date.now(),
+      isOwn: false,
+      isSystem: true
+    })
+  }
+
+  const onUserLeft = (username) => {
+    messages.value.push({
+      author: 'System',
+      text: `${username} left the chat`,
+      timestamp: Date.now(),
+      isOwn: false,
+      isSystem: true
+    })
+  }
+
+  // Create SignalR connection with callbacks
+  // The singleton useSignalR will handle listener registration/cleanup
+  const { connection, connect: connectSignalR, disconnect: disconnectSignalR } = useSignalR({
+    onReceiveMessage,
+    onUserJoined,
+    onUserLeft
+  })
+
+  // Watch for connection errors handled by the singleton
+  // access connectionError from useSignalR if needed, but here we just handle connection state
 
   const connect = async () => {
     try {
       await connectSignalR()
-      
+
       if (connection.value) {
-        // Listen for chat messages
-        connection.value.on('ReceiveMessage', (author, text, timestamp) => {
-          messages.value.push({
-            author,
-            text,
-            timestamp: timestamp || Date.now(),
-            isOwn: false
-          })
-        })
+        // Connection events are global in useSignalR singleton, 
+        // but we can check state here
 
-        // Listen for user joined/left
-        connection.value.on('UserJoined', (username) => {
-          messages.value.push({
-            author: 'System',
-            text: `${username} joined the chat`,
-            timestamp: Date.now(),
-            isOwn: false,
-            isSystem: true
-          })
-        })
+        // Handle connection errors with auto-reconnect logic if needed
+        // Note: useSignalR singleton has built-in auto-reconnect for the socket
+        // But if we need custom UI logic for chat reconnection:
 
-        connection.value.on('UserLeft', (username) => {
-          messages.value.push({
-            author: 'System',
-            text: `${username} left the chat`,
-            timestamp: Date.now(),
-            isOwn: false,
-            isSystem: true
-          })
-        })
-
-        // Handle connection errors with auto-reconnect
         connection.value.onclose((error) => {
           isConnected.value = false
           if (error) {
@@ -54,12 +67,8 @@ export function useChat() {
               isOwn: false,
               isSystem: true
             })
-            // Auto-reconnect after 3 seconds
-            setTimeout(() => {
-              connect().catch(err => {
-                console.error('Auto-reconnect failed:', err)
-              })
-            }, 3000)
+            // Singleton handles the actual socket reconnection, 
+            // we just update UI state or retry explicitly if needed
           }
         })
 
@@ -99,7 +108,7 @@ export function useChat() {
     if (!text.trim()) return
 
     const timestamp = Date.now()
-    
+
     // Add to local messages immediately (optimistic update)
     messages.value.push({
       author: 'You',
