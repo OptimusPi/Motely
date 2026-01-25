@@ -23,7 +23,8 @@ should:
   - smallBlindTag: NegativeTag
   - joker: Brainstorm
     antes: [1]
-    judgement: [1]
+    sources:
+      judgement: [1]
     score: 100
 
   - soulJoker: Any
