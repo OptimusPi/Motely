@@ -523,17 +523,17 @@ int main(int argc, char** argv) {
 
         // Print results IMMEDIATELY (deduplicate within batch)
         if (result_count > 0) {
-            PrefilterResult* h_results = (PrefilterResult*)malloc(sizeof(PrefilterResult) * result_count);
-            GPU_MEMCPY(h_results, d_results, sizeof(PrefilterResult) * result_count, GPU_MEMCPY_DEVICE_TO_HOST);
-
+            UFResult* h_results = (UFResult*)malloc(sizeof(UFResult) * result_count);
+            GPU_MEMCPY(h_results, d_results, sizeof(UFResult) * result_count, GPU_MEMCPY_DEVICE_TO_HOST);
+ 
             // Deduplicate within batch and print immediately
             for (int i = 0; i < result_count; i++) {
                 bool is_duplicate = false;
                 for (int j = 0; j < i; j++) {
                     if (strncmp(h_results[i].seed_str, h_results[j].seed_str, 8) == 0) {
                         // Duplicate in this batch - keep higher score
-                        if (h_results[i].hit_count > h_results[j].hit_count) {
-                            h_results[j].hit_count = h_results[i].hit_count;
+                        if (h_results[i].sum_score > h_results[j].sum_score) {
+                            h_results[j].sum_score = h_results[i].sum_score;
                         }
                         is_duplicate = true;
                         break;
@@ -541,11 +541,13 @@ int main(int argc, char** argv) {
                 }
                 if (!is_duplicate) {
                     // Print immediately!
-                    printf("|%s,%d\n", h_results[i].seed_str, h_results[i].hit_count);
+                    char out_buf[128];
+                    sprintf(out_buf, "|%s,%d\n", h_results[i].seed_str, h_results[i].sum_score);
+                    printf("%s", out_buf);
                     fflush(stdout);
                 }
             }
-
+ 
             free(h_results);
         }
 

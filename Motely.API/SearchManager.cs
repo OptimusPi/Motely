@@ -7,6 +7,8 @@ using Motely.API; // For SearchResult type
 using Motely.DuckDB;
 using Motely.Executors;
 using Motely.Filters;
+using Motely.Analysis;
+using Motely.Utils;
 
 namespace Motely.API;
 
@@ -24,6 +26,11 @@ public class SearchManager
     private readonly ConcurrentDictionary<string, string> _lastErrors = new(
         StringComparer.OrdinalIgnoreCase
     );
+
+    private SearchManager()
+    {
+        StartBroadcasterLoop();
+    }
 
     public string GetSearchResultsDir() => MotelyPaths.SearchResultsDir;
 
@@ -58,6 +65,36 @@ public class SearchManager
     internal void SetMotelyRoot(string motelyRoot)
     {
         _motelyRoot = motelyRoot;
+    }
+
+    // ========== ASYNC BROADCASTER ==========
+    // Channel to decouple synchronous search callbacks from async broadcasting
+    private readonly System.Threading.Channels.Channel<Func<Task>> _broadcastChannel = 
+        System.Threading.Channels.Channel.CreateUnbounded<Func<Task>>();
+
+    private void StartBroadcasterLoop()
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var broadcastFunc in _broadcastChannel.Reader.ReadAllAsync())
+                {
+                    try
+                    {
+                        await broadcastFunc();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Broadcaster] Error sending broadcast: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Broadcaster] Loop fatal error: {ex.Message}");
+            }
+        });
     }
 
     public bool TryGetLastError(string searchId, out string error)
@@ -97,6 +134,7 @@ public class SearchManager
         public long SeedsSearched { get; set; } = 0;
         public double SeedsPerSecond { get; set; } = 0;
         public int TotalResults { get; set; } = 0;
+        public MotelyRunConfig? RunConfig { get; set; }
     }
 
     /// <summary>
@@ -154,6 +192,7 @@ public class SearchManager
                 immediateResults = GetTopResultsFromDb(dbPath, 1000);
             }
 
+            var runConfig = MotelyRunConfig.Factory(config!);
             var search = new ActiveSearch
             {
                 SearchId = searchId,
@@ -166,20 +205,56 @@ public class SearchManager
                 ColumnNames = columnNames,
                 BatchSize = 3,
                 CutoffOverride = cutoffOverride,
+                RunConfig = runConfig,
             };
 
             search.StopReason = null;
 
-            ReadResumeCursor(dbPath, columnNames, out var startBatch, out var batchSize);
+            ReadResumeCursor(dbPath, columnNames, out var startBatch, out var batchSize, out var lastSeed);
             if (startBatchOverride.HasValue)
+            {
                 search.ResumeStartBatch = Math.Max(0, startBatchOverride.Value);
+                if (batchSize > 0) search.BatchSize = batchSize; // Use stored batch size if override is explicit? No, keep logic simple.
+            }
             else
-                search.ResumeStartBatch = startBatch;
-            if (batchSize > 0)
-                search.BatchSize = batchSize;
+            {
+                // Resume logic
+                if (!string.IsNullOrEmpty(lastSeed))
+                {
+                   // Seed-based resume: recalculate batch index based on current (default 3) batch size
+                   // But if stored batchSize > 0, do we use it?
+                   // If we rely on SeedMath, we can use ANY batch size.
+                   // Let's use the configured batch size (search.BatchSize is 3 by default).
+                   // But wait, SearchManager default is 3. What if CLI passed a different one?
+                   // CLI doesn't pass batch size to StartSearchAsync! Config does?
+                   // StartSearchAsync params don't include batchSize.
+                   // search.BatchSize = 3 (line 203).
+                   // If we want to support CLI batchSize, StartSearchAsync needs it passed in OR set on search object.
+                   // Currently StartSearchAsync HARDCODES BatchSize=3.
+                   
+                   // However, Rebalance updates BatchSize from allocations? No.
+                   // Rebalance sets search.BatchSize (line 1603).
+                   
+                   // StartSearchAsync is for "Start One Search".
+                   // If launched via API, batchSize is 3.
+                   // If launched via CLI, does it use StartSearchAsync?
+                   // Application uses SearchManager?
+                   // SearchManager seems to handle multiple searches.
+                   
+                   // Assuming BatchSize=3 for now, or use stored batchSize if available.
+                   int effectiveBatchSize = batchSize > 0 ? batchSize : search.BatchSize;
+                   search.BatchSize = effectiveBatchSize; // update search to match stored preference
+                   search.ResumeStartBatch = SeedMath.SeedToBatchIndex(lastSeed, effectiveBatchSize);
+                }
+                else
+                {
+                    search.ResumeStartBatch = startBatch;
+                    if (batchSize > 0) search.BatchSize = batchSize;
+                }
+            }
 
             // (Re)open DB for active writes
-            search.Database = new MotelySearchDatabase(dbPath, columnNames);
+            search.Database = new MotelySearchDatabase(dbPath, runConfig);
 
             // Save JAML metadata file so it can be retrieved even after search stops
             var jamlPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.jaml");
@@ -193,9 +268,12 @@ public class SearchManager
             await RebalanceAndRestartAllSearchesAsync();
 
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            _ = _broadcaster?.BroadcastAsync(
-                JsonSerializer.Serialize(new { type = "filters_changed" }, options)
-            );
+            if (_broadcaster != null)
+            {
+                await _broadcaster.BroadcastAsync(
+                    JsonSerializer.Serialize(new { type = "filters_changed" }, options)
+                );
+            }
 
             return (immediateResults, searchId);
         }
@@ -511,7 +589,7 @@ public class SearchManager
         try
         {
             // Broadcast that this search is now active
-            _ = _broadcaster?.BroadcastToSearchAsync(
+            await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastToSearchAsync(
                 searchId,
                 JsonSerializer.Serialize(
                     new
@@ -521,10 +599,10 @@ public class SearchManager
                         isFastLane = runToCompletion,
                     }
                 )
-            );
+            ) ?? Task.CompletedTask);
 
             var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{search.SearchId}.db");
-            ReadResumeCursor(dbPath, search.ColumnNames, out var startBatch, out var batchSize);
+            ReadResumeCursor(dbPath, search.ColumnNames, out var startBatch, out var batchSize, out var _);
 
             // For round-robin: limit to BatchesPerTurn batches
             // For fast lane: run to completion (EndBatch = 0)
@@ -540,7 +618,19 @@ public class SearchManager
 
             // Open/reopen database for this turn
             search.Database?.Dispose();
-            search.Database = new MotelySearchDatabase(dbPath, search.ColumnNames);
+            if (search.RunConfig == null)
+            {
+                // Try to recover config if missing (fallback for older searches in memory?)
+                if (JamlConfigLoader.TryLoadFromJamlString(search.FilterJaml, out var cfg, out _))
+                {
+                    search.RunConfig = MotelyRunConfig.Factory(cfg!);
+                }
+                else
+                {
+                     throw new InvalidOperationException($"Missing RunConfig for search {search.SearchId} and failed to re-parse JAML");
+                }
+            }
+            search.Database = new MotelySearchDatabase(dbPath, search.RunConfig);
 
             var runId = Guid.NewGuid();
             search.RunInstanceId = runId;
@@ -651,7 +741,7 @@ public class SearchManager
             }
 
             // Broadcast progress
-            _ = _broadcaster?.BroadcastToSearchAsync(
+            _broadcastChannel.Writer.TryWrite(() => _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -665,7 +755,7 @@ public class SearchManager
                         seedsFound = search.TotalResults,
                     }
                 )
-            );
+            ) ?? Task.CompletedTask);
         };
 
         var executor = new JsonSearchExecutor(
@@ -676,7 +766,7 @@ public class SearchManager
                 search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
                 search.TotalResults++;
 
-                _ = _broadcaster?.BroadcastToSearchAsync(
+                _broadcastChannel.Writer.TryWrite(() => _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -692,7 +782,7 @@ public class SearchManager
                             columns = search.ColumnNames,
                         }
                     )
-                );
+                ) ?? Task.CompletedTask);
             }
         );
 
@@ -713,7 +803,7 @@ public class SearchManager
 
         if (naturallyComplete)
         {
-            _ = _broadcaster?.BroadcastToSearchAsync(
+            await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -724,7 +814,7 @@ public class SearchManager
                         seedsSearched = search.SeedsSearched,
                     }
                 )
-            );
+            ) ?? Task.CompletedTask);
         }
 
         return naturallyComplete;
@@ -894,9 +984,12 @@ public class SearchManager
             await RebalanceAndRestartAllSearchesAsync();
 
             var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            _ = _broadcaster?.BroadcastAsync(
-                JsonSerializer.Serialize(new { type = "filters_changed" }, options)
-            );
+            if (_broadcaster != null)
+            {
+                await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastAsync(
+                    JsonSerializer.Serialize(new { type = "filters_changed" }, options)
+                ) ?? Task.CompletedTask);
+            }
 
             var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{searchId}.db");
             return GetTopResultsFromDb(dbPath, 1000);
@@ -923,8 +1016,13 @@ public class SearchManager
                     await StopSearchInternalAsync(search, reason: "stop_all");
                 }
             }
-
-            _ = _broadcaster?.BroadcastAsync(JsonSerializer.Serialize(new { type = "filters_changed" }));
+            
+            if (_broadcaster != null)
+            {
+                await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastAsync(
+                    JsonSerializer.Serialize(new { type = "filters_changed" })
+                ) ?? Task.CompletedTask);
+            }
         }
         finally
         {
@@ -968,7 +1066,13 @@ public class SearchManager
             }
 
             // Broadcast clear event
-            _ = _broadcaster?.BroadcastAsync(JsonSerializer.Serialize(new { type = "results_cleared" }));
+            // Broadcast clear event
+            if (_broadcaster != null)
+            {
+                await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastAsync(
+                    JsonSerializer.Serialize(new { type = "results_cleared" })
+                ) ?? Task.CompletedTask);
+            }
         }
         finally
         {
@@ -978,7 +1082,7 @@ public class SearchManager
 
     private async Task<bool> StopSearchInternalAsync(ActiveSearch search, string reason)
     {
-        _ = _broadcaster?.BroadcastToSearchAsync(
+        await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastToSearchAsync(
             search.SearchId,
             JsonSerializer.Serialize(
                 new
@@ -988,7 +1092,7 @@ public class SearchManager
                     reason,
                 }
             )
-        );
+        ) ?? Task.CompletedTask);
 
         search.StopReason = reason;
 
@@ -1114,21 +1218,47 @@ public class SearchManager
         string dbPath,
         List<string> columnNames,
         out long startBatch,
-        out int batchSize
+        out int batchSize,
+        out string? lastSeed
     )
     {
         startBatch = 0;
         batchSize = 0;
+        lastSeed = null;
+
+        if (!File.Exists(dbPath))
+            return;
 
         try
         {
-            using var db = new MotelySearchDatabase(dbPath, columnNames);
-            var (lastBatch, lastBatchSize) = db.GetLastBatchPosition();
-            if (lastBatch.HasValue)
-                startBatch = lastBatch.Value;
-            if (lastBatchSize.HasValue)
-                batchSize = lastBatchSize.Value;
+            using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
+            conn.Open();
+            
+            // Check if search_meta table exists
+            using var checkCmd = conn.CreateCommand();
+            checkCmd.CommandText = "SELECT count(*) FROM information_schema.tables WHERE table_name = 'search_meta'";
+            var count = Convert.ToInt32(checkCmd.ExecuteScalar());
+            
+            if (count == 0)
+                return;
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT key, value FROM search_meta WHERE key IN ('last_batch', 'last_batch_size', 'last_seed')";
+            using var reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                var key = reader.GetString(0);
+                var value = reader.GetString(1);
+                if (key == "last_batch" && long.TryParse(value, out var b))
+                    startBatch = b;
+                else if (key == "last_batch_size" && int.TryParse(value, out var bs))
+                    batchSize = bs;
+                else if (key == "last_seed")
+                    lastSeed = value;
+            }
         }
+
         catch (Exception ex)
         {
             Console.WriteLine($"Error reading resume cursor from {dbPath}: {ex.Message}");
@@ -1263,7 +1393,7 @@ public class SearchManager
             {
                 var errText = parseError ?? "Invalid filter";
                 _lastErrors[search.SearchId] = errText;
-                _ = _broadcaster?.BroadcastToSearchAsync(
+                await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -1273,7 +1403,7 @@ public class SearchManager
                             error = errText,
                         }
                     )
-                );
+                ) ?? Task.CompletedTask);
                 return;
             }
 
@@ -1321,7 +1451,7 @@ public class SearchManager
                 // Check if search is complete (all batches done)
                 bool isComplete = progress.TotalBatchCount > 0 && progress.CompletedBatchCount >= progress.TotalBatchCount;
 
-                _ = _broadcaster?.BroadcastToSearchAsync(
+                _broadcastChannel.Writer.TryWrite(() => _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -1338,7 +1468,7 @@ public class SearchManager
                             completed = isComplete,
                         }
                     )
-                );
+                ) ?? Task.CompletedTask);
             };
 
             search.Executor = new JsonSearchExecutor(
@@ -1349,7 +1479,7 @@ public class SearchManager
                     search.Database?.InsertRow(result.Seed, result.Score, result.TallyColumns);
                     search.TotalResults++;
 
-                    _ = _broadcaster?.BroadcastToSearchAsync(
+                    _broadcastChannel.Writer.TryWrite(() => _broadcaster?.BroadcastToSearchAsync(
                         search.SearchId,
                         JsonSerializer.Serialize(
                             new
@@ -1365,7 +1495,7 @@ public class SearchManager
                                 columns = search.ColumnNames,
                             }
                         )
-                    );
+                    ) ?? Task.CompletedTask);
                 }
             );
 
@@ -1386,7 +1516,7 @@ public class SearchManager
         {
             var err = ex.ToString();
             _lastErrors[search.SearchId] = err;
-            _ = _broadcaster?.BroadcastToSearchAsync(
+            await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -1396,7 +1526,7 @@ public class SearchManager
                         error = ex.Message,
                     }
                 )
-            );
+            ) ?? Task.CompletedTask);
 
             Console.WriteLine($"Search {search.SearchId} failed: {ex.Message}");
         }
@@ -1405,7 +1535,7 @@ public class SearchManager
             if (search.StopReason == null && search.RunInstanceId == runId)
             {
                 // Broadcast search completion if it finished naturally (not cancelled)
-                _ = _broadcaster?.BroadcastToSearchAsync(
+                await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastToSearchAsync(
                     search.SearchId,
                     JsonSerializer.Serialize(
                         new
@@ -1417,7 +1547,7 @@ public class SearchManager
                             columns = search.ColumnNames,
                         }
                     )
-                );
+                ) ?? Task.CompletedTask);
 
                 try
                 {
@@ -1456,7 +1586,12 @@ public class SearchManager
                 }
 
                 _activeSearches.TryRemove(search.SearchId, out _);
-                _ = _broadcaster?.BroadcastAsync(JsonSerializer.Serialize(new { type = "filters_changed" }));
+                if (_broadcaster != null)
+                {
+                    await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastAsync(
+                        JsonSerializer.Serialize(new { type = "filters_changed" })
+                    ) ?? Task.CompletedTask);
+                }
             }
         }
     }
@@ -1504,14 +1639,47 @@ public class SearchManager
             search.AssignedThreads = allocations.TryGetValue(id, out var t) ? Math.Max(1, t) : 1;
 
             var dbPath = Path.Combine(MotelyPaths.SearchResultsDir, $"{search.SearchId}.db");
-            ReadResumeCursor(dbPath, search.ColumnNames, out var startBatch, out var batchSize);
-            search.ResumeStartBatch = startBatch;
+            ReadResumeCursor(dbPath, search.ColumnNames, out var startBatch, out var batchSize, out var lastSeed);
+            
+            if (!string.IsNullOrEmpty(lastSeed))
+            {
+               // If we have a stored lastSeed, we resume from there using CURRENT (rebalanced) batchSize?
+               // Wait, Rebalance calculates 'allocations'. Does it calculate BatchSize?
+               // No, BatchSize is usually fixed or comes from search.BatchSize.
+               // If line 1590 `if (batchSize > 0) search.BatchSize = batchSize` executed, we overwrite.
+               
+               // But if we want to change BatchSize via rebalance?
+               // SearchManager doesn't seem to change BatchSize dynamically during rebalance unless code does.
+               
+               // Assume we stick to search.BatchSize (or updated if stored > 0).
+               if (batchSize > 0) search.BatchSize = batchSize;
+               search.ResumeStartBatch = SeedMath.SeedToBatchIndex(lastSeed, search.BatchSize);
+            }
+            else
+            {
+                search.ResumeStartBatch = startBatch;
+                if (batchSize > 0)
+                    search.BatchSize = batchSize;
+            }
+
             if (batchSize > 0)
                 search.BatchSize = batchSize;
 
-            search.Database = new MotelySearchDatabase(dbPath, search.ColumnNames);
+            if (search.RunConfig == null)
+            {
+               if (JamlConfigLoader.TryLoadFromJamlString(search.FilterJaml, out var rebalanceConfig, out _))
+               {
+                   search.RunConfig = MotelyRunConfig.Factory(rebalanceConfig!);
+               }
+               else
+               {
+                   // Skip this search if config is broken
+                   continue;
+               }
+            }
+            search.Database = new MotelySearchDatabase(dbPath, search.RunConfig);
 
-            _ = _broadcaster?.BroadcastToSearchAsync(
+            await _broadcastChannel.Writer.WriteAsync(() => _broadcaster?.BroadcastToSearchAsync(
                 search.SearchId,
                 JsonSerializer.Serialize(
                     new
@@ -1524,7 +1692,7 @@ public class SearchManager
                         batchSize = search.BatchSize,
                     }
                 )
-            );
+            ) ?? Task.CompletedTask);
 
             var runId = Guid.NewGuid();
             search.RunInstanceId = runId;

@@ -205,6 +205,17 @@ public class MotelyJsonConfig
     [JsonPropertyName("mode")]
     public string? Mode { get; set; }
 
+    [JsonPropertyName("startSeed")]
+    public string? StartSeed { get; set; }
+
+    [JsonPropertyName("templates")]
+    [YamlMember(Alias = "templates")]
+    public object? Templates { get; set; }
+
+    [JsonPropertyName("anchors")]
+    [YamlMember(Alias = "anchors")]
+    public object? Anchors { get; set; }
+
     [JsonPropertyName("defaults")]
     public MotelyFilterDefaults? Defaults { get; set; }
 
@@ -718,7 +729,7 @@ public class MotelyJsonConfig
                                         "Queen" => MotelyPlayingCardRank.Queen,
                                         "King" => MotelyPlayingCardRank.King,
                                         "Ace" => MotelyPlayingCardRank.Ace,
-                                        _ => (MotelyPlayingCardRank?)null,
+                                        _ => Enum.TryParse<MotelyPlayingCardRank>(rankStr, true, out var r) ? r : (MotelyPlayingCardRank?)null,
                                     };
 
                                     // Parse suit
@@ -728,13 +739,62 @@ public class MotelyJsonConfig
                                         "Diamonds" => MotelyPlayingCardSuit.Diamonds,
                                         "Hearts" => MotelyPlayingCardSuit.Hearts,
                                         "Spades" => MotelyPlayingCardSuit.Spades,
-                                        _ => (MotelyPlayingCardSuit?)null,
+                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(suitStr, true, out var s) ? s : (MotelyPlayingCardSuit?)null,
                                     };
 
                                     if (rankEnum.HasValue)
                                         RankEnum = rankEnum.Value;
                                     if (suitEnum.HasValue)
                                         SuitEnum = suitEnum.Value;
+                                }
+                            }
+                            else
+                            {
+                                // Try parsing as standalone Rank or Suit (e.g. "Two", "Hearts", "2", "K")
+                                var val = Value.Trim();
+                                
+                                // Try Rank first
+                                var rankEnum = val switch
+                                {
+                                    "2" => MotelyPlayingCardRank.Two,
+                                    "3" => MotelyPlayingCardRank.Three,
+                                    "4" => MotelyPlayingCardRank.Four,
+                                    "5" => MotelyPlayingCardRank.Five,
+                                    "6" => MotelyPlayingCardRank.Six,
+                                    "7" => MotelyPlayingCardRank.Seven,
+                                    "8" => MotelyPlayingCardRank.Eight,
+                                    "9" => MotelyPlayingCardRank.Nine,
+                                    "10" => MotelyPlayingCardRank.Ten,
+                                    "J" => MotelyPlayingCardRank.Jack,
+                                    "Q" => MotelyPlayingCardRank.Queen,
+                                    "K" => MotelyPlayingCardRank.King,
+                                    "A" => MotelyPlayingCardRank.Ace,
+                                    _ => Enum.TryParse<MotelyPlayingCardRank>(val, true, out var r) ? r : (MotelyPlayingCardRank?)null,
+                                };
+
+                                if (rankEnum.HasValue)
+                                {
+                                    RankEnum = rankEnum.Value;
+                                    // Clear Value to satisfy validator which forbids Value+Rank/Suit mixture
+                                    Value = null; 
+                                }
+                                else
+                                {
+                                    // Try Suit
+                                    var suitEnum = val switch
+                                    {
+                                        "C" or "Clubs" => MotelyPlayingCardSuit.Clubs,
+                                        "D" or "Diamonds" => MotelyPlayingCardSuit.Diamonds,
+                                        "H" or "Hearts" => MotelyPlayingCardSuit.Hearts,
+                                        "S" or "Spades" => MotelyPlayingCardSuit.Spades,
+                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(val, true, out var s) ? s : (MotelyPlayingCardSuit?)null,
+                                    };
+
+                                    if (suitEnum.HasValue)
+                                    {
+                                        SuitEnum = suitEnum.Value;
+                                        Value = null;
+                                    }
                                 }
                             }
                             break;
@@ -1582,107 +1642,7 @@ public class MotelyJsonConfig
         };
     }
 
-    /// <summary>
-    /// Convert this parsed DTO to a fully typed, validated runtime config.
-    /// The returned MotelyRunConfig has NO nullable fields - guaranteed runnable.
-    /// Call this AFTER PostProcess() has been called.
-    /// </summary>
-    public MotelyRunConfig ToRunConfig()
-    {
-        var mustClauses = ConvertClauses(Must ?? [], false);
-        var shouldClauses = ConvertClauses(Should ?? [], false);
-        var mustNotClauses = ConvertClauses(MustNot ?? [], true);
 
-        return new MotelyRunConfig(
-            name: Name ?? "",
-            author: Author ?? "",
-            description: Description ?? "",
-            deck: Deck ?? "Red",
-            stake: Stake ?? "White",
-            scoreAggregationMode: ScoreAggregationMode,
-            must: mustClauses,
-            should: shouldClauses,
-            mustNot: mustNotClauses,
-            defaults: Defaults ?? new MotelyFilterDefaults()
-        );
-    }
-
-    private static MotelyRunClause[] ConvertClauses(
-        List<MotelyJsonFilterClause> clauses,
-        bool invert
-    )
-    {
-        var result = new MotelyRunClause[clauses.Count];
-        for (int i = 0; i < clauses.Count; i++)
-        {
-            result[i] = ConvertClause(clauses[i], invert);
-        }
-        return result;
-    }
-
-    private static MotelyRunClause ConvertClause(MotelyJsonFilterClause c, bool invert)
-    {
-        Debug.Assert(!string.IsNullOrEmpty(c.Type), "Type must be set before conversion");
-
-        // Convert nested clauses for And/Or
-        MotelyRunClause[]? nestedClauses = null;
-        if (c.Clauses != null && c.Clauses.Count > 0)
-        {
-            nestedClauses = new MotelyRunClause[c.Clauses.Count];
-            for (int i = 0; i < c.Clauses.Count; i++)
-            {
-                nestedClauses[i] = ConvertClause(c.Clauses[i], invert);
-            }
-        }
-
-        // Convert sources
-        MotelyRunSources? sources = null;
-        if (c.Sources != null)
-        {
-            sources = new MotelyRunSources(
-                packSlots: c.Sources.PackSlots ?? [],
-                shopSlots: c.Sources.ShopSlots ?? [],
-                tags: c.Sources.Tags ?? true,
-                requireMega: c.Sources.RequireMega ?? false
-            );
-        }
-
-        return new MotelyRunClause(
-            itemType: c.ItemTypeEnum,
-            antes: c.Antes ?? [],
-            score: c.Score,
-            isInverted: invert || c.IsInverted,
-            label: c.Label ?? "",
-            joker: c.JokerEnum ?? default,
-            jokers: c.JokerEnums?.ToArray(),
-            voucher: c.VoucherEnum ?? default,
-            vouchers: c.VoucherEnums?.ToArray(),
-            tarot: c.TarotEnum ?? default,
-            tarots: c.TarotEnums?.ToArray(),
-            planet: c.PlanetEnum ?? default,
-            planets: c.PlanetEnums?.ToArray(),
-            spectral: c.SpectralEnum ?? default,
-            spectrals: c.SpectralEnums?.ToArray(),
-            tag: c.TagEnum ?? default,
-            tags: c.TagEnums?.ToArray(),
-            tagType: c.TagTypeEnum,
-            boss: c.BossEnum ?? default,
-            bosses: c.BossEnums?.ToArray(),
-            eventType: c.EventTypeEnum ?? default,
-            suit: c.SuitEnum ?? default,
-            rank: c.RankEnum ?? default,
-            seal: c.SealEnum ?? default,
-            enhancement: c.EnhancementEnum ?? default,
-            edition: c.EditionEnum ?? default,
-            stickers: c.StickerEnums?.ToArray(),
-            isWildcard: c.IsWildcard,
-            wildcard: c.WildcardEnum ?? default,
-            sources: sources,
-            nestedClauses: nestedClauses,
-            rolls: c.Rolls,
-            min: c.Min
-        );
-    }
 
     /// <summary>
     /// Convert to JSON string
@@ -1732,6 +1692,8 @@ public class MotelyJsonConfig
     /// </summary>
     private static string GetClauseColumnName(MotelyJsonFilterClause clause)
     {
+        string name;
+
         // Use label if provided (highest priority - keep original formatting!)
         if (!string.IsNullOrEmpty(clause.Label))
             return clause.Label;
@@ -1788,7 +1750,6 @@ public class MotelyJsonConfig
         }
 
         // Build name from value/type
-        string name;
         if (!string.IsNullOrEmpty(clause.Value))
         {
             // Special handling for wildcards (Any)

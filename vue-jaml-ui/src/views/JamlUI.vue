@@ -431,6 +431,7 @@ const handleKeydown = (e) => {
 const startDragFromCollapsed = (panel, event) => {
   event.dataTransfer.effectAllowed = 'move'
   event.dataTransfer.setData('collapsed-panel-id', panel.id)
+  event.dataTransfer.setData('text/plain', panel.id) // Also set standard data
   event.currentTarget.classList.add('dragging')
   playClickSound('click')
 }

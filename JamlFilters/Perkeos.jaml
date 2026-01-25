@@ -3,55 +3,14 @@ author: pifreak
 deck: Anaglyph
 stake: White
 
-Must:  
+Must:
   - soulJoker: Perkeo
     edition: Negative
     packSlots: [0]
   - smallblindtag: NegativeTag
-    Antes: [4]  
+    antes: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    min: 2
 Should:
-
-  - soulJoker: Perkeo
-    antes: [1,2,3]
-    packSlots: [0,1]
-    score: 17
-  - soulJoker: Perkeo
-    antes: [1,2,3,4]
-    packSlots: [0,1,2,3]
-    score: 10
-  - joker: Showman
-    antes: [1,2,3,4]
-    shopSlots: [0,1,2,3]
-    packSlots: [0,1,2,3]
-
-
-
-  - joker: Mime
-    ShopSlots: [2,3,4,5,6,7]
-    score: 444
-    antes: [4]
   - smallblindtag: NegativeTag
-  - tag: DoubleTag
-    antes: [1]
-    score: 2
-  - tag: DoubleTag
-    antes: [2]
-    score: 2
-  - tag: DoubleTag
-    antes: [3]
-    score: 2
-  - tag: DoubleTag
-    antes: [4]
-    score: 2
-  - tag: DoubleTag
-    antes: [5]
-    score: 2
-  - tag: DoubleTag
-    antes: [6]
-    score: 2
-  - tag: DoubleTag
-    antes: [7]
-    score: 2
-  - tag: DoubleTag
-    antes: [8]
-    score: 2
+    antes: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    min: 2

@@ -21,14 +21,6 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
   let stackPointerId = null
   let stackDragEl = null
 
-  // Corner handle state
-  const cornerHandleY = ref(0)
-  let isCornerDragging = false
-  let cornerStartY = 0
-  let cornerStartHeights = { left: [], right: [] }
-  
-  const isCornerDraggingFn = () => isCornerDragging
-
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
   // Split resize handlers
@@ -143,7 +135,7 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     const deltaY = currentY - stackStartY
 
     let newHeight = stackStartHeight + deltaY
-    
+
     // Allow full collapse to 0
     if (newHeight < 0 && resizeIndex > 0) {
       // Dragging up past 0: shrink panel above, then allow full collapse
@@ -154,13 +146,13 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
         if (shrinkAmount > 0) {
           panelAbove.defaultHeight = Math.max(panelAbove.minHeight, currentHeight - shrinkAmount)
           newHeight = stackStartHeight + (deltaY + shrinkAmount)
-          
+
           if (panelAbove.defaultHeight <= panelAbove.minHeight) {
             panelAbove.collapsed = true
           }
         }
       }
-      
+
       // Continue collapsing the current panel to 0
       if (newHeight < 0) {
         resizingPanel.defaultHeight = 0
@@ -169,7 +161,7 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
         return
       }
     }
-    
+
     // Collision detection: if dragging up, shrink panels above
     if (deltaY < 0 && resizeIndex > 0 && newHeight >= 0) {
       const panelAbove = stackPanels[resizeIndex - 1]
@@ -179,19 +171,19 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
         if (shrinkAmount > 0) {
           panelAbove.defaultHeight = Math.max(panelAbove.minHeight, currentHeight - shrinkAmount)
           newHeight = stackStartHeight + (deltaY + shrinkAmount)
-          
+
           if (panelAbove.defaultHeight <= panelAbove.minHeight) {
             panelAbove.collapsed = true
           }
         }
       }
     }
-    
+
     // Uncollapse: if dragging topmost panel down with space, uncollapse next collapsed panel
     if (deltaY > 0 && resizeIndex === 0) {
       const resizingPanelSide = resizingPanel.side
       const collapsedOnSameSide = panels.value.filter(p => p.side === resizingPanelSide && p.collapsed)
-      
+
       if (collapsedOnSameSide.length > 0) {
         const availableSpace = deltaY
         if (availableSpace >= collapsedOnSameSide[0].minHeight) {
@@ -272,7 +264,7 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
         return
       }
       const desired = startHeight + (moveEvent.clientY - startY)
-      
+
       // Allow full collapse to 0
       if (desired < 0) {
         currentPanel.defaultHeight = 0
@@ -295,121 +287,6 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     dividerEl?.addEventListener?.('pointermove', onMove)
     dividerEl?.addEventListener?.('pointerup', onUp)
     dividerEl?.addEventListener?.('pointercancel', onUp)
-  }
-
-  // Corner resize handlers
-  const startCornerResize = (event) => {
-    if (event.button !== 0) return
-    if (leftPanels.value.length !== 2 || rightPanels.value.length !== 2) return
-    
-    playTick()
-    
-    event.preventDefault()
-    event.stopPropagation()
-
-    const badgeEl = event.currentTarget
-    if (!badgeEl) return
-
-    badgeEl?.setPointerCapture?.(event.pointerId)
-    isCornerDragging = true
-    document.body.style.cursor = 'row-resize'
-    document.body.style.userSelect = 'none'
-    badgeEl?.classList?.add?.('is-resizing')
-
-    const layoutEl = splitContainer?.value || badgeEl?.closest?.('.layout-split')
-    if (!layoutEl) return
-    
-    const layoutRect = layoutEl.getBoundingClientRect()
-    const startY = event.clientY
-    const startCornerY = cornerHandleY.value
-
-    cornerStartHeights.left = leftPanels.value.map(p => ({
-      id: p.id,
-      height: p.defaultHeight || p.minHeight || 200,
-      minHeight: p.minHeight
-    }))
-    cornerStartHeights.right = rightPanels.value.map(p => ({
-      id: p.id,
-      height: p.defaultHeight || p.minHeight || 200,
-      minHeight: p.minHeight
-    }))
-
-    const totalLeftHeight = cornerStartHeights.left.reduce((sum, p) => sum + p.height, 0)
-    const totalRightHeight = cornerStartHeights.right.reduce((sum, p) => sum + p.height, 0)
-
-    const onMove = (moveEvent) => {
-      if (!isCornerDragging) return
-
-      const deltaY = moveEvent.clientY - startY
-      const availableHeight = layoutRect.height - 28
-      
-      const minCornerY = Math.max(
-        cornerStartHeights.left[0].minHeight,
-        cornerStartHeights.right[0].minHeight
-      )
-      const maxCornerY = availableHeight - Math.max(
-        cornerStartHeights.left[1].minHeight,
-        cornerStartHeights.right[1].minHeight
-      )
-      const newCornerY = Math.max(minCornerY, Math.min(maxCornerY, startCornerY + deltaY))
-      
-      const topPanelTargetHeight = newCornerY
-      const bottomPanelTargetHeight = availableHeight - newCornerY
-      
-      const leftTopRatio = cornerStartHeights.left[0].height / totalLeftHeight
-      const leftBottomRatio = cornerStartHeights.left[1].height / totalLeftHeight
-      const rightTopRatio = cornerStartHeights.right[0].height / totalRightHeight
-      const rightBottomRatio = cornerStartHeights.right[1].height / totalRightHeight
-      
-      const leftTopPanel = leftPanels.value[0]
-      const leftBottomPanel = leftPanels.value[1]
-      if (leftTopPanel && leftBottomPanel) {
-        const leftTopHeight = topPanelTargetHeight * leftTopRatio
-        const leftBottomHeight = bottomPanelTargetHeight * leftBottomRatio
-        
-        leftTopPanel.defaultHeight = Math.max(leftTopPanel.minHeight, leftTopHeight)
-        leftBottomPanel.defaultHeight = Math.max(leftBottomPanel.minHeight, leftBottomHeight)
-      }
-      
-      const rightTopPanel = rightPanels.value[0]
-      const rightBottomPanel = rightPanels.value[1]
-      if (rightTopPanel && rightBottomPanel) {
-        const rightTopHeight = topPanelTargetHeight * rightTopRatio
-        const rightBottomHeight = bottomPanelTargetHeight * rightBottomRatio
-        
-        rightTopPanel.defaultHeight = Math.max(rightTopPanel.minHeight, rightTopHeight)
-        rightBottomPanel.defaultHeight = Math.max(rightBottomPanel.minHeight, rightBottomHeight)
-      }
-      
-      cornerHandleY.value = newCornerY
-      moveEvent.preventDefault()
-    }
-
-    const onUp = () => {
-      badgeEl?.releasePointerCapture?.(event.pointerId)
-      badgeEl?.classList?.remove?.('is-resizing')
-      badgeEl?.removeEventListener?.('pointermove', onMove)
-      badgeEl?.removeEventListener?.('pointerup', onUp)
-      badgeEl?.removeEventListener?.('pointercancel', onUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      isCornerDragging = false
-    }
-
-    badgeEl?.addEventListener?.('pointermove', onMove)
-    badgeEl?.addEventListener?.('pointerup', onUp)
-    badgeEl?.addEventListener?.('pointercancel', onUp)
-  }
-
-  const updateCornerHandlePosition = () => {
-    if (leftPanels.value.length === 2 && rightPanels.value.length === 2 && splitContainer.value) {
-      const leftTopHeight = leftPanels.value[0]?.defaultHeight || leftPanels.value[0]?.minHeight || 200
-      const rightTopHeight = rightPanels.value[0]?.defaultHeight || rightPanels.value[0]?.minHeight || 200
-      const avgTopHeight = (leftTopHeight + rightTopHeight) / 2
-      cornerHandleY.value = Math.max(0, avgTopHeight)
-    } else {
-      cornerHandleY.value = 0
-    }
   }
 
   // Split width persistence
@@ -438,22 +315,16 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     // State
     splitLeftWidth,
     badgeSnapState,
-    cornerHandleY,
-    isCornerDragging: isCornerDraggingFn,
-    
+
     // Split resize
     startSplitResize,
-    
+
     // Stack resize
     startStackResize,
-    
+
     // Column resize
     startColumnResize,
-    
-    // Corner resize
-    startCornerResize,
-    updateCornerHandlePosition,
-    
+
     // Persistence
     saveSplitWidth,
     loadSplitWidth

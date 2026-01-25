@@ -444,6 +444,44 @@ public static class TallyColorizer
     }
 
     /// <summary>
+    /// Format a complete result line with colored column values (handles both strings and numbers)
+    /// </summary>
+    public static string FormatResultLine(string seed, int score, IEnumerable<string?> columns)
+    {
+        if (!ColorEnabled)
+            return $"{seed},{score},{string.Join(",", columns.Select(c => c ?? ""))}";
+
+        var sb = new StringBuilder();
+        sb.Append(seed).Append(',').Append(score).Append(',');
+        
+        bool first = true;
+        foreach (var col in columns)
+        {
+            if (!first) sb.Append(',');
+            first = false;
+
+            if (string.IsNullOrEmpty(col))
+            {
+                sb.Append("");
+                continue;
+            }
+
+            if (int.TryParse(col, out int val))
+            {
+                int colorKey = Math.Max(0, Math.Min(8, val));
+                sb.Append(TallyColors[colorKey]).Append(col).Append(ResetColor);
+            }
+            else
+            {
+                // Labels/Strings get White/Bright color
+                sb.Append(TallyColors[8]).Append(col).Append(ResetColor);
+            }
+        }
+        
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Format a complete result line with colored tallies (List version)
     /// </summary>
     public static string FormatResultLine(string seed, int score, List<int> tallies)
