@@ -185,9 +185,29 @@ Should:
     antes: [1, 2]
     score: 1000
 
-  - standardCard: Two
+  - standardCard:
+    rank: 2
+    suite: any
     seal: Red
     edition: Polychrome
     min: 10
     antes: [1, 2]
     score: 333
+
+  - standardCard:
+    rank: 2
+    suit: any
+    seal: Any
+    edition: Polychrome
+    min: 10
+    antes: [1, 2]
+    score: 311
+
+  - standardCard:
+    rank: 2
+    suit: any
+    seal: Red
+    edition: Any
+    min: 10
+    antes: [1, 2]
+    score: 233

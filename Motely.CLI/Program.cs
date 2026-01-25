@@ -686,19 +686,25 @@ namespace Motely
             int maxPad = 8 - keyword.Length;
 
             // Generate all combinations - yield directly, no materialization!
-            return GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars, quiet);
+            var seeds = GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars);
+            var count = 
+            if (!quiet)
+            {
+                Console.WriteLine(
+                    $"🔧 Generated {seeds.Count()} seeds containing '{keyword}'"
+                );
+            }
+
+            return seeds;
         }
 
         private static IEnumerable<string> GenerateKeywordSeedsEnumerable(
             string keyword,
             int maxPad,
-            char[] validChars,
-            bool quiet
-        )
+            char[] validChars)
         {
-            int count = 0;
+            
             yield return keyword;
-            count++;
 
             // Generate with padding - yield directly (NO SFW filtering during generation)
             for (int padLen = 1; padLen <= maxPad; padLen++)
@@ -706,14 +712,9 @@ namespace Motely
                 foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
                 {
                     yield return seed;
-                    count++;
                 }
             }
 
-            if (!quiet)
-            {
-                Console.WriteLine($"   Generated {count:N0} seeds containing '{keyword}'");
-            }
         }
 
         private static IEnumerable<string> GeneratePaddedSeeds(
