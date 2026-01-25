@@ -59,3 +59,4 @@ Motely/tui.json
 /vue-jaml-ui/node_modules
 mcp-config.json
 *.txt
+/vue-jaml-ui/dist
