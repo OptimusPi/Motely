@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Balatro Quick Search UI Prototype</title>
+<style>
+  :root{
+    --bg:#0f1720;
+    --panel:#0f1728;
+    --muted:#9aa6b2;
+    --accent:#e63946;
+    --accent2:#ffd166;
+    --dot-size:34px;
+    --axis-height:320px;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#071018 0%, #0b1220 100%);font-family:Inter,system-ui,Segoe UI,Arial;color:#e6eef6}
+  .wrap{max-width:1100px;margin:28px auto;padding:20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+  h3{margin:0 0 12px 0}
+  .top{display:flex;gap:16px;align-items:flex-start}
+  .controls{width:360px;padding:12px;background:rgba(255,255,255,0.02);border-radius:10px}
+  textarea{width:100%;height:110px;background:#07121a;color:#dbe9f8;border:1px solid rgba(255,255,255,0.03);padding:8px;border-radius:6px;resize:vertical}
+  .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  .weights{display:flex;gap:8px}
+  .weights input{width:70px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff}
+  .main{flex:1;padding:12px}
+  .axis-wrap{display:flex;gap:12px;align-items:flex-start}
+  .axis{
+    width:80px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .axis .ticks{height:var(--axis-height);width:100%;position:relative;border-left:2px dashed rgba(255,255,255,0.03);display:flex;flex-direction:column;justify-content:space-between;padding-left:12px}
+  .tick{font-size:12px;color:var(--muted);transform:translateY(6px)}
+  .seeds{flex:1;overflow:auto;max-height:420px;padding:8px;background:rgba(0,0,0,0.02);border-radius:8px}
+  .seed-row{display:flex;align-items:center;gap:12px;padding:8px;border-radius:8px;margin-bottom:8px;background:linear-gradient(90deg, rgba(255,255,255,0.01), transparent)}
+  .seed-label{width:90px;font-weight:600}
+  .pole-area{flex:1;display:flex;align-items:center;gap:8px}
+  .pole-track{position:relative;height:var(--axis-height);width:220px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border:1px solid rgba(255,255,255,0.02)}
+  .dot{
+    position:absolute;left:50%;transform:translate(-50%,-50%);
+    width:var(--dot-size);height:var(--dot-size);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-weight:700;color:#07121a;
+    box-shadow:0 6px 18px rgba(0,0,0,0.6);cursor:grab;user-select:none;
+  }
+  .dot.dragging{cursor:grabbing;transform:translate(-50%,-50%) scale(1.05)}
+  .dot.a{background:linear-gradient(180deg,var(--accent2),#ffb84d)}
+  .dot.b{background:linear-gradient(180deg,#8be9a8,#3ecf8e)}
+  .meta{width:160px;text-align:right;color:var(--muted);font-size:13px}
+  .total{font-weight:700;color:var(--accent2)}
+  .small{font-size:12px;color:var(--muted)}
+  .legend{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .legend .sw{width:14px;height:14px;border-radius:4px}
+  .sw.a{background:linear-gradient(180deg,var(--accent2),#ffb84d)}
+  .sw.b{background:linear-gradient(180deg,#8be9a8,#3ecf8e)}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--muted)}
+  @media (max-width:900px){.top{flex-direction:column}.controls{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h3>Balatro Quick Search — Live Prototype</h3>
+  <div class="top">
+    <div class="controls">
+      <label>Paste CSV (header: Seed,Score,GoldenJoker,Brainstorm,Baron,...)</label>
+      <textarea id="csvInput">Seed,Score,GoldenJoker,Brainstorm,Baron
+GG67,51,1,0,9
+HLII,49,0,2,0
+</textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="loadBtn">Load</button>
+        <button id="resetBtn" class="ghost">Reset positions</button>
+        <button id="randomBtn" class="ghost">Randomize</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>Custom point weights (added to base Score)</label>
+        <div class="weights">
+          <div><div class="small">GoldenJoker</div><input id="wG" type="number" value="10"></div>
+          <div><div class="small">Brainstorm</div><input id="wB" type="number" value="2"></div>
+          <div><div class="small">Baron</div><input id="wR" type="number" value="1"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>Global ante slider (snap 0-8)</label>
+        <input id="globalAnte" type="range" min="0" max="8" value="1" style="width:100%">
+        <div class="small">Global ante: <span id="globalAnteVal">1</span></div>
+      </div>
+
+      <div class="legend">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;gap:8px;align-items:center"><div class="sw a"></div><div class="small">Pole A</div></div>
+          <div style="display:flex;gap:8px;align-items:center"><div class="sw b"></div><div class="small">Pole B</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="axis-wrap">
+        <div class="axis">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Ante axis</div>
+          <div class="ticks" id="axisTicks">
+            <!-- ticks generated by JS -->
+          </div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+            <div style="width:90px;font-weight:700">Seed</div>
+            <div style="flex:1;font-weight:700">Poles (drag vertically)</div>
+            <div style="width:160px;text-align:right;font-weight:700">Score</div>
+          </div>
+
+          <div class="seeds" id="seedsContainer">
+            <!-- seed rows -->
+          </div>
+
+          <div class="footer">
+            <div class="small">Prototype — dots snap to ante positions 1–8; two poles per seed.</div>
+            <div class="small">Tip: paste CSV, set weights, drag dots.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Utility: parse CSV simple */
+function parseCSV(text){
+  const lines = text.trim().split(/\\r?\\n/).map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return [];
+  const headers = lines[0].split(',').map(h=>h.trim());
+  return lines.slice(1).map(line=>{
+    const cols = line.split(',').map(c=>c.trim());
+    const obj = {};
+    headers.forEach((h,i)=>obj[h]=cols[i] ?? '');
+    return obj;
+  });
+}
+
+/* UI state */
+let seeds = []; // {Seed,Score,GoldenJoker,Brainstorm,Baron, poleA:1..8, poleB:1..8, initialA, initialB}
+const axisHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--axis-height')) || 320;
+const ticksEl = document.getElementById('axisTicks');
+const seedsContainer = document.getElementById('seedsContainer');
+const globalAnte = document.getElementById('globalAnte');
+const globalAnteVal = document.getElementById('globalAnteVal');
+
+function makeTicks(){
+  ticksEl.innerHTML = '';
+  for(let i=8;i>=0;i--){ // show 8..0 top to bottom
+    const t = document.createElement('div');
+    t.className='tick';
+    t.textContent = i;
+    ticksEl.appendChild(t);
+  }
+}
+makeTicks();
+
+function loadFromCSV(){
+  const raw = document.getElementById('csvInput').value;
+  const parsed = parseCSV(raw);
+  seeds = parsed.map((r,idx)=>{
+    // default poles: if CSV has ante columns use them, else random 1..8
+    const poleA = r.AnteA ? Math.max(1,Math.min(8,Number(r.AnteA))) : 1;
+    const poleB = r.AnteB ? Math.max(1,Math.min(8,Number(r.AnteB))) : 1;
+    return {
+      ...r,
+      Score: Number(r.Score||0),
+      GoldenJoker: Number(r.GoldenJoker||0),
+      Brainstorm: Number(r.Brainstorm||0),
+      Baron: Number(r.Baron||0),
+      poleA: poleA || 1,
+      poleB: poleB || 1,
+      initialA: poleA || 1,
+      initialB: poleB || 1,
+      id: 's'+idx
+    };
+  });
+  renderSeeds();
+  recalcAll();
+}
+
+function randomizePositions(){
+  seeds.forEach(s=>{
+    s.poleA = Math.floor(Math.random()*8)+1;
+    s.poleB = Math.floor(Math.random()*8)+1;
+  });
+  renderSeeds();
+  recalcAll();
+}
+
+function resetPositions(){
+  seeds.forEach(s=>{
+    s.poleA = s.initialA || 1;
+    s.poleB = s.initialB || 1;
+  });
+  renderSeeds();
+  recalcAll();
+}
+
+function renderSeeds(){
+  seedsContainer.innerHTML = '';
+  seeds.forEach(s=>{
+    const row = document.createElement('div');
+    row.className='seed-row';
+    const label = document.createElement('div'); label.className='seed-label'; label.textContent = s.Seed || '—';
+    const poleArea = document.createElement('div'); poleArea.className='pole-area';
+    const track = document.createElement('div'); track.className='pole-track';
+    track.style.height = axisHeight+'px';
+    track.dataset.id = s.id;
+
+    // create two dots
+    const dotA = document.createElement('div'); dotA.className='dot a'; dotA.dataset.which='A';
+    dotA.textContent = s.poleA;
+    const dotB = document.createElement('div'); dotB.className='dot b'; dotB.dataset.which='B';
+    dotB.textContent = s.poleB;
+
+    track.appendChild(dotA); track.appendChild(dotB);
+    poleArea.appendChild(track);
+
+    const meta = document.createElement('div'); meta.className='meta';
+    meta.innerHTML = `<div>Base: ${s.Score}</div>
+      <div class="small">GJ:${s.GoldenJoker} BS:${s.Brainstorm} BR:${s.Baron}</div>
+      <div class="total" id="total-${s.id}">Total: 0</div>`;
+
+    row.appendChild(label); row.appendChild(poleArea); row.appendChild(meta);
+    seedsContainer.appendChild(row);
+
+    // position dots according to ante (1..8). ante 0 allowed but we clamp to 0..8
+    positionDot(dotA, s.poleA);
+    positionDot(dotB, s.poleB);
+
+    // attach drag handlers
+    makeDraggable(dotA, track, s);
+    makeDraggable(dotB, track, s);
+  });
+}
+
+/* Convert ante (0..8) to pixel Y inside track (top=0 -> bottom=height). We want ante 8 at top, 0 at bottom? 
+   User said ante 1..8 vertical; earlier axis shows 8..0 top to bottom. We'll map ante 8 -> top, 0 -> bottom. */
+function anteToY(ante){
+  const h = axisHeight;
+  const ratio = (8 - ante) / 8; // ante 8 => 0; ante 0 => 1
+  return Math.round(ratio * (h - 8)) + 8; // small padding
+}
+function yToAnte(y){
+  const h = axisHeight;
+  const ratio = y / (h - 8);
+  const ante = 8 - Math.round(ratio * 8);
+  return Math.max(0, Math.min(8, ante));
+}
+
+function positionDot(dot, ante){
+  const y = anteToY(ante);
+  dot.style.top = y + 'px';
+  dot.textContent = ante;
+}
+
+/* Draggable logic (pointer events) */
+function makeDraggable(dot, track, seedObj){
+  let dragging = false;
+  let startY = 0;
+  let trackRect;
+  dot.addEventListener('pointerdown', (e)=>{
+    e.preventDefault();
+    dragging = true;
+    dot.setPointerCapture(e.pointerId);
+    dot.classList.add('dragging');
+    trackRect = track.getBoundingClientRect();
+    startY = e.clientY;
+  });
+  window.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const relY = e.clientY - trackRect.top;
+    const clamped = Math.max(0, Math.min(axisHeight, relY));
+    dot.style.top = clamped + 'px';
+    // live ante display while dragging
+    const ante = yToAnte(clamped);
+    dot.textContent = ante;
+  });
+  window.addEventListener('pointerup', (e)=>{
+    if(!dragging) return;
+    dragging = false;
+    dot.classList.remove('dragging');
+    dot.releasePointerCapture && dot.releasePointerCapture(e.pointerId);
+    // snap to nearest ante
+    const topPx = parseFloat(dot.style.top || 0);
+    const ante = yToAnte(topPx);
+    // update seed state
+    const which = dot.dataset.which;
+    if(which === 'A'){ seedObj.poleA = ante; } else { seedObj.poleB = ante; }
+    positionDot(dot, ante);
+    recalcAll();
+  });
+}
+
+/* Recalculate totals using weights */
+function recalcAll(){
+  const wG = Number(document.getElementById('wG').value || 0);
+  const wB = Number(document.getElementById('wB').value || 0);
+  const wR = Number(document.getElementById('wR').value || 0);
+  seeds.forEach(s=>{
+    const total = (s.Score || 0) + (s.GoldenJoker||0)*wG + (s.Brainstorm||0)*wB + (s.Baron||0)*wR;
+    const el = document.getElementById('total-'+s.id);
+    if(el) el.textContent = 'Total: ' + total;
+  });
+}
+
+/* Wire up controls */
+document.getElementById('loadBtn').addEventListener('click', ()=>{ loadFromCSV(); });
+document.getElementById('randomBtn').addEventListener('click', ()=>{ randomizePositions(); });
+document.getElementById('resetBtn').addEventListener('click', ()=>{ resetPositions(); });
+document.getElementById('wG').addEventListener('input', recalcAll);
+document.getElementById('wB').addEventListener('input', recalcAll);
+document.getElementById('wR').addEventListener('input', recalcAll);
+globalAnte.addEventListener('input', ()=>{
+  const v = Number(globalAnte.value);
+  globalAnteVal.textContent = v;
+  // move both poles of every seed to that ante (quick global set)
+  seeds.forEach(s=>{ s.poleA = v; s.poleB = v; });
+  renderSeeds();
+  recalcAll();
+});
+
+/* initial load */
+loadFromCSV();
+</script>
+</body>
+</html>
