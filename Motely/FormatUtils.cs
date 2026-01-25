@@ -216,31 +216,37 @@ public static class FormatUtils
 
     public static string FormatPlayingCard(MotelyPlayingCard card)
     {
-        var cardStr = card.ToString();
-        if (cardStr.Length >= 2)
-        {
-            var suit = FormatPlayingCardSuit(cardStr[0].ToString());
-            var rank = cardStr.Substring(1) switch
-            {
-                "2" => "2",
-                "3" => "3",
-                "4" => "4",
-                "5" => "5",
-                "6" => "6",
-                "7" => "7",
-                "8" => "8",
-                "9" => "9",
-                "10" => "10",
-                "J" => "Jack",
-                "Q" => "Queen",
-                "K" => "King",
-                "A" => "Ace",
-                _ => cardStr.Substring(1),
-            };
+        var rank = card.GetRank();
+        var suit = card.GetSuit();
 
-            return $"{rank} of {suit}";
-        }
-        return cardStr;
+        var rankStr = rank switch
+        {
+            MotelyPlayingCardRank.Two => "2",
+            MotelyPlayingCardRank.Three => "3",
+            MotelyPlayingCardRank.Four => "4",
+            MotelyPlayingCardRank.Five => "5",
+            MotelyPlayingCardRank.Six => "6",
+            MotelyPlayingCardRank.Seven => "7",
+            MotelyPlayingCardRank.Eight => "8",
+            MotelyPlayingCardRank.Nine => "9",
+            MotelyPlayingCardRank.Ten => "10",
+            MotelyPlayingCardRank.Jack => "Jack",
+            MotelyPlayingCardRank.Queen => "Queen",
+            MotelyPlayingCardRank.King => "King",
+            MotelyPlayingCardRank.Ace => "Ace",
+            _ => rank.ToString(),
+        };
+
+        var suitStr = suit switch
+        {
+            MotelyPlayingCardSuit.Clubs => "Clubs",
+            MotelyPlayingCardSuit.Diamonds => "Diamonds",
+            MotelyPlayingCardSuit.Hearts => "Hearts",
+            MotelyPlayingCardSuit.Spades => "Spades",
+            _ => suit.ToString(),
+        };
+
+        return $"{rankStr} of {suitStr}";
     }
 
     public static string FormatPackName(MotelyBoosterPack pack)

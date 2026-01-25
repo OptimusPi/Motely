@@ -1,0 +1,72 @@
+name: Negative Trickeo-glyph
+author: qcom
+description: Negative perkeo ante 1, canio ante 8, both hieroglyph vouchers and magic trick before ante 8
+deck: Ghost
+stake: White
+
+must:
+  - soulJoker: Perkeo
+    antes: [1]
+    sources:
+      shopSlots: [1, 2, 3]
+    edition: Negative
+
+  - soulJoker: Canio
+    antes: [1, 8]
+    sources:
+      shopSlots: [0, 1, 2, 3, 4, 5]
+    edition: Negative
+
+  - voucher: Hieroglyph
+    antes: [1, 2]
+    score: 1
+  - voucher: Petroglyph
+    antes: [1, 2]
+    score: 1
+  - voucher: MagicTrick
+    antes: [1, 2, 3]
+    score: 1
+
+  - soulJoker: Canio
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    sources:
+      packSlots: [0, 1, 2, 3, 4, 5]
+
+should:
+  - voucher: MagicTrick
+    antes: [1, 2, 3, 4]
+    score: 1
+  - voucher: Hieroglyph
+    antes: [1, 2, 3, 4, 5, 6]
+    score: 1
+  - voucher: Petroglyph
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
+    score: 1
+
+  - spectralCard: Immolate
+    antes: [7, 8, 9]
+    packSlots: [0, 1, 2, 3, 4, 5]
+    score: 1
+
+  - joker: Blueprint
+  - joker: Brainstorm
+
+  - voucher: Hieroglyph
+    antes: [1, 2, 3, 4]
+    score: 1
+  - voucher: Petroglyph
+    antes: [1, 2, 3, 4]
+    score: 1
+  - voucher: MagicTrick
+    antes: [1, 2, 3, 4]
+    score: 1
+
+  - tarotCard: Judgement
+    antes: [1]
+    shopSlots: [0, 1]
+    score: 1
+  - joker: Blueprint
+    sources:
+      judgement: [0]
+    antes: [1]
+    score: 1

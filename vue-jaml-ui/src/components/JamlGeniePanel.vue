@@ -409,16 +409,29 @@ const loadRecentFilters = async () => {
 }
 
 const formatMessage = (content) => {
-  // Enhanced text formatting with code block support
+  // Enhanced text formatting with Expressive Code style
   let formatted = content
   
   // Handle code blocks (```yaml ... ```)
   formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-    return `<pre style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1);"><code style="font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; white-space: pre;">${escapeHtml(code.trim())}</code></pre>`
+    const title = lang || 'code'
+    return `
+      <div class="expressive-code">
+        <div class="code-header">
+          <div class="window-controls">
+            <span class="control close"></span>
+            <span class="control minimize"></span>
+            <span class="control maximize"></span>
+          </div>
+          <span class="code-title">${title}</span>
+        </div>
+        <pre class="code-body"><code>${escapeHtml(code.trim())}</code></pre>
+      </div>
+    `
   })
   
   // Handle inline code (`code`)
-  formatted = formatted.replace(/`([^`\n]+)`/g, '<code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 3px; font-family: monospace; font-size: 0.9em;">$1</code>')
+  formatted = formatted.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>')
   
   // Handle bold (**text**)
   formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -646,8 +659,69 @@ onMounted(async () => {
 }
 
 .genie-message .message-text {
-  background: rgba(155, 89, 182, 0.15);
-  border: 1px solid rgba(155, 89, 182, 0.3);
+  background: rgba(155, 89, 182, 0.05);
+  border: 1px solid rgba(155, 89, 182, 0.2);
+}
+
+/* Expressive Code Styles */
+:deep(.expressive-code) {
+  margin: 16px 0;
+  background: #011627; /* Night Owl Dark */
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep(.code-header) {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:deep(.window-controls) {
+  display: flex;
+  gap: 6px;
+  margin-right: 12px;
+}
+
+:deep(.control) {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+:deep(.control.close) { background: #ff5f56; }
+:deep(.control.minimize) { background: #ffbd2e; }
+:deep(.control.maximize) { background: #27c93f; }
+
+:deep(.code-title) {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+  font-weight: bold;
+}
+
+:deep(.code-body) {
+  padding: 16px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d6deeb; /* Night Owl Text */
+}
+
+:deep(.inline-code) {
+  background: rgba(155, 89, 182, 0.2);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+  color: #addb67; /* Night Owl Accent */
 }
 
 .message-time {

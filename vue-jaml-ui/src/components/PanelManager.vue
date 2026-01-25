@@ -80,11 +80,7 @@
     <div v-if="!isMobile" class="split-divider" @pointerdown="startSplitResize" role="separator">
       <div 
         class="jaml-badge"
-        :class="[badgeSnapClass, { 'corner-resize-mode': leftPanels.length === 2 && rightPanels.length === 2 }]"
-        :style="leftPanels.length === 2 && rightPanels.length === 2 && cornerHandleY > 0 
-          ? { top: cornerHandleY + 'px' } 
-          : { top: '0px' }"
-        @pointerdown="handleBadgePointerDown"
+        :class="[badgeSnapClass]"
       >
         <GripVertical v-if="badgeSnapState !== 'left'" :size="16" />
         <Home :size="16" @click.stop.prevent="goHome" class="icon-btn" title="Go Home" />
@@ -232,12 +228,6 @@ const getPanelEvents = (panel) => {
   return events
 }
 
-const handleBadgePointerDown = (event) => {
-  if (props.leftPanels.length !== 2 || props.rightPanels.length !== 2) return
-  if (event.target.closest('.icon-btn') || event.target.closest('button') || event.target.closest('svg')) return
-  props.startCornerResize(event)
-}
-
 const onDropZoneOver = (event) => {
   event.dataTransfer.dropEffect = 'move'
   event.currentTarget.classList.add('active')
@@ -249,16 +239,32 @@ const onDropZoneLeave = (event) => {
 
 const onDropZoneTop = (side, event) => {
   onDropZoneLeave(event)
-  const panelId = event.dataTransfer.getData('collapsed-panel-id')
+  const collapsedId = event.dataTransfer.getData('collapsed-panel-id')
+  const regularId = event.dataTransfer.getData('text/plain')
+  const panelId = collapsedId || regularId
+  
   if (!panelId) return
-  props.expandPanel?.(panelId)
+  
+  if (collapsedId) {
+    props.expandPanel?.(panelId)
+  }
+  
+  props.movePanelToSide?.(panelId, side)
 }
 
 const onDropZoneBottom = (side, event) => {
   onDropZoneLeave(event)
-  const panelId = event.dataTransfer.getData('collapsed-panel-id')
+  const collapsedId = event.dataTransfer.getData('collapsed-panel-id')
+  const regularId = event.dataTransfer.getData('text/plain')
+  const panelId = collapsedId || regularId
+  
   if (!panelId) return
-  props.expandPanel?.(panelId)
+  
+  if (collapsedId) {
+    props.expandPanel?.(panelId)
+  }
+  
+  props.movePanelToSide?.(panelId, side)
 }
 </script>
 
@@ -334,19 +340,6 @@ const onDropZoneBottom = (side, event) => {
   left: 50%;
   margin-left: -50px;
   transition: top 0.2s ease;
-}
-
-.jaml-badge.corner-resize-mode {
-  cursor: row-resize;
-  transition: none;
-}
-
-.jaml-badge.corner-resize-mode:hover {
-  background: var(--balatro-dark-gold);
-}
-
-.jaml-badge.corner-resize-mode.is-resizing {
-  background: var(--balatro-dark-gold);
 }
 
 .jaml-badge .logo {

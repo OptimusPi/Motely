@@ -2,7 +2,9 @@
   "mcpServers": {
     "balatro-seed-oracle": {
       "command": "X:/BalatroSeedOracle/external/Motely/Motely.MCP/publish/Motely.MCP.exe",
-      "args": ["--mcp-stdio"],
+      "args": [
+        "--mcp-stdio"
+      ],
       "env": {
         "MCP_MODE": "stdio"
       }

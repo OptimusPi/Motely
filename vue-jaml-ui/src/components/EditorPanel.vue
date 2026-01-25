@@ -21,6 +21,7 @@
       <button v-if="!isMobile" @click="toggleBuilder" class="btn">
         {{ showBuilder ? 'Hide Builder' : 'Show Builder' }}
       </button>
+      <button @click="editorMode = 'soft'" class="btn" :class="{ 'btn-active': editorMode === 'soft' }">✨ Soft</button>
       <button v-if="!isMobile" @click="toggleEditor" class="btn">{{ editorMode === 'monaco' ? 'Text' : 'Monaco' }}</button>
       <button @click="handleFormat" class="btn">Format</button>
       <button @click="$emit('save')" class="btn">💾 Save</button>
@@ -35,11 +36,16 @@
       </div>
       <div class="code-pane">
         <div class="code-header">
-          <span>{{ editorMode === 'monaco' ? 'Monaco YAML' : 'Plain Text' }}</span>
-          <small>Schema-aware autocomplete + manual editing</small>
+          <span>{{ modeLabel }}</span>
+          <small>{{ modeSublabel }}</small>
         </div>
         <div class="editor-area">
-          <div v-if="editorMode === 'monaco'" ref="monacoContainer" class="monaco-wrapper" />
+          <SoftVisualEditor
+            v-if="editorMode === 'soft'"
+            :jaml="localJaml"
+            @update:jaml="handleBuilderUpdate"
+          />
+          <div v-else-if="editorMode === 'monaco'" ref="monacoContainer" class="monaco-wrapper" />
           <textarea
             v-else
             v-model="localJaml"
@@ -60,6 +66,7 @@ import { useMonaco } from '../composables/useMonaco'
 import { useApi } from '../composables/useApi'
 import { useLayout } from '../composables/useLayout'
 import JamlBuilder from './JamlBuilder.vue'
+import SoftVisualEditor from './SoftVisualEditor.vue'
 
 const props = defineProps({
   jaml: {
@@ -73,8 +80,8 @@ const emit = defineEmits(['update:jaml', 'save', 'format'])
 const monacoContainer = ref(null)
 const { windowWidth } = useLayout()
 const isMobile = computed(() => windowWidth.value < 768)
-// Default to textarea on mobile, monaco on desktop
-const editorMode = ref(isMobile.value ? 'text' : 'monaco') // 'text' | 'monaco'
+// Default to soft on mobile
+const editorMode = ref(isMobile.value ? 'soft' : 'monaco') // 'text' | 'monaco' | 'soft'
 const showBuilder = ref(!isMobile.value) // Hide builder on mobile by default
 const selectedFilter = ref('')
 const localJaml = ref(props.jaml)
@@ -111,6 +118,18 @@ const handleBuilderUpdate = (val) => {
   }
   builderSyncing = false
 }
+
+const modeLabel = computed(() => {
+  if (editorMode.value === 'soft') return 'Visual Editor'
+  if (editorMode.value === 'monaco') return 'Monaco YAML'
+  return 'Plain Text'
+})
+
+const modeSublabel = computed(() => {
+  if (editorMode.value === 'soft') return 'Soft interactive blocks'
+  if (editorMode.value === 'monaco') return 'Schema-aware autocomplete'
+  return 'Manual editing'
+})
 
 const handleFilterChange = async (e) => {
   const filterId = e.target.value
@@ -263,6 +282,12 @@ onUnmounted(() => {
   padding: 8px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
+}
+
+.btn-active {
+  background: var(--accent) !important;
+  color: white !important;
+  box-shadow: 0 0 10px var(--accent);
 }
 
 .editor-body {

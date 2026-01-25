@@ -1,3 +1,4 @@
+using Motely;
 using Motely.Filters;
 
 namespace Motely.Utils;
@@ -82,7 +83,10 @@ public static class SpecializedFilterFactory
     /// <summary>
     /// Creates appropriate search settings for specialized filter
     /// </summary>
-    public static dynamic CreateSearchSettings(IMotelySeedFilterDesc filterDesc)
+    /// <summary>
+    /// Creates appropriate search settings for specialized filter
+    /// </summary>
+    public static IMotelySearchSettings CreateSearchSettings(IMotelySeedFilterDesc filterDesc)
     {
         return filterDesc switch
         {
@@ -143,7 +147,10 @@ public static class SpecializedFilterFactory
     /// <summary>
     /// Complete JSON filter pipeline: group by category, create base + chained filters
     /// </summary>
-    public static dynamic CreateJsonFilterPipeline(
+    /// <summary>
+    /// Complete JSON filter pipeline: group by category, create base + chained filters
+    /// </summary>
+    public static IMotelySearchSettings CreateJsonFilterPipeline(
         List<MotelyJsonConfig.MotelyJsonFilterClause> mustClauses,
         int threads,
         int batchSize

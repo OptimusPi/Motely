@@ -112,6 +112,7 @@
   <!-- Include Motely DB layer sources - ONE TRUE IMPLEMENTATION -->
   <ItemGroup>
     <Compile Include="..\Motely.DB\**\*.cs" />
+    <Compile Include="..\Motely.Analysis\**\*.cs" />
   </ItemGroup>
   <!-- Exclude desktop-only files from browser build (Terminal.Gui TUI, CLI executors) -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">

@@ -24,6 +24,7 @@ public class McpProtocolServer
     private const string TOOL_SEARCH_SEEDS = "search_seeds";
     private const string TOOL_GET_SEARCH_STATUS = "get_search_status";
     private const string TOOL_ANALYZE_SEED = "analyze_seed";
+    private const string TOOL_BALATRO_SEED_ANALYZER = "balatro_seed_analyzer";
     private const string TOOL_VERIFY_SEED = "verify_seed";
 
     private readonly ILogger<McpProtocolServer> _logger;
@@ -234,6 +235,44 @@ public class McpProtocolServer
             },
             new McpTool
             {
+                Name = TOOL_BALATRO_SEED_ANALYZER,
+                Description =
+                    "Get a comprehensive analysis of a Balatro seed. Identifies every Joker, Voucher, Tarot, and Boss Blind across all 8 antes. Essential for deep seed exploration.",
+                InputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        seed = new
+                        {
+                            type = "string",
+                            description = "The 8-character Balatro seed (e.g. 'TACO1111' or 'ALEEB')",
+                        },
+                        deck = new
+                        {
+                            type = "string",
+                            description = "The deck to simulate (defaults to Red)",
+                            @enum = new[]
+                            {
+                                "Red", "Blue", "Yellow", "Green", "Black", "Ghost",
+                                "Abandoned", "Checkered", "Anaglyph", "Plasma", "Erratic"
+                            }
+                        },
+                        stake = new
+                        {
+                            type = "string",
+                            description = "The stake level (defaults to White)",
+                            @enum = new[]
+                            {
+                                "White", "Yellow", "Orange", "Red", "Green", "Blue", "Purple", "Gold"
+                            }
+                        },
+                    },
+                    required = new[] { "seed" },
+                },
+            },
+            new McpTool
+            {
                 Name = TOOL_VERIFY_SEED,
                 Description =
                     "Verify if a specific Balatro seed matches a JAML filter. Returns whether it matches, the score, and detailed tallies.",
@@ -293,6 +332,7 @@ public class McpProtocolServer
                 TOOL_SEARCH_SEEDS => await HandleSearchSeeds(arguments),
                 TOOL_GET_SEARCH_STATUS => HandleGetSearchStatus(arguments),
                 TOOL_ANALYZE_SEED => HandleAnalyzeSeed(arguments),
+                TOOL_BALATRO_SEED_ANALYZER => HandleBalatroSeedAnalyzer(arguments),
                 TOOL_VERIFY_SEED => HandleVerifySeed(arguments),
                 _ => throw new ArgumentException($"Unknown tool: {toolName}"),
             };
@@ -484,6 +524,50 @@ public class McpProtocolServer
             deck = deckValue,
             stake = stakeValue,
             analysis = analysis.ToString(),
+        };
+    }
+
+    private object HandleBalatroSeedAnalyzer(Dictionary<string, object> args)
+    {
+        if (!args.TryGetValue("seed", out var seedObj) || seedObj is not string seed)
+        {
+            throw new ArgumentException("Missing or invalid 'seed' parameter");
+        }
+
+        var deck = args.TryGetValue("deck", out var deckObj) ? deckObj?.ToString() : null;
+        var deckValue = deck ?? "Red";
+        var stake = args.TryGetValue("stake", out var stakeObj) ? stakeObj?.ToString() : null;
+        var stakeValue = stake ?? "White";
+
+        if (!Enum.TryParse<MotelyDeck>(deckValue, true, out var deckEnum))
+            deckEnum = MotelyDeck.Red;
+        if (!Enum.TryParse<MotelyStake>(stakeValue, true, out var stakeEnum))
+            stakeEnum = MotelyStake.White;
+
+        var analysis = MotelySeedAnalyzer.Analyze(
+            new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum)
+        );
+
+        // Return rich structured data so the AI can actually "see" the shop
+        return new
+        {
+            seed,
+            deck = deckValue,
+            stake = stakeValue,
+            analysis_text = analysis.ToString(),
+            starting_deck = analysis.StartingDeck,
+            antes = analysis.Antes.Select(a => new {
+                ante = a.Ante,
+                boss = FormatUtils.FormatBoss(a.Boss),
+                voucher = FormatUtils.FormatVoucher(a.Voucher),
+                tags = new[] { FormatUtils.FormatTag(a.SmallBlindTag), FormatUtils.FormatTag(a.BigBlindTag) },
+                shop = a.ShopQueue.Select(item => FormatUtils.FormatItem(item)).ToArray(),
+                packs = a.Packs.Select(p => new {
+                    type = FormatUtils.FormatPackName(p.Type),
+                    items = p.Items.Select(item => FormatUtils.FormatItem(item)).ToArray()
+                }).ToArray()
+            }).ToArray(),
+            error = analysis.Error
         };
     }
 

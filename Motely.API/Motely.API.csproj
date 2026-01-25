@@ -30,6 +30,7 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 </Project>

@@ -58,11 +58,10 @@ namespace Motely.Filters.MotelyJson
             value = null;
 
             // Check if this is a type we should handle
-            var expectedTypeName = expectedType.FullName ?? string.Empty;
-            var isMotelyJsonConfigClause =
-                expectedTypeName.Contains("MotelyJsonFilterClause")
-                && expectedType != typeof(MotelyJsonConfig);
-            var isMotelyJsonFilterClause = expectedType == typeof(MotelyJsonFilterClause);
+            var expectedTypeName = expectedType.Name;
+            var isMotelyJsonConfigClause = expectedTypeName.Contains("MotelyJsonFilterClause");
+            var isMotelyJsonFilterClause = expectedType == typeof(MotelyJsonFilterClause) || 
+                                          expectedType.IsSubclassOf(typeof(MotelyJsonFilterClause));
 
             if (!isMotelyJsonConfigClause && !isMotelyJsonFilterClause)
             {
@@ -86,6 +85,18 @@ namespace Motely.Filters.MotelyJson
                 }
 
                 var key = keyScalar.Value;
+
+                // Handle YAML Merge Key (<<) - just pass it through to let MergingParser handle it
+                if (key == "<<")
+                {
+                    var mergedValue = objectFactory(reader, typeof(object));
+                    // We don't need to do anything with it here, MergingParser has already swallowed the anchor events
+                    // and presented the merged properties as new events.
+                    // But if we are in a custom deserializer, we might need to be careful.
+                    // Actually, MergingParser sits BEFORE the Deserializer, so we shouldn't even see "<<"
+                    // unless something is wrong.
+                    continue;
+                }
 
                 if (TypeMappings.TryGetValue(key, out var mappedType))
                 {
@@ -139,12 +150,51 @@ namespace Motely.Filters.MotelyJson
                     }
                     else if (string.Equals(key, "sources", StringComparison.OrdinalIgnoreCase))
                     {
-                        var sourcesValue = objectFactory(reader, typeof(SourcesConfig));
-                        entries[key] = sourcesValue!;
+                        if (reader.Current is SequenceStart)
+                        {
+                            var sourcesList = objectFactory(
+                                reader,
+                                typeof(List<SourcesConfig>)
+                            ) as List<SourcesConfig>;
+                            if (sourcesList != null && sourcesList.Count > 0)
+                            {
+                                var merged = new SourcesConfig();
+                                foreach (var s in sourcesList)
+                                {
+                                    MergeSources(merged, s);
+                                }
+                                entries[key] = merged;
+                            }
+                        }
+                        else
+                        {
+                            var sourcesValue = objectFactory(reader, typeof(SourcesConfig));
+                            entries[key] = sourcesValue!;
+                        }
                     }
                     else
                     {
-                        var nodeValue = objectFactory(reader, typeof(object));
+                        // Validate property existence
+                        var prop = FindPropertyWithAlias(expectedType, key);
+                        if (prop == null)
+                        {
+                            // Check if it's a known source property that should be in sources:
+                            var sourceProp = FindPropertyWithAlias(typeof(SourcesConfig), key);
+                            if (sourceProp != null)
+                            {
+                                throw new YamlException(keyScalar.Start, keyScalar.End, 
+                                    $"Property '{key}' is not valid at this level. " +
+                                    $"Did you mean to put it inside a 'sources:' block?");
+                            }
+                            
+                            // Normal strict failure
+                            throw new YamlException(keyScalar.Start, keyScalar.End, 
+                                $"Unknown property '{key}' in filter clause.");
+                        }
+
+                        // Defer type coercion for properties that might use range syntax (int[])
+                        Type targetType = (prop.PropertyType == typeof(int[])) ? typeof(object) : prop.PropertyType;
+                        var nodeValue = objectFactory(reader, targetType);
                         entries[key] = nodeValue!;
                     }
                 }
@@ -152,6 +202,21 @@ namespace Motely.Filters.MotelyJson
 
             if (!entries.TryGetValue("type", out var typeValue) || typeValue == null)
             {
+                // For non-clause types (like SourcesConfig), create and populate normally
+                var obj = Activator.CreateInstance(expectedType);
+                if (obj != null)
+                {
+                    foreach (var entry in entries)
+                    {
+                        var prop = FindPropertyWithAlias(expectedType, entry.Key);
+                        if (prop != null && prop.CanWrite)
+                        {
+                            SetPropertyValue(prop, obj, entry.Value);
+                        }
+                    }
+                    value = obj;
+                    return true;
+                }
                 return false;
             }
 
@@ -325,18 +390,45 @@ namespace Motely.Filters.MotelyJson
             else if (property.PropertyType == typeof(int[]))
             {
                 int[]? intArray = null;
-                if (entryValue is object[] array)
+
+                // Handle Range Syntax: "1..3" or ["1..3", 5]
+                if (entryValue is string rangeStr && rangeStr.Contains(".."))
                 {
-                    // Zero-allocation: direct array allocation
-                    intArray = new int[array.Length];
-                    for (int i = 0; i < array.Length; i++)
-                        intArray[i] = Convert.ToInt32(array[i]);
+                    intArray = ParseRange(rangeStr);
+                }
+                else if (entryValue is object[] array)
+                {
+                    var resultList = new List<int>();
+                    foreach (var item in array)
+                    {
+                        var s = item?.ToString();
+                        if (s != null && s.Contains(".."))
+                        {
+                            resultList.AddRange(ParseRange(s));
+                        }
+                        else
+                        {
+                            resultList.Add(Convert.ToInt32(item));
+                        }
+                    }
+                    intArray = resultList.ToArray();
                 }
                 else if (entryValue is System.Collections.IList list)
                 {
-                    intArray = new int[list.Count];
-                    for (int i = 0; i < list.Count; i++)
-                        intArray[i] = Convert.ToInt32(list[i]);
+                    var resultList = new List<int>();
+                    foreach (var item in list)
+                    {
+                        var s = item?.ToString();
+                        if (s != null && s.Contains(".."))
+                        {
+                            resultList.AddRange(ParseRange(s));
+                        }
+                        else
+                        {
+                            resultList.Add(Convert.ToInt32(item));
+                        }
+                    }
+                    intArray = resultList.ToArray();
                 }
 
                 if (intArray != null)
@@ -410,6 +502,57 @@ namespace Motely.Filters.MotelyJson
                     property.SetValue(target, sourcesConfig);
                 }
             }
+        }
+
+        private static void MergeSources(SourcesConfig target, SourcesConfig source)
+        {
+            if (source.ShopSlots != null) target.ShopSlots = source.ShopSlots;
+            if (source.PackSlots != null) target.PackSlots = source.PackSlots;
+            if (source.MinShopSlot.HasValue) target.MinShopSlot = source.MinShopSlot;
+            if (source.MaxShopSlot.HasValue) target.MaxShopSlot = source.MaxShopSlot;
+            if (source.MinPackSlot.HasValue) target.MinPackSlot = source.MinPackSlot;
+            if (source.MaxPackSlot.HasValue) target.MaxPackSlot = source.MaxPackSlot;
+            if (source.Tags.HasValue) target.Tags = source.Tags;
+            if (source.RequireMega.HasValue) target.RequireMega = source.RequireMega;
+            if (source.Judgement != null) target.Judgement = source.Judgement;
+            if (source.Wraith != null) target.Wraith = source.Wraith;
+            if (source.RareTag != null) target.RareTag = source.RareTag;
+            if (source.UncommonTag != null) target.UncommonTag = source.UncommonTag;
+            if (source.RiffRaff != null) target.RiffRaff = source.RiffRaff;
+            if (source.PurpleSealOrEightBall != null) target.PurpleSealOrEightBall = source.PurpleSealOrEightBall;
+            if (source.Emperor != null) target.Emperor = source.Emperor;
+            if (source.SixthSense != null) target.SixthSense = source.SixthSense;
+            if (source.Seance != null) target.Seance = source.Seance;
+            if (source.UncommonShopJokers != null) target.UncommonShopJokers = source.UncommonShopJokers;
+            if (source.RareShopJokers != null) target.RareShopJokers = source.RareShopJokers;
+            if (source.CommonShopJokers != null) target.CommonShopJokers = source.CommonShopJokers;
+        }
+
+        private static int[] ParseRange(string range)
+        {
+            var parts = range.Split("..");
+            if (
+                parts.Length == 2
+                && int.TryParse(parts[0], out int start)
+                && int.TryParse(parts[1], out int end)
+            )
+            {
+                if (start <= end)
+                {
+                    var result = new int[end - start + 1];
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = start + i;
+                    return result;
+                }
+                else
+                {
+                    var result = new int[start - end + 1];
+                    for (int i = 0; i < result.Length; i++)
+                        result[i] = start - i;
+                    return result;
+                }
+            }
+            return Array.Empty<int>();
         }
     }
 }

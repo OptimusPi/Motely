@@ -154,6 +154,7 @@ public interface IMotelySearch : IDisposable
     public void AwaitCompletion();
     public void Pause();
     public void Cancel();
+    public void ForceProgressReport();
 }
 
 internal unsafe interface IInternalMotelySearch : IMotelySearch
@@ -162,11 +163,35 @@ internal unsafe interface IInternalMotelySearch : IMotelySearch
     internal int* PseudoHashKeyLengths { get; }
 }
 
+public interface IMotelySearchSettings
+{
+    IMotelySeedFilterDesc BaseFilterDescBase { get; }
+    IList<IMotelySeedFilterDesc>? AdditionalFilters { get; }
+    IMotelySearchSettings WithAdditionalFilter(IMotelySeedFilterDesc filterDesc);
+    IMotelySearchSettings WithThreadCount(int threadCount);
+    IMotelySearchSettings WithBatchCharacterCount(int batchCharacterCount);
+    IMotelySearchSettings WithStartBatchIndex(long startBatchIndex);
+    IMotelySearchSettings WithEndBatchIndex(long endBatchIndex);
+    IMotelySearchSettings WithSeedScoreProvider(IMotelySeedScoreDesc seedScoreDesc);
+    IMotelySearchSettings WithListSearch(IEnumerable<string> seeds, bool alreadySorted = false);
+    IMotelySearchSettings WithRandomSearch(int count);
+    IMotelySearchSettings WithProviderSearch(IMotelySeedProvider provider);
+    IMotelySearchSettings WithSequentialSearch();
+    IMotelySearchSettings WithDeck(MotelyDeck deck);
+    IMotelySearchSettings WithStake(MotelyStake stake);
+    IMotelySearchSettings WithProgressCallback(Action<MotelyProgress> callback);
+    IMotelySearchSettings WithCsvOutput(bool csvOutput);
+    IMotelySearchSettings WithQuietMode(bool quietMode);
+    IMotelySearch Start();
+}
+
 public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySeedFilterDesc<TBaseFilter> baseFilterDesc
-)
+) : IMotelySearchSettings
     where TBaseFilter : struct, IMotelySeedFilter
 {
+    // Interface implementation
+    IMotelySeedFilterDesc IMotelySearchSettings.BaseFilterDescBase => BaseFilterDesc;
     public int ThreadCount { get; set; } = Environment.ProcessorCount;
     public long StartBatchIndex { get; set; } = 0;
     public long EndBatchIndex { get; set; } = long.MaxValue;
@@ -248,6 +273,29 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         AdditionalFilters.Add(filterDesc);
         return this;
     }
+
+    // Explicit interface implementation for chaining
+    IMotelySearchSettings IMotelySearchSettings.WithAdditionalFilter(IMotelySeedFilterDesc filterDesc)
+    {
+        return WithAdditionalFilter(filterDesc);
+    }
+
+    // Explicit interface implementations for chaining
+    IMotelySearchSettings IMotelySearchSettings.WithThreadCount(int threadCount) => WithThreadCount(threadCount);
+    IMotelySearchSettings IMotelySearchSettings.WithBatchCharacterCount(int count) => WithBatchCharacterCount(count);
+    IMotelySearchSettings IMotelySearchSettings.WithStartBatchIndex(long index) => WithStartBatchIndex(index);
+    IMotelySearchSettings IMotelySearchSettings.WithEndBatchIndex(long index) => WithEndBatchIndex(index);
+    IMotelySearchSettings IMotelySearchSettings.WithSeedScoreProvider(IMotelySeedScoreDesc desc) => WithSeedScoreProvider(desc);
+    IMotelySearchSettings IMotelySearchSettings.WithListSearch(IEnumerable<string> seeds, bool alreadySorted) => WithListSearch(seeds, alreadySorted);
+    IMotelySearchSettings IMotelySearchSettings.WithRandomSearch(int count) => WithRandomSearch(count);
+    IMotelySearchSettings IMotelySearchSettings.WithProviderSearch(IMotelySeedProvider provider) => WithProviderSearch(provider);
+    IMotelySearchSettings IMotelySearchSettings.WithSequentialSearch() => WithSequentialSearch();
+    IMotelySearchSettings IMotelySearchSettings.WithDeck(MotelyDeck deck) => WithDeck(deck);
+    IMotelySearchSettings IMotelySearchSettings.WithStake(MotelyStake stake) => WithStake(stake);
+    IMotelySearchSettings IMotelySearchSettings.WithProgressCallback(Action<MotelyProgress> callback) => WithProgressCallback(callback);
+    IMotelySearchSettings IMotelySearchSettings.WithCsvOutput(bool csvOutput) => WithCsvOutput(csvOutput);
+    IMotelySearchSettings IMotelySearchSettings.WithQuietMode(bool quietMode) => WithQuietMode(quietMode);
+    IMotelySearch IMotelySearchSettings.Start() => Start();
 
     public MotelySearchSettings<TBaseFilter> WithSeedScoreProvider(
         IMotelySeedScoreDesc seedScoreDesc

@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Motely.Filters;
 
 namespace Motely.Tests
@@ -18,7 +19,12 @@ namespace Motely.Tests
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = null,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
         };
 
         [Fact]
@@ -26,17 +32,18 @@ namespace Motely.Tests
         {
             // Arrange
             var originalJson = File.ReadAllText(_testConfigPath);
-            var originalConfig = ConfigFormatConverter.LoadFromJsonString(originalJson);
+            var originalConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(originalJson, _jsonOptions);
+            originalConfig!.PostProcess();
 
             // Act - Convert to JAML and back
-            var jamlString = originalConfig!.SaveAsJaml();
+            var jamlString = JamlFormatter.Format(originalConfig);
             Assert.NotNull(jamlString);
             Assert.NotEmpty(jamlString);
 
-            var configFromJaml = ConfigFormatConverter.LoadFromJamlString(jamlString);
+            JamlConfigLoader.TryLoadFromJamlString(jamlString, out var configFromJaml, out _);
             Assert.NotNull(configFromJaml);
 
-            var backToJson = configFromJaml.SaveAsJson();
+            var backToJson = JsonSerializer.Serialize(configFromJaml, _jsonOptions);
             Assert.NotNull(backToJson);
 
             // Assert - Compare configs deeply
@@ -66,24 +73,26 @@ namespace Motely.Tests
         {
             // Arrange - First create a JAML from our test JSON
             var originalJson = File.ReadAllText(_testConfigPath);
-            var jsonConfig = ConfigFormatConverter.LoadFromJsonString(originalJson);
-            var originalJaml = jsonConfig!.SaveAsJaml();
+            var jsonConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(originalJson, _jsonOptions);
+            jsonConfig!.PostProcess();
+            var originalJaml = JamlFormatter.Format(jsonConfig);
 
-            var originalConfig = ConfigFormatConverter.LoadFromJamlString(originalJaml);
+            JamlConfigLoader.TryLoadFromJamlString(originalJaml, out var originalConfig, out _);
             Assert.NotNull(originalConfig);
 
             // Act - Convert to JSON and back to JAML
-            var jsonString = originalConfig.SaveAsJson();
+            var jsonString = JsonSerializer.Serialize(originalConfig, _jsonOptions);
             Assert.NotNull(jsonString);
 
-            var configFromJson = ConfigFormatConverter.LoadFromJsonString(jsonString);
+            var configFromJson = JsonSerializer.Deserialize<MotelyJsonConfig>(jsonString, _jsonOptions);
+            configFromJson!.PostProcess();
             Assert.NotNull(configFromJson);
 
-            var backToJaml = configFromJson.SaveAsJaml();
+            var backToJaml = JamlFormatter.Format(configFromJson);
             Assert.NotNull(backToJaml);
 
             // Assert
-            AssertConfigsEqual(originalConfig, configFromJson, "JAML→JSON→JAML");
+            AssertConfigsEqual(originalConfig!, configFromJson!, "JAML→JSON→JAML");
 
             // Check critical properties survived
         }
@@ -114,16 +123,16 @@ should:
 ";
 
             // Act - Load JAML with anchors
-            var config = ConfigFormatConverter.LoadFromJamlString(jamlWithAnchors);
+            JamlConfigLoader.TryLoadFromJamlString(jamlWithAnchors, out var config, out _);
             Assert.NotNull(config);
-            Assert.NotNull(config.Must);
+            Assert.NotNull(config!.Must);
             Assert.True(
                 config.Must.Count >= 2,
                 $"Expected at least 2 Must clauses, got {config.Must.Count}"
             );
 
             // Convert to JSON (anchors should expand to full values)
-            var jsonString = config.SaveAsJson();
+            var jsonString = JsonSerializer.Serialize(config, _jsonOptions);
             Assert.NotNull(jsonString);
             Assert.NotEmpty(jsonString);
 
@@ -132,7 +141,8 @@ should:
             Assert.DoesNotContain("*EARLY_GAME", jsonString);
 
             // Load back from JSON
-            var configFromJson = ConfigFormatConverter.LoadFromJsonString(jsonString);
+            var configFromJson = JsonSerializer.Deserialize<MotelyJsonConfig>(jsonString, _jsonOptions);
+            configFromJson!.PostProcess();
             Assert.NotNull(configFromJson);
 
             // Assert - All antes arrays should have the same expanded values
@@ -146,10 +156,10 @@ should:
             Assert.Equal(new[] { 1, 2, 3 }, configFromJson.Should[0].Antes);
 
             // Round-trip back to JAML should also work
-            var backToJaml = configFromJson.SaveAsJaml();
+            var backToJaml = JamlFormatter.Format(configFromJson);
             Assert.NotNull(backToJaml);
 
-            var finalConfig = ConfigFormatConverter.LoadFromJamlString(backToJaml);
+            JamlConfigLoader.TryLoadFromJamlString(backToJaml, out var finalConfig, out _);
             Assert.Equal(3, finalConfig!.Must![0].Antes!.Length);
         }
 
@@ -158,50 +168,53 @@ should:
         {
             // Arrange - Start with JSON
             var originalJson = File.ReadAllText(_testConfigPath);
-            var originalConfig = ConfigFormatConverter.LoadFromJsonString(originalJson);
+            var originalConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(originalJson, _jsonOptions);
+            originalConfig!.PostProcess();
             Assert.NotNull(originalConfig);
 
             // Step 1: JSON -> JAML
-            var jaml1 = originalConfig!.SaveAsJaml();
+            var jaml1 = JamlFormatter.Format(originalConfig);
             Assert.NotNull(jaml1);
             Assert.NotEmpty(jaml1);
 
-            var config1 = ConfigFormatConverter.LoadFromJamlString(jaml1);
+            JamlConfigLoader.TryLoadFromJamlString(jaml1, out var config1, out _);
             Assert.NotNull(config1);
-            AssertConfigsEqual(originalConfig, config1!, "JSON→JAML (Step 1)");
+            AssertConfigsEqual(originalConfig!, config1!, "JSON→JAML (Step 1)");
 
             // Step 2: JAML -> JSON
-            var json2 = config1!.SaveAsJson();
+            var json2 = JsonSerializer.Serialize(config1, _jsonOptions);
             Assert.NotNull(json2);
             Assert.NotEmpty(json2);
 
-            var config2 = ConfigFormatConverter.LoadFromJsonString(json2);
+            var config2 = JsonSerializer.Deserialize<MotelyJsonConfig>(json2, _jsonOptions);
+            config2!.PostProcess();
             Assert.NotNull(config2);
             AssertConfigsEqual(originalConfig, config2!, "JAML→JSON (Step 2)");
 
             // Step 3: JSON -> JAML (again)
-            var jaml3 = config2!.SaveAsJaml();
+            var jaml3 = JamlFormatter.Format(config2);
             Assert.NotNull(jaml3);
             Assert.NotEmpty(jaml3);
 
-            var config3 = ConfigFormatConverter.LoadFromJamlString(jaml3);
+            JamlConfigLoader.TryLoadFromJamlString(jaml3, out var config3, out _);
             Assert.NotNull(config3);
             AssertConfigsEqual(originalConfig, config3!, "JSON→JAML (Step 3)");
 
             // Step 4: JAML -> JSON (again)
-            var json4 = config3!.SaveAsJson();
+            var json4 = JsonSerializer.Serialize(config3, _jsonOptions);
             Assert.NotNull(json4);
             Assert.NotEmpty(json4);
 
-            var config4 = ConfigFormatConverter.LoadFromJsonString(json4);
+            var config4 = JsonSerializer.Deserialize<MotelyJsonConfig>(json4, _jsonOptions);
+            config4!.PostProcess();
             Assert.NotNull(config4);
             AssertConfigsEqual(originalConfig, config4!, "JAML→JSON (Step 4)");
 
             // Final verification: All configs should be equivalent
-            AssertConfigsEqual(config1, config2, "Config1 vs Config2");
-            AssertConfigsEqual(config2, config3, "Config2 vs Config3");
-            AssertConfigsEqual(config3, config4, "Config3 vs Config4");
-            AssertConfigsEqual(config1, config4, "Config1 vs Config4");
+            AssertConfigsEqual(config1!, config2!, "Config1 vs Config2");
+            AssertConfigsEqual(config2!, config3!, "Config2 vs Config3");
+            AssertConfigsEqual(config3!, config4!, "Config3 vs Config4");
+            AssertConfigsEqual(config1!, config4!, "Config1 vs Config4");
         }
 
         private void AssertConfigsEqual(

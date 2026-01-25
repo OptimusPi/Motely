@@ -742,80 +742,30 @@ Return ONLY the cleaned, refined prompt with no explanations or markdown:";
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
-        // Remove markdown code blocks (```yaml ... ``` or ``` ... ```)
-        text = System.Text.RegularExpressions.Regex.Replace(
-            text,
-            @"^```(?:yaml|yml|jaml)?\s*\n?",
-            "",
-            System.Text.RegularExpressions.RegexOptions.Multiline
-        );
-        text = System.Text.RegularExpressions.Regex.Replace(
-            text,
-            @"\n?```\s*$",
-            "",
-            System.Text.RegularExpressions.RegexOptions.Multiline
-        );
-
-        // Remove JSON wrapper if AI returned {"success":true,"jaml":"..."}
-        if (text.TrimStart().StartsWith("{") && text.Contains("\"jaml\""))
+        // 1. Strip JSON wrapper if present (Cloudflare Workers often wrap)
+        if (text.TrimStart().StartsWith("{"))
         {
             try
             {
                 var parsed = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(text);
-                if (
-                    parsed.TryGetProperty("jaml", out var jamlProp)
-                    && jamlProp.ValueKind == JsonValueKind.String
-                )
-                {
-                    text = jamlProp.GetString() ?? text;
-                }
+                if (parsed.TryGetProperty("jaml", out var jamlProp)) return jamlProp.GetString() ?? text;
+                if (parsed.TryGetProperty("text", out var textProp)) return textProp.GetString() ?? text;
             }
-            catch
-            {
-                // Not valid JSON, continue with original
-            }
+            catch { /* Skip and try regex */ }
         }
 
-        // Find YAML content (starts with "name:" or "deck:" or "must:")
-        var yamlMatch = System.Text.RegularExpressions.Regex.Match(
-            text,
-            @"(?:^|\n)(name:|deck:|must:|should:|mustNot:)",
-            System.Text.RegularExpressions.RegexOptions.Multiline
-        );
-        if (yamlMatch.Success && yamlMatch.Index > 0)
+        // 2. Remove ANY markdown code blocks
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"^```[^\n]*\n", "", System.Text.RegularExpressions.RegexOptions.Multiline);
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\n```\s*$", "", System.Text.RegularExpressions.RegexOptions.Multiline);
+        
+        // 3. Find the first YAML-like key (name:, must:, jokers:, etc) and prune everything before
+        var startMatch = System.Text.RegularExpressions.Regex.Match(text, @"(?m)^(name|description|author|deck|stake|must|should|mustNot):");
+        if (startMatch.Success && startMatch.Index > 0)
         {
-            text = text.Substring(yamlMatch.Index);
+            text = text.Substring(startMatch.Index);
         }
 
-        // Remove trailing explanation text (anything after blank line + non-YAML)
-        var lines = text.Split('\n');
-        int yamlEnd = lines.Length;
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (string.IsNullOrWhiteSpace(lines[i]) && i > 0)
-            {
-                // Check if next line looks like YAML
-                if (i + 1 < lines.Length)
-                {
-                    var nextLine = lines[i + 1];
-                    if (
-                        !string.IsNullOrWhiteSpace(nextLine)
-                        && !System.Text.RegularExpressions.Regex.IsMatch(
-                            nextLine,
-                            @"^[\w-]+:|^[\s]*-[\s]*(joker|voucher|tarot|planet|spectral|soulJoker|tag|boss|playingCard|event|and|or):",
-                            System.Text.RegularExpressions.RegexOptions.IgnoreCase
-                        )
-                    )
-                    {
-                        yamlEnd = i;
-                        break;
-                    }
-                }
-            }
-        }
-        text = string.Join("\n", lines.Take(yamlEnd)).Trim();
-
-        return text;
+        return text.Trim();
     }
 
     public string GetSystemPrompt()
@@ -915,12 +865,15 @@ deck: Red
 stake: White
 must:
   - joker: Blueprint
-    antes: [1, 2, 3]
+    antes: 1..3  # USE RANGE SYNTAX!
 should:
   - joker: LuckyCat
     score: 1
 mustNot:
   - joker: Showman
+sources:
+  - judgement: [0]
+    antes: 1
 ```
 
 EXAMPLES:

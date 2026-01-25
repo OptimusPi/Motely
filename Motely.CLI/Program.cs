@@ -1,7 +1,6 @@
 using DuckDB.NET.Data;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-using Motely.API;
 using Motely.DuckDB;
 using Motely.Executors;
 using Motely.Filters;
@@ -284,31 +283,32 @@ namespace Motely
                     return (progress) =>
                     {
                         var now = DateTime.UtcNow;
-                        lock (lockObj)
+                        
+                        // Benign race condition on throttling is acceptable for console output
+                        if ((now - lastReportTime).TotalSeconds < 2.0 && batchOneReported)
+                            return;
+
+                        if (progress.TotalBatchCount <= 0) return;
+
+                        double progressPercent = progress.PercentComplete;
+                        if (progressPercent > 100.0) progressPercent = 100.0;
+
+                        // Determine reporting threshold
+                        double threshold = progressPercent < 0.1 ? 0.001 : progressPercent < 1.0 ? 0.01 : 0.1;
+                        double nextThreshold = (Math.Floor(lastReportedPercent / threshold) + 1) * threshold;
+
+                        // Only report if crossed threshold or enough time elapsed
+                        if (progressPercent >= nextThreshold || (now - lastReportTime).TotalSeconds > 10.0)
                         {
-                            // Throttle: Max one update every 2 seconds
-                            if ((now - lastReportTime).TotalSeconds < 2.0 && batchOneReported)
-                                return;
+                            var timeStr = progress.ElapsedTime.TotalSeconds < 60
+                                ? $"{progress.ElapsedTime.TotalSeconds:F1}s"
+                                : $"{progress.ElapsedTime.TotalMinutes:F1}m";
 
-                            if (progress.TotalBatchCount <= 0) return;
-
-                            double progressPercent = progress.PercentComplete;
-                            if (progressPercent > 100.0) progressPercent = 100.0;
-
-                            // Determine reporting threshold
-                            double threshold = progressPercent < 0.1 ? 0.001 : progressPercent < 1.0 ? 0.01 : 0.1;
-                            double nextThreshold = (Math.Floor(lastReportedPercent / threshold) + 1) * threshold;
-
-                            if (progressPercent >= nextThreshold || (now - lastReportTime).TotalSeconds > 10.0)
-                            {
-                                var timeStr = progress.ElapsedTime.TotalSeconds < 60
-                                    ? $"{progress.ElapsedTime.TotalSeconds:F1}s"
-                                    : $"{progress.ElapsedTime.TotalMinutes:F1}m";
-
-                                Console.WriteLine($"   ◸ {progressPercent:F4}% complete ({progress.CompletedBatchCount:N0}/{progress.TotalBatchCount:N0} batches) - {timeStr} elapsed");
-                                lastReportedPercent = progressPercent;
-                                lastReportTime = now;
-                            }
+                            Console.WriteLine($"   ◸ {progressPercent:F4}% complete ({progress.CompletedBatchCount:N0}/{progress.TotalBatchCount:N0} batches) - {timeStr} elapsed");
+                            lastReportedPercent = progressPercent;
+                            lastReportTime = now;
+                            if (!batchOneReported && progress.CompletedBatchCount > 0)
+                                batchOneReported = true;
                         }
                     };
                 }
@@ -359,20 +359,9 @@ namespace Motely
                 long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
 
                 // Convert startSeed to batch if specified
-                if (startSeedOption.HasValue())
-                {
-                    string startSeed = startSeedOption.Value()!.ToUpperInvariant();
-                    long batchNum = ConvertSeedToBatch(startSeed, parameters.BatchSize);
-                    parameters.StartBatch = (ulong)batchNum;
-                    if (!parameters.Quiet)
-                    {
-                        Console.WriteLine(
-                            $"📍 Starting at seed '{startSeed}' = batch {parameters.StartBatch:N0}"
-                        );
-                    }
-                }
+
                 // Convert percent to batch if specified (keyword/startSeed take priority)
-                else if (startPercentOption.HasValue())
+                if (startPercentOption.HasValue())
                 {
                     double startPct = startPercentOption.ParsedValue;
                     if (startPct < 0 || startPct > 100)
@@ -433,430 +422,96 @@ namespace Motely
                     return 1;
                 }
 
+                // Determine output paths
+                string? dbPath = outputDbOption.Value();
+                string? csvPath = outputCsvOption.Value();
+                string? configName = jamlOption.HasValue() ? jamlOption.Value() : (jsonOption.Value() ?? "standard");
+
                 // Check which mode to run
                 var nativeFilter = nativeOption.Value();
-                if (!string.IsNullOrEmpty(nativeFilter))
+
+                if (saveOption.HasValue())
                 {
-                    // Native filter mode
-                    var scoreConfig = scoreOption.Value();
-
-                    // Parse cutoff for native filters with scoring or CSV scoring
-                    if (!string.IsNullOrEmpty(scoreConfig))
-                    {
-                        var cutoffStr = (cutoffOption.Value() ?? "0").ToLowerInvariant();
-                        if (cutoffStr == "auto")
-                        {
-                            parameters.AutoCutoff = true;
-                            parameters.CutoffMode = ScoreCutoffMode.AutoSmart;
-                            parameters.Cutoff = 0;
-                        }
-                        else if (cutoffStr == "best")
-                        {
-                            parameters.AutoCutoff = true;
-                            parameters.CutoffMode = ScoreCutoffMode.AutoBest;
-                            parameters.Cutoff = 0;
-                        }
-                        else if (int.TryParse(cutoffStr, out var c))
-                        {
-                            parameters.AutoCutoff = false;
-                            parameters.Cutoff = c;
-                        }
-                        else
-                        {
-                            parameters.AutoCutoff = false;
-                            parameters.Cutoff = 0;
-                        }
-                    }
-
-                    var executor = new NativeFilterExecutor(nativeFilter, parameters, scoreConfig);
-                    return executor.Execute();
+                    Directory.CreateDirectory("SearchResults");
+                    var filterId = System.Text.RegularExpressions.Regex.Replace(
+                        configName ?? "search",
+                        "[^a-zA-Z0-9_-]",
+                        "_"
+                    ).ToLowerInvariant();
+                    dbPath = $"SearchResults/{filterId}.db";
                 }
-                else
+
+                parameters.OutputDbPath = dbPath;
+
+                // Setup CSV output if requested
+                StreamWriter? csvWriter = null;
+                if (!string.IsNullOrEmpty(csvPath))
                 {
-                    // Config file mode (JSON/JAML)
-                    var cutoffStr = (cutoffOption.Value() ?? "0").ToLowerInvariant();
-                    if (cutoffStr == "auto")
+                    if (!parameters.Quiet)
+                        Console.WriteLine($"💾 Writing results to CSV: {csvPath}");
+                    
+                    csvWriter = new StreamWriter(csvPath, false, Encoding.UTF8);
+                    // Header will be printed by the executor inside the orchestrator
+                    // But we need to handle the writing of rows if we want it in CSV.
+                    // The Orchestrator's Launch method takes a resultCallback.
+                }
+
+                int exitCode = 0;
+                try
+                {
+                    IMotelySearch search;
+                    Action<MotelySeedScoreTally> resultCallback = (result) =>
                     {
-                        parameters.AutoCutoff = true;
-                        parameters.CutoffMode = ScoreCutoffMode.AutoSmart;
-                        parameters.Cutoff = 0;
-                    }
-                    else if (cutoffStr == "best")
-                    {
-                        parameters.AutoCutoff = true;
-                        parameters.CutoffMode = ScoreCutoffMode.AutoBest;
-                        parameters.Cutoff = 0;
-                    }
-                    else if (int.TryParse(cutoffStr, out var c))
-                    {
-                        parameters.AutoCutoff = false;
-                        parameters.Cutoff = c;
-                    }
-                    else
-                    {
-                        parameters.AutoCutoff = false;
-                        parameters.Cutoff = 0;
-                    }
-
-                    // Determine which config format
-                    string? configName = null;
-                    string? configFormat = null;
-
-                    if (jamlOption.HasValue())
-                    {
-                        configName = jamlOption.Value();
-                        configFormat = "jaml";
-                    }
-                    else
-                    {
-                        configName = jsonOption.Value() ?? "standard";
-                        configFormat = "json";
-                    }
-
-                    // Setup output (DuckDB and/or CSV)
-                    Action<MotelySeedScoreTally>? dbCallback = null;
-                    Action<MotelySeedScoreTally>? bulkCallback = null;
-                    MotelySearchDatabase? db = null;
-                    StreamWriter? csvWriter = null;
-                    List<string>? csvColumnNames = null;
-                    long seedsFound = 0;
-
-                    // Handle --save flag: auto-generate filenames in SearchResults/
-                    string? dbPath = outputDbOption.Value();
-                    string? csvPath = outputCsvOption.Value();
-
-                    if (saveOption.HasValue())
-                    {
-                        // Create SearchResults directory if needed
-                        Directory.CreateDirectory("SearchResults");
-
-                        // Use filter name as ID (same as SearchManager does)
-                        var filterId = System.Text.RegularExpressions.Regex.Replace(
-                            configName ?? "search",
-                            "[^a-zA-Z0-9_-]",
-                            "_"
-                        ).ToLowerInvariant();
-
-                        dbPath = $"SearchResults/{filterId}.db";
-                    }
-
-                    // Console output (no dedupe needed—batches are disjoint)
-                    Action<MotelySeedScoreTally> consoleCallback = (result) =>
-                    {
-                        if (parameters.Quiet)
-                            return;
-
-                        FancyConsole.WriteLine(
-                            TallyColorizer.FormatResultLine(
-                                result.Seed,
-                                result.Score,
-                                result.TallyColumns
-                            )
-                        );
-                    };
-
-                    // Setup DB output if requested
-                    if (outputDbOption.HasValue() || dbPath != null)
-                    {
-                        if (outputDbOption.HasValue())
-                            dbPath = outputDbOption.Value()!;
-
-                        if (string.IsNullOrWhiteSpace(dbPath))
-                        {
-                            Console.WriteLine("❌ Error: --output-db requires a database path");
-                            return 1;
-                        }
-
-                        // Load config to get column names upfront
-                        MotelyJsonConfig? config = null;
-                        if (configFormat == "jaml")
-                        {
-                            string jamlPath = Path.Combine("JamlFilters", configName! + ".jaml");
-                            if (!File.Exists(jamlPath))
-                            {
-                                jamlPath = configName!; // Try as absolute path
-                            }
-                            if (
-                                !JamlConfigLoader.TryLoadFromJaml(
-                                    jamlPath,
-                                    out config,
-                                    out var error
-                                )
-                            )
-                            {
-                                Console.WriteLine($"❌ Error loading JAML config: {error}");
-                                return 1;
-                            }
-                        }
-                        else
-                        {
-                            string jsonPath = Path.Combine("JsonFilters", configName! + ".json");
-                            if (!File.Exists(jsonPath))
-                            {
-                                jsonPath = configName!; // Try as absolute path
-                            }
-                            if (!MotelyJsonConfig.TryLoadFromJsonFile(jsonPath, out config))
-                            {
-                                Console.WriteLine($"❌ Error loading JSON config: {jsonPath}");
-                                return 1;
-                            }
-                        }
-
-                        if (config == null)
-                        {
-                            Console.WriteLine("❌ Error: Failed to load config");
-                            return 1;
-                        }
-
-                        // Get column names from config
-                        var columnNames = config.GetColumnNames();
-                        db = new MotelySearchDatabase(dbPath, columnNames);
-
-                        if (!parameters.Quiet)
-                        {
-                            Console.WriteLine($"💾 Writing results to: {dbPath}");
-                        }
-
-                        // Direct DB callback (no queue)
-                        dbCallback = (result) =>
-                        {
-                            consoleCallback(result);
-                            try
-                            {
-                                db?.InsertRow(result.Seed, result.Score, result.TallyColumns);
-                                seedsFound++;
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.Error.WriteLine($"❌ Failed to write seed {result.Seed} to database: {ex.Message}");
-                                throw;
-                            }
-                        };
-
-                        // Bulk insert buffer for SpannableArray
-                        var bulkBuffer = new List<(string seed, int score)>();
-                        const int BULK_SIZE = 1000;
-
-                        bulkCallback = (result) =>
-                        {
-                            consoleCallback(result);
-                            bulkBuffer.Add((result.Seed, result.Score));
-                            seedsFound++;
-
-                            if (bulkBuffer.Count >= BULK_SIZE)
-                            {
-                                try
-                                {
-                                    var array = bulkBuffer.ToArray();
-                                    db?.InsertBulk(array.AsSpan());
-                                    bulkBuffer.Clear();
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.Error.WriteLine($"❌ Failed bulk insert: {ex.Message}");
-                                    throw;
-                                }
-                            }
-                        };
-                    }
-
-                    // Combine callbacks if both CSV and DB are requested
-                    if (csvWriter != null && dbCallback != null)
-                    {
-                        var originalDbCallback = dbCallback;
-                        dbCallback = (result) =>
-                        {
-                            consoleCallback(result);
-                            // Write to CSV
-                            if (csvColumnNames != null && csvColumnNames.Count > 0)
-                            {
-                                var values = new List<string>
-                                {
-                                    $"\"{result.Seed}\"",
-                                    result.Score.ToString(),
-                                };
-                                for (int i = 2; i < csvColumnNames.Count; i++)
-                                {
-                                    int tallyIndex = i - 2;
-                                    int tallyValue =
-                                        (tallyIndex < result.TallyColumns.Count)
-                                            ? result.TallyColumns[tallyIndex]
-                                            : 0;
-                                    values.Add(tallyValue.ToString());
-                                }
-                                csvWriter.WriteLine(string.Join(",", values));
-                                csvWriter.Flush();
-                            }
-                            // Write to DB
-                            originalDbCallback(result);
-                        };
-                    }
-                    else if (csvWriter != null)
-                    {
-                        // CSV only
-                        dbCallback = (result) =>
-                        {
-                            consoleCallback(result);
-                            if (csvColumnNames != null && csvColumnNames.Count > 0)
-                            {
-                                var values = new List<string>
-                                {
-                                    $"\"{result.Seed}\"",
-                                    result.Score.ToString(),
-                                };
-                                for (int i = 2; i < csvColumnNames.Count; i++)
-                                {
-                                    int tallyIndex = i - 2;
-                                    int tallyValue =
-                                        (tallyIndex < result.TallyColumns.Count)
-                                            ? result.TallyColumns[tallyIndex]
-                                            : 0;
-                                    values.Add(tallyValue.ToString());
-                                }
-                                csvWriter.WriteLine(string.Join(",", values));
-                                csvWriter.Flush();
-                                seedsFound++;
-                                if (seedsFound == 1 && !parameters.Quiet)
-                                    Console.Error.WriteLine(
-                                        "✅ Found first matching seed (writing to CSV)..."
-                                    );
-                            }
-                        };
-                    }
-
-                    // Handle dungmot GPU acceleration if requested
-                    DungmotSeedProvider? dungmotProvider = null;
-                    if (dungmotOption.HasValue() && configFormat == "jaml")
-                    {
-                        // Load JAML to get MotelyRunConfig for translation
-                        string jamlPath = Path.Combine("JamlFilters", configName! + ".jaml");
-                        if (!File.Exists(jamlPath))
-                            jamlPath = configName!;
-
-                        if (JamlConfigLoader.TryLoadFromJaml(jamlPath, out var jamlConfig, out var jamlError) && jamlConfig != null)
-                        {
-                            var runConfig = jamlConfig.ToRunConfig();
-                            var dungmotOptions = new DungmotOptions
-                            {
-                                ExecutablePath = dungmotPathOption.HasValue() ? dungmotPathOption.Value() : null,
-                                StartBatch = (long)parameters.StartBatch,
-                                EndBatch = (long)parameters.EndBatch,
-                                BatchChars = parameters.BatchSize
-                            };
-
-                            var dungmotConfig = DungmotFilterTranslator.TryTranslate(runConfig, dungmotOptions);
-                            if (dungmotConfig != null)
-                            {
-                                if (!parameters.Quiet)
-                                {
-                                    Console.WriteLine($"🚀 GPU Mode: {DungmotFilterTranslator.DescribeFilter(dungmotConfig)}");
-                                    Console.WriteLine($"   Executable: {dungmotConfig.ExecutablePath}");
-                                    Console.WriteLine($"   Args: {dungmotConfig.ToArgumentString()}");
-                                }
-
-                                try
-                                {
-                                    dungmotProvider = new DungmotSeedProvider(dungmotConfig);
-                                    // NOTE: For now, dungmot streams seeds but we don't yet pipe them to the search
-                                    // Future: parameters.SeedProvider = dungmotProvider or similar
-                                    Console.WriteLine("⚠️  GPU streaming mode not yet fully integrated with search pipeline.");
-                                    Console.WriteLine("   Seeds will be generated but not fed to scoring (coming soon!)");
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.Error.WriteLine($"❌ Failed to start dungmot: {ex.Message}");
-                                    Console.Error.WriteLine("   Falling back to CPU-only search...");
-                                    dungmotProvider = null;
-                                }
-                            }
-                            else
-                            {
-                                if (!parameters.Quiet)
-                                {
-                                    Console.WriteLine("⚠️  No dungmot-compatible filter found in JAML.");
-                                    Console.WriteLine("   Dungmot supports: negative jokers, soul jokers, negative tags.");
-                                    Console.WriteLine("   Falling back to CPU-only search...");
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Console.Error.WriteLine($"❌ Failed to load JAML for dungmot translation: {jamlError}");
-                        }
-                    }
-                    else if (dungmotOption.HasValue() && configFormat != "jaml")
-                    {
-                        Console.Error.WriteLine("⚠️  --dungmot currently only supports JAML configs (not JSON)");
-                    }
-
-                    var executor = new JsonSearchExecutor(
-                        configName!,
-                        parameters,
-                        configFormat,
-                        bulkCallback ?? dbCallback
-                    );
-                    int exitCode = 0;
-                    try
-                    {
-                        exitCode = executor.Execute();
-                    }
-                    finally
-                    {
-                        // CRITICAL: Always flush DuckDB on exit (normal or cancelled) to prevent WAL files
-                        if (db != null)
-                        {
-                            try
-                            {
-                                db.Checkpoint();
-
-                                // Create indexes after search completes (deferred to avoid write conflicts)
-                                db.CreateIndexes();
-
-                                if (!parameters.Quiet)
-                                {
-                                    var actualCount = db.GetResultCount();
-                                    Console.WriteLine(
-                                        $"💾 Total seeds saved to database: {actualCount} (verified)"
-                                    );
-                                    if (seedsFound != actualCount)
-                                    {
-                                        Console.Error.WriteLine(
-                                            $"⚠️  WARNING: Expected {seedsFound} seeds but database contains {actualCount}!"
-                                        );
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.Error.WriteLine($"❌ [CRITICAL] DuckDB checkpoint failed: {ex.Message}");
-                            }
-                        }
-
-                        // Flush and close CSV
                         if (csvWriter != null)
                         {
-                            try
-                            {
-                                csvWriter.Flush();
-                                csvWriter.Close();
-                                Console.WriteLine($"💾 Total seeds saved to CSV: {seedsFound}");
-
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.Error.WriteLine($"❌ [CRITICAL] CSV write failed: {ex.Message}");
-                            }
+                            var values = new List<string> { $"\"{result.Seed}\"", result.Score.ToString() };
+                            values.AddRange(result.TallyColumns.Select(t => t.ToString()));
+                            csvWriter.WriteLine(string.Join(",", values));
                         }
+                    };
 
-                        // Clean up dungmot provider
-                        dungmotProvider?.Dispose();
+                    if (!string.IsNullOrEmpty(nativeFilter))
+                    {
+                        search = MotelySearchOrchestrator.LaunchNative(nativeFilter, parameters, scoreOption.Value());
+                    }
+                    else
+                    {
+                        if (jamlOption.HasValue())
+                        {
+                            search = MotelySearchOrchestrator.LaunchJaml(jamlOption.Value()!, parameters, resultCallback);
+                        }
+                        else
+                        {
+                            search = MotelySearchOrchestrator.LaunchJson(jsonOption.Value() ?? "standard", parameters, resultCallback);
+                        }
                     }
 
-                    // Dispose database connection
-                    db?.Dispose();
-
-                    return exitCode;
+                    search.Start();
+                    while (search.Status == MotelySearchStatus.Running || search.Status == MotelySearchStatus.Paused)
+                    {
+                        if (parameters.CancellationToken?.IsCancellationRequested == true)
+                            break;
+                        Thread.Sleep(100);
+                    }
+                    search.Dispose();
                 }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"❌ Search failed: {ex.Message}");
+                    if (parameters.EnableDebug)
+                        Console.Error.WriteLine(ex.StackTrace);
+                    exitCode = 1;
+                }
+                finally
+                {
+                    if (csvWriter != null)
+                    {
+                        csvWriter.Flush();
+                        csvWriter.Close();
+                    }
+                }
+
+                return exitCode;
             });
 
             try
@@ -1067,6 +722,8 @@ namespace Motely
             char[] validChars
         )
         {
+            if (validChars == null) throw new ArgumentNullException(nameof(validChars));
+
             if (padLen <= 0)
             {
                 yield return keyword;

@@ -10,7 +10,7 @@ namespace Motely.Filters;
 public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 {
     public int Score { get; set; } // Made mutable for easier scoring logic
-    public string Seed { get; }
+    public string Seed { get; set; }
 
     private fixed int _tallyValues[1024];
     private int _tallyCount;
@@ -104,17 +104,27 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     /// Get all column values as strings (for CSV export)
     /// Returns null for columns that have integer values (backward compatibility)
     /// </summary>
-    public List<string?>? ColumnValues
+    /// <summary>
+    /// Get all column values as unified strings (for CSV export/Display)
+    /// Merges explicit string values with integer tallies
+    /// </summary>
+    public List<string?> ColumnValues
     {
         get
         {
-            if (_columnValues == null)
-                return null;
-
             var list = new List<string?>(_tallyCount);
             for (int i = 0; i < _tallyCount; i++)
             {
-                list.Add(_columnValues[i]);
+                // Prioritize explicit string value if it exists
+                if (_columnValues != null && i < _columnValues.Length && _columnValues[i] != null)
+                {
+                    list.Add(_columnValues[i]);
+                }
+                // Otherwise use the integer tally value
+                else
+                {
+                    list.Add(_tallyValues[i].ToString());
+                }
             }
             return list;
         }

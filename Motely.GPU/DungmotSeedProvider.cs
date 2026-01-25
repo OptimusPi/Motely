@@ -106,8 +106,22 @@ public sealed class DungmotSeedProvider : IMotelySeedProvider, IDisposable
                     return ReadOnlySpan<char>.Empty;
                 }
 
+                // Handle format: |SEED,SCORE
+                if (line.StartsWith("|"))
+                {
+                    int commaIndex = line.IndexOf(',');
+                    if (commaIndex > 1)
+                    {
+                        line = line.Substring(1, commaIndex - 1);
+                    }
+                    else
+                    {
+                        line = line.Substring(1);
+                    }
+                }
+
                 _seedCount++;
-                return line.AsSpan();
+                return line.Trim().AsSpan();
             }
             catch (Exception)
             {
