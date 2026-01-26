@@ -60,3 +60,5 @@ Motely/tui.json
 mcp-config.json
 *.txt
 /vue-jaml-ui/dist
+/vue-jaml-ui/dist/assets
+/publish-wasm

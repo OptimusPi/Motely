@@ -169,8 +169,10 @@ public static class MotelyApiHost
                                     ctx.Context.Response.Headers.Append("Content-Encoding", "gzip");
                                 }
                             }
-                            // CORS headers for all static files
+                            // CORS and WASM Multithreading headers for all static files
                             ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                            ctx.Context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin");
+                            ctx.Context.Response.Headers.Append("Cross-Origin-Embedder-Policy", "require-corp");
                         }
                         catch { }
                     },
@@ -198,6 +200,8 @@ public static class MotelyApiHost
                         try
                         {
                             ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                            ctx.Context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin");
+                            ctx.Context.Response.Headers.Append("Cross-Origin-Embedder-Policy", "require-corp");
                         }
                         catch { }
                     },

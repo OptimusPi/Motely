@@ -1,7 +1,8 @@
 using DuckDB.NET.Data;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-using Motely.DuckDB;
+using Motely.Orchestration;
+using DuckSeedStorage = global::Motely.DuckDB.DuckDBSeedStorage;
 using Motely.Executors;
 using Motely.Filters;
 using Motely.GPU;
@@ -687,11 +688,11 @@ namespace Motely
 
             // Generate all combinations - yield directly, no materialization!
             var seeds = GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars);
-            var count = 
+            var count = GetCountOfSeeds(keyword, maxPad, validChars.Length);
             if (!quiet)
             {
                 Console.WriteLine(
-                    $"🔧 Generated {seeds.Count()} seeds containing '{keyword}'"
+                    $"🔧 Generated {count:N0} seeds containing '{keyword}'"
                 );
             }
 
@@ -898,6 +899,26 @@ namespace Motely
         /// <summary>
         /// Save generated seeds to DuckDB file
         /// </summary>
+        private static long GetCountOfSeeds(string keyword, int maxPad, int validCharCount)
+        {
+            long total = 1; // The keyword itself
+
+            // Formula: sum( (padLen + 1) * N^padLen ) for padLen 1 to maxPad
+            // where N is validCharCount
+            
+            for (int padLen = 1; padLen <= maxPad; padLen++)
+            {
+                long permutations = (long)Math.Pow(validCharCount, padLen);
+                long positions = padLen + 1;
+                total += positions * permutations;
+            }
+
+            return total;
+        }
+
+        /// <summary>
+        /// Save generated seeds to DuckDB file using Motely.DB optimized storage
+        /// </summary>
         private static void SaveSeedsToDuckDB(IEnumerable<string> seeds, string dbPath, bool quiet, bool isRegenerating = false)
         {
             if (!quiet)
@@ -907,60 +928,16 @@ namespace Motely
             if (isRegenerating && File.Exists(dbPath))
                 File.Delete(dbPath);
             
-            using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
-            using var cmd = conn.CreateCommand();
-            
-            // Create table
-            cmd.CommandText = @"
-                CREATE TABLE seeds (
-                    id BIGINT,
-                    seed VARCHAR
-                );
-                CREATE INDEX idx_seeds_id ON seeds(id);
-            ";
-            cmd.ExecuteNonQuery();
-            
-            // Insert seeds in batches (DuckDB is fast!)
-            const int batchSize = 100000;
-            var batch = new List<string>(batchSize);
-            long id = 0;
-            
-            foreach (var seed in seeds)
-            {
-                batch.Add(seed);
-                if (batch.Count >= batchSize)
-                {
-                    InsertBatch(cmd, batch, ref id);
-                    batch.Clear();
-                }
-            }
-            
-            // Insert remaining
-            if (batch.Count > 0)
-                InsertBatch(cmd, batch, ref id);
+            using var storage = new DuckSeedStorage(dbPath);
+            long count = storage.BulkInsertSeeds(seeds);
             
             if (!quiet)
-                Console.WriteLine($"✅ Saved {id:N0} seeds to {dbPath}");
+                Console.WriteLine($"✅ Saved {count:N0} seeds to {dbPath}");
         }
 
         /// <summary>
         /// Insert a batch of seeds into DuckDB
         /// </summary>
-        private static void InsertBatch(DuckDBCommand cmd, List<string> batch, ref long startId)
-        {
-            // Build INSERT statement with VALUES clause
-            var values = new StringBuilder();
-            for (int i = 0; i < batch.Count; i++)
-            {
-                if (i > 0) values.Append(',');
-                var seed = batch[i].Replace("'", "''"); // SQL escape
-                values.Append($"({startId + i}, '{seed}')");
-            }
-            
-            cmd.CommandText = $"INSERT INTO seeds (id, seed) VALUES {values}";
-            cmd.ExecuteNonQuery();
-            
-            startId += batch.Count;
-        }
+
     }
 }
