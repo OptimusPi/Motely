@@ -23,7 +23,7 @@
         :active-searches="activeSearches"
         :get-panel-label="getPanelLabel"
         :is-base-panel="isBasePanel"
-                :remove-panel="removePanel"
+        :remove-panel="removePanel"
         :move-panel-to-side="movePanelToSide"
         :on-panel-resize="onPanelResize"
         :on-panel-collapse="onPanelCollapse"
@@ -97,119 +97,33 @@ import { useSignalR } from '../composables/useSignalR'
 import { useGlobalError } from '../composables/useGlobalError'
 import { useLayout } from '../composables/useLayout'
 import { useSound } from '../composables/useSound'
-import { usePanels } from '../composables/usePanels'
 import { useResize } from '../composables/useResize'
 import { useToasts } from '../composables/useToasts'
+import { usePanelState } from '../composables/usePanelState'
 
-// Create initial panel configuration factory
-const createInitialPanels = (generatePanelId) => [
-  {
-    id: generatePanelId('jaml-editor'),
-    baseId: 'jaml-editor',
-    color: 'red',
-    label: 'JAML Editor',
-    filterId: null,
-    side: 'left',
-    collapsed: false,
-    minHeight: 220,
-    defaultHeight: 320,
-    component: markRaw(EditorPanel)
-  },
-  {
-    id: generatePanelId('blueprint'),
-    baseId: 'blueprint',
-    color: 'orange',
-    label: 'Blueprint Analyzer',
-    filterId: null,
-    side: 'left',
-    collapsed: false,
-    minHeight: 220,
-    defaultHeight: 320,
-    component: markRaw(BlueprintPanel)
-  },
-  {
-    id: generatePanelId('active-searches'),
-    baseId: 'active-searches',
-    color: 'green',
-    label: 'Active Searches',
-    filterId: null,
-    side: 'right',
-    collapsed: false,
-    minHeight: 200,
-    defaultHeight: 240,
-    component: markRaw(ActiveSearchesPanel)
-  },
-  {
-    id: generatePanelId('chat'),
-    baseId: 'chat',
-    color: 'blue',
-    label: 'Chat',
-    filterId: null,
-    side: 'right',
-    collapsed: false,
-    minHeight: 200,
-    defaultHeight: 300,
-    component: markRaw(ChatPanel)
-  },
-  {
-    id: generatePanelId('results'),
-    baseId: 'results',
-    color: 'purple',
-    label: 'Search Results',
-    filterId: null,
-    side: 'right',
-    collapsed: false,
-    minHeight: 260,
-    defaultHeight: 360,
-    component: markRaw(ResultsPanel)
-  },
-  {
-    id: generatePanelId('requests'),
-    baseId: 'requests',
-    color: 'green',
-    label: 'API Requests',
-    filterId: null,
-    side: 'right',
-    collapsed: false,
-    minHeight: 200,
-    defaultHeight: 280,
-    component: markRaw(RequestsPanel)
-  },
-  {
-    id: generatePanelId('jaml-genie'),
-    baseId: 'jaml-genie',
-    color: 'purple',
-    label: 'JAML Genie',
-    filterId: null,
-    side: 'left',
-    collapsed: false,
-    minHeight: 300,
-    defaultHeight: 400,
-    component: markRaw(JamlGeniePanel)
-  }
-]
-
-// Use panels composable
+// Use panel state composable
 const {
   panels,
-  visiblePanels,
+  layoutMode,
+  splitLeftWidth,
+  isMobile,
+  badgeSnapState,
+  cornerHandleY,
   leftPanels,
   rightPanels,
-  collapsedPanels,
+  visiblePanels,
+  collapsedLeftPanels,
+  collapsedRightPanels,
+  removePanel,
+  movePanelToSide,
+  togglePanelCollapse,
+  resetLayout,
   getPanelLabel,
   isBasePanel,
-  duplicatePanel: duplicatePanelOp,
-  removePanel: removePanelOp,
-  movePanelToSide: movePanelToSideOp,
-  collapsePanel,
-  expandPanel,
-  updatePanelFilterId,
-  resetPanels,
-  loadPanelState
-} = usePanels(createInitialPanels)
-
-const collapsedLeftPanels = computed(() => collapsedPanels.value.filter(p => p.side === 'left'))
-const collapsedRightPanels = computed(() => collapsedPanels.value.filter(p => p.side === 'right'))
+  onPanelResize,
+  onPanelCollapse,
+  expandPanel
+} = usePanelState()
 
 const showSettings = ref(false)
 const savingFilter = ref(false)
@@ -221,9 +135,6 @@ const leftColumnContainer = ref(null)
 const rightColumnContainer = ref(null)
 
 const {
-  splitLeftWidth,
-  badgeSnapState,
-  cornerHandleY,
   isCornerDragging,
   startSplitResize,
   startStackResize,
@@ -239,13 +150,6 @@ const { playClickSound, playSnap } = useSound()
 
 // Mobile detection
 const { windowWidth } = useLayout()
-const isMobile = computed(() => windowWidth.value < 768)
-
-const layoutMode = computed(() => {
-  if (isMobile.value) return 'stack'
-  if (badgeSnapState.value === 'left' || badgeSnapState.value === 'right') return 'stack'
-  return 'split'
-})
 
 // Composables
 const { filters, currentFilter, jamlContent, loadFilters, selectFilter, saveFilter, deleteFilter } = useFilters()
@@ -289,10 +193,6 @@ const { connect, disconnect, joinSearchGroup, leaveSearchGroup } = useSignalR({
   }
 })
 const { error: globalError, showError, dismissError } = useGlobalError()
-
-// Event handlers
-const goHome = () => window.location.href = '/'
-const toggleSettings = () => showSettings.value = !showSettings.value
 
 const handleSelectFilter = async (f) => {
   try {
@@ -377,47 +277,9 @@ const copyJamlToClipboard = async () => {
   }
 }
 
-const onPanelResize = () => {}
-
-const onPanelCollapse = (id, collapsed) => {
-  collapsePanel(id, collapsed)
-  if (collapsed) {
-    const p = panels.find(x => x.id === id)
-    if (p) {
-      const sameSide = panels.filter(x => x.side === p.side)
-      const idx = sameSide.findIndex(x => x.id === id)
-      if (idx > 0) {
-        for (let i = idx - 1; i >= 0; i--) {
-          const above = sameSide[i]
-          if (above && !above.collapsed) {
-            above.defaultHeight = (above.defaultHeight || above.minHeight) + (p.defaultHeight || p.minHeight)
-            break
-          }
-        }
-      }
-    }
-  }
-}
-
-const movePanelToSide = (id, side) => movePanelToSideOp(id, side) && playClickSound('clack')
-const removePanel = (id) => {
-  const r = removePanelOp(id)
-  showToast(r.message, r.success ? 'success' : 'error')
-  if (r.success) playSnap()
-}
-
-const resetLayout = () => {
-  try {
-    localStorage.removeItem('jaml-ui-panels')
-    localStorage.removeItem('jaml-ui-split-width')
-  } catch (err) {
-    console.warn('Failed to clear localStorage:', err)
-  }
-  resetPanels()
-  splitLeftWidth.value = 50
-  badgeSnapState.value = 'center'
-  showToast('Layout reset to default', 'success')
-}
+// Event handlers
+const goHome = () => window.location.href = '/'
+const toggleSettings = () => showSettings.value = !showSettings.value
 
 const handleKeydown = (e) => {
   const mod = e.ctrlKey || e.metaKey
