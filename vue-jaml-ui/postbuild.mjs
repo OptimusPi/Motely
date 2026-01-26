@@ -31,13 +31,13 @@ try {
   const apiIndexTarget = join(__dirname, '../Motely.API/wwwroot/index.html');
   mkdirSync(join(__dirname, '../Motely.API/wwwroot'), { recursive: true });
   copyFileSync(apiIndexSource, apiIndexTarget);
-  
+
   console.log('API index.html copied successfully');
-  
+
   // Copy JamlGenie static files from public/ to wwwroot/
   const jamlGenieSourceDir = join(__dirname, '../public/JamlGenie');
   const jamlGenieTargetDir = join(__dirname, '../Motely.API/wwwroot/JamlGenie');
-  
+
   try {
     if (statSync(jamlGenieSourceDir).isDirectory()) {
       mkdirSync(jamlGenieTargetDir, { recursive: true });
@@ -49,11 +49,12 @@ try {
           copyFileSync(sourcePath, targetPath);
         }
       }
-      console.log('JamlGenie files copied successfully');
     }
   } catch (error) {
     console.warn('JamlGenie source directory not found, skipping copy:', error.message);
   }
+
+  console.log('JamlGenie files copied successfully');
 } catch (error) {
   console.error('Failed to copy font:', error);
   process.exit(1);
