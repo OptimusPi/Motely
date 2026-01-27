@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using MotelyYaml;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -94,10 +95,8 @@ public static class JamlFormatter
         if (config == null)
             return string.Empty;
 
-        // First serialize with YamlDotNet
-        // Use NullNamingConvention to match JamlConfigLoader's deserialization setup
-        // This ensures round-trip compatibility - properties are matched by YamlMember aliases
-        var serializer = new SerializerBuilder()
+        // AOT-compatible: Use StaticSerializerBuilder with pre-generated context
+        var serializer = new StaticSerializerBuilder(new MotelyYamlStaticContext())
             .WithNamingConvention(NullNamingConvention.Instance)
             .ConfigureDefaultValuesHandling(
                 DefaultValuesHandling.OmitNull
@@ -132,11 +131,9 @@ public static class JamlFormatter
         if (string.IsNullOrWhiteSpace(jamlContent))
             return new MotelyJsonConfig();
 
-        // Use NullNamingConvention + WithCaseInsensitivePropertyMatching to match JamlConfigLoader
-        // This ensures round-trip compatibility with Format() which uses NullNamingConvention
-        var deserializer = new DeserializerBuilder()
+        // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
+        var deserializer = new StaticDeserializerBuilder(new MotelyYamlStaticContext())
             .WithNamingConvention(NullNamingConvention.Instance)
-            .WithCaseInsensitivePropertyMatching()
             .IgnoreUnmatchedProperties()
             .Build();
 

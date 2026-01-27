@@ -31,6 +31,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
     <ProjectReference Include="..\Motely.GPU\Motely.GPU.csproj" />
-    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
+    <!-- Motely.DB types come through Motely.Orchestration -> Motely (which includes DB sources) -->
   </ItemGroup>
 </Project>

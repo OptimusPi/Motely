@@ -1,5 +1,6 @@
 using Motely.Filters;
 using Motely.Filters.MotelyJson;
+using MotelyYaml;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -61,12 +62,9 @@ public static class JamlConfigLoader
             // YamlDotNet handles case-insensitive matching natively via .WithCaseInsensitivePropertyMatching()
             jamlContent = PreProcessJamlForTypeAsKey(jamlContent);
 
-            // Parse JAML using YamlDotNet's BUILT-IN case-insensitive matching
-            // NullNamingConvention preserves property names as-is, but WithCaseInsensitivePropertyMatching
-            // ensures case-insensitive matching for both property names AND YamlMember aliases
-            var deserializer = new DeserializerBuilder()
+            // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
+            var deserializer = new StaticDeserializerBuilder(new MotelyYamlStaticContext())
                 .WithNamingConvention(NullNamingConvention.Instance)
-                .WithCaseInsensitivePropertyMatching()
                 .WithNodeDeserializer(
                     new JamlTypeAsKeyNodeDeserializer(),
                     s =>

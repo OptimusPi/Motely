@@ -103,6 +103,7 @@
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
     <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <!-- System.Collections.Immutable removed - not used in code, only in comments -->
   </ItemGroup>
@@ -111,8 +112,8 @@
   </ItemGroup>
   <!-- Include Motely DB layer sources - ONE TRUE IMPLEMENTATION -->
   <ItemGroup>
-    <Compile Include="..\Motely.DB\**\*.cs" />
-    <Compile Include="..\Motely.Analysis\**\*.cs" />
+    <Compile Include="..\Motely.DB\**\*.cs" Exclude="..\Motely.DB\obj\**;..\Motely.DB\bin\**" />
+    <Compile Include="..\Motely.Analysis\**\*.cs" Exclude="..\Motely.Analysis\obj\**;..\Motely.Analysis\bin\**" />
   </ItemGroup>
   <!-- Exclude desktop-only files from browser build (Terminal.Gui TUI, CLI executors) -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
