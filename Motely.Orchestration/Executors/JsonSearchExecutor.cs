@@ -50,6 +50,7 @@ namespace Motely.Executors
         private global::DuckDB.NET.Data.DuckDBAppender? _resultsAppender;
         public global::Motely.DuckDB.MotelySearchDatabase? ResultsDatabase { get; set; }
 
+
         public JsonSearchExecutor(
             string configPath,
             JsonSearchParams parameters,
@@ -174,20 +175,25 @@ namespace Motely.Executors
                 ConsoleCancelEventHandler? cancelHandler = null;
                 if (_customCallback == null)
                 {
-#if !BROWSER
-                    cancelHandler = (sender, e) =>
+                    try
                     {
-                        e.Cancel = true;
-                        _cancelled = true;
-                        if (!_params.Quiet)
+                        cancelHandler = (sender, e) =>
                         {
-                            Console.WriteLine("\n🛑 Stopping search...");
-                        }
-                        // Cancel search - cancellation token is already wired up and will be signaled by Program.cs handler
-                        search.Cancel();
-                    };
-                    Console.CancelKeyPress += cancelHandler;
-#endif
+                            e.Cancel = true;
+                            _cancelled = true;
+                            if (!_params.Quiet)
+                            {
+                                Console.WriteLine("\n🛑 Stopping search...");
+                            }
+                            search.Cancel();
+                        };
+                        Console.CancelKeyPress += cancelHandler;
+                    }
+                    catch (PlatformNotSupportedException)
+                    {
+                        // Console.CancelKeyPress not available on this platform (e.g., WASM)
+                        cancelHandler = null;
+                    }
                 }
 
                 search.Start();
@@ -203,17 +209,22 @@ namespace Motely.Executors
                             if (_params.CancellationToken?.IsCancellationRequested == true)
                                 break;
 
-#if !BROWSER
                             // Support ESC key to force a progress update (useful in quiet mode)
-                            if (!Console.IsInputRedirected && Console.KeyAvailable)
+                            try
                             {
-                                var key = Console.ReadKey(true);
-                                if (key.Key == ConsoleKey.Escape)
+                                if (!Console.IsInputRedirected && Console.KeyAvailable)
                                 {
-                                    search.ForceProgressReport();
+                                    var key = Console.ReadKey(true);
+                                    if (key.Key == ConsoleKey.Escape)
+                                    {
+                                        search.ForceProgressReport();
+                                    }
                                 }
                             }
-#endif
+                            catch (PlatformNotSupportedException)
+                            {
+                                // Console key input not available on this platform
+                            }
 
                             // Use a small sleep to avoid pegged CPU on main thread
                             Thread.Sleep(100);
@@ -237,13 +248,12 @@ namespace Motely.Executors
                     _runningSearch = search;
                 }
 
-#if !BROWSER
                 // Cleanup cancel handler if registered
                 if (cancelHandler != null)
                 {
-                    Console.CancelKeyPress -= cancelHandler;
+                    try { Console.CancelKeyPress -= cancelHandler; }
+                    catch (PlatformNotSupportedException) { }
                 }
-#endif
 
                 Console.Out.Flush();
                 return 0;
