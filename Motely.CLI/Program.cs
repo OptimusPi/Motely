@@ -584,12 +584,12 @@ namespace Motely
                     seed = seed,
                     deck = deck.ToString(),
                     stake = stake.ToString(),
-                    startingDeck = analysis.StartingDeck?.Split(
+                    erraticDeckComposition = analysis.ErraticDeckComposition?.Split(
                         ',',
                         StringSplitOptions.RemoveEmptyEntries
                     ) ?? Array.Empty<string>(),
                     twos = analysis
-                        .StartingDeck?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries)
                         .Count(c => c.StartsWith("2_")) ?? 0,
                     error = analysis.Error,
                     antes = analysis

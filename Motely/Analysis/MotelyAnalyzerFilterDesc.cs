@@ -113,13 +113,19 @@ public sealed class MotelyAnalyzerFilterDesc()
                     packs[i] = new(pack, packContent.AsArray());
                 }
 
-                // Get draw order for this ante (need to recreate pack stream since we already consumed it)
-                string? drawOrder = GetDrawOrderForAnte(ref ctx, ante, ref state);
+                    // NOTE: Per-round hand draw not yet implemented - requires shuffle PRNG per round
+                // For now, omitting DrawOrder as the previous implementation was incorrect
+                // (it showed standard pack cards, not the actual hand draw)
 
-                antes.Add(new(ante, boss, voucher, smallTag, bigTag, shopItems, packs, drawOrder));
+                antes.Add(new(ante, boss, voucher, smallTag, bigTag, shopItems, packs, null));
             }
 
-            FilterDesc.LastAnalysis = new(null, antes, ctx.Deck, startingDeck);
+            // For Erratic deck, include the full deck composition with breakdown
+            // For other decks, the starting deck is always the same 52 standard cards
+            string? deckComposition = ctx.Deck == MotelyDeck.Erratic ? startingDeck : null;
+            string? deckBreakdown = ctx.Deck == MotelyDeck.Erratic ? GetErraticDeckBreakdown(deckCards) : null;
+
+            FilterDesc.LastAnalysis = new(null, antes, ctx.Deck, deckComposition, deckBreakdown);
 
             return false; // Always return false since we're just analyzing
         }
@@ -223,6 +229,65 @@ public sealed class MotelyAnalyzerFilterDesc()
                 _ => suit.ToString(),
             };
             return $"{rankStr}_{suitStr}";
+        }
+
+        /// <summary>
+        /// Gets a breakdown of ranks and suits for Erratic deck with asterisks marking the most common
+        /// Uses ASCII suit symbols: ♣ ♦ ♥ ♠
+        /// </summary>
+        private static string GetErraticDeckBreakdown(List<string> deckCards)
+        {
+            // Count ranks and suits
+            var rankCounts = new Dictionary<string, int>();
+            var suitCounts = new Dictionary<char, int>
+            {
+                ['C'] = 0, ['D'] = 0, ['H'] = 0, ['S'] = 0
+            };
+
+            foreach (var card in deckCards)
+            {
+                var parts = card.Split('_');
+                if (parts.Length == 2)
+                {
+                    var rank = parts[0];
+                    var suit = parts[1][0];
+
+                    rankCounts[rank] = rankCounts.GetValueOrDefault(rank, 0) + 1;
+                    if (suitCounts.ContainsKey(suit))
+                        suitCounts[suit]++;
+                }
+            }
+
+            // Find max counts for asterisks
+            int maxRankCount = rankCounts.Values.Max();
+            int maxSuitCount = suitCounts.Values.Max();
+
+            var sb = new System.Text.StringBuilder();
+
+            // Ranks breakdown (ordered: 2-10, J, Q, K, A)
+            string[] rankOrder = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+            sb.AppendLine("Ranks:");
+            foreach (var rank in rankOrder)
+            {
+                int count = rankCounts.GetValueOrDefault(rank, 0);
+                string marker = count == maxRankCount && count > 0 ? "*" : "";
+                sb.AppendLine($"  {rank,2}: {count}{marker}");
+            }
+
+            // Suits breakdown with ASCII symbols
+            sb.AppendLine("Suits:");
+            var suitSymbols = new Dictionary<char, string>
+            {
+                ['C'] = "♣", ['D'] = "♦", ['H'] = "♥", ['S'] = "♠"
+            };
+            foreach (var (suit, symbol) in suitSymbols)
+            {
+                int count = suitCounts[suit];
+                string marker = count == maxSuitCount && count > 0 ? "*" : "";
+                sb.AppendLine($"  {symbol}: {count}{marker}");
+            }
+
+            return sb.ToString().TrimEnd();
         }
 
         private static MotelySingleItemSet GetPackContents(
