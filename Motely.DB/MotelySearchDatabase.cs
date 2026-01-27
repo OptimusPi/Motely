@@ -445,46 +445,75 @@ public sealed class MotelySearchDatabase : IDisposable
     }
 
     /// <summary>
-    /// Check if an existing database has a schema compatible with the current run configuration
+    /// Result details for schema comparison between a JAML config and an existing DuckDB file
     /// </summary>
-    public static bool IsSchemaCompatible(string dbPath, MotelyRunConfig runConfig)
+    public sealed class SchemaComparisonResult
     {
+        public bool IsCompatible { get; }
+        public IReadOnlyList<string> DbColumns { get; }
+        public IReadOnlyList<string> RequiredColumns { get; }
+        public string? Error { get; }
+
+        public SchemaComparisonResult(
+            bool isCompatible,
+            IReadOnlyList<string> dbColumns,
+            IReadOnlyList<string> requiredColumns,
+            string? error = null)
+        {
+            IsCompatible = isCompatible;
+            DbColumns = dbColumns;
+            RequiredColumns = requiredColumns;
+            Error = error;
+        }
+    }
+
+    /// <summary>
+    /// Compare an existing database schema with the required columns generated from a MotelyRunConfig
+    /// </summary>
+    public static SchemaComparisonResult CompareSchema(string dbPath, MotelyRunConfig runConfig)
+    {
+        var requiredColumns = new List<string> { "seed", "score" };
+        requiredColumns.AddRange(runConfig.Columns.Select(c => c.Name));
+        var dbColumns = new List<string>();
+
         try
         {
             using var connection = DuckDBConnectionFactory.CreateConnection(dbPath);
             connection.Open();
             using var command = connection.CreateCommand();
-            
-            // Get columns from 'results' table
+
             command.CommandText = "PRAGMA table_info('results')";
             using var reader = command.ExecuteReader();
-            
-            var dbColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             while (reader.Read())
             {
-                var name = reader.GetString(1); // 'name' column is index 1
+                var name = reader.GetString(1);
                 dbColumns.Add(name);
             }
-            
-            // Check essential structure
-            if (!dbColumns.Contains("seed") || !dbColumns.Contains("score"))
-                return false;
-                
-            // Check that all config columns exist in DB
-            // (It's okay if DB has EXTRA columns, but it must have all required ones for this run)
-            foreach (var col in runConfig.Columns)
-            {
-                if (!dbColumns.Contains(col.Name))
-                    return false;
-            }
 
-            return true;
+            var dbColumnSet = new HashSet<string>(dbColumns, StringComparer.OrdinalIgnoreCase);
+            bool hasCoreColumns = dbColumnSet.Contains("seed") && dbColumnSet.Contains("score");
+            bool hasAllRequired = requiredColumns.All(c => dbColumnSet.Contains(c));
+
+            return new SchemaComparisonResult(hasCoreColumns && hasAllRequired, dbColumns, requiredColumns);
         }
-        catch
+        catch (Exception ex)
         {
-            // If we can't open DB or query schema, assume incompatible/corrupt
-            return false;
+            return new SchemaComparisonResult(false, dbColumns, requiredColumns, ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Check if an existing database has a schema compatible with the current run configuration.
+    /// Returns the comparison result so callers can log detailed differences without re-querying.
+    /// </summary>
+    public static bool IsSchemaCompatible(
+        string dbPath,
+        MotelyRunConfig runConfig,
+        out SchemaComparisonResult comparison)
+    {
+        comparison = CompareSchema(dbPath, runConfig);
+        return comparison.IsCompatible;
     }
 
     public class SearchResultRow
