@@ -12,6 +12,123 @@ namespace Motely.Executors
     /// </summary>
     public static class MotelySearchOrchestrator
     {
+        /// <summary>
+        /// Launch a search and return a context with full result access.
+        /// This is the preferred method for UI applications like BSO.
+        /// 
+        /// Motely owns everything: SearchId, FilterId, database operations, result queries.
+        /// The consumer just calls methods on the returned context.
+        /// </summary>
+        /// <param name="config">The filter configuration</param>
+        /// <param name="parameters">Search parameters (threads, batch size, etc.)</param>
+        /// <param name="useInMemoryStorage">True for browser/WASM builds, false for desktop</param>
+        /// <returns>Search context with full control and result access</returns>
+        public static IMotelySearchContext LaunchWithContext(
+            MotelyJsonConfig config, 
+            JsonSearchParams parameters,
+            bool useInMemoryStorage = false)
+        {
+            var runConfig = MotelyRunConfig.Factory(config);
+            
+            // Generate IDs - Motely owns this!
+            var filterId = GenerateFilterId(config);
+            var searchId = $"{filterId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
+            
+            if (useInMemoryStorage)
+            {
+                // Browser/WASM: Use in-memory storage with callback
+                var context = LaunchInMemory(config, runConfig, parameters, searchId, filterId);
+                return context;
+            }
+            else
+            {
+                // Desktop: Use database storage
+                var context = LaunchWithDatabase(config, runConfig, parameters, searchId, filterId);
+                return context;
+            }
+        }
+        
+        private static MotelySearchContext LaunchWithDatabase(
+            MotelyJsonConfig config,
+            MotelyRunConfig runConfig,
+            JsonSearchParams parameters,
+            string searchId,
+            string filterId)
+        {
+            // Determine database path
+            var dbPath = parameters.OutputDbPath;
+            if (string.IsNullOrEmpty(dbPath))
+            {
+                // Default path based on filter ID
+                var searchResultsDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Motely", "SearchResults");
+                Directory.CreateDirectory(searchResultsDir);
+                dbPath = Path.Combine(searchResultsDir, $"{filterId}.db");
+            }
+            
+            var database = OrchestrateDatabase(dbPath, runConfig, parameters);
+            
+            // Create executor with callback that writes to database
+            var executor = new JsonSearchExecutor(config, parameters, result =>
+            {
+                database.InsertRow(result.Seed, result.Score, result.TallyColumns, result.ColumnValues);
+            });
+            
+            var search = executor.ExecuteAsSearch();
+            
+            return new MotelySearchContext(search, database, runConfig, searchId, filterId);
+        }
+        
+        private static MotelySearchContext LaunchInMemory(
+            MotelyJsonConfig config,
+            MotelyRunConfig runConfig,
+            JsonSearchParams parameters,
+            string searchId,
+            string filterId)
+        {
+            // Create context first (with in-memory storage)
+            // We need to create a "placeholder" search first, then wire up the callback
+            MotelySearchContext? context = null;
+            
+            // Create executor with callback that writes to in-memory storage
+            var executor = new JsonSearchExecutor(config, parameters, result =>
+            {
+                context?.AddResult(result.Seed, result.Score, result.TallyColumns);
+            });
+            
+            var search = executor.ExecuteAsSearch();
+            
+            context = new MotelySearchContext(search, runConfig, searchId, filterId);
+            
+            return context;
+        }
+        
+        private static string GenerateFilterId(MotelyJsonConfig config)
+        {
+            var name = SanitizeForId(config.Name ?? "Unknown");
+            var deck = config.Deck ?? "Red";
+            var stake = config.Stake ?? "White";
+            return $"{name}_{deck}_{stake}";
+        }
+        
+        private static string SanitizeForId(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return "unknown";
+                
+            // Replace spaces with underscores, remove invalid chars
+            var sanitized = input.Trim().Replace(' ', '_');
+            var invalidChars = Path.GetInvalidFileNameChars();
+            foreach (var c in invalidChars)
+            {
+                sanitized = sanitized.Replace(c, '_');
+            }
+            return sanitized;
+        }
+        
+        // === Legacy methods for backward compatibility ===
+        
         public static IMotelySearch LaunchJaml(string jamlPath, JsonSearchParams parameters, Action<MotelySeedScoreTally>? resultCallback = null)
         {
             if (!File.Exists(jamlPath))
