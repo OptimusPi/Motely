@@ -62,8 +62,9 @@ public static class JamlConfigLoader
             // YamlDotNet handles case-insensitive matching natively via .WithCaseInsensitivePropertyMatching()
             jamlContent = PreProcessJamlForTypeAsKey(jamlContent);
 
-            // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
-            var deserializer = new StaticDeserializerBuilder(new MotelyYamlStaticContext())
+            // Use reflection-based deserializer for JAML - static generator too limited
+            // (can't handle required properties, collections, nested types)
+            var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(NullNamingConvention.Instance)
                 .WithNodeDeserializer(
                     new JamlTypeAsKeyNodeDeserializer(),

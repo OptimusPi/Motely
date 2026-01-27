@@ -95,8 +95,8 @@ public static class JamlFormatter
         if (config == null)
             return string.Empty;
 
-        // AOT-compatible: Use StaticSerializerBuilder with pre-generated context
-        var serializer = new StaticSerializerBuilder(new MotelyYamlStaticContext())
+        // Use reflection-based serializer - static generator too limited for complex types
+        var serializer = new SerializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
             .ConfigureDefaultValuesHandling(
                 DefaultValuesHandling.OmitNull
@@ -131,8 +131,8 @@ public static class JamlFormatter
         if (string.IsNullOrWhiteSpace(jamlContent))
             return new MotelyJsonConfig();
 
-        // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
-        var deserializer = new StaticDeserializerBuilder(new MotelyYamlStaticContext())
+        // Use reflection-based deserializer - static generator too limited for complex types
+        var deserializer = new DeserializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
             .IgnoreUnmatchedProperties()
             .Build();
