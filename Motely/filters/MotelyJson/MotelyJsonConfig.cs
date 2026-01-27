@@ -194,18 +194,23 @@ public class MotelyJsonConfig
     public DateTime? DateCreated { get; set; }
 
     [JsonPropertyName("verifiedSeed")]
+    [YamlMember(Alias = "verifiedSeed")]
     public string? VerifiedSeed { get; set; }
 
     [JsonPropertyName("deck")]
+    [YamlMember(Alias = "deck")]
     public string? Deck { get; set; } = "Red";
 
     [JsonPropertyName("stake")]
+    [YamlMember(Alias = "stake")]
     public string? Stake { get; set; } = "White";
 
     [JsonPropertyName("mode")]
+    [YamlMember(Alias = "mode")]
     public string? Mode { get; set; }
 
     [JsonPropertyName("startSeed")]
+    [YamlMember(Alias = "startSeed")]
     public string? StartSeed { get; set; }
 
     [JsonPropertyName("templates")]
