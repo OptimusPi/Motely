@@ -1073,15 +1073,7 @@ public class MotelyJsonConfig
         {
             var json = File.ReadAllText(jsonPath);
 
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-                UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, // Reject typos like "Valuie:" instead of "value"
-            };
-
-            var deserializedConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(json, options);
+            var deserializedConfig = JsonSerializer.Deserialize(json, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
             if (deserializedConfig == null)
             {
                 error = "Failed to deserialize JSON - result was null";
@@ -1649,13 +1641,7 @@ public class MotelyJsonConfig
     /// </summary>
     public string ToJson()
     {
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-        return JsonSerializer.Serialize(this, options);
+        return JsonSerializer.Serialize(this, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
     }
 
     /// <summary>
@@ -1845,16 +1831,10 @@ public class MotelyJsonConfig
     // Create a utility class for centralized parsing logic
     public static class MotelyEnumParser
     {
-        private static readonly Dictionary<string, MotelyJoker> JokerLookup = Enum.GetValues(
-                typeof(MotelyJoker)
-            )
-            .Cast<MotelyJoker>()
+        private static readonly Dictionary<string, MotelyJoker> JokerLookup = Enum.GetValues<MotelyJoker>()
             .ToDictionary(j => j.ToString(), j => j, StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, MotelyVoucher> VoucherLookup = Enum.GetValues(
-                typeof(MotelyVoucher)
-            )
-            .Cast<MotelyVoucher>()
+        private static readonly Dictionary<string, MotelyVoucher> VoucherLookup = Enum.GetValues<MotelyVoucher>()
             .ToDictionary(v => v.ToString(), v => v, StringComparer.OrdinalIgnoreCase);
 
         public static bool TryParseJoker(string value, out MotelyJoker joker)

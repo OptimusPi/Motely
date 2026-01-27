@@ -113,7 +113,7 @@ namespace Motely.Executors
         private static global::Motely.DuckDB.MotelySearchDatabase OrchestrateDatabase(string dbPath, MotelyRunConfig runConfig, JsonSearchParams parameters)
         {
             bool exists = File.Exists(dbPath);
-            bool compatible = exists && global::Motely.DuckDB.MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig);
+            bool compatible = exists && global::Motely.DuckDB.MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig, out _);
 
             if (exists && !compatible)
             {

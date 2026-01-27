@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -146,11 +147,17 @@ public static class MotelyApiHost
             var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
                 wwwrootPath
             );
+            
+            // Create a custom content type provider that includes .dat files
+            var contentTypeProvider = new FileExtensionContentTypeProvider();
+            contentTypeProvider.Mappings[".dat"] = "application/octet-stream";
+            
             app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
             app.UseStaticFiles(
                 new StaticFileOptions
                 {
                     FileProvider = fileProvider,
+                    ContentTypeProvider = contentTypeProvider,
                     OnPrepareResponse = ctx =>
                     {
                         try
@@ -163,10 +170,21 @@ public static class MotelyApiHost
                                 if (path.EndsWith(".br"))
                                 {
                                     ctx.Context.Response.Headers.Append("Content-Encoding", "br");
+                                    // Tell CloudFlare this is already compressed
+                                    ctx.Context.Response.Headers.Append("Vary", "Accept-Encoding");
+                                    ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
                                 }
                                 else if (path.EndsWith(".gz"))
                                 {
                                     ctx.Context.Response.Headers.Append("Content-Encoding", "gzip");
+                                    // Tell CloudFlare this is already compressed
+                                    ctx.Context.Response.Headers.Append("Vary", "Accept-Encoding");
+                                    ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
+                                }
+                                else if (path.EndsWith(".wasm"))
+                                {
+                                    // WASM files should also be cached aggressively
+                                    ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
                                 }
                             }
                             // CORS and WASM Multithreading headers for all static files

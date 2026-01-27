@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Reflection;
 using Motely.Filters;
 using Motely.Filters.MotelyJson;
 using YamlDotNet.Core;
@@ -39,13 +38,237 @@ namespace Motely.Filters.MotelyJson
             ["or"] = "Or",
         };
 
-        private static PropertyInfo? FindPropertyWithAlias(Type type, string alias)
+        #region AOT-Compatible Static Property Mapping
+        
+        /// <summary>
+        /// Static property info for AOT compatibility - no reflection needed at runtime
+        /// </summary>
+        private record struct PropertyAccessor(Type PropertyType, Action<object, object?> Setter);
+        
+        /// <summary>
+        /// Static property mappings for MotelyJsonFilterClause (case-insensitive keys)
+        /// </summary>
+        private static readonly Dictionary<string, PropertyAccessor> ClausePropertyMap = new(StringComparer.OrdinalIgnoreCase)
         {
-            return type.GetProperty(
-                alias,
-                BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance
-            );
+            ["type"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Type = val?.ToString() ?? ""),
+            ["value"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Value = val?.ToString()),
+            ["values"] = new(typeof(string[]), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Values = ConvertToStringArray(val)),
+            ["label"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Label = val?.ToString()),
+            ["antes"] = new(typeof(int[]), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Antes = ConvertToIntArray(val)),
+            ["clauses"] = new(typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Clauses = ConvertToClauseList(val)),
+            ["score"] = new(typeof(int), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Score = ConvertToInt(val, 1)),
+            ["mode"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Mode = val?.ToString()),
+            ["function"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Function = val?.ToString()),
+            ["cards"] = new(typeof(int[]), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Cards = ConvertToIntArray(val)),
+            ["min"] = new(typeof(int?), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Min = ConvertToNullableInt(val)),
+            ["filterOrder"] = new(typeof(int?), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).FilterOrder = ConvertToNullableInt(val)),
+            ["edition"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Edition = val?.ToString()),
+            ["stickers"] = new(typeof(List<string>), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Stickers = ConvertToStringList(val)),
+            ["suit"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Suit = val?.ToString()),
+            ["rank"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Rank = val?.ToString()),
+            ["seal"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Seal = val?.ToString()),
+            ["enhancement"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Enhancement = val?.ToString()),
+            ["sources"] = new(typeof(SourcesConfig), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Sources = val as SourcesConfig),
+            ["packSlots"] = new(typeof(int[]), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).PackSlots = ConvertToIntArray(val)),
+            ["shopSlots"] = new(typeof(int[]), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).ShopSlots = ConvertToIntArray(val)),
+            ["requireMega"] = new(typeof(bool?), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).RequireMega = ConvertToNullableBool(val)),
+            ["tags"] = new(typeof(bool?), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Tags = ConvertToNullableBool(val)),
+            ["eventType"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).EventType = val?.ToString()),
+            ["rolls"] = new(typeof(int[]), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Rolls = ConvertToIntArray(val)),
+        };
+        
+        /// <summary>
+        /// Static property mappings for SourcesConfig (case-insensitive keys)
+        /// </summary>
+        private static readonly Dictionary<string, PropertyAccessor> SourcesPropertyMap = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["shopSlots"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).ShopSlots = ConvertToIntArray(val)),
+            ["packSlots"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).PackSlots = ConvertToIntArray(val)),
+            ["minShopSlot"] = new(typeof(int?), (obj, val) => ((SourcesConfig)obj).MinShopSlot = ConvertToNullableInt(val)),
+            ["maxShopSlot"] = new(typeof(int?), (obj, val) => ((SourcesConfig)obj).MaxShopSlot = ConvertToNullableInt(val)),
+            ["minPackSlot"] = new(typeof(int?), (obj, val) => ((SourcesConfig)obj).MinPackSlot = ConvertToNullableInt(val)),
+            ["maxPackSlot"] = new(typeof(int?), (obj, val) => ((SourcesConfig)obj).MaxPackSlot = ConvertToNullableInt(val)),
+            ["tags"] = new(typeof(bool?), (obj, val) => ((SourcesConfig)obj).Tags = ConvertToNullableBool(val)),
+            ["requireMega"] = new(typeof(bool?), (obj, val) => ((SourcesConfig)obj).RequireMega = ConvertToNullableBool(val)),
+            ["judgement"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).Judgement = ConvertToIntArray(val)),
+            ["wraith"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).Wraith = ConvertToIntArray(val)),
+            ["rareTag"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).RareTag = ConvertToIntArray(val)),
+            ["uncommonTag"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).UncommonTag = ConvertToIntArray(val)),
+            ["riffRaff"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).RiffRaff = ConvertToIntArray(val)),
+            ["purpleSealOrEightBall"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).PurpleSealOrEightBall = ConvertToIntArray(val)),
+            ["emperor"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).Emperor = ConvertToIntArray(val)),
+            ["sixthSense"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).SixthSense = ConvertToIntArray(val)),
+            ["seance"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).Seance = ConvertToIntArray(val)),
+            ["uncommonShopJokers"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).UncommonShopJokers = ConvertToIntArray(val)),
+            ["rareShopJokers"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).RareShopJokers = ConvertToIntArray(val)),
+            ["commonShopJokers"] = new(typeof(int[]), (obj, val) => ((SourcesConfig)obj).CommonShopJokers = ConvertToIntArray(val)),
+        };
+        
+        /// <summary>
+        /// Check if a property exists for a given type (AOT-safe replacement for FindPropertyWithAlias)
+        /// </summary>
+        private static bool TryGetPropertyAccessor(Type type, string propertyName, out PropertyAccessor accessor)
+        {
+            if (type == typeof(MotelyJsonConfig.MotelyJsonFilterClause) || 
+                type.Name.Contains("MotelyJsonFilterClause"))
+            {
+                return ClausePropertyMap.TryGetValue(propertyName, out accessor);
+            }
+            if (type == typeof(SourcesConfig))
+            {
+                return SourcesPropertyMap.TryGetValue(propertyName, out accessor);
+            }
+            accessor = default;
+            return false;
         }
+        
+        /// <summary>
+        /// Check if a property exists (for validation purposes)
+        /// </summary>
+        private static bool HasProperty(Type type, string propertyName)
+        {
+            return TryGetPropertyAccessor(type, propertyName, out _);
+        }
+        
+        /// <summary>
+        /// Get property type for a given type and property name
+        /// </summary>
+        private static Type? GetPropertyType(Type type, string propertyName)
+        {
+            if (TryGetPropertyAccessor(type, propertyName, out var accessor))
+                return accessor.PropertyType;
+            return null;
+        }
+        
+        /// <summary>
+        /// Set property value using static accessor (AOT-safe)
+        /// </summary>
+        private static void SetPropertyStatic(Type type, object target, string propertyName, object? value)
+        {
+            if (TryGetPropertyAccessor(type, propertyName, out var accessor))
+            {
+                accessor.Setter(target, value);
+            }
+        }
+        
+        #region Type Conversion Helpers
+        
+        private static int[]? ConvertToIntArray(object? value)
+        {
+            if (value == null) return null;
+            if (value is int[] arr) return arr;
+            
+            // Handle range syntax and lists
+            if (value is string rangeStr && rangeStr.Contains(".."))
+                return ParseRange(rangeStr);
+            
+            if (value is object[] objArr)
+            {
+                var result = new List<int>();
+                foreach (var item in objArr)
+                {
+                    var s = item?.ToString();
+                    if (s != null && s.Contains(".."))
+                        result.AddRange(ParseRange(s));
+                    else if (int.TryParse(s, out var i))
+                        result.Add(i);
+                }
+                return result.ToArray();
+            }
+            
+            if (value is System.Collections.IList list)
+            {
+                var result = new List<int>();
+                foreach (var item in list)
+                {
+                    var s = item?.ToString();
+                    if (s != null && s.Contains(".."))
+                        result.AddRange(ParseRange(s));
+                    else if (int.TryParse(s, out var i))
+                        result.Add(i);
+                }
+                return result.ToArray();
+            }
+            
+            return null;
+        }
+        
+        private static string[]? ConvertToStringArray(object? value)
+        {
+            if (value == null) return null;
+            if (value is string[] arr) return arr;
+            
+            if (value is object[] objArr)
+            {
+                var result = new string[objArr.Length];
+                for (int i = 0; i < objArr.Length; i++)
+                    result[i] = objArr[i]?.ToString() ?? "";
+                return result;
+            }
+            
+            if (value is System.Collections.IList list)
+            {
+                var result = new string[list.Count];
+                for (int i = 0; i < list.Count; i++)
+                    result[i] = list[i]?.ToString() ?? "";
+                return result;
+            }
+            
+            return null;
+        }
+        
+        private static List<string>? ConvertToStringList(object? value)
+        {
+            var arr = ConvertToStringArray(value);
+            return arr?.ToList();
+        }
+        
+        private static List<MotelyJsonConfig.MotelyJsonFilterClause>? ConvertToClauseList(object? value)
+        {
+            if (value == null) return null;
+            if (value is List<MotelyJsonConfig.MotelyJsonFilterClause> list) return list;
+            
+            if (value is System.Collections.IList ilist)
+            {
+                var result = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
+                foreach (var item in ilist)
+                {
+                    if (item is MotelyJsonConfig.MotelyJsonFilterClause clause)
+                        result.Add(clause);
+                }
+                return result;
+            }
+            
+            return null;
+        }
+        
+        private static int ConvertToInt(object? value, int defaultValue = 0)
+        {
+            if (value == null) return defaultValue;
+            if (value is int i) return i;
+            if (int.TryParse(value.ToString(), out var parsed)) return parsed;
+            return defaultValue;
+        }
+        
+        private static int? ConvertToNullableInt(object? value)
+        {
+            if (value == null) return null;
+            if (value is int i) return i;
+            if (int.TryParse(value.ToString(), out var parsed)) return parsed;
+            return null;
+        }
+        
+        private static bool? ConvertToNullableBool(object? value)
+        {
+            if (value == null) return null;
+            if (value is bool b) return b;
+            if (bool.TryParse(value.ToString(), out var parsed)) return parsed;
+            return null;
+        }
+        
+        #endregion
+        
+        #endregion
 
         public bool Deserialize(
             IParser reader,
@@ -174,13 +397,11 @@ namespace Motely.Filters.MotelyJson
                     }
                     else
                     {
-                        // Validate property existence
-                        var prop = FindPropertyWithAlias(expectedType, key);
-                        if (prop == null)
+                        // Validate property existence (AOT-safe)
+                        if (!HasProperty(expectedType, key))
                         {
                             // Check if it's a known source property that should be in sources:
-                            var sourceProp = FindPropertyWithAlias(typeof(SourcesConfig), key);
-                            if (sourceProp != null)
+                            if (HasProperty(typeof(SourcesConfig), key))
                             {
                                 throw new YamlException(keyScalar.Start, keyScalar.End, 
                                     $"Property '{key}' is not valid at this level. " +
@@ -193,7 +414,8 @@ namespace Motely.Filters.MotelyJson
                         }
 
                         // Defer type coercion for properties that might use range syntax (int[])
-                        Type targetType = (prop.PropertyType == typeof(int[])) ? typeof(object) : prop.PropertyType;
+                        var propType = GetPropertyType(expectedType, key);
+                        Type targetType = (propType == typeof(int[])) ? typeof(object) : (propType ?? typeof(object));
                         var nodeValue = objectFactory(reader, targetType);
                         entries[key] = nodeValue!;
                     }
@@ -202,16 +424,17 @@ namespace Motely.Filters.MotelyJson
 
             if (!entries.TryGetValue("type", out var typeValue) || typeValue == null)
             {
-                // For non-clause types (like SourcesConfig), create and populate normally
-                var obj = Activator.CreateInstance(expectedType);
+                // For non-clause types (like SourcesConfig), create and populate normally (AOT-safe)
+                object? obj = expectedType == typeof(SourcesConfig) ? new SourcesConfig() 
+                            : expectedType == typeof(MotelyJsonConfig.MotelyJsonFilterClause) ? new MotelyJsonConfig.MotelyJsonFilterClause { Type = "" }
+                            : null;
                 if (obj != null)
                 {
                     foreach (var entry in entries)
                     {
-                        var prop = FindPropertyWithAlias(expectedType, entry.Key);
-                        if (prop != null && prop.CanWrite)
+                        if (HasProperty(expectedType, entry.Key))
                         {
-                            SetPropertyValue(prop, obj, entry.Value);
+                            SetPropertyStatic(expectedType, obj, entry.Key, entry.Value);
                         }
                     }
                     value = obj;
@@ -236,77 +459,27 @@ namespace Motely.Filters.MotelyJson
                     Type = typeStr.ToLowerInvariant(),
                 };
 
-                var clausesProperty = andOrClause
-                    .GetType()
-                    .GetProperty(
-                        "clauses",
-                        BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance
-                    );
-                if (clausesProperty != null && clausesProperty.CanWrite)
+                // Set clauses directly (AOT-safe - no reflection)
+                if (entries.TryGetValue("clauses", out var clausesValue))
                 {
-                    if (entries.TryGetValue("clauses", out var clausesValue))
-                    {
-                        if (
-                            clausesValue
-                            is List<MotelyJsonConfig.MotelyJsonFilterClause> clausesList
-                        )
-                        {
-                            clausesProperty.SetValue(andOrClause, clausesList);
-                        }
-                        else if (clausesValue is System.Collections.IList list)
-                        {
-                            var convertedList = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
-                            foreach (var item in list)
-                            {
-                                if (item is MotelyJsonConfig.MotelyJsonFilterClause filterClause)
-                                {
-                                    convertedList.Add(filterClause);
-                                }
-                            }
-                            clausesProperty.SetValue(andOrClause, convertedList);
-                        }
-                    }
-                    else if (entries.TryGetValue("value", out var complexValue))
-                    {
-                        if (complexValue is System.Collections.IList list)
-                        {
-                            DebugLogger.Log($"  Converting list with {list.Count} items");
-                            var convertedList = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
-                            foreach (var item in list)
-                            {
-                                DebugLogger.Log(
-                                    $"    Item type: {item?.GetType().Name}, value: {item}"
-                                );
-                                if (item is MotelyJsonConfig.MotelyJsonFilterClause filterClause)
-                                {
-                                    convertedList.Add(filterClause);
-                                    DebugLogger.Log(
-                                        $"    Added filter clause with Type='{filterClause.Type}'"
-                                    );
-                                }
-                            }
-                            DebugLogger.Log(
-                                $"  Final converted list has {convertedList.Count} items"
-                            );
-                            clausesProperty.SetValue(andOrClause, convertedList);
-                        }
-                    }
+                    andOrClause.Clauses = ConvertToClauseList(clausesValue);
+                }
+                else if (entries.TryGetValue("value", out var complexValue))
+                {
+                    andOrClause.Clauses = ConvertToClauseList(complexValue);
                 }
 
-                // Set other properties
+                // Set other properties (AOT-safe)
                 foreach (var entry in entries)
                 {
-                    if (
-                        entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase)
+                    if (entry.Key.Equals("type", StringComparison.OrdinalIgnoreCase)
                         || entry.Key.Equals("value", StringComparison.OrdinalIgnoreCase)
-                        || entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase)
-                    )
+                        || entry.Key.Equals("clauses", StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    var property = FindPropertyWithAlias(andOrClause.GetType(), entry.Key);
-                    if (property != null && property.CanWrite)
+                    if (HasProperty(typeof(MotelyJsonConfig.MotelyJsonFilterClause), entry.Key))
                     {
-                        SetPropertyValue(property, andOrClause, entry.Value);
+                        SetPropertyStatic(typeof(MotelyJsonConfig.MotelyJsonFilterClause), andOrClause, entry.Key, entry.Value);
                     }
                 }
 
@@ -314,194 +487,20 @@ namespace Motely.Filters.MotelyJson
                 return true;
             }
 
-            // Create the appropriate filter clause from the processed entries
-            if (isMotelyJsonConfigClause)
+            // Create filter clause and set all properties (AOT-safe)
+            var typeValue2 = entries.TryGetValue("type", out var tv) ? tv?.ToString() ?? "" : "";
+            var configClause = new MotelyJsonConfig.MotelyJsonFilterClause { Type = typeValue2 };
+
+            foreach (var entry in entries)
             {
-                // Type is required - extract it first, default to empty string if missing (will fail validation later)
-                var typeValue2 = entries.TryGetValue("type", out var tv)
-                    ? tv?.ToString() ?? ""
-                    : "";
-                var configClause = new MotelyJsonConfig.MotelyJsonFilterClause
+                if (HasProperty(typeof(MotelyJsonConfig.MotelyJsonFilterClause), entry.Key))
                 {
-                    Type = typeValue2,
-                };
-
-                foreach (var entry in entries)
-                {
-                    var property = FindPropertyWithAlias(configClause.GetType(), entry.Key);
-                    if (property != null && property.CanWrite)
-                    {
-                        SetPropertyValue(property, configClause, entry.Value);
-                    }
-                }
-
-                value = configClause;
-                return true;
-            }
-            else
-            {
-                // Create the abstract MotelyJsonFilterClause concrete implementation
-                MotelyJsonFilterClause filterClause;
-
-                if (entries.TryGetValue("type", out var clauseTypeValue))
-                {
-                    var innerTypeStr = clauseTypeValue.ToString()?.ToLowerInvariant();
-                    filterClause = innerTypeStr switch
-                    {
-                        "joker" => new MotelyJsonJokerFilterClause(),
-                        "souljoker" => new MotelyJsonSoulJokerFilterClause(),
-                        "voucher" => new MotelyJsonVoucherFilterClause(),
-                        "tarotcard" => new MotelyJsonTarotFilterClause(),
-                        "spectralcard" => new MotelyJsonSpectralFilterClause(),
-                        "planetcard" => new MotelyJsonPlanetFilterClause(),
-                        "event" => new MotelyJsonJokerFilterClause(),
-                        _ => throw new ArgumentException($"Unknown type: {innerTypeStr}"),
-                    };
-                }
-                else
-                {
-                    throw new ArgumentException($"Missing type in filter clause");
-                }
-
-                foreach (var entry in entries)
-                {
-                    var property = FindPropertyWithAlias(filterClause.GetType(), entry.Key);
-                    if (property != null && property.CanWrite)
-                    {
-                        SetPropertyValue(property, filterClause, entry.Value);
-                    }
-                }
-
-                value = filterClause;
-                return true;
-            }
-        }
-
-        private static void SetPropertyValue(
-            PropertyInfo property,
-            object target,
-            object? entryValue
-        )
-        {
-            if (property.PropertyType == typeof(string))
-            {
-                property.SetValue(target, entryValue?.ToString());
-            }
-            else if (property.PropertyType == typeof(int[]))
-            {
-                int[]? intArray = null;
-
-                // Handle Range Syntax: "1..3" or ["1..3", 5]
-                if (entryValue is string rangeStr && rangeStr.Contains(".."))
-                {
-                    intArray = ParseRange(rangeStr);
-                }
-                else if (entryValue is object[] array)
-                {
-                    var resultList = new List<int>();
-                    foreach (var item in array)
-                    {
-                        var s = item?.ToString();
-                        if (s != null && s.Contains(".."))
-                        {
-                            resultList.AddRange(ParseRange(s));
-                        }
-                        else
-                        {
-                            resultList.Add(Convert.ToInt32(item));
-                        }
-                    }
-                    intArray = resultList.ToArray();
-                }
-                else if (entryValue is System.Collections.IList list)
-                {
-                    var resultList = new List<int>();
-                    foreach (var item in list)
-                    {
-                        var s = item?.ToString();
-                        if (s != null && s.Contains(".."))
-                        {
-                            resultList.AddRange(ParseRange(s));
-                        }
-                        else
-                        {
-                            resultList.Add(Convert.ToInt32(item));
-                        }
-                    }
-                    intArray = resultList.ToArray();
-                }
-
-                if (intArray != null)
-                {
-                    property.SetValue(target, intArray);
+                    SetPropertyStatic(typeof(MotelyJsonConfig.MotelyJsonFilterClause), configClause, entry.Key, entry.Value);
                 }
             }
-            else if (property.PropertyType == typeof(string[]))
-            {
-                string[]? stringArray = null;
-                if (entryValue is object[] array)
-                {
-                    // Zero-allocation: direct array allocation
-                    stringArray = new string[array.Length];
-                    for (int i = 0; i < array.Length; i++)
-                        stringArray[i] = array[i]?.ToString() ?? "";
-                }
-                else if (entryValue is System.Collections.IList list)
-                {
-                    stringArray = new string[list.Count];
-                    for (int i = 0; i < list.Count; i++)
-                        stringArray[i] = list[i]?.ToString() ?? "";
-                }
 
-                if (stringArray != null)
-                {
-                    property.SetValue(target, stringArray);
-                }
-            }
-            else if (property.PropertyType == typeof(int))
-            {
-                if (int.TryParse(entryValue?.ToString(), out var intValue))
-                {
-                    property.SetValue(target, intValue);
-                }
-            }
-            else if (property.PropertyType == typeof(int?))
-            {
-                if (entryValue == null)
-                {
-                    property.SetValue(target, null);
-                }
-                else if (int.TryParse(entryValue.ToString(), out var intValue))
-                {
-                    property.SetValue(target, intValue);
-                }
-            }
-            else if (property.PropertyType == typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>))
-            {
-                if (entryValue is List<MotelyJsonConfig.MotelyJsonFilterClause> clausesList)
-                {
-                    property.SetValue(target, clausesList);
-                }
-                else if (entryValue is System.Collections.IList list)
-                {
-                    var convertedList = new List<MotelyJsonConfig.MotelyJsonFilterClause>();
-                    foreach (var item in list)
-                    {
-                        if (item is MotelyJsonConfig.MotelyJsonFilterClause filterClause)
-                        {
-                            convertedList.Add(filterClause);
-                        }
-                    }
-                    property.SetValue(target, convertedList);
-                }
-            }
-            else if (property.PropertyType == typeof(SourcesConfig))
-            {
-                if (entryValue is SourcesConfig sourcesConfig)
-                {
-                    property.SetValue(target, sourcesConfig);
-                }
-            }
+            value = configClause;
+            return true;
         }
 
         private static void MergeSources(SourcesConfig target, SourcesConfig source)

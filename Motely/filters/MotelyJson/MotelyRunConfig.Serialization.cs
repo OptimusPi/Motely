@@ -11,12 +11,6 @@ public static class MotelyRunConfigSerializationExtensions
 {
     public static string ToJson(this MotelyRunConfig config)
     {
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = false,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-        return JsonSerializer.Serialize(config, options);
+        return JsonSerializer.Serialize(config, MotelyJsonSerializerContext.Default.MotelyRunConfig);
     }
 }
