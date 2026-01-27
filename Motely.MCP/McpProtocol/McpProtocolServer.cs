@@ -555,7 +555,7 @@ public class McpProtocolServer
             deck = deckValue,
             stake = stakeValue,
             analysis_text = analysis.ToString(),
-            starting_deck = analysis.StartingDeck,
+            erratic_deck_composition = analysis.ErraticDeckComposition,
             antes = analysis.Antes.Select(a => new {
                 ante = a.Ante,
                 boss = FormatUtils.FormatBoss(a.Boss),

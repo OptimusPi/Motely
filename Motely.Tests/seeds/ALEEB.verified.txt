@@ -1,4 +1,4 @@
-==ANTE 1==
+﻿==ANTE 1==
 Boss: The Window
 Voucher: Magic Trick
 Tags: Speed Tag, Speed Tag
@@ -87,7 +87,7 @@ Arcana Pack - The Chariot, Death, The Soul
 Arcana Pack - The Fool, The Soul, The Tower
 Arcana Pack - Death, The Wheel of Fortune, Strength
 Jumbo Arcana Pack - The Tower, Strength, The High Priestess, Death, The Hierophant
-Standard Pack - Blue Seal 9 of Spades, Queen of Spades, 7 of Diamonds
+Standard Pack - Blue Seal 9 of Spades, King of Spades, 7 of Diamonds
 
 ==ANTE 3==
 Boss: The Mouth
@@ -146,10 +146,10 @@ Shop Queue:
 50) Astronomer
 
 Packs: 
-Standard Pack - Foil Ace of Spades, 7 of Diamonds, 5 of Hearts
+Standard Pack - Foil 10 of Spades, 7 of Diamonds, 5 of Hearts
 Arcana Pack - The Chariot, The Soul, Temperance
 Jumbo Standard Pack - Mult 8 of Hearts, Holographic 7 of Hearts, 2 of Clubs, Foil 6 of Hearts, 4 of Clubs
-Jumbo Standard Pack - Polychrome Lucky 7 of Clubs, Gold 2 of Spades, Glass 10 of Hearts, Queen of Hearts, 8 of Diamonds
+Jumbo Standard Pack - Polychrome Lucky 7 of Clubs, Gold 2 of Spades, Glass Ace of Hearts, King of Hearts, 8 of Diamonds
 Jumbo Arcana Pack - Judgement, The World, The Magician, The Tower, The Sun
 Arcana Pack - Justice, The Hierophant, The Lovers
 
@@ -212,9 +212,9 @@ Shop Queue:
 Packs: 
 Arcana Pack - Justice, Temperance, The Wheel of Fortune
 Celestial Pack - Eris, Planet X, Mars
-Standard Pack - King of Spades, Mult 6 of Clubs, Polychrome Jack of Spades
+Standard Pack - Queen of Spades, Mult 6 of Clubs, Polychrome Jack of Spades
 Celestial Pack - Jupiter, Mars, Mercury
-Standard Pack - Ace of Spades, 2 of Hearts, Jack of Hearts
+Standard Pack - 10 of Spades, 2 of Hearts, Jack of Hearts
 Celestial Pack - Venus, Pluto, Neptune
 
 ==ANTE 5==
@@ -274,7 +274,7 @@ Shop Queue:
 50) Satellite
 
 Packs: 
-Jumbo Standard Pack - Bonus 7 of Hearts, King of Clubs, Blue Seal 6 of Diamonds, 10 of Hearts, Mult 6 of Clubs
+Jumbo Standard Pack - Bonus 7 of Hearts, Queen of Clubs, Blue Seal 6 of Diamonds, Ace of Hearts, Mult 6 of Clubs
 Arcana Pack - Death, The Sun, The Hierophant
 Celestial Pack - Eris, Neptune, Venus
 Buffoon Pack - Gros Michel, Seltzer
@@ -407,7 +407,7 @@ Mega Celestial Pack - Saturn, Ceres, Mars, Planet X, Mercury
 Standard Pack - Foil 6 of Hearts, Red Seal Foil 2 of Diamonds, Glass 7 of Hearts
 Celestial Pack - Neptune, Mercury, Jupiter
 Mega Arcana Pack - The Hierophant, Death, The High Priestess, The Moon, The Star
-Jumbo Standard Pack - Blue Seal 3 of Clubs, Red Seal Stone 4 of Hearts, Mult 8 of Clubs, 5 of Clubs, 10 of Clubs
+Jumbo Standard Pack - Blue Seal 3 of Clubs, Red Seal Stone 4 of Hearts, Mult 8 of Clubs, 5 of Clubs, Ace of Clubs
 
 ==ANTE 8==
 Boss: Violet Vessel

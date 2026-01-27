@@ -16,7 +16,8 @@ public sealed record class MotelySeedAnalysis(
     string? Error,
     IReadOnlyList<MotelyAnteAnalysis> Antes,
     MotelyDeck? Deck = null,
-    string? StartingDeck = null
+    string? ErraticDeckComposition = null,
+    string? ErraticDeckBreakdown = null
 )
 {
     public override string ToString()
@@ -28,10 +29,14 @@ public sealed record class MotelySeedAnalysis(
 
         StringBuilder sb = new();
 
-        // Add starting deck at the top if available
-        if (!string.IsNullOrEmpty(StartingDeck))
+        // Add erratic deck composition at the top if available (Erratic deck only)
+        if (!string.IsNullOrEmpty(ErraticDeckComposition))
         {
-            sb.AppendLine($"Starting Deck: {StartingDeck}");
+            sb.AppendLine($"Erratic Deck Composition: {ErraticDeckComposition}");
+            if (!string.IsNullOrEmpty(ErraticDeckBreakdown))
+            {
+                sb.AppendLine(ErraticDeckBreakdown);
+            }
             sb.AppendLine();
         }
 
