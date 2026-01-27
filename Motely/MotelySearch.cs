@@ -452,8 +452,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         return scoreProvider != null;
     }
 
-    private double _lastReportMS;
-    private readonly double reportInterval = 2000; // Report every 2 seconds
+    private long _lastReportMS;
+    private const long ReportIntervalMS = 2000; // Report every 2 seconds
 
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly int _batchCharacterCount;
@@ -627,12 +627,23 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private void PrintReport(bool force = false)
     {
-        double elapsedMS = _elapsedTime.ElapsedMilliseconds;
+        long elapsedMS = _elapsedTime.ElapsedMilliseconds;
 
-        if (!force && elapsedMS - _lastReportMS < reportInterval)
-            return;
-
-        _lastReportMS = elapsedMS;
+        if (!force)
+        {
+            // Atomic check-and-set to prevent multiple threads from printing simultaneously
+            long lastReport = Volatile.Read(ref _lastReportMS);
+            if (elapsedMS - lastReport < ReportIntervalMS)
+                return;
+            
+            // Try to claim this report slot - if another thread beat us, skip
+            if (Interlocked.CompareExchange(ref _lastReportMS, elapsedMS, lastReport) != lastReport)
+                return;
+        }
+        else
+        {
+            Volatile.Write(ref _lastReportMS, elapsedMS);
+        }
 
         // PERFORMANCE: Use calculated CompletedBatchCount (no extra state to maintain)
         long thisCompletedCount = CompletedBatchCount;
@@ -743,8 +754,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     public void Dispose()
     {
-        // First, try to pause if running
-        if (_status == MotelySearchStatus.Running)
+        // If cancellation was requested, don't try to pause - let threads exit naturally
+        // Trying to pause after cancellation causes delays due to barrier timeouts
+        if (_status == MotelySearchStatus.Running && !_cancellationToken.IsCancellationRequested)
         {
             Pause();
         }
@@ -786,7 +798,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             if (thread.Thread.IsAlive)
             {
                 // Give threads a moment to see the Disposed status and exit
-                if (!thread.Thread.Join(TimeSpan.FromSeconds(2)))
+                // Use shorter timeout since threads should already be exiting due to cancellation
+                if (!thread.Thread.Join(TimeSpan.FromMilliseconds(500)))
                 {
                     // Thread didn't exit in time - this shouldn't happen but handle gracefully
                     // The thread should exit when it checks _status in ThreadMain
@@ -943,7 +956,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 // This prevents repeated decrements and keeps Pause() barriers consistent.
                 if (_providerExhausted)
                 {
-                    // BUT: Still check status to allow proper unpause/dispose
+                    // Check for cancellation even while idling!
+                    if (Search._cancellationToken.IsCancellationRequested)
+                        break;
                     Thread.Yield();
                     continue;
                 }
@@ -957,6 +972,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                     if (_providerExhausted)
                     {
+                        // CRITICAL: Flush counters before idling!
+                        // Without this, single-seed searches never report their results.
+                        FlushLocalCounters();
+                        
                         if (Search._cancellationToken.IsCancellationRequested)
                         {
                             break;

@@ -61,7 +61,17 @@ namespace Motely.Executors
                 }
             };
 
-            return CreateFilterSearch(_filterName.ToLower().Trim(), _params.Quiet ? null : progressCallback);
+            var search = CreateFilterSearch(_filterName.ToLower().Trim(), _params.Quiet ? null : progressCallback);
+            
+            // Wire up cancellation token so Ctrl+C works with AwaitCompletion()
+            if (_params.CancellationToken != null)
+            {
+                var setTokenMethod = search.GetType().GetMethod("SetCancellationToken", 
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                setTokenMethod?.Invoke(search, [_params.CancellationToken.Value]);
+            }
+            
+            return search;
         }
 
         public int Execute()
@@ -170,8 +180,6 @@ namespace Motely.Executors
                 );
             }
 
-            search.Start();
-            
             // Wire up cancellation token BEFORE starting search
             if (_params.CancellationToken != null)
             {
@@ -179,6 +187,8 @@ namespace Motely.Executors
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
                 setTokenMethod?.Invoke(search, [_params.CancellationToken.Value]);
             }
+            
+            search.Start();
 
             try
             {
