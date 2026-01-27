@@ -285,6 +285,14 @@ namespace Motely.Executors
 
                 _runningSearch = CreateSearch(config, source);
                 
+                // Wire up cancellation token so Ctrl+C works with AwaitCompletion()
+                if (_params.CancellationToken != null)
+                {
+                    var setTokenMethod = _runningSearch.GetType().GetMethod("SetCancellationToken", 
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                    setTokenMethod?.Invoke(_runningSearch, [_params.CancellationToken.Value]);
+                }
+                
                 // Return the search handle directly
                 return _runningSearch;
             }
@@ -831,19 +839,37 @@ namespace Motely.Executors
 
         private void PrintResultRow(MotelySeedScoreTally result, MotelyJsonConfig config)
         {
-            var parts = new List<string>();
-            parts.Add($"\"{result.Seed}\"");
-            parts.Add(result.Score.ToString());
-
-            if (result.ColumnValues != null)
+            // Check if we have any actual string column values (not just integer representations)
+            var tallies = result.TallyColumns;
+            var columnValues = result.ColumnValues;
+            bool hasStringValues = false;
+            
+            if (columnValues != null)
             {
-                foreach (var val in result.ColumnValues)
+                for (int i = 0; i < columnValues.Count && i < tallies.Count; i++)
                 {
-                    parts.Add(val == null ? "" : $"\"{val}\"");
+                    var strVal = columnValues[i];
+                    if (strVal != null && strVal != tallies[i].ToString())
+                    {
+                        hasStringValues = true;
+                        break;
+                    }
                 }
             }
-
-            FancyConsole.WriteLine(string.Join(",", parts));
+            
+            string line;
+            if (hasStringValues)
+            {
+                // Mixed string/int columns - use the column values version
+                line = TallyColorizer.FormatResultLine(result.Seed, result.Score, columnValues!);
+            }
+            else
+            {
+                // Pure integer tallies - use the optimized span version with colors!
+                line = TallyColorizer.FormatResultLine(result.Seed, result.Score, tallies);
+            }
+            
+            FancyConsole.WriteLine(line);
         }
 
         /// <summary>

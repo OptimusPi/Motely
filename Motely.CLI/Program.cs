@@ -256,6 +256,24 @@ namespace Motely
                 // Build common parameters first
                 var quietMode = quietOption.HasValue();
 
+                // Parse cutoff option
+                int cutoffValue = 0;
+                ScoreCutoffMode cutoffMode = ScoreCutoffMode.None;
+                var cutoffStr = cutoffOption.Value()?.ToLowerInvariant() ?? "0";
+                if (cutoffStr == "auto" || cutoffStr == "smart")
+                {
+                    cutoffMode = ScoreCutoffMode.AutoSmart;
+                }
+                else if (cutoffStr == "best")
+                {
+                    cutoffMode = ScoreCutoffMode.AutoBest;
+                }
+                else if (int.TryParse(cutoffStr, out int parsedCutoff))
+                {
+                    cutoffValue = parsedCutoff;
+                    cutoffMode = parsedCutoff > 0 ? ScoreCutoffMode.Manual : ScoreCutoffMode.None;
+                }
+
                 var parameters = new JsonSearchParams
                 {
                     Threads = threadsOption.ParsedValue,
@@ -272,6 +290,8 @@ namespace Motely
                     SeedList = null, // Will be set by keyword handling below
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
                     CancellationToken = _cts.Token,
+                    Cutoff = cutoffValue,
+                    CutoffMode = cutoffMode,
                 };
 
                 if (forceOption.HasValue())
@@ -283,51 +303,8 @@ namespace Motely
                     parameters.SchemaMismatchPrompt = (dbPath, message) => PromptForceOverwrite(dbPath, message, quietMode);
                 }
 
-                // Smart progress reporting: batch 1, then 0.01%-0.1%, then 1% increments
-                if (!parameters.Quiet)
-                {
-                    parameters.ProgressCallback = CreateSmartProgressCallback();
-                }
-
-                static Action<MotelyProgress> CreateSmartProgressCallback()
-                {
-                    var lastReportedPercent = -1.0;
-                    var batchOneReported = false;
-                    var lastReportTime = DateTime.MinValue;
-                    var lockObj = new object();
-
-                    return (progress) =>
-                    {
-                        var now = DateTime.UtcNow;
-                        
-                        // Benign race condition on throttling is acceptable for console output
-                        if ((now - lastReportTime).TotalSeconds < 2.0 && batchOneReported)
-                            return;
-
-                        if (progress.TotalBatchCount <= 0) return;
-
-                        double progressPercent = progress.PercentComplete;
-                        if (progressPercent > 100.0) progressPercent = 100.0;
-
-                        // Determine reporting threshold
-                        double threshold = progressPercent < 0.1 ? 0.001 : progressPercent < 1.0 ? 0.01 : 0.1;
-                        double nextThreshold = (Math.Floor(lastReportedPercent / threshold) + 1) * threshold;
-
-                        // Only report if crossed threshold or enough time elapsed
-                        if (progressPercent >= nextThreshold || (now - lastReportTime).TotalSeconds > 10.0)
-                        {
-                            var timeStr = progress.ElapsedTime.TotalSeconds < 60
-                                ? $"{progress.ElapsedTime.TotalSeconds:F1}s"
-                                : $"{progress.ElapsedTime.TotalMinutes:F1}m";
-
-                            Console.WriteLine($"   ◸ {progressPercent:F4}% complete ({progress.CompletedBatchCount:N0}/{progress.TotalBatchCount:N0} batches) - {timeStr} elapsed");
-                            lastReportedPercent = progressPercent;
-                            lastReportTime = now;
-                            if (!batchOneReported && progress.CompletedBatchCount > 0)
-                                batchOneReported = true;
-                        }
-                    };
-                }
+                // Progress reporting is handled by MotelySearch.PrintReport() internally
+                // No need for a separate CLI callback - it causes duplicate output
 
                 // Handle --keyword: Use IEnumerable directly for fast keyword generation
                 if (keywordOption.HasValue())
@@ -503,12 +480,15 @@ namespace Motely
                     }
 
                     search.Start();
-                    while (search.Status == MotelySearchStatus.Running || search.Status == MotelySearchStatus.Paused)
-                    {
-                        if (parameters.CancellationToken?.IsCancellationRequested == true)
-                            break;
-                        Thread.Sleep(100);
-                    }
+                    
+                    // Use AwaitCompletion() for clean blocking - respects cancellation token internally
+                    search.AwaitCompletion();
+                    
+                    // Check if cancelled
+                    bool wasCancelled = parameters.CancellationToken?.IsCancellationRequested == true;
+                    
+                    // Print final summary before disposing
+                    PrintSearchSummary(search, parameters, wasCancelled);
                     search.Dispose();
                 }
                 catch (Exception ex)
@@ -974,6 +954,52 @@ namespace Motely
         /// <summary>
         /// Insert a batch of seeds into DuckDB
         /// </summary>
+
+        /// <summary>
+        /// Print search summary after completion or cancellation
+        /// </summary>
+        private static void PrintSearchSummary(IMotelySearch search, JsonSearchParams parameters, bool wasCancelled)
+        {
+            if (parameters.Quiet)
+                return;
+                
+            Console.Out.Flush();
+            Console.WriteLine("\n" + new string('═', 60));
+            Console.WriteLine(wasCancelled ? "🛑 SEARCH STOPPED" : "✅ SEARCH COMPLETED");
+            Console.WriteLine(new string('═', 60));
+
+            long lastBatchIndex = search.CompletedBatchCount;
+
+            // Calculate precise percentage
+            double precisePercent = 0.0;
+            if (parameters.SeedList != null)
+            {
+                if (!wasCancelled)
+                    precisePercent = 100.0;
+            }
+            else
+            {
+                long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
+                if (maxBatches > 0)
+                    precisePercent = (double)lastBatchIndex * 100.0 / (double)maxBatches;
+            }
+            
+            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
+            Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
+            Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
+            Console.WriteLine($"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)");
+            
+            double speed = search.ElapsedTime.TotalMilliseconds > 0 
+                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
+                : 0;
+            Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
+
+            if (wasCancelled)
+            {
+                Console.WriteLine($"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F4}");
+            }
+            Console.WriteLine(new string('═', 60));
+        }
 
     }
 }
