@@ -22,7 +22,7 @@ Shop Queue:
 Packs: 
 Buffoon Pack - Egg, Joker
 Jumbo Arcana Pack - The Hierophant, The Tower, The Magician, Death, The Lovers
-Standard Pack - Gold Seal Lucky 3 of Hearts, King of Spades, 7 of Hearts
+Standard Pack - Gold Seal Lucky 3 of Hearts, Queen of Spades, 7 of Hearts
 Buffoon Pack - Sly Joker, Misprint
 
 ==ANTE 2==
@@ -83,7 +83,7 @@ Shop Queue:
 
 Packs: 
 Buffoon Pack - Constellation, Drunkard
-Standard Pack - Red Seal 7 of Spades, Bonus Queen of Diamonds, Bonus Jack of Diamonds
+Standard Pack - Red Seal 7 of Spades, Bonus King of Diamonds, Bonus Jack of Diamonds
 Celestial Pack - Uranus, Pluto, Mercury
 Standard Pack - Gold Seal Stone 3 of Diamonds, Gold 4 of Hearts, 3 of Diamonds
 Arcana Pack - The Devil, Death, The Hermit
@@ -149,7 +149,7 @@ Packs:
 Celestial Pack - Earth, Saturn, Mercury
 Mega Arcana Pack - The Sun, Justice, The Magician, The Empress, Judgement
 Mega Celestial Pack - Saturn, Pluto, Planet X, Mercury, Eris
-Standard Pack - Red Seal King of Spades, Bonus Ace of Clubs, Red Seal 7 of Diamonds
+Standard Pack - Red Seal Queen of Spades, Bonus 10 of Clubs, Red Seal 7 of Diamonds
 Jumbo Arcana Pack - The Star, The Lovers, The Chariot, The Emperor, The Hermit
 Jumbo Arcana Pack - The World, The Hanged Man, The High Priestess, Strength, The Soul
 
@@ -338,10 +338,10 @@ Shop Queue:
 50) Red Card
 
 Packs: 
-Mega Standard Pack - Holographic 8 of Clubs, 2 of Clubs, Gold Seal 6 of Hearts, Queen of Clubs, Mult Jack of Clubs
+Mega Standard Pack - Holographic 8 of Clubs, 2 of Clubs, Gold Seal 6 of Hearts, King of Clubs, Mult Jack of Clubs
 Mega Arcana Pack - The Moon, The World, The Tower, The Hermit, The Wheel of Fortune
 Spectral Pack - Aura, Hex
-Standard Pack - 6 of Diamonds, 10 of Spades, 5 of Spades
+Standard Pack - 6 of Diamonds, Ace of Spades, 5 of Spades
 Arcana Pack - The Chariot, The Emperor, The Sun
 Jumbo Celestial Pack - Venus, Mars, Eris, Earth, Ceres
 
@@ -403,7 +403,7 @@ Shop Queue:
 
 Packs: 
 Jumbo Standard Pack - 4 of Clubs, Foil 8 of Clubs, Gold Seal Gold 7 of Diamonds, 6 of Hearts, 2 of Spades
-Standard Pack - 8 of Diamonds, Queen of Spades, 4 of Diamonds
+Standard Pack - 8 of Diamonds, King of Spades, 4 of Diamonds
 Standard Pack - Red Seal Jack of Clubs, Mult 5 of Spades, 6 of Hearts
 Jumbo Spectral Pack - Ectoplasm, Medium, Talisman, Familiar
 Celestial Pack - Saturn, Pluto, Eris
@@ -468,7 +468,7 @@ Shop Queue:
 Packs: 
 Jumbo Celestial Pack - Neptune, Ceres, Mars, Jupiter, Mercury
 Arcana Pack - The Emperor, Temperance, The Devil
-Jumbo Standard Pack - Lucky Ace of Spades, 8 of Hearts, King of Clubs, Gold Seal Stone King of Hearts, 2 of Spades
+Jumbo Standard Pack - Lucky 10 of Spades, 8 of Hearts, Queen of Clubs, Gold Seal Stone Queen of Hearts, 2 of Spades
 Celestial Pack - Uranus, Eris, Earth
 Mega Celestial Pack - Earth, Mars, Ceres, Neptune, Mercury
 Celestial Pack - Pluto, Ceres, Saturn
