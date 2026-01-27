@@ -3,4 +3,10 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
+
+  <!-- Android SDK Settings -->
+  <PropertyGroup Condition="$(TargetFramework.StartsWith('net10.0-android'))">
+    <AcceptAndroidSDKLicenses>true</AcceptAndroidSDKLicenses>
+    <AndroidSdkDirectory>$(LOCALAPPDATA)\Android\android-sdk</AndroidSdkDirectory>
+  </PropertyGroup>
 </Project>
