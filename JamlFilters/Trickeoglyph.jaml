@@ -7,26 +7,16 @@ stake: White
 must:
   - soulJoker: Perkeo
     antes: [1]
-    packSlots: [1]
+    packSlots: [0,1,2,3]
     edition: Negative
   - soulJoker: Any
-    antes: [8]
-    packSlots: [0, 1]
-
-  - voucher: Hieroglyph
-    antes: [1, 2]
-    score: 1
-  - voucher: Petroglyph
-    antes: [1, 2]
-    score: 1
-  - voucher: MagicTrick
-    antes: [1, 2, 3]
-    score: 1
-
+    edition: Negative
+    antes: [7,8]
+    packSlots: [0,1,2,3,4]
   - soulJoker: Canio
     antes: [1, 2, 3, 4, 5, 6, 7, 8]
     sources:
-      packSlots: [0, 1, 2, 3, 4, 5]
+      packSlots: [0, 1, 2, 3, 4]
 
 should:
   - voucher: MagicTrick
