@@ -1,9 +1,8 @@
 using DuckDB.NET.Data;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
-using Motely.Orchestration;
-using DuckSeedStorage = global::Motely.DuckDB.DuckDBSeedStorage;
 using Motely.Executors;
+using DuckSeedStorage = global::Motely.DuckDB.DuckDBSeedStorage;
 using Motely.Filters;
 using Motely.GPU;
 using System.Collections.Generic;
@@ -180,6 +179,11 @@ namespace Motely
                 "Save results to SearchResults/ (DuckDB)",
                 CommandOptionType.NoValue
             );
+            var forceOption = app.Option(
+                "--force",
+                "Overwrite existing SearchResults database if schema changed",
+                CommandOptionType.NoValue
+            );
 
             var outputDbOption = app.Option<string>(
                 "--output-db <PATH>",
@@ -250,6 +254,8 @@ namespace Motely
                 }
 
                 // Build common parameters first
+                var quietMode = quietOption.HasValue();
+
                 var parameters = new JsonSearchParams
                 {
                     Threads = threadsOption.ParsedValue,
@@ -258,7 +264,7 @@ namespace Motely
                     EndBatch = (ulong)endBatchOption.ParsedValue,
                     EnableDebug = debugOption.HasValue(),
                     NoFancy = noFancyOption.HasValue(),
-                    Quiet = quietOption.HasValue(),
+                    Quiet = quietMode,
                     SpecificSeed = seedOption.Value(),
                     SeedSources = seedsourcesOption.Value(),
                     Deck = deckOption.Value(),
@@ -267,6 +273,15 @@ namespace Motely
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
                     CancellationToken = _cts.Token,
                 };
+
+                if (forceOption.HasValue())
+                {
+                    parameters.ForceOverwrite = true;
+                }
+                else
+                {
+                    parameters.SchemaMismatchPrompt = (dbPath, message) => PromptForceOverwrite(dbPath, message, quietMode);
+                }
 
                 // Smart progress reporting: batch 1, then 0.01%-0.1%, then 1% increments
                 if (!parameters.Quiet)
@@ -622,6 +637,27 @@ namespace Motely
                 Console.Write(analysis);
             }
             return 0;
+        }
+
+        private static bool PromptForceOverwrite(string dbPath, string message, bool quiet)
+        {
+            if (quiet)
+                return false;
+
+            while (true)
+            {
+                Console.WriteLine(message);
+                Console.Write($"Overwrite {dbPath}? [y/N]: ");
+                var input = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(input))
+                    return false;
+
+                input = input.Trim();
+                if (input.Equals("y", StringComparison.OrdinalIgnoreCase) || input.Equals("yes", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                if (input.Equals("n", StringComparison.OrdinalIgnoreCase) || input.Equals("no", StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
         }
 
         /// <summary>
