@@ -150,8 +150,9 @@ public interface IMotelySearch : IDisposable
     public long MatchingSeeds { get; }
     public long FilteredSeeds { get; }
 
-    public void Start();
+    public void Start(CancellationToken cancellationToken = default);
     public void AwaitCompletion();
+    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
     public void Pause();
     public void Cancel();
     public void ForceProgressReport();
@@ -182,7 +183,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithProgressCallback(Action<MotelyProgress> callback);
     IMotelySearchSettings WithCsvOutput(bool csvOutput);
     IMotelySearchSettings WithQuietMode(bool quietMode);
-    IMotelySearch Start();
+    IMotelySearch Start(CancellationToken cancellationToken = default);
 }
 
 public sealed class MotelySearchSettings<TBaseFilter>(
@@ -295,7 +296,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithProgressCallback(Action<MotelyProgress> callback) => WithProgressCallback(callback);
     IMotelySearchSettings IMotelySearchSettings.WithCsvOutput(bool csvOutput) => WithCsvOutput(csvOutput);
     IMotelySearchSettings IMotelySearchSettings.WithQuietMode(bool quietMode) => WithQuietMode(quietMode);
-    IMotelySearch IMotelySearchSettings.Start() => Start();
+    IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) => Start(cancellationToken);
 
     public MotelySearchSettings<TBaseFilter> WithSeedScoreProvider(
         IMotelySeedScoreDesc seedScoreDesc
@@ -337,7 +338,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
-    public IMotelySearch Start()
+    public IMotelySearch Start(CancellationToken cancellationToken = default)
     {
         throw new PlatformNotSupportedException("MotelySearch.Start() is not supported in browser builds. Use JsonSearchExecutor or browser-specific search implementation.");
     }

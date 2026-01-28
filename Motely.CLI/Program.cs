@@ -5,6 +5,7 @@ using Motely.Executors;
 using DuckSeedStorage = global::Motely.DuckDB.DuckDBSeedStorage;
 using Motely.Filters;
 using Motely.GPU;
+using Motely.Reporting;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -416,25 +417,23 @@ namespace Motely
                 }
 
                 // Determine output paths
+                // dbPath is ONLY for user override - orchestrator handles default path generation
                 string? dbPath = outputDbOption.Value();
                 string? csvPath = outputCsvOption.Value();
-                string? configName = jamlOption.HasValue() ? jamlOption.Value() : (jsonOption.Value() ?? "standard");
 
                 // Check which mode to run
                 var nativeFilter = nativeOption.Value();
 
-                if (saveOption.HasValue())
+                // Set OutputDbPath ONLY if user explicitly provided it
+                // For --save flag, set AutoSave=true and orchestrator will generate path from config
+                if (!string.IsNullOrEmpty(dbPath))
                 {
-                    Directory.CreateDirectory("SearchResults");
-                    var filterId = System.Text.RegularExpressions.Regex.Replace(
-                        configName ?? "search",
-                        "[^a-zA-Z0-9_-]",
-                        "_"
-                    ).ToLowerInvariant();
-                    dbPath = $"SearchResults/{filterId}.db";
+                    parameters.OutputDbPath = dbPath;
                 }
-
-                parameters.OutputDbPath = dbPath;
+                else if (saveOption.HasValue())
+                {
+                    parameters.AutoSave = true; // Orchestrator will generate path from config
+                }
 
                 // Setup CSV output if requested
                 StreamWriter? csvWriter = null;
@@ -452,14 +451,35 @@ namespace Motely
                 int exitCode = 0;
                 try
                 {
+                    // ORCHESTRATOR HANDLES EVERYTHING - just give it the config!
+                    // Column names come from JAML labels (handled by GetColumnNames in config)
+                    // DB path generation comes from filterId (handled by orchestrator)
                     IMotelySearch search;
                     Action<MotelySeedScoreTally> resultCallback = (result) =>
                     {
+                        // Build CSV line efficiently without intermediate List allocations
+                        var sb = new StringBuilder();
+                        sb.Append('"').Append(result.Seed).Append('"').Append(',');
+                        sb.Append(result.Score);
+                        
+                        // Append tally columns
+                        if (result.TallyColumns != null && result.TallyColumns.Count > 0)
+                        {
+                            foreach (var tally in result.TallyColumns)
+                            {
+                                sb.Append(',').Append(tally);
+                            }
+                        }
+                        
+                        string csvLine = sb.ToString();
+                        
+                        // Always print to console (quiet mode still shows CSV results)
+                        Console.WriteLine(csvLine);
+                        
+                        // Also write to CSV file if specified
                         if (csvWriter != null)
                         {
-                            var values = new List<string> { $"\"{result.Seed}\"", result.Score.ToString() };
-                            values.AddRange(result.TallyColumns.Select(t => t.ToString()));
-                            csvWriter.WriteLine(string.Join(",", values));
+                            csvWriter.WriteLine(csvLine);
                         }
                     };
 
@@ -479,7 +499,11 @@ namespace Motely
                         }
                     }
 
-                    search.Start();
+                    // Print startup info with column names BEFORE search starts (even in quiet mode)
+                    // Column names come from JAML labels (handled by GetColumnNames in config, printed by executor)
+                    PrintStartupInfo(search, parameters, configName ?? "standard", deckOption.Value()!, stakeOption.Value()!, null);
+
+                    search.Start(parameters.CancellationToken ?? default);
                     
                     // Use AwaitCompletion() for clean blocking - respects cancellation token internally
                     search.AwaitCompletion();
@@ -487,7 +511,7 @@ namespace Motely
                     // Check if cancelled
                     bool wasCancelled = parameters.CancellationToken?.IsCancellationRequested == true;
                     
-                    // Print final summary before disposing
+                    // Print final summary ALWAYS (even in quiet mode on interrupt/completion)
                     PrintSearchSummary(search, parameters, wasCancelled);
                     search.Dispose();
                 }
@@ -621,9 +645,6 @@ namespace Motely
 
         private static bool PromptForceOverwrite(string dbPath, string message, bool quiet)
         {
-            if (quiet)
-                return false;
-
             while (true)
             {
                 Console.WriteLine(message);
@@ -956,13 +977,27 @@ namespace Motely
         /// </summary>
 
         /// <summary>
+        /// Print startup info before search (filter name, deck, stake)
+        /// Always prints, even in quiet mode - users need to know what's running
+        /// CSV header is printed by the executor (ONE SOURCE OF TRUTH)
+        /// </summary>
+        private static void PrintStartupInfo(IMotelySearch search, JsonSearchParams parameters, string configName, string deck, string stake, MotelyJsonConfig? config)
+        {
+            Console.Out.Flush();
+            Console.WriteLine($"🔍 Running filter: {configName}");
+            Console.WriteLine($"   Deck: {deck}, Stake: {stake}");
+            Console.WriteLine($"   Threads: {parameters.Threads}, BatchSize: {parameters.BatchSize}");
+            if (parameters.StartBatch > 0)
+                Console.WriteLine($"   Starting from batch: {parameters.StartBatch:N0}");
+            Console.WriteLine();
+        }
+
+        /// <summary>
         /// Print search summary after completion or cancellation
+        /// Always prints, even in quiet mode - user needs to know how to continue
         /// </summary>
         private static void PrintSearchSummary(IMotelySearch search, JsonSearchParams parameters, bool wasCancelled)
         {
-            if (parameters.Quiet)
-                return;
-                
             Console.Out.Flush();
             Console.WriteLine("\n" + new string('═', 60));
             Console.WriteLine(wasCancelled ? "🛑 SEARCH STOPPED" : "✅ SEARCH COMPLETED");
@@ -989,10 +1024,10 @@ namespace Motely
             Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
             Console.WriteLine($"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)");
             
-            double speed = search.ElapsedTime.TotalMilliseconds > 0 
-                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
+            double speed = search.ElapsedTime.TotalSeconds > 0 
+                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds 
                 : 0;
-            Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
+            Console.WriteLine($"   Speed: {speed:F2} seeds/second");
 
             if (wasCancelled)
             {

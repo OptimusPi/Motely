@@ -56,26 +56,20 @@ namespace Motely.Executors
                     double elapsedMS = progress.ElapsedTime.TotalMilliseconds;
                     string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
                     var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
-                    string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(progress.SeedsPerMillisecond)} seeds/ms";
+                    double seedsPerSec = progress.SeedsPerMillisecond * 1000.0;
+                    string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerSec)} seeds/sec";
                     Console.Write($"\r{progressLine}                    \r{progressLine}");
                 }
             };
 
-            var search = CreateFilterSearch(_filterName.ToLower().Trim(), _params.Quiet ? null : progressCallback);
-            
-            // Wire up cancellation token so Ctrl+C works with AwaitCompletion()
-            if (_params.CancellationToken != null)
-            {
-                var setTokenMethod = search.GetType().GetMethod("SetCancellationToken", 
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-                setTokenMethod?.Invoke(search, [_params.CancellationToken.Value]);
-            }
-            
-            return search;
+            // Return search without starting - caller will call Start(cancellationToken)
+            return CreateFilterSearch(_filterName.ToLower().Trim(), _params.Quiet ? null : progressCallback);
         }
 
-        public int Execute()
+        public int Execute(CancellationToken cancellationToken = default)
         {
+            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
+            
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             // Ensure tally colors respect --nofancy
@@ -180,15 +174,7 @@ namespace Motely.Executors
                 );
             }
 
-            // Wire up cancellation token BEFORE starting search
-            if (_params.CancellationToken != null)
-            {
-                var setTokenMethod = search.GetType().GetMethod("SetCancellationToken", 
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-                setTokenMethod?.Invoke(search, [_params.CancellationToken.Value]);
-            }
-            
-            search.Start();
+            search.Start(effectiveToken);
 
             try
             {
@@ -198,6 +184,134 @@ namespace Motely.Executors
                 searchStopwatch.Stop();
                 PrintSummary(search, searchStopwatch.Elapsed);
 
+                return 0;
+            }
+            finally
+            {
+                // Always dispose, but avoid double-dispose if cancelled and handler already disposed
+                if (!_cancelled)
+                {
+                    search.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Async version of Execute that doesn't block the calling thread.
+        /// Uses WaitForCompletionAsync instead of AwaitCompletion.
+        /// </summary>
+        public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+        {
+            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
+            
+            DebugLogger.IsEnabled = _params.EnableDebug;
+            FancyConsole.IsEnabled = !_params.NoFancy;
+            // Ensure tally colors respect --nofancy
+            TallyColorizer.ColorEnabled = !_params.NoFancy;
+
+            string normalizedFilterName = _filterName
+                .ToLower(System.Globalization.CultureInfo.CurrentCulture)
+                .Trim();
+
+            // Progress callback
+            Action<MotelyProgress>? progressCallback = null;
+
+            DateTime lastProgressUpdate = DateTime.UtcNow;
+            object progressLock = new object();
+            
+            progressCallback = (progress) =>
+            {
+                lock (progressLock)
+                {
+                    var now = DateTime.UtcNow;
+                    var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+
+                    // Throttle progress updates to every 2 seconds
+                    if (timeSinceLastUpdate < 2000)
+                        return;
+
+                    lastProgressUpdate = now;
+
+                    string timeLeftFormatted = "calculating...";
+                    if (progress.TotalBatchCount > 0 && progress.CompletedBatchCount > 0)
+                    {
+                        if (progress.EstimatedTimeRemaining.HasValue)
+                        {
+                            var timeLeftSpan = progress.EstimatedTimeRemaining.Value;
+                            timeLeftFormatted = timeLeftSpan.Days == 0 
+                                ? $"{timeLeftSpan:hh\\:mm\\:ss}" 
+                                : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                        }
+                    }
+                    double pct = progress.PercentComplete;
+                    double elapsedMS = progress.ElapsedTime.TotalMilliseconds;
+                    string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
+                    var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
+                    string progressLine =
+                        $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(progress.SeedsPerMillisecond)} seeds/ms";
+                    Console.Write($"\r{progressLine}                    \r{progressLine}");
+                }
+            };
+
+            // Create the appropriate filter
+            IMotelySearch search;
+            try
+            {
+                search = CreateFilterSearch(normalizedFilterName, progressCallback);
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"❌ {ex.Message}");
+                return 1;
+            }
+
+            Console.WriteLine(
+                $"🔍 Running native filter: {_filterName}"
+                    + (
+                        !string.IsNullOrEmpty(_params.SpecificSeed)
+                            ? $" on seed: {_params.SpecificSeed}"
+                            : ""
+                    )
+                    + (!string.IsNullOrEmpty(_scoreConfig) ? $" with scoring: {_scoreConfig}" : "")
+            );
+
+            // Help identify non-determinism
+            DebugLogger.Log($"Thread count: {_params.Threads}");
+            DebugLogger.Log($"Batch size: {_params.BatchSize}");
+            DebugLogger.Log($"Start batch: {_params.StartBatch}");
+            DebugLogger.Log($"End batch: {_params.EndBatch}");
+
+            var searchStopwatch = Stopwatch.StartNew();
+
+            // Add debug output for batch range processing
+            if (_params.StartBatch > 0 || _params.EndBatch > 0)
+            {
+                Console.WriteLine(
+                    $"   Processing batches: {_params.StartBatch} to {_params.EndBatch}"
+                );
+                Console.WriteLine($"   Seeds per batch: {Math.Pow(35, _params.BatchSize):N0}");
+                Console.WriteLine(
+                    $"   Total seeds to search: {((_params.EndBatch - _params.StartBatch + 1) * Math.Pow(35, _params.BatchSize)):N0}"
+                );
+            }
+
+            search.Start(effectiveToken);
+
+            try
+            {
+                // Wait for completion using async API - doesn't block the UI thread
+                await search.WaitForCompletionAsync(effectiveToken).ConfigureAwait(false);
+
+                searchStopwatch.Stop();
+                PrintSummary(search, searchStopwatch.Elapsed);
+
+                return 0;
+            }
+            catch (OperationCanceledException)
+            {
+                _cancelled = true;
+                searchStopwatch.Stop();
+                PrintSummary(search, searchStopwatch.Elapsed);
                 return 0;
             }
             finally
@@ -489,10 +603,11 @@ namespace Motely.Executors
 
             if (duration.TotalMilliseconds >= 1)
             {
-                var speed = (double)totalSeedsSearched / duration.TotalMilliseconds;
+                var speed = duration.TotalSeconds > 0 
+                    ? (double)totalSeedsSearched / duration.TotalSeconds 
+                    : 0;
                 Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
-                // Show 2 decimal places for precision (especially important for slow searches)
-                Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
+                Console.WriteLine($"   Speed: {speed:F0} seeds/second");
             }
         }
     }

@@ -17,9 +17,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- When referenced as library (BSO_LIBRARY), compile as Library not Exe -->
-    <OutputType Condition="'$(BSO_LIBRARY)' != 'true'">Exe</OutputType>
-    <OutputType Condition="'$(BSO_LIBRARY)' == 'true'">Library</OutputType>
+    <!-- Default to Library - can be referenced by any consumer -->
+    <!-- To run standalone: dotnet run (works even with Library OutputType) -->
+    <OutputType>Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591;CS8032;NU1510</NoWarn>
   </PropertyGroup>

@@ -47,11 +47,11 @@ public abstract class MotelyJsonFilterClause
             }
         }
 
-        // Handle empty case
+        // Handle empty case - use DEFAULT_ANTES range (1-8)
         if (minAnte == int.MaxValue)
         {
             minAnte = 1;
-            maxAnte = 1;
+            maxAnte = 8; // MotelyFilterDefaults.DEFAULT_ANTES = [1, 2, 3, 4, 5, 6, 7, 8]
         }
 
         return (minAnte, maxAnte);
@@ -97,137 +97,123 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker? JokerType { get; init; }
     public List<MotelyJoker>? JokerTypes { get; init; }
-    public new MotelyItemEdition? EditionEnum { get; init; } // ADDED: Preserve edition requirements (new keyword to hide base class member)
-    public List<MotelyJokerSticker>? StickerEnums { get; init; } // ADDED: Preserve sticker requirements
+    public MotelyItemEdition? Edition { get; init; }  // Joker-specific edition (separate from base)
+    public List<MotelyJokerSticker>? StickerEnums { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
     public SourcesConfig? Sources { get; init; }
-    public bool[] WantedAntes { get; init; } = new bool[40];
-    public bool[] WantedShopSlots { get; init; } = new bool[1024]; // Support large maxShopSlot values (600+)
-    public bool[] WantedPackSlots { get; init; } = new bool[6];
-    public int? MinPackSlot { get; init; }
-    public int? MaxPackSlot { get; init; }
-    public int? MinShopSlot { get; init; }
-    public int? MaxShopSlot { get; init; }
-    public int MaxShopSlotsNeeded { get; init; } // Pre-calculated max shop slot index + 1
-    public int MaxPackSlotsNeeded { get; init; } // Pre-calculated max pack slot index + 1
-    public bool HasShopSlots { get; init; } // PRE-COMPUTED FLAG - NO LINQ IN HOTPATH!
-    public bool HasPackSlots { get; init; } // PRE-COMPUTED FLAG - NO LINQ IN HOTPATH!
+    
+    // Antes
+    public int[] EffectiveAntes { get; init; } = [];  // Sparse list for hot path iteration
+    public bool[] WantedAntes { get; init; } = new bool[40];  // Dense lookup for CalculateAnteRange
+    
+    // Shop slots - range-based (min inclusive, max exclusive)
+    public int? MinShopSlot { get; init; }  // null = start from beginning
+    public int? MaxShopSlot { get; init; }  // null = use ante-based defaults
+    
+    // Pack slots - 6-bit bitmask (slots 0-5)
+    public byte PackSlotMask { get; init; }  // bit i = slot i wanted, 0 = use defaults
+    
+    // Pre-computed for hot path
+    public int MaxShopSlotsNeeded { get; init; }
+    public int MaxPackSlotsNeeded { get; init; }
+    public bool HasShopConstraint { get; init; }
+    public bool HasPackConstraint { get; init; }
+    
+    /// <summary>Check if shop slot is in range. O(1).</summary>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool IsShopSlotWanted(int slot) => 
+        !HasShopConstraint || (slot >= MinShopSlot && slot < MaxShopSlot);
+    
+    /// <summary>Check if pack slot bit is set. O(1).</summary>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool IsPackSlotWanted(int slot) => 
+        !HasPackConstraint || ((PackSlotMask & (1 << slot)) != 0);
+    
+    // Compatibility properties for existing code
+    public bool HasShopSlots => HasShopConstraint;
+    public bool HasPackSlots => HasPackConstraint;
+    public int? MaxPackSlot => HasPackConstraint ? MaxPackSlotsNeeded : null;
+    public bool[] WantedShopSlots { get; init; } = new bool[1024];  // Legacy - prefer IsShopSlotWanted()
+    public bool[] WantedPackSlots { get; init; } = new bool[6];     // Legacy - prefer IsPackSlotWanted()
 
     /// <summary>
-    /// Create from generic JSON config clause
+    /// Create from generic JSON config clause.
     /// </summary>
     public static MotelyJsonJokerFilterClause FromJsonClause(
         MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
-        bool[] wantedAntes = new bool[40];
-        var effectiveAntes = jsonClause.EffectiveAntes;
-        foreach (var ante in effectiveAntes)
+        // Shop slots: convert explicit array to min/max range, or use specified range
+        int minShop = 0, maxShop = 0;
+        bool hasShopConstraint = false;
+        
+        if (jsonClause.Sources?.ShopSlots is { Length: > 0 } slots)
+        {
+            // Explicit slots -> convert to range (min to max+1)
+            minShop = slots[0];
+            maxShop = slots[0] + 1;
+            for (int i = 1; i < slots.Length; i++)
+            {
+                if (slots[i] < minShop) minShop = slots[i];
+                if (slots[i] >= maxShop) maxShop = slots[i] + 1;
+            }
+            hasShopConstraint = true;
+        }
+        else if (jsonClause.MinShopSlot.HasValue || jsonClause.MaxShopSlot.HasValue)
+        {
+            minShop = jsonClause.MinShopSlot ?? 0;
+            maxShop = jsonClause.MaxShopSlot ?? 1000; // Large default if only min specified
+            hasShopConstraint = true;
+        }
+        
+        // Pack slots: convert to 6-bit bitmask
+        byte packMask = 0;
+        bool hasPackConstraint = false;
+        
+        if (jsonClause.Sources?.PackSlots is { Length: > 0 } packSlots)
+        {
+            foreach (var slot in packSlots)
+            {
+                if (slot >= 0 && slot < 6)
+                    packMask |= (byte)(1 << slot);
+            }
+            hasPackConstraint = packMask != 0;
+        }
+        else if (jsonClause.MinPackSlot.HasValue || jsonClause.MaxPackSlot.HasValue)
+        {
+            // Range -> set bits in range
+            int minPack = jsonClause.MinPackSlot ?? 0;
+            int maxPack = jsonClause.MaxPackSlot ?? 6;
+            for (int i = minPack; i < maxPack && i < 6; i++)
+                packMask |= (byte)(1 << i);
+            hasPackConstraint = packMask != 0;
+        }
+        
+        // Build WantedAntes bool array from EffectiveAntes
+        var wantedAntes = new bool[40];
+        foreach (var ante in jsonClause.EffectiveAntes)
         {
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
         }
-
-        // Create shop slots bool array from explicit sources OR from min/max range
-        bool[] wantedShopSlots = new bool[1024];
-        DebugLogger.Log(
-            $"[JOKER CONVERT] Value={jsonClause.Value}, Sources={jsonClause.Sources}, MinShop={jsonClause.MinShopSlot}, MaxShop={jsonClause.MaxShopSlot}"
-        );
-        if (jsonClause.Sources?.ShopSlots != null)
+        
+        // Build legacy WantedShopSlots array (for compatibility)
+        var wantedShopSlots = new bool[1024];
+        if (hasShopConstraint)
         {
-            // Explicit shop slots specified
-            DebugLogger.Log($"[JOKER CONVERT] Using explicit ShopSlots");
-            foreach (var slot in jsonClause.Sources.ShopSlots)
-            {
-                if (slot >= 0 && slot < 1024)
-                    wantedShopSlots[slot] = true;
-            }
-        }
-        else if (jsonClause.MinShopSlot.HasValue || jsonClause.MaxShopSlot.HasValue)
-        {
-            // Use min/max shop slot range (min inclusive, max exclusive)
-            int minSlot = jsonClause.MinShopSlot ?? 0;
-            int maxSlot = jsonClause.MaxShopSlot ?? 1023;
-            DebugLogger.Log(
-                $"[SHOP SLOTS] MinShopSlot={jsonClause.MinShopSlot}, MaxShopSlot={jsonClause.MaxShopSlot}, range={minSlot}-{maxSlot}"
-            );
-            for (int i = minSlot; i < maxSlot && i < 1024; i++)
-            {
+            for (int i = minShop; i < maxShop && i < 1024; i++)
                 wantedShopSlots[i] = true;
-            }
-            DebugLogger.Log(
-                $"[SHOP SLOTS] Set slots {minSlot} to {maxSlot - 1} (exclusive max). Slot[6]={wantedShopSlots[6]}"
-            );
         }
-
-        bool[] wantedPackSlots = new bool[6];
-        if (jsonClause.Sources?.PackSlots != null)
+        
+        // Build legacy WantedPackSlots array (for compatibility)
+        var wantedPackSlots = new bool[6];
+        for (int i = 0; i < 6; i++)
         {
-            DebugLogger.Log(
-                $"[JOKER CONVERT] Explicit PackSlots: {string.Join(",", jsonClause.Sources.PackSlots)}"
-            );
-            foreach (var slot in jsonClause.Sources.PackSlots)
-            {
-                if (slot >= 0 && slot < 6)
-                    wantedPackSlots[slot] = true;
-            }
+            if ((packMask & (1 << i)) != 0)
+                wantedPackSlots[i] = true;
         }
-        else if (
-            jsonClause.Sources?.ShopSlots == null
-            && !jsonClause.MinShopSlot.HasValue
-            && !jsonClause.MaxShopSlot.HasValue
-        )
-        {
-            // NO slots specified - leave arrays EMPTY so CountJokerOccurrences can apply ante-based defaults
-            // This allows dynamic slot ranges per ante (e.g., ante 0 = 3 shops, ante 3+ = 6 + ante shops)
-            // If user specifies ANY source (packSlots, shopSlots, etc), we respect it and DON'T add defaults!
-            DebugLogger.Log(
-                $"[JOKER CONVERT] No slots specified, will use ante-based defaults in scoring"
-            );
-            // Both wantedShopSlots and wantedPackSlots remain all-false (empty)
-        }
-        else
-        {
-            DebugLogger.Log($"[JOKER CONVERT] ShopSlots specified, NOT setting pack slots");
-        }
-
-        // Log final state
-        int shopCount = wantedShopSlots.Count(s => s);
-        int packCount = wantedPackSlots.Count(s => s);
-        DebugLogger.Log(
-            $"[JOKER CONVERT FINAL] {jsonClause.Value}: shopSlots={shopCount}, packSlots={packCount}"
-        );
-
-        // Pre-calculate MaxShopSlotsNeeded for hot path
-        int maxShopSlotsNeeded = 0;
-        bool hasShopSlots = false;
-        for (int i = 0; i < wantedShopSlots.Length; i++)
-        {
-            if (wantedShopSlots[i])
-            {
-                hasShopSlots = true;
-                maxShopSlotsNeeded = i + 1;
-            }
-        }
-        // If no specific slots wanted, use default of 8
-        if (!hasShopSlots)
-            maxShopSlotsNeeded = 8;
-
-        // Pre-calculate MaxPackSlotsNeeded AND HasPackSlots flag
-        int maxPackSlotsNeeded = 0;
-        bool hasPackSlots = false;
-        for (int i = 0; i < wantedPackSlots.Length; i++)
-        {
-            if (wantedPackSlots[i])
-            {
-                hasPackSlots = true;
-                maxPackSlotsNeeded = i + 1;
-            }
-        }
-        if (maxPackSlotsNeeded == 0)
-            maxPackSlotsNeeded = 6; // Default if no specific slots
-
+        
         return new MotelyJsonJokerFilterClause
         {
             JokerType = jsonClause.JokerEnum,
@@ -235,19 +221,19 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             IsWildcard = jsonClause.IsWildcard,
             WildcardEnum = jsonClause.WildcardEnum,
             Sources = jsonClause.Sources,
-            EditionEnum = jsonClause.EditionEnum,
+            Edition = jsonClause.EditionEnum,
             StickerEnums = jsonClause.StickerEnums,
+            EffectiveAntes = jsonClause.EffectiveAntes,
             WantedAntes = wantedAntes,
             WantedShopSlots = wantedShopSlots,
             WantedPackSlots = wantedPackSlots,
-            MinPackSlot = jsonClause.MinPackSlot,
-            MaxPackSlot = jsonClause.MaxPackSlot,
-            MinShopSlot = jsonClause.MinShopSlot,
-            MaxShopSlot = jsonClause.MaxShopSlot,
-            MaxShopSlotsNeeded = maxShopSlotsNeeded,
-            MaxPackSlotsNeeded = maxPackSlotsNeeded,
-            HasShopSlots = hasShopSlots, // PRE-COMPUTED!
-            HasPackSlots = hasPackSlots, // PRE-COMPUTED!
+            MinShopSlot = hasShopConstraint ? minShop : null,
+            MaxShopSlot = hasShopConstraint ? maxShop : null,
+            PackSlotMask = packMask,
+            MaxShopSlotsNeeded = hasShopConstraint ? maxShop : 8,
+            MaxPackSlotsNeeded = 6,
+            HasShopConstraint = hasShopConstraint,
+            HasPackConstraint = hasPackConstraint,
             Min = jsonClause.Min,
         };
     }
