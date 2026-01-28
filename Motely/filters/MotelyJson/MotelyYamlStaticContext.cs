@@ -11,9 +11,9 @@ namespace MotelyYaml;
 /// </summary>
 [YamlStaticContext]
 [YamlSerializable(typeof(MotelyJsonConfig))]
+[YamlSerializable(typeof(MotelyJsonConfig.MotelyJsonFilterClause))]
 [YamlSerializable(typeof(MotelyFilterDefaults))]
 [YamlSerializable(typeof(SourcesConfig))]
-// Note: MotelyJsonFilterClause excluded - has 'required' properties incompatible with source generator
 public partial class MotelyYamlStaticContext : StaticContext
 {
 }

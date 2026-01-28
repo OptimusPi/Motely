@@ -202,9 +202,6 @@ public struct MotelyJsonSeedScoreDesc(
             if (baseFilterMask.IsAllFalse())
                 return VectorMask.NoBitsSet;
 
-            if (IsCancelled)
-                return VectorMask.NoBitsSet;
-
             // Copy fields to local variables to avoid struct closure issues
             var config = Config;
             var cutoff = scoreThreshold > 0 ? scoreThreshold : Cutoff;
@@ -726,7 +723,7 @@ public struct MotelyJsonSeedScoreDesc(
             // 2. Filter: If best score > 0, set cutoff to at least 1 (or 80% of best)
 
             long elapsedTicks = DateTime.UtcNow.Ticks - state.StartTime;
-            if (elapsedTicks < TimeSpan.TicksPerSecond)
+            if (elapsedTicks < TimeSpan.TicksPerSecond * 10)
             {
                 return 0; // Warmup period
             }
@@ -735,8 +732,8 @@ public struct MotelyJsonSeedScoreDesc(
             if (best > 0)
             {
                 // If we found something, filter out garbage (0s)
-                // Use 80% rule but ensure at least 1
-                return Math.Max(1, (int)(best * 0.8));
+                // Use 67% rule but ensure at least 1
+                return Math.Max(1, (int)(best * 0.67)); // 🤲🏻
             }
 
             return 0; // Nothing found yet, keep searching everything

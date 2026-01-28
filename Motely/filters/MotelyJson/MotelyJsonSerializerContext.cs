@@ -22,6 +22,6 @@ namespace Motely.Filters;
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(int[]))]
 [JsonSerializable(typeof(List<string>))]
-internal partial class MotelyJsonSerializerContext : JsonSerializerContext
+public partial class MotelyJsonSerializerContext : JsonSerializerContext
 {
 }

@@ -1,8 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Motely.Filters;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace Motely;
 
@@ -13,40 +11,21 @@ namespace Motely;
 /// </summary>
 public static class ConfigFormatConverter
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = null, // Use JsonPropertyName attributes instead
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
-
     #region Load Methods
 
     /// <summary>
-    /// Load config from JSON string
+    /// Load config from JSON string (AOT-compatible via source generation)
     /// </summary>
     public static MotelyJsonConfig? LoadFromJsonString(string jsonContent)
     {
         try
         {
-            // Use same options as the original TryLoadFromJsonFile
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true,
-                // Note: Not using UnmappedMemberHandling since we want to be lenient for format conversion
-            };
-
-            var config = JsonSerializer.Deserialize<MotelyJsonConfig>(jsonContent, options);
+            // Use AOT-compatible source-generated serializer
+            var config = JsonSerializer.Deserialize(jsonContent, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
             config?.PostProcess();
 
             // Validate config just like JAML loader does
-            if (config != null)
+            if (config is not null)
             {
                 MotelyJsonConfigValidator.ValidateConfig(config);
             }
@@ -79,11 +58,11 @@ public static class ConfigFormatConverter
     #region Save Methods
 
     /// <summary>
-    /// Save config to JSON string
+    /// Save config to JSON string (AOT-compatible via source generation)
     /// </summary>
     public static string SaveAsJson(this MotelyJsonConfig config)
     {
-        return JsonSerializer.Serialize(config, JsonOptions);
+        return JsonSerializer.Serialize(config, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
     }
 
     /// <summary>

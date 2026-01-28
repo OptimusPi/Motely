@@ -104,7 +104,11 @@ namespace Motely.Executors
             return context;
         }
         
-        private static string GenerateFilterId(MotelyJsonConfig config)
+        /// <summary>
+        /// Generate a consistent filter ID from config (used for both filterId and searchId prefix).
+        /// Public so CLI can use the same logic.
+        /// </summary>
+        public static string GenerateFilterId(MotelyJsonConfig config)
         {
             var name = SanitizeForId(config.Name ?? "Unknown");
             var deck = config.Deck ?? "Red";
@@ -112,7 +116,11 @@ namespace Motely.Executors
             return $"{name}_{deck}_{stake}";
         }
         
-        private static string SanitizeForId(string input)
+        /// <summary>
+        /// Sanitize a string for use in file/folder names.
+        /// Public so CLI can use the same logic.
+        /// </summary>
+        public static string SanitizeForId(string input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return "unknown";
@@ -217,13 +225,24 @@ namespace Motely.Executors
         {
             // Convert to run config
             var runConfig = MotelyRunConfig.Factory(config);
+            
+            // Auto-generate database path from config if OutputDbPath is null but user wants to save
+            // Orchestrator handles everything - generates filterId from config and creates path
+            if (string.IsNullOrEmpty(parameters.OutputDbPath) && parameters.AutoSave)
+            {
+                var filterId = GenerateFilterId(config);
+                // Use unified "seeds" folder (combines SearchResults and SeedSources)
+                var seedsDir = Path.Combine(Directory.GetCurrentDirectory(), "seeds");
+                parameters.OutputDbPath = Path.Combine(seedsDir, $"{filterId}.db");
+            }
+            
             var executor = new JsonSearchExecutor(config, parameters, resultCallback);
             
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {
                 executor.ResultsDatabase = OrchestrateDatabase(parameters.OutputDbPath, runConfig, parameters);
             }
-            
+
             return executor.ExecuteAsSearch();
         }
 
