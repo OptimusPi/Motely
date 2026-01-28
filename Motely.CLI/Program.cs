@@ -483,19 +483,23 @@ namespace Motely
                         }
                     };
 
+                    string? configName;
                     if (!string.IsNullOrEmpty(nativeFilter))
                     {
+                        configName = nativeFilter;
                         search = MotelySearchOrchestrator.LaunchNative(nativeFilter, parameters, scoreOption.Value());
                     }
                     else
                     {
                         if (jamlOption.HasValue())
                         {
+                            configName = jamlOption.Value();
                             search = MotelySearchOrchestrator.LaunchJaml(jamlOption.Value()!, parameters, resultCallback);
                         }
                         else
                         {
-                            search = MotelySearchOrchestrator.LaunchJson(jsonOption.Value() ?? "standard", parameters, resultCallback);
+                            configName = jsonOption.Value() ?? "standard";
+                            search = MotelySearchOrchestrator.LaunchJson(configName, parameters, resultCallback);
                         }
                     }
 
@@ -624,6 +628,9 @@ namespace Motely
                         })
                         .ToArray(),
                 };
+                // AOT warning suppression: Anonymous type serialization is acceptable for CLI output
+                #pragma warning disable IL2026 // RequiresUnreferencedCode
+                #pragma warning disable IL3050 // RequiresDynamicCode
                 Console.WriteLine(
                     System.Text.Json.JsonSerializer.Serialize(
                         jsonOutput,
@@ -634,6 +641,8 @@ namespace Motely
                         }
                     )
                 );
+                #pragma warning restore IL3050
+                #pragma warning restore IL2026
             }
             else
             {

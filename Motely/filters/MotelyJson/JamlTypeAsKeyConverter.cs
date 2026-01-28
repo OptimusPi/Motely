@@ -63,7 +63,7 @@ namespace Motely.Filters.MotelyJson
             ["min"] = new(typeof(int?), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Min = ConvertToNullableInt(val)),
             ["filterOrder"] = new(typeof(int?), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).FilterOrder = ConvertToNullableInt(val)),
             ["edition"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Edition = val?.ToString()),
-            ["stickers"] = new(typeof(List<string>), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Stickers = ConvertToStringList(val)),
+            ["stickers"] = new(typeof(string[]), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Stickers = ConvertToStringArray(val)),
             ["suit"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Suit = val?.ToString()),
             ["rank"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Rank = val?.ToString()),
             ["seal"] = new(typeof(string), (obj, val) => ((MotelyJsonConfig.MotelyJsonFilterClause)obj).Seal = val?.ToString()),
@@ -312,7 +312,8 @@ namespace Motely.Filters.MotelyJson
                 // Handle YAML Merge Key (<<) - just pass it through to let MergingParser handle it
                 if (key == "<<")
                 {
-                    var mergedValue = objectFactory(reader, typeof(object));
+                    // Use MotelyJsonConfig instead of object for AOT compatibility
+                    var mergedValue = objectFactory(reader, typeof(MotelyJsonConfig.MotelyJsonFilterClause));
                     // We don't need to do anything with it here, MergingParser has already swallowed the anchor events
                     // and presented the merged properties as new events.
                     // But if we are in a custom deserializer, we might need to be careful.
@@ -342,16 +343,27 @@ namespace Motely.Filters.MotelyJson
                     {
                         if (mappedType == "And" || mappedType == "Or" && nextEvent is SequenceStart)
                         {
+                            // AOT-compatible: Deserialize to array instead of List<T>
                             var complexValue = objectFactory(
                                 reader,
-                                typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>)
+                                typeof(MotelyJsonConfig.MotelyJsonFilterClause[])
                             );
-                            entries["type"] = mappedType;
-                            entries["value"] = complexValue!;
+                            // Convert array to List for compatibility
+                            if (complexValue is MotelyJsonConfig.MotelyJsonFilterClause[] arrayValue)
+                            {
+                                entries["type"] = mappedType;
+                                entries["value"] = new List<MotelyJsonConfig.MotelyJsonFilterClause>(arrayValue);
+                            }
+                            else
+                            {
+                                entries["type"] = mappedType;
+                                entries["value"] = complexValue!;
+                            }
                         }
                         else
                         {
-                            var complexValue = objectFactory(reader, typeof(object));
+                            // Use MotelyJsonConfig.MotelyJsonFilterClause instead of object for AOT compatibility
+                            var complexValue = objectFactory(reader, typeof(MotelyJsonConfig.MotelyJsonFilterClause));
                             entries["type"] = mappedType;
                             entries["value"] = complexValue!;
                         }
@@ -365,10 +377,16 @@ namespace Motely.Filters.MotelyJson
                 {
                     if (string.Equals(key, "clauses", StringComparison.OrdinalIgnoreCase))
                     {
+                        // AOT-compatible: Deserialize to array instead of List<T>
                         var clausesValue = objectFactory(
                             reader,
-                            typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>)
+                            typeof(MotelyJsonConfig.MotelyJsonFilterClause[])
                         );
+                        // Convert array to List for compatibility
+                        if (clausesValue is MotelyJsonConfig.MotelyJsonFilterClause[] arrayValue)
+                        {
+                            clausesValue = new List<MotelyJsonConfig.MotelyJsonFilterClause>(arrayValue);
+                        }
                         entries[key] = clausesValue!;
                     }
                     else if (string.Equals(key, "sources", StringComparison.OrdinalIgnoreCase))
@@ -415,7 +433,14 @@ namespace Motely.Filters.MotelyJson
 
                         // Defer type coercion for properties that might use range syntax (int[])
                         var propType = GetPropertyType(expectedType, key);
-                        Type targetType = (propType == typeof(int[])) ? typeof(object) : (propType ?? typeof(object));
+                        // Use specific types instead of object for AOT compatibility
+                        // For int[] properties, we need to handle range syntax, so use List<object> then convert
+                        Type targetType = propType ?? typeof(MotelyJsonConfig.MotelyJsonFilterClause);
+                        if (propType == typeof(int[]))
+                        {
+                            // For int arrays with range syntax, deserialize as sequence then convert
+                            targetType = typeof(List<object>);
+                        }
                         var nodeValue = objectFactory(reader, targetType);
                         entries[key] = nodeValue!;
                     }

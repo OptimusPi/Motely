@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using MotelyYaml;
+using MotelyJaml;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -96,7 +96,7 @@ public static class JamlFormatter
             return string.Empty;
 
         // AOT-compatible: Use StaticSerializerBuilder with pre-generated context
-        var serializer = new StaticSerializerBuilder(new MotelyYamlStaticContext())
+        var serializer = new StaticSerializerBuilder(new MotelyJamlStaticContext())
             .WithNamingConvention(NullNamingConvention.Instance)
             .ConfigureDefaultValuesHandling(
                 DefaultValuesHandling.OmitNull
@@ -132,7 +132,7 @@ public static class JamlFormatter
             return new MotelyJsonConfig();
 
         // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
-        var deserializer = new StaticDeserializerBuilder(new MotelyYamlStaticContext())
+        var deserializer = new StaticDeserializerBuilder(new MotelyJamlStaticContext())
             .WithNamingConvention(NullNamingConvention.Instance)
             .IgnoreUnmatchedProperties()
             .Build();

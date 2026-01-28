@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Threading;
 using Motely.Filters;
 
 namespace Motely;
@@ -81,9 +82,16 @@ public sealed class MotelyRandomSeedProvider(int count) : IMotelySeedProvider
     public int SeedCount { get; } = count;
 
     private readonly ThreadLocal<Random> _randomInstances = new();
+    private int _seedsGenerated = 0;
 
     public ReadOnlySpan<char> NextSeed()
     {
+        // Check if we've generated enough seeds
+        if (Interlocked.Increment(ref _seedsGenerated) > SeedCount)
+        {
+            return ReadOnlySpan<char>.Empty;
+        }
+
         Random? random = _randomInstances.Value ??= new();
 
         Span<char> seed = stackalloc char[Motely.MaxSeedLength];

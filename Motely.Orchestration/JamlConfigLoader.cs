@@ -1,6 +1,6 @@
 using Motely.Filters;
 using Motely.Filters.MotelyJson;
-using MotelyYaml;
+using MotelyJaml;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -64,7 +64,7 @@ public static class JamlConfigLoader
 
             // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
             // Note: WithNodeDeserializer is supported by StaticDeserializerBuilder
-            var deserializer = new StaticDeserializerBuilder(new MotelyYamlStaticContext())
+            var deserializer = new StaticDeserializerBuilder(new MotelyJamlStaticContext())
                 .WithNamingConvention(NullNamingConvention.Instance)
                 .WithNodeDeserializer(
                     new JamlTypeAsKeyNodeDeserializer(),

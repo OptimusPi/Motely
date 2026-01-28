@@ -9,7 +9,6 @@ must:
     antes: [1]
     edition: Negative
 
-
 should:
   - soulJoker: Any
     antes: [1]
