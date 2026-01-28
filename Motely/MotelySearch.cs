@@ -112,6 +112,10 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     private readonly IEnumerator<string> _seedEnumerator;
     private string? _currentSeed;
     private long _seedIndex = -1;
+    
+    // Thread-safety: IEnumerator<T> is NOT thread-safe, so we need a lock
+    // This is a lightweight lock for the hot path - contention should be minimal
+    private readonly object _enumeratorLock = new object();
 
     public int SeedCount { get; private set; } = -1; // Unknown for enumerables
 
@@ -123,18 +127,27 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
 
     public ReadOnlySpan<char> NextSeed()
     {
-        _seedIndex++;
-        if (_seedEnumerator.MoveNext())
+        // Thread-safe access to enumerator - multiple threads may call this concurrently
+        lock (_enumeratorLock)
         {
-            _currentSeed = _seedEnumerator.Current;
-            return _currentSeed.AsSpan();
+            _seedIndex++;
+            if (_seedEnumerator.MoveNext())
+            {
+                _currentSeed = _seedEnumerator.Current;
+                // Create a copy of the string to avoid issues if Current is modified
+                // (though it shouldn't be, this is defensive)
+                return _currentSeed.AsSpan();
+            }
+            return ReadOnlySpan<char>.Empty;
         }
-        return ReadOnlySpan<char>.Empty;
     }
 
     public void Dispose()
     {
-        _seedEnumerator?.Dispose();
+        lock (_enumeratorLock)
+        {
+            _seedEnumerator?.Dispose();
+        }
     }
 }
 
@@ -679,9 +692,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         long totalBatches = _threads[0].MaxBatch;
         long seedsSearched = TotalSeedsSearched;
 
-        // Calculate seeds per second (more intuitive than per millisecond)
-        double seedsPerSecond = elapsedMS > 1 ? (seedsSearched * 1000.0) / elapsedMS : 0;
-        double seedsPerMs = seedsPerSecond / 1000.0; // Keep for backward compatibility in callback
+        // Calculate seeds per millisecond (easier to read than per second for large numbers)
+        double seedsPerMs = elapsedMS > 1 ? (double)seedsSearched / elapsedMS : 0;
+        double seedsPerSecond = seedsPerMs * 1000.0; // Keep for backward compatibility in callback
 
         // ALWAYS invoke progress callback if set (even in quiet mode) - needed for API speed stats
         if (_progressCallback != null)

@@ -573,6 +573,9 @@ public class MotelyJsonConfig
 
         public void InitializeParsedEnums()
         {
+            // Single source of truth: EffectiveAntes is set here so tests and ProcessClause both get it
+            EffectiveAntes = Antes ?? [];
+
             // PERFORMANCE FIX: Use pre-computed dictionary instead of ToLowerInvariant() + switch
             ItemTypeEnum = MotelyJsonPerformanceUtils.ParseItemType(Type);
 
