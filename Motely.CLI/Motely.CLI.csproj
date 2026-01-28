@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <PublishTrimmed>false</PublishTrimmed>
     <!-- Performance optimizations -->
     <Optimize>true</Optimize>
     <TieredCompilation>true</TieredCompilation>
@@ -22,6 +21,8 @@
     <NoWarn>$(NoWarn);CS8032</NoWarn>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Enable AOT for native compilation (faster startup, better performance) -->
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>

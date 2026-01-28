@@ -165,8 +165,10 @@ public sealed class MotelySearchContext : IMotelySearchContext
     public long MatchingSeeds => _search.MatchingSeeds;
     public long FilteredSeeds => _search.FilteredSeeds;
     
-    public void Start() => _search.Start();
+    public void Start(CancellationToken cancellationToken = default) => _search.Start(cancellationToken);
     public void AwaitCompletion() => _search.AwaitCompletion();
+    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default) 
+        => _search.WaitForCompletionAsync(cancellationToken);
     public void Pause() => _search.Pause();
     public void Cancel() => _search.Cancel();
     public void ForceProgressReport() => _search.ForceProgressReport();

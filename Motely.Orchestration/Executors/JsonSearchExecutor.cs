@@ -49,6 +49,8 @@ namespace Motely.Executors
         private IMotelySearch? _runningSearch;
         private global::DuckDB.NET.Data.DuckDBAppender? _resultsAppender;
         public global::Motely.DuckDB.MotelySearchDatabase? ResultsDatabase { get; set; }
+        private bool _headerPrinted = false;
+        private MotelyJsonConfig? _lastConfigForHeader;
 
 
         public JsonSearchExecutor(
@@ -116,8 +118,10 @@ namespace Motely.Executors
             }
         }
 
-        public int Execute(bool awaitCompletion = true)
+        public int Execute(bool awaitCompletion = true, CancellationToken cancellationToken = default)
         {
+            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
+            
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             // Gate colored output based on --nofancy
@@ -159,16 +163,9 @@ namespace Motely.Executors
                     return 1;
                 }
                 
-                // Wire up cancellation token BEFORE starting search
-                if (_params.CancellationToken != null)
-                {
-                    var setTokenMethod = search.GetType().GetMethod("SetCancellationToken", 
-                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-                    setTokenMethod?.Invoke(search, [_params.CancellationToken.Value]);
-                }
-
                 // Print CSV header (even for filters with no SHOULD clauses, output seed with score 0)
                 PrintResultsHeader(config);
+                _headerPrinted = true; // Mark as printed so PrintResultRow doesn't duplicate
 
                 // Setup cancellation handler ONLY when NOT in TUI mode
                 // In TUI mode, the UI handles Ctrl+C via KeyDown event and calls Cancel() directly
@@ -196,7 +193,7 @@ namespace Motely.Executors
                     }
                 }
 
-                search.Start();
+                search.Start(effectiveToken);
 
                 if (awaitCompletion)
                 {
@@ -270,6 +267,97 @@ namespace Motely.Executors
         }
 
         /// <summary>
+        /// Async version of Execute that doesn't block the calling thread.
+        /// Uses WaitForCompletionAsync instead of polling with Thread.Sleep.
+        /// </summary>
+        public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+        {
+            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
+            
+            DebugLogger.IsEnabled = _params.EnableDebug;
+            FancyConsole.IsEnabled = !_params.NoFancy;
+            // Gate colored output based on --nofancy
+            TallyColorizer.ColorEnabled = !_params.NoFancy;
+
+            SeedSourceResult seedSource = LoadSeeds();
+
+            // Suppress startup messages in quiet mode
+            if (!_params.Quiet)
+            {
+                Console.WriteLine($"🔍 MotelyJAML Search Starting");
+                Console.WriteLine($"   Config: {_configPath}");
+                Console.WriteLine($"   Threads: {_params.Threads}");
+
+                if (_params.RandomSeeds.HasValue)
+                {
+                    Console.WriteLine($"   Mode: Random ({_params.RandomSeeds} seeds)");
+                }
+                else
+                {
+                    Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
+                    string endDisplay = _params.EndBatch == 0 ? "∞" : _params.EndBatch.ToString();
+                    Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
+                }
+                if (_params.EnableDebug)
+                {
+                    Console.WriteLine($"   Debug: Enabled");
+                }
+
+                Console.WriteLine();
+            }
+
+            try
+            {
+                MotelyJsonConfig config = LoadConfig();
+                IMotelySearch search = CreateSearch(config, seedSource);
+                if (search == null)
+                {
+                    return 1;
+                }
+                
+                // Print CSV header (even for filters with no SHOULD clauses, output seed with score 0)
+                PrintResultsHeader(config);
+                _headerPrinted = true; // Mark as printed so PrintResultRow doesn't duplicate
+
+                search.Start(effectiveToken);
+
+                try
+                {
+                    // Wait for completion using async API - doesn't block the UI thread
+                    await search.WaitForCompletionAsync(effectiveToken).ConfigureAwait(false);
+
+                    // Always print final summary, even in quiet mode
+                    PrintResultsSummary(search, _cancelled);
+                }
+                catch (OperationCanceledException)
+                {
+                    _cancelled = true;
+                    PrintResultsSummary(search, _cancelled);
+                }
+                finally
+                {
+                    // Always dispose, but avoid double-dispose if cancelled and handler already disposed
+                    if (!_cancelled)
+                    {
+                        search.Dispose();
+                    }
+                }
+
+                Console.Out.Flush();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error: {ex.Message}");
+                if (_params.EnableDebug)
+                {
+                    Console.WriteLine($"[DEBUG] {ex}");
+                }
+                return 1;
+            }
+        }
+
+        /// <summary>
         /// Same as Execute() but returns the search handle for orchestration.
         /// </summary>
         public IMotelySearch ExecuteAsSearch()
@@ -285,15 +373,10 @@ namespace Motely.Executors
 
                 _runningSearch = CreateSearch(config, source);
                 
-                // Wire up cancellation token so Ctrl+C works with AwaitCompletion()
-                if (_params.CancellationToken != null)
-                {
-                    var setTokenMethod = _runningSearch.GetType().GetMethod("SetCancellationToken", 
-                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-                    setTokenMethod?.Invoke(_runningSearch, [_params.CancellationToken.Value]);
-                }
+                // Store config for header printing when first result arrives
+                _lastConfigForHeader = config;
                 
-                // Return the search handle directly
+                // Return the search handle - caller will call Start(cancellationToken)
                 return _runningSearch;
             }
             catch (Exception ex)
@@ -379,8 +462,9 @@ namespace Motely.Executors
             }
 
             // Fallback for relative, extensionless names (legacy behavior/convenience)
-            string storageDirectory = "SeedSources";
-            Directory.CreateDirectory(storageDirectory);
+            // Use unified "seeds" folder (combines SearchResults and SeedSources)
+            string storageDirectory = "seeds";
+            // Directory will be created by MotelySearchDatabase or file operations as needed
 
             // Special case: if it has an extension, try looking in SeedSources with the exact name
             if (Path.HasExtension(seedSource))
@@ -752,14 +836,10 @@ namespace Motely.Executors
                 .WithQuietMode(_params.Quiet)
                 .WithProgressCallback(progress =>
                 {
-                    // Hook custom callback if provided
-                    _customCallback?.Invoke(new MotelySeedScoreTally 
-                    { 
-                        Seed = "PROGRESS", 
-                        Score = (int)progress.PercentComplete // Abuse score for percent? No, just ignored.
-                    });
+                    // DO NOT call _customCallback here - that's for RESULTS only, not progress!
+                    // Progress updates should NOT appear as CSV rows
                     
-                    // Also forward to the main progress callback if set
+                    // Forward to the main progress callback if set (for API/UI stats)
                     _params.ProgressCallback?.Invoke(progress);
                 });
 
@@ -793,27 +873,29 @@ namespace Motely.Executors
             // 3. Configure Seed Source & Start Search
             // Priority: Random -> SeedList -> DuckDB -> Sequential
             
+            var token = _params.CancellationToken ?? default;
+            
             if (_params.RandomSeeds.HasValue)
             {
                  if (!_params.Quiet) Console.WriteLine($"🎲 Random Search: {_params.RandomSeeds} seeds");
-                 return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start();
+                 return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start(token);
             }
             
             if (source.SourceType == SeedSourceType.SeedList && _params.SeedList != null)
             {
                  if (!_params.Quiet) Console.WriteLine($"📋 List Search: {_params.SeedList.Count()} seeds");
-                 return searchSettings.WithListSearch(_params.SeedList, alreadySorted: false).Start();
+                 return searchSettings.WithListSearch(_params.SeedList, alreadySorted: false).Start(token);
             }
 
             if (source.SourceType == SeedSourceType.DuckDatabase && !string.IsNullOrEmpty(source.DbPath))
             {
                  if (!_params.Quiet) Console.WriteLine($"🦆 DuckDB Search: {source.DbPath}");
-                 return searchSettings.WithProviderSearch(new global::Motely.DuckDB.DuckDBSeedProvider(source.DbPath)).Start();
+                 return searchSettings.WithProviderSearch(new global::Motely.DuckDB.DuckDBSeedProvider(source.DbPath)).Start(token);
             }
 
             // Default: Sequential Search
             if (!_params.Quiet) Console.WriteLine($"🔄 Sequential Search: 35^{8-_params.BatchSize} batches");
-            return searchSettings.WithSequentialSearch().Start();
+            return searchSettings.WithSequentialSearch().Start(token);
         }
 
 
@@ -827,18 +909,22 @@ namespace Motely.Executors
             // ONE SOURCE OF TRUTH: Use GetColumnNames()
             var columnNames = config.GetColumnNames();
             var allColumns = new List<string> { "Seed", "Score" };
-            allColumns.AddRange(columnNames);
+            allColumns.AddRange(columnNames.Skip(2)); // Skip "seed" and "score" since we already have them capitalized
             var quotedColumns = allColumns.Select(name => $"\"{name}\"");
 
-            // In quiet mode, user expects data-only output (headless CSV)
-            if (!_params.Quiet)
-            {
-                Console.WriteLine(string.Join(",", quotedColumns));
-            }
+            // Always print CSV header (even in quiet mode - users need it!)
+            Console.WriteLine(string.Join(",", quotedColumns));
         }
 
         private void PrintResultRow(MotelySeedScoreTally result, MotelyJsonConfig config)
         {
+            // Print CSV header on first result (immediately before results start printing)
+            if (!_headerPrinted)
+            {
+                PrintResultsHeader(config);
+                _headerPrinted = true;
+            }
+            
             // Check if we have any actual string column values (not just integer representations)
             var tallies = result.TallyColumns;
             var columnValues = result.ColumnValues;
@@ -1029,9 +1115,10 @@ namespace Motely.Executors
             Console.WriteLine(
                 $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
             );
-            double speed = (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds;
-            // Show 2 decimal places for precision (especially important for slow searches)
-            Console.WriteLine($"   Speed: {speed:F2} seeds/ms");
+            double speed = search.ElapsedTime.TotalSeconds > 0 
+                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds 
+                : 0;
+            Console.WriteLine($"   Speed: {speed:F0} seeds/second");
 
             // Only show "To continue" message if search was cancelled (interrupted)
             if (wasCancelled)
@@ -1081,6 +1168,7 @@ namespace Motely.Executors
         public bool NoFancy { get; set; }
         public bool Quiet { get; set; }
         public bool ForceOverwrite { get; set; } = false;
+        public bool AutoSave { get; set; } = false; // If true, auto-generate DB path from config when OutputDbPath is null
         public Func<string, string, bool>? SchemaMismatchPrompt { get; set; }
         public string? SpecificSeed { get; set; }
         public string? Deck { get; set; }

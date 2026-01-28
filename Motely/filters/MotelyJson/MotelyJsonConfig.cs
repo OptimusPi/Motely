@@ -262,11 +262,61 @@ public class MotelyJsonConfig
     public MotelyJsonFilterClause[] ShouldNonVouchers { get; private set; } =
         Array.Empty<MotelyJsonFilterClause>();
 
+    // PERFORMANCE: Pre-converted typed clauses (converted ONCE in PostProcess, not per-seed)
+    // These arrays hold the same clauses as Must/Should but converted to their typed form
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonJokerFilterClause[] MustJokers { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonJokerFilterClause[] ShouldJokers { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonSoulJokerFilterClause[] MustSoulJokers { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonSoulJokerFilterClause[] ShouldSoulJokers { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonTarotFilterClause[] MustTarots { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonTarotFilterClause[] ShouldTarots { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonSpectralFilterClause[] MustSpectrals { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonSpectralFilterClause[] ShouldSpectrals { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonPlanetFilterClause[] MustPlanets { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonPlanetFilterClause[] ShouldPlanets { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonVoucherFilterClause[] MustVouchersTyped { get; private set; } = [];
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public MotelyJsonVoucherFilterClause[] ShouldVouchersTyped { get; private set; } = [];
+
     public class MotelyJsonFilterClause
     {
         [JsonPropertyName("type")]
         [YamlMember(Alias = "type")]
-        public required string Type { get; set; }
+        public string Type { get; set; } = string.Empty;
 
         [JsonPropertyName("value")]
         [YamlMember(Alias = "value")]
@@ -380,13 +430,10 @@ public class MotelyJsonConfig
         [YamlMember(Alias = "rolls")]
         public int[]? Rolls { get; set; }
 
+        // Pre-computed in ProcessClause() - no null-coalescing in hot path
         [JsonIgnore]
         [YamlIgnore]
-        public int[] EffectiveAntes
-        {
-            get => Antes ?? [];
-            set { Antes = value; }
-        }
+        public int[] EffectiveAntes { get; internal set; } = [];
 
         // Pre-computed values (set during ProcessClause from Sources)
         // Min/Max are calculated from Sources.min/maxShopSlot or Sources.shopSlots array
@@ -1187,6 +1234,9 @@ public class MotelyJsonConfig
             item.Antes = defaults.GetEffectiveAntes();
         }
 
+        // Pre-compute EffectiveAntes ONCE (no null-coalescing in hot path)
+        item.EffectiveAntes = item.Antes ?? [];
+
         // Don't initialize empty arrays - let min/max populate them later
         // if (item.Sources != null)
         // {
@@ -1513,8 +1563,60 @@ public class MotelyJsonConfig
         ShouldVouchers = shouldVouchers;
         ShouldNonVouchers = shouldNonVouchers;
 
+        // Pre-convert clauses to typed versions ONCE (not per-seed in hot path)
+        // This eliminates FromJsonClause() calls in the search hot path
+        MustJokers = (Must ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker)
+            .Select(MotelyJsonJokerFilterClause.FromJsonClause)
+            .ToArray();
+        ShouldJokers = (Should ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker)
+            .Select(MotelyJsonJokerFilterClause.FromJsonClause)
+            .ToArray();
+        MustSoulJokers = (Must ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+            .Select(MotelyJsonSoulJokerFilterClause.FromJsonClause)
+            .ToArray();
+        ShouldSoulJokers = (Should ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
+            .Select(MotelyJsonSoulJokerFilterClause.FromJsonClause)
+            .ToArray();
+        MustTarots = (Must ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard)
+            .Select(MotelyJsonTarotFilterClause.FromJsonClause)
+            .ToArray();
+        ShouldTarots = (Should ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard)
+            .Select(MotelyJsonTarotFilterClause.FromJsonClause)
+            .ToArray();
+        MustSpectrals = (Must ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
+            .Select(MotelyJsonSpectralFilterClause.FromJsonClause)
+            .ToArray();
+        ShouldSpectrals = (Should ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
+            .Select(MotelyJsonSpectralFilterClause.FromJsonClause)
+            .ToArray();
+        MustPlanets = (Must ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard)
+            .Select(MotelyJsonPlanetFilterClause.FromJsonClause)
+            .ToArray();
+        ShouldPlanets = (Should ?? [])
+            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard)
+            .Select(MotelyJsonPlanetFilterClause.FromJsonClause)
+            .ToArray();
+        MustVouchersTyped = MustVouchers
+            .Select(MotelyJsonVoucherFilterClause.FromJsonClause)
+            .ToArray();
+        ShouldVouchersTyped = ShouldVouchers
+            .Select(MotelyJsonVoucherFilterClause.FromJsonClause)
+            .ToArray();
+
         DebugLogger.Log(
             $"[PostProcess] Partitioned. MustVouchers={MustVouchers.Length}, ShouldVouchers={ShouldVouchers.Length}"
+        );
+        DebugLogger.Log(
+            $"[PostProcess] Typed: Jokers={MustJokers.Length}/{ShouldJokers.Length}, Tarots={MustTarots.Length}/{ShouldTarots.Length}"
         );
 
         // Compute MaxVoucherAnte once during PostProcess (use pre-partitioned arrays!)
@@ -1746,7 +1848,16 @@ public class MotelyJsonConfig
             // Special handling for wildcards (Any)
             if (clause.Value.Equals("Any", StringComparison.OrdinalIgnoreCase))
             {
-                name = $"Any_{clause.Type}";
+                // For "Any" with edition, format as "Any [Edition] [Type]" (e.g., "Any Negative Joker")
+                // Otherwise just "Any [Type]"
+                if (!string.IsNullOrEmpty(clause.Edition))
+                {
+                    name = $"Any {clause.Edition} {clause.Type}";
+                }
+                else
+                {
+                    name = $"Any {clause.Type}";
+                }
             }
             else
             {
@@ -1772,8 +1883,8 @@ public class MotelyJsonConfig
             name = clause.Type ?? "Unknown";
         }
 
-        // Add edition prefix if specified
-        if (!string.IsNullOrEmpty(clause.Edition))
+        // Add edition prefix if specified (but NOT for "Any" - already handled above)
+        if (!string.IsNullOrEmpty(clause.Edition) && !clause.Value?.Equals("Any", StringComparison.OrdinalIgnoreCase) == true)
             name = clause.Edition + " " + name; // Space instead of underscore!
 
         // Add ante suffix if specified (human-readable range format)

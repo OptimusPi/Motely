@@ -150,7 +150,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithProgressCallback(Action<MotelyProgress> callback);
     IMotelySearchSettings WithCsvOutput(bool csvOutput);
     IMotelySearchSettings WithQuietMode(bool quietMode);
-    IMotelySearch Start();
+    IMotelySearch Start(CancellationToken cancellationToken = default);
 }
 
 public sealed class MotelySearchSettings<TBaseFilter>(
@@ -286,7 +286,7 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithProgressCallback(Action<MotelyProgress> callback) => WithProgressCallback(callback);
     IMotelySearchSettings IMotelySearchSettings.WithCsvOutput(bool csvOutput) => WithCsvOutput(csvOutput);
     IMotelySearchSettings IMotelySearchSettings.WithQuietMode(bool quietMode) => WithQuietMode(quietMode);
-    IMotelySearch IMotelySearchSettings.Start() => Start();
+    IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) => Start(cancellationToken);
 
     public MotelySearchSettings<TBaseFilter> WithDeck(MotelyDeck deck)
     {
@@ -320,11 +320,11 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         return this;
     }
 
-    public IMotelySearch Start()
+    public IMotelySearch Start(CancellationToken cancellationToken = default)
     {
         MotelySearch<TBaseFilter> search = new(this);
 
-        search.Start();
+        search.Start(cancellationToken);
 
         return search;
     }
@@ -340,8 +340,9 @@ public interface IMotelySearch : IDisposable
     public long MatchingSeeds { get; }
     public long FilteredSeeds { get; }
 
-    public void Start();
+    public void Start(CancellationToken cancellationToken = default);
     public void AwaitCompletion();
+    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
     public void Pause();
     public void Cancel();
     public void ForceProgressReport();
@@ -379,11 +380,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     public MotelySearchStatus Status => _status;
     
     internal CancellationToken _cancellationToken = CancellationToken.None;
-
-    public void SetCancellationToken(CancellationToken cancellationToken)
-    {
-        _cancellationToken = cancellationToken;
-    }
+    private readonly TaskCompletionSource<bool> _completionSource = 
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private readonly TBaseFilter _baseFilter;
     private readonly IMotelySeedFilter[] _additionalFilters;
@@ -541,9 +539,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _pauseBarrier.SignalAndWait();
     }
 
-    public void Start()
+    public void Start(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_status == MotelySearchStatus.Disposed, this);
+        
+        // Set cancellation token before starting
+        _cancellationToken = cancellationToken;
+        
         // Atomically replace paused status with running
         if (
             Interlocked.CompareExchange(
@@ -587,6 +589,25 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
             }
         }
+    }
+
+    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default)
+    {
+        // Already completed - return immediately
+        if (_status == MotelySearchStatus.Completed || _status == MotelySearchStatus.Disposed)
+            return Task.CompletedTask;
+        
+        // Register cancellation callback
+        if (cancellationToken.CanBeCanceled)
+        {
+            cancellationToken.Register(() => 
+            {
+                Cancel();  // Signal search to stop
+                _completionSource.TrySetCanceled(cancellationToken);
+            });
+        }
+        
+        return _completionSource.Task;
     }
 
     public void Pause()
@@ -650,8 +671,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         long totalBatches = _threads[0].MaxBatch;
         long seedsSearched = TotalSeedsSearched;
 
-        // Calculate seeds per millisecond once (reuse for both callback and display)
-        double seedsPerMs = elapsedMS > 1 ? seedsSearched / elapsedMS : 0;
+        // Calculate seeds per second (more intuitive than per millisecond)
+        double seedsPerSecond = elapsedMS > 1 ? (seedsSearched * 1000.0) / elapsedMS : 0;
+        double seedsPerMs = seedsPerSecond / 1000.0; // Keep for backward compatibility in callback
 
         // ALWAYS invoke progress callback if set (even in quiet mode) - needed for API speed stats
         if (_progressCallback != null)
@@ -722,7 +744,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // In CSV mode, print progress on a NEW LINE (not overwriting) to avoid collision with results
             // Print at end of batch flush, so it appears after any results from that batch
             var progressMsg =
-                $"# Progress: {totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)";
+                $"# Progress: {totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({seedsPerSecond:F0} seeds/sec)";
             lock (FancyConsole.ConsoleLock)
             {
                 Console.Error.WriteLine(progressMsg);
@@ -731,8 +753,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         else
         {
             // Normal mode - use fancy bottom line
+            // DEBUG: Show raw values to verify calculation accuracy
             FancyConsole.SetBottomLine(
-                $"{totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({seedsPerMs:F2} seeds/ms)"
+                $"{totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({seedsPerSecond:F0} seeds/sec) [batches:{thisCompletedCount}/{totalBatches} t:{elapsedMS}ms]"
             );
         }
     }
@@ -993,6 +1016,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     {
                         // Don't process this batch - we're done
                         Search._status = MotelySearchStatus.Completed;
+                        Search._completionSource.TrySetResult(true);
                         continue;
                     }
 
@@ -1504,6 +1528,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         if (Interlocked.Decrement(ref Search._activeProviderThreads) == 0)
                         {
                             Search._status = MotelySearchStatus.Completed;
+                            Search._completionSource.TrySetResult(true);
                         }
                         return;
                     }
