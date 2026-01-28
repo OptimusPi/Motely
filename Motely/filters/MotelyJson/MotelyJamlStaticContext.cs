@@ -1,10 +1,10 @@
 using Motely.Filters;
 using YamlDotNet.Serialization;
 
-namespace MotelyYaml;
+namespace MotelyJaml;
 
 /// <summary>
-/// AOT-compatible YAML serialization context for Motely filter types.
+/// AOT-compatible JAML serialization context for Motely filter types.
 /// The YamlDotNet.Analyzers.StaticGenerator will generate static serialization code for these types.
 /// Uses a separate namespace to avoid conflicts with Motely project name.
 /// Note: Only register concrete classes, not generic collections (generator doesn't support them).
@@ -14,6 +14,6 @@ namespace MotelyYaml;
 [YamlSerializable(typeof(MotelyJsonConfig.MotelyJsonFilterClause))]
 [YamlSerializable(typeof(MotelyFilterDefaults))]
 [YamlSerializable(typeof(SourcesConfig))]
-public partial class MotelyYamlStaticContext : StaticContext
+public partial class MotelyJamlStaticContext : StaticContext
 {
 }

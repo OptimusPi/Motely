@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 using Motely.Filters;
-using MotelyYaml;
+using MotelyJaml;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -694,7 +694,7 @@ public class FilterBuilderWindow : Window
                 };
 
                 // AOT-compatible: Use StaticSerializerBuilder with pre-generated context
-                var serializer = new StaticSerializerBuilder(new MotelyYamlStaticContext())
+                var serializer = new StaticSerializerBuilder(new MotelyJamlStaticContext())
                     .WithNamingConvention(NullNamingConvention.Instance)
                     .DisableAliases() // Prevent &o0/*o0 anchor/alias references
                     .ConfigureDefaultValuesHandling(
@@ -778,7 +778,7 @@ public class FilterBuilderWindow : Window
         };
 
         // AOT-compatible: Use StaticSerializerBuilder with pre-generated context
-        var serializer = new StaticSerializerBuilder(new MotelyYamlStaticContext())
+        var serializer = new StaticSerializerBuilder(new MotelyJamlStaticContext())
             .WithNamingConvention(NullNamingConvention.Instance)
             .DisableAliases() // Prevent &o0/*o0 anchor/alias references
             .ConfigureDefaultValuesHandling(
