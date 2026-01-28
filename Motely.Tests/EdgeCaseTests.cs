@@ -31,7 +31,7 @@ must:
             Assert.True(clause.Antes!.Length > 0); // Defaulted to all antes
             // ShopSlots and Stickers can be null or empty (both valid)
             Assert.True(clause.ShopSlots == null || clause.ShopSlots.Length == 0);
-            Assert.True(clause.Stickers == null || clause.Stickers.Count == 0);
+            Assert.True(clause.Stickers == null || clause.Stickers.Length == 0);
         }
 
         [Fact]

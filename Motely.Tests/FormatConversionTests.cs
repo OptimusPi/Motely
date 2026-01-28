@@ -316,10 +316,10 @@ should:
             }
 
             // Stickers - important: check if expected has stickers, actual should too
-            if (expected.Stickers != null && expected.Stickers.Count > 0)
+            if (expected.Stickers != null && expected.Stickers.Length > 0)
             {
                 Assert.NotNull(actual.Stickers);
-                Assert.Equal(expected.Stickers.Count, actual.Stickers.Count);
+                Assert.Equal(expected.Stickers.Length, actual.Stickers.Length);
                 if (actual.Stickers != null)
                 {
                     var expectedSorted = expected.Stickers.OrderBy(s => s).ToList();
@@ -327,7 +327,7 @@ should:
                     Assert.Equal(expectedSorted, actualSorted);
                 }
             }
-            else if (expected.Stickers == null || expected.Stickers.Count == 0)
+            else if (expected.Stickers == null || expected.Stickers.Length == 0)
             {
                 // If expected has no stickers, actual can be null or empty (both are valid)
                 // This is fine - empty collections may be omitted in JAML
