@@ -9,6 +9,7 @@ using Motely.Reporting;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Motely
@@ -129,14 +130,19 @@ namespace Motely
                 "Specific seed",
                 CommandOptionType.SingleValue
             );
-            var seedsourcesOption = app.Option<string>(
-                "--seedsource <SS>",
-                "Seed source file (txt, csv, or db)",
+            var seedsOption = app.Option<string>(
+                "--seeds <SEEDS>",
+                "Seed source file (txt, csv, or db) OR comma-separated seed list (e.g., TACO1111,PIES2222,CAKE3333)",
                 CommandOptionType.SingleValue
             );
             var keywordOption = app.Option<string>(
                 "--keyword <KEYWORD>",
                 "Generate seeds containing keyword (all seeds by default, use --sfw to filter NSFW)",
+                CommandOptionType.SingleValue
+            );
+            var keywordsOption = app.Option<string>(
+                "--keywords <KEYWORDS>",
+                "Comma-separated keywords to search sequentially (e.g., GAY,ASS,OOOO,AAAA)",
                 CommandOptionType.SingleValue
             );
             var paddingOption = app.Option<string>(
@@ -285,7 +291,7 @@ namespace Motely
                     NoFancy = noFancyOption.HasValue(),
                     Quiet = quietMode,
                     SpecificSeed = seedOption.Value(),
-                    SeedSources = seedsourcesOption.Value(),
+                    SeedSources = seedsOption.Value(),
                     Deck = deckOption.Value(),
                     Stake = stakeOption.Value(),
                     SeedList = null, // Will be set by keyword handling below
@@ -306,6 +312,29 @@ namespace Motely
 
                 // Progress reporting is handled by MotelySearch.PrintReport() internally
                 // No need for a separate CLI callback - it causes duplicate output
+
+                // Handle --seeds: Check if it's comma-separated seeds or a file path
+                if (seedsOption.HasValue())
+                {
+                    string seedsValue = seedsOption.Value()!;
+                    
+                    // Check if it's comma-separated seeds (contains comma and doesn't exist as file)
+                    if (seedsValue.Contains(',') && !File.Exists(seedsValue))
+                    {
+                        // Treat as comma-separated seed list
+                        var seedList = seedsValue
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Select(s => s.ToUpperInvariant().Replace('0', 'O'))
+                            .Where(s => !string.IsNullOrEmpty(s));
+                        
+                        if (!parameters.Quiet)
+                            Console.WriteLine($"📋 Using {seedList.Count()} comma-separated seeds from --seeds");
+                        
+                        parameters.SeedList = seedList;
+                        parameters.SeedSources = null; // Don't use DuckDB for direct seed lists
+                    }
+                    // Otherwise, treat as file path (existing behavior)
+                }
 
                 // Handle --keyword: Use IEnumerable directly for fast keyword generation
                 if (keywordOption.HasValue())
@@ -451,73 +480,161 @@ namespace Motely
                 int exitCode = 0;
                 try
                 {
-                    // ORCHESTRATOR HANDLES EVERYTHING - just give it the config!
-                    // Column names come from JAML labels (handled by GetColumnNames in config)
-                    // DB path generation comes from filterId (handled by orchestrator)
-                    IMotelySearch search;
-                    Action<MotelySeedScoreTally> resultCallback = (result) =>
+                    // Handle --keywords: Run searches sequentially for each keyword
+                    if (keywordsOption.HasValue())
                     {
-                        // Build CSV line efficiently without intermediate List allocations
-                        var sb = new StringBuilder();
-                        sb.Append('"').Append(result.Seed).Append('"').Append(',');
-                        sb.Append(result.Score);
+                        string keywordsValue = keywordsOption.Value()!;
+                        var keywords = keywordsValue
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Select(k => k.ToUpperInvariant())
+                            .Where(k => !string.IsNullOrEmpty(k))
+                            .ToList();
                         
-                        // Append tally columns
-                        if (result.TallyColumns != null && result.TallyColumns.Count > 0)
+                        if (keywords.Count == 0)
                         {
-                            foreach (var tally in result.TallyColumns)
+                            Console.Error.WriteLine("❌ Error: --keywords must contain at least one keyword");
+                            return 1;
+                        }
+                        
+                        if (!parameters.Quiet)
+                            Console.WriteLine($"🔑 Running searches for {keywords.Count} keywords: {string.Join(", ", keywords)}");
+                        
+                        // Save original parameters to restore after each search
+                        var originalSeedList = parameters.SeedList;
+                        var originalSeedSources = parameters.SeedSources;
+                        
+                        int completedKeywords = 0;
+                        bool wasCancelled = false;
+                        
+                        for (int i = 0; i < keywords.Count; i++)
+                        {
+                            string keyword = keywords[i];
+                            
+                            if (!parameters.Quiet)
                             {
-                                sb.Append(',').Append(tally);
+                                Console.WriteLine();
+                                Console.WriteLine(new string('═', 60));
+                                Console.WriteLine($"🔍 Keyword {i + 1}/{keywords.Count}: '{keyword}'");
+                                Console.WriteLine(new string('═', 60));
+                            }
+                            
+                            // Generate seeds for this keyword (same as --keyword)
+                            string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
+                            var keywordSeedList = GenerateKeywordSeeds(
+                                keyword,
+                                paddingChars,
+                                parameters.Quiet
+                            );
+                            
+                            // Set up parameters for this keyword search
+                            parameters.SeedList = keywordSeedList;
+                            parameters.SeedSources = null;
+                            
+                            // Run the search (reuse the same search execution logic)
+                            Action<MotelySeedScoreTally> keywordResultCallback = (result) =>
+                            {
+                                // Build CSV line efficiently without intermediate List allocations
+                                var sb = new StringBuilder();
+                                sb.Append('"').Append(result.Seed).Append('"').Append(',');
+                                sb.Append(result.Score);
+                                
+                                // Append tally columns
+                                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
+                                {
+                                    foreach (var tally in result.TallyColumns)
+                                    {
+                                        sb.Append(',').Append(tally);
+                                    }
+                                }
+                                
+                                string csvLine = sb.ToString();
+                                
+                                // Always print to console (quiet mode still shows CSV results)
+                                Console.WriteLine(csvLine);
+                                
+                                // Also write to CSV file if specified
+                                if (csvWriter != null)
+                                {
+                                    csvWriter.WriteLine(csvLine);
+                                }
+                            };
+                            
+                            exitCode = RunSingleSearch(parameters, nativeFilter, jamlOption, jsonOption, 
+                                deckOption, stakeOption, scoreOption, csvWriter, keywordResultCallback);
+                            
+                            // Restore original parameters
+                            parameters.SeedList = originalSeedList;
+                            parameters.SeedSources = originalSeedSources;
+                            
+                            // Check for cancellation
+                            if (parameters.CancellationToken?.IsCancellationRequested == true)
+                            {
+                                wasCancelled = true;
+                                if (!parameters.Quiet)
+                                    Console.WriteLine($"\n⚠️  Search cancelled after keyword '{keyword}'");
+                                break;
+                            }
+                            
+                            // Track completed keywords (only if not cancelled and search succeeded)
+                            if (exitCode == 0)
+                            {
+                                completedKeywords++;
+                            }
+                            else if (!parameters.Quiet)
+                            {
+                                Console.WriteLine($"⚠️  Search for keyword '{keyword}' failed, continuing to next keyword...");
                             }
                         }
                         
-                        string csvLine = sb.ToString();
-                        
-                        // Always print to console (quiet mode still shows CSV results)
-                        Console.WriteLine(csvLine);
-                        
-                        // Also write to CSV file if specified
-                        if (csvWriter != null)
+                        if (!parameters.Quiet)
                         {
-                            csvWriter.WriteLine(csvLine);
+                            Console.WriteLine();
+                            Console.WriteLine(new string('═', 60));
+                            if (wasCancelled)
+                            {
+                                Console.WriteLine($"⚠️  Searches cancelled: {completedKeywords}/{keywords.Count} keywords completed");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"✅ Completed searches for all {completedKeywords}/{keywords.Count} keywords");
+                            }
+                            Console.WriteLine(new string('═', 60));
                         }
-                    };
-
-                    string? configName;
-                    if (!string.IsNullOrEmpty(nativeFilter))
-                    {
-                        configName = nativeFilter;
-                        search = MotelySearchOrchestrator.LaunchNative(nativeFilter, parameters, scoreOption.Value());
                     }
                     else
                     {
-                        if (jamlOption.HasValue())
+                        // Single search (original behavior)
+                        Action<MotelySeedScoreTally> resultCallback = (result) =>
                         {
-                            configName = jamlOption.Value();
-                            search = MotelySearchOrchestrator.LaunchJaml(jamlOption.Value()!, parameters, resultCallback);
-                        }
-                        else
-                        {
-                            configName = jsonOption.Value() ?? "standard";
-                            search = MotelySearchOrchestrator.LaunchJson(configName, parameters, resultCallback);
-                        }
+                            // Build CSV line efficiently without intermediate List allocations
+                            var sb = new StringBuilder();
+                            sb.Append('"').Append(result.Seed).Append('"').Append(',');
+                            sb.Append(result.Score);
+                            
+                            // Append tally columns
+                            if (result.TallyColumns != null && result.TallyColumns.Count > 0)
+                            {
+                                foreach (var tally in result.TallyColumns)
+                                {
+                                    sb.Append(',').Append(tally);
+                                }
+                            }
+                            
+                            string csvLine = sb.ToString();
+                            
+                            // Always print to console (quiet mode still shows CSV results)
+                            Console.WriteLine(csvLine);
+                            
+                            // Also write to CSV file if specified
+                            if (csvWriter != null)
+                            {
+                                csvWriter.WriteLine(csvLine);
+                            }
+                        };
+                        
+                        exitCode = RunSingleSearch(parameters, nativeFilter, jamlOption, jsonOption,
+                            deckOption, stakeOption, scoreOption, csvWriter, resultCallback);
                     }
-
-                    // Print startup info with column names BEFORE search starts (even in quiet mode)
-                    // Column names come from JAML labels (handled by GetColumnNames in config, printed by executor)
-                    PrintStartupInfo(search, parameters, configName ?? "standard", deckOption.Value()!, stakeOption.Value()!, null);
-
-                    search.Start(parameters.CancellationToken ?? default);
-                    
-                    // Use AwaitCompletion() for clean blocking - respects cancellation token internally
-                    search.AwaitCompletion();
-                    
-                    // Check if cancelled
-                    bool wasCancelled = parameters.CancellationToken?.IsCancellationRequested == true;
-                    
-                    // Print final summary ALWAYS (even in quiet mode on interrupt/completion)
-                    PrintSearchSummary(search, parameters, wasCancelled);
-                    search.Dispose();
                 }
                 catch (Exception ex)
                 {
@@ -544,19 +661,17 @@ namespace Motely
             }
             catch (McMaster.Extensions.CommandLineUtils.UnrecognizedCommandParsingException ex)
             {
-                // Clear the annoying "Specify --help" message by writing directly to stderr
+                // Short error message - don't spam with full help
                 Console.Error.WriteLine($"❌ Error: {ex.Message}");
-                Console.Error.WriteLine();
-                app.ShowHelp();
+                Console.Error.WriteLine("💡 Use -h or --help for available options");
                 return 1;
             }
             catch (Exception ex)
                 when (ex.Message.Contains("Unrecognized") || ex.Message.Contains("option"))
             {
-                // Catch any other parsing errors
+                // Short error message - don't spam with full help
                 Console.Error.WriteLine($"❌ Error: {ex.Message}");
-                Console.Error.WriteLine();
-                app.ShowHelp();
+                Console.Error.WriteLine("💡 Use -h or --help for available options");
                 return 1;
             }
         }
@@ -714,12 +829,28 @@ namespace Motely
                     }
                     paddingSet.Add(c);
                 }
+                
+                if (paddingSet.Count == 0)
+                {
+                    throw new ArgumentException(
+                        "Padding characters must contain at least one valid character (A-Z, 1-9)."
+                    );
+                }
+                
                 validChars = paddingSet.ToArray();
             }
             else
             {
                 // Default: use all valid chars
                 validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".ToCharArray();
+            }
+            
+            // Final validation - ensure validChars is never null or empty
+            if (validChars == null || validChars.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    "validChars must not be null or empty. This should never happen."
+                );
             }
 
             if (!quiet)
@@ -733,12 +864,13 @@ namespace Motely
             int maxPad = 8 - keyword.Length;
 
             // Generate all combinations - yield directly, no materialization!
+            // LAZY: Don't count seeds - just generate them on-the-fly!
             var seeds = GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars);
-            var count = GetCountOfSeeds(keyword, maxPad, validChars.Length);
+            
             if (!quiet)
             {
                 Console.WriteLine(
-                    $"🔧 Generated {count:N0} seeds containing '{keyword}'"
+                    $"🔧 Generating seeds containing '{keyword}' (lazy enumeration, no pre-counting)"
                 );
             }
 
@@ -750,18 +882,29 @@ namespace Motely
             int maxPad,
             char[] validChars)
         {
+            // Defensive null check
+            if (validChars == null)
+                throw new ArgumentNullException(nameof(validChars));
+            
+            if (validChars.Length == 0)
+                throw new ArgumentException("validChars cannot be empty", nameof(validChars));
+            
+            if (string.IsNullOrEmpty(keyword))
+                throw new ArgumentException("keyword cannot be null or empty", nameof(keyword));
             
             yield return keyword;
 
             // Generate with padding - yield directly (NO SFW filtering during generation)
-            for (int padLen = 1; padLen <= maxPad; padLen++)
+            if (maxPad > 0)
             {
-                foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
+                for (int padLen = 1; padLen <= maxPad; padLen++)
                 {
-                    yield return seed;
+                    foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
+                    {
+                        yield return seed;
+                    }
                 }
             }
-
         }
 
         private static IEnumerable<string> GeneratePaddedSeeds(
@@ -770,7 +913,15 @@ namespace Motely
             char[] validChars
         )
         {
-            if (validChars == null) throw new ArgumentNullException(nameof(validChars));
+            // Defensive null and empty checks
+            if (validChars == null)
+                throw new ArgumentNullException(nameof(validChars));
+            
+            if (validChars.Length == 0)
+                throw new ArgumentException("validChars cannot be empty", nameof(validChars));
+            
+            if (string.IsNullOrEmpty(keyword))
+                throw new ArgumentException("keyword cannot be null or empty", nameof(keyword));
 
             if (padLen <= 0)
             {
@@ -826,12 +977,26 @@ namespace Motely
 
         private static IEnumerable<string> GenerateLargePaddedSeeds(string keyword, int padLen, char[] validChars)
         {
+            // Defensive null check
+            if (validChars == null)
+                throw new ArgumentNullException(nameof(validChars));
+            
+            if (validChars.Length == 0)
+                throw new ArgumentException("validChars cannot be empty", nameof(validChars));
+            
+            if (padLen <= 0)
+                throw new ArgumentException("padLen must be greater than 0", nameof(padLen));
+            
             var padding = new char[padLen];
             return GenerateLargePaddedSeedsRec(keyword, validChars, padding, 0);
         }
 
         private static IEnumerable<string> GenerateLargePaddedSeedsRec(string keyword, char[] validChars, char[] padding, int depth)
         {
+            // Defensive null check (should never be null at this point, but be safe)
+            if (validChars == null || validChars.Length == 0)
+                yield break;
+            
             if (depth == padding.Length)
             {
                 // Generate all positions for keyword within padding
@@ -986,6 +1151,93 @@ namespace Motely
         /// </summary>
 
         /// <summary>
+        /// Run a single search with the given parameters
+        /// </summary>
+        private static int RunSingleSearch(
+            JsonSearchParams parameters,
+            string? nativeFilter,
+            CommandOption<string>? jamlOption,
+            CommandOption<string>? jsonOption,
+            CommandOption<string> deckOption,
+            CommandOption<string> stakeOption,
+            CommandOption<string>? scoreOption,
+            StreamWriter? csvWriter,
+            Action<MotelySeedScoreTally>? resultCallback)
+        {
+            // ORCHESTRATOR HANDLES EVERYTHING - just give it the config!
+            // Column names come from JAML labels (handled by GetColumnNames in config)
+            // DB path generation comes from filterId (handled by orchestrator)
+            IMotelySearch search;
+            
+            // Use provided callback or create default one
+            Action<MotelySeedScoreTally> callback = resultCallback ?? ((result) =>
+            {
+                // Build CSV line efficiently without intermediate List allocations
+                var sb = new StringBuilder();
+                sb.Append('"').Append(result.Seed).Append('"').Append(',');
+                sb.Append(result.Score);
+                
+                // Append tally columns
+                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
+                {
+                    foreach (var tally in result.TallyColumns)
+                    {
+                        sb.Append(',').Append(tally);
+                    }
+                }
+                
+                string csvLine = sb.ToString();
+                
+                // Always print to console (quiet mode still shows CSV results)
+                Console.WriteLine(csvLine);
+                
+                // Also write to CSV file if specified
+                if (csvWriter != null)
+                {
+                    csvWriter.WriteLine(csvLine);
+                }
+            });
+
+            string? configName;
+            if (!string.IsNullOrEmpty(nativeFilter))
+            {
+                configName = nativeFilter;
+                search = MotelySearchOrchestrator.LaunchNative(nativeFilter, parameters, scoreOption?.Value());
+            }
+            else
+            {
+                if (jamlOption?.HasValue() == true)
+                {
+                    configName = jamlOption.Value();
+                    search = MotelySearchOrchestrator.LaunchJaml(jamlOption.Value()!, parameters, callback);
+                }
+                else
+                {
+                    configName = jsonOption?.Value() ?? "standard";
+                    search = MotelySearchOrchestrator.LaunchJson(configName, parameters, callback);
+                }
+            }
+
+            // Print startup info with column names BEFORE search starts (even in quiet mode)
+            // Column names come from JAML labels (handled by GetColumnNames in config, printed by executor)
+            PrintStartupInfo(search, parameters, configName ?? "standard", deckOption.Value()!, stakeOption.Value()!, null);
+
+            search.Start(parameters.CancellationToken ?? default);
+            
+            // Use AwaitCompletion() for clean blocking - respects cancellation token internally
+            search.AwaitCompletion();
+            
+            // Check if cancelled
+            bool wasCancelled = parameters.CancellationToken?.IsCancellationRequested == true;
+            
+            // Print final summary ALWAYS (even in quiet mode on interrupt/completion)
+            PrintSearchSummary(search, parameters, wasCancelled);
+            search.Dispose();
+            
+            return wasCancelled ? 1 : 0;
+        }
+
+        /// <summary>
         /// Print startup info before search (filter name, deck, stake)
         /// Always prints, even in quiet mode - users need to know what's running
         /// CSV header is printed by the executor (ONE SOURCE OF TRUTH)
@@ -1033,10 +1285,10 @@ namespace Motely
             Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
             Console.WriteLine($"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)");
             
-            double speed = search.ElapsedTime.TotalSeconds > 0 
-                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds 
+            double speed = search.ElapsedTime.TotalMilliseconds > 0 
+                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
                 : 0;
-            Console.WriteLine($"   Speed: {speed:F2} seeds/second");
+            Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
 
             if (wasCancelled)
             {

@@ -434,13 +434,10 @@ namespace Motely.Filters.MotelyJson
                         // Defer type coercion for properties that might use range syntax (int[])
                         var propType = GetPropertyType(expectedType, key);
                         // Use specific types instead of object for AOT compatibility
-                        // For int[] properties, we need to handle range syntax, so use List<object> then convert
+                        // For int[] properties, use int[] directly - the static generator can handle arrays if element type is registered
                         Type targetType = propType ?? typeof(MotelyJsonConfig.MotelyJsonFilterClause);
-                        if (propType == typeof(int[]))
-                        {
-                            // For int arrays with range syntax, deserialize as sequence then convert
-                            targetType = typeof(List<object>);
-                        }
+                        // int[] is already the target type, no conversion needed
+                        // The static generator can handle int[] because int is a primitive type
                         var nodeValue = objectFactory(reader, targetType);
                         entries[key] = nodeValue!;
                     }

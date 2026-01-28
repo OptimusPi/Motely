@@ -603,11 +603,11 @@ namespace Motely.Executors
 
             if (duration.TotalMilliseconds >= 1)
             {
-                var speed = duration.TotalSeconds > 0 
-                    ? (double)totalSeedsSearched / duration.TotalSeconds 
+                var speed = duration.TotalMilliseconds > 0 
+                    ? (double)totalSeedsSearched / duration.TotalMilliseconds 
                     : 0;
                 Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
-                Console.WriteLine($"   Speed: {speed:F0} seeds/second");
+                Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
             }
         }
     }

@@ -883,7 +883,8 @@ namespace Motely.Executors
             
             if (source.SourceType == SeedSourceType.SeedList && _params.SeedList != null)
             {
-                 if (!_params.Quiet) Console.WriteLine($"📋 List Search: {_params.SeedList.Count()} seeds");
+                 // Don't materialize IEnumerable by counting - it's lazy!
+                 if (!_params.Quiet) Console.WriteLine($"📋 List Search: seeds from provided list (lazy enumeration)");
                  return searchSettings.WithListSearch(_params.SeedList, alreadySorted: false).Start(token);
             }
 
@@ -1115,10 +1116,10 @@ namespace Motely.Executors
             Console.WriteLine(
                 $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
             );
-            double speed = search.ElapsedTime.TotalSeconds > 0 
-                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds 
+            double speed = search.ElapsedTime.TotalMilliseconds > 0 
+                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
                 : 0;
-            Console.WriteLine($"   Speed: {speed:F0} seeds/second");
+            Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
 
             // Only show "To continue" message if search was cancelled (interrupted)
             if (wasCancelled)

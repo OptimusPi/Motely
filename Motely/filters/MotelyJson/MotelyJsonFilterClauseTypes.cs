@@ -150,7 +150,6 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
         
         if (jsonClause.Sources?.ShopSlots is { Length: > 0 } slots)
         {
-            // Explicit slots -> convert to range (min to max+1)
             minShop = slots[0];
             maxShop = slots[0] + 1;
             for (int i = 1; i < slots.Length; i++)
@@ -190,7 +189,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             hasPackConstraint = packMask != 0;
         }
         
-        // Build WantedAntes bool array from EffectiveAntes
+        // Build WantedAntes bool array from EffectiveAntes (set by InitializeParsedEnums or ProcessClause)
         var wantedAntes = new bool[40];
         foreach (var ante in jsonClause.EffectiveAntes)
         {
@@ -198,9 +197,17 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
                 wantedAntes[ante] = true;
         }
         
-        // Build legacy WantedShopSlots array (for compatibility)
+        // Build legacy WantedShopSlots array (for compatibility): explicit list = only those indices; range = fill range
         var wantedShopSlots = new bool[1024];
-        if (hasShopConstraint)
+        if (jsonClause.Sources?.ShopSlots is { Length: > 0 } explicitSlots)
+        {
+            foreach (var slot in explicitSlots)
+            {
+                if (slot >= 0 && slot < 1024)
+                    wantedShopSlots[slot] = true;
+            }
+        }
+        else if (hasShopConstraint)
         {
             for (int i = minShop; i < maxShop && i < 1024; i++)
                 wantedShopSlots[i] = true;
@@ -222,6 +229,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             WildcardEnum = jsonClause.WildcardEnum,
             Sources = jsonClause.Sources,
             Edition = jsonClause.EditionEnum,
+            EditionEnum = jsonClause.EditionEnum,
             StickerEnums = jsonClause.StickerEnums,
             EffectiveAntes = jsonClause.EffectiveAntes,
             WantedAntes = wantedAntes,
@@ -338,8 +346,7 @@ public class MotelyJsonSoulJokerFilterClause : MotelyJsonFilterClause
     )
     {
         bool[] wantedAntes = new bool[40];
-        var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
-        foreach (var ante in effectiveAntes)
+        foreach (var ante in jsonClause.EffectiveAntes)
         {
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
@@ -505,8 +512,7 @@ public class MotelyJsonTarotFilterClause : MotelyJsonFilterClause
     )
     {
         bool[] wantedAntes = new bool[40];
-        var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
-        foreach (var ante in effectiveAntes)
+        foreach (var ante in jsonClause.EffectiveAntes)
         {
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
@@ -653,15 +659,10 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
     )
     {
         bool[] wantedAntes = new bool[40];
-        var effectiveAntesList = new List<int>(); // Build once during pre-optimization
-        var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
-        foreach (var ante in effectiveAntes)
+        foreach (var ante in jsonClause.EffectiveAntes)
         {
             if (ante >= 0 && ante < 40)
-            {
                 wantedAntes[ante] = true;
-                effectiveAntesList.Add(ante); // Store in array for hotpath
-            }
         }
 
         return new MotelyJsonVoucherFilterClause
@@ -669,7 +670,7 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
             VoucherType = jsonClause.VoucherEnum ?? MotelyVoucher.Overstock,
             VoucherTypes = jsonClause.VoucherEnums?.Count > 0 ? jsonClause.VoucherEnums : null,
             WantedAntes = wantedAntes,
-            EffectiveAntes = effectiveAntesList.ToArray(), // Pre-computed once!
+            EffectiveAntes = jsonClause.EffectiveAntes,
             Min = jsonClause.Min,
         };
     }
@@ -762,8 +763,7 @@ public class MotelyJsonSpectralFilterClause : MotelyJsonFilterClause
     )
     {
         bool[] wantedAntes = new bool[40];
-        var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
-        foreach (var ante in effectiveAntes)
+        foreach (var ante in jsonClause.EffectiveAntes)
         {
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
@@ -919,8 +919,7 @@ public class MotelyJsonPlanetFilterClause : MotelyJsonFilterClause
     )
     {
         bool[] wantedAntes = new bool[40];
-        var effectiveAntes = jsonClause.EffectiveAntes ?? Array.Empty<int>();
-        foreach (var ante in effectiveAntes)
+        foreach (var ante in jsonClause.EffectiveAntes)
         {
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
