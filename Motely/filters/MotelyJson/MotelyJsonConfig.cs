@@ -213,12 +213,14 @@ public class MotelyJsonConfig
     [YamlMember(Alias = "startSeed")]
     public string? StartSeed { get; set; }
 
-    [JsonPropertyName("templates")]
-    [YamlMember(Alias = "templates")]
+    // AOT-compatible: Templates and Anchors are YAML metadata not used in filter logic
+    // Marking as ignored to avoid List<object> deserialization issues in AOT
+    [JsonIgnore]
+    [YamlIgnore]
     public object? Templates { get; set; }
 
-    [JsonPropertyName("anchors")]
-    [YamlMember(Alias = "anchors")]
+    [JsonIgnore]
+    [YamlIgnore]
     public object? Anchors { get; set; }
 
     [JsonPropertyName("defaults")]
@@ -380,7 +382,7 @@ public class MotelyJsonConfig
 
         [JsonPropertyName("stickers")]
         [YamlMember(Alias = "stickers")]
-        public List<string>? Stickers { get; set; }
+        public string[]? Stickers { get; set; }
 
         // PlayingCard specific
         [JsonPropertyName("suit")]
@@ -867,7 +869,7 @@ public class MotelyJsonConfig
             }
 
             // Parse Stickers
-            if (Stickers != null && Stickers.Count > 0)
+            if (Stickers != null && Stickers.Length > 0)
             {
                 StickerEnums = new List<MotelyJokerSticker>();
                 foreach (var sticker in Stickers)

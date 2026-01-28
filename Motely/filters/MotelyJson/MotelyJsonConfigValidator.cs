@@ -305,7 +305,7 @@ namespace Motely.Filters
                         }
 
                         // Validate stickers using enum-based logic for performance
-                        if (item.Stickers != null && item.Stickers.Count > 0)
+                        if (item.Stickers != null && item.Stickers.Length > 0)
                         {
                             foreach (var sticker in item.Stickers)
                             {
