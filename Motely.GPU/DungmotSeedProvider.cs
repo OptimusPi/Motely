@@ -132,6 +132,58 @@ public sealed class DungmotSeedProvider : IMotelySeedProvider, IDisposable
     }
 
     /// <summary>
+    /// Batch retrieve multiple seeds in one lock operation.
+    /// </summary>
+    public int NextSeeds(string[] seeds)
+    {
+        if (seeds == null || seeds.Length == 0)
+            return 0;
+
+        lock (_lock)
+        {
+            if (_disposed)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                try
+                {
+                    string? line = _stdout.ReadLine();
+                    
+                    if (string.IsNullOrEmpty(line))
+                        break;
+
+                    // Handle format: |SEED,SCORE
+                    if (line.StartsWith("|"))
+                    {
+                        int commaIndex = line.IndexOf(',');
+                        if (commaIndex > 1)
+                        {
+                            line = line.Substring(1, commaIndex - 1);
+                        }
+                        else
+                        {
+                            line = line.Substring(1);
+                        }
+                    }
+
+                    seeds[i] = line.Trim();
+                    count++;
+                    _seedCount++;
+                }
+                catch (Exception)
+                {
+                    // Process may have been killed or pipe closed
+                    break;
+                }
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>
     /// Gracefully stop the dungmot process.
     /// </summary>
     public void Stop()

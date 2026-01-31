@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using DuckDB.NET.Data;
 
-namespace Motely.DuckDB;
+namespace Motely.DB;
 
 /// <summary>
 /// specialized storage for seeds using DuckDB Appender for high performance

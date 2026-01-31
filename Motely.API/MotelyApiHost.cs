@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -11,8 +12,9 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Motely;
-using Motely.Analysis;
 using Motely.API;
+using Motely.Executors;
+using Motely.Analysis;
 using Motely.API.Hubs;
 using Motely.API.Models;
 using Motely.API.Services;
@@ -20,12 +22,12 @@ using Motely.API.Services;
 // Request records
 public record SearchStartRequest(
     string? FilterId,
-    string? Deck,
-    string? Stake,
     long? SeedCount,
     long? StartBatch,
     int? Cutoff,
-    string? SeedSource
+    string? SeedSource,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] MotelyDeck Deck = MotelyDeck.Red,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] MotelyStake Stake = MotelyStake.White
 );
 
 public record SearchStopRequest(string? SearchId);
@@ -60,60 +62,13 @@ public static class MotelyApiHost
         builder.Services.AddSwaggerGen();
 
         builder.Services.AddMotelyServices(builder.Configuration);
-
-        // Register MCP services from Motely.MCP project
-        // Register MCP services via reflection to avoid circular dependency
-        builder.Services.AddHttpClient();
-        try
-        {
-            var mcpServerType = Type.GetType("Motely.MCP.McpServer, Motely.MCP");
-            var mcpProtocolServerType = Type.GetType("Motely.MCP.McpProtocol.McpProtocolServer, Motely.MCP");
-            
-            if (mcpServerType != null)
-            {
-                builder.Services.AddScoped(mcpServerType, sp =>
-                {
-                    var loggerType = typeof(ILogger<>).MakeGenericType(mcpServerType);
-                    var logger = sp.GetRequiredService(loggerType);
-                    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                    var httpClient = httpClientFactory.CreateClient();
-                    var config = sp.GetRequiredService<IConfiguration>();
-                    var searchManager = sp.GetRequiredService<SearchManager>();
-                    var feedbackService = sp.GetService<GenieFeedbackService>();
-                    
-                    return Activator.CreateInstance(mcpServerType, logger, httpClient, config, searchManager, feedbackService)!;
-                });
-            }
-            
-            if (mcpProtocolServerType != null && mcpServerType != null)
-            {
-                builder.Services.AddScoped(mcpProtocolServerType, sp =>
-                {
-                    var loggerType = typeof(ILogger<>).MakeGenericType(mcpProtocolServerType);
-                    var logger = sp.GetRequiredService(loggerType);
-                    var mcpServer = sp.GetRequiredService(mcpServerType);
-                    var searchManager = sp.GetRequiredService<SearchManager>();
-                    
-                    return Activator.CreateInstance(mcpProtocolServerType, logger, mcpServer, searchManager)!;
-                });
-            }
-        }
-        catch
-        {
-            // MCP assembly not available - silently skip
-        }
-
         var app = builder.Build();
 
         // Initialize MotelyPaths with ContentRoot and configuration
         MotelyPaths.Initialize(app.Environment, app.Configuration);
 
-        // Initialize SearchManager with motely root path (for SaveFilterToEcosystem compatibility)
-        SearchManager.Instance.SetMotelyRoot(app.Environment.ContentRootPath);
-
-        // Wire up SearchBroadcaster to SearchManager (always enabled)
-        var broadcaster = app.Services.GetRequiredService<ISearchBroadcaster>();
-        SearchManager.Instance.SetBroadcaster(broadcaster);
+        // One library spot for DuckLake — callers never pass it; they only use searchId
+        MotelySearchOrchestrator.SetResultsLibraryRoot(MotelyPaths.SearchResultsDir);
 
         // Register shutdown handler to close SignalR connections quickly
         {
@@ -122,6 +77,9 @@ public static class MotelyApiHost
             {
                 try
                 {
+                    // Stop all searches gracefully
+                    MultiSearchManager.Instance.StopAll("Server shutdown");
+                    
                     // Force close all SignalR connections immediately
                     var hubContext = app.Services.GetService<IHubContext<SearchHub>>();
                     if (hubContext != null)
@@ -140,17 +98,45 @@ public static class MotelyApiHost
         // Configure middleware - STATIC FILES MUST COME BEFORE ROUTING
         app.UseCors("AllowAll");
 
-        // Static file hosting - wwwroot is at Motely.API/wwwroot (not ContentRoot/wwwroot)
-        var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "Motely.API", "wwwroot");
+        // Middleware to ensure WASM threading headers are set on ALL responses
+        // This must come early to apply to all requests including default files
+        app.Use(async (context, next) =>
+        {
+            // Set headers BEFORE the response is sent
+            context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+            context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+            context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            await next();
+        });
+
+        // /BSO and /BSO/ -> /BSO/index.html (MUST be before UseStaticFiles)
+        app.Use((context, next) =>
+        {
+            var path = context.Request.Path.Value?.TrimEnd('/') ?? "";
+            if (path.Equals("/BSO", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Request.Path = "/BSO/index.html";
+            }
+            return next();
+        });
+
+        // Static file hosting - check project folder first, then parent folder (for dotnet run vs publish)
+        var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+        if (!Directory.Exists(wwwrootPath))
+        {
+            // Fallback: wwwroot is in parent directory (when running dotnet run from Motely.API)
+            wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "..", "wwwroot");
+        }
         if (Directory.Exists(wwwrootPath))
         {
             var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
                 wwwrootPath
             );
             
-            // Create a custom content type provider that includes .dat files
+            // Create a custom content type provider that includes .dat and .wasm files
             var contentTypeProvider = new FileExtensionContentTypeProvider();
             contentTypeProvider.Mappings[".dat"] = "application/octet-stream";
+            contentTypeProvider.Mappings[".wasm"] = "application/wasm";
             
             app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
             app.UseStaticFiles(
@@ -162,6 +148,12 @@ public static class MotelyApiHost
                     {
                         try
                         {
+                            // CRITICAL: Set COOP/COEP headers for WASM threading support
+                            // These MUST be set on static file responses for SharedArrayBuffer to work
+                            ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+                            ctx.Context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+                            ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+                            
                             // Let ASP.NET Core handle MIME types automatically via FileExtensionContentTypeProvider
                             // Only set content encoding headers for compressed files
                             if (ctx.File?.Name != null)
@@ -183,14 +175,10 @@ public static class MotelyApiHost
                                 }
                                 else if (path.EndsWith(".wasm"))
                                 {
-                                    // WASM files should also be cached aggressively
+                                    // WASM files - aggressive caching
                                     ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
                                 }
                             }
-                            // CORS and WASM Multithreading headers for all static files
-                            ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-                            ctx.Context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin");
-                            ctx.Context.Response.Headers.Append("Cross-Origin-Embedder-Policy", "require-corp");
                         }
                         catch { }
                     },
@@ -204,8 +192,11 @@ public static class MotelyApiHost
         }
 
         // Also serve static files from public folder (tracked by git, won't be wiped by build)
-        // Files in Motely.API/public/ will be accessible at /public/* URLs
-        var publicPath = Path.Combine(app.Environment.ContentRootPath, "Motely.API", "public");
+        var publicPath = Path.Combine(app.Environment.ContentRootPath, "public");
+        if (!Directory.Exists(publicPath))
+        {
+            publicPath = Path.Combine(app.Environment.ContentRootPath, "..", "public");
+        }
         if (Directory.Exists(publicPath))
         {
             app.UseStaticFiles(
@@ -215,14 +206,11 @@ public static class MotelyApiHost
                     RequestPath = "/public",
                     OnPrepareResponse = ctx =>
                     {
-                        try
-                        {
-                            ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-                            ctx.Context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin");
-                            ctx.Context.Response.Headers.Append("Cross-Origin-Embedder-Policy", "require-corp");
-                        }
-                        catch { }
-                    },
+                        // Set COOP/COEP headers for WASM threading support
+                        ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+                        ctx.Context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+                        ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+                    }
                 }
             );
         }

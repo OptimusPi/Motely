@@ -158,6 +158,11 @@ namespace Motely
                 "Test with random seeds",
                 CommandOptionType.SingleValue
             );
+            var palindromeOption = app.Option(
+                "--palindrome",
+                "Generate palindrome seeds (reads same forwards and backwards)",
+                CommandOptionType.NoValue
+            );
 
             // Game options
             var deckOption = app.Option<string>(
@@ -294,6 +299,7 @@ namespace Motely
                     Stake = stakeOption.Value(),
                     SeedList = null, // Will be set by keyword handling below
                     RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
+                    PalindromeSeeds = palindromeOption.HasValue(),
                     CancellationToken = _cts.Token,
                     Cutoff = cutoffValue,
                     CutoffMode = cutoffMode,
@@ -344,6 +350,13 @@ namespace Motely
 
                     string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
 
+                    // Calculate seed count first (needed for progress reporting)
+                    int maxPad = 8 - keyword.Length;
+                    char[] validChars = paddingChars != null 
+                        ? paddingChars.ToUpperInvariant().ToCharArray()
+                        : "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+                    long seedCount = GetCountOfSeeds(keyword, maxPad, validChars.Length);
+                    
                     // Generate seeds as IEnumerable (lazy, no allocation)
                     var keywordSeedList = GenerateKeywordSeeds(
                         keyword,
@@ -355,6 +368,7 @@ namespace Motely
                     // This skips all file I/O and locks - perfect for in-memory searching
                     parameters.SeedList = keywordSeedList;
                     parameters.SeedSources = null; // Don't use DuckDB for keywords
+                    parameters.KeywordSeedCount = (int)Math.Min(seedCount, int.MaxValue);
 
                     if (!parameters.Quiet)
                         Console.WriteLine($"✅ Seeds ready for search (streaming mode)");
@@ -1201,7 +1215,12 @@ namespace Motely
             if (!string.IsNullOrEmpty(nativeFilter))
             {
                 configName = nativeFilter;
-                search = MotelySearchOrchestrator.LaunchNative(nativeFilter, parameters, scoreOption?.Value());
+                search = MotelySearchOrchestrator.LaunchNative(
+                    nativeFilter,
+                    parameters,
+                    scoreOption?.Value(),
+                    new ConsoleTerminalOutput(),
+                    new ConsoleCancelKeyHandler());
             }
             else
             {
@@ -1282,10 +1301,10 @@ namespace Motely
                     : $"   Total seeds: {search.TotalSeedsSearched:N0}"
             );
             
-            double speed = search.ElapsedTime.TotalMilliseconds > 0 
-                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
+            double speed = search.ElapsedTime.TotalSeconds > 0 
+                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds 
                 : 0;
-            Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
+            Console.WriteLine($"   Speed: {speed:N0} seeds/second");
 
             if (wasCancelled && search.IsSequentialBatchSearch)
             {

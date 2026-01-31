@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Library: do not publish when solution is published (publish apps instead) -->
+    <IsPublishable>false</IsPublishable>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateProgramFile>false</GenerateProgramFile>
@@ -32,52 +34,28 @@
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
     <WasmSIMD>true</WasmSIMD>
     <RunAOTCompilation>true</RunAOTCompilation>
-    <PublishAot>false</PublishAot>
+    <!-- Suppress CA1416 warnings - browser-specific APIs (Barrier, Thread) are only called in browser builds -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>
 
-  <!-- Desktop-only packages -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageReference Include="DuckDB.NET.Data.Full" />
-    <PackageReference Include="Terminal.Gui" />
-  </ItemGroup>
-
-  <!-- Browser packages -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
-    <PackageReference Include="DuckDB.NET.Data.Full" />
-  </ItemGroup>
-
-  <!-- Cross-platform packages -->
+  <!-- Packages (versions from Directory.Packages.props) -->
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <!-- Include shared source files -->
-  <ItemGroup>
-    <Compile Include="..\Motely.DB\**\*.cs" Exclude="..\Motely.DB\obj\**;..\Motely.DB\bin\**" />
-    <Compile Include="..\Motely.Analysis\**\*.cs" Exclude="..\Motely.Analysis\obj\**;..\Motely.Analysis\bin\**" />
-  </ItemGroup>
-
-  <!-- Exclude desktop-only files from browser -->
+  <!-- Exclude desktop-only from browser. Same MotelySearch.cs (real implementation) for both desktop and browser. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
     <Compile Remove="TUI\**\*.cs" />
     <Compile Remove="API\**\*.cs" />
     <Compile Remove="Executors\**\*.cs" />
     <Compile Remove="Program.cs" />
-    <Compile Remove="MotelySearch.cs" />
   </ItemGroup>
 
-  <!-- Exclude browser stub and moved files from desktop -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <Compile Remove="API\**\*.cs" />
     <Compile Remove="TUI\**\*.cs" />
-    <Compile Remove="MotelySearch.Browser.cs" />
   </ItemGroup>
 </Project>

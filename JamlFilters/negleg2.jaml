@@ -1,0 +1,26 @@
+name: Quickeoglyph (Trickeoglyph Variant)
+author: qcom, adapted by pifreak
+description: Negative perkeo ante 1, canio ante 8, both hieroglyph vouchers and magic trick before ante 8
+deck: Ghost
+stake: White
+
+must:
+  - smallBlindTag: NegativeTag
+    antes: [4]
+  - joker: Showman
+    score: 100
+    antes: [4]
+    sources:
+      shopSlots: [0,1]
+  - joker: Showman
+    score: 100
+    antes: [4]
+    sources:
+      shopSlots: [0,1]
+should:
+  - joker: OopsAll6s
+    score: 100
+    antes: [4]
+    sources:
+      shopSlots: [2,3,4,5,6,7,8]
+

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Motely;
 using Motely.API.Hubs;
 using Motely.API.Models;
-using Motely.DuckDB;
+using Motely.DB;
 using Motely.Filters;
 using Motely.Utils;
 

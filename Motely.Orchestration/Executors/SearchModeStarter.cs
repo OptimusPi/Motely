@@ -1,4 +1,4 @@
-using Motely.DuckDB;
+using Motely.DB;
 using Motely.Filters;
 
 namespace Motely.Executors;
@@ -22,10 +22,10 @@ public static class SearchModeStarter
             return settings.WithRandomSearch(p.RandomSeeds.Value).Start();
         
         if (p.SeedList != null)
-            return settings.WithListSearch(p.SeedList, alreadySorted: false).Start();
+            return settings.WithListSearch(p.SeedList, seedCount: -1).Start();
         
         if (!string.IsNullOrEmpty(duckDbPath))
-            return settings.WithProviderSearch(new global::Motely.DuckDB.DuckDBSeedProvider(duckDbPath)).Start();
+            return settings.WithProviderSearch(new global::Motely.DB.DataLakeSeedProvider(duckDbPath)).Start();
         
         return settings.WithSequentialSearch().Start();
     }

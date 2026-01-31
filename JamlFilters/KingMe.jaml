@@ -1,0 +1,32 @@
+name: Dave
+author: THE ONE AND ONLY DAVID STEINBERG SOLO-JAZZ
+description: omg yes so much vapewave bro im sad reacting
+deck: Erratic
+stake: White
+
+must:
+
+  - joker: Baron
+  - joker: mime
+  - soulJoker: Perkeo
+  
+should:
+  - erraticRank: King
+    score: 1
+
+  - spectralCard: Immolate
+    antes: [2,3]
+    sources:
+      shopSlots: [0,1,2,3]
+  - tarotCard: Death
+    antes: [2,3]
+    sources:
+      packSlots: [0,1,2,3]
+
+  - joker: Baron
+    antes: [2,3,4,5,7]
+  - joker: Mime
+    antes: [2,3,4,5,6]
+
+  
+  

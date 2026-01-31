@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Motely.API.Models;
-using Motely.DuckDB;
+using Motely.DB;
 using Motely.Filters;
 
 namespace Motely.API.Services;

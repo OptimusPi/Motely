@@ -45,6 +45,10 @@ namespace MotelyJaml;
 [YamlSerializable(typeof(MotelyItemSeal))]
 [YamlSerializable(typeof(MotelyItemEnhancement))]
 
+// Additional enum types that may be referenced indirectly
+[YamlSerializable(typeof(ScoreCutoffMode))]
+[YamlSerializable(typeof(FilterCategory))]
+
 // Value types - primitives are handled automatically, but arrays need element type registered
 // int, string, bool, DateTime are handled automatically
 // int[] and string[] are inferred from int and string registrations

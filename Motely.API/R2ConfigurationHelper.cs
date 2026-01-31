@@ -1,6 +1,6 @@
 using DuckDB.NET.Data;
 using Microsoft.Extensions.Configuration;
-using Motely.DuckDB;
+using Motely.DB;
 
 namespace Motely.API;
 

@@ -1,7 +1,13 @@
 <Project>
   <PropertyGroup>
+    <!-- Solution-wide version - change this one place to update all projects -->
+    <MotelyVersion>1.0.0</MotelyVersion>
+    <Version>$(MotelyVersion)</Version>
+    <AssemblyVersion>$(MotelyVersion)</AssemblyVersion>
+    <FileVersion>$(MotelyVersion)</FileVersion>
+    
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <!-- Android SDK Settings -->

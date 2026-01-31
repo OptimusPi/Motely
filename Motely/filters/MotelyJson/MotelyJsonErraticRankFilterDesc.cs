@@ -23,7 +23,6 @@ public struct MotelyJsonErraticRankFilterDesc(MotelyPlayingCardRank rank, int mi
     {
         private readonly MotelyPlayingCardRank _rank;
         private readonly int _minCount;
-        private static int _debugLogCount = 0;
 
         public MotelyJsonErraticRankFilter(MotelyPlayingCardRank rank, int minCount)
         {
@@ -50,12 +49,6 @@ public struct MotelyJsonErraticRankFilterDesc(MotelyPlayingCardRank rank, int mi
                     Vector256<int>.One,
                     Vector256<int>.Zero
                 );
-
-                if (_debugLogCount < 20)
-                {
-                    System.Threading.Interlocked.Increment(ref _debugLogCount);
-                    Console.WriteLine($"[DEBUG] Card {cardIndex}: Rank[0]={(int)card.PlayingCardRank[0]} ({card.PlayingCardRank[0]}), Target={_rank}");
-                }
             }
 
             // Return mask where count >= minCount
