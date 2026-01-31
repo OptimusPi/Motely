@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
+    <!-- Desktop: DuckDB via Motely.DB. Browser/WASM: useInMemoryStorage + ResultCallback, no DB. -->
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Library: do not publish when solution is published -->
+    <IsPublishable>false</IsPublishable>
   </PropertyGroup>
 
   <!-- Desktop AOT -->
@@ -17,16 +20,12 @@
     <PublishAot>false</PublishAot>
   </PropertyGroup>
 
-  <!-- DuckDB for desktop only (no WASM support) -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageReference Include="DuckDB.NET.Data.Full" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
   </ItemGroup>
 </Project>

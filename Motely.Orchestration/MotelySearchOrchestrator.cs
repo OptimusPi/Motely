@@ -3,15 +3,65 @@ using System.Collections.Generic;
 using System.IO;
 using Motely.Filters;
 using Motely.Reporting;
+using Motely.DB;
 
 namespace Motely.Executors
 {
     /// <summary>
     /// Static orchestrator to launch searches from various configuration formats.
-    /// Provides one-liner entry points for CLI, TUI, API, and BSO.
+    /// Single gate to Motely.DB: only Orchestration touches DuckDB; API calls these methods.
     /// </summary>
     public static class MotelySearchOrchestrator
     {
+        // === Result set gate (API → Orchestration → Motely.DB only) ===
+
+        /// <summary>Set the library root for result sets. Call once at host startup.</summary>
+        public static void SetResultsLibraryRoot(string path) => ResultsSetReader.SetLibraryRoot(path);
+
+        /// <summary>Get DB path for a search (for creating DB). Only valid after SetResultsLibraryRoot.</summary>
+        public static string? GetDbPathForSearch(string searchId) => ResultsSetReader.GetPathForFilter(searchId);
+
+        /// <summary>Create a result database for a search. Only Orchestration touches Motely.DB.</summary>
+        public static IResultsDatabaseWriter CreateResultsDatabase(string searchId, MotelyRunConfig runConfig)
+        {
+            var path = ResultsSetReader.GetPathForFilter(searchId)
+                ?? throw new InvalidOperationException($"Results library root not set or invalid searchId: {searchId}");
+            var db = new MotelySearchDatabase(path, runConfig);
+            return new ResultsDatabaseWriterAdapter(db);
+        }
+
+        /// <summary>Get top seeds from a result set by searchId.</summary>
+        public static List<string> GetTopSeeds(string searchId, int limit)
+            => ResultsSetReader.Open(searchId)?.GetTopSeeds(limit) ?? new List<string>();
+
+        /// <summary>Delete a result set (catalog + _data). Only Orchestration touches storage.</summary>
+        public static void DeleteResultSet(string searchId) => ResultsSetReader.Delete(searchId);
+
+        /// <summary>Fertilizer pile (seeds from invalidated results). Only Orchestration touches Motely.DB.</summary>
+        public static FertilizerDatabase GetFertilizerDatabase() => FertilizerDatabase.Instance;
+
+        /// <summary>Bulk insert seeds into a DuckDB file. Only Orchestration touches Motely.DB.</summary>
+        public static long BulkInsertSeeds(string dbPath, IEnumerable<string> seeds, bool deleteExisting = false)
+        {
+            if (deleteExisting && File.Exists(dbPath))
+                File.Delete(dbPath);
+            
+            using var storage = new DuckDBSeedStorage(dbPath);
+            return storage.BulkInsertSeeds(seeds);
+        }
+
+        /// <summary>Get top result rows from a result set by searchId.</summary>
+        public static List<Dictionary<string, object?>> GetTopResultsFromDb(string searchId, int offset, int limit)
+            => ResultsSetReader.Open(searchId)?.GetTopResults(offset, limit) ?? new List<Dictionary<string, object?>>();
+
+        /// <summary>Get column names for a result set by searchId.</summary>
+        public static List<string> GetColumnNames(string searchId)
+            => ResultsSetReader.Open(searchId)?.GetColumnNames() ?? new List<string> { "seed", "score" };
+
+        /// <summary>Get resume cursor for a result set by searchId.</summary>
+        public static (long startBatch, int batchSize, string? lastSeed) GetResumeCursor(string searchId)
+            => ResultsSetReader.Open(searchId)?.GetResumeCursor() ?? (0, 0, null);
+
         /// <summary>
         /// Launch a search and return a context with full result access.
         /// This is the preferred method for UI applications like BSO.
@@ -91,10 +141,10 @@ namespace Motely.Executors
             // We need to create a "placeholder" search first, then wire up the callback
             MotelySearchContext? context = null;
             
-            // Create executor with callback that writes to in-memory storage
+            // Callback-only: results go to host via ResultCallback (e.g. MotelyWasmOnResult).
             var executor = new JsonSearchExecutor(config, parameters, result =>
             {
-                context?.AddResult(result.Seed, result.Score, result.TallyColumns);
+                parameters.ResultCallback?.Invoke(result);
             });
             
             var search = executor.ExecuteAsSearch();
@@ -126,7 +176,7 @@ namespace Motely.Executors
                 return "unknown";
                 
             // Replace spaces with underscores, remove invalid chars
-            var sanitized = input.Trim().Replace(' ', '_');
+            var sanitized = input.Trim().Replace(" ", "");
             var invalidChars = Path.GetInvalidFileNameChars();
             foreach (var c in invalidChars)
             {
@@ -246,10 +296,10 @@ namespace Motely.Executors
             return executor.ExecuteAsSearch();
         }
 
-        private static global::Motely.DuckDB.MotelySearchDatabase OrchestrateDatabase(string dbPath, MotelyRunConfig runConfig, JsonSearchParams parameters)
+        private static global::Motely.DB.MotelySearchDatabase OrchestrateDatabase(string dbPath, MotelyRunConfig runConfig, JsonSearchParams parameters)
         {
             bool exists = File.Exists(dbPath);
-            bool compatible = exists && global::Motely.DuckDB.MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig, out _);
+            bool compatible = exists && global::Motely.DB.MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig, out _);
 
             if (exists && !compatible)
             {
@@ -269,7 +319,7 @@ namespace Motely.Executors
                 }
             }
 
-            return new global::Motely.DuckDB.MotelySearchDatabase(dbPath, runConfig);
+            return new global::Motely.DB.MotelySearchDatabase(dbPath, runConfig);
         }
 
         // Helper to load scoring config synchronously (copy of logic from NativeFilterExecutor)

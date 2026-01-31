@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Motely;
 using Motely.Analysis;
 using Motely.API.Hubs;
+using Motely.Executors;
 using Motely.API.Models;
 using Motely.API.Services;
 
@@ -122,20 +123,21 @@ public static class EndpointRegistration
                     if (request == null)
                         return Results.BadRequest(new { error = "Missing request body" });
 
-                    var seedCount = request.SeedCount.HasValue
-                        ? (int)Math.Min(request.SeedCount.Value, int.MaxValue)
-                        : 0;
+                    // Thread count is independent of SeedCount; cap at processor count to avoid allocating millions of threads.
+                    var threads = Math.Min(Environment.ProcessorCount, 64);
+                    if (threads < 1) threads = 1;
 
                     var filterJaml = FilterService.GetFilterJaml(request.FilterId);
                     if (string.IsNullOrEmpty(filterJaml))
                         return Results.BadRequest(new { error = "Filter not found" });
 
                     var (immediateResults, searchId) =
-                        await SearchManager.Instance.StartSearchAsync(
+                        await MultiSearchManager.Instance.StartSearchAsync(
                             filterJaml,
-                            request.Deck ?? "Red",
-                            request.Stake ?? "White",
-                            seedCount,
+                            request.Deck,
+                            request.Stake,
+                            threads,
+                            request.SeedCount,
                             request.StartBatch,
                             request.Cutoff,
                             request.SeedSource
@@ -146,7 +148,7 @@ public static class EndpointRegistration
                         {
                             searchId = searchId,
                             status = "running",
-                            columns = SearchManager.Instance.GetColumnNames(searchId),
+                            columns = MultiSearchManager.Instance.GetColumnNames(searchId),
                         }
                     );
                 }
@@ -163,8 +165,8 @@ public static class EndpointRegistration
             {
                 try
                 {
-                    var (results, progressPercent) = SearchManager.Instance.GetSearchStatus(id);
-                    var isRunning = SearchManager.Instance.IsSearchRunning(id);
+                    var (results, progressPercent) = MultiSearchManager.Instance.GetSearchStatus(id);
+                    var isRunning = MultiSearchManager.Instance.IsSearchRunning(id);
 
                     return Results.Ok(
                         new
@@ -173,7 +175,7 @@ public static class EndpointRegistration
                             status = isRunning ? "running" : "stopped",
                             results = results,
                             progressPercent = progressPercent,
-                            columns = SearchManager.Instance.GetColumnNames(id),
+                            columns = MultiSearchManager.Instance.GetColumnNames(id),
                         }
                     );
                 }
@@ -190,7 +192,7 @@ public static class EndpointRegistration
             {
                 try
                 {
-                    var results = await SearchManager.Instance.StopSearchAsync(
+                    var results = await MultiSearchManager.Instance.StopSearchAsync(
                         request?.SearchId ?? ""
                     );
                     return Results.Ok(
