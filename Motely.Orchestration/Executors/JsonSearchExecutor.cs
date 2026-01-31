@@ -1,5 +1,5 @@
 using Motely;
-using Motely.DuckDB;
+using Motely.DB;
 using Motely.Filters;
 using Motely.Reporting;
 using Motely.Utils;
@@ -48,7 +48,7 @@ namespace Motely.Executors
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
         private global::DuckDB.NET.Data.DuckDBAppender? _resultsAppender;
-        public global::Motely.DuckDB.MotelySearchDatabase? ResultsDatabase { get; set; }
+        public global::Motely.DB.MotelySearchDatabase? ResultsDatabase { get; set; }
         private bool _headerPrinted = false;
         private MotelyJsonConfig? _lastConfigForHeader;
 
@@ -891,7 +891,7 @@ namespace Motely.Executors
             if (source.SourceType == SeedSourceType.DuckDatabase && !string.IsNullOrEmpty(source.DbPath))
             {
                  if (!_params.Quiet) Console.WriteLine($"🦆 DuckDB Search: {source.DbPath}");
-                 return searchSettings.WithProviderSearch(new global::Motely.DuckDB.DuckDBSeedProvider(source.DbPath)).Start(token);
+                 return searchSettings.WithProviderSearch(new global::Motely.DB.DataLakeSeedProvider(source.DbPath)).Start(token);
             }
 
             // Default: Sequential Search
@@ -1066,69 +1066,38 @@ namespace Motely.Executors
 
             long lastBatchIndex = search.CompletedBatchCount;
 
-            // Calculate percentage: for provider/list searches, use actual seed count
-            // For sequential searches, use theoretical search space
-            int percentComplete;
-            if (!string.IsNullOrEmpty(_params.SeedSources) || _params.SeedList != null)
-            {
-                // Provider/list search: if completed, we've processed all seeds (100%)
-                // For cancelled searches, we can't know exact percentage without total count
-                // So we'll show approximate based on batches processed
-                if (wasCancelled)
-                {
-                    // For cancelled provider searches, we don't have total count easily accessible
-                    // Show approximate: assume we're near completion if we processed many batches
-                    // This is a rough estimate - actual percentage would require querying DB
-                    percentComplete = 0; // Can't calculate accurately without total seed count
-                }
-                else
-                {
-                    // Search completed - we've processed all available seeds
-                    percentComplete = 100;
-                }
-            }
-            else
-            {
-                // Sequential search: use theoretical search space
-                long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
-                percentComplete = maxBatches > 0 ? (int)(lastBatchIndex * 100 / maxBatches) : 0;
-            }
-
-            // Calculate precise percentage with 8 decimal places
-            double precisePercent = 0.0;
-            if (!string.IsNullOrEmpty(_params.SeedSources) || _params.SeedList != null)
-            {
-                if (!wasCancelled)
-                    precisePercent = 100.0;
-            }
-            else
+            // Batches only apply to sequential (batch) search; for provider/list search, don't show batch progress
+            if (search.IsSequentialBatchSearch)
             {
                 long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
-                if (maxBatches > 0)
-                    precisePercent = (double)lastBatchIndex * 100.0 / (double)maxBatches;
+                double precisePercent = maxBatches > 0 ? (double)lastBatchIndex * 100.0 / (double)maxBatches : 0.0;
+                Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
             }
-            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
             Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
             // Note: FilteredSeeds is deprecated and always returns 0
             // MatchingSeeds represents seeds that passed all filters AND cutoff
 
             Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
             Console.WriteLine(
-                $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
+                search.IsSequentialBatchSearch
+                    ? $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
+                    : $"   Total seeds: {search.TotalSeedsSearched:N0}"
             );
             double speed = search.ElapsedTime.TotalMilliseconds > 0 
                 ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
                 : 0;
             Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
 
-            // Only show "To continue" message if search was cancelled (interrupted)
-            if (wasCancelled)
+            // Only show "To continue" for sequential batch search when cancelled
+            if (wasCancelled && search.IsSequentialBatchSearch)
             {
+                long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
+                double precisePercent = maxBatches > 0 ? (double)lastBatchIndex * 100.0 / (double)maxBatches : 0.0;
                 Console.WriteLine(
                     $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F4}"
                 );
-                Console.WriteLine(new string('═', 60));
             }
+            Console.WriteLine(new string('═', 60));
         }
 
         public void Dispose()
@@ -1186,9 +1155,20 @@ namespace Motely.Executors
         public int? RandomSeeds { get; set; }
 
         /// <summary>
+        /// In-memory (WASM/browser) only: max number of results to keep in the top-K heap.
+        /// Ignored when using database storage. Default 1000.
+        /// </summary>
+        public int MaxResults { get; set; } = 1000;
+
+        /// <summary>
         /// Progress callback: receives MotelyProgress object with all progress data
         /// </summary>
         public Action<MotelyProgress>? ProgressCallback { get; set; }
+
+        /// <summary>
+        /// Result callback: each matching seed (WASM/browser uses this to push to JS via MotelyWasmOnResult).
+        /// </summary>
+        public Action<MotelySeedScoreTally>? ResultCallback { get; set; }
 
         /// <summary>
         /// Cancellation token to stop the search when CTRL+C is pressed
