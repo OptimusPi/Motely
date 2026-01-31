@@ -50,4 +50,4 @@ export interface MotelyWasmProgress {
   threadCount: number;
 }
 
-export function getAppBundlePath(): string;
+export function getDistPath(): string;
