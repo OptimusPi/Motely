@@ -18,9 +18,21 @@ public static class ColumnDefinitionHelper
         if (config.Should == null || config.Should.Count == 0)
             return columns;
 
+        // Track used names to ensure uniqueness (case-insensitive for SQL compatibility)
+        var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var clause in config.Should)
         {
-            var columnName = GetClauseColumnName(clause);
+            var baseName = GetClauseColumnName(clause);
+            
+            // Ensure unique column name by adding suffix if duplicate
+            var columnName = baseName;
+            int suffix = 2;
+            while (usedNames.Contains(columnName))
+            {
+                columnName = $"{baseName}_{suffix++}";
+            }
+            usedNames.Add(columnName);
 
             // Check if this is a ValueFunction column
             var mode = clause.Mode?.ToLowerInvariant();

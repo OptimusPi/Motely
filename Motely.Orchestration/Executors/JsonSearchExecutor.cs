@@ -43,27 +43,23 @@ namespace Motely.Executors
         private readonly string? _configPath;
         private readonly MotelyJsonConfig? _config;
         private readonly JsonSearchParams _params;
-        private readonly string _format;
+        private readonly string? _format;
         private readonly Action<MotelySeedScoreTally>? _customCallback;
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
         private global::DuckDB.NET.Data.DuckDBAppender? _resultsAppender;
         public global::Motely.DB.MotelySearchDatabase? ResultsDatabase { get; set; }
-        private bool _headerPrinted = false;
-        private MotelyJsonConfig? _lastConfigForHeader;
-
 
         public JsonSearchExecutor(
             string configPath,
             JsonSearchParams parameters,
-            string format = "json",
             Action<MotelySeedScoreTally>? customCallback = null
         )
         {
             _configPath = configPath;
             _config = null;
             _params = parameters;
-            _format = format;
+            _format = Path.GetExtension(configPath).EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) ? "jaml" : "json";
             _customCallback = customCallback;
         }
 
@@ -76,7 +72,7 @@ namespace Motely.Executors
             _configPath = null;
             _config = config;
             _params = parameters;
-            _format = "json";
+            _format = null;
             _customCallback = customCallback;
         }
 
@@ -163,9 +159,7 @@ namespace Motely.Executors
                     return 1;
                 }
                 
-                // Print CSV header (even for filters with no SHOULD clauses, output seed with score 0)
                 PrintResultsHeader(config);
-                _headerPrinted = true; // Mark as printed so PrintResultRow doesn't duplicate
 
                 // Setup cancellation handler ONLY when NOT in TUI mode
                 // In TUI mode, the UI handles Ctrl+C via KeyDown event and calls Cancel() directly
@@ -315,9 +309,7 @@ namespace Motely.Executors
                     return 1;
                 }
                 
-                // Print CSV header (even for filters with no SHOULD clauses, output seed with score 0)
                 PrintResultsHeader(config);
-                _headerPrinted = true; // Mark as printed so PrintResultRow doesn't duplicate
 
                 search.Start(effectiveToken);
 
@@ -372,9 +364,6 @@ namespace Motely.Executors
                 // Determine output path (SearchResults/<config_name>.db)
 
                 _runningSearch = CreateSearch(config, source);
-                
-                // Store config for header printing when first result arrives
-                _lastConfigForHeader = config;
                 
                 // Return the search handle - caller will call Start(cancellationToken)
                 return _runningSearch;
@@ -437,10 +426,10 @@ namespace Motely.Executors
 
         /// <summary>
         /// Load seed sources from file (.db/.csv/.txt).
-        /// Converts CSV/TXT to DuckDB if needed, returns the dbPath.
+        /// Returns the file path directly - DataLakeSeedProvider handles reading .txt/.csv files natively.
         /// 
         /// For IEnumerable sources (--keyword, --seedlist), use SeedList directly instead - faster!
-        /// DuckDB is primarily for caching/reuse of pre-generated seed lists.
+        /// DuckDB conversion is only done for caching/reuse, but .txt/.csv can be read directly.
         /// </summary>
         private string? LoadSeedSources(string seedSource)
         {
@@ -448,17 +437,19 @@ namespace Motely.Executors
             if (File.Exists(seedSource))
             {
                 string ext = Path.GetExtension(seedSource).ToLowerInvariant();
-                string baseName = Path.GetFileNameWithoutExtension(seedSource);
-                string dir = Path.GetDirectoryName(seedSource) ?? "";
-                string dbPath = Path.Combine(dir, baseName + ".db");
-
-                return ext switch
+                
+                // .txt and .csv files can be read directly by DataLakeSeedProvider - no conversion needed!
+                if (ext == ".txt" || ext == ".csv")
                 {
-                    ".db" => seedSource,
-                    ".csv" => ConvertCsvToDuckDB(seedSource, dbPath),
-                    ".txt" => ConvertTextToDuckDB(seedSource, dbPath),
-                    _ => throw new NotSupportedException($"Unsupported seed source extension: {ext}")
-                };
+                    return seedSource; // Pass directly - DataLakeSeedProvider handles it
+                }
+                
+                if (ext == ".db")
+                {
+                    return seedSource;
+                }
+                
+                throw new NotSupportedException($"Unsupported seed source extension: {ext}");
             }
 
             // Fallback for relative, extensionless names (legacy behavior/convenience)
@@ -473,20 +464,19 @@ namespace Motely.Executors
                 if (File.Exists(directPathInSeedSources))
                 {
                     string ext = Path.GetExtension(directPathInSeedSources).ToLowerInvariant();
-                    string baseName = Path.GetFileNameWithoutExtension(directPathInSeedSources);
-                    string dbPath = Path.Combine(storageDirectory, baseName + ".db");
-
-                    return ext switch
+                    
+                    // .txt and .csv files can be read directly - no conversion needed!
+                    if (ext == ".txt" || ext == ".csv" || ext == ".db")
                     {
-                        ".db" => directPathInSeedSources,
-                        ".csv" => ConvertCsvToDuckDB(directPathInSeedSources, dbPath),
-                        ".txt" => ConvertTextToDuckDB(directPathInSeedSources, dbPath),
-                        _ => throw new NotSupportedException($"Unsupported seed source extension: {ext}")
-                    };
+                        return directPathInSeedSources;
+                    }
+                    
+                    throw new NotSupportedException($"Unsupported seed source extension: {ext}");
                 }
             }
 
             // Priority: .db > .csv > .txt (for extensionless names)
+            // But .txt/.csv can be read directly without conversion!
             string dbPathInternal = Path.Combine(storageDirectory, seedSource + ".db");
             string csvPathInternal = Path.Combine(storageDirectory, seedSource + ".csv");
             string txtPathInternal = Path.Combine(storageDirectory, seedSource + ".txt");
@@ -498,12 +488,12 @@ namespace Motely.Executors
 
             if (File.Exists(csvPathInternal))
             {
-                return ConvertCsvToDuckDB(csvPathInternal, dbPathInternal);
+                return csvPathInternal; // Read directly - no conversion!
             }
 
             if (File.Exists(txtPathInternal))
             {
-                return ConvertTextToDuckDB(txtPathInternal, dbPathInternal);
+                return txtPathInternal; // Read directly - no conversion!
             }
 
             throw new FileNotFoundException(
@@ -784,7 +774,7 @@ namespace Motely.Executors
 
             if (!File.Exists(configPath))
                 throw new FileNotFoundException(
-                    $"Could not find {_format.ToUpper()} config file: {configPath}"
+                    $"Could not find {_format!.ToUpper()} config file: {configPath}"
                 );
 
             MotelyJsonConfig? config;
@@ -832,7 +822,7 @@ namespace Motely.Executors
                 .WithStartBatchIndex((long)_params.StartBatch)
                 .WithDeck(runConfig.Deck)
                 .WithStake(runConfig.Stake)
-                .WithCsvOutput(_format == "csv" || _params.Quiet) // Assume CSV output if quiet (data-only)
+                .WithCsvOutput(_params.Quiet)
                 .WithQuietMode(_params.Quiet)
                 .WithProgressCallback(progress =>
                 {
@@ -871,7 +861,7 @@ namespace Motely.Executors
             }
 
             // 3. Configure Seed Source & Start Search
-            // Priority: Random -> SeedList -> DuckDB -> Sequential
+            // Priority: Random -> Palindrome -> SeedList -> DuckDB -> Sequential
             
             var token = _params.CancellationToken ?? default;
             
@@ -881,11 +871,18 @@ namespace Motely.Executors
                  return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start(token);
             }
             
+            if (_params.PalindromeSeeds)
+            {
+                 if (!_params.Quiet) Console.WriteLine($"🔄 Palindrome Search: generating palindrome seeds lazily");
+                 return searchSettings.WithPalindromeSearch().Start(token);
+            }
+            
             if (source.SourceType == SeedSourceType.SeedList && _params.SeedList != null)
             {
-                 // Don't materialize IEnumerable by counting - it's lazy!
+                 // Don't materialize IEnumerable - it's lazy! Seeds come from generator/enumerator in their natural order
+                 // Use known count for keyword generation if available (for progress reporting)
                  if (!_params.Quiet) Console.WriteLine($"📋 List Search: seeds from provided list (lazy enumeration)");
-                 return searchSettings.WithListSearch(_params.SeedList, alreadySorted: false).Start(token);
+                 return searchSettings.WithListSearch(_params.SeedList, seedCount: _params.KeywordSeedCount ?? -1).Start(token);
             }
 
             if (source.SourceType == SeedSourceType.DuckDatabase && !string.IsNullOrEmpty(source.DbPath))
@@ -919,14 +916,6 @@ namespace Motely.Executors
 
         private void PrintResultRow(MotelySeedScoreTally result, MotelyJsonConfig config)
         {
-            // Print CSV header on first result (immediately before results start printing)
-            if (!_headerPrinted)
-            {
-                PrintResultsHeader(config);
-                _headerPrinted = true;
-            }
-            
-            // Check if we have any actual string column values (not just integer representations)
             var tallies = result.TallyColumns;
             var columnValues = result.ColumnValues;
             bool hasStringValues = false;
@@ -1083,21 +1072,39 @@ namespace Motely.Executors
                     ? $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
                     : $"   Total seeds: {search.TotalSeedsSearched:N0}"
             );
-            double speed = search.ElapsedTime.TotalMilliseconds > 0 
+            double speedMs = search.ElapsedTime.TotalMilliseconds > 0 
                 ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
                 : 0;
-            Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
+            double speedPerSecond = speedMs * 1000.0;
+            string speedFormatted = FormatSpeed(speedPerSecond);
+            Console.WriteLine($"   Speed: {speedFormatted}");
 
             // Only show "To continue" for sequential batch search when cancelled
             if (wasCancelled && search.IsSequentialBatchSearch)
             {
                 long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
-                double precisePercent = maxBatches > 0 ? (double)lastBatchIndex * 100.0 / (double)maxBatches : 0.0;
-                Console.WriteLine(
-                    $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F4}"
-                );
+                Console.WriteLine($"   To continue from here, use: --start {lastBatchIndex}");
             }
-            Console.WriteLine(new string('═', 60));
+        }
+        
+        /// <summary>
+        /// Format speed as M/s (millions per second) for readability.
+        /// Examples: 2950678 → "2.95 M/s", 123456 → "123K seeds/s", 1234 → "1.23K seeds/s"
+        /// </summary>
+        private static string FormatSpeed(double seedsPerSecond)
+        {
+            if (seedsPerSecond >= 1_000_000)
+            {
+                return $"{seedsPerSecond / 1_000_000:F2} M/s";
+            }
+            else if (seedsPerSecond >= 1_000)
+            {
+                return $"{seedsPerSecond / 1_000:F2}K seeds/s";
+            }
+            else
+            {
+                return $"{seedsPerSecond:F0} seeds/s";
+            }
         }
 
         public void Dispose()
@@ -1153,6 +1160,8 @@ namespace Motely.Executors
         public string? SeedSources { get; set; }
         public IEnumerable<string>? SeedList { get; set; }
         public int? RandomSeeds { get; set; }
+        public bool PalindromeSeeds { get; set; }
+        public int? KeywordSeedCount { get; set; } // Seed count for keyword generation (for progress)
 
         /// <summary>
         /// In-memory (WASM/browser) only: max number of results to keep in the top-K heap.

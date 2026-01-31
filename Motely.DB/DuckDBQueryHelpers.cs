@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DuckDB.NET.Data;
 
-namespace Motely.DuckDB;
+namespace Motely.DB;
 
 /// <summary>
 /// Helper methods for common DuckDB queries

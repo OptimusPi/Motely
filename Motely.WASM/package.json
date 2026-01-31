@@ -1,0 +1,49 @@
+{
+  "name": "motely-wasm",
+  "version": "1.0.0",
+  "description": "Balatro seed analyzer and searcher - .NET WebAssembly build with JS interop (SIMD + multi-threaded). No UI; use from React/Next.js/any host.",
+  "author": "Motely Contributors",
+  "license": "MIT",
+  "main": "index.js",
+  "types": "motely-wasm.d.ts",
+  "files": [
+    "dist",
+    "scripts",
+    "index.js",
+    "motely-wasm.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "build:wasm": "dotnet publish -c Release",
+    "copy:bundle": "node scripts/copy-appbundle.js",
+    "build": "npm run build:wasm && npm run copy:bundle",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "balatro",
+    "wasm",
+    "seed",
+    "analyzer",
+    "motely",
+    "webassembly",
+    "dotnet"
+  ],
+  "bin": {
+    "motely-wasm-copy-to-public": "scripts/copy-to-public.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tacodiva/BalatroSeedOracle.git",
+    "directory": "external/Motely/Motely.WASM"
+  },
+  "bugs": {
+    "url": "https://github.com/tacodiva/BalatroSeedOracle/issues"
+  },
+  "homepage": "https://github.com/tacodiva/BalatroSeedOracle#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

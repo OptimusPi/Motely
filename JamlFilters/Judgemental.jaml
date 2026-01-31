@@ -5,27 +5,41 @@ deck: Ghost
 stake: White
 
 must:
-  - smallBlindTag: InvestmentTag
-    antes: [1]
-  - bigBlindTag: CouponTag
-    antes: [1]
   - tarotCard: Judgement
     antes: [2]
-    shopSlots: [0,1]
+    shopSlots: [0,1,2,3]
   - soulJoker: Perkeo
     antes: [2]
     sources:
       packSlots: [0]
-      requireMega: true
+  - soulJoker: Canio
+    antes: [2,3,4,5,6,7,8]
 should:
-  - joker: Blueprint
-    antes: [2]
+  - joker: Showman
+    antes: [2,3,4,5]
     sources:
-      judgement: [0]
+      judgement: [0,1]
+      packSlots: [0,1,2,3,4]
     score: 10
 
-  - jokers: [Blueprint, Brainstorm, InvisibleJoker]
-    antes: [8]
+  - joker: Showman
+    antes: [2,3,4,5]
     sources:
-      shopSlots: [2,3,4,5]
+      judgement: [0,1]
+      packSlots: [0,1,2,3,4]
+    score: 10
+
+
+  - jokers: [Blueprint, Brainstorm, InvisibleJoker]
+    antes: [6]
+    sources:
+      minShopSlot: 2
+      maxShopSlot: 18
+    score: 12
+
+  - jokers: [Blueprint, Brainstorm, InvisibleJoker]
+    antes: [6]
+    sources:
+      minShopSlot: 2
+      maxShopSlot: 40
     score: 10

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Motely;
 using Motely.API;
+using Motely.Executors;
 
 namespace Motely.API.Services;
 
@@ -93,7 +94,7 @@ public static class FilterService
             }
 
             var filterName = displayName ?? "UnknownFilter";
-            var searchId = $"{SearchManager.SanitizeFilterFileStem(filterName)}_{deck}_{stake}";
+            var searchId = $"{MultiSearchManager.SanitizeFilterFileStem(filterName)}_{deck}_{stake}";
             var fileName = Path.GetFileName(file);
             var filterId = Path.GetFileNameWithoutExtension(fileName);
 

@@ -63,9 +63,10 @@ public static class JamlConfigLoader
             jamlContent = PreProcessJamlForTypeAsKey(jamlContent);
 
             // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
-            // Note: WithNodeDeserializer is supported by StaticDeserializerBuilder
+            // Note: WithNodeDeserializer and WithCaseInsensitivePropertyMatching are supported by StaticDeserializerBuilder
             var deserializer = new StaticDeserializerBuilder(new MotelyJamlStaticContext())
                 .WithNamingConvention(NullNamingConvention.Instance)
+                .WithCaseInsensitivePropertyMatching()
                 .WithNodeDeserializer(
                     new JamlTypeAsKeyNodeDeserializer(),
                     s =>

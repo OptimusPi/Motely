@@ -195,7 +195,6 @@ interface SearchConfig {
   filters: JamlFilter[];
   anteRange: [number, number];
   seedRange?: [number, number];
-  maxResults: number;
 }
 ```
 

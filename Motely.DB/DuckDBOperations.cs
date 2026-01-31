@@ -1,6 +1,6 @@
 using DuckDB.NET.Data;
 
-namespace Motely.DuckDB;
+namespace Motely.DB;
 
 /// <summary>
 /// Cross-platform DuckDB operations helper

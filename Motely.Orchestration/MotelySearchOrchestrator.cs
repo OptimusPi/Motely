@@ -137,19 +137,27 @@ namespace Motely.Executors
             string searchId,
             string filterId)
         {
-            // Create context first (with in-memory storage)
-            // We need to create a "placeholder" search first, then wire up the callback
-            MotelySearchContext? context = null;
+            // Create executor first (needed to get search instance)
+            // We'll create a placeholder callback that will be updated after context creation
+            MotelySearchContext? contextRef = null;
             
-            // Callback-only: results go to host via ResultCallback (e.g. MotelyWasmOnResult).
-            var executor = new JsonSearchExecutor(config, parameters, result =>
+            // Combined callback: store in context AND call external callback if provided
+            Action<MotelySeedScoreTally> combinedCallback = result =>
             {
+                // Store result in context's in-memory storage (contextRef is assigned before Start() is called)
+                contextRef?.StoreResult(result);
+                
+                // Also call external callback if provided (e.g., for JS interop)
                 parameters.ResultCallback?.Invoke(result);
-            });
+            };
             
+            var executor = new JsonSearchExecutor(config, parameters, combinedCallback);
             var search = executor.ExecuteAsSearch();
             
-            context = new MotelySearchContext(search, runConfig, searchId, filterId);
+            // Create context AFTER executor (context needs search instance)
+            // Note: Callback won't be invoked until Start() is called, so contextRef will be set by then
+            var context = new MotelySearchContext(search, runConfig, searchId, filterId);
+            contextRef = context; // Assign to closure variable
             
             return context;
         }
@@ -233,7 +241,12 @@ namespace Motely.Executors
             return Launch(config, parameters, resultCallback);
         }
 
-        public static IMotelySearch LaunchNative(string filterName, JsonSearchParams parameters, string? scoreConfig = null)
+        public static IMotelySearch LaunchNative(
+            string filterName,
+            JsonSearchParams parameters,
+            string? scoreConfig = null,
+            ITerminalOutput? terminal = null,
+            ICancelKeyHandler? cancelKeyHandler = null)
         {
             MotelyRunConfig? runConfig = null;
             if (!string.IsNullOrEmpty(scoreConfig))
@@ -261,7 +274,7 @@ namespace Motely.Executors
                 MaxBossAnte = 8
             };
 
-            var executor = new NativeFilterExecutor(filterName, parameters, scoreConfig);
+            var executor = new NativeFilterExecutor(filterName, parameters, scoreConfig, terminal, cancelKeyHandler);
             
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {

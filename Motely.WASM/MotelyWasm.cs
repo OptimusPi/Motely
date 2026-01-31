@@ -118,7 +118,7 @@ public static partial class MotelyWasm
             var searchParams = new JsonSearchParams
             {
                 Threads = threadCount,
-                BatchSize = 1,
+                BatchSize = 4,
                 MaxResults = maxResults > 0 ? Math.Min(maxResults, 100_000) : 1000,
                 SeedList = !string.IsNullOrEmpty(seedList)
                     ? seedList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

@@ -36,6 +36,11 @@ public static class SpecializedFilterFactory
                     MotelyJsonJokerFilterClause.ConvertClauses(clauses)
                 )
             ),
+            FilterCategory.JokerRarityEditionPreFilter => new MotelyJsonJokerRarityEditionPreFilterDesc(
+                MotelyJsonJokerFilterClause.CreateCriteria(
+                    MotelyJsonJokerFilterClause.ConvertClauses(clauses)
+                )
+            ),
             FilterCategory.Voucher => new MotelyJsonVoucherFilterDesc(
                 MotelyJsonVoucherFilterClause.CreateCriteria(
                     MotelyJsonVoucherFilterClause.ConvertClauses(clauses)
@@ -101,6 +106,10 @@ public static class SpecializedFilterFactory
             MotelyJsonJokerFilterDesc jokerDesc =>
                 new MotelySearchSettings<MotelyJsonJokerFilterDesc.MotelyJsonJokerFilter>(
                     jokerDesc
+                ),
+            MotelyJsonJokerRarityEditionPreFilterDesc preFilterDesc =>
+                new MotelySearchSettings<MotelyJsonJokerRarityEditionPreFilterDesc.MotelyJsonJokerRarityEditionPreFilter>(
+                    preFilterDesc
                 ),
             MotelyJsonVoucherFilterDesc voucherDesc =>
                 new MotelySearchSettings<MotelyJsonVoucherFilterDesc.MotelyJsonVoucherFilter>(

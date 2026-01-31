@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using DuckDB.NET.Data;
 
-namespace Motely.DuckDB;
+namespace Motely.DB;
 
 /// <summary>
 /// High-level abstraction for search queue database operations

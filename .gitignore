@@ -62,3 +62,4 @@ mcp-config.json
 /vue-jaml-ui/dist
 /vue-jaml-ui/dist/assets
 /publish-wasm
+/seeds
