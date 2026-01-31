@@ -1135,7 +1135,7 @@ namespace Motely.Executors
     {
         public string Config { get; set; } = "standard";
         public int Threads { get; set; } = Environment.ProcessorCount;
-        public int BatchSize { get; set; } = 1;
+        public int BatchSize { get; set; } = 4;
         public ulong StartBatch { get; set; }
         public ulong EndBatch { get; set; }
         public int Cutoff { get; set; }

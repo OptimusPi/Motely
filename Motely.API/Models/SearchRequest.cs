@@ -49,7 +49,7 @@ public class SearchCriteriaDto
     /// <summary>
     /// Batch character count (2 = 35^2 seeds per batch)
     /// </summary>
-    public int BatchSize { get; set; } = 2;
+    public int BatchSize { get; set; } = 4;
 
     /// <summary>
     /// Deck to use (Red, Blue, Yellow, Ghost, Abandoned, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic, Challenge)
