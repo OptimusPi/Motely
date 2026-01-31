@@ -1,21 +1,16 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Motely.DuckDB;
+using Motely.DB;
 using Motely.Filters;
 
 namespace Motely.Executors;
 
 /// <summary>
-/// Implementation of IMotelySearchContext that wraps a search instance
-/// and its result storage. Provides unified access to search control
-/// and result queries.
-/// 
-/// For Desktop: Uses MotelySearchDatabase (native DuckDB)
-/// For Browser: Uses in-memory storage (no native DuckDB available)
-/// 
-/// Consumers just call methods - Motely handles storage internally.
+/// Wraps a search instance and its result storage.
+/// Desktop: MotelySearchDatabase (DuckDB). GetResults/GetTopResults query the DB.
+/// Browser/WASM: Callback-only. No storage. Results go out via JsonSearchParams.ResultCallback.
+/// GetResults/GetTopResults return empty; ResultCount = MatchingSeeds.
 /// </summary>
 public sealed class MotelySearchContext : IMotelySearchContext
 {
@@ -24,9 +19,6 @@ public sealed class MotelySearchContext : IMotelySearchContext
     private readonly MotelyRunConfig _runConfig;
     private readonly string _searchId;
     private readonly string _filterId;
-    
-    // In-memory result storage for browser/WASM builds
-    private readonly ConcurrentBag<MotelySearchResultRow>? _inMemoryResults;
     private readonly bool _useInMemoryStorage;
     
     /// <summary>
@@ -45,11 +37,10 @@ public sealed class MotelySearchContext : IMotelySearchContext
         _searchId = searchId ?? throw new ArgumentNullException(nameof(searchId));
         _filterId = filterId ?? throw new ArgumentNullException(nameof(filterId));
         _useInMemoryStorage = false;
-        _inMemoryResults = null;
     }
-    
+
     /// <summary>
-    /// Create a search context with in-memory storage (Browser/WASM)
+    /// Create a search context for browser/WASM. Callback-only; no storage. Results via ResultCallback.
     /// </summary>
     public MotelySearchContext(
         IMotelySearch search,
@@ -63,7 +54,6 @@ public sealed class MotelySearchContext : IMotelySearchContext
         _searchId = searchId ?? throw new ArgumentNullException(nameof(searchId));
         _filterId = filterId ?? throw new ArgumentNullException(nameof(filterId));
         _useInMemoryStorage = true;
-        _inMemoryResults = new ConcurrentBag<MotelySearchResultRow>();
     }
     
     // === IMotelySearchContext implementation ===
@@ -77,8 +67,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
         get
         {
             if (_useInMemoryStorage)
-                return _inMemoryResults?.Count ?? 0;
-            
+                return (int)_search.MatchingSeeds;
             return _database?.GetResultCount() ?? 0;
         }
     }
@@ -96,15 +85,8 @@ public sealed class MotelySearchContext : IMotelySearchContext
     public List<MotelySearchResultRow> GetResults(int offset, int limit)
     {
         if (_useInMemoryStorage)
-        {
-            // In-memory: return slice of results
-            return _inMemoryResults?
-                .OrderByDescending(r => r.Score)
-                .Skip(offset)
-                .Take(limit)
-                .ToList() ?? new List<MotelySearchResultRow>();
-        }
-        
+            return new List<MotelySearchResultRow>(); // Callback-only; host gets results via ResultCallback.
+
         // Database: query via MotelySearchDatabase
         if (_database == null)
             return new List<MotelySearchResultRow>();
@@ -121,22 +103,6 @@ public sealed class MotelySearchContext : IMotelySearchContext
     public List<MotelySearchResultRow> GetTopResults(int limit = 1000)
     {
         return GetResults(0, limit);
-    }
-    
-    /// <summary>
-    /// Add a result to in-memory storage (used by browser builds)
-    /// </summary>
-    internal void AddResult(string seed, int score, List<int>? tallies)
-    {
-        if (_useInMemoryStorage && _inMemoryResults != null)
-        {
-            _inMemoryResults.Add(new MotelySearchResultRow
-            {
-                Seed = seed,
-                Score = score,
-                Tallies = tallies
-            });
-        }
     }
     
     private List<int>? ExtractTallies(Dictionary<string, object?> row)
@@ -158,6 +124,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
     // === IMotelySearch delegation ===
     
     public MotelySearchStatus Status => _search.Status;
+    public bool IsSequentialBatchSearch => _search.IsSequentialBatchSearch;
     public long BatchIndex => _search.BatchIndex;
     public long CompletedBatchCount => _search.CompletedBatchCount;
     public TimeSpan ElapsedTime => _search.ElapsedTime;

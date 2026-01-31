@@ -1,8 +1,6 @@
-using DuckDB.NET.Data;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.Executors;
-using DuckSeedStorage = global::Motely.DuckDB.DuckDBSeedStorage;
 using Motely.Filters;
 using Motely.GPU;
 using Motely.Reporting;
@@ -382,9 +380,32 @@ namespace Motely
                 long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
 
                 // Convert startSeed to batch if specified
+                if (startSeedOption.HasValue())
+                {
+                    var seedStr = startSeedOption.ParsedValue.ToUpperInvariant();
+                    if (seedStr.Length != 8)
+                    {
+                        Console.WriteLine($"❌ Error: startSeed must be 8 characters (got {seedStr.Length})");
+                        return 1;
+                    }
+                    try
+                    {
+                        var batchIndex = SeedMath.SeedToBatchIndex(seedStr, parameters.BatchSize);
+                        parameters.StartBatch = (ulong)batchIndex;
+                        if (!parameters.Quiet)
+                        {
+                            Console.WriteLine($"📍 Starting at seed {seedStr} = batch {parameters.StartBatch:N0}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ Error: Invalid seed '{seedStr}': {ex.Message}");
+                        return 1;
+                    }
+                }
 
-                // Convert percent to batch if specified (keyword/startSeed take priority)
-                if (startPercentOption.HasValue())
+                // Convert percent to batch only when startSeed was not specified (startSeed takes priority)
+                if (startPercentOption.HasValue() && !startSeedOption.HasValue())
                 {
                     double startPct = startPercentOption.ParsedValue;
                     if (startPct < 0 || startPct > 100)
@@ -701,41 +722,41 @@ namespace Motely
 
             if (outputJson)
             {
-                // Output as JSON for script consumption
-                var jsonOutput = new
+                // Output as JSON for script consumption using AOT-compatible source-generated serialization
+                var erraticComposition = analysis.ErraticDeckComposition?.Split(
+                    ',',
+                    StringSplitOptions.RemoveEmptyEntries
+                ) ?? Array.Empty<string>();
+                
+                var jsonOutput = new SeedAnalysisDto
                 {
-                    seed = seed,
-                    deck = deck.ToString(),
-                    stake = stake.ToString(),
-                    erraticDeckComposition = analysis.ErraticDeckComposition?.Split(
-                        ',',
-                        StringSplitOptions.RemoveEmptyEntries
-                    ) ?? Array.Empty<string>(),
-                    twos = analysis
-                        .ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Count(c => c.StartsWith("2_")) ?? 0,
-                    error = analysis.Error,
-                    antes = analysis
-                        .Antes.Select(ante => new
+                    Seed = seed,
+                    Deck = deck.ToString(),
+                    Stake = stake.ToString(),
+                    ErraticDeckComposition = erraticComposition,
+                    Twos = erraticComposition.Count(c => c.StartsWith("2_")),
+                    Error = analysis.Error,
+                    Antes = analysis
+                        .Antes.Select(ante => new AnteAnalysisDto
                         {
-                            ante = ante.Ante,
-                            boss = FormatUtils.FormatBoss(ante.Boss),
-                            voucher = FormatUtils.FormatVoucher(ante.Voucher),
-                            smallBlindTag = FormatUtils.FormatTag(ante.SmallBlindTag),
-                            bigBlindTag = FormatUtils.FormatTag(ante.BigBlindTag),
-                            drawOrder = ante.DrawOrder,
-                            shopQueue = ante
-                                .ShopQueue.Select(item => new
+                            Ante = ante.Ante,
+                            Boss = FormatUtils.FormatBoss(ante.Boss),
+                            Voucher = FormatUtils.FormatVoucher(ante.Voucher),
+                            SmallBlindTag = FormatUtils.FormatTag(ante.SmallBlindTag),
+                            BigBlindTag = FormatUtils.FormatTag(ante.BigBlindTag),
+                            DrawOrder = ante.DrawOrder ?? string.Empty,
+                            ShopQueue = ante
+                                .ShopQueue.Select(item => new ShopItemDto
                                 {
-                                    id = item.ToString(),
-                                    name = FormatUtils.FormatItem(item),
+                                    Id = item.ToString(),
+                                    Name = FormatUtils.FormatItem(item),
                                 })
                                 .ToArray(),
-                            packs = ante
-                                .Packs.Select(pack => new
+                            Packs = ante
+                                .Packs.Select(pack => new PackDto
                                 {
-                                    type = FormatUtils.FormatPackName(pack.Type),
-                                    items = pack
+                                    Type = FormatUtils.FormatPackName(pack.Type),
+                                    Items = pack
                                         .Items.Select(item => FormatUtils.FormatItem(item))
                                         .ToArray(),
                                 })
@@ -743,21 +764,14 @@ namespace Motely
                         })
                         .ToArray(),
                 };
-                // AOT warning suppression: Anonymous type serialization is acceptable for CLI output
-                #pragma warning disable IL2026 // RequiresUnreferencedCode
-                #pragma warning disable IL3050 // RequiresDynamicCode
+                
+                // Use AOT-compatible source-generated serialization context
                 Console.WriteLine(
                     System.Text.Json.JsonSerializer.Serialize(
                         jsonOutput,
-                        new System.Text.Json.JsonSerializerOptions
-                        {
-                            WriteIndented = false,
-                            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-                        }
+                        MotelyAotJsonContext.Default.SeedAnalysisDto
                     )
                 );
-                #pragma warning restore IL3050
-                #pragma warning restore IL2026
             }
             else
             {
@@ -853,28 +867,18 @@ namespace Motely
                 );
             }
 
+            int maxPad = 8 - keyword.Length;
+            long count = GetCountOfSeeds(keyword, maxPad, validChars.Length);
+
             if (!quiet)
             {
                 string paddingInfo = paddingChars != null ? $" (padding: {paddingChars})" : "";
                 Console.WriteLine(
-                    $"🔧 Generating seeds containing '{keyword}'{paddingInfo}..."
+                    $"🔧 Generating {count:N0} seeds containing '{keyword}'{paddingInfo}..."
                 );
             }
 
-            int maxPad = 8 - keyword.Length;
-
-            // Generate all combinations - yield directly, no materialization!
-            // LAZY: Don't count seeds - just generate them on-the-fly!
-            var seeds = GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars);
-            
-            if (!quiet)
-            {
-                Console.WriteLine(
-                    $"🔧 Generating seeds containing '{keyword}' (lazy enumeration, no pre-counting)"
-                );
-            }
-
-            return seeds;
+            return GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars);
         }
 
         private static IEnumerable<string> GenerateKeywordSeedsEnumerable(
@@ -1128,19 +1132,14 @@ namespace Motely
         }
 
         /// <summary>
-        /// Save generated seeds to DuckDB file using Motely.DB optimized storage
+        /// Save generated seeds to DuckDB file using Motely.DB optimized storage (via Orchestrator)
         /// </summary>
         private static void SaveSeedsToDuckDB(IEnumerable<string> seeds, string dbPath, bool quiet, bool isRegenerating = false)
         {
             if (!quiet)
                 Console.WriteLine($"💾 Saving seeds to {dbPath}...");
             
-            // Only delete existing file if we're explicitly regenerating
-            if (isRegenerating && File.Exists(dbPath))
-                File.Delete(dbPath);
-            
-            using var storage = new DuckSeedStorage(dbPath);
-            long count = storage.BulkInsertSeeds(seeds);
+            long count = MotelySearchOrchestrator.BulkInsertSeeds(dbPath, seeds, deleteExisting: isRegenerating);
             
             if (!quiet)
                 Console.WriteLine($"✅ Saved {count:N0} seeds to {dbPath}");
@@ -1266,32 +1265,34 @@ namespace Motely
 
             long lastBatchIndex = search.CompletedBatchCount;
 
-            // Calculate precise percentage
-            double precisePercent = 0.0;
-            if (parameters.SeedList != null)
+            // Batches only apply to sequential (batch) search; for provider/list search, don't show batch progress
+            if (search.IsSequentialBatchSearch)
             {
-                if (!wasCancelled)
-                    precisePercent = 100.0;
-            }
-            else
-            {
+                double precisePercent = 0.0;
                 long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
                 if (maxBatches > 0)
                     precisePercent = (double)lastBatchIndex * 100.0 / (double)maxBatches;
+                Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
             }
-            
-            Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
             Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
             Console.WriteLine($"   Duration: {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
-            Console.WriteLine($"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)");
+            Console.WriteLine(
+                search.IsSequentialBatchSearch
+                    ? $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
+                    : $"   Total seeds: {search.TotalSeedsSearched:N0}"
+            );
             
             double speed = search.ElapsedTime.TotalMilliseconds > 0 
                 ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
                 : 0;
             Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
 
-            if (wasCancelled)
+            if (wasCancelled && search.IsSequentialBatchSearch)
             {
+                double precisePercent = 0.0;
+                long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
+                if (maxBatches > 0)
+                    precisePercent = (double)lastBatchIndex * 100.0 / (double)maxBatches;
                 Console.WriteLine($"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F4}");
             }
             Console.WriteLine(new string('═', 60));

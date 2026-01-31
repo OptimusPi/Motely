@@ -5,6 +5,7 @@ using Motely;
 using Motely.API;
 using Motely.API.Models;
 using Motely.API.Services;
+using Motely.Executors;
 
 namespace Motely.API;
 
@@ -69,7 +70,7 @@ public static class Endpoints
 
     public static IResult GetSearches()
     {
-        var allSearches = SearchManager.Instance.GetActiveSearchesStatus();
+        var allSearches = MultiSearchManager.Instance.GetAllStatuses();
         var searches = allSearches
             .Select(s => new
             {
@@ -78,15 +79,10 @@ public static class Endpoints
                 filterName = s.FilterName,
                 deck = s.Deck,
                 stake = s.Stake,
-                completedBatches = s.CompletedBatches,
-                totalBatches = s.TotalBatches,
                 seedsSearched = s.SeedsSearched,
                 seedsPerSecond = s.SeedsPerSecond,
-                resultsFound = s.ResultsFound,
+                resultsFound = s.TotalMatches,
                 isRunning = s.IsRunning,
-                isFastLane = s.IsFastLane,
-                inQueue = s.InQueue,
-                stopReason = s.StopReason,
             })
             .ToList();
 
@@ -103,29 +99,25 @@ public static class Endpoints
         if (string.IsNullOrEmpty(filterJaml))
             return Results.BadRequest("Filter not found");
 
-        (List<SearchResult> immediateResults, string searchId) =
-            await SearchManager.Instance.StartSearchAsync(
-                filterJaml,
-                "Red",
-                "White",
-                (int)(request.SeedCount ?? 0),
-                request.StartBatch,
-                request.Cutoff,
-                request.SeedSource
-            );
+        var (_, searchId) = await MultiSearchManager.Instance.StartSearchAsync(
+            filterJaml,
+            request.Deck,
+            request.Stake,
+            threads: 1
+        );
 
         return Results.Ok(new { searchId });
     }
 
     public static IResult GetSearch(string id)
     {
-        var (results, progress) = SearchManager.Instance.GetSearchStatus(id);
+        var (results, progress) = MultiSearchManager.Instance.GetSearchStatusWithResults(id);
         return Results.Ok(new { results, progress });
     }
 
-    public static async Task<IResult> StopSearch(string id)
+    public static IResult StopSearch(string id)
     {
-        await SearchManager.Instance.StopSearchAsync(id);
+        MultiSearchManager.Instance.Stop(id);
         return Results.Ok();
     }
 
