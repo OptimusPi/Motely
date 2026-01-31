@@ -72,7 +72,7 @@ public sealed class MultiSearchManager
         var parameters = new JsonSearchParams
         {
             Threads = threadCount,
-            BatchSize = 3,
+            BatchSize = 4,
             AutoSave = true,
             SeedSources = seedSource,
         };

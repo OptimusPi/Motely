@@ -9,7 +9,7 @@
   "files": ["index.js", "motely-wasm.d.ts"],
   "scripts": {
     "build": "dotnet publish -c Release",
-    "dev": "node scripts/serve-with-headers.cjs 3333 poc/public/motely-wasm"
+    "dev": "node scripts/serve-with-headers.cjs 3333 poc/public"
   },
   "repository": "https://github.com/OptimusPi/Motely",
   "publishConfig": { "access": "public" }
