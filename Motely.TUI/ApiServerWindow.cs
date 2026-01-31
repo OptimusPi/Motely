@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Motely.API;
+using Motely.Executors;
 
 namespace Motely.TUI;
 
@@ -235,7 +236,7 @@ public class ApiServerWindow : Window
             _server = MotelyApiHost.CreateHost(args);
 
             // Apply TUI thread budget to API search manager (multi-search allocator uses this budget)
-            SearchManager.Instance.SetThreadBudget(TuiSettings.ThreadCount);
+            MultiSearchManager.Instance.SetTotalThreads(TuiSettings.ThreadCount);
 
             await _server.StartAsync(_cts.Token);
 
@@ -321,57 +322,42 @@ public class ApiServerWindow : Window
 
     private async Task StopServerOnlyAsync()
     {
-        if (_isRunning)
+        if (!_isRunning) return;
+
+        // Update UI immediately - don't wait for anything
+        App?.Invoke(() =>
+        {
+            _stopButton.Enabled = false;
+            _stopButton.Text = "Stopping...";
+        });
+
+        LogMessage("Stopping server...");
+
+        // Cancel token FIRST - signals everything to stop immediately
+        try { _cts?.Cancel(); } catch { }
+
+        // Fire and forget search stop - don't block on it
+        _ = Task.Run(() =>
+        {
+            try { MultiSearchManager.Instance.StopAll("Stopping"); }
+            catch { }
+        });
+
+        // Force stop server with very short timeout (500ms)
+        var server = _server;
+        if (server != null)
         {
             try
             {
-                LogMessage("Stopping searches...");
-                await SearchManager.Instance.StopAllSearchesAsync();
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"[WARN] Failed to stop all searches: {ex.Message}");
-            }
-
-            LogMessage("Stopping clean API server...");
-            var cts = _cts;
-            var server = _server;
-
-            App?.Invoke(() =>
-            {
-                _stopButton.Enabled = false;
-                _stopButton.Visible = false;
-            });
-
-            try
-            {
-                cts?.Cancel();
+                using var stopCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+                await server.StopAsync(stopCts.Token);
             }
             catch { }
 
-            if (server != null)
-            {
-                try
-                {
-                    // Aggressive shutdown - only wait 2 seconds for graceful shutdown
-                    using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-                    await server.StopAsync(stopCts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    // Timeout - force dispose
-                    LogMessage("[WARN] Server stop timed out, forcing shutdown...");
-                }
-                catch { }
-
-                // Force dispose regardless
-                try
-                {
-                    await server.DisposeAsync();
-                }
-                catch { }
-            }
+            try { await server.DisposeAsync(); } catch { }
         }
+
+        App?.Invoke(() => _stopButton.Visible = false);
     }
 
     private void AttemptClose()

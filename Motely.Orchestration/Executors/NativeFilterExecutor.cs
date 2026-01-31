@@ -12,19 +12,25 @@ namespace Motely.Executors
         private readonly string _filterName;
         private readonly string? _scoreConfig;
         private readonly JsonSearchParams _params;
+        private readonly ITerminalOutput _terminal;
+        private readonly ICancelKeyHandler _cancelKeyHandler;
         private bool _cancelled = false;
         private IEnumerable<string>? _searchSeeds = null;
-        public global::Motely.DuckDB.MotelySearchDatabase? ResultsDatabase { get; set; }
+        public global::Motely.DB.MotelySearchDatabase? ResultsDatabase { get; set; }
 
         public NativeFilterExecutor(
             string filterName,
             JsonSearchParams parameters,
-            string? scoreConfig = null
+            string? scoreConfig = null,
+            ITerminalOutput? terminal = null,
+            ICancelKeyHandler? cancelKeyHandler = null
         )
         {
             _filterName = filterName;
             _scoreConfig = scoreConfig;
             _params = parameters;
+            _terminal = terminal ?? NoOpTerminalOutput.Instance;
+            _cancelKeyHandler = cancelKeyHandler ?? NoOpCancelKeyHandler.Instance;
         }
 
         public IMotelySearch ExecuteAsSearch()
@@ -58,7 +64,7 @@ namespace Motely.Executors
                     var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
                     double seedsPerSec = progress.SeedsPerMillisecond * 1000.0;
                     string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerSec)} seeds/sec";
-                    Console.Write($"\r{progressLine}                    \r{progressLine}");
+                    _terminal.Write($"\r{progressLine}                    \r{progressLine}");
                 }
             };
 
@@ -116,7 +122,7 @@ namespace Motely.Executors
                     var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
                     string progressLine =
                         $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(progress.SeedsPerMillisecond)} seeds/ms";
-                    Console.Write($"\r{progressLine}                    \r{progressLine}");
+                    _terminal.Write($"\r{progressLine}                    \r{progressLine}");
                 }
             };
 
@@ -128,11 +134,11 @@ namespace Motely.Executors
             }
             catch (ArgumentException ex)
             {
-                Console.WriteLine($"❌ {ex.Message}");
+                _terminal.WriteLine($"❌ {ex.Message}");
                 return 1;
             }
 
-            Console.WriteLine(
+            _terminal.WriteLine(
                 $"🔍 Running native filter: {_filterName}"
                     + (
                         !string.IsNullOrEmpty(_params.SpecificSeed)
@@ -148,28 +154,23 @@ namespace Motely.Executors
             DebugLogger.Log($"Start batch: {_params.StartBatch}");
             DebugLogger.Log($"End batch: {_params.EndBatch}");
 
-#if !BROWSER
-            // Setup cancellation handler
-            Console.CancelKeyPress += (sender, e) =>
+            _cancelKeyHandler.Register(() =>
             {
-                e.Cancel = true;
                 _cancelled = true;
-                Console.WriteLine("\n🛑 Stopping search...");
-                // Use fast-path cancel to return immediately without waiting for threads
+                _terminal.WriteLine("\n🛑 Stopping search...");
                 search.Cancel();
-            };
-#endif
+            });
 
             var searchStopwatch = Stopwatch.StartNew();
 
             // Add debug output for batch range processing
             if (_params.StartBatch > 0 || _params.EndBatch > 0)
             {
-                Console.WriteLine(
+                _terminal.WriteLine(
                     $"   Processing batches: {_params.StartBatch} to {_params.EndBatch}"
                 );
-                Console.WriteLine($"   Seeds per batch: {Math.Pow(35, _params.BatchSize):N0}");
-                Console.WriteLine(
+                _terminal.WriteLine($"   Seeds per batch: {Math.Pow(35, _params.BatchSize):N0}");
+                _terminal.WriteLine(
                     $"   Total seeds to search: {((_params.EndBatch - _params.StartBatch + 1) * Math.Pow(35, _params.BatchSize)):N0}"
                 );
             }
@@ -249,7 +250,7 @@ namespace Motely.Executors
                     var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
                     string progressLine =
                         $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(progress.SeedsPerMillisecond)} seeds/ms";
-                    Console.Write($"\r{progressLine}                    \r{progressLine}");
+                    _terminal.Write($"\r{progressLine}                    \r{progressLine}");
                 }
             };
 
@@ -261,11 +262,11 @@ namespace Motely.Executors
             }
             catch (ArgumentException ex)
             {
-                Console.WriteLine($"❌ {ex.Message}");
+                _terminal.WriteLine($"❌ {ex.Message}");
                 return 1;
             }
 
-            Console.WriteLine(
+            _terminal.WriteLine(
                 $"🔍 Running native filter: {_filterName}"
                     + (
                         !string.IsNullOrEmpty(_params.SpecificSeed)
@@ -286,11 +287,11 @@ namespace Motely.Executors
             // Add debug output for batch range processing
             if (_params.StartBatch > 0 || _params.EndBatch > 0)
             {
-                Console.WriteLine(
+                _terminal.WriteLine(
                     $"   Processing batches: {_params.StartBatch} to {_params.EndBatch}"
                 );
-                Console.WriteLine($"   Seeds per batch: {Math.Pow(35, _params.BatchSize):N0}");
-                Console.WriteLine(
+                _terminal.WriteLine($"   Seeds per batch: {Math.Pow(35, _params.BatchSize):N0}");
+                _terminal.WriteLine(
                     $"   Total seeds to search: {((_params.EndBatch - _params.StartBatch + 1) * Math.Pow(35, _params.BatchSize)):N0}"
                 );
             }
@@ -379,7 +380,7 @@ namespace Motely.Executors
             if (_params.RandomSeeds.HasValue)
                 return settings.WithRandomSearch(_params.RandomSeeds.Value).Start();
             else if (seeds != null && seeds.Any())
-                return settings.WithListSearch(seeds).Start();
+                return settings.WithListSearch(seeds, seedCount: -1).Start();
             else
                 return settings.WithSequentialSearch().Start();
         }
@@ -434,7 +435,7 @@ namespace Motely.Executors
                 }
 
                 // Use original tally column format (CSV-style with colored numbers)
-                Console.WriteLine(
+                _terminal.WriteLine(
                     TallyColorizer.FormatResultLine(score.Seed, score.Score, score.TallyValuesSpan)
                 );
 
@@ -542,12 +543,12 @@ namespace Motely.Executors
 
         private void PrintResultsHeader(MotelyJsonConfig config)
         {
-            Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
+            _terminal.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
 
             // ONE SOURCE OF TRUTH: Use GetColumnNames()
             var columnNames = config.GetColumnNames();
             var quotedColumns = columnNames.Select(name => $"\"{name}\"");
-            Console.WriteLine(string.Join(",", quotedColumns));
+            _terminal.WriteLine(string.Join(",", quotedColumns));
         }
 
         private IEnumerable<string>? LoadSeeds()
@@ -584,7 +585,7 @@ namespace Motely.Executors
 
         private void PrintSummary(IMotelySearch search, TimeSpan duration)
         {
-            Console.WriteLine(
+            _terminal.WriteLine(
                 _cancelled ? "\n✅ Search stopped gracefully" : "\n✅ Search completed"
             );
 
@@ -594,10 +595,10 @@ namespace Motely.Executors
             // Calculate the actual last batch processed
             var lastBatch = search.CompletedBatchCount;
 
-            Console.WriteLine($"   Batches completed: {search.CompletedBatchCount}");
-            Console.WriteLine($"   Last batch: {lastBatch}");
-            Console.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
-            Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
+            _terminal.WriteLine($"   Batches completed: {search.CompletedBatchCount}");
+            _terminal.WriteLine($"   Last batch: {lastBatch}");
+            _terminal.WriteLine($"   Seeds searched: {totalSeedsSearched:N0}");
+            _terminal.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
             // Note: FilteredSeeds is deprecated and always returns 0
             // MatchingSeeds represents seeds that passed all filters AND cutoff
 
@@ -606,8 +607,8 @@ namespace Motely.Executors
                 var speed = duration.TotalMilliseconds > 0 
                     ? (double)totalSeedsSearched / duration.TotalMilliseconds 
                     : 0;
-                Console.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
-                Console.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
+                _terminal.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
+                _terminal.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
             }
         }
     }

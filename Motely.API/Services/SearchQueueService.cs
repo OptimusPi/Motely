@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Motely.DuckDB;
+using Motely.DB;
 
 namespace Motely.API.Services;
 

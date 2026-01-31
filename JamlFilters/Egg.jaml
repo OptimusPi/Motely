@@ -1,0 +1,17 @@
+name: Egg
+author: ShadowBulb (M)s Unconscious Desire
+description: 🥚
+deck: Anaglyph
+stake: White
+
+must:
+
+  - joker: egg
+    edition: Negative
+  
+should:
+  - joker: egg
+    score: 1
+  - joker: egg
+    edition: Negative
+    score: 10

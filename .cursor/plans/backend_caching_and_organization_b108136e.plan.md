@@ -29,6 +29,7 @@ todos:
   - id: order_filters
     content: Order filters - unsaved first, then alphabetical by name
     status: completed
+isProject: false
 ---
 
 **File:** `Motely.API/Program.cs`
@@ -40,8 +41,8 @@ todos:
 - If cache miss, scan directories and build list
 - Store in cache with **absolute expiration** (30 minutes or 1 hour) - sources rarely change
 - **Important:** Add HTTP headers for Cloudflare CDN:
-    - `Cache-Control: public, max-age=1800` (30 minutes) or `max-age=3600` (1 hour)
-    - `ETag` header for cache validation
+  - `Cache-Control: public, max-age=1800` (30 minutes) or `max-age=3600` (1 hour)
+  - `ETag` header for cache validation
 - Return cached or fresh data
 - **No automatic invalidation** - cache expires naturally after long period, respects Cloudflare's caching
 
@@ -56,10 +57,10 @@ todos:
 - Underscores in category name render as spaces in display (e.g., `_Erratic_Deck__` → "Erratic Deck")
 - **Helper Methods:**
 - `ParseCategoryFromFileName(string fileName)` → returns `(category: string?, displayName: string)`
-    - If starts with `_`, extract category (everything before `__`)
-    - Replace underscores in category with spaces for display
-    - Extract filename (everything after `__`)
-    - If no category, `category = null`, `displayName = fileName`
+  - If starts with `_`, extract category (everything before `__`)
+  - Replace underscores in category with spaces for display
+  - Extract filename (everything after `__`)
+  - If no category, `category = null`, `displayName = fileName`
 - **Organization:**
 - Always include categories (even if empty)
 - Group by category, then sort alphabetically within category
@@ -77,18 +78,18 @@ todos:
 - Seeds must be 0-8 characters
 - Valid dictionary: `[ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789]` (35 chars)
 - **UX Conversions:**
-    - Convert `0` → `O` (zero to letter O)
-    - Convert lowercase → uppercase
-    - Reject any character not in dictionary
+  - Convert `0` → `O` (zero to letter O)
+  - Convert lowercase → uppercase
+  - Reject any character not in dictionary
 - Skip invalid seeds (log warning, continue processing)
 - **Helper Method:**
 - `ValidateAndNormalizeSeed(string seed)` → returns normalized seed or null if invalid
-    - Trim whitespace
-    - Replace `0` with `O`
-    - Convert to uppercase
-    - Check length (0-8 chars)
-    - Check all chars in dictionary
-    - Return normalized seed or null
+  - Trim whitespace
+  - Replace `0` with `O`
+  - Convert to uppercase
+  - Check length (0-8 chars)
+  - Check all chars in dictionary
+  - Return normalized seed or null
 
 ### 4. Icons and Metadata
 
@@ -111,8 +112,8 @@ todos:
 - Modify `/seed-sources` endpoint to include sequential search options:
 - `"all"` → "All Seeds (Start from beginning)"
 - `"all:continue"` → "All Seeds (Continue Saved Search - {progress}%)"
-    - Calculate progress from `SearchManager` if there's a paused/resumable search
-    - Format: `"All Seeds (Continue Saved Search - 2.3456%)"` (4 decimal places)
+  - Calculate progress from `SearchManager` if there's a paused/resumable search
+  - Format: `"All Seeds (Continue Saved Search - 2.3456%)"` (4 decimal places)
 - **Backend Logic:**
 - Check if there's a resumable sequential search (check DuckDB for saved batch position)
 - If resumable, include continue option with calculated progress
@@ -137,10 +138,6 @@ todos:
                   cutoff: int?
                 }
   ```
-
-
-
-
 - **Backend Implementation:**
 - Parse each source key (format: `{type}:{filename}`)
 - Load seeds from all sources (combine into single list)
@@ -204,9 +201,6 @@ todos:
                 }
   ```
 
-
-
-
 ## Files to Modify
 
 1. `Motely.API/Program.cs` - Main implementation
@@ -216,8 +210,9 @@ todos:
 
 ## Testing Checklist
 
-- [ ] Seed sources are cached and don't hit disk on every request
-- [ ] HTTP headers respect Cloudflare CDN caching
-- [ ] Category parsing works correctly (`_CATEGORY__filename.ext`)
-- [ ] Underscores in category names render as spaces
-- [ ] Seed sources are grouped by category
+- Seed sources are cached and don't hit disk on every request
+- HTTP headers respect Cloudflare CDN caching
+- Category parsing works correctly (`_CATEGORY__filename.ext`)
+- Underscores in category names render as spaces
+- Seed sources are grouped by category
+

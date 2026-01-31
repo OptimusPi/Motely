@@ -1,4 +1,4 @@
-namespace Motely.DuckDB;
+namespace Motely.DB;
 
 /// <summary>
 /// SQL schema definitions for Motely tables

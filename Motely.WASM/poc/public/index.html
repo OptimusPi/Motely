@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Motely.WASM POC</title>
+  <style>
+    body { font-family: system-ui; max-width: 720px; margin: 2rem auto; padding: 1rem; }
+    pre { background: #f0f0f0; padding: 1rem; overflow: auto; max-height: 360px; font-size: 12px; }
+    #out { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 12px; min-height: 1.5em; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    input { padding: 0.5rem; font-size: 1rem; width: 120px; }
+    textarea { font-family: ui-monospace, monospace; font-size: 12px; width: 100%; height: 140px; padding: 0.5rem; box-sizing: border-box; }
+    label { display: inline-block; margin-right: 1rem; }
+    .section { margin-bottom: 1.5rem; }
+    .section h2 { margin: 0 0 0.5rem 0; font-size: 1rem; }
+    #status { font-weight: bold; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h1>Motely.WASM POC</h1>
+  <p id="status">Loading .NET WASM runtime...</p>
+  <div id="controls" style="display:none">
+    <div class="section">
+      <h2>Analyze seed</h2>
+      <p>
+        <label>Seed: <input id="seed" value="TACO1111"></label>
+        <label>Deck: <input id="deck" value="Red"></label>
+        <label>Stake: <input id="stake" value="White"></label>
+      </p>
+      <button id="go">Analyze seed</button>
+    </div>
+    <div class="section">
+      <h2>JAML search</h2>
+      <p><label>JAML filter (YAML):</label></p>
+      <textarea id="jaml" title="JAML filter">name: poc-search
+deck: Red
+stake: White
+must:
+  - joker: Sly Joker
+    antes: [1]</textarea>
+      <p>
+        <label>Threads: <input id="threadCount" type="number" value="" placeholder="auto" min="1" max="32" style="width:50px" title="Leave empty for navigator.hardwareConcurrency"></label>
+        <label>Seed list (optional; empty = sequential/exhaustive over full seedspace): <input id="seedList" placeholder="TACO1111,TACO1112" style="width:200px"></label>
+        <label title="Use a small list so empty seed list still finishes fast">Quick run: <input type="checkbox" id="quickRun" checked></label>
+      </p>
+      <p id="threadInfo" style="font-size:0.9em;color:#666"></p>
+      <button id="searchBtn">Run search</button>
+      <button id="cancelBtn" style="display:none">Cancel</button>
+    </div>
+  </div>
+  <h2>Result</h2>
+  <p id="out" role="status" aria-live="polite">—</p>
+  <div id="searchResultsContainer" style="display:none; margin-top:1rem;">
+    <p id="searchSummary" style="font-weight:bold; margin-bottom:0.5rem;"></p>
+    <div style="overflow:auto; max-height:360px; border:1px solid #ccc;">
+      <table id="searchResultsTable" style="width:100%; border-collapse:collapse; font-size:14px;">
+        <thead><tr id="searchResultsHead"></tr></thead>
+        <tbody id="searchResultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <details style="margin-top:1rem;"><summary style="cursor:pointer;">Raw JSON</summary><pre id="rawJson" style="background:#f0f0f0; padding:0.5rem; font-size:11px; max-height:200px; overflow:auto;">—</pre></details>
+
+  <script type="module">
+    const status = document.getElementById('status');
+    const out = document.getElementById('out');
+    const controls = document.getElementById('controls');
+    const go = document.getElementById('go');
+    const searchBtn = document.getElementById('searchBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const jamlEl = document.getElementById('jaml');
+    const seedListEl = document.getElementById('seedList');
+    const threadCountEl = document.getElementById('threadCount');
+    const threadInfoEl = document.getElementById('threadInfo');
+    const quickRunEl = document.getElementById('quickRun');
+    const resultsContainer = document.getElementById('searchResultsContainer');
+    const resultsSummary = document.getElementById('searchSummary');
+    const resultsHead = document.getElementById('searchResultsHead');
+    const resultsBody = document.getElementById('searchResultsBody');
+    const rawJsonEl = document.getElementById('rawJson');
+
+    function showSearchResults(data) {
+      rawJsonEl.textContent = JSON.stringify(data, null, 2);
+      if (data.error) {
+        resultsContainer.style.display = 'none';
+        return;
+      }
+      const results = data.results || [];
+      const totalSearched = data.totalSearched ?? 0;
+      const foundCount = data.foundCount ?? results.length;
+      resultsSummary.textContent = 'Found ' + foundCount + ' result(s) (searched ' + totalSearched.toLocaleString() + ' seeds)' + (data.cancelled ? ' — cancelled' : '');
+      resultsHead.innerHTML = '';
+      resultsBody.innerHTML = '';
+      if (results.length === 0) {
+        resultsContainer.style.display = 'block';
+        resultsBody.innerHTML = '<tr><td colspan="10" style="padding:0.5rem;">No matches.</td></tr>';
+        return;
+      }
+      const first = results[0];
+      const hasTallies = first.tallies && first.tallies.length > 0;
+      const headers = ['Seed', 'Score'].concat(hasTallies ? first.tallies.map((_, i) => 'Tally ' + (i + 1)) : []);
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.style.cssText = 'text-align:left; padding:0.35rem 0.5rem; border-bottom:1px solid #ccc; background:#eee;';
+        th.textContent = h;
+        resultsHead.appendChild(th);
+      });
+      results.forEach(r => {
+        const tr = document.createElement('tr');
+        const cells = [r.seed, r.score].concat((r.tallies || []).map(t => t));
+        cells.forEach(c => {
+          const td = document.createElement('td');
+          td.style.cssText = 'padding:0.35rem 0.5rem; border-bottom:1px solid #eee;';
+          td.textContent = c;
+          tr.appendChild(td);
+        });
+        resultsBody.appendChild(tr);
+      });
+      resultsContainer.style.display = 'block';
+    }
+
+    (async function run() {
+      try {
+        const { dotnet } = await import('/motely-wasm/_framework/dotnet.js');
+        status.textContent = 'Initializing .NET runtime...';
+        const { getAssemblyExports, getConfig } = await dotnet.create({
+          configSrc: '/motely-wasm/_framework/dotnet.boot.js',
+        });
+        status.textContent = 'Loading assembly exports...';
+        const config = getConfig();
+        const exports = await getAssemblyExports(config.mainAssemblyName);
+        const api = exports.Motely.WASM.MotelyWasm;
+
+        const procCount = await api.GetProcessorCount();
+        threadInfoEl.textContent = 'C# reports ' + procCount + ' processor(s). Use Threads above or leave empty for browser default. Multi-thread needs COOP/COEP headers — use run.ps1 (sends them).';
+
+        status.textContent = 'Ready';
+        status.className = 'success';
+        controls.style.display = 'block';
+        out.textContent = 'Analyze a seed or run a JAML search.';
+
+        go.onclick = async () => {
+          const seed = document.getElementById('seed').value.trim() || 'TACO1111';
+          const deck = document.getElementById('deck').value.trim() || 'Red';
+          const stake = document.getElementById('stake').value.trim() || 'White';
+          out.textContent = 'Analyzing...';
+          status.className = '';
+          try {
+            const json = await api.AnalyzeSeed(seed, deck, stake, 1, 8, '{}');
+            out.textContent = JSON.stringify(JSON.parse(json), null, 2);
+            out.classList.remove('error');
+          } catch (e) {
+            out.textContent = 'Error: ' + e.message + (e.stack ? '\n\n' + e.stack : '');
+            out.classList.add('error');
+          }
+        };
+
+        searchBtn.onclick = async () => {
+          const jaml = jamlEl.value.trim();
+          if (!jaml) {
+            out.textContent = 'Paste or edit a JAML filter in the text area.';
+            return;
+          }
+          const threadCountRaw = threadCountEl.value.trim() ? parseInt(threadCountEl.value, 10) : (typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4);
+          const threadCount = Math.max(1, Math.min(32, threadCountRaw || 4));
+          let seedList = seedListEl.value.trim() || null;
+          if (!seedList && quickRunEl.checked) {
+            const quickSeeds = [];
+            for (let i = 0; i < 200; i++) quickSeeds.push('TACO' + String(1111 + i).padStart(4, '0'));
+            seedList = quickSeeds.join(',');
+          }
+          searchBtn.disabled = true;
+          cancelBtn.style.display = 'inline-block';
+          resultsContainer.style.display = 'none';
+          out.classList.remove('error');
+
+          // KISS: C# pushes progress, each result, then complete. Host accumulates results from OnResult.
+          const streamedResults = [];
+          globalThis.MotelyWasmOnProgress = (progressJson) => {
+            const p = JSON.parse(progressJson);
+            const rate = (p.seedsPerSecond ?? 0).toFixed(0);
+            out.textContent = p.status + ' — searched ' + (p.searchedCount ?? 0).toLocaleString() + ', found ' + (p.foundCount ?? 0) + ' @ ' + rate + '/s';
+          };
+          globalThis.MotelyWasmOnResult = (seed, score, talliesStr) => {
+            const tallies = talliesStr ? talliesStr.split(',').map(Number) : [];
+            streamedResults.push({ seed, score, tallies });
+          };
+          globalThis.MotelyWasmOnComplete = (resultJson) => {
+            const data = resultJson === 'null' ? {} : JSON.parse(resultJson);
+            if (data.error) {
+              out.textContent = 'Error: ' + data.error;
+              out.classList.add('error');
+              resultsContainer.style.display = 'none';
+            } else {
+              out.textContent = 'Done.';
+              showSearchResults({ results: streamedResults, totalSearched: data.totalSearched, foundCount: data.foundCount ?? streamedResults.length, cancelled: data.cancelled });
+            }
+            searchBtn.disabled = false;
+            cancelBtn.style.display = 'none';
+          };
+
+          try {
+            await api.SearchSeeds(jaml, seedList, threadCount);
+            // Result and UI already updated via MotelyWasmOnComplete; re-enable handled in callback
+          } catch (e) {
+            out.textContent = 'Error: ' + e.message + (e.stack ? '\n\n' + e.stack : '');
+            out.classList.add('error');
+            searchBtn.disabled = false;
+            cancelBtn.style.display = 'none';
+          }
+        };
+
+        cancelBtn.onclick = async () => {
+          await api.CancelSearch();
+          out.textContent = 'Cancelling...';
+        };
+      } catch (e) {
+        status.textContent = 'Failed to load';
+        status.className = 'error';
+        out.textContent = e.message + '\n\n' + (e.stack || '');
+        out.classList.add('error');
+      }
+    })();
+  </script>
+</body>
+</html>

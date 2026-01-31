@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DuckDB.NET.Data;
-using Motely.DuckDB;
+using Motely.DB;
 
-namespace Motely.DuckDB;
+namespace Motely.DB;
 
 /// <summary>
 /// The "One True Way" to get a seed database from a user-provided string.

@@ -1,6 +1,7 @@
+using System.IO;
 using DuckDB.NET.Data;
 
-namespace Motely.DuckDB;
+namespace Motely.DB;
 
 /// <summary>
 /// Cross-platform factory for creating DuckDB connections
@@ -33,24 +34,51 @@ public static class DuckDBConnectionFactory
     }
 
     /// <summary>
-    /// Create a DuckDB connection with DuckLake attached for concurrent access
+    /// Create a DuckDB connection with DuckLake attached for concurrent read/write.
+    /// Uses official DuckDB 1.4+ syntax: ATTACH 'ducklake:&lt;catalog&gt;' AS name (DATA_PATH '...').
+    /// Extension autoloads on first ATTACH. For existing DuckLake, data path is read from catalog so dataPath can be null.
     /// </summary>
+    /// <param name="catalogPath">Path to the .ducklake catalog file (or URL for R2/S3).</param>
+    /// <param name="dataPath">Optional. Parquet data directory; omit for existing DuckLake (loaded from catalog).</param>
+    /// <param name="schemaName">Attached catalog alias (default seed_source).</param>
     public static DuckDBConnection CreateConnectionWithDuckLake(
         string catalogPath,
-        string dataPath,
+        string? dataPath = null,
         string schemaName = "seed_source"
     )
     {
-        var connection = new DuckDBConnection(":memory:");
+        // Use proper connection string format for in-memory database
+        var connection = new DuckDBConnection("Data Source=:memory:");
         connection.Open();
 
-        using var cmd = connection.CreateCommand();
+        // Normalize path for SQL: single quotes escaped by doubling; use forward slashes
+        var catalogSql = EscapePathForSql(catalogPath);
 
-        // Attach DuckLake catalog
-        cmd.CommandText =
-            $"ATTACH '{catalogPath}' AS {schemaName} (TYPE DUCKLAKE, CATALOG_PATH '{catalogPath}', DATA_PATH '{dataPath}')";
-        cmd.ExecuteNonQuery();
+        string attachSql;
+        if (string.IsNullOrEmpty(dataPath))
+        {
+            // Existing DuckLake: data path is loaded from catalog
+            attachSql = $"ATTACH 'ducklake:{catalogSql}' AS {schemaName}";
+        }
+        else
+        {
+            var dataSql = EscapePathForSql(dataPath);
+            attachSql = $"ATTACH 'ducklake:{catalogSql}' AS {schemaName} (DATA_PATH '{dataSql}')";
+        }
+
+        using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = attachSql;
+            cmd.ExecuteNonQuery();
+        }
 
         return connection;
+    }
+
+    private static string EscapePathForSql(string path)
+    {
+        // Single quotes in path must be doubled for SQL; use forward slashes for portability
+        var normalized = path.Replace('\\', '/');
+        return normalized.Replace("'", "''");
     }
 }
