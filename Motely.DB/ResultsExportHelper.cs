@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using DuckDB.NET.Data;
 
 namespace Motely.DB;
@@ -134,5 +135,64 @@ public static class ResultsExportHelper
                 cmd.ExecuteNonQuery();
             }
         }
+    }
+
+    /// <summary>
+    /// Export results from DuckDB to CSV using native COPY command.
+    /// This is the correct way - let DuckDB handle CSV formatting.
+    /// </summary>
+    /// <param name="dbPath">Path to the DuckDB results database.</param>
+    /// <param name="csvPath">Output CSV file path.</param>
+    /// <param name="tableName">Table name (default "results").</param>
+    public static void ExportDuckDbToCsv(string dbPath, string csvPath, string tableName = "results")
+    {
+        if (string.IsNullOrEmpty(dbPath))
+            throw new ArgumentNullException(nameof(dbPath));
+        if (string.IsNullOrEmpty(csvPath))
+            throw new ArgumentNullException(nameof(csvPath));
+        if (!File.Exists(dbPath))
+            throw new FileNotFoundException($"DuckDB file not found: {dbPath}");
+
+        var csvDir = Path.GetDirectoryName(csvPath);
+        if (!string.IsNullOrEmpty(csvDir) && !Directory.Exists(csvDir))
+            Directory.CreateDirectory(csvDir);
+
+        // Escape path for SQL
+        var escapedCsvPath = csvPath.Replace("'", "''").Replace('\\', '/');
+
+        using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
+        using var cmd = conn.CreateCommand();
+        
+        // Use DuckDB's native COPY TO CSV - handles quoting, escaping, headers properly
+        cmd.CommandText = $"COPY {tableName} TO '{escapedCsvPath}' (FORMAT CSV, HEADER true)";
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Export results from DuckLake to CSV using native COPY command.
+    /// </summary>
+    public static void ExportDuckLakeToCsv(string catalogPath, string csvPath, string tableName = "results")
+    {
+        if (string.IsNullOrEmpty(catalogPath))
+            throw new ArgumentNullException(nameof(catalogPath));
+        if (string.IsNullOrEmpty(csvPath))
+            throw new ArgumentNullException(nameof(csvPath));
+
+        var path = DuckLakeHelper.GetDuckLakeCatalogPath(catalogPath);
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"DuckLake catalog not found: {path}");
+
+        var csvDir = Path.GetDirectoryName(csvPath);
+        if (!string.IsNullOrEmpty(csvDir) && !Directory.Exists(csvDir))
+            Directory.CreateDirectory(csvDir);
+
+        var escapedCsvPath = csvPath.Replace("'", "''").Replace('\\', '/');
+        const string schemaName = "dl";
+
+        using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(path, dataPath: null, schemaName);
+        using var cmd = conn.CreateCommand();
+        
+        cmd.CommandText = $"COPY {schemaName}.main.{tableName} TO '{escapedCsvPath}' (FORMAT CSV, HEADER true)";
+        cmd.ExecuteNonQuery();
     }
 }

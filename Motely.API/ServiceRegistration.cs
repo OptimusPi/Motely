@@ -22,6 +22,7 @@ public static class ServiceRegistration
         services.AddSingleton<SearchQueueService>();
         services.AddHostedService<SearchQueueHostedService>();
         services.AddSingleton<SearchService>();
+        services.AddSingleton<SearchManager>(); // Facade for MCP
         return services;
     }
 

@@ -47,8 +47,18 @@ namespace Motely.Executors
         private readonly Action<MotelySeedScoreTally>? _customCallback;
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
+        private MotelyJsonConfig? _loadedConfig; // Config loaded by ExecuteAsSearch for header printing
         private global::DuckDB.NET.Data.DuckDBAppender? _resultsAppender;
         public global::Motely.DB.MotelySearchDatabase? ResultsDatabase { get; set; }
+        
+        /// <summary>
+        /// Print CSV header row. Call AFTER your startup output but BEFORE Start().
+        /// </summary>
+        public void EmitResultsHeader()
+        {
+            if (_loadedConfig != null)
+                PrintResultsHeader(_loadedConfig);
+        }
 
         public JsonSearchExecutor(
             string configPath,
@@ -194,21 +204,43 @@ namespace Motely.Executors
                     try
                     {
                         // Wait for completion - will exit early if cancellation token is signaled
-                        // Wait for completion - check for keys to support manual progress (ESC)
+                        // Wait for completion - check for keys to support manual progress (P) and quit (ESC ESC)
+                        DateTime? lastEscTime = null;
                         while (!_cancelled && (search.Status == MotelySearchStatus.Running || search.Status == MotelySearchStatus.Paused))
                         {
                             if (_params.CancellationToken?.IsCancellationRequested == true)
                                 break;
 
-                            // Support ESC key to force a progress update (useful in quiet mode)
+                            // Support P for progress, double-ESC to quit
                             try
                             {
+                                // Check for key input (only works when stdin isn't redirected)
                                 if (!Console.IsInputRedirected && Console.KeyAvailable)
                                 {
                                     var key = Console.ReadKey(true);
-                                    if (key.Key == ConsoleKey.Escape)
+                                    if (key.Key == ConsoleKey.P)
                                     {
+                                        Console.WriteLine("📊 Progress:");
                                         search.ForceProgressReport();
+                                    }
+                                    else if (key.Key == ConsoleKey.Escape)
+                                    {
+                                        var now = DateTime.UtcNow;
+                                        if (lastEscTime.HasValue && (now - lastEscTime.Value).TotalMilliseconds < 1000)
+                                        {
+                                            // Double-tap ESC within 1 second = quit
+                                            Console.WriteLine();
+                                            Console.WriteLine("🛑 ESC ESC - Stopping search...");
+                                            search.Cancel();
+                                            _cancelled = true;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            // First ESC - show hint
+                                            lastEscTime = now;
+                                            Console.WriteLine("💡 Double-tap ESC to quit (or Ctrl+C)");
+                                        }
                                     }
                                 }
                             }
@@ -351,19 +383,18 @@ namespace Motely.Executors
 
         /// <summary>
         /// Same as Execute() but returns the search handle for orchestration.
+        /// Caller should call PrintResultsHeader() after their own startup output.
         /// </summary>
         public IMotelySearch ExecuteAsSearch()
         {
             try
             {
-                MotelyJsonConfig config = LoadConfig();
+                _loadedConfig = LoadConfig();
                 
                 // Load seeds from the configured source
                 SeedSourceResult source = LoadSeeds();
                 
-                // Determine output path (SearchResults/<config_name>.db)
-
-                _runningSearch = CreateSearch(config, source);
+                _runningSearch = CreateSearch(_loadedConfig, source);
                 
                 // Return the search handle - caller will call Start(cancellationToken)
                 return _runningSearch;
@@ -847,6 +878,7 @@ namespace Motely.Executors
                 Action<MotelySeedScoreTally> onResult = (tally) => 
                 {
                     PrintResultRow(tally, config);
+                    _customCallback?.Invoke(tally);
                 };
 
                 // Create a new descriptor with the callback
@@ -899,19 +931,23 @@ namespace Motely.Executors
 
         private void PrintResultsHeader(MotelyJsonConfig config)
         {
+            // Informational output goes to stderr (doesn't pollute CSV/piped output)
             if (!_params.Quiet)
             {
-                Console.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
+                Console.Error.WriteLine($"# Deck: {config.Deck}, Stake: {config.Stake}");
             }
 
             // ONE SOURCE OF TRUTH: Use GetColumnNames()
             var columnNames = config.GetColumnNames();
             var allColumns = new List<string> { "Seed", "Score" };
             allColumns.AddRange(columnNames.Skip(2)); // Skip "seed" and "score" since we already have them capitalized
-            var quotedColumns = allColumns.Select(name => $"\"{name}\"");
+            var headerLine = string.Join(",", allColumns.Select(name => $"\"{name}\""));
 
-            // Always print CSV header (even in quiet mode - users need it!)
-            Console.WriteLine(string.Join(",", quotedColumns));
+            // Write header to stdout (for console mode / piping)
+            Console.WriteLine(headerLine);
+
+            // Also write header to CSV file if specified (ONE SOURCE OF TRUTH)
+            _params.CsvWriter?.WriteLine(headerLine);
         }
 
         private void PrintResultRow(MotelySeedScoreTally result, MotelyJsonConfig config)
@@ -1183,5 +1219,18 @@ namespace Motely.Executors
         /// Cancellation token to stop the search when CTRL+C is pressed
         /// </summary>
         public CancellationToken? CancellationToken { get; set; }
+
+        /// <summary>
+        /// Optional CSV file writer. When set, header and results are written here.
+        /// ONE SOURCE OF TRUTH: The executor writes the header format.
+        /// </summary>
+        public TextWriter? CsvWriter { get; set; }
+
+        /// <summary>
+        /// Path to export results as CSV after search completes.
+        /// Export is done via DuckDB COPY command (proper formatting).
+        /// Requires AutoSave or OutputDbPath to have results in DuckDB.
+        /// </summary>
+        public string? CsvExportPath { get; set; }
     }
 }

@@ -145,14 +145,18 @@ public class ApiServerWindow : Window
                 copyLogsButton.Text = "COPIED!";
                 copyLogsButton.SetScheme(BalatroTheme.GreenButton);
 
-                Task.Run(async () =>
+                _ = Task.Run(async () =>
                 {
-                    await Task.Delay(1000);
-                    MotelyTUI.App?.Invoke(() =>
+                    try
                     {
-                        copyLogsButton.Text = "Copy Logs";
-                        copyLogsButton.SetScheme(BalatroTheme.BackButton);
-                    });
+                        await Task.Delay(1000).ConfigureAwait(false);
+                        MotelyTUI.App?.Invoke(() =>
+                        {
+                            copyLogsButton.Text = "Copy Logs";
+                            copyLogsButton.SetScheme(BalatroTheme.BackButton);
+                        });
+                    }
+                    catch { /* UI reset is non-critical */ }
                 });
             }
         };
@@ -443,7 +447,8 @@ public class ApiServerWindow : Window
         _tunnelButton.Text = "Starting...";
         _tunnelButton.Enabled = false;
 
-        Task.Run(() =>
+        // Intentional fire-and-forget - tunnel process is tracked via _tunnelProcess
+        _ = Task.Run(() =>
         {
             try
             {

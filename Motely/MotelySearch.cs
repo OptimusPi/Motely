@@ -636,7 +636,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     }
 
     private long _lastReportMS;
-    private const long ReportIntervalMS = 2000; // Report every 2 seconds
+    private const long ReportIntervalMS = 30000; // Report every 30 seconds (press P for instant progress)
 
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly int _batchCharacterCount;

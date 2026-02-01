@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Motely.Filters;
 using Motely.Reporting;
 using Motely.DB;
@@ -57,6 +58,21 @@ namespace Motely.Executors
         /// <summary>Get column names for a result set by searchId.</summary>
         public static List<string> GetColumnNames(string searchId)
             => ResultsSetReader.Open(searchId)?.GetColumnNames() ?? new List<string> { "seed", "score" };
+
+        /// <summary>Export results from DuckDB to CSV using native COPY command. Only Orchestration touches Motely.DB.</summary>
+        public static void ExportResultsToCsv(string dbPath, string csvPath, string tableName = "results")
+            => ResultsExportHelper.ExportDuckDbToCsv(dbPath, csvPath, tableName);
+
+        /// <summary>Print CSV header row for a config. Call after your startup messages but before search.Start().</summary>
+        public static void PrintCsvHeader(MotelyJsonConfig config)
+        {
+            var columnNames = config.GetColumnNames();
+            var allColumns = new List<string> { "Seed", "Score" };
+            allColumns.AddRange(columnNames.Skip(2)); // Skip "seed" and "score" since we already have them capitalized
+            var headerLine = string.Join(",", allColumns.Select(name => $"\"{name}\""));
+            Console.WriteLine(headerLine);
+            Console.Out.Flush();
+        }
 
         /// <summary>Get resume cursor for a result set by searchId.</summary>
         public static (long startBatch, int batchSize, string? lastSeed) GetResumeCursor(string searchId)

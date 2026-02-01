@@ -652,7 +652,7 @@ public class MotelyJsonConfig
                             }
                             else
                             {
-                                Console.WriteLine(
+                                Console.Error.WriteLine(
                                     $"[InitParsedEnums] ErraticRank: FAILED to parse '{Value}' as MotelyPlayingCardRank! Valid values include: Ace, King, Queen, Jack, Ten, Nine, Eight, Seven, Six, Five, Four, Three, Two, or One."
                                 );
                             }
@@ -727,14 +727,14 @@ public class MotelyJsonConfig
                                     }
                                     else
                                     {
-                                        Console.WriteLine(
+                                        Console.Error.WriteLine(
                                             $"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' (King of Clubs) or '2_H' (2 of Hearts). Rank: '{rankStr}', Suit: '{suitStr}'"
                                         );
                                     }
                                 }
                                 else
                                 {
-                                    Console.WriteLine(
+                                    Console.Error.WriteLine(
                                         $"[InitParsedEnums] ErraticCard: FAILED to parse '{Value}'! Expected format: 'K_C' or '2_H' (rank_suit)."
                                     );
                                 }
@@ -1932,8 +1932,6 @@ public class MotelyJsonConfig
     /// </summary>
     public static MotelyJsonFilterClause ParseShorthand(string shorthand)
     {
-        Console.WriteLine($"Parsing shorthand: {shorthand}"); // Debugging log
-
         if (shorthand.StartsWith("event:", StringComparison.OrdinalIgnoreCase))
         {
             var clause = new MotelyJsonFilterClause
@@ -1942,7 +1940,6 @@ public class MotelyJsonConfig
                 Value = shorthand.Substring("event:".Length).Trim(),
             };
 
-            Console.WriteLine($"Parsed clause: Type={clause.Type}, Value={clause.Value}"); // Debugging log
             return clause;
         }
 
