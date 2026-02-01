@@ -17,6 +17,7 @@ namespace Motely;
 [JsonSerializable(typeof(PackDto))]
 [JsonSerializable(typeof(ErrorDto))]
 [JsonSerializable(typeof(SearchHitDto))]
+[JsonSerializable(typeof(SearchHitDto[]))]
 [JsonSerializable(typeof(SearchResponseDto))]
 [JsonSerializable(typeof(ProgressDto))]
 [JsonSerializable(typeof(VersionDto))]

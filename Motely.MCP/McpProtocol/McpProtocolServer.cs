@@ -639,7 +639,7 @@ public class McpProtocolServer
             }
         );
 
-        var exitCode = executor.Execute(awaitCompletion: true);
+        var exitCode = executor.Execute();
 
         // Determine if seed matched (exit code 0 and has results)
         bool matched = exitCode == 0 && results.Count > 0;

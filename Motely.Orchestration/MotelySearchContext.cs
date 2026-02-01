@@ -1,42 +1,39 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Motely.DB;
+using Motely;
 using Motely.Filters;
 using Motely.Reporting;
 
 namespace Motely.Executors;
 
 /// <summary>
-/// Wraps a search instance and its result storage.
-/// Desktop: MotelySearchDatabase (DuckDB). GetResults/GetTopResults query the DB.
-/// Browser/WASM: In-memory storage. Results stored as they come via callback, queryable via GetResults.
+/// Wraps a search instance and its result sink.
 /// </summary>
 public sealed class MotelySearchContext : IMotelySearchContext
 {
     private readonly IMotelySearch _search;
-    private readonly MotelySearchDatabase? _database;
+    private readonly IResultStorage? _sink;
     private readonly MotelyRunConfig _runConfig;
     private readonly string _searchId;
     private readonly string _filterId;
     private readonly bool _useInMemoryStorage;
     
-    // Browser/WASM: In-memory result storage (sorted by score descending)
     private readonly List<MotelySearchResultRow>? _inMemoryResults;
     private readonly object _inMemoryResultsLock = new object();
     
     /// <summary>
-    /// Create a search context with database storage (Desktop/native)
+    /// Create a search context with a result sink.
     /// </summary>
     public MotelySearchContext(
         IMotelySearch search,
-        MotelySearchDatabase database,
+        IResultStorage sink,
         MotelyRunConfig runConfig,
         string searchId,
         string filterId)
     {
         _search = search ?? throw new ArgumentNullException(nameof(search));
-        _database = database ?? throw new ArgumentNullException(nameof(database));
+        _sink = sink ?? throw new ArgumentNullException(nameof(sink));
         _runConfig = runConfig ?? throw new ArgumentNullException(nameof(runConfig));
         _searchId = searchId ?? throw new ArgumentNullException(nameof(searchId));
         _filterId = filterId ?? throw new ArgumentNullException(nameof(filterId));
@@ -44,7 +41,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
     }
 
     /// <summary>
-    /// Create a search context for browser/WASM. In-memory storage; results stored as they come via callback.
+    /// Create a search context with in-memory storage.
     /// </summary>
     public MotelySearchContext(
         IMotelySearch search,
@@ -53,7 +50,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
         string filterId)
     {
         _search = search ?? throw new ArgumentNullException(nameof(search));
-        _database = null;
+        _sink = null;
         _runConfig = runConfig ?? throw new ArgumentNullException(nameof(runConfig));
         _searchId = searchId ?? throw new ArgumentNullException(nameof(searchId));
         _filterId = filterId ?? throw new ArgumentNullException(nameof(filterId));
@@ -128,7 +125,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
                     return _inMemoryResults.Count;
                 }
             }
-            return _database?.GetResultCount() ?? 0;
+            return _sink?.GetResultCount() ?? 0;
         }
     }
     
@@ -166,11 +163,11 @@ public sealed class MotelySearchContext : IMotelySearchContext
             }
         }
 
-        // Database: query via MotelySearchDatabase
-        if (_database == null)
+        // Non-browser: query via IResultStorage
+        if (_sink == null)
             return new List<MotelySearchResultRow>();
-            
-        var rows = _database.GetResultsPage(offset, limit);
+
+        var rows = _sink.GetResultsPage(offset, limit);
         return rows.Select(r => new MotelySearchResultRow
         {
             Seed = r.TryGetValue("seed", out var s) ? s?.ToString() ?? "" : "",
@@ -222,6 +219,6 @@ public sealed class MotelySearchContext : IMotelySearchContext
     public void Dispose()
     {
         _search.Dispose();
-        _database?.Dispose();
+        _sink?.Dispose();
     }
 }

@@ -28,7 +28,7 @@
     <PublishAot>false</PublishAot>
     
     <!-- Package metadata -->
-    <Version>1.0.0</Version>
+    <Version>1.0.2</Version>
     <PackageId>Motely.WASM</PackageId>
     <Description>Balatro seed analyzer and searcher - Browser WASM build with JavaScript interop (SIMD + multi-threaded)</Description>
     <Authors>Motely Contributors</Authors>
@@ -45,9 +45,8 @@
     <UseAppHost>false</UseAppHost>
   </PropertyGroup>
   
-  <!-- WASM uses in-memory search only (LaunchWithContext(..., useInMemoryStorage: true)). DuckDB is NOT used;
-       it is pulled in via Motely.Orchestration -> Motely.DB and adds trim warnings + bundle weight.
-       TODO: Refactor so WASM build does not reference Motely.DB (e.g. Orchestration multi-target or browser-only orchestration). -->
+  <!-- WASM uses in-memory search only (LaunchWithContext(..., useInMemoryStorage: true)).
+       DuckDB.NET is excluded; browser persistence uses DuckDB-WASM via JS interop. -->
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="YamlDotNet" />
@@ -60,12 +59,11 @@
     <WasmExtraFilesToDeploy Include="serve.json" />
   </ItemGroup>
   
-  <!-- Reference Motely projects instead of including source files -->
-  <!-- IMPORTANT: Build this .csproj directly, NOT the solution file!
-       Building from the solution will try to build CLI/TUI/etc which can't run in WASM. -->
+  <!-- Reference Motely + Orchestration.Browser (browser-only orchestrator; no desktop DB, DuckDB WASM via JS interop) -->
+  <!-- IMPORTANT: Build this .csproj directly, NOT the solution file! -->
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
+    <ProjectReference Include="..\Motely.Orchestration.Browser\Motely.Orchestration.Browser.csproj" />
   </ItemGroup>
   
 </Project>

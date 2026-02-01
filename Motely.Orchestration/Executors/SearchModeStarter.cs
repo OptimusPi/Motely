@@ -1,5 +1,5 @@
-using Motely.DB;
 using Motely.Filters;
+using Motely.Repository;
 
 namespace Motely.Executors;
 
@@ -23,10 +23,13 @@ public static class SearchModeStarter
         
         if (p.SeedList != null)
             return settings.WithListSearch(p.SeedList, seedCount: -1).Start();
-        
         if (!string.IsNullOrEmpty(duckDbPath))
-            return settings.WithProviderSearch(new global::Motely.DB.DataLakeSeedProvider(duckDbPath)).Start();
-        
+        {
+            if (RepositoryHost.Instance == null)
+                throw new InvalidOperationException("Repository.Instance must be set to use seed sources.");
+            var provider = RepositoryHost.Instance.GetSource(duckDbPath);
+            return settings.WithProviderSearch(provider).Start();
+        }
         return settings.WithSequentialSearch().Start();
     }
 }

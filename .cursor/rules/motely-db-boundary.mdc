@@ -1,0 +1,36 @@
+---
+description: Database and file I/O must stay inside Motely.DB; other projects use only abstractions and public API.
+category: architecture
+alwaysApply: false
+priority: 5
+lastReviewed: 2026-02-01
+---
+
+# Motely.DB Boundary Rule
+
+All **database and file I/O** implementation and concrete types live **only** in the **Motely.DB** project. No other project may depend on DB implementation details.
+
+## Do
+
+- **Motely.DB** contains: DuckDB/DuckLake code, `MotelySearchDatabase`, `ResultStorageAdapter`, schema, appenders, file paths, and any new storage implementations.
+- **Other projects** (Orchestration, API, TUI, etc.):
+  - Use **only** the interfaces **`IMotelyRepository`** for storage and seed source/sink.
+  - **Accept by moniker: SEED SOURCE. Output by moniker: SEED SINK.** Orchestrator says: "run my search using {param} as source" — use **`IMotelyRepository.GetSource(moniker)`** for the abstract seed input and **`GetSink(moniker, runConfig)`** for the abstract result sink. Set the repository at startup via **`MotelySearchOrchestrator.SetRepository(repository)`** (e.g. `new MotelyRepository()` in Motely.DB).
+  - Use **only** the **public API of Motely.DB** when not using the repository:
+    - **`ResultStorageFactory.CreateResultStorage(searchId, runConfig)`** – create result storage by search ID.
+    - **`ResultStorageFactory.CreateOrOpenStorage(dbPath, runConfig, ...)`** – create or open storage at a path (handles schema compatibility).
+    - **`ResultsSetReader`** – library root, get path, open/delete result sets, get top seeds/results.
+    - **`FertilizerDatabase`**, **`DuckDBSeedStorage`** – only when needed; prefer repository/factory where possible.
+- When adding new storage or DB features: implement in **Motely.DB**, expose via **ResultStorageFactory** or a small public API; do **not** expose concrete DB types outside Motely.DB.
+
+## Don't
+
+- **Do not** reference **`MotelySearchDatabase`**, **`ResultStorageAdapter`**, **`DuckDBConnection`**, **`DuckDBCommand`**, or other Motely.DB implementation types from **Motely.Orchestration**, **Motely.API**, **Motely.TUI**, or any project outside Motely.DB.
+- **Do not** instantiate **`new MotelySearchDatabase(...)`** or **`new ResultStorageAdapter(...)`** outside Motely.DB; use **`ResultStorageFactory`** instead.
+- **Do not** move DB or file I/O implementation into Orchestration or other projects; keep it in Motely.DB.
+
+## Rationale
+
+- Single place for DB/file logic: easier to maintain, test, and swap (e.g. browser vs desktop).
+- Orchestration and API stay agnostic of DuckDB/DuckLake details; they only see **IResultStorage** and the factory/catalog API.
+- NPM/WASM package can exclude Motely.DB for browser builds; Orchestration then uses in-memory storage only.

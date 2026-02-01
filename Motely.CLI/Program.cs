@@ -1,5 +1,6 @@
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
+using Motely.DB;
 using Motely.Executors;
 using Motely.Filters;
 using Motely.GPU;
@@ -33,6 +34,14 @@ namespace Motely
                 Description = "Motely - Balatro Seed Searcher",
                 OptionsComparison = StringComparison.OrdinalIgnoreCase,
             };
+
+            MotelySearchOrchestrator.SetRepository(new MotelyRepository());
+            var searchResultsDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Motely",
+                "SearchResults");
+            Directory.CreateDirectory(searchResultsDir);
+            ResultsSetReader.SetLibraryRoot(searchResultsDir);
 
             app.HelpOption("-?|-h|--help");
 
@@ -585,12 +594,11 @@ namespace Motely
                         string? resultsDbPath = dbPath;
                         if (string.IsNullOrEmpty(resultsDbPath) && saveOption.HasValue())
                         {
-                            // AutoSave path - same logic as orchestrator
-                            var filterId = jamlOption?.Value() ?? jsonOption?.Value() ?? "standard";
-                            var searchResultsDir = Path.Combine(
-                                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                "Motely", "SearchResults");
-                            resultsDbPath = Path.Combine(searchResultsDir, $"{filterId}.db");
+                            if (TryLoadConfigForExport(jamlOption, jsonOption, out var exportConfig) && exportConfig != null)
+                            {
+                                var filterId = MotelySearchOrchestrator.GenerateFilterId(exportConfig);
+                                resultsDbPath = ResultsSetReader.GetPathForFilter(filterId);
+                            }
                         }
                         
                         if (!string.IsNullOrEmpty(resultsDbPath) && File.Exists(resultsDbPath))
@@ -598,7 +606,7 @@ namespace Motely
                             if (!parameters.Quiet)
                                 Console.Error.WriteLine($"💾 Exporting results to CSV: {csvPath}");
                             
-                            MotelySearchOrchestrator.ExportResultsToCsv(resultsDbPath, csvPath);
+                            ResultsExportHelper.ExportDuckDbToCsv(resultsDbPath, csvPath);
                             
                             if (!parameters.Quiet)
                                 Console.Error.WriteLine($"✅ CSV export complete: {csvPath}");
@@ -1058,7 +1066,7 @@ namespace Motely
             
             // Print CSV header AFTER startup info but BEFORE results start streaming
             if (loadedConfig != null)
-                MotelySearchOrchestrator.PrintCsvHeader(loadedConfig);
+                PrintCsvHeader(loadedConfig);
 
             search.Start(parameters.CancellationToken ?? default);
             
@@ -1090,6 +1098,64 @@ namespace Motely
                 Console.WriteLine($"   Starting from batch: {parameters.StartBatch:N0}");
             Console.WriteLine($"   [P] progress  [ESC ESC] quit");
             Console.WriteLine();
+        }
+
+        private static void PrintCsvHeader(MotelyJsonConfig config)
+        {
+            var columnNames = config.GetColumnNames();
+            var allColumns = new List<string> { "Seed", "Score" };
+            allColumns.AddRange(columnNames.Skip(2));
+            var headerLine = string.Join(",", allColumns.Select(name => $"\"{name}\""));
+            Console.WriteLine(headerLine);
+            Console.Out.Flush();
+        }
+
+        private static bool TryLoadConfigForExport(
+            CommandOption? jamlOption,
+            CommandOption? jsonOption,
+            out MotelyJsonConfig? config)
+        {
+            config = null;
+            if (jamlOption?.HasValue() == true)
+            {
+                var jamlPath = jamlOption.Value() ?? "";
+                if (string.IsNullOrEmpty(jamlPath))
+                    return false;
+
+                if (!Path.IsPathRooted(jamlPath) && string.IsNullOrEmpty(Path.GetDirectoryName(jamlPath)))
+                {
+                    if (!jamlPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase))
+                        jamlPath += ".jaml";
+                    jamlPath = Path.Combine("JamlFilters", jamlPath);
+                }
+
+                if (JamlConfigLoader.TryLoadFromJaml(jamlPath, out var jamlConfig, out _) && jamlConfig != null)
+                {
+                    config = jamlConfig;
+                    return true;
+                }
+            }
+            else if (jsonOption?.HasValue() == true)
+            {
+                var jsonPath = jsonOption.Value() ?? "";
+                if (string.IsNullOrEmpty(jsonPath))
+                    return false;
+
+                if (!Path.IsPathRooted(jsonPath) && string.IsNullOrEmpty(Path.GetDirectoryName(jsonPath)))
+                {
+                    if (!jsonPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                        jsonPath += ".json";
+                    jsonPath = Path.Combine("JsonFilters", jsonPath);
+                }
+
+                if (MotelyJsonConfig.TryLoadFromJsonFile(jsonPath, out var jsonConfig) && jsonConfig != null)
+                {
+                    config = jsonConfig;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

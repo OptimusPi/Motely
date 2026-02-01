@@ -7,6 +7,10 @@
  *   globalThis.MotelyWasmOnProgress = (progressJson: string) => void;
  *   globalThis.MotelyWasmOnResult = (seed: string, score: number, talliesStr: string) => void; // talliesStr = comma-separated ints
  *   globalThis.MotelyWasmOnComplete = (resultJson: string) => void;
+ *
+ * Optional DuckDB-WASM results storage (JS glue):
+ *   import { initDuckDbWasmResults } from 'motely-wasm';
+ *   await initDuckDbWasmResults({ tableName: 'motely_results' });
  */
 
 // ============================================================================
@@ -171,6 +175,20 @@ export function getDistPath(): string;
 
 /** Get the path to the _framework folder containing the WASM runtime. */
 export function getFrameworkPath(): string;
+
+/** Initialize DuckDB-WASM results storage and hook into MotelyWasmOnResult. */
+export function initDuckDbWasmResults(options?: DuckDbWasmResultsOptions): Promise<DuckDbWasmResultsHandle>;
+
+export interface DuckDbWasmResultsHandle {
+  getTopResults(limit?: number): Promise<Array<{ seed: string; score: number; tallies?: string }>>;
+  getCount(): Promise<number>;
+  close(): Promise<void>;
+}
+
+export interface DuckDbWasmResultsOptions {
+  tableName?: string;
+  maxQueueSize?: number;
+}
 
 // NOTE: loadMotely() was removed because dynamic imports break bundlers (Webpack/Turbopack).
 // Load the WASM module directly in your browser code:
