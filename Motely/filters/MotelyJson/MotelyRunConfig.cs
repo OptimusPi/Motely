@@ -81,7 +81,7 @@ public sealed record MotelyRunConfig
         catch (Exception ex)
         {
             // Log but don't crash - allow fallback to slow path if pipeline creation fails
-            Console.WriteLine($"[RunConfig] Warning: Failed to optimize filter pipeline: {ex.Message}"); 
+            Console.Error.WriteLine($"[RunConfig] Warning: Failed to optimize filter pipeline: {ex.Message}"); 
         }
         
         // 5. Create the run config

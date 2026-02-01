@@ -66,13 +66,13 @@ namespace Motely.Filters
                 }
             }
 
-            // If there are warnings, print them
+            // If there are warnings, print them to stderr
             if (warnings.Count > 0)
             {
-                Console.WriteLine("WARNINGS:");
+                Console.Error.WriteLine("WARNINGS:");
                 foreach (var warning in warnings)
                 {
-                    Console.WriteLine($"  ⚠️  {warning}");
+                    Console.Error.WriteLine($"  ⚠️  {warning}");
                 }
             }
 
@@ -1043,12 +1043,12 @@ namespace Motely.Filters
                             {
                                 if (!autoFixedSlots)
                                 {
-                                    Console.WriteLine(
+                                    Console.Error.WriteLine(
                                         $"  ✨ AUTO-FIX: Ante 1 only has 4 packs (slots 0-3)"
                                     );
                                     autoFixedSlots = true;
                                 }
-                                Console.WriteLine(
+                                Console.Error.WriteLine(
                                     $"  ✨ {prefix}: Adjusted pack slot {slot} → {adjustedSlot} for ante 1 compatibility"
                                 );
                             }

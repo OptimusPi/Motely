@@ -14,6 +14,7 @@ public partial class FancyConsoleImpl : IMotelyConsole
 {
     public static bool IsEnabled { get; set; } = true;
     protected static string? _bottomLine;
+    protected static string? _lastPrintedBottomLine;
     private static readonly FancyConsoleImpl _instance = new();
 
     public static FancyConsoleImpl Instance => _instance;
@@ -25,7 +26,7 @@ public partial class FancyConsoleImpl : IMotelyConsole
         set => IsEnabled = value;
     }
 
-    private FancyConsoleImpl() { } // Private constructor for singleton
+    protected FancyConsoleImpl() { } // Protected constructor for inheritance
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     public void SetBottomLine(string? bottomLine)
@@ -60,36 +61,33 @@ public partial class FancyConsoleImpl : IMotelyConsole
             return;
         }
 
-        // Simple implementation - just write to console
-        // Platform-specific implementations can override this behavior
-        if (_bottomLine != null)
-        {
-            ClearBottomLine();
-        }
-
+        // Simple fallback: just write message, don't re-print bottom line
+        // (no cursor positioning = re-printing is useless and spammy)
+        // Platform-specific implementations with cursor support override this
         Console.WriteLine(message ?? "null");
-
-        if (_bottomLine != null)
-        {
-            WriteBottomLine(_bottomLine);
-        }
     }
 
     // WriteBottomLine and ClearBottomLine are implemented in platform-specific partial files
     protected virtual void WriteBottomLine(string bottomLine)
     {
-        // Default: just write to console (platform-specific can override)
-        Console.WriteLine(bottomLine);
+        // Default: only print if the value changed (no cursor positioning in fallback)
+        if (bottomLine != _lastPrintedBottomLine)
+        {
+            Console.WriteLine(bottomLine);
+            _lastPrintedBottomLine = bottomLine;
+        }
     }
 
     protected virtual void ClearBottomLine()
     {
         // Default: no-op (platform-specific can override for cursor positioning)
+        // Reset tracking so next different value will print
+        _lastPrintedBottomLine = null;
     }
 }
 
 /// <summary>
-/// Static facade for console output
+/// Static facade for console output - routes to Desktop impl when available
 /// </summary>
 public static class FancyConsole
 {
@@ -97,6 +95,9 @@ public static class FancyConsole
     /// Global lock for all console output to prevent interleaved writes from multiple threads
     /// </summary>
     public static readonly object ConsoleLock = new();
+
+    // Use base implementation - cursor positioning is too unreliable across terminals
+    private static readonly FancyConsoleImpl _impl = FancyConsoleImpl.Instance;
 
     public static bool IsEnabled
     {
@@ -107,7 +108,10 @@ public static class FancyConsole
     [MethodImpl(MethodImplOptions.Synchronized)]
     public static void SetBottomLine(string? bottomLine)
     {
-        FancyConsoleImpl.Instance.SetBottomLine(bottomLine);
+        lock (ConsoleLock)
+        {
+            _impl.SetBottomLine(bottomLine);
+        }
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
@@ -119,7 +123,10 @@ public static class FancyConsole
             return;
         }
 
-        FancyConsoleImpl.Instance.WriteLine(message);
+        lock (ConsoleLock)
+        {
+            _impl.WriteLine(message?.ToString());
+        }
     }
 
     [MethodImpl(MethodImplOptions.Synchronized)]
@@ -131,6 +138,9 @@ public static class FancyConsole
             return;
         }
 
-        FancyConsoleImpl.Instance.WriteLine(message);
+        lock (ConsoleLock)
+        {
+            _impl.WriteLine(message);
+        }
     }
 }

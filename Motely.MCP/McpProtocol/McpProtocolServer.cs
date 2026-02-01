@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Motely;
+using Motely.Analysis;
 using Motely.API;
 using Motely.Executors;
 using Motely.Filters;

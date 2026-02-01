@@ -8,27 +8,20 @@ must:
   - soulJoker: Perkeo
     edition: Negative
     sources:
-      packSlots: [1]
-  - jokers: [Blueprint, Brainstorm, Baron, Mime]
-    packSlots: [0]
+      packSlots: [2,3]
     antes: [1]
 
+  - joker: Baron
+  - joker: Mime
   - spectralCard: Cryptid
     antes: [2,3,4,5]
     sources:
-      shopSlots: [0,1,2,3,4,5]
-
-  - spectralCard: Immolate
-    antes: [2,3,4,5]
-    sources:
-      shopSlots: [0,1,2,3,4,5]
-
-
+      shopSlots: [0,1,2,3]
 
   
 should:
   - joker: Baron
-    antes: [2,3,4,5,6,7]
+    antes: [2,3,4,5,6]
   - joker: Mime
     antes: [2,3,4,5,6]
   - spectralCard: Immolate
@@ -40,9 +33,9 @@ should:
     sources:
       packSlots: [0,1,2,3]
 
-  - joker: Baron
+  - joker: Brainstorm
     antes: [2,3,4,5,7]
-  - joker: Mime
+  - joker: Blueprint
     antes: [2,3,4,5,6]
 
   
