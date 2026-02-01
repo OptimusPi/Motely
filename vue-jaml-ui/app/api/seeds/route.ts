@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { query, querySingle } from "@/lib/duckdb"
+import { isDuckDBAvailable, query, querySingle } from "@/lib/duckdb"
 
 export async function GET(request: NextRequest) {
+  if (!isDuckDBAvailable()) {
+    return NextResponse.json(
+      {
+        error: "Seeds API unavailable",
+        details: "DuckDB is not available on this deployment (e.g. Vercel). Use self-hosted backend or the WASM client for seed search.",
+      },
+      { status: 503 }
+    )
+  }
+
   const searchParams = request.nextUrl.searchParams
   const page = parseInt(searchParams.get("page") || "1", 10)
   const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500)

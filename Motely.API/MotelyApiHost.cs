@@ -18,6 +18,7 @@ using Motely.Analysis;
 using Motely.API.Hubs;
 using Motely.API.Models;
 using Motely.API.Services;
+using Motely.DB;
 
 // Request records
 public record SearchStartRequest(
@@ -67,8 +68,9 @@ public static class MotelyApiHost
         // Initialize MotelyPaths with ContentRoot and configuration
         MotelyPaths.Initialize(app.Environment, app.Configuration);
 
-        // One library spot for DuckLake — callers never pass it; they only use searchId
-        MotelySearchOrchestrator.SetResultsLibraryRoot(MotelyPaths.SearchResultsDir);
+        // Repository + library root for DuckLake storage
+        MotelySearchOrchestrator.SetRepository(new MotelyRepository());
+        ResultsSetReader.SetLibraryRoot(MotelyPaths.SearchResultsDir);
 
         // Register shutdown handler to close SignalR connections quickly
         {

@@ -8,9 +8,8 @@ using Motely.Reporting;
 namespace Motely.DB;
 
 /// <summary>
-/// High-level abstraction for Motely search result databases
-/// Handles schema, indexes, appenders, and queries internally
-/// Cross-platform compatible (Desktop, Browser, CLI, TUI, Avalonia, WASM)
+/// Desktop storage implementation (DuckDB .NET). Wrapped by ResultStorageAdapter for IResultStorage.
+/// Handles schema, indexes, appenders, and queries. Browser/WASM uses a separate implementation.
 /// </summary>
 public sealed class MotelySearchDatabase : IDisposable
 {

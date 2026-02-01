@@ -7,6 +7,7 @@ using Motely.Analysis;
 using Motely.Filters;
 using Motely.Filters.MotelyJson;
 using Motely.Executors;
+using Motely.Orchestration.Browser;
 using System.Linq;
 
 namespace Motely.WASM;
@@ -127,7 +128,7 @@ public static partial class MotelyWasm
                 ResultCallback = r => PushResult(r.Seed, r.Score, r.TallyColumns)
             };
 
-            _currentSearchContext = MotelySearchOrchestrator.LaunchWithContext(config, searchParams, useInMemoryStorage: true);
+            _currentSearchContext = BrowserWASMOrchestrator.LaunchWithContext(config, searchParams);
 
             // Progress loop: push updates to JS (MS best practice: C# calls into JS)
             _ = Task.Run(async () =>
@@ -275,7 +276,7 @@ public static partial class MotelyWasm
     [JSExport]
     public static async Task<string> GetVersion()
     {
-        return JsonSerializer.Serialize(new VersionDto { Version = "1.0.0", Runtime = "browser-wasm", Features = new[] { "analyze", "search", "jaml", "simd", "duckdb" } }, MotelyAotJsonContext.Default.VersionDto);
+        return JsonSerializer.Serialize(new VersionDto { Version = "1.0.2", Runtime = "browser-wasm", Features = new[] { "analyze", "search", "jaml", "simd" } }, MotelyAotJsonContext.Default.VersionDto);
     }
 
     /// <summary>

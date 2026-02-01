@@ -1,26 +1,40 @@
 #!/usr/bin/env node
 /**
- * Prepares the npm package by copying the WASM AppBundle to dist/
- * Run after: dotnet publish -c Release
+ * Prepares the npm package by copying the WASM publish output to dist/
+ * Run from Motely.WASM: npm run build (runs dotnet publish then this script)
  */
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = path.join(__dirname, '..', 'bin', 'Release', 'net10.0-browser', 'browser-wasm', 'AppBundle');
-const distDir = path.join(__dirname, '..', 'dist');
+const root = path.join(__dirname, '..');
+const base = path.join(root, 'bin', 'Release', 'net10.0-browser', 'browser-wasm');
+const distDir = path.join(root, 'dist');
 
-if (!fs.existsSync(srcDir)) {
-    console.error('ERROR: AppBundle not found. Run "dotnet publish -c Release" first.');
+const candidates = [
+    path.join(base, 'AppBundle'),
+    path.join(base, 'publish'),
+];
+
+let srcDir = null;
+for (const dir of candidates) {
+    if (fs.existsSync(dir) && fs.existsSync(path.join(dir, '_framework'))) {
+        srcDir = dir;
+        break;
+    }
+}
+
+if (!srcDir) {
+    console.error('ERROR: No WASM publish output found.');
+    console.error('  Looked in: ' + base);
+    console.error('  Tried: AppBundle, publish (each with _framework)');
+    console.error('  Run from Motely.WASM: dotnet publish -c Release');
     process.exit(1);
 }
 
-// Clean dist
 if (fs.existsSync(distDir)) {
     fs.rmSync(distDir, { recursive: true });
 }
 
-// Copy AppBundle to dist
 fs.cpSync(srcDir, distDir, { recursive: true });
-
-console.log(`✅ Copied AppBundle to dist/`);
-console.log(`   Framework files: ${fs.readdirSync(path.join(distDir, '_framework')).length}`);
+const frameworkCount = fs.readdirSync(path.join(distDir, '_framework')).length;
+console.log('Copied to dist/ (' + frameworkCount + ' files in _framework)');
