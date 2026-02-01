@@ -2,81 +2,24 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Motely;
 using Motely.Filters;
 using Motely.Reporting;
-using Motely.DB;
+using Motely.Repository;
 
 namespace Motely.Executors
 {
     /// <summary>
     /// Static orchestrator to launch searches from various configuration formats.
-    /// Single gate to Motely.DB: only Orchestration touches DuckDB; API calls these methods.
+    /// Storage is resolved via repository (source/sink by moniker); browser uses in-memory only.
     /// </summary>
     public static class MotelySearchOrchestrator
     {
-        // === Result set gate (API → Orchestration → Motely.DB only) ===
-
-        /// <summary>Set the library root for result sets. Call once at host startup.</summary>
-        public static void SetResultsLibraryRoot(string path) => ResultsSetReader.SetLibraryRoot(path);
-
-        /// <summary>Get DB path for a search (for creating DB). Only valid after SetResultsLibraryRoot.</summary>
-        public static string? GetDbPathForSearch(string searchId) => ResultsSetReader.GetPathForFilter(searchId);
-
-        /// <summary>Create a result database for a search. Only Orchestration touches Motely.DB.</summary>
-        public static IResultsDatabaseWriter CreateResultsDatabase(string searchId, MotelyRunConfig runConfig)
+        /// <summary>Set the repository (source/sink by moniker). Call once at host startup.</summary>
+        public static void SetRepository(IMotelyRepository repository)
         {
-            var path = ResultsSetReader.GetPathForFilter(searchId)
-                ?? throw new InvalidOperationException($"Results library root not set or invalid searchId: {searchId}");
-            var db = new MotelySearchDatabase(path, runConfig);
-            return new ResultsDatabaseWriterAdapter(db);
+            RepositoryHost.Set(repository);
         }
-
-        /// <summary>Get top seeds from a result set by searchId.</summary>
-        public static List<string> GetTopSeeds(string searchId, int limit)
-            => ResultsSetReader.Open(searchId)?.GetTopSeeds(limit) ?? new List<string>();
-
-        /// <summary>Delete a result set (catalog + _data). Only Orchestration touches storage.</summary>
-        public static void DeleteResultSet(string searchId) => ResultsSetReader.Delete(searchId);
-
-        /// <summary>Fertilizer pile (seeds from invalidated results). Only Orchestration touches Motely.DB.</summary>
-        public static FertilizerDatabase GetFertilizerDatabase() => FertilizerDatabase.Instance;
-
-        /// <summary>Bulk insert seeds into a DuckDB file. Only Orchestration touches Motely.DB.</summary>
-        public static long BulkInsertSeeds(string dbPath, IEnumerable<string> seeds, bool deleteExisting = false)
-        {
-            if (deleteExisting && File.Exists(dbPath))
-                File.Delete(dbPath);
-            
-            using var storage = new DuckDBSeedStorage(dbPath);
-            return storage.BulkInsertSeeds(seeds);
-        }
-
-        /// <summary>Get top result rows from a result set by searchId.</summary>
-        public static List<Dictionary<string, object?>> GetTopResultsFromDb(string searchId, int offset, int limit)
-            => ResultsSetReader.Open(searchId)?.GetTopResults(offset, limit) ?? new List<Dictionary<string, object?>>();
-
-        /// <summary>Get column names for a result set by searchId.</summary>
-        public static List<string> GetColumnNames(string searchId)
-            => ResultsSetReader.Open(searchId)?.GetColumnNames() ?? new List<string> { "seed", "score" };
-
-        /// <summary>Export results from DuckDB to CSV using native COPY command. Only Orchestration touches Motely.DB.</summary>
-        public static void ExportResultsToCsv(string dbPath, string csvPath, string tableName = "results")
-            => ResultsExportHelper.ExportDuckDbToCsv(dbPath, csvPath, tableName);
-
-        /// <summary>Print CSV header row for a config. Call after your startup messages but before search.Start().</summary>
-        public static void PrintCsvHeader(MotelyJsonConfig config)
-        {
-            var columnNames = config.GetColumnNames();
-            var allColumns = new List<string> { "Seed", "Score" };
-            allColumns.AddRange(columnNames.Skip(2)); // Skip "seed" and "score" since we already have them capitalized
-            var headerLine = string.Join(",", allColumns.Select(name => $"\"{name}\""));
-            Console.WriteLine(headerLine);
-            Console.Out.Flush();
-        }
-
-        /// <summary>Get resume cursor for a result set by searchId.</summary>
-        public static (long startBatch, int batchSize, string? lastSeed) GetResumeCursor(string searchId)
-            => ResultsSetReader.Open(searchId)?.GetResumeCursor() ?? (0, 0, null);
 
         /// <summary>
         /// Launch a search and return a context with full result access.
@@ -102,18 +45,14 @@ namespace Motely.Executors
             
             if (useInMemoryStorage)
             {
-                // Browser/WASM: Use in-memory storage with callback
+                // Browser/WASM: Use in-memory storage with callback (no DuckDB in NPM package)
                 var context = LaunchInMemory(config, runConfig, parameters, searchId, filterId);
                 return context;
             }
-            else
-            {
-                // Desktop: Use database storage
-                var context = LaunchWithDatabase(config, runConfig, parameters, searchId, filterId);
-                return context;
-            }
+            // Use repository-backed storage
+            var contextDb = LaunchWithDatabase(config, runConfig, parameters, searchId, filterId);
+            return contextDb;
         }
-        
         private static MotelySearchContext LaunchWithDatabase(
             MotelyJsonConfig config,
             MotelyRunConfig runConfig,
@@ -121,19 +60,14 @@ namespace Motely.Executors
             string searchId,
             string filterId)
         {
-            // Determine database path
-            var dbPath = parameters.OutputDbPath;
-            if (string.IsNullOrEmpty(dbPath))
-            {
-                // Default path based on filter ID
-                var searchResultsDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Motely", "SearchResults");
-                Directory.CreateDirectory(searchResultsDir);
-                dbPath = Path.Combine(searchResultsDir, $"{filterId}.db");
-            }
-            
-            var database = OrchestrateDatabase(dbPath, runConfig, parameters);
+            if (RepositoryHost.Instance == null)
+                throw new InvalidOperationException("Repository.Instance must be set to use database storage.");
+
+            var sinkMoniker = string.IsNullOrWhiteSpace(parameters.OutputDbPath)
+                ? searchId
+                : parameters.OutputDbPath;
+
+            var database = RepositoryHost.Instance.GetSink(sinkMoniker, runConfig);
             
             // Create executor with callback that writes to database
             var executor = new JsonSearchExecutor(config, parameters, result =>
@@ -145,7 +79,6 @@ namespace Motely.Executors
             
             return new MotelySearchContext(search, database, runConfig, searchId, filterId);
         }
-        
         private static MotelySearchContext LaunchInMemory(
             MotelyJsonConfig config,
             MotelyRunConfig runConfig,
@@ -208,8 +141,7 @@ namespace Motely.Executors
             }
             return sanitized;
         }
-        
-        // === Legacy methods for backward compatibility ===
+        // === Legacy methods for backward compatibility (desktop only) ===
         
         public static IMotelySearch LaunchJaml(string jamlPath, JsonSearchParams parameters, Action<MotelySeedScoreTally>? resultCallback = null)
         {
@@ -294,7 +226,7 @@ namespace Motely.Executors
             
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {
-                executor.ResultsDatabase = OrchestrateDatabase(parameters.OutputDbPath, runConfig, parameters);
+                executor.ResultSink = ResolveSink(parameters.OutputDbPath, runConfig);
             }
 
             return executor.ExecuteAsSearch();
@@ -309,46 +241,24 @@ namespace Motely.Executors
             // Orchestrator handles everything - generates filterId from config and creates path
             if (string.IsNullOrEmpty(parameters.OutputDbPath) && parameters.AutoSave)
             {
-                var filterId = GenerateFilterId(config);
-                // Use unified "seeds" folder (combines SearchResults and SeedSources)
-                var seedsDir = Path.Combine(Directory.GetCurrentDirectory(), "seeds");
-                parameters.OutputDbPath = Path.Combine(seedsDir, $"{filterId}.db");
+                parameters.OutputDbPath = GenerateFilterId(config);
             }
             
             var executor = new JsonSearchExecutor(config, parameters, resultCallback);
             
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {
-                executor.ResultsDatabase = OrchestrateDatabase(parameters.OutputDbPath, runConfig, parameters);
+                executor.ResultStorage = ResolveSink(parameters.OutputDbPath, runConfig);
             }
 
             return executor.ExecuteAsSearch();
         }
 
-        private static global::Motely.DB.MotelySearchDatabase OrchestrateDatabase(string dbPath, MotelyRunConfig runConfig, JsonSearchParams parameters)
+        private static IResultStorage ResolveSink(string moniker, MotelyRunConfig runConfig)
         {
-            bool exists = File.Exists(dbPath);
-            bool compatible = exists && global::Motely.DB.MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig, out _);
-
-            if (exists && !compatible)
-            {
-                bool shouldOverwrite = parameters.ForceOverwrite;
-                if (!shouldOverwrite && parameters.SchemaMismatchPrompt != null)
-                {
-                    shouldOverwrite = parameters.SchemaMismatchPrompt(dbPath, "Database schema mismatch. Existing database has different columns or types than current search config.");
-                }
-
-                if (shouldOverwrite)
-                {
-                    try { File.Delete(dbPath); } catch { /* Ignore delete errors, let DB open fail if needed */ }
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Cannot use existing database '{dbPath}' due to schema mismatch. Use --force to overwrite.");
-                }
-            }
-
-            return new global::Motely.DB.MotelySearchDatabase(dbPath, runConfig);
+            if (RepositoryHost.Instance == null)
+                throw new InvalidOperationException("Repository.Instance must be set before creating result storage.");
+            return RepositoryHost.Instance.GetSink(moniker, runConfig);
         }
 
         // Helper to load scoring config synchronously (copy of logic from NativeFilterExecutor)

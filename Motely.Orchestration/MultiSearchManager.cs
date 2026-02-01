@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Motely;
-using Motely.DB;
 using Motely.Filters;
 
 namespace Motely.Executors;
@@ -82,45 +81,14 @@ public sealed class MultiSearchManager
         if (requestEndBatch.HasValue)
             parameters.EndBatch = requestEndBatch.Value;
 
-        // Explicit start from request takes priority; else resume from last seed if sequential
+        // Explicit start from request takes priority
         if (requestStartBatch.HasValue)
             parameters.StartBatch = requestStartBatch.Value;
-        else if (isSequential)
-        {
-            try
-            {
-                var meta = SequentialLibrary.Instance.GetSearchMeta(searchId);
-                if (meta?.LastSeed != null)
-                    parameters.StartBatch = (ulong)SeedMath.SeedToBatchIndex(meta.LastSeed, parameters.BatchSize) + 1;
-            }
-            catch { /* Library not initialized */ }
-        }
 
         var context = MotelySearchOrchestrator.LaunchWithContext(config, parameters, useInMemoryStorage: false);
 
         var activeSearch = new ActiveSearch(searchId, config, context, threadCount, isSequential, seedSource);
         _activeSearches[searchId] = activeSearch;
-
-        // Mark active in DB
-        if (isSequential)
-        {
-            try
-            {
-                SequentialLibrary.Instance.UpsertSearchMeta(new SearchMeta
-                {
-                    SearchId = searchId,
-                    TableName = searchId,
-                    JamlFilter = config.Name,
-                    Deck = config.Deck,
-                    Stake = config.Stake,
-                    SeedSource = seedSource,
-                    IsActive = true,
-                    LastAccessed = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow,
-                });
-            }
-            catch { /* Library not initialized */ }
-        }
 
         return activeSearch;
     }
@@ -134,22 +102,6 @@ public sealed class MultiSearchManager
             return;
 
         search.Context?.Cancel();
-
-        // Persist last position
-        if (search.IsSequential && search.Context != null)
-        {
-            try
-            {
-                var prefix = SeedMath.BatchIndexToSeedPrefix(search.Context.BatchIndex, 3);
-                var lastSeed = prefix.PadRight(8, '1');
-                SequentialLibrary.Instance.UpdateLastSeed(
-                    searchId, lastSeed,
-                    search.Context.TotalSeedsSearched,
-                    search.Context.MatchingSeeds);
-                SequentialLibrary.Instance.SetSearchActive(searchId, false);
-            }
-            catch { /* Library not initialized */ }
-        }
 
         Interlocked.Add(ref _allocatedThreads, -search.AllocatedThreads);
     }
@@ -193,20 +145,7 @@ public sealed class MultiSearchManager
 
     public Task<List<string>> RestoreActiveSearchesAsync()
     {
-        try
-        {
-            return Task.FromResult(SequentialLibrary.Instance.GetAllActiveSearchIds());
-        }
-        catch
-        {
-            return Task.FromResult(new List<string>());
-        }
-    }
-
-    public SearchMeta? GetPersistedMeta(string searchId)
-    {
-        try { return SequentialLibrary.Instance.GetSearchMeta(searchId); }
-        catch { return null; }
+        return Task.FromResult(new List<string>());
     }
 
     #endregion

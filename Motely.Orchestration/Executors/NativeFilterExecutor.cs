@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Motely;
 using Motely.Filters;
 
 namespace Motely.Executors
@@ -16,7 +17,9 @@ namespace Motely.Executors
         private readonly ICancelKeyHandler _cancelKeyHandler;
         private bool _cancelled = false;
         private IEnumerable<string>? _searchSeeds = null;
-        public global::Motely.DB.MotelySearchDatabase? ResultsDatabase { get; set; }
+        /// <summary>Optional result storage. Set by caller when saving results.</summary>
+        /// <summary>Optional result sink. Set by caller.</summary>
+        public IResultStorage? ResultSink { get; set; }
 
         public NativeFilterExecutor(
             string filterName,
@@ -439,9 +442,9 @@ namespace Motely.Executors
                     TallyColorizer.FormatResultLine(score.Seed, score.Score, score.TallyValuesSpan)
                 );
 
-                if (ResultsDatabase != null)
+                if (ResultSink != null)
                 {
-                    ResultsDatabase.InsertRow(score.Seed, score.Score, score.TallyColumns, score.ColumnValues);
+                    ResultSink.InsertRow(score.Seed, score.Score, score.TallyColumns, score.ColumnValues);
                 }
             };
 

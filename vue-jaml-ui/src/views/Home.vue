@@ -61,13 +61,7 @@
 const localTools = [
   { label: 'JAML WebUI', description: 'Commander control for JAML filters and live seed searches.', href: 'http://localhost:8080/JAML/' },
   { label: 'BSO Browser', description: 'Avalonia UI compiled to WebAssembly. Full oracle in browser.', href: 'http://localhost:8080/BSO/' },
-  { label: 'JamlGenie (Legacy)', description: 'Prototype JAML filter generator and helper tool.', href: 'http://localhost:8080/JamlGenie/' },
-  { label: 'JamlUI (Legacy)', description: 'Original modular JAML editor prototype.', href: 'http://localhost:8080/JamlUI/' },
-  { label: 'JamlUI Alpine', description: 'JAML UI experiment using Alpine.js framework.', href: 'http://localhost:8080/JamlUI-Alpine/' },
-  { label: 'JamlUI HTMX', description: 'JAML UI experiment using HTMX for dynamic interactions.', href: 'http://localhost:8080/JamlUI-HTMX/' },
-  { label: 'JamlUI Lit', description: 'JAML UI experiment using Lit web components.', href: 'http://localhost:8080/JamlUI-Lit/' },
-  { label: 'JamlUI Preact', description: 'JAML UI experiment using Preact framework.', href: 'http://localhost:8080/JamlUI-Preact/' },
-  { label: 'JamlUI5', description: 'Fifth iteration of JAML UI experiments.', href: 'http://localhost:8080/JamlUI5/' }
+  { label: 'JamlGenie (Legacy)', description: 'Prototype JAML filter generator and helper tool.', href: 'http://localhost:8080/JamlGenie/' }
 ]
 
 const games = [
