@@ -1,16 +1,25 @@
 {
   "name": "motely-wasm",
-  "version": "1.0.0",
-  "description": "MotelyJAML WASM",
+  "version": "1.0.1",
+  "description": "Balatro seed analyzer and searcher - Browser WASM build with SIMD + multi-threading",
   "author": "OptimusPi",
   "license": "MIT",
   "main": "index.js",
   "types": "motely-wasm.d.ts",
-  "files": ["index.js", "motely-wasm.d.ts"],
+  "files": [
+    "index.js",
+    "motely-wasm.d.ts",
+    "dist/"
+  ],
   "scripts": {
-    "build": "dotnet publish -c Release",
+    "build": "dotnet publish -c Release && node scripts/prepare-npm.js",
+    "prepublishOnly": "npm run build",
     "dev": "node scripts/serve-with-headers.cjs 3333 poc/public"
   },
-  "repository": "https://github.com/OptimusPi/Motely",
-  "publishConfig": { "access": "public" }
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OptimusPi/MotelyJAML.git"
+  },
+  "publishConfig": { "access": "public" },
+  "keywords": ["balatro", "wasm", "seed", "analyzer", "searcher"]
 }

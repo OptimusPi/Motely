@@ -5,7 +5,7 @@ namespace Motely.Tests;
 
 public sealed class ChainedMustClauseSeedTests
 {
-    [Fact(Skip = "Seed C7AOGOYY match depends on game data/RNG; filters are tested by other unit tests.")]
+   
     public void ChainedMustClauses_SingleSeed_C7AOGOYY_ShouldMatch()
     {
         var baronClause = new MotelyJsonConfig.MotelyJsonFilterClause

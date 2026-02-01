@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://balatrogenie.app/jaml.schema.json",
+  "$id": "https://seedsearcher.app/jaml.schema.json",
   "version": "2.0.0",
   "title": "JAML - Jimbo's Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml). v2.0.0 adds Event type-as-key shorthand and full source support (Judgement, RiffRaff, Seance, SixthSense, Emperor, PurpleSealOrEightBall, RareTag, UncommonTag).",

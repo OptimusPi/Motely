@@ -495,9 +495,17 @@ public sealed class GenericLibrary : IDisposable
 
     #region Helpers
 
+    /// <summary>
+    /// Escapes a string value for safe SQL interpolation.
+    /// Note: Parameterized queries (DuckDBParameter) are preferred for values where possible,
+    /// but MERGE statements with dynamic columns require string building.
+    /// </summary>
     private static string EscapeSql(string value)
     {
-        return value?.Replace("'", "''") ?? "";
+        if (value == null) return "";
+        // Escape single quotes (SQL string delimiter)
+        // Backslashes don't need escaping in DuckDB standard SQL mode
+        return value.Replace("'", "''");
     }
 
     private static string SanitizeTableName(string name)

@@ -64,27 +64,11 @@ namespace Motely
                 "Run built-in native filter",
                 CommandOptionType.SingleValue
             );
-            var convertOption = app.Option(
-                "--convert",
-                "Convert all JSON filters to JAML format",
-                CommandOptionType.NoValue
-            );
             var scoreOption = app.Option<string>(
                 "--score <JSON>",
                 "Add JSON scoring to native filter",
                 CommandOptionType.SingleValue
             );
-            var csvScoreOption = app.Option<string>(
-                "--csvScore <TYPE>",
-                "Enable CSV scoring output (native for built-in)",
-                CommandOptionType.SingleValue
-            );
-            var timeOption = app.Option<int>(
-                "--time <SECONDS>",
-                "Progress report interval in seconds (default: 1200)",
-                CommandOptionType.SingleValue
-            );
-
             // Search parameters
             var threadsOption = app.Option<int>(
                 "--threads <COUNT>",
@@ -148,11 +132,6 @@ namespace Motely
                 "Restrict padding characters (e.g., --padding OU or --padding 1). Only works with --keyword.",
                 CommandOptionType.SingleValue
             );
-            var regenerateKeywordDbOption = app.Option(
-                "--regenerate-keyword-db",
-                "Force regeneration of keyword DB even if it exists",
-                CommandOptionType.NoValue
-            );
             var randomOption = app.Option<int>(
                 "--random <COUNT>",
                 "Test with random seeds",
@@ -211,17 +190,6 @@ namespace Motely
                 CommandOptionType.NoValue
             );
 
-            // GPU acceleration options
-            var dungmotOption = app.Option(
-                "--dungmot",
-                "Use GPU-accelerated dungmot as seed pre-filter",
-                CommandOptionType.NoValue
-            );
-            var dungmotPathOption = app.Option<string>(
-                "--dungmot-path <PATH>",
-                "Path to dungmot executable (default: auto-detect based on filter type)",
-                CommandOptionType.SingleValue
-            );
             var noFancyOption = app.Option(
                 "--nofancy",
                 "Suppress fancy output",
@@ -241,7 +209,6 @@ namespace Motely
             cutoffOption.DefaultValue = "0";
             deckOption.DefaultValue = "Red";
             stakeOption.DefaultValue = "White";
-            timeOption.DefaultValue = 2; // 2 seconds
 
             app.OnExecute(() =>
             {
@@ -499,17 +466,13 @@ namespace Motely
                     parameters.AutoSave = true; // Orchestrator will generate path from config
                 }
 
-                // Setup CSV output if requested
-                StreamWriter? csvWriter = null;
-                if (!string.IsNullOrEmpty(csvPath))
+                // CSV export happens AFTER search completes (via DuckDB COPY)
+                // Requires --save or --output-db to have results in DuckDB
+                if (!string.IsNullOrEmpty(csvPath) && string.IsNullOrEmpty(dbPath) && !saveOption.HasValue())
                 {
-                    if (!parameters.Quiet)
-                        Console.WriteLine($"💾 Writing results to CSV: {csvPath}");
-                    
-                    csvWriter = new StreamWriter(csvPath, false, Encoding.UTF8);
-                    // Header will be printed by the executor inside the orchestrator
-                    // But we need to handle the writing of rows if we want it in CSV.
-                    // The Orchestrator's Launch method takes a resultCallback.
+                    Console.Error.WriteLine($"❌ Error: --output-csv requires --save or --output-db");
+                    Console.Error.WriteLine($"   Results must be saved to DuckDB before exporting to CSV");
+                    return 1;
                 }
 
                 int exitCode = 0;
@@ -565,37 +528,9 @@ namespace Motely
                             parameters.SeedList = keywordSeedList;
                             parameters.SeedSources = null;
                             
-                            // Run the search (reuse the same search execution logic)
-                            Action<MotelySeedScoreTally> keywordResultCallback = (result) =>
-                            {
-                                // Build CSV line efficiently without intermediate List allocations
-                                var sb = new StringBuilder();
-                                sb.Append('"').Append(result.Seed).Append('"').Append(',');
-                                sb.Append(result.Score);
-                                
-                                // Append tally columns
-                                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
-                                {
-                                    foreach (var tally in result.TallyColumns)
-                                    {
-                                        sb.Append(',').Append(tally);
-                                    }
-                                }
-                                
-                                string csvLine = sb.ToString();
-                                
-                                // Always print to console (quiet mode still shows CSV results)
-                                Console.WriteLine(csvLine);
-                                
-                                // Also write to CSV file if specified
-                                if (csvWriter != null)
-                                {
-                                    csvWriter.WriteLine(csvLine);
-                                }
-                            };
-                            
+                            // Run the search - no manual callbacks, console output handled by executor
                             exitCode = RunSingleSearch(parameters, nativeFilter, jamlOption, jsonOption, 
-                                deckOption, stakeOption, scoreOption, csvWriter, keywordResultCallback);
+                                deckOption, stakeOption, scoreOption, null, null);
                             
                             // Restore original parameters
                             parameters.SeedList = originalSeedList;
@@ -638,37 +573,40 @@ namespace Motely
                     }
                     else
                     {
-                        // Single search (original behavior)
-                        Action<MotelySeedScoreTally> resultCallback = (result) =>
-                        {
-                            // Build CSV line efficiently without intermediate List allocations
-                            var sb = new StringBuilder();
-                            sb.Append('"').Append(result.Seed).Append('"').Append(',');
-                            sb.Append(result.Score);
-                            
-                            // Append tally columns
-                            if (result.TallyColumns != null && result.TallyColumns.Count > 0)
-                            {
-                                foreach (var tally in result.TallyColumns)
-                                {
-                                    sb.Append(',').Append(tally);
-                                }
-                            }
-                            
-                            string csvLine = sb.ToString();
-                            
-                            // Always print to console (quiet mode still shows CSV results)
-                            Console.WriteLine(csvLine);
-                            
-                            // Also write to CSV file if specified
-                            if (csvWriter != null)
-                            {
-                                csvWriter.WriteLine(csvLine);
-                            }
-                        };
-                        
+                        // Single search - no manual callbacks, console output handled by executor
                         exitCode = RunSingleSearch(parameters, nativeFilter, jamlOption, jsonOption,
-                            deckOption, stakeOption, scoreOption, csvWriter, resultCallback);
+                            deckOption, stakeOption, scoreOption, null, null);
+                    }
+                    
+                    // Export to CSV AFTER search completes (DuckDB handles the export properly)
+                    if (exitCode == 0 && !string.IsNullOrEmpty(csvPath))
+                    {
+                        // Determine the DB path that was used
+                        string? resultsDbPath = dbPath;
+                        if (string.IsNullOrEmpty(resultsDbPath) && saveOption.HasValue())
+                        {
+                            // AutoSave path - same logic as orchestrator
+                            var filterId = jamlOption?.Value() ?? jsonOption?.Value() ?? "standard";
+                            var searchResultsDir = Path.Combine(
+                                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                "Motely", "SearchResults");
+                            resultsDbPath = Path.Combine(searchResultsDir, $"{filterId}.db");
+                        }
+                        
+                        if (!string.IsNullOrEmpty(resultsDbPath) && File.Exists(resultsDbPath))
+                        {
+                            if (!parameters.Quiet)
+                                Console.Error.WriteLine($"💾 Exporting results to CSV: {csvPath}");
+                            
+                            MotelySearchOrchestrator.ExportResultsToCsv(resultsDbPath, csvPath);
+                            
+                            if (!parameters.Quiet)
+                                Console.Error.WriteLine($"✅ CSV export complete: {csvPath}");
+                        }
+                        else
+                        {
+                            Console.Error.WriteLine($"⚠️  No results database found to export");
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -677,14 +615,6 @@ namespace Motely
                     if (parameters.EnableDebug)
                         Console.Error.WriteLine(ex.StackTrace);
                     exitCode = 1;
-                }
-                finally
-                {
-                    if (csvWriter != null)
-                    {
-                        csvWriter.Flush();
-                        csvWriter.Close();
-                    }
                 }
 
                 return exitCode;
@@ -1039,94 +969,8 @@ namespace Motely
             }
         }
 
-        private static IEnumerable<string> GenerateAllCombinations(char[] validChars, int length)
-        {
-            if (length == 0)
-            {
-                yield return "";
-                yield break;
-            }
-
-            var buffer = new char[length];
-            foreach (var combo in GenerateCombinationsRecursive(validChars, buffer, 0))
-            {
-                yield return combo;
-            }
-        }
-
-        private static IEnumerable<string> GenerateCombinationsRecursive(
-            char[] validChars,
-            char[] buffer,
-            int index
-        )
-        {
-            if (index == buffer.Length)
-            {
-                yield return new string(buffer);
-                yield break;
-            }
-
-            foreach (var c in validChars)
-            {
-                buffer[index] = c;
-                // Continue building - only yield when we reach the end (base case above)
-                foreach (var result in GenerateCombinationsRecursive(validChars, buffer, index + 1))
-                {
-                    yield return result;
-                }
-            }
-        }
-
         /// <summary>
-        /// Convert a seed string to a batch number for sequential search.
-        /// Batches are organized by the first (8 - BatchSize) characters.
-        /// </summary>
-        private static long ConvertSeedToBatch(string seed, int batchSize)
-        {
-            // Pad seed to max length if needed
-            seed = seed.PadRight(8, '1');
-
-            // Batches are organized by the characters that are NOT varying.
-            // Motely iterates using the LEFT characters (indices 0 to batchSize-1)
-            // as the varying parts within a batch.
-            // The FIXED characters for a batch are the RIGHT characters (indices batchSize to 7).
-
-            int fixedLength = 8 - batchSize;
-            if (fixedLength <= 0)
-                return 0;
-
-            // Get the fixed part (the suffix)
-            string suffix = seed.Substring(batchSize);
-
-            // Convert to batch index:
-            // digit at index batchSize is 35^0
-            // digit at index batchSize+1 is 35^1
-            // ...
-            // digit at index 7 is 35^(fixedLength-1)
-
-            long batchNum = 0;
-            long multiplier = 1;
-
-            for (int i = 0; i < suffix.Length; i++)
-            {
-                char c = suffix[i];
-                int digitIndex = Array.IndexOf(Motely.SeedDigits, c);
-                if (digitIndex < 0)
-                {
-                    throw new ArgumentException(
-                        $"Invalid seed character '{c}' in '{seed}'. Valid chars: 1-9, A-Z"
-                    );
-                }
-
-                batchNum += digitIndex * multiplier;
-                multiplier *= 35;
-            }
-
-            return batchNum;
-        }
-
-        /// <summary>
-        /// Save generated seeds to DuckDB file
+        /// Calculate the number of seeds for a keyword with given padding constraints
         /// </summary>
         private static long GetCountOfSeeds(string keyword, int maxPad, int validCharCount)
         {
@@ -1146,25 +990,8 @@ namespace Motely
         }
 
         /// <summary>
-        /// Save generated seeds to DuckDB file using Motely.DB optimized storage (via Orchestrator)
-        /// </summary>
-        private static void SaveSeedsToDuckDB(IEnumerable<string> seeds, string dbPath, bool quiet, bool isRegenerating = false)
-        {
-            if (!quiet)
-                Console.WriteLine($"💾 Saving seeds to {dbPath}...");
-            
-            long count = MotelySearchOrchestrator.BulkInsertSeeds(dbPath, seeds, deleteExisting: isRegenerating);
-            
-            if (!quiet)
-                Console.WriteLine($"✅ Saved {count:N0} seeds to {dbPath}");
-        }
-
-        /// <summary>
-        /// Insert a batch of seeds into DuckDB
-        /// </summary>
-
-        /// <summary>
-        /// Run a single search with the given parameters
+        /// Run a single search with the given parameters.
+        /// Console output handled by executor. Results saved to DuckDB if --save or --output-db.
         /// </summary>
         private static int RunSingleSearch(
             JsonSearchParams parameters,
@@ -1174,44 +1001,19 @@ namespace Motely
             CommandOption<string> deckOption,
             CommandOption<string> stakeOption,
             CommandOption<string>? scoreOption,
-            StreamWriter? csvWriter,
-            Action<MotelySeedScoreTally>? resultCallback)
+            StreamWriter? _unused1,  // Legacy parameter, kept for signature compatibility
+            Action<MotelySeedScoreTally>? _unused2)  // Legacy parameter, kept for signature compatibility
         {
             // ORCHESTRATOR HANDLES EVERYTHING - just give it the config!
             // Column names come from JAML labels (handled by GetColumnNames in config)
             // DB path generation comes from filterId (handled by orchestrator)
+            // Console output handled by executor's PrintResultRow
+            // Results saved to DuckDB by orchestrator when --save or --output-db specified
             IMotelySearch search;
-            
-            // Use provided callback or create default one
-            Action<MotelySeedScoreTally> callback = resultCallback ?? ((result) =>
-            {
-                // Build CSV line efficiently without intermediate List allocations
-                var sb = new StringBuilder();
-                sb.Append('"').Append(result.Seed).Append('"').Append(',');
-                sb.Append(result.Score);
-                
-                // Append tally columns
-                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
-                {
-                    foreach (var tally in result.TallyColumns)
-                    {
-                        sb.Append(',').Append(tally);
-                    }
-                }
-                
-                string csvLine = sb.ToString();
-                
-                // Always print to console (quiet mode still shows CSV results)
-                Console.WriteLine(csvLine);
-                
-                // Also write to CSV file if specified
-                if (csvWriter != null)
-                {
-                    csvWriter.WriteLine(csvLine);
-                }
-            });
 
             string? configName;
+            MotelyJsonConfig? loadedConfig = null;
+            
             if (!string.IsNullOrEmpty(nativeFilter))
             {
                 configName = nativeFilter;
@@ -1227,18 +1029,36 @@ namespace Motely
                 if (jamlOption?.HasValue() == true)
                 {
                     configName = jamlOption.Value();
-                    search = MotelySearchOrchestrator.LaunchJaml(jamlOption.Value()!, parameters, callback);
+                    // Resolve JAML path (same logic as LaunchJaml)
+                    var jamlPath = jamlOption.Value()!;
+                    if (!File.Exists(jamlPath))
+                    {
+                        string localPath = Path.Combine("JamlFilters", jamlPath);
+                        if (!localPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase))
+                            localPath += ".jaml";
+                        if (File.Exists(localPath))
+                            jamlPath = localPath;
+                        else
+                            throw new FileNotFoundException($"JAML config file not found: {jamlPath}");
+                    }
+                    // Load config once, reuse for launch AND header
+                    if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out loadedConfig, out var error) || loadedConfig == null)
+                        throw new InvalidOperationException($"Error loading JAML config: {error}");
+                    search = MotelySearchOrchestrator.Launch(loadedConfig, parameters, null);
                 }
                 else
                 {
                     configName = jsonOption?.Value() ?? "standard";
-                    search = MotelySearchOrchestrator.LaunchJson(configName, parameters, callback);
+                    search = MotelySearchOrchestrator.LaunchJson(configName, parameters, null);
                 }
             }
 
             // Print startup info with column names BEFORE search starts (even in quiet mode)
-            // Column names come from JAML labels (handled by GetColumnNames in config, printed by executor)
             PrintStartupInfo(search, parameters, configName ?? "standard", deckOption.Value()!, stakeOption.Value()!, null);
+            
+            // Print CSV header AFTER startup info but BEFORE results start streaming
+            if (loadedConfig != null)
+                MotelySearchOrchestrator.PrintCsvHeader(loadedConfig);
 
             search.Start(parameters.CancellationToken ?? default);
             
@@ -1268,6 +1088,7 @@ namespace Motely
             Console.WriteLine($"   Threads: {parameters.Threads}, BatchSize: {parameters.BatchSize}");
             if (parameters.StartBatch > 0)
                 Console.WriteLine($"   Starting from batch: {parameters.StartBatch:N0}");
+            Console.WriteLine($"   [P] progress  [ESC ESC] quit");
             Console.WriteLine();
         }
 

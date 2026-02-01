@@ -132,13 +132,21 @@ public static partial class MotelyWasm
             // Progress loop: push updates to JS (MS best practice: C# calls into JS)
             _ = Task.Run(async () =>
             {
-                while (_isSearchRunning)
+                try
                 {
-                    await Task.Delay(200).ConfigureAwait(false);
-                    if (!_isSearchRunning) break;
-                    PushProgress(GetProgressJsonSync());
+                    while (_isSearchRunning && !_searchCts!.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(200, _searchCts.Token).ConfigureAwait(false);
+                        if (!_isSearchRunning) break;
+                        PushProgress(GetProgressJsonSync());
+                    }
                 }
-            });
+                catch (OperationCanceledException) { /* Expected on cancellation */ }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[WASM] Progress loop error: {ex.Message}");
+                }
+            }, _searchCts.Token);
 
             try
             {

@@ -172,12 +172,6 @@ public static class FormatUtils
         return FormatDisplayName(name);
     }
 
-    public static string FormatTarotName(string name)
-    {
-        // This method is now obsolete - just use FormatDisplayName
-        return FormatDisplayName(name);
-    }
-
     public static string FormatPlayingCardSuit(string suitAbbreviation)
     {
         return suitAbbreviation switch

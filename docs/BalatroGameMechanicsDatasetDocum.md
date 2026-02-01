@@ -155,7 +155,7 @@ cost: 8
 sell_price: 4
 unlock_condition: Available from start
 compatibility:
-  editions: All compatible
+editions: All compatible
   seals: Red Seal retriggers effect per King
   stickers: Perishable, Eternal (compatible)
 special_interactions:
