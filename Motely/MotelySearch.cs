@@ -622,7 +622,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
     }
     public long MatchingSeeds => _matchingSeeds;
-    public long FilteredSeeds => Filters.MotelyJsonSeedScoreDesc.FilteredSeedCount;
+    public long FilteredSeeds => MotelyJsonSeedScoreDesc.FilteredSeedCount;
 
     public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
 

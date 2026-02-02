@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Balatro seed analyzer and searcher for the browser - WASM with SIMD + multi-threading (front-end only)",
   "author": "OptimusPi",
   "license": "MIT",

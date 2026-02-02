@@ -36,8 +36,16 @@ export interface MotelyWasmApi {
   SearchSeeds(
     jamlFilterJson: string,
     seedList: string | null,
-    threadCount: number,
-    maxResults?: number
+    threadCount: number
+  ): Promise<string>;
+
+  /**
+   * Search with advanced options (keyword generation, batch ranges, random, etc).
+   * optionsJson should match SearchOptions (camelCase).
+   */
+  SearchSeedsWithOptions(
+    jamlFilterJson: string,
+    optionsJson: string
   ): Promise<string>;
 
   /** Validate a JAML filter string without running a search. */
@@ -152,6 +160,23 @@ export interface VersionInfo {
   version: string;
   runtime: string;
   features: string[];
+}
+
+export interface SearchOptions {
+  threadCount?: number;
+  batchSize?: number;
+  startBatch?: number;
+  endBatch?: number;
+  startPercent?: number;
+  endPercent?: number;
+  startSeed?: string;
+  cutoff?: string;
+  seedList?: string;
+  keyword?: string;
+  padding?: string;
+  randomSeeds?: number;
+  palindrome?: boolean;
+  specificSeed?: string;
 }
 
 /** Error response (returned when operations fail). */

@@ -61,7 +61,7 @@ public struct FunnySeedFilterDesc : IMotelySeedFilterDesc<FunnySeedFilterDesc.Fu
                 {
                     // Log the funny seed we found (commented out to reduce spam)
                     DebugLogger.Log($"😂 Found funny seed: {seed} (contains {funnyWord})");
-                    FunnySeedFilterDesc.FoundSeeds.Add(seed);
+                    FoundSeeds.Add(seed);
                     return true;
                 }
             }

@@ -19,13 +19,13 @@ import {
 
 /**
  * Loads the Motely WASM runtime from the specified base URL.
- * Use this in browser code when your bundler supports dynamic import of the WASM URL.
+ * Works with Next.js and other bundlers by using a script tag injection approach.
  *
  * @param baseUrl The public path where the motely-wasm files are served (e.g., '/motely-wasm' or 'https://cdn.example.com/motely').
  * @returns A promise that resolves to the MotelyWasmApi.
  */
 export async function loadMotely(baseUrl: string = '/motely-wasm'): Promise<MotelyWasmApi> {
-    // Ensure trailing slash is removed for consistency, then append _framework/dotnet.js
+    // Ensure trailing slash is removed for consistency
     const cleanBase = baseUrl.replace(/\/$/, '');
     const dotnetUrl = `${cleanBase}/_framework/dotnet.js`;
     const bootConfigUrl = `${cleanBase}/_framework/dotnet.boot.js`;
@@ -33,9 +33,8 @@ export async function loadMotely(baseUrl: string = '/motely-wasm'): Promise<Mote
     console.log(`[motely-wasm] Loading runtime from: ${dotnetUrl}`);
 
     try {
-        // dynamic import with webpackIgnore to prevent bundlers from trying to resolve this at build time.
-        // @ts-ignore
-        const { dotnet } = await import(/* webpackIgnore: true */ /* @vite-ignore */ dotnetUrl);
+        // Load dotnet.js as a script tag to avoid bundler static analysis issues
+        const dotnet = await loadScriptGlobal(dotnetUrl);
 
         const { getAssemblyExports, getConfig } = await dotnet
             .withConfigSrc(bootConfigUrl)
@@ -50,6 +49,34 @@ export async function loadMotely(baseUrl: string = '/motely-wasm'): Promise<Mote
         console.error(`[motely-wasm] Failed to load WASM runtime:`, err);
         throw new Error(`Motely WASM Init Failed: ${err.message || String(err)}`);
     }
+}
+
+/**
+ * Loads a script via a <script> tag and waits for it to define a global.
+ * Returns the global reference or throws if not found.
+ */
+function loadScriptGlobal(url: string, globalName: string = 'dotnet'): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.type = 'text/javascript';
+        script.async = true;
+
+        script.onload = () => {
+            const global = (globalThis as any)[globalName];
+            if (global) {
+                resolve(global);
+            } else {
+                reject(new Error(`Global '${globalName}' not found after loading ${url}`));
+            }
+        };
+
+        script.onerror = () => {
+            reject(new Error(`Failed to load script: ${url}`));
+        };
+
+        document.head.appendChild(script);
+    });
 }
 
 /**

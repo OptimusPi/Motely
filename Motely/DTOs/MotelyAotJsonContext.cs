@@ -26,6 +26,7 @@ namespace Motely;
 [JsonSerializable(typeof(ShopItemDto[]))]
 [JsonSerializable(typeof(PackDto[]))]
 [JsonSerializable(typeof(string[]))]
+[JsonSerializable(typeof(SearchOptionsDto))]
 public partial class MotelyAotJsonContext : JsonSerializerContext
 {
 }

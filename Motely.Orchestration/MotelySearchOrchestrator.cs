@@ -18,7 +18,7 @@ namespace Motely.Executors
         /// <summary>Set the repository (source/sink by moniker). Call once at host startup.</summary>
         public static void SetRepository(IMotelyRepository repository)
         {
-            RepositoryHost.Set(repository);
+            global::Motely.Repository.RepositoryHost.Set(repository);
         }
 
         /// <summary>
@@ -60,14 +60,14 @@ namespace Motely.Executors
             string searchId,
             string filterId)
         {
-            if (RepositoryHost.Instance == null)
+            if (global::Motely.Repository.RepositoryHost.Instance == null)
                 throw new InvalidOperationException("Repository.Instance must be set to use database storage.");
 
             var sinkMoniker = string.IsNullOrWhiteSpace(parameters.OutputDbPath)
                 ? searchId
                 : parameters.OutputDbPath;
 
-            var database = RepositoryHost.Instance.GetSink(sinkMoniker, runConfig);
+            var database = global::Motely.Repository.RepositoryHost.Instance.GetSink(sinkMoniker, runConfig);
             
             // Create executor with callback that writes to database
             var executor = new JsonSearchExecutor(config, parameters, result =>
@@ -256,9 +256,9 @@ namespace Motely.Executors
 
         private static IResultStorage ResolveSink(string moniker, MotelyRunConfig runConfig)
         {
-            if (RepositoryHost.Instance == null)
+            if (global::Motely.Repository.RepositoryHost.Instance == null)
                 throw new InvalidOperationException("Repository.Instance must be set before creating result storage.");
-            return RepositoryHost.Instance.GetSink(moniker, runConfig);
+            return global::Motely.Repository.RepositoryHost.Instance.GetSink(moniker, runConfig);
         }
 
         // Helper to load scoring config synchronously (copy of logic from NativeFilterExecutor)

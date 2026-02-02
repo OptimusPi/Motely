@@ -37,7 +37,7 @@ public class SearchService
     {
         var searchId = Guid.NewGuid().ToString();
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        var jamlJson = System.Text.Json.JsonSerializer.Serialize(config, options);
+        var jamlJson = JsonSerializer.Serialize(config, options);
 
         // Validate criteria to prevent unlimited writes
         if (criteria == null)
