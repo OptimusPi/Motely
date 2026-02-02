@@ -104,7 +104,8 @@ Without these headers, the WASM will still load but run single-threaded.
 | Method | Description |
 |--------|-------------|
 | `AnalyzeSeed(seed, deck, stake, minAnte, maxAnte, optionsJson)` | Analyze one seed; returns ante data. |
-| `SearchSeeds(jamlFilterJson, seedList, threadCount, maxResults?)` | Search seeds matching a JAML filter. Optional: set `globalThis.MotelyWasmOnProgress`, `MotelyWasmOnResult`, `MotelyWasmOnComplete` before calling. |
+| `SearchSeeds(jamlFilterJson, seedList, threadCount)` | Search seeds matching a JAML filter. Optional: set `globalThis.MotelyWasmOnProgress`, `MotelyWasmOnResult`, `MotelyWasmOnComplete` before calling. |
+| `SearchSeedsWithOptions(jamlFilterJson, optionsJson)` | Advanced search (keywords, batch ranges, random/palindrome). `optionsJson` matches `SearchOptions` (camelCase). |
 | `ValidateJaml(jamlString)` | Validate JAML without searching. |
 | `CancelSearch()` | Cancel in-progress search. |
 | `IsSearchRunning()` | Returns whether a search is running. |
@@ -270,7 +271,7 @@ Get version information.
 
 ```typescript
 await MotelyWasm.GetVersion(): Promise<string>
-// Returns: { version: "1.0.2", runtime: "browser-wasm", features: [...] }
+// Returns: { version: "1.0.4", runtime: "browser-wasm", features: [...] }
 ```
 
 ## JAML Filter Format

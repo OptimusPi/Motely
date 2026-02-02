@@ -98,7 +98,7 @@ public class SearchQueueHostedService : BackgroundService
             {
                 // Parse JAML filter (assume valid - validated at enqueue time)
                 var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-                var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(
+                var config = JsonSerializer.Deserialize<MotelyJsonConfig>(
                     entry.JamlFilter,
                     options
                 );

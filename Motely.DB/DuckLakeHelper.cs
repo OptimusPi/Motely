@@ -15,7 +15,7 @@ public static class DuckLakeHelper
     public static bool IsDuckLake(string path)
     {
         return !string.IsNullOrWhiteSpace(path)
-            && path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase);
+            && path.EndsWith(".ducklake", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -23,7 +23,7 @@ public static class DuckLakeHelper
     /// </summary>
     public static string GetDuckLakeCatalogPath(string path)
     {
-        if (path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase))
+        if (path.EndsWith(".ducklake", StringComparison.OrdinalIgnoreCase))
             return path;
 
         return path + ".ducklake";
@@ -35,7 +35,7 @@ public static class DuckLakeHelper
     /// </summary>
     public static string GetDuckLakeDataPath(string path)
     {
-        var basePath = path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase)
+        var basePath = path.EndsWith(".ducklake", StringComparison.OrdinalIgnoreCase)
             ? path.Substring(0, path.Length - 9)
             : path;
 

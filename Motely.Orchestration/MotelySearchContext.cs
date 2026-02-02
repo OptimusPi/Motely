@@ -186,7 +186,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
         var tallies = new List<int>();
         foreach (var col in _runConfig.Columns)
         {
-            if (col.Type == Reporting.ColumnType.ScoreTally)
+            if (col.Type == ColumnType.ScoreTally)
             {
                 if (row.TryGetValue(col.Name, out var val) && val != null)
                     tallies.Add(Convert.ToInt32(val));
