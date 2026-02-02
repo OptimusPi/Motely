@@ -17,9 +17,9 @@ internal static class ResultsQueryHelper
     /// <summary>Normalize path to DuckLake catalog path (.db -> .ducklake, else ensure .ducklake).</summary>
     internal static string ToDuckLakeCatalogPath(string path)
     {
-        if (path.EndsWith(".ducklake", System.StringComparison.OrdinalIgnoreCase))
+        if (path.EndsWith(".ducklake", StringComparison.OrdinalIgnoreCase))
             return path;
-        if (path.EndsWith(".db", System.StringComparison.OrdinalIgnoreCase))
+        if (path.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
             return path[..^3] + ".ducklake";
         return path + ".ducklake";
     }

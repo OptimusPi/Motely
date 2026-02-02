@@ -155,32 +155,6 @@ namespace Motely.Executors
                 
                 PrintResultsHeader(config);
 
-                // Setup cancellation handler ONLY when NOT in TUI mode
-                // In TUI mode, the UI handles Ctrl+C via KeyDown event and calls Cancel() directly
-                ConsoleCancelEventHandler? cancelHandler = null;
-                if (_customCallback == null)
-                {
-                    try
-                    {
-                        cancelHandler = (sender, e) =>
-                        {
-                            e.Cancel = true;
-                            _cancelled = true;
-                            if (!_params.Quiet)
-                            {
-                                Console.WriteLine("\n🛑 Stopping search...");
-                            }
-                            search.Cancel();
-                        };
-                        Console.CancelKeyPress += cancelHandler;
-                    }
-                    catch (PlatformNotSupportedException)
-                    {
-                        // Console.CancelKeyPress not available on this platform (e.g., WASM)
-                        cancelHandler = null;
-                    }
-                }
-
                 search.Start(effectiveToken);
 
                 try
@@ -199,12 +173,8 @@ namespace Motely.Executors
                         search.Dispose();
                 }
 
-                // Cleanup cancel handler if registered
-                if (cancelHandler != null)
-                {
-                    try { Console.CancelKeyPress -= cancelHandler; }
-                    catch (PlatformNotSupportedException) { }
-                }
+                // Cleanup cancel handler if registered (CLI only; not used on browser)
+                // Moved to Motely.CLI/Program.cs where it belongs
 
                 Console.Out.Flush();
                 return 0;

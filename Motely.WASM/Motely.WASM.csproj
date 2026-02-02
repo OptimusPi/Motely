@@ -28,7 +28,7 @@
     <PublishAot>false</PublishAot>
     
     <!-- Package metadata -->
-    <Version>1.0.2</Version>
+    <Version>1.0.4</Version>
     <PackageId>Motely.WASM</PackageId>
     <Description>Balatro seed analyzer and searcher - Browser WASM build with JavaScript interop (SIMD + multi-threaded)</Description>
     <Authors>Motely Contributors</Authors>

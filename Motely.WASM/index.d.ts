@@ -15,6 +15,7 @@ export type {
   SearchResponse,
   SearchHit,
   SearchProgress,
+  SearchOptions,
   ValidateResult,
   VersionInfo,
   ErrorResult,

@@ -7,26 +7,33 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const base = path.join(root, 'bin', 'Release', 'net10.0-browser', 'browser-wasm');
 const distDir = path.join(root, 'dist');
 
+// Try multiple possible .NET WASM publish output locations
 const candidates = [
-    path.join(base, 'AppBundle'),
-    path.join(base, 'publish'),
+    // Net 8/9 style: bin/Release/net8.0-browser/browser-wasm/publish
+    path.join(root, 'bin', 'Release', 'net8.0-browser', 'browser-wasm', 'publish'),
+    path.join(root, 'bin', 'Release', 'net8.0-browser', 'browser-wasm', 'AppBundle'),
+    // Net 10 style: bin/Release/net10.0-browser/browser-wasm/publish
+    path.join(root, 'bin', 'Release', 'net10.0-browser', 'browser-wasm', 'publish'),
+    path.join(root, 'bin', 'Release', 'net10.0-browser', 'browser-wasm', 'AppBundle'),
+    // Alternative: bin/Release/net10.0-browser/publish
+    path.join(root, 'bin', 'Release', 'net10.0-browser', 'publish'),
 ];
 
 let srcDir = null;
 for (const dir of candidates) {
     if (fs.existsSync(dir) && fs.existsSync(path.join(dir, '_framework'))) {
         srcDir = dir;
+        console.log('Found WASM output at: ' + dir);
         break;
     }
 }
 
 if (!srcDir) {
     console.error('ERROR: No WASM publish output found.');
-    console.error('  Looked in: ' + base);
-    console.error('  Tried: AppBundle, publish (each with _framework)');
+    console.error('  Tried:');
+    candidates.forEach(dir => console.error('    - ' + dir));
     console.error('  Run from Motely.WASM: dotnet publish -c Release');
     process.exit(1);
 }
