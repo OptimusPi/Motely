@@ -38,6 +38,9 @@ namespace Motely.Executors
             DateTime lastProgressUpdate = DateTime.UtcNow;
             object progressLock = new object();
             
+            // Check if CSV output will be enabled (when scoring is applied)
+            bool willHaveCsvOutput = !string.IsNullOrEmpty(_scoreConfig);
+            
             Action<MotelyProgress>? progressCallback = (progress) =>
             {
                 lock (progressLock)
@@ -64,7 +67,17 @@ namespace Motely.Executors
                     var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
                     double seedsPerSec = progress.SeedsPerMillisecond * 1000.0;
                     string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerSec)} seeds/sec";
-                    _terminal.Write($"\r{progressLine}                    \r{progressLine}");
+                    
+                    // In CSV mode, write progress to stderr to avoid overwriting seed output
+                    // Otherwise, use carriage return to overwrite the same line
+                    if (willHaveCsvOutput)
+                    {
+                        Console.Error.WriteLine($"# Progress: {progressLine}");
+                    }
+                    else
+                    {
+                        _terminal.Write($"\r{progressLine}                    \r{progressLine}");
+                    }
                 }
             };
 

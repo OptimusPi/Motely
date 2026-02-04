@@ -11,7 +11,10 @@ Must:
     antes: [2]
 
   - soulJoker: Perkeo
-    antes: [1, 2, 3]
+    edition: Negative
+    antes: [1]
+    sources:
+      packSlots: [1]
 
 Should:
   - jokers: [Blueprint, Brainstorm]

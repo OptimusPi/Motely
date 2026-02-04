@@ -4,26 +4,66 @@ description: Luchado, boss blind with double tag combo, and voucher support for 
 deck: Plasma
 Stake: White
 must:
-  - joker: The Luchador
-    antes: [1]
-  - tags: [Investment, Negative, Voucher, Economy]  # Double tags
-    antes: [2, 3, 4, 5, 6, 7, 8]
-  - voucher: Overstock
-    antes: [3, 4, 5, 6, 7, 8]
-  - voucher: Reroll Surplus
-    antes: [4, 5, 6, 7, 8]
-  - tag: Small Blind
-    antes: [2]
-    sources:
-      shopSlots: [0, 1]
-      edition: Negative  # Free + Negative from Small Blind tag
 
+  - smallBlindTag: DoubleTag
+    antes: [1,2]
+  - smallBlindTag: DoubleTag
+    antes: [3]
+  - joker: Luchador
+    antes: [1,2,3]
+    sources:
+      packSlots: [0,1]
+      shopSlots: [0,1]
+  - smallBlindTag: DoubleTag
+    antes: [3,4,5]
+  - bigBlindTag: CouponTag
+    antes: [3,4,5]
+  - tag: VoucherTag
+    antes: [5,6]
+  - tag: VoucherTag
+    antes: [7,8]
 should:
-  - boss: The Hook
-    score: 3  # One-shot ability
-  - boss: The Ox
-    score: 3
-  - boss: The Wheel
-    score: 3
-  - tag: Orbital
-    score: -5  # Avoid Orbital tags
+  - And:
+    score: 100
+    clauses:
+      - smallBlindTag: DoubleTag
+        antes: [3]
+      - bigBlindTag: BuffoonTag
+        antes: [3]
+      - joker: Luchador
+        antes: [3]
+        sources:
+          packSlots: [0,1]
+  - And:
+    score: 100
+    clauses:
+      - smallBlindTag: DoubleTag
+        antes: [4]
+      - bigBlindTag: BuffoonTag
+        antes: [4]
+      - joker: Luchador
+        antes: [4]
+        sources:
+          packSlots: [0,1]
+  - And:
+    score: 100
+    clauses:
+      - smallBlindTag: DoubleTag
+        antes: [5]
+      - bigBlindTag: BuffoonTag
+        antes: [5]
+      - joker: Luchador
+        antes: [5]
+        sources:
+          packSlots: [0,1]
+  - And:
+    score: 100
+    clauses:
+      - smallBlindTag: DoubleTag
+        antes: [6]
+      - bigBlindTag: BuffoonTag
+        antes: [6]
+      - joker: Luchador
+        antes: [6]
+        sources:
+          packSlots: [0,1]
