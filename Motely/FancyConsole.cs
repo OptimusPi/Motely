@@ -96,8 +96,8 @@ public static class FancyConsole
     /// </summary>
     public static readonly object ConsoleLock = new();
 
-    // Use base implementation - cursor positioning is too unreliable across terminals
-    private static readonly FancyConsoleImpl _impl = FancyConsoleImpl.Instance;
+    // Use Desktop implementation for CLI/Desktop apps
+    private static readonly FancyConsoleDesktop _impl = FancyConsoleDesktop.Instance;
 
     public static bool IsEnabled
     {

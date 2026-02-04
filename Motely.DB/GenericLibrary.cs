@@ -46,9 +46,7 @@ public sealed class GenericLibrary : IDisposable
             lock (_initLock)
             {
                 if (string.IsNullOrWhiteSpace(_libraryRoot))
-                    throw new InvalidOperationException(
-                        "GenericLibrary.SetLibraryRoot must be called before accessing Instance"
-                    );
+                    throw new InvalidOperationException("GenericLibrary.SetLibraryRoot must be called before accessing Instance");
 
                 if (_instance == null || _instance._disposed)
                 {
@@ -78,11 +76,7 @@ public sealed class GenericLibrary : IDisposable
     {
         // For existing catalog, data path is loaded from catalog
         var dataPath = File.Exists(_catalogPath) ? null : _dataPath;
-        return DuckDBConnectionFactory.CreateConnectionWithDuckLake(
-            _catalogPath,
-            dataPath,
-            CatalogSchemaName
-        );
+        return DuckDBConnectionFactory.CreateConnectionWithDuckLake(_catalogPath, dataPath, CatalogSchemaName);
     }
 
     #region Table Operations
@@ -90,10 +84,7 @@ public sealed class GenericLibrary : IDisposable
     /// <summary>
     /// Create a new table for a dataset.
     /// </summary>
-    public void CreateTable(
-        string tableName,
-        IEnumerable<(string Name, string Type)>? extraColumns = null
-    )
+    public void CreateTable(string tableName, IEnumerable<(string Name, string Type)>? extraColumns = null)
     {
         if (string.IsNullOrWhiteSpace(tableName))
             throw new ArgumentException("tableName is required", nameof(tableName));
@@ -112,8 +103,7 @@ public sealed class GenericLibrary : IDisposable
             }
         }
 
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             CREATE TABLE IF NOT EXISTS {CatalogSchemaName}.main.""{sanitizedName}"" (
                 {string.Join(", ", columnDefs)}
             )";
@@ -131,8 +121,7 @@ public sealed class GenericLibrary : IDisposable
         {
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText =
-                $@"
+            cmd.CommandText = $@"
                 SELECT table_name FROM information_schema.tables 
                 WHERE table_catalog = '{CatalogSchemaName}' 
                 AND table_schema = 'main'
@@ -166,8 +155,7 @@ public sealed class GenericLibrary : IDisposable
         {
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText =
-                $@"
+            cmd.CommandText = $@"
                 SELECT COUNT(*) FROM information_schema.tables 
                 WHERE table_catalog = '{CatalogSchemaName}' 
                 AND table_schema = 'main' 
@@ -253,11 +241,7 @@ public sealed class GenericLibrary : IDisposable
         private DuckDBDataReader? _reader;
         private bool _disposed;
 
-        internal GenericLibrarySeedReader(
-            DuckDBConnection conn,
-            string schemaName,
-            string tableName
-        )
+        internal GenericLibrarySeedReader(DuckDBConnection conn, string schemaName, string tableName)
         {
             _conn = conn;
             _cmd = conn.CreateCommand();
@@ -280,8 +264,7 @@ public sealed class GenericLibrary : IDisposable
         /// <inheritdoc />
         public void Dispose()
         {
-            if (_disposed)
-                return;
+            if (_disposed) return;
             _disposed = true;
             _reader?.Dispose();
             _cmd?.Dispose();
@@ -305,8 +288,7 @@ public sealed class GenericLibrary : IDisposable
 
         using var conn = GetConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             SELECT seed, score FROM {CatalogSchemaName}.main.""{sanitizedName}""
             ORDER BY score DESC
             LIMIT {limit}";
@@ -324,12 +306,7 @@ public sealed class GenericLibrary : IDisposable
     /// <summary>
     /// Insert a seed result using MERGE INTO (upsert by seed).
     /// </summary>
-    public void InsertSeed(
-        string tableName,
-        string seed,
-        int score,
-        Dictionary<string, object>? extraValues = null
-    )
+    public void InsertSeed(string tableName, string seed, int score, Dictionary<string, object>? extraValues = null)
     {
         if (string.IsNullOrWhiteSpace(tableName))
             return;
@@ -355,8 +332,7 @@ public sealed class GenericLibrary : IDisposable
             }
         }
 
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             MERGE INTO {CatalogSchemaName}.main.""{sanitizedName}"" AS t
             USING (SELECT {string.Join(", ", vals.Select((v, i) => $"{v} as {cols[i]}"))}) AS s
             ON t.seed = s.seed
@@ -380,8 +356,7 @@ public sealed class GenericLibrary : IDisposable
         // Create table if it doesn't exist
         using (var createCmd = conn.CreateCommand())
         {
-            createCmd.CommandText =
-                $@"
+            createCmd.CommandText = $@"
                 CREATE TABLE IF NOT EXISTS {CatalogSchemaName}.main.""{sanitizedName}"" (
                     seed VARCHAR, score INTEGER
                 )";
@@ -392,8 +367,7 @@ public sealed class GenericLibrary : IDisposable
         foreach (var (seed, score) in seeds)
         {
             using var cmd = conn.CreateCommand();
-            cmd.CommandText =
-                $@"
+            cmd.CommandText = $@"
                 MERGE INTO {CatalogSchemaName}.main.""{sanitizedName}"" AS t
                 USING (SELECT '{EscapeSql(seed)}' as seed, {score} as score) AS s
                 ON t.seed = s.seed
@@ -442,15 +416,13 @@ public sealed class GenericLibrary : IDisposable
 
         // Create table from CSV schema
         var escapedPath = filePath.Replace("'", "''").Replace('\\', '/');
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             CREATE TABLE IF NOT EXISTS {CatalogSchemaName}.main.""{tableName}"" AS 
             SELECT * FROM read_csv('{escapedPath}', header=true) LIMIT 0";
         cmd.ExecuteNonQuery();
 
         // Insert data
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             INSERT INTO {CatalogSchemaName}.main.""{tableName}"" 
             SELECT * FROM read_csv('{escapedPath}', header=true)";
         cmd.ExecuteNonQuery();
@@ -466,8 +438,7 @@ public sealed class GenericLibrary : IDisposable
         using var cmd = conn.CreateCommand();
 
         // Create simple seed table
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             CREATE TABLE IF NOT EXISTS {CatalogSchemaName}.main.""{tableName}"" (
                 seed VARCHAR, score INTEGER DEFAULT 0
             )";
@@ -476,8 +447,7 @@ public sealed class GenericLibrary : IDisposable
         // Insert seeds
         foreach (var seed in seeds)
         {
-            cmd.CommandText =
-                $@"
+            cmd.CommandText = $@"
                 INSERT INTO {CatalogSchemaName}.main.""{tableName}"" (seed, score) 
                 VALUES ('{EscapeSql(seed)}', 0)";
             cmd.ExecuteNonQuery();
@@ -490,15 +460,13 @@ public sealed class GenericLibrary : IDisposable
         var escapedPath = filePath.Replace("'", "''").Replace('\\', '/');
 
         // Create table from Parquet schema
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             CREATE TABLE IF NOT EXISTS {CatalogSchemaName}.main.""{tableName}"" AS 
             SELECT * FROM read_parquet('{escapedPath}') LIMIT 0";
         cmd.ExecuteNonQuery();
 
         // Insert data
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             INSERT INTO {CatalogSchemaName}.main.""{tableName}"" 
             SELECT * FROM read_parquet('{escapedPath}')";
         cmd.ExecuteNonQuery();
@@ -517,8 +485,7 @@ public sealed class GenericLibrary : IDisposable
 
         using var conn = GetConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText =
-            $@"
+        cmd.CommandText = $@"
             COPY {CatalogSchemaName}.main.""{sanitizedName}"" 
             TO '{escapedPath}' (FORMAT PARQUET)";
         cmd.ExecuteNonQuery();
@@ -528,18 +495,9 @@ public sealed class GenericLibrary : IDisposable
 
     #region Helpers
 
-    /// <summary>
-    /// Escapes a string value for safe SQL interpolation.
-    /// Note: Parameterized queries (DuckDBParameter) are preferred for values where possible,
-    /// but MERGE statements with dynamic columns require string building.
-    /// </summary>
     private static string EscapeSql(string value)
     {
-        if (value == null)
-            return "";
-        // Escape single quotes (SQL string delimiter)
-        // Backslashes don't need escaping in DuckDB standard SQL mode
-        return value.Replace("'", "''");
+        return value?.Replace("'", "''") ?? "";
     }
 
     private static string SanitizeTableName(string name)
