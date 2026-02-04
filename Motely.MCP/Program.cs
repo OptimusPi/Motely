@@ -38,7 +38,7 @@ public class Program
             options.FormatterName = "Simple";
         });
 
-        builder.Services.AddSingleton(global::Motely.API.SearchManager.Instance);
+        builder.Services.AddSingleton(global::Motely.Executors.MultiSearchManager.Instance);
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<McpServer>();
         builder.Services.AddScoped<McpProtocol.McpProtocolServer>();

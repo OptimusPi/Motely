@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Motely;
+using Motely.Analysis;
 using Motely.API;
 using Motely.Executors;
 using Motely.Filters;
@@ -28,12 +29,12 @@ public class McpProtocolServer
 
     private readonly ILogger<McpProtocolServer> _logger;
     private readonly McpServer _mcpServer;
-    private readonly SearchManager _searchManager;
+    private readonly MultiSearchManager _searchManager;
 
     public McpProtocolServer(
         ILogger<McpProtocolServer> logger,
         McpServer mcpServer,
-        SearchManager searchManager
+        MultiSearchManager searchManager
     )
     {
         _logger = logger;
@@ -460,13 +461,12 @@ public class McpProtocolServer
         var columns = _searchManager.GetColumnNames(searchId);
         var searchUrl = $"/JAML/?search={Uri.EscapeDataString(searchId)}";
 
-        _searchManager.TryGetSearchMetrics(
-            searchId,
-            out var currentBatch,
-            out var totalBatches,
-            out var seedsSearched,
-            out var seedsPerSecond
-        );
+        // Get metrics from search status
+        var status = _searchManager.GetStatus(searchId);
+        var currentBatch = status?.SeedsSearched ?? 0;
+        var totalBatches = 0L; // Not available from MultiSearchManager
+        var seedsSearched = status?.SeedsSearched ?? 0;
+        var seedsPerSecond = status?.SeedsPerSecond ?? 0.0;
 
         var resultList =
             results
@@ -695,7 +695,7 @@ public class McpProtocolServer
         try
         {
             var filtersDir = Path.Combine(
-                _searchManager.GetSearchResultsDir(),
+                MotelyPaths.SearchResultsDir,
                 "..",
                 "JamlFilters"
             );
@@ -808,7 +808,7 @@ Tarot cards provide one-time effects when used.";
                 var filterName = readParams.Uri.Replace("jaml://filter/", "");
 
                 // Try multiple paths
-                var motelyRoot = _searchManager.GetSearchResultsDir();
+                var motelyRoot = MotelyPaths.SearchResultsDir;
                 var possiblePaths = new[]
                 {
                     Path.Combine(motelyRoot, "..", "JamlFilters", $"{filterName}.jaml"),

@@ -271,6 +271,27 @@ public static class JamlConfigLoader
                         }
                     }
 
+                    // Special handling for "tags" and "events" - only treat as type-as-key if value is an array
+                    // This avoids conflicts with the boolean Tags property in SourcesConfig
+                    if (!matched && (keyPart == "tags" || keyPart == "events"))
+                    {
+                        var valueContent = trimmed.Substring(colonIndex + 1).Trim();
+                        // Remove inline comments before checking if it's an array
+                        var commentIndex = valueContent.IndexOf('#');
+                        if (commentIndex >= 0)
+                            valueContent = valueContent.Substring(0, commentIndex).Trim();
+                        
+                        if (valueContent.StartsWith('['))
+                        {
+                            var indent = line.Substring(0, line.IndexOf('-'));
+                            var normalizedType = keyPart == "tags" ? "Tag" : "Event";
+                            var originalValue = trimmed.Substring(colonIndex + 1).Trim();
+                            result.AppendLine($"{indent}- type: {normalizedType}");
+                            result.AppendLine($"{indent}  values: {originalValue}");
+                            matched = true;
+                        }
+                    }
+
                     // Then check for singular type-as-key patterns
                     if (!matched)
                     {
@@ -347,6 +368,27 @@ public static class JamlConfigLoader
                             result.AppendLine($"{indent}values: {arrayContent}");
                             matched = true;
                             break;
+                        }
+                    }
+
+                    // Special handling for "tags" and "events" - only treat as type-as-key if value is an array
+                    // This avoids conflicts with the boolean Tags property in SourcesConfig
+                    if (!matched && (string.Equals(keyPart, "tags", StringComparison.OrdinalIgnoreCase) || string.Equals(keyPart, "events", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var valueContent = trimmed.Substring(colonIndex + 1).Trim();
+                        // Remove inline comments before checking if it's an array
+                        var commentIndex = valueContent.IndexOf('#');
+                        if (commentIndex >= 0)
+                            valueContent = valueContent.Substring(0, commentIndex).Trim();
+                        
+                        if (valueContent.StartsWith('['))
+                        {
+                            var indent = line.Substring(0, line.Length - trimmed.Length);
+                            var normalizedType = string.Equals(keyPart, "tags", StringComparison.OrdinalIgnoreCase) ? "Tag" : "Event";
+                            var originalValue = trimmed.Substring(colonIndex + 1).Trim();
+                            result.AppendLine($"{indent}type: {normalizedType}");
+                            result.AppendLine($"{indent}values: {originalValue}");
+                            matched = true;
                         }
                     }
 
