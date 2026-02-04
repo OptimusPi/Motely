@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
@@ -31,8 +32,10 @@ public struct MotelyJsonBossFilterDesc(MotelyJsonBossFilterCriteria criteria)
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Count == 0)
-                return VectorMask.AllBitsSet;
+            Debug.Assert(
+                _clauses != null && _clauses.Count > 0,
+                "Boss filter created with empty clauses - this is a programming error!"
+            );
 
             // Copy struct members to locals to avoid CS1673
             var clauses = _clauses;

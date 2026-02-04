@@ -113,7 +113,7 @@ public sealed class MotelyAnalyzerFilterDesc()
                     packs[i] = new(pack, packContent.AsArray());
                 }
 
-                    // NOTE: Per-round hand draw not yet implemented - requires shuffle PRNG per round
+                // NOTE: Per-round hand draw not yet implemented - requires shuffle PRNG per round
                 // For now, omitting DrawOrder as the previous implementation was incorrect
                 // (it showed standard pack cards, not the actual hand draw)
 
@@ -123,7 +123,8 @@ public sealed class MotelyAnalyzerFilterDesc()
             // For Erratic deck, include the full deck composition with breakdown
             // For other decks, the starting deck is always the same 52 standard cards
             string? deckComposition = ctx.Deck == MotelyDeck.Erratic ? startingDeck : null;
-            string? deckBreakdown = ctx.Deck == MotelyDeck.Erratic ? GetErraticDeckBreakdown(deckCards) : null;
+            string? deckBreakdown =
+                ctx.Deck == MotelyDeck.Erratic ? GetErraticDeckBreakdown(deckCards) : null;
 
             FilterDesc.LastAnalysis = new(null, antes, ctx.Deck, deckComposition, deckBreakdown);
 
@@ -241,7 +242,10 @@ public sealed class MotelyAnalyzerFilterDesc()
             var rankCounts = new Dictionary<string, int>();
             var suitCounts = new Dictionary<char, int>
             {
-                ['C'] = 0, ['D'] = 0, ['H'] = 0, ['S'] = 0
+                ['C'] = 0,
+                ['D'] = 0,
+                ['H'] = 0,
+                ['S'] = 0,
             };
 
             foreach (var card in deckCards)
@@ -271,14 +275,17 @@ public sealed class MotelyAnalyzerFilterDesc()
             {
                 int count = rankCounts.GetValueOrDefault(rank, 0);
                 string marker = count == maxRankCount && count > 0 ? "*" : "";
-                sb.AppendLine($"  {rank,2}: {count}{marker}");
+                sb.AppendLine($"  {rank, 2}: {count}{marker}");
             }
 
             // Suits breakdown with ASCII symbols
             sb.AppendLine("Suits:");
             var suitSymbols = new Dictionary<char, string>
             {
-                ['C'] = "♣", ['D'] = "♦", ['H'] = "♥", ['S'] = "♠"
+                ['C'] = "♣",
+                ['D'] = "♦",
+                ['H'] = "♥",
+                ['S'] = "♠",
             };
             foreach (var (suit, symbol) in suitSymbols)
             {

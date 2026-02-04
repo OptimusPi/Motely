@@ -74,8 +74,7 @@ public sealed class ResultsSetReader
         ResultsQueryHelper.GetTopSeedsFromPath(_path, limit);
 
     /// <summary>Column names (seed, score, ...).</summary>
-    public List<string> GetColumnNames() =>
-        ResultsQueryHelper.GetColumnNamesFromPath(_path);
+    public List<string> GetColumnNames() => ResultsQueryHelper.GetColumnNamesFromPath(_path);
 
     /// <summary>Resume cursor (last_batch, last_batch_size, last_seed).</summary>
     public (long startBatch, int batchSize, string? lastSeed) GetResumeCursor() =>

@@ -17,6 +17,7 @@ namespace Motely.Executors
         private readonly ICancelKeyHandler _cancelKeyHandler;
         private bool _cancelled = false;
         private IEnumerable<string>? _searchSeeds = null;
+
         /// <summary>Optional result storage. Set by caller when saving results.</summary>
         /// <summary>Optional result sink. Set by caller.</summary>
         public IResultStorage? ResultSink { get; set; }
@@ -40,14 +41,15 @@ namespace Motely.Executors
         {
             DateTime lastProgressUpdate = DateTime.UtcNow;
             object progressLock = new object();
-            
+
             Action<MotelyProgress>? progressCallback = (progress) =>
             {
                 lock (progressLock)
                 {
                     var now = DateTime.UtcNow;
                     var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
-                    if (timeSinceLastUpdate < 2000) return;
+                    if (timeSinceLastUpdate < 2000)
+                        return;
                     lastProgressUpdate = now;
 
                     string timeLeftFormatted = "calculating...";
@@ -56,9 +58,10 @@ namespace Motely.Executors
                         if (progress.EstimatedTimeRemaining.HasValue)
                         {
                             var timeLeftSpan = progress.EstimatedTimeRemaining.Value;
-                            timeLeftFormatted = timeLeftSpan.Days == 0 
-                                ? $"{timeLeftSpan:hh\\:mm\\:ss}" 
-                                : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                            timeLeftFormatted =
+                                timeLeftSpan.Days == 0
+                                    ? $"{timeLeftSpan:hh\\:mm\\:ss}"
+                                    : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
                         }
                     }
                     double pct = progress.PercentComplete;
@@ -66,19 +69,26 @@ namespace Motely.Executors
                     string[] spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
                     var spinner = spinnerFrames[(int)(elapsedMS / 250) % spinnerFrames.Length];
                     double seedsPerSec = progress.SeedsPerMillisecond * 1000.0;
-                    string progressLine = $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerSec)} seeds/sec";
+                    string progressLine =
+                        $"{spinner} {pct:F2}% | {timeLeftFormatted} remaining | {Math.Round(seedsPerSec)} seeds/sec";
                     _terminal.Write($"\r{progressLine}                    \r{progressLine}");
                 }
             };
 
             // Return search without starting - caller will call Start(cancellationToken)
-            return CreateFilterSearch(_filterName.ToLower().Trim(), _params.Quiet ? null : progressCallback);
+            return CreateFilterSearch(
+                _filterName.ToLower().Trim(),
+                _params.Quiet ? null : progressCallback
+            );
         }
 
         public int Execute(CancellationToken cancellationToken = default)
         {
-            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
-            
+            var effectiveToken =
+                cancellationToken != default
+                    ? cancellationToken
+                    : _params.CancellationToken ?? default;
+
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             // Ensure tally colors respect --nofancy
@@ -94,7 +104,7 @@ namespace Motely.Executors
 
             DateTime lastProgressUpdate = DateTime.UtcNow;
             object progressLock = new object();
-            
+
             progressCallback = (progress) =>
             {
                 lock (progressLock)
@@ -114,9 +124,10 @@ namespace Motely.Executors
                         if (progress.EstimatedTimeRemaining.HasValue)
                         {
                             var timeLeftSpan = progress.EstimatedTimeRemaining.Value;
-                            timeLeftFormatted = timeLeftSpan.Days == 0 
-                                ? $"{timeLeftSpan:hh\\:mm\\:ss}" 
-                                : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                            timeLeftFormatted =
+                                timeLeftSpan.Days == 0
+                                    ? $"{timeLeftSpan:hh\\:mm\\:ss}"
+                                    : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
                         }
                     }
                     double pct = progress.PercentComplete;
@@ -206,8 +217,11 @@ namespace Motely.Executors
         /// </summary>
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
         {
-            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
-            
+            var effectiveToken =
+                cancellationToken != default
+                    ? cancellationToken
+                    : _params.CancellationToken ?? default;
+
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             // Ensure tally colors respect --nofancy
@@ -222,7 +236,7 @@ namespace Motely.Executors
 
             DateTime lastProgressUpdate = DateTime.UtcNow;
             object progressLock = new object();
-            
+
             progressCallback = (progress) =>
             {
                 lock (progressLock)
@@ -242,9 +256,10 @@ namespace Motely.Executors
                         if (progress.EstimatedTimeRemaining.HasValue)
                         {
                             var timeLeftSpan = progress.EstimatedTimeRemaining.Value;
-                            timeLeftFormatted = timeLeftSpan.Days == 0 
-                                ? $"{timeLeftSpan:hh\\:mm\\:ss}" 
-                                : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
+                            timeLeftFormatted =
+                                timeLeftSpan.Days == 0
+                                    ? $"{timeLeftSpan:hh\\:mm\\:ss}"
+                                    : $"{timeLeftSpan:d\\:hh\\:mm\\:ss}";
                         }
                     }
                     double pct = progress.PercentComplete;
@@ -444,7 +459,12 @@ namespace Motely.Executors
 
                 if (ResultSink != null)
                 {
-                    ResultSink.InsertRow(score.Seed, score.Score, score.TallyColumns, score.ColumnValues);
+                    ResultSink.InsertRow(
+                        score.Seed,
+                        score.Score,
+                        score.TallyColumns,
+                        score.ColumnValues
+                    );
                 }
             };
 
@@ -607,9 +627,10 @@ namespace Motely.Executors
 
             if (duration.TotalMilliseconds >= 1)
             {
-                var speed = duration.TotalMilliseconds > 0 
-                    ? (double)totalSeedsSearched / duration.TotalMilliseconds 
-                    : 0;
+                var speed =
+                    duration.TotalMilliseconds > 0
+                        ? (double)totalSeedsSearched / duration.TotalMilliseconds
+                        : 0;
                 _terminal.WriteLine($"   Duration: {duration:hh\\:mm\\:ss\\.fff}");
                 _terminal.WriteLine($"   Speed: {speed:F2} seeds/millisecond");
             }

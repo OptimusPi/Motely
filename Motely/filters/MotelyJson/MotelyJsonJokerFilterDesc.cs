@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -53,6 +54,11 @@ public partial struct MotelyJsonJokerFilterDesc(MotelyJsonJokerFilterCriteria cr
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
+            Debug.Assert(
+                Clauses != null && Clauses.Count > 0,
+                "Joker filter created with empty clauses - this is a programming error!"
+            );
+
             int _minAnte = MinAnte;
             int _maxAnte = MaxAnte;
 

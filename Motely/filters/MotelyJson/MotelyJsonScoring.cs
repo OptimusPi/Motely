@@ -1306,34 +1306,36 @@ public static class MotelyJsonScoring
         ref MotelyRunState voucherState
     )
     {
-        // Make a COPY of the voucherState to avoid corrupting the shared state!
-        // Each clause should evaluate independently without affecting other clauses
-        var localVoucherState = voucherState; // Struct copy - preserves original state
+        // BUG FIX: Start with a FRESH state, NOT the passed-in voucherState!
+        // The passed-in voucherState has vouchers pre-activated by ActivateAllVouchers,
+        // which causes GetAnteFirstVoucher to RESAMPLE and return different vouchers
+        // than what the filter found. We need to regenerate vouchers the same way
+        // the filter does - starting fresh and building state progressively.
+        var localVoucherState = new MotelyRunState(); // Fresh state!
         int count = 0;
 
         // ALWAYS walk from ante 1 to build voucher state correctly (vouchers persist across antes!)
         // SCORE only in user-specified antes, but BUILD STATE from ante 1
         int minAnte = 1; // ALWAYS start at ante 1 to build voucher state correctly
-        int maxAnte =
-            clause.EffectiveAntes.Length > 0
-                ? clause.EffectiveAntes[clause.EffectiveAntes.Length - 1]
-                : 1;
 
-        // Use pre-computed EffectiveAntes array - no LINQ, no allocations!
+        // Use WantedAntes bool array - handles cases where EffectiveAntes wasn't populated
+        int maxAnte = 8; // Default to checking all standard antes
+        for (int i = clause.WantedAntes.Length - 1; i >= 0; i--)
+        {
+            if (clause.WantedAntes[i])
+            {
+                maxAnte = i;
+                break;
+            }
+        }
+
+        // Use WantedAntes bool array for O(1) lookup
         for (int ante = minAnte; ante <= maxAnte; ante++)
         {
             var voucherAtAnte = ctx.GetAnteFirstVoucher(ante, localVoucherState);
 
-            // Check if THIS CLAUSE cares about this ante
-            bool anteWanted = false;
-            foreach (var wantedAnte in clause.EffectiveAntes)
-            {
-                if (wantedAnte == ante)
-                {
-                    anteWanted = true;
-                    break;
-                }
-            }
+            // Check if THIS CLAUSE cares about this ante using WantedAntes bool array
+            bool anteWanted = ante < clause.WantedAntes.Length && clause.WantedAntes[ante];
 
             if (anteWanted)
             {
@@ -1590,6 +1592,9 @@ public static class MotelyJsonScoring
                     {
                         MotelyJsonSoulJokerFilterClause.FromJsonClause(clause),
                     },
+                    minAnte: ante,
+                    maxAnte: ante,
+                    maxPackSlotsPerAnte: new Dictionary<int, int> { { ante, 6 } },
                     ref ctx,
                     earlyExit: true
                 )
@@ -2562,6 +2567,9 @@ public static class MotelyJsonScoring
         // Use the existing robust soul joker checking logic
         return CheckSoulJokerForSeed(
             new List<MotelyJsonSoulJokerFilterClause> { singleAnteClause },
+            minAnte: targetAnte,
+            maxAnte: targetAnte,
+            maxPackSlotsPerAnte: new Dictionary<int, int> { { targetAnte, 6 } },
             ref ctx,
             earlyExit: true
         );
@@ -2570,44 +2578,23 @@ public static class MotelyJsonScoring
     /// <summary>
     /// SHARED FUNCTION - used by both filter (with earlyExit=true) and scoring (with earlyExit=false)
     /// FIXED: Uses the CORRECT order like PerkeoObservatory - check Soul Joker result FIRST, then verify Soul card exists
+    /// Parameters (minAnte, maxAnte, maxPackSlotsPerAnte) are precomputed at config parse time - NO RECALCULATION IN HOTPATH
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static bool CheckSoulJokerForSeed(
         List<MotelyJsonSoulJokerFilterClause> clauses,
+        int minAnte,
+        int maxAnte,
+        Dictionary<int, int> maxPackSlotsPerAnte,
         ref MotelySingleSearchContext searchContext,
         bool earlyExit = true
     )
     {
-        if (clauses == null || clauses.Count == 0)
-            return true; // No clauses to check means success
-
         try
         {
             int matchedClauses = 0;
             bool[] clauseSatisfied = new bool[clauses.Count];
             int[] clauseCounts = new int[clauses.Count]; // Track count per clause for Min parameter
-
-            // Calculate ante range from clauses (don't hard-code!)
-            int minAnte = int.MaxValue,
-                maxAnte = -1;
-            foreach (var clause in clauses)
-            {
-                if (clause?.WantedAntes != null)
-                {
-                    for (int i = 0; i < clause.WantedAntes.Length; i++)
-                    {
-                        if (clause.WantedAntes[i])
-                        {
-                            minAnte = Math.Min(minAnte, i);
-                            maxAnte = Math.Max(maxAnte, i);
-                        }
-                    }
-                }
-            }
-
-            // If no antes wanted, no requirements to check
-            if (minAnte > maxAnte)
-                return true;
 
             // Soul joker has TWO components with different ante-dependency behavior:
             // 1. Face/Type (Perkeo, Canio, etc.) - NOT ante-dependent (same PRNG sequence for entire seed)
@@ -2621,23 +2608,6 @@ public static class MotelyJsonScoring
             // Loop ANTES first - create streams ONCE per ante, check ALL clauses
             for (int ante = minAnte; ante <= maxAnte; ante++)
             {
-                // Skip antes that no clause cares about
-                bool anteNeeded = false;
-                foreach (var clause in clauses)
-                {
-                    if (
-                        clause?.WantedAntes != null
-                        && ante < clause?.WantedAntes?.Length
-                        && clause.WantedAntes[ante]
-                    )
-                    {
-                        anteNeeded = true;
-                        break;
-                    }
-                }
-                if (!anteNeeded)
-                    continue;
-
                 // Create per-ante edition stream for edition checks (ante-dependent)
                 var soulEditionStream = searchContext.CreateSoulJokerStream(ante);
 
@@ -2651,15 +2621,8 @@ public static class MotelyJsonScoring
                 var tarotStream = searchContext.CreateArcanaPackTarotStream(ante, false);
                 var spectralStream = searchContext.CreateSpectralPackSpectralStream(ante, false);
 
-                // Calculate max pack slot - use the highest MaxPackSlot from all clauses, or default
-                int maxPackSlot = ante == 1 ? 4 : 6;
-                foreach (var clause in clauses)
-                {
-                    if (clause?.MaxPackSlot.HasValue == true)
-                    {
-                        maxPackSlot = Math.Max(maxPackSlot, clause.MaxPackSlot.Value + 1);
-                    }
-                }
+                // Get precomputed max pack slots for this ante - NO RECALCULATION!
+                int maxPackSlot = maxPackSlotsPerAnte[ante];
                 bool tarotStreamInit = false,
                     spectralStreamInit = false;
 

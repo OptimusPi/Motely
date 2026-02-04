@@ -14,14 +14,24 @@ public static class McpEndpoints
     /// </summary>
     public static IEndpointRouteBuilder MapMcpEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/mcp/generate", async (McpPromptRequest request, McpServer mcpServer) =>
-            await GenerateJaml(request, mcpServer));
-        endpoints.MapPost("/mcp/prompt", async (McpPromptRequest request, McpServer mcpServer) =>
-            await ProcessPrompt(request, mcpServer));
-        endpoints.MapPost("/mcp/protocol", async (HttpRequest request, McpProtocolServer mcpProtocolServer) =>
-            await HandleMcpProtocol(request, mcpProtocolServer));
+        endpoints.MapPost(
+            "/mcp/generate",
+            async (McpPromptRequest request, McpServer mcpServer) =>
+                await GenerateJaml(request, mcpServer)
+        );
+        endpoints.MapPost(
+            "/mcp/prompt",
+            async (McpPromptRequest request, McpServer mcpServer) =>
+                await ProcessPrompt(request, mcpServer)
+        );
+        endpoints.MapPost(
+            "/mcp/protocol",
+            async (HttpRequest request, McpProtocolServer mcpProtocolServer) =>
+                await HandleMcpProtocol(request, mcpProtocolServer)
+        );
         return endpoints;
     }
+
     public static async Task<IResult> ProcessPrompt(McpPromptRequest request, McpServer mcpServer)
     {
         try

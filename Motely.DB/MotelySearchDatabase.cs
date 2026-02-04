@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using DuckDB.NET.Data;
 using Motely.Filters;
@@ -45,15 +45,23 @@ public sealed class MotelySearchDatabase : IDisposable
                 Directory.CreateDirectory(catalogDir);
 
             // New DuckLake: pass DATA_PATH so ATTACH creates catalog; existing: pass null
-            var dataPath = File.Exists(catalogPath) ? null : DuckLakeHelper.GetDuckLakeDataPath(dbPath);
+            var dataPath = File.Exists(catalogPath)
+                ? null
+                : DuckLakeHelper.GetDuckLakeDataPath(dbPath);
             if (dataPath != null)
             {
-                var dataDir = Path.GetDirectoryName(dataPath.TrimEnd(Path.DirectorySeparatorChar, '/'));
+                var dataDir = Path.GetDirectoryName(
+                    dataPath.TrimEnd(Path.DirectorySeparatorChar, '/')
+                );
                 if (!string.IsNullOrEmpty(dataDir) && !Directory.Exists(dataDir))
                     Directory.CreateDirectory(dataDir);
             }
 
-            _connection = DuckDBConnectionFactory.CreateConnectionWithDuckLake(catalogPath, dataPath, DuckLakeSchemaName);
+            _connection = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+                catalogPath,
+                dataPath,
+                DuckLakeSchemaName
+            );
             _resultsTableRef = $"{DuckLakeSchemaName}.main.results";
             CreateResultsTable();
             _appender = null;
@@ -79,7 +87,9 @@ public sealed class MotelySearchDatabase : IDisposable
     private void CreateResultsTable()
     {
         // DuckLake does not support PRIMARY KEY; use plain columns for DuckLake
-        var seedScoreDef = _isDuckLake ? "seed VARCHAR, score INTEGER" : "seed VARCHAR PRIMARY KEY, score INTEGER";
+        var seedScoreDef = _isDuckLake
+            ? "seed VARCHAR, score INTEGER"
+            : "seed VARCHAR PRIMARY KEY, score INTEGER";
         var columnDefs = new List<string> { seedScoreDef };
 
         foreach (var col in _runConfig.Columns)
@@ -89,14 +99,20 @@ public sealed class MotelySearchDatabase : IDisposable
             columnDefs.Add($"{quotedName} {columnType}");
         }
 
-        var createTableSql = $"CREATE TABLE IF NOT EXISTS {_resultsTableRef} ({string.Join(", ", columnDefs)})";
+        var createTableSql =
+            $"CREATE TABLE IF NOT EXISTS {_resultsTableRef} ({string.Join(", ", columnDefs)})";
         ExecuteNonQuery(createTableSql);
     }
 
     /// <summary>
     /// Insert a search result row - appender for .duckdb, MERGE INTO for DuckLake
     /// </summary>
-    public void InsertRow(string seed, int score, List<int> tallies, List<string?>? columnValues = null)
+    public void InsertRow(
+        string seed,
+        int score,
+        List<int> tallies,
+        List<string?>? columnValues = null
+    )
     {
         if (_disposed)
             return;
@@ -141,7 +157,12 @@ public sealed class MotelySearchDatabase : IDisposable
         }
     }
 
-    private void ExecuteMergeRow(string seed, int score, List<int>? tallies, List<string?>? columnValues)
+    private void ExecuteMergeRow(
+        string seed,
+        int score,
+        List<int>? tallies,
+        List<string?>? columnValues
+    )
     {
         var seedEsc = seed.Replace("'", "''");
         var cols = _runConfig.Columns.ToList();
@@ -158,13 +179,26 @@ public sealed class MotelySearchDatabase : IDisposable
         foreach (var col in cols)
         {
             if (col.Type == ColumnType.ScoreTally)
-                valueParts.Add((tallies != null && tallyIndex < tallies.Count) ? tallies[tallyIndex++].ToString() : "0");
+                valueParts.Add(
+                    (tallies != null && tallyIndex < tallies.Count)
+                        ? tallies[tallyIndex++].ToString()
+                        : "0"
+                );
             else
-                valueParts.Add("'" + (columnValues != null && stringIndex < columnValues.Count ? (columnValues[stringIndex++] ?? "").Replace("'", "''") : "") + "'");
+                valueParts.Add(
+                    "'"
+                        + (
+                            columnValues != null && stringIndex < columnValues.Count
+                                ? (columnValues[stringIndex++] ?? "").Replace("'", "''")
+                                : ""
+                        )
+                        + "'"
+                );
         }
 
         var valList = string.Join(", ", valueParts);
-        var mergeSql = $@"
+        var mergeSql =
+            $@"
             MERGE INTO {_resultsTableRef} AS t
             USING (SELECT * FROM (VALUES ({valList})) AS s(seed, score, {string.Join(", ", quotedCols)}))
             ON t.seed = s.seed
@@ -192,7 +226,8 @@ public sealed class MotelySearchDatabase : IDisposable
             foreach (var (seed, score) in results)
             {
                 using var cmd = _connection.CreateCommand();
-                cmd.CommandText = $"INSERT OR REPLACE INTO {_resultsTableRef} (seed, score) VALUES ('{seed.Replace("'", "''")}', {score})";
+                cmd.CommandText =
+                    $"INSERT OR REPLACE INTO {_resultsTableRef} (seed, score) VALUES ('{seed.Replace("'", "''")}', {score})";
                 cmd.ExecuteNonQuery();
             }
         }
@@ -341,12 +376,13 @@ public sealed class MotelySearchDatabase : IDisposable
     /// </summary>
     public void SaveLastSeed(string seed)
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
         ExecuteNonQuery(
             @"CREATE TABLE IF NOT EXISTS search_meta (key VARCHAR PRIMARY KEY, value VARCHAR)"
         );
-        
+
         // Upsert last_seed
         ExecuteNonQuery(
             $"INSERT INTO search_meta (key, value) VALUES ('last_seed', '{seed}') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
@@ -358,7 +394,8 @@ public sealed class MotelySearchDatabase : IDisposable
     /// </summary>
     public string? GetLastSeed()
     {
-        if (_disposed) return null;
+        if (_disposed)
+            return null;
 
         try
         {
@@ -381,12 +418,16 @@ public sealed class MotelySearchDatabase : IDisposable
 
         try
         {
-            ExecuteNonQuery($"CREATE INDEX IF NOT EXISTS idx_results_score ON {_resultsTableRef}(score DESC)");
+            ExecuteNonQuery(
+                $"CREATE INDEX IF NOT EXISTS idx_results_score ON {_resultsTableRef}(score DESC)"
+            );
             _logCallback?.Invoke("✓ Score index created successfully");
         }
         catch (Exception ex)
         {
-            _logCallback?.Invoke($"⚠ Failed to create score index (may already exist): {ex.Message}");
+            _logCallback?.Invoke(
+                $"⚠ Failed to create score index (may already exist): {ex.Message}"
+            );
         }
     }
 
@@ -520,7 +561,8 @@ public sealed class MotelySearchDatabase : IDisposable
             bool isCompatible,
             IReadOnlyList<string> dbColumns,
             IReadOnlyList<string> requiredColumns,
-            string? error = null)
+            string? error = null
+        )
         {
             IsCompatible = isCompatible;
             DbColumns = dbColumns;
@@ -544,9 +586,16 @@ public sealed class MotelySearchDatabase : IDisposable
             if (DuckLakeHelper.IsDuckLake(dbPath))
             {
                 var catalogPath = DuckLakeHelper.GetDuckLakeCatalogPath(dbPath);
-                using var connection = DuckDBConnectionFactory.CreateConnectionWithDuckLake(catalogPath, null, DuckLakeSchemaName);
+                using var connection = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+                    catalogPath,
+                    null,
+                    DuckLakeSchemaName
+                );
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT column_name FROM information_schema.columns WHERE table_catalog = '" + DuckLakeSchemaName + "' AND table_schema = 'main' AND table_name = 'results' ORDER BY ordinal_position";
+                command.CommandText =
+                    "SELECT column_name FROM information_schema.columns WHERE table_catalog = '"
+                    + DuckLakeSchemaName
+                    + "' AND table_schema = 'main' AND table_name = 'results' ORDER BY ordinal_position";
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
                     dbColumns.Add(reader.GetString(0));
@@ -565,7 +614,11 @@ public sealed class MotelySearchDatabase : IDisposable
             bool hasCoreColumns = dbColumnSet.Contains("seed") && dbColumnSet.Contains("score");
             bool hasAllRequired = requiredColumns.All(c => dbColumnSet.Contains(c));
 
-            return new SchemaComparisonResult(hasCoreColumns && hasAllRequired, dbColumns, requiredColumns);
+            return new SchemaComparisonResult(
+                hasCoreColumns && hasAllRequired,
+                dbColumns,
+                requiredColumns
+            );
         }
         catch (Exception ex)
         {
@@ -580,7 +633,8 @@ public sealed class MotelySearchDatabase : IDisposable
     public static bool IsSchemaCompatible(
         string dbPath,
         MotelyRunConfig runConfig,
-        out SchemaComparisonResult comparison)
+        out SchemaComparisonResult comparison
+    )
     {
         comparison = CompareSchema(dbPath, runConfig);
         return comparison.IsCompatible;

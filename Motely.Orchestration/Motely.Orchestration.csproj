@@ -18,6 +18,10 @@
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
     <RunAOTCompilation>true</RunAOTCompilation>
     <PublishAot>false</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <TrimmerDefaultAction>link</TrimmerDefaultAction>
   </PropertyGroup>
 
   <ItemGroup>

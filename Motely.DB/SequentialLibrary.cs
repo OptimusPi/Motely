@@ -47,7 +47,9 @@ public sealed class SequentialLibrary : IDisposable
             lock (_initLock)
             {
                 if (string.IsNullOrWhiteSpace(_libraryRoot))
-                    throw new InvalidOperationException("SequentialLibrary.SetLibraryRoot must be called before accessing Instance");
+                    throw new InvalidOperationException(
+                        "SequentialLibrary.SetLibraryRoot must be called before accessing Instance"
+                    );
 
                 if (_instance == null || _instance._disposed)
                 {
@@ -80,7 +82,11 @@ public sealed class SequentialLibrary : IDisposable
     {
         // For existing catalog, data path is loaded from catalog
         var dataPath = File.Exists(_catalogPath) ? null : _dataPath;
-        return DuckDBConnectionFactory.CreateConnectionWithDuckLake(_catalogPath, dataPath, CatalogSchemaName);
+        return DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+            _catalogPath,
+            dataPath,
+            CatalogSchemaName
+        );
     }
 
     private void EnsureSearchMetaTable()
@@ -89,7 +95,8 @@ public sealed class SequentialLibrary : IDisposable
         using var cmd = conn.CreateCommand();
 
         // DuckLake does not support PRIMARY KEY - we'll use MERGE INTO for upserts
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             CREATE TABLE IF NOT EXISTS {CatalogSchemaName}.main.{SearchMetaTable} (
                 search_id VARCHAR,
                 table_name VARCHAR,
@@ -119,7 +126,8 @@ public sealed class SequentialLibrary : IDisposable
 
         using var conn = GetConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             SELECT search_id, table_name, jaml_filter, deck, stake, seed_source, 
                    is_active, last_accessed, last_seed, total_seeds_processed, 
                    total_matches, created_at
@@ -142,7 +150,8 @@ public sealed class SequentialLibrary : IDisposable
         var result = new List<string>();
         using var conn = GetConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             SELECT search_id FROM {CatalogSchemaName}.main.{SearchMetaTable}
             WHERE is_active = true";
 
@@ -162,7 +171,8 @@ public sealed class SequentialLibrary : IDisposable
         var result = new List<SearchMeta>();
         using var conn = GetConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             SELECT search_id, table_name, jaml_filter, deck, stake, seed_source, 
                    is_active, last_accessed, last_seed, total_seeds_processed, 
                    total_matches, created_at
@@ -199,7 +209,8 @@ public sealed class SequentialLibrary : IDisposable
         var lastAccessed = meta.LastAccessed?.ToString("yyyy-MM-dd HH:mm:ss") ?? "NULL";
         var createdAt = meta.CreatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "NULL";
 
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             MERGE INTO {CatalogSchemaName}.main.{SearchMetaTable} AS t
             USING (SELECT 
                 '{searchId}' as search_id,
@@ -255,7 +266,12 @@ public sealed class SequentialLibrary : IDisposable
     /// <summary>
     /// Update the last seed position for a search (for resume capability).
     /// </summary>
-    public void UpdateLastSeed(string searchId, string lastSeed, long totalProcessed, long totalMatches)
+    public void UpdateLastSeed(
+        string searchId,
+        string lastSeed,
+        long totalProcessed,
+        long totalMatches
+    )
     {
         var meta = GetSearchMeta(searchId);
         if (meta == null)
@@ -285,7 +301,8 @@ public sealed class SequentialLibrary : IDisposable
         var tableName = meta?.TableName ?? searchId;
 
         // Delete from search_meta
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             DELETE FROM {CatalogSchemaName}.main.{SearchMetaTable}
             WHERE search_id = '{EscapeSql(searchId)}'";
         cmd.ExecuteNonQuery();
@@ -295,7 +312,8 @@ public sealed class SequentialLibrary : IDisposable
         {
             try
             {
-                cmd.CommandText = $"DROP TABLE IF EXISTS {CatalogSchemaName}.main.\"{EscapeSql(tableName)}\"";
+                cmd.CommandText =
+                    $"DROP TABLE IF EXISTS {CatalogSchemaName}.main.\"{EscapeSql(tableName)}\"";
                 cmd.ExecuteNonQuery();
             }
             catch
@@ -320,7 +338,7 @@ public sealed class SequentialLibrary : IDisposable
             LastSeed = reader.IsDBNull(8) ? null : reader.GetString(8),
             TotalSeedsProcessed = reader.IsDBNull(9) ? 0 : reader.GetInt64(9),
             TotalMatches = reader.IsDBNull(10) ? 0 : reader.GetInt64(10),
-            CreatedAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+            CreatedAt = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
         };
     }
 
@@ -331,7 +349,10 @@ public sealed class SequentialLibrary : IDisposable
     /// <summary>
     /// Create a results table for a search if it doesn't exist.
     /// </summary>
-    public void CreateResultsTable(string searchId, IEnumerable<(string Name, string Type)>? extraColumns = null)
+    public void CreateResultsTable(
+        string searchId,
+        IEnumerable<(string Name, string Type)>? extraColumns = null
+    )
     {
         if (string.IsNullOrWhiteSpace(searchId))
             throw new ArgumentException("searchId is required", nameof(searchId));
@@ -350,7 +371,8 @@ public sealed class SequentialLibrary : IDisposable
             }
         }
 
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             CREATE TABLE IF NOT EXISTS {CatalogSchemaName}.main.""{tableName}"" (
                 {string.Join(", ", columnDefs)}
             )";
@@ -378,7 +400,11 @@ public sealed class SequentialLibrary : IDisposable
         private DuckDBDataReader? _reader;
         private bool _disposed;
 
-        internal SequentialLibrarySeedReader(DuckDBConnection conn, string schemaName, string tableName)
+        internal SequentialLibrarySeedReader(
+            DuckDBConnection conn,
+            string schemaName,
+            string tableName
+        )
         {
             _conn = conn;
             _cmd = conn.CreateCommand();
@@ -401,7 +427,8 @@ public sealed class SequentialLibrary : IDisposable
         /// <inheritdoc />
         public void Dispose()
         {
-            if (_disposed) return;
+            if (_disposed)
+                return;
             _disposed = true;
             _reader?.Dispose();
             _cmd?.Dispose();
@@ -425,7 +452,8 @@ public sealed class SequentialLibrary : IDisposable
 
         using var conn = GetConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             SELECT seed, score FROM {CatalogSchemaName}.main.""{tableName}""
             ORDER BY score DESC
             LIMIT {limit}";
@@ -443,7 +471,12 @@ public sealed class SequentialLibrary : IDisposable
     /// <summary>
     /// Insert a result row using MERGE INTO (upsert by seed).
     /// </summary>
-    public void InsertResult(string searchId, string seed, int score, Dictionary<string, object>? extraValues = null)
+    public void InsertResult(
+        string searchId,
+        string seed,
+        int score,
+        Dictionary<string, object>? extraValues = null
+    )
     {
         if (string.IsNullOrWhiteSpace(searchId))
             return;
@@ -469,7 +502,8 @@ public sealed class SequentialLibrary : IDisposable
             }
         }
 
-        cmd.CommandText = $@"
+        cmd.CommandText =
+            $@"
             MERGE INTO {CatalogSchemaName}.main.""{tableName}"" AS t
             USING (SELECT {string.Join(", ", vals.Select((v, i) => $"{v} as {cols[i]}"))}) AS s
             ON t.seed = s.seed
@@ -516,7 +550,8 @@ public sealed class SequentialLibrary : IDisposable
         {
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = $@"
+            cmd.CommandText =
+                $@"
                 SELECT COUNT(*) FROM information_schema.tables 
                 WHERE table_catalog = '{CatalogSchemaName}' 
                 AND table_schema = 'main' 

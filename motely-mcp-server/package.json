@@ -1,0 +1,39 @@
+{
+  "name": "@balatroseedoracle/motely-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Balatro seed searching - edit JAML filters, run searches, analyze seeds",
+  "main": "dist/index.js",
+  "bin": {
+    "motely-mcp-server": "dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "postinstall": "node dist/postinstall.js || echo 'Skipping .NET runtime check'",
+    "start": "node dist/index.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "balatro",
+    "seed-search",
+    "jaml"
+  ],
+  "author": "BalatroSeedOracle",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

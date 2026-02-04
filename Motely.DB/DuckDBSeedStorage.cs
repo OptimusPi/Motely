@@ -16,10 +16,11 @@ public sealed class DuckDBSeedStorage : IDisposable
     {
         _connection = DuckDBConnectionFactory.CreateConnection(dbPath);
         _connection.Open();
-        
+
         // Ensure table exists
         var cmd = _connection.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             CREATE TABLE IF NOT EXISTS seeds (
                 id BIGINT,
                 seed VARCHAR
@@ -36,7 +37,7 @@ public sealed class DuckDBSeedStorage : IDisposable
     {
         using var appender = _connection.CreateAppender("seeds");
         long count = 0;
-        
+
         foreach (var seed in seeds)
         {
             var row = appender.CreateRow();
@@ -45,10 +46,10 @@ public sealed class DuckDBSeedStorage : IDisposable
             row.EndRow();
             count++;
         }
-        
+
         return count;
     }
-    
+
     /// <summary>
     /// Get the total count of seeds in the database
     /// </summary>
@@ -59,7 +60,7 @@ public sealed class DuckDBSeedStorage : IDisposable
         var result = cmd.ExecuteScalar();
         return result != null ? Convert.ToInt64(result) : 0;
     }
-    
+
     /// <summary>
     /// Clear all seeds from the database
     /// </summary>
@@ -72,7 +73,8 @@ public sealed class DuckDBSeedStorage : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
         _disposed = true;
         _connection?.Dispose();
     }

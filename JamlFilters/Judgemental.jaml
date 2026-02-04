@@ -1,45 +1,43 @@
 name: Judgemental
 author: pi
 description: get cool shit from judgement lol
-deck: Ghost
+deck: Yellow
 stake: White
 
 must:
   - tarotCard: Judgement
-    antes: [2]
-    shopSlots: [0,1,2,3]
-  - soulJoker: Perkeo
-    antes: [2]
+    antes: [1]
     sources:
-      packSlots: [0]
-  - soulJoker: Canio
-    antes: [2,3,4,5,6,7,8]
+      shopSlots: [0,1]
+    
+  - soulJoker: Chicot
+    antes: [1]
+    packSlots: [1]
+
+  - jokers: [MerryAndy, Drunkard]
+    sources:
+      judgement: [0] # the first judgement use
+    antes: [1]
 should:
-  - joker: Showman
-    antes: [2,3,4,5]
+  - joker: MerryAndy
     sources:
-      judgement: [0,1]
-      packSlots: [0,1,2,3,4]
-    score: 10
-
-  - joker: Showman
-    antes: [2,3,4,5]
+      judgement: [0,1,2,3]
+    antes: [1]
+  - joker: Drunkard
     sources:
-      judgement: [0,1]
-      packSlots: [0,1,2,3,4]
-    score: 10
-
-
-  - jokers: [Blueprint, Brainstorm, InvisibleJoker]
-    antes: [6]
+      judgement: [0,1,2,3]
+    antes: [1]
+  - tarotCard: TheFool
+    antes: [1]
     sources:
-      minShopSlot: 2
-      maxShopSlot: 18
-    score: 12
-
-  - jokers: [Blueprint, Brainstorm, InvisibleJoker]
-    antes: [6]
+      shopSlots: [0,1]  
+  - soulJoker: Perkeo
+    antes: [1]
+    packSlots: [1,2,3]
+  - smallBlindTag: EconomyTag
+    antes: [1]
+  - SpectralCard: Ankh
+    antes: [1]
     sources:
-      minShopSlot: 2
-      maxShopSlot: 40
-    score: 10
+      packSlots: [1]
+      requireMega: true

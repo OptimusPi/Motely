@@ -19,8 +19,10 @@ public sealed class MotelyRepository : IMotelyRepository
             throw new ArgumentException("Source moniker is required.", nameof(moniker));
 
         // Library references pass through
-        if (moniker.StartsWith("seq:", StringComparison.OrdinalIgnoreCase) ||
-            moniker.StartsWith("gen:", StringComparison.OrdinalIgnoreCase))
+        if (
+            moniker.StartsWith("seq:", StringComparison.OrdinalIgnoreCase)
+            || moniker.StartsWith("gen:", StringComparison.OrdinalIgnoreCase)
+        )
             return new DataLakeSeedProvider(moniker);
 
         string resolved = ResolveSourceMoniker(moniker);
@@ -68,9 +70,12 @@ public sealed class MotelyRepository : IMotelyRepository
         string dbPath = Path.Combine(storageDirectory, moniker + ".db");
         string csvPath = Path.Combine(storageDirectory, moniker + ".csv");
         string txtPath = Path.Combine(storageDirectory, moniker + ".txt");
-        if (File.Exists(dbPath)) return Path.GetFullPath(dbPath);
-        if (File.Exists(csvPath)) return Path.GetFullPath(csvPath);
-        if (File.Exists(txtPath)) return Path.GetFullPath(txtPath);
+        if (File.Exists(dbPath))
+            return Path.GetFullPath(dbPath);
+        if (File.Exists(csvPath))
+            return Path.GetFullPath(csvPath);
+        if (File.Exists(txtPath))
+            return Path.GetFullPath(txtPath);
 
         throw new FileNotFoundException($"Seed source not found for moniker: {moniker}");
     }
@@ -79,7 +84,10 @@ public sealed class MotelyRepository : IMotelyRepository
     {
         if (Path.IsPathRooted(moniker))
             return true;
-        if (moniker.Contains(Path.DirectorySeparatorChar) || moniker.Contains(Path.AltDirectorySeparatorChar))
+        if (
+            moniker.Contains(Path.DirectorySeparatorChar)
+            || moniker.Contains(Path.AltDirectorySeparatorChar)
+        )
             return true;
         var ext = Path.GetExtension(moniker);
         return !string.IsNullOrEmpty(ext);

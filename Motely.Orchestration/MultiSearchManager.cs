@@ -15,7 +15,9 @@ namespace Motely.Executors;
 /// </summary>
 public sealed class MultiSearchManager
 {
-    private static readonly Lazy<MultiSearchManager> _instance = new(() => new MultiSearchManager());
+    private static readonly Lazy<MultiSearchManager> _instance = new(() =>
+        new MultiSearchManager()
+    );
     public static MultiSearchManager Instance => _instance.Value;
 
     private readonly ConcurrentDictionary<string, ActiveSearch> _activeSearches = new();
@@ -30,6 +32,7 @@ public sealed class MultiSearchManager
     #region Thread Management
 
     public void SetTotalThreads(int count) => _totalThreads = Math.Max(1, count);
+
     public int TotalThreads => _totalThreads;
     public int AllocatedThreads => _allocatedThreads;
     public int AvailableThreads => Math.Max(0, _totalThreads - _allocatedThreads);
@@ -52,7 +55,8 @@ public sealed class MultiSearchManager
         bool isSequential = true,
         ulong? requestStartBatch = null,
         ulong? requestEndBatch = null,
-        int? requestCutoff = null)
+        int? requestCutoff = null
+    )
     {
         if (string.IsNullOrWhiteSpace(searchId))
             throw new ArgumentException("searchId is required", nameof(searchId));
@@ -85,9 +89,20 @@ public sealed class MultiSearchManager
         if (requestStartBatch.HasValue)
             parameters.StartBatch = requestStartBatch.Value;
 
-        var context = MotelySearchOrchestrator.LaunchWithContext(config, parameters, useInMemoryStorage: false);
+        var context = MotelySearchOrchestrator.LaunchWithContext(
+            config,
+            parameters,
+            useInMemoryStorage: false
+        );
 
-        var activeSearch = new ActiveSearch(searchId, config, context, threadCount, isSequential, seedSource);
+        var activeSearch = new ActiveSearch(
+            searchId,
+            config,
+            context,
+            threadCount,
+            isSequential,
+            seedSource
+        );
         _activeSearches[searchId] = activeSearch;
 
         return activeSearch;
@@ -153,9 +168,22 @@ public sealed class MultiSearchManager
     #region API-Friendly Methods
 
     public Task<(List<MotelySearchResultRow> results, string searchId)> StartSearchAsync(
-        string filterJaml, MotelyDeck deck, MotelyStake stake, int threads = 1)
+        string filterJaml,
+        MotelyDeck deck,
+        MotelyStake stake,
+        int threads = 1
+    )
     {
-        return StartSearchAsync(filterJaml, deck, stake, threads, seedCount: null, startBatch: null, cutoff: null, seedSource: null);
+        return StartSearchAsync(
+            filterJaml,
+            deck,
+            stake,
+            threads,
+            seedCount: null,
+            startBatch: null,
+            cutoff: null,
+            seedSource: null
+        );
     }
 
     /// <summary>
@@ -169,11 +197,21 @@ public sealed class MultiSearchManager
         long? seedCount = null,
         long? startBatch = null,
         int? cutoff = null,
-        string? seedSource = null)
+        string? seedSource = null
+    )
     {
         var deckEnum = Enum.TryParse<MotelyDeck>(deck, true, out var d) ? d : MotelyDeck.Red;
         var stakeEnum = Enum.TryParse<MotelyStake>(stake, true, out var s) ? s : MotelyStake.White;
-        return StartSearchAsync(filterJaml, deckEnum, stakeEnum, threads, seedCount, startBatch, cutoff, seedSource);
+        return StartSearchAsync(
+            filterJaml,
+            deckEnum,
+            stakeEnum,
+            threads,
+            seedCount,
+            startBatch,
+            cutoff,
+            seedSource
+        );
     }
 
     /// <summary>
@@ -188,16 +226,22 @@ public sealed class MultiSearchManager
         long? seedCount = null,
         long? startBatch = null,
         int? cutoff = null,
-        string? seedSource = null)
+        string? seedSource = null
+    )
     {
-        if (!JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var config, out var error) || config == null)
+        if (
+            !JamlConfigLoader.TryLoadFromJamlString(filterJaml, out var config, out var error)
+            || config == null
+        )
             throw new InvalidOperationException($"Failed to parse filter: {error}");
 
         config.Deck = deck.ToString();
         config.Stake = stake.ToString();
 
         var searchId = GenerateSearchId(config);
-        var startBatchVal = startBatch.HasValue ? (ulong)Math.Max(0, startBatch.Value) : (ulong?)null;
+        var startBatchVal = startBatch.HasValue
+            ? (ulong)Math.Max(0, startBatch.Value)
+            : (ulong?)null;
         var search = Launch(
             config,
             searchId,
@@ -206,7 +250,8 @@ public sealed class MultiSearchManager
             isSequential: true,
             requestStartBatch: startBatchVal,
             requestEndBatch: null,
-            requestCutoff: cutoff);
+            requestCutoff: cutoff
+        );
 
         if (search == null)
             throw new InvalidOperationException("Not enough threads available");
@@ -214,7 +259,9 @@ public sealed class MultiSearchManager
         return Task.FromResult((new List<MotelySearchResultRow>(), searchId));
     }
 
-    public (List<MotelySearchResultRow> results, int progressPercent) GetSearchStatusWithResults(string searchId)
+    public (List<MotelySearchResultRow> results, int progressPercent) GetSearchStatusWithResults(
+        string searchId
+    )
     {
         if (!_activeSearches.TryGetValue(searchId, out var search))
             return (new List<MotelySearchResultRow>(), 0);
@@ -225,8 +272,9 @@ public sealed class MultiSearchManager
     }
 
     /// <summary>Alias for API: returns (results, progressPercent).</summary>
-    public (List<MotelySearchResultRow> results, int progressPercent) GetSearchStatus(string searchId) =>
-        GetSearchStatusWithResults(searchId);
+    public (List<MotelySearchResultRow> results, int progressPercent) GetSearchStatus(
+        string searchId
+    ) => GetSearchStatusWithResults(searchId);
 
     /// <summary>Stop a search and return current results (for API).</summary>
     public Task<List<MotelySearchResultRow>> StopSearchAsync(string searchId)
@@ -248,7 +296,8 @@ public sealed class MultiSearchManager
         return $"{MotelySearchOrchestrator.GenerateFilterId(config)}_{DateTime.UtcNow:yyyyMMddHHmmss}";
     }
 
-    public static string SanitizeFilterFileStem(string name) => MotelySearchOrchestrator.SanitizeForId(name);
+    public static string SanitizeFilterFileStem(string name) =>
+        MotelySearchOrchestrator.SanitizeForId(name);
 
     #endregion
 }
@@ -266,8 +315,14 @@ public sealed class ActiveSearch
     public string? SeedSource { get; }
     public DateTime StartedAt { get; }
 
-    public ActiveSearch(string searchId, MotelyJsonConfig config, IMotelySearchContext? context,
-        int allocatedThreads, bool isSequential, string? seedSource)
+    public ActiveSearch(
+        string searchId,
+        MotelyJsonConfig config,
+        IMotelySearchContext? context,
+        int allocatedThreads,
+        bool isSequential,
+        string? seedSource
+    )
     {
         SearchId = searchId;
         Config = config;
@@ -294,8 +349,10 @@ public sealed class ActiveSearch
             AllocatedThreads = AllocatedThreads,
             SeedsSearched = ctx?.TotalSeedsSearched ?? 0,
             TotalMatches = ctx?.MatchingSeeds ?? 0,
-            SeedsPerSecond = ctx != null && ctx.ElapsedTime.TotalSeconds > 0
-                ? ctx.TotalSeedsSearched / ctx.ElapsedTime.TotalSeconds : 0,
+            SeedsPerSecond =
+                ctx != null && ctx.ElapsedTime.TotalSeconds > 0
+                    ? ctx.TotalSeedsSearched / ctx.ElapsedTime.TotalSeconds
+                    : 0,
             StartedAt = StartedAt,
         };
     }
@@ -332,4 +389,9 @@ public sealed class SearchProgress
     public long TotalMatches { get; set; }
 }
 
-public enum SearchCompletionReason { Completed, Stopped, Error }
+public enum SearchCompletionReason
+{
+    Completed,
+    Stopped,
+    Error,
+}

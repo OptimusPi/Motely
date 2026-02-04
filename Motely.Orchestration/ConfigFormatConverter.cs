@@ -21,7 +21,10 @@ public static class ConfigFormatConverter
         try
         {
             // Use AOT-compatible source-generated serializer
-            var config = JsonSerializer.Deserialize(jsonContent, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
+            var config = JsonSerializer.Deserialize(
+                jsonContent,
+                MotelyJsonSerializerContext.Default.MotelyJsonConfig
+            );
             config?.PostProcess();
 
             // Validate config just like JAML loader does
@@ -62,7 +65,10 @@ public static class ConfigFormatConverter
     /// </summary>
     public static string SaveAsJson(this MotelyJsonConfig config)
     {
-        return JsonSerializer.Serialize(config, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
+        return JsonSerializer.Serialize(
+            config,
+            MotelyJsonSerializerContext.Default.MotelyJsonConfig
+        );
     }
 
     /// <summary>

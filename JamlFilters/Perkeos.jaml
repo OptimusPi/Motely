@@ -12,5 +12,7 @@ Must:
     min: 2
 Should:
   - smallblindtag: NegativeTag
-    antes: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-    min: 2
+    antes: [2, 3, 4, 5, 6, 7, 8]
+  - soulJoker: Any
+    edition: Negative
+

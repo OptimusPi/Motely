@@ -204,7 +204,8 @@ public static class TallyColorizer
             var sb = new StringBuilder(tallies.Length * 3);
             for (int i = 0; i < tallies.Length; i++)
             {
-                if (i > 0) sb.Append(',');
+                if (i > 0)
+                    sb.Append(',');
                 sb.Append(tallies[i]);
             }
             return sb.ToString();
@@ -334,7 +335,8 @@ public static class TallyColorizer
             sb.Append(seed).Append(',').Append(score).Append(',');
             for (int i = 0; i < tallies.Length; i++)
             {
-                if (i > 0) sb.Append(',');
+                if (i > 0)
+                    sb.Append(',');
                 sb.Append(tallies[i]);
             }
             return sb.ToString();
@@ -453,11 +455,12 @@ public static class TallyColorizer
 
         var sb = new StringBuilder();
         sb.Append(seed).Append(',').Append(score).Append(',');
-        
+
         bool first = true;
         foreach (var col in columns)
         {
-            if (!first) sb.Append(',');
+            if (!first)
+                sb.Append(',');
             first = false;
 
             if (string.IsNullOrEmpty(col))
@@ -477,7 +480,7 @@ public static class TallyColorizer
                 sb.Append(TallyColors[8]).Append(col).Append(ResetColor);
             }
         }
-        
+
         return sb.ToString();
     }
 

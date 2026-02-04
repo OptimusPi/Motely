@@ -156,7 +156,9 @@ public class ApiServerWindow : Window
                             copyLogsButton.SetScheme(BalatroTheme.BackButton);
                         });
                     }
-                    catch { /* UI reset is non-critical */ }
+                    catch
+                    { /* UI reset is non-critical */
+                    }
                 });
             }
         };
@@ -326,7 +328,8 @@ public class ApiServerWindow : Window
 
     private async Task StopServerOnlyAsync()
     {
-        if (!_isRunning) return;
+        if (!_isRunning)
+            return;
 
         // Update UI immediately - don't wait for anything
         App?.Invoke(() =>
@@ -338,12 +341,19 @@ public class ApiServerWindow : Window
         LogMessage("Stopping server...");
 
         // Cancel token FIRST - signals everything to stop immediately
-        try { _cts?.Cancel(); } catch { }
+        try
+        {
+            _cts?.Cancel();
+        }
+        catch { }
 
         // Fire and forget search stop - don't block on it
         _ = Task.Run(() =>
         {
-            try { MultiSearchManager.Instance.StopAll("Stopping"); }
+            try
+            {
+                MultiSearchManager.Instance.StopAll("Stopping");
+            }
             catch { }
         });
 
@@ -358,7 +368,11 @@ public class ApiServerWindow : Window
             }
             catch { }
 
-            try { await server.DisposeAsync(); } catch { }
+            try
+            {
+                await server.DisposeAsync();
+            }
+            catch { }
         }
 
         App?.Invoke(() => _stopButton.Visible = false);

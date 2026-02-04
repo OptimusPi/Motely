@@ -11,12 +11,19 @@ public sealed class ResultStorageAdapter : IResultStorage
 {
     private readonly MotelySearchDatabase _db;
 
-    public ResultStorageAdapter(MotelySearchDatabase db) => _db = db ?? throw new ArgumentNullException(nameof(db));
+    public ResultStorageAdapter(MotelySearchDatabase db) =>
+        _db = db ?? throw new ArgumentNullException(nameof(db));
 
-    public void InsertRow(string seed, int score, List<int>? tallies, List<string?>? columnValues) =>
-        _db.InsertRow(seed, score, tallies ?? new List<int>(), columnValues);
+    public void InsertRow(
+        string seed,
+        int score,
+        List<int>? tallies,
+        List<string?>? columnValues
+    ) => _db.InsertRow(seed, score, tallies ?? new List<int>(), columnValues);
 
-    public void SaveBatchPosition(long batch, int batchSize) => _db.SaveBatchPosition(batch, batchSize);
+    public void SaveBatchPosition(long batch, int batchSize) =>
+        _db.SaveBatchPosition(batch, batchSize);
+
     public void Checkpoint() => _db.Checkpoint();
 
     public List<MotelySearchResultRow> GetTopResults(int limit = 1000)
@@ -26,12 +33,14 @@ public sealed class ResultStorageAdapter : IResultStorage
         {
             Seed = r.Seed,
             Score = r.Score,
-            Tallies = r.Tallies
+            Tallies = r.Tallies,
         });
     }
 
     public int GetResultCount() => _db.GetResultCount();
-    public List<Dictionary<string, object?>> GetResultsPage(int offset, int limit) => _db.GetResultsPage(offset, limit, "score", false);
+
+    public List<Dictionary<string, object?>> GetResultsPage(int offset, int limit) =>
+        _db.GetResultsPage(offset, limit, "score", false);
 
     public void Dispose() => _db.Dispose();
 }

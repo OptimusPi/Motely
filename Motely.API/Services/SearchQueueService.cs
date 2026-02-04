@@ -80,4 +80,3 @@ public class SearchQueueService : IDisposable
         _database?.Dispose();
     }
 }
-

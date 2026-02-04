@@ -36,7 +36,10 @@ internal static class ResultsQueryHelper
         try
         {
             using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
-                catalogPath, dataPath: null, DuckLakeSchemaName);
+                catalogPath,
+                dataPath: null,
+                DuckLakeSchemaName
+            );
             return DuckDBQueryHelpers.GetTopSeeds(conn, ResultsTableRef, "score", limit);
         }
         catch
@@ -57,7 +60,10 @@ internal static class ResultsQueryHelper
         try
         {
             using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
-                catalogPath, dataPath: null, DuckLakeSchemaName);
+                catalogPath,
+                dataPath: null,
+                DuckLakeSchemaName
+            );
             var cols = GetColumnNamesFromConnection(conn, DuckLakeSchemaName, "main", "results");
             return cols.Count > 0 ? cols : new List<string> { "seed", "score" };
         }
@@ -71,10 +77,12 @@ internal static class ResultsQueryHelper
         DuckDBConnection connection,
         string tableCatalog,
         string tableSchema,
-        string tableName)
+        string tableName
+    )
     {
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = $"SELECT column_name FROM information_schema.columns WHERE table_catalog = '{tableCatalog}' AND table_schema = '{tableSchema}' AND table_name = '{tableName}' ORDER BY ordinal_position";
+        cmd.CommandText =
+            $"SELECT column_name FROM information_schema.columns WHERE table_catalog = '{tableCatalog}' AND table_schema = '{tableSchema}' AND table_name = '{tableName}' ORDER BY ordinal_position";
         using var reader = cmd.ExecuteReader();
         var columns = new List<string>();
         while (reader.Read())
@@ -82,7 +90,9 @@ internal static class ResultsQueryHelper
         return columns;
     }
 
-    internal static (long startBatch, int batchSize, string? lastSeed) GetResumeCursorFromPath(string dbPath)
+    internal static (long startBatch, int batchSize, string? lastSeed) GetResumeCursorFromPath(
+        string dbPath
+    )
     {
         long startBatch = 0;
         int batchSize = 0;
@@ -98,8 +108,17 @@ internal static class ResultsQueryHelper
         try
         {
             using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
-                catalogPath, dataPath: null, DuckLakeSchemaName);
-            ReadResumeFromConnection(conn, MetaTableRef, ref startBatch, ref batchSize, ref lastSeed);
+                catalogPath,
+                dataPath: null,
+                DuckLakeSchemaName
+            );
+            ReadResumeFromConnection(
+                conn,
+                MetaTableRef,
+                ref startBatch,
+                ref batchSize,
+                ref lastSeed
+            );
             return (startBatch, batchSize, lastSeed);
         }
         catch
@@ -113,12 +132,14 @@ internal static class ResultsQueryHelper
         string metaTableRef,
         ref long startBatch,
         ref int batchSize,
-        ref string? lastSeed)
+        ref string? lastSeed
+    )
     {
         try
         {
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = $"SELECT key, value FROM {metaTableRef} WHERE key IN ('last_batch', 'last_batch_size', 'last_seed')";
+            cmd.CommandText =
+                $"SELECT key, value FROM {metaTableRef} WHERE key IN ('last_batch', 'last_batch_size', 'last_seed')";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
@@ -138,7 +159,11 @@ internal static class ResultsQueryHelper
         }
     }
 
-    internal static List<Dictionary<string, object?>> GetTopResultsFromPath(string dbPath, int offset, int limit)
+    internal static List<Dictionary<string, object?>> GetTopResultsFromPath(
+        string dbPath,
+        int offset,
+        int limit
+    )
     {
         if (string.IsNullOrWhiteSpace(dbPath))
             return new List<Dictionary<string, object?>>();
@@ -150,7 +175,10 @@ internal static class ResultsQueryHelper
         try
         {
             using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
-                catalogPath, dataPath: null, DuckLakeSchemaName);
+                catalogPath,
+                dataPath: null,
+                DuckLakeSchemaName
+            );
             return GetResultsWithTalliesFromConnection(conn, ResultsTableRef, offset, limit);
         }
         catch
@@ -163,10 +191,12 @@ internal static class ResultsQueryHelper
         DuckDBConnection connection,
         string tableRef,
         int offset,
-        int limit)
+        int limit
+    )
     {
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = $"SELECT * FROM {tableRef} ORDER BY score DESC LIMIT {limit} OFFSET {offset}";
+        cmd.CommandText =
+            $"SELECT * FROM {tableRef} ORDER BY score DESC LIMIT {limit} OFFSET {offset}";
         using var reader = cmd.ExecuteReader();
         var results = new List<Dictionary<string, object?>>();
         while (reader.Read())

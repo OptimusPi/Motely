@@ -165,6 +165,9 @@ public readonly struct MotelyJsonSoulJokerFilterDesc
                     // This ensures all clauses check against the SAME stream walkthrough
                     return MotelyJsonScoring.CheckSoulJokerForSeed(
                         clauses,
+                        minAnte,
+                        maxAnte,
+                        maxPackSlotsPerAnte,
                         ref singleCtx,
                         earlyExit: true
                     );

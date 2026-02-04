@@ -71,13 +71,16 @@ public abstract class MotelyJsonFilterClause
             MotelyFilterItemType.PlanetCard => MotelyJsonPlanetFilterClause.FromJsonClause(raw),
             MotelyFilterItemType.SpectralCard => MotelyJsonSpectralFilterClause.FromJsonClause(raw),
             // Fallback for types that don't have specialized classes yet but should still be in the typed list
-            _ => new MotelyJsonGenericFilterClause(raw)
+            _ => new MotelyJsonGenericFilterClause(raw),
         };
     }
 
-    public static List<MotelyJsonFilterClause> ConvertAll(IEnumerable<MotelyJsonConfig.MotelyJsonFilterClause>? raw)
+    public static List<MotelyJsonFilterClause> ConvertAll(
+        IEnumerable<MotelyJsonConfig.MotelyJsonFilterClause>? raw
+    )
     {
-        if (raw == null) return new();
+        if (raw == null)
+            return new();
         return raw.Select(Convert).ToList();
     }
 }
@@ -85,7 +88,8 @@ public abstract class MotelyJsonFilterClause
 /// <summary>
 /// Fallback for types that don't need a specialized class yet
 /// </summary>
-public class MotelyJsonGenericFilterClause(MotelyJsonConfig.MotelyJsonFilterClause raw) : MotelyJsonFilterClause
+public class MotelyJsonGenericFilterClause(MotelyJsonConfig.MotelyJsonFilterClause raw)
+    : MotelyJsonFilterClause
 {
     public MotelyJsonConfig.MotelyJsonFilterClause Raw { get; } = raw;
 }
@@ -97,45 +101,49 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
 {
     public MotelyJoker? JokerType { get; init; }
     public List<MotelyJoker>? JokerTypes { get; init; }
-    public MotelyItemEdition? Edition { get; init; }  // Joker-specific edition (separate from base)
+    public MotelyItemEdition? Edition { get; init; } // Joker-specific edition (separate from base)
     public List<MotelyJokerSticker>? StickerEnums { get; init; }
     public bool IsWildcard { get; init; }
     public MotelyJsonConfigWildcards? WildcardEnum { get; init; }
     public SourcesConfig? Sources { get; init; }
-    
+
     // Antes
-    public int[] EffectiveAntes { get; init; } = [];  // Sparse list for hot path iteration
-    public bool[] WantedAntes { get; init; } = new bool[40];  // Dense lookup for CalculateAnteRange
-    
+    public int[] EffectiveAntes { get; init; } = []; // Sparse list for hot path iteration
+    public bool[] WantedAntes { get; init; } = new bool[40]; // Dense lookup for CalculateAnteRange
+
     // Shop slots - range-based (min inclusive, max exclusive)
-    public int? MinShopSlot { get; init; }  // null = start from beginning
-    public int? MaxShopSlot { get; init; }  // null = use ante-based defaults
-    
+    public int? MinShopSlot { get; init; } // null = start from beginning
+    public int? MaxShopSlot { get; init; } // null = use ante-based defaults
+
     // Pack slots - 6-bit bitmask (slots 0-5)
-    public byte PackSlotMask { get; init; }  // bit i = slot i wanted, 0 = use defaults
-    
+    public byte PackSlotMask { get; init; } // bit i = slot i wanted, 0 = use defaults
+
     // Pre-computed for hot path
     public int MaxShopSlotsNeeded { get; init; }
     public int MaxPackSlotsNeeded { get; init; }
     public bool HasShopConstraint { get; init; }
     public bool HasPackConstraint { get; init; }
-    
+
     /// <summary>Check if shop slot is in range. O(1).</summary>
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public bool IsShopSlotWanted(int slot) => 
+    [System.Runtime.CompilerServices.MethodImpl(
+        System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining
+    )]
+    public bool IsShopSlotWanted(int slot) =>
         !HasShopConstraint || (slot >= MinShopSlot && slot < MaxShopSlot);
-    
+
     /// <summary>Check if pack slot bit is set. O(1).</summary>
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public bool IsPackSlotWanted(int slot) => 
+    [System.Runtime.CompilerServices.MethodImpl(
+        System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining
+    )]
+    public bool IsPackSlotWanted(int slot) =>
         !HasPackConstraint || ((PackSlotMask & (1 << slot)) != 0);
-    
+
     // Compatibility properties for existing code
     public bool HasShopSlots => HasShopConstraint;
     public bool HasPackSlots => HasPackConstraint;
     public int? MaxPackSlot => HasPackConstraint ? MaxPackSlotsNeeded : null;
-    public bool[] WantedShopSlots { get; init; } = new bool[1024];  // Legacy - prefer IsShopSlotWanted()
-    public bool[] WantedPackSlots { get; init; } = new bool[6];     // Legacy - prefer IsPackSlotWanted()
+    public bool[] WantedShopSlots { get; init; } = new bool[1024]; // Legacy - prefer IsShopSlotWanted()
+    public bool[] WantedPackSlots { get; init; } = new bool[6]; // Legacy - prefer IsPackSlotWanted()
 
     /// <summary>
     /// Create from generic JSON config clause.
@@ -145,17 +153,20 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
     )
     {
         // Shop slots: convert explicit array to min/max range, or use specified range
-        int minShop = 0, maxShop = 0;
+        int minShop = 0,
+            maxShop = 0;
         bool hasShopConstraint = false;
-        
+
         if (jsonClause.Sources?.ShopSlots is { Length: > 0 } slots)
         {
             minShop = slots[0];
             maxShop = slots[0] + 1;
             for (int i = 1; i < slots.Length; i++)
             {
-                if (slots[i] < minShop) minShop = slots[i];
-                if (slots[i] >= maxShop) maxShop = slots[i] + 1;
+                if (slots[i] < minShop)
+                    minShop = slots[i];
+                if (slots[i] >= maxShop)
+                    maxShop = slots[i] + 1;
             }
             hasShopConstraint = true;
         }
@@ -165,11 +176,11 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             maxShop = jsonClause.MaxShopSlot ?? 1000; // Large default if only min specified
             hasShopConstraint = true;
         }
-        
+
         // Pack slots: convert to 6-bit bitmask
         byte packMask = 0;
         bool hasPackConstraint = false;
-        
+
         if (jsonClause.Sources?.PackSlots is { Length: > 0 } packSlots)
         {
             foreach (var slot in packSlots)
@@ -188,7 +199,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
                 packMask |= (byte)(1 << i);
             hasPackConstraint = packMask != 0;
         }
-        
+
         // Build WantedAntes bool array from EffectiveAntes (set by InitializeParsedEnums or ProcessClause)
         var wantedAntes = new bool[40];
         foreach (var ante in jsonClause.EffectiveAntes)
@@ -196,7 +207,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
         }
-        
+
         // Build legacy WantedShopSlots array (for compatibility): explicit list = only those indices; range = fill range
         var wantedShopSlots = new bool[1024];
         if (jsonClause.Sources?.ShopSlots is { Length: > 0 } explicitSlots)
@@ -212,7 +223,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             for (int i = minShop; i < maxShop && i < 1024; i++)
                 wantedShopSlots[i] = true;
         }
-        
+
         // Build legacy WantedPackSlots array (for compatibility)
         var wantedPackSlots = new bool[6];
         for (int i = 0; i < 6; i++)
@@ -220,7 +231,7 @@ public class MotelyJsonJokerFilterClause : MotelyJsonFilterClause
             if ((packMask & (1 << i)) != 0)
                 wantedPackSlots[i] = true;
         }
-        
+
         return new MotelyJsonJokerFilterClause
         {
             JokerType = jsonClause.JokerEnum,
@@ -653,13 +664,22 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
     public List<MotelyVoucher>? VoucherTypes { get; init; }
     public bool[] WantedAntes { get; init; } = new bool[40];
     public int[] EffectiveAntes { get; init; } = Array.Empty<int>(); // Pre-computed for SIMD hotpath!
+    public int MaxAnte { get; init; } // Highest ante this clause cares about - for early exit optimization
 
     public static MotelyJsonVoucherFilterClause FromJsonClause(
         MotelyJsonConfig.MotelyJsonFilterClause jsonClause
     )
     {
+        // BUG FIX: Use EffectiveAntes if populated, otherwise fall back to Antes with defaults
+        // This handles cases where FromJsonClause is called on clauses that haven't been
+        // fully processed by PostProcess (e.g., during scoring)
+        var antesToUse =
+            jsonClause.EffectiveAntes.Length > 0
+                ? jsonClause.EffectiveAntes
+                : (jsonClause.Antes ?? MotelyFilterDefaults.DEFAULT_ANTES);
+
         bool[] wantedAntes = new bool[40];
-        foreach (var ante in jsonClause.EffectiveAntes)
+        foreach (var ante in antesToUse)
         {
             if (ante >= 0 && ante < 40)
                 wantedAntes[ante] = true;
@@ -670,7 +690,8 @@ public class MotelyJsonVoucherFilterClause : MotelyJsonFilterClause
             VoucherType = jsonClause.VoucherEnum ?? MotelyVoucher.Overstock,
             VoucherTypes = jsonClause.VoucherEnums?.Count > 0 ? jsonClause.VoucherEnums : null,
             WantedAntes = wantedAntes,
-            EffectiveAntes = jsonClause.EffectiveAntes,
+            EffectiveAntes = antesToUse,
+            MaxAnte = antesToUse.Length > 0 ? antesToUse.Max() : 0,
             Min = jsonClause.Min,
         };
     }

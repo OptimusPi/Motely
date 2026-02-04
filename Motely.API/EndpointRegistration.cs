@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Routing;
 using Motely;
 using Motely.Analysis;
 using Motely.API.Hubs;
-using Motely.Executors;
 using Motely.API.Models;
 using Motely.API.Services;
+using Motely.Executors;
 
 namespace Motely.API;
 
@@ -125,7 +125,8 @@ public static class EndpointRegistration
 
                     // Thread count is independent of SeedCount; cap at processor count to avoid allocating millions of threads.
                     var threads = Math.Min(Environment.ProcessorCount, 64);
-                    if (threads < 1) threads = 1;
+                    if (threads < 1)
+                        threads = 1;
 
                     var filterJaml = FilterService.GetFilterJaml(request.FilterId);
                     if (string.IsNullOrEmpty(filterJaml))
@@ -165,7 +166,9 @@ public static class EndpointRegistration
             {
                 try
                 {
-                    var (results, progressPercent) = MultiSearchManager.Instance.GetSearchStatus(id);
+                    var (results, progressPercent) = MultiSearchManager.Instance.GetSearchStatus(
+                        id
+                    );
                     var isRunning = MultiSearchManager.Instance.IsSearchRunning(id);
 
                     return Results.Ok(
@@ -213,7 +216,4 @@ public static class EndpointRegistration
 
         return endpoints;
     }
-
-
-
 }

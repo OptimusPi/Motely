@@ -34,13 +34,19 @@ public sealed class MotelySearchQueueDatabase : IDisposable
         ExecuteNonQuery(searchQueueSchema);
     }
 
-    public void Enqueue(string searchId, string jamlFilter, int threadCount = 1, bool isBurst = false)
+    public void Enqueue(
+        string searchId,
+        string jamlFilter,
+        int threadCount = 1,
+        bool isBurst = false
+    )
     {
         if (_disposed)
             return;
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "INSERT OR REPLACE INTO SearchQueue (searchId, jamlFilter, threadCount, isBurst, status, dateCreated, lastAccessed) VALUES (?, ?, ?, ?, 'queued', current_timestamp, current_timestamp);";
+        cmd.CommandText =
+            "INSERT OR REPLACE INTO SearchQueue (searchId, jamlFilter, threadCount, isBurst, status, dateCreated, lastAccessed) VALUES (?, ?, ?, ?, 'queued', current_timestamp, current_timestamp);";
         cmd.Parameters.Add(new DuckDBParameter(searchId));
         cmd.Parameters.Add(new DuckDBParameter(jamlFilter));
         cmd.Parameters.Add(new DuckDBParameter(threadCount));
@@ -54,7 +60,8 @@ public sealed class MotelySearchQueueDatabase : IDisposable
             return null;
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "SELECT searchId, jamlFilter, dateCreated, lastAccessed, status, batchMarker, seedsSearched, resultsFound, threadCount, isBurst FROM SearchQueue WHERE status = 'queued' ORDER BY dateCreated ASC LIMIT 1;";
+        cmd.CommandText =
+            "SELECT searchId, jamlFilter, dateCreated, lastAccessed, status, batchMarker, seedsSearched, resultsFound, threadCount, isBurst FROM SearchQueue WHERE status = 'queued' ORDER BY dateCreated ASC LIMIT 1;";
         using var reader = cmd.ExecuteReader();
 
         if (!reader.Read())
@@ -90,7 +97,8 @@ public sealed class MotelySearchQueueDatabase : IDisposable
             return;
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "UPDATE SearchQueue SET status = 'completed', seedsSearched = ?, resultsFound = ?, lastAccessed = current_timestamp WHERE searchId = ?;";
+        cmd.CommandText =
+            "UPDATE SearchQueue SET status = 'completed', seedsSearched = ?, resultsFound = ?, lastAccessed = current_timestamp WHERE searchId = ?;";
         cmd.Parameters.Add(new DuckDBParameter(seedsSearched));
         cmd.Parameters.Add(new DuckDBParameter(resultsFound));
         cmd.Parameters.Add(new DuckDBParameter(searchId));
@@ -103,13 +111,19 @@ public sealed class MotelySearchQueueDatabase : IDisposable
         Touch(searchId);
     }
 
-    public void UpdateProgress(string searchId, long seedsSearched, int resultsFound, long batchMarker = 0)
+    public void UpdateProgress(
+        string searchId,
+        long seedsSearched,
+        int resultsFound,
+        long batchMarker = 0
+    )
     {
         if (_disposed)
             return;
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "UPDATE SearchQueue SET seedsSearched = ?, resultsFound = ?, batchMarker = ?, lastAccessed = current_timestamp WHERE searchId = ?;";
+        cmd.CommandText =
+            "UPDATE SearchQueue SET seedsSearched = ?, resultsFound = ?, batchMarker = ?, lastAccessed = current_timestamp WHERE searchId = ?;";
         cmd.Parameters.Add(new DuckDBParameter(seedsSearched));
         cmd.Parameters.Add(new DuckDBParameter(resultsFound));
         cmd.Parameters.Add(new DuckDBParameter(batchMarker));
@@ -124,24 +138,27 @@ public sealed class MotelySearchQueueDatabase : IDisposable
 
         var list = new List<SearchQueueEntry>();
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "SELECT searchId, jamlFilter, dateCreated, lastAccessed, status, batchMarker, seedsSearched, resultsFound, threadCount, isBurst FROM SearchQueue ORDER BY dateCreated DESC;";
+        cmd.CommandText =
+            "SELECT searchId, jamlFilter, dateCreated, lastAccessed, status, batchMarker, seedsSearched, resultsFound, threadCount, isBurst FROM SearchQueue ORDER BY dateCreated DESC;";
         using var reader = cmd.ExecuteReader();
 
         while (reader.Read())
         {
-            list.Add(new SearchQueueEntry
-            {
-                SearchId = reader.GetString(0),
-                JamlFilter = reader.GetString(1),
-                DateCreated = reader.GetDateTime(2),
-                LastAccessed = reader.GetDateTime(3),
-                Status = reader.GetString(4),
-                BatchMarker = reader.IsDBNull(5) ? 0 : reader.GetInt64(5),
-                SeedsSearched = reader.IsDBNull(6) ? 0 : reader.GetInt64(6),
-                ResultsFound = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
-                ThreadCount = reader.IsDBNull(8) ? 1 : reader.GetInt32(8),
-                IsBurst = reader.GetBoolean(9),
-            });
+            list.Add(
+                new SearchQueueEntry
+                {
+                    SearchId = reader.GetString(0),
+                    JamlFilter = reader.GetString(1),
+                    DateCreated = reader.GetDateTime(2),
+                    LastAccessed = reader.GetDateTime(3),
+                    Status = reader.GetString(4),
+                    BatchMarker = reader.IsDBNull(5) ? 0 : reader.GetInt64(5),
+                    SeedsSearched = reader.IsDBNull(6) ? 0 : reader.GetInt64(6),
+                    ResultsFound = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
+                    ThreadCount = reader.IsDBNull(8) ? 1 : reader.GetInt32(8),
+                    IsBurst = reader.GetBoolean(9),
+                }
+            );
         }
         return list;
     }
@@ -152,7 +169,8 @@ public sealed class MotelySearchQueueDatabase : IDisposable
             return;
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = $"DELETE FROM SearchQueue WHERE lastAccessed < (current_timestamp - INTERVAL {olderThan.TotalSeconds} SECOND) AND status IN ('completed', 'error', 'cancelled');";
+        cmd.CommandText =
+            $"DELETE FROM SearchQueue WHERE lastAccessed < (current_timestamp - INTERVAL {olderThan.TotalSeconds} SECOND) AND status IN ('completed', 'error', 'cancelled');";
         cmd.ExecuteNonQuery();
     }
 
@@ -162,7 +180,8 @@ public sealed class MotelySearchQueueDatabase : IDisposable
             return;
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "UPDATE SearchQueue SET batchMarker = ?, seedsSearched = ?, resultsFound = ?, lastAccessed = current_timestamp WHERE searchId = ?;";
+        cmd.CommandText =
+            "UPDATE SearchQueue SET batchMarker = ?, seedsSearched = ?, resultsFound = ?, lastAccessed = current_timestamp WHERE searchId = ?;";
         cmd.Parameters.Add(new DuckDBParameter(entry.BatchMarker));
         cmd.Parameters.Add(new DuckDBParameter(entry.SeedsSearched));
         cmd.Parameters.Add(new DuckDBParameter(entry.ResultsFound));
@@ -188,7 +207,8 @@ public sealed class MotelySearchQueueDatabase : IDisposable
             return;
 
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "UPDATE SearchQueue SET lastAccessed = current_timestamp WHERE searchId = ?;";
+        cmd.CommandText =
+            "UPDATE SearchQueue SET lastAccessed = current_timestamp WHERE searchId = ?;";
         cmd.Parameters.Add(new DuckDBParameter(searchId));
         cmd.ExecuteNonQuery();
     }

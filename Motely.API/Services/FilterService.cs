@@ -94,7 +94,8 @@ public static class FilterService
             }
 
             var filterName = displayName ?? "UnknownFilter";
-            var searchId = $"{MultiSearchManager.SanitizeFilterFileStem(filterName)}_{deck}_{stake}";
+            var searchId =
+                $"{MultiSearchManager.SanitizeFilterFileStem(filterName)}_{deck}_{stake}";
             var fileName = Path.GetFileName(file);
             var filterId = Path.GetFileNameWithoutExtension(fileName);
 

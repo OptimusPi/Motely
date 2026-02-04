@@ -13,7 +13,7 @@ public sealed record MotelyRunConfig
     public required string Name { get; init; }
     public required MotelyDeck Deck { get; init; }
     public required MotelyStake Stake { get; init; }
-    
+
     // Core search logic
     // Now using typed descriptors for high-performance execution
     public IMotelySeedFilterDesc? FilterPipeline { get; init; }
@@ -23,10 +23,10 @@ public sealed record MotelyRunConfig
     public required IReadOnlyList<MotelyJsonFilterClause> Must { get; init; }
     public required IReadOnlyList<MotelyJsonFilterClause> MustNot { get; init; }
     public required IReadOnlyList<MotelyJsonFilterClause> Should { get; init; }
-    
+
     // Reporting & Database schema
     public required IReadOnlyList<IColumnDefinition> Columns { get; init; }
-    
+
     // Validation limits
     public required int MaxVoucherAnte { get; init; }
     public required int MaxBossAnte { get; init; }
@@ -38,11 +38,11 @@ public sealed record MotelyRunConfig
     {
         // 1. Initialize and validate the raw config
         config.PostProcess(); // Initialize and validate
-        
+
         // 2. Resolve Deck/Stake
         if (!Enum.TryParse<MotelyDeck>(config.Deck, true, out var deck))
             deck = MotelyDeck.Red;
-            
+
         if (!Enum.TryParse<MotelyStake>(config.Stake, true, out var stake))
             stake = MotelyStake.White;
 
@@ -53,7 +53,7 @@ public sealed record MotelyRunConfig
         IMotelySeedFilterDesc? pipeline = null;
         IMotelySeedScoreDesc? scoreDesc = null;
 
-        try 
+        try
         {
             // Build optimized filter pipeline
             if (config.Must != null && config.Must.Count > 0)
@@ -62,11 +62,11 @@ public sealed record MotelyRunConfig
                 // This invokes the AVX2/AVX512 specialized implementations
                 // Returns IMotelySearchSettings (type-safe interface)
                 var pipelineSettings = SpecializedFilterFactory.CreateJsonFilterPipeline(
-                    config.Must, 
-                    Environment.ProcessorCount, 
+                    config.Must,
+                    Environment.ProcessorCount,
                     1024 // Default batch size
                 );
-                
+
                 // Extract the filter description from the settings using the interface property
                 pipeline = pipelineSettings.BaseFilterDescBase;
             }
@@ -75,15 +75,22 @@ public sealed record MotelyRunConfig
             if (config.Should != null && config.Should.Count > 0)
             {
                 // Default setup: no cutoff, console reporting (to be overridden by executors)
-                scoreDesc = new MotelyJsonSeedScoreDesc(config, 0, ScoreCutoffMode.None, (_) => {});
+                scoreDesc = new MotelyJsonSeedScoreDesc(
+                    config,
+                    0,
+                    ScoreCutoffMode.None,
+                    (_) => { }
+                );
             }
         }
         catch (Exception ex)
         {
             // Log but don't crash - allow fallback to slow path if pipeline creation fails
-            Console.Error.WriteLine($"[RunConfig] Warning: Failed to optimize filter pipeline: {ex.Message}"); 
+            Console.Error.WriteLine(
+                $"[RunConfig] Warning: Failed to optimize filter pipeline: {ex.Message}"
+            );
         }
-        
+
         // 5. Create the run config
         return new MotelyRunConfig
         {
@@ -96,11 +103,11 @@ public sealed record MotelyRunConfig
             MustNot = MotelyJsonFilterClause.ConvertAll(config.MustNot),
             Should = MotelyJsonFilterClause.ConvertAll(config.Should),
             Columns = columns.AsReadOnly(),
-            MaxVoucherAnte = 8, 
+            MaxVoucherAnte = 8,
             MaxBossAnte = 8,
-            StartSeed = config.StartSeed
+            StartSeed = config.StartSeed,
         };
     }
-    
+
     public string? StartSeed { get; init; }
 }
