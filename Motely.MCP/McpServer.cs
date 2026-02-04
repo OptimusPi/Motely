@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Motely;
 using Motely.Filters;
 using GenieFeedbackService = global::Motely.API.GenieFeedbackService;
-using SearchManager = global::Motely.API.SearchManager;
+using MultiSearchManager = global::Motely.Executors.MultiSearchManager;
 using SearchResult = global::Motely.API.SearchResult;
 
 namespace Motely.MCP;
@@ -19,13 +19,13 @@ public class McpServer
     private readonly string _workerUrl;
     private readonly string _model;
     private readonly GenieFeedbackService? _feedbackService;
-    private readonly SearchManager _searchManager;
+    private readonly MultiSearchManager _searchManager;
 
     public McpServer(
         ILogger<McpServer> logger,
         HttpClient httpClient,
         IConfiguration configuration,
-        SearchManager searchManager,
+        MultiSearchManager searchManager,
         GenieFeedbackService? feedbackService = null
     )
     {
@@ -230,13 +230,21 @@ public class McpServer
             // Generate search URL for linking to JAML UI
             var searchUrl = $"/JAML/?search={Uri.EscapeDataString(searchId)}";
 
+            // Convert MotelySearchResultRow to SearchResult
+            var searchResults = results?.Select(r => new SearchResult
+            {
+                Seed = r.Seed,
+                Score = r.Score,
+                Tallies = r.Tallies ?? new List<int>()
+            }).ToList();
+
             return new McpResponse
             {
                 Success = true,
                 SearchId = searchId,
                 JamlFilter = jamlFilter,
                 Reasoning = reasoning,
-                Results = results,
+                Results = searchResults,
                 Columns = columns,
                 Message =
                     $"Generated JAML filter for: {prompt}. Search started with ID: {searchId}",

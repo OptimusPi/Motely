@@ -748,8 +748,16 @@ namespace Motely.Executors
             {
                 Action<MotelySeedScoreTally> onResult = (tally) => 
                 {
-                    PrintResultRow(tally, config);
-                    _customCallback?.Invoke(tally);
+                    // If custom callback is provided, use it (handles CSV formatting with quotes)
+                    // Otherwise, use PrintResultRow (handles colored output)
+                    if (_customCallback != null)
+                    {
+                        _customCallback.Invoke(tally);
+                    }
+                    else
+                    {
+                        PrintResultRow(tally, config);
+                    }
                 };
 
                 var scoreDesc = new MotelyJsonSeedScoreDesc(config, _params.Cutoff, _params.CutoffMode, onResult);
