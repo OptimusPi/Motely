@@ -26,6 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" Condition="'$(TargetFramework)' != 'net10.0-browser' />
+    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" Condition="'$(TargetFramework)' != 'net10.0-browser'" />
   </ItemGroup>
 </Project>
