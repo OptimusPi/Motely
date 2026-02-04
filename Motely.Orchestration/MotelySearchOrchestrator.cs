@@ -16,33 +16,12 @@ namespace Motely.Executors
     /// </summary>
     public static class MotelySearchOrchestrator
     {
-#if !BROWSER
-        // === Result set gate (API → Orchestration → Motely.DB only) ===
-
-        /// <summary>Set the library root for result sets. Call once at host startup.</summary>
-        public static void SetResultsLibraryRoot(string path) => ResultsSetReader.SetLibraryRoot(path);
-
-        /// <summary>Get DB path for a search (for creating DB). Only valid after SetResultsLibraryRoot.</summary>
-        public static string? GetDbPathForSearch(string searchId) => ResultsSetReader.GetPathForFilter(searchId);
-
-        /// <summary>Create a result database for a search. Only Orchestration touches Motely.DB.</summary>
-        public static IResultsDatabaseWriter CreateResultsDatabase(string searchId, MotelyRunConfig runConfig)
-        {
-            var path = ResultsSetReader.GetPathForFilter(searchId)
-                ?? throw new InvalidOperationException($"Results library root not set or invalid searchId: {searchId}");
-            var db = new MotelySearchDatabase(path, runConfig);
-            return new ResultsDatabaseWriterAdapter(db);
-        }
-
         /// <summary>Get top seeds from a result set by searchId.</summary>
         public static List<string> GetTopSeeds(string searchId, int limit)
             => ResultsSetReader.Open(searchId)?.GetTopSeeds(limit) ?? new List<string>();
 
         /// <summary>Delete a result set (catalog + _data). Only Orchestration touches storage.</summary>
         public static void DeleteResultSet(string searchId) => ResultsSetReader.Delete(searchId);
-
-        /// <summary>Fertilizer pile (seeds from invalidated results). Only Orchestration touches Motely.DB.</summary>
-        public static FertilizerDatabase GetFertilizerDatabase() => FertilizerDatabase.Instance;
 
         /// <summary>Bulk insert seeds into a DuckDB file. Only Orchestration touches Motely.DB.</summary>
         public static long BulkInsertSeeds(string dbPath, IEnumerable<string> seeds, bool deleteExisting = false)
@@ -80,7 +59,6 @@ namespace Motely.Executors
         /// <summary>Get resume cursor for a result set by searchId.</summary>
         public static (long startBatch, int batchSize, string? lastSeed) GetResumeCursor(string searchId)
             => ResultsSetReader.Open(searchId)?.GetResumeCursor() ?? (0, 0, null);
-#endif
 
         /// <summary>
         /// Launch a search and return a context with full result access.
@@ -110,14 +88,12 @@ namespace Motely.Executors
                 var context = LaunchInMemory(config, runConfig, parameters, searchId, filterId);
                 return context;
             }
-#if !BROWSER
+
             // Desktop: Use database storage
             var contextDb = LaunchWithDatabase(config, runConfig, parameters, searchId, filterId);
             return contextDb;
-#endif
-            throw new NotSupportedException("Database storage is not available in browser build. Use useInMemoryStorage: true.");
         }
-#if !BROWSER
+        
         private static MotelySearchContext LaunchWithDatabase(
             MotelyJsonConfig config,
             MotelyRunConfig runConfig,
@@ -136,20 +112,20 @@ namespace Motely.Executors
                 Directory.CreateDirectory(searchResultsDir);
                 dbPath = Path.Combine(searchResultsDir, $"{filterId}.db");
             }
-            
+
             var database = OrchestrateDatabase(dbPath, runConfig, parameters);
-            
+
             // Create executor with callback that writes to database
             var executor = new JsonSearchExecutor(config, parameters, result =>
             {
                 database.InsertRow(result.Seed, result.Score, result.TallyColumns, result.ColumnValues);
             });
-            
+
             var search = executor.ExecuteAsSearch();
-            
+
             return new MotelySearchContext(search, database, runConfig, searchId, filterId);
         }
-#endif
+
         private static MotelySearchContext LaunchInMemory(
             MotelyJsonConfig config,
             MotelyRunConfig runConfig,
