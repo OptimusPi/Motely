@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Motely.API.Hubs;
 using Motely.API.Services;
-using Motely.Executors;
 
 namespace Motely.API;
 
@@ -22,7 +21,6 @@ public static class ServiceRegistration
         services.AddSingleton<SearchQueueService>();
         services.AddHostedService<SearchQueueHostedService>();
         services.AddSingleton<SearchService>();
-        services.AddSingleton<SearchManager>(); // Facade for MCP
         return services;
     }
 
@@ -62,9 +60,9 @@ public static class ServiceRegistration
         IConfiguration configuration
     )
     {
-        // Register MultiSearchManager as singleton (manages thread pool for queued searches)
-        services.AddSingleton(MultiSearchManager.Instance);
-
+        // Register SearchManager as singleton (manages thread pool for queued searches)
+        services.AddSingleton(_ => SearchManager.Instance);
+        
         // Always enable all services - no feature flags needed
         services.AddSearchQueueServices();
         services.AddSignalRServices();
