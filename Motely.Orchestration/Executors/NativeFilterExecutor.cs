@@ -16,7 +16,7 @@ namespace Motely.Executors
         private readonly ICancelKeyHandler _cancelKeyHandler;
         private bool _cancelled = false;
         private IEnumerable<string>? _searchSeeds = null;
-        public global::Motely.DB.MotelySearchDatabase? ResultsDatabase { get; set; }
+        public IResultStorage? ResultsDatabase { get; set; }
 
         public NativeFilterExecutor(
             string filterName,

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Desktop only. DuckDB.NET.Data does not support net10.0-browser. Browser/WASM does not use DuckDB; orchestration uses callback-only (ResultCallback). -->
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Multi-target: desktop with DuckDB, browser with stubs -->
+    <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -9,8 +9,31 @@
     <RootNamespace>Motely.DB</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- Desktop: DuckDB support -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="DuckDB.NET.Data.Full" />
+  </ItemGroup>
+
+  <!-- Browser: exclude DuckDB implementation files -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <Compile Remove="DataLakeSeedProvider.cs" />
+    <Compile Remove="DuckDB*.cs" />
+    <Compile Remove="DuckLakeHelper.cs" />
+    <Compile Remove="FilterDatabaseCleanup.cs" />
+    <Compile Remove="GenericLibrary.cs" />
+    <Compile Remove="MotelySearchDatabase.cs" />
+    <Compile Remove="MotelySearchQueueDatabase.cs" />
+    <Compile Remove="ResultsExportHelper.cs" />
+    <Compile Remove="ResultsQueryHelper.cs" />
+    <Compile Remove="ResultsSetReader.cs" />
+    <Compile Remove="SeedSourceProvider.cs" />
+    <Compile Remove="SequentialLibrary.cs" />
+  </ItemGroup>
+  
+  <!-- Desktop: exclude browser stubs -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Compile Remove="MotelySearchDatabase.Browser.cs" />
+    <Compile Remove="BrowserStubs.cs" />
   </ItemGroup>
 
   <ItemGroup>

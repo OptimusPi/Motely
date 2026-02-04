@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Desktop: DuckDB via Motely.DB. Browser/WASM: useInMemoryStorage + ResultCallback, no DB (NPM package must not include DuckDB). -->
     <TargetFrameworks>net10.0;net10.0-browser</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -13,12 +12,12 @@
     <PublishAot>true</PublishAot>
   </PropertyGroup>
 
-  <!-- Browser WASM: no Motely.DB/DuckDB so published NPM package has no DuckDB errors on Vercel. -->
+  <!-- Browser WASM -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
-    <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
     <RunAOTCompilation>true</RunAOTCompilation>
     <PublishAot>false</PublishAot>
   </PropertyGroup>
+
 
   <ItemGroup>
     <PackageReference Include="YamlDotNet" />
@@ -26,6 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" Condition="'$(TargetFramework)' != 'net10.0-browser'" />
+    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
   </ItemGroup>
 </Project>

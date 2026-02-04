@@ -12,19 +12,6 @@ namespace Motely.Executors
     /// </summary>
     public sealed class JsonSearchExecutor : IDisposable
     {
-        /// <summary>
-        /// Enum for seed source type - used to determine which search mode to use
-        /// </summary>
-        private enum SeedSourceType
-        {
-            /// <summary>Specific seed lookup or in-memory IEnumerable list</summary>
-            SeedList,
-            /// <summary>DuckDB file (streamed or loaded into memory)</summary>
-            DuckDatabase,
-            /// <summary>No seed source provided - use sequential search</summary>
-            Sequential,
-        }
-
         private readonly string? _configPath;
         private readonly MotelyJsonConfig? _config;
         private readonly JsonSearchParams _params;
@@ -115,12 +102,8 @@ namespace Motely.Executors
             
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
-            // Gate colored output based on --nofancy
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 
-            SeedSourceResult seedSource = LoadSeeds();
-
-            // Suppress startup messages in quiet mode
             if (!_params.Quiet)
             {
                 Console.WriteLine($"🔍 MotelyJAML Search Starting");
@@ -128,9 +111,7 @@ namespace Motely.Executors
                 Console.WriteLine($"   Threads: {_params.Threads}");
 
                 if (_params.RandomSeeds.HasValue)
-                {
                     Console.WriteLine($"   Mode: Random ({_params.RandomSeeds} seeds)");
-                }
                 else
                 {
                     Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
@@ -138,9 +119,7 @@ namespace Motely.Executors
                     Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
                 }
                 if (_params.EnableDebug)
-                {
                     Console.WriteLine($"   Debug: Enabled");
-                }
 
                 Console.WriteLine();
             }
@@ -148,11 +127,9 @@ namespace Motely.Executors
             try
             {
                 MotelyJsonConfig config = LoadConfig();
-                IMotelySearch search = CreateSearch(config, seedSource);
+                IMotelySearch search = CreateSearch(config);
                 if (search == null)
-                {
                     return 1;
-                }
                 
                 PrintResultsHeader(config);
 
@@ -287,12 +264,8 @@ namespace Motely.Executors
             
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
-            // Gate colored output based on --nofancy
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 
-            SeedSourceResult seedSource = LoadSeeds();
-
-            // Suppress startup messages in quiet mode
             if (!_params.Quiet)
             {
                 Console.WriteLine($"🔍 MotelyJAML Search Starting");
@@ -300,9 +273,7 @@ namespace Motely.Executors
                 Console.WriteLine($"   Threads: {_params.Threads}");
 
                 if (_params.RandomSeeds.HasValue)
-                {
                     Console.WriteLine($"   Mode: Random ({_params.RandomSeeds} seeds)");
-                }
                 else
                 {
                     Console.WriteLine($"   Batch Size: {_params.BatchSize} chars");
@@ -310,9 +281,7 @@ namespace Motely.Executors
                     Console.WriteLine($"   Range: {_params.StartBatch} to {endDisplay}");
                 }
                 if (_params.EnableDebug)
-                {
                     Console.WriteLine($"   Debug: Enabled");
-                }
 
                 Console.WriteLine();
             }
@@ -320,11 +289,9 @@ namespace Motely.Executors
             try
             {
                 MotelyJsonConfig config = LoadConfig();
-                IMotelySearch search = CreateSearch(config, seedSource);
+                IMotelySearch search = CreateSearch(config);
                 if (search == null)
-                {
                     return 1;
-                }
                 
                 PrintResultsHeader(config);
 
@@ -375,13 +342,7 @@ namespace Motely.Executors
             try
             {
                 _loadedConfig = LoadConfig();
-                
-                // Load seeds from the configured source
-                SeedSourceResult source = LoadSeeds();
-                
-                _runningSearch = CreateSearch(_loadedConfig, source);
-                
-                // Return the search handle - caller will call Start(cancellationToken)
+                _runningSearch = CreateSearch(_loadedConfig);
                 return _runningSearch;
             }
             catch (Exception ex)
@@ -392,62 +353,9 @@ namespace Motely.Executors
         }
 
         /// <summary>
-        /// Load seeds from the configured source and determine which search mode to use.
-        /// 
-        /// Priority:
-        /// 1. SpecificSeed → SeedList mode (search for one seed)
-        /// 2. SeedList → SeedList mode (use provided IEnumerable directly)
-        /// 3. SeedSources → DuckDatabase mode (load from .db/.csv/.txt file)
-        /// 4. (none) → Sequential mode (full seed space scan)
+        /// Resolve seed source path from moniker. Motely.DB handles reading the file.
         /// </summary>
-        private SeedSourceResult LoadSeeds()
-        {
-            if (!string.IsNullOrEmpty(_params.SpecificSeed))
-            {
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine($"🔍 Searching for specific seed: {_params.SpecificSeed}");
-                }
-                // Create a single-seed list from SpecificSeed
-                _params.SeedList = new[] { _params.SpecificSeed };
-                return new SeedSourceResult(SeedSourceType.SeedList);
-            }
-
-            // Direct seed list takes priority over wordlist file
-            if (_params.SeedList != null)
-            {
-                if (!_params.Quiet)
-                {
-                    // Don't enumerate IEnumerable - just note we have a list
-                    Console.WriteLine($"🔍 Searching seeds from provided list");
-                }
-                return new SeedSourceResult(SeedSourceType.SeedList);
-            }
-
-            // Unified SeedSources parameter - handles both relative and absolute paths
-            if (!string.IsNullOrEmpty(_params.SeedSources))
-            {
-                string? dbPath = LoadSeedSources(_params.SeedSources);
-                if (dbPath != null)
-                {
-                    return new SeedSourceResult(SeedSourceType.DuckDatabase, dbPath);
-                }
-                // If LoadSeedSources returns null, it indicates the operation was cancelled by the user (e.g. denied overwrite)
-                throw new OperationCanceledException("Seed source loading cancelled by user.");
-            }
-
-            // No seed source provided - use sequential search
-            return new SeedSourceResult(SeedSourceType.Sequential);
-        }
-
-        /// <summary>
-        /// Load seed sources from file (.db/.csv/.txt).
-        /// Returns the file path directly - DataLakeSeedProvider handles reading .txt/.csv files natively.
-        /// 
-        /// For IEnumerable sources (--keyword, --seedlist), use SeedList directly instead - faster!
-        /// DuckDB conversion is only done for caching/reuse, but .txt/.csv can be read directly.
-        /// </summary>
-        private string? LoadSeedSources(string seedSource)
+        private string? ResolveSeedSourcePath(string seedSource)
         {
             // If the user gave an absolute path or it already exists exactly where it is, respect it!
             if (File.Exists(seedSource))
@@ -813,25 +721,16 @@ namespace Motely.Executors
         }
 
         /// <summary>
-        /// Create a search with the appropriate seed source (Random, SeedList, DuckDB, or Sequential)
+        /// Create a search with the appropriate seed source.
+        /// Priority: Random -> Palindrome -> SpecificSeed/SeedList -> SeedSources -> Sequential
         /// </summary>
-        /// <summary>
-        /// Create a search with the appropriate seed source (Random, SeedList, DuckDB, or Sequential)
-        /// </summary>
-        private IMotelySearch CreateSearch(MotelyJsonConfig config, SeedSource source)
+        private IMotelySearch CreateSearch(MotelyJsonConfig config)
         {
-            // 1. Create optimized filter pipeline via MotelyRunConfig factory
-            // This ensures AVX/SIMD optimizations are applied!
             var runConfig = MotelyRunConfig.Factory(config);
             
             if (runConfig.FilterPipeline == null)
-            {
-                // Fallback for empty/trivial filters (should rarely happen with Factory)
-                 throw new InvalidOperationException("Failed to create filter pipeline from configuration.");
-            }
+                throw new InvalidOperationException("Failed to create filter pipeline from configuration.");
 
-            // 2. Create Search Settings from the pipeline
-            // SpecializedFilterFactory now returns IMotelySearchSettings, supporting fluent config
             var searchSettings = SpecializedFilterFactory.CreateSearchSettings(runConfig.FilterPipeline)
                 .WithThreadCount(_params.Threads)
                 .WithBatchCharacterCount(_params.BatchSize)
@@ -840,75 +739,65 @@ namespace Motely.Executors
                 .WithStake(runConfig.Stake)
                 .WithCsvOutput(_params.Quiet)
                 .WithQuietMode(_params.Quiet)
-                .WithProgressCallback(progress =>
-                {
-                    // DO NOT call _customCallback here - that's for RESULTS only, not progress!
-                    // Progress updates should NOT appear as CSV rows
-                    
-                    // Forward to the main progress callback if set (for API/UI stats)
-                    _params.ProgressCallback?.Invoke(progress);
-                });
+                .WithProgressCallback(progress => _params.ProgressCallback?.Invoke(progress));
 
-            // Handle EndBatch (0 means infinite/max)
             if (_params.EndBatch > 0)
-            {
-                 searchSettings.WithEndBatchIndex((long)_params.EndBatch);
-            }
+                searchSettings.WithEndBatchIndex((long)_params.EndBatch);
 
-            // 4. Attach Score Provider with PRINTING callback
-            // override the one from RunConfig because we need to hook up the UI callback here
             if (config.Should != null && config.Should.Count > 0)
             {
-                // Define the callback that prints the result to the console
                 Action<MotelySeedScoreTally> onResult = (tally) => 
                 {
                     PrintResultRow(tally, config);
                     _customCallback?.Invoke(tally);
                 };
 
-                // Create a new descriptor with the callback
-                var scoreDesc = new MotelyJsonSeedScoreDesc(
-                    config, 
-                    _params.Cutoff, 
-                    _params.CutoffMode, 
-                    onResult
-                );
-                
+                var scoreDesc = new MotelyJsonSeedScoreDesc(config, _params.Cutoff, _params.CutoffMode, onResult);
                 searchSettings.WithSeedScoreProvider(scoreDesc);
             }
 
-            // 3. Configure Seed Source & Start Search
-            // Priority: Random -> Palindrome -> SeedList -> DuckDB -> Sequential
-            
             var token = _params.CancellationToken ?? default;
             
+            // Random search
             if (_params.RandomSeeds.HasValue)
             {
-                 if (!_params.Quiet) Console.WriteLine($"🎲 Random Search: {_params.RandomSeeds} seeds");
-                 return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start(token);
+                if (!_params.Quiet) Console.WriteLine($"🎲 Random Search: {_params.RandomSeeds} seeds");
+                return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start(token);
             }
             
+            // Palindrome search
             if (_params.PalindromeSeeds)
             {
-                 if (!_params.Quiet) Console.WriteLine($"🔄 Palindrome Search: generating palindrome seeds lazily");
-                 return searchSettings.WithPalindromeSearch().Start(token);
+                if (!_params.Quiet) Console.WriteLine($"🔄 Palindrome Search");
+                return searchSettings.WithPalindromeSearch().Start(token);
             }
             
-            if (source.SourceType == SeedSourceType.SeedList && _params.SeedList != null)
+            // Specific seed -> convert to list
+            if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
-                 // Don't materialize IEnumerable - it's lazy! Seeds come from generator/enumerator in their natural order
-                 // Use known count for keyword generation if available (for progress reporting)
-                 if (!_params.Quiet) Console.WriteLine($"📋 List Search: seeds from provided list (lazy enumeration)");
-                 return searchSettings.WithListSearch(_params.SeedList, seedCount: _params.KeywordSeedCount ?? -1).Start(token);
+                if (!_params.Quiet) Console.WriteLine($"🔍 Specific seed: {_params.SpecificSeed}");
+                _params.SeedList = new[] { _params.SpecificSeed };
+            }
+            
+            // Seed list search
+            if (_params.SeedList != null)
+            {
+                if (!_params.Quiet) Console.WriteLine($"📋 List Search");
+                return searchSettings.WithListSearch(_params.SeedList, seedCount: _params.KeywordSeedCount ?? -1).Start(token);
             }
 
-            if (source.SourceType == SeedSourceType.DuckDatabase && !string.IsNullOrEmpty(source.DbPath))
+            // File-based seed source (Motely.DB handles the details)
+            if (!string.IsNullOrEmpty(_params.SeedSources))
             {
-                 if (!_params.Quiet) Console.WriteLine($"🦆 DuckDB Search: {source.DbPath}");
-                 return searchSettings.WithProviderSearch(new global::Motely.DB.DataLakeSeedProvider(source.DbPath)).Start(token);
+                string? resolvedPath = ResolveSeedSourcePath(_params.SeedSources);
+                if (resolvedPath == null)
+                    throw new OperationCanceledException("Seed source loading cancelled.");
+                    
+                if (!_params.Quiet) Console.WriteLine($"📁 File Search: {resolvedPath}");
+                return searchSettings.WithProviderSearch(new global::Motely.DB.DataLakeSeedProvider(resolvedPath)).Start(token);
             }
 
-            // Default: Sequential Search
+            // Default: Sequential
             if (!_params.Quiet) Console.WriteLine($"🔄 Sequential Search: 35^{8-_params.BatchSize} batches");
             return searchSettings.WithSequentialSearch().Start(token);
         }
@@ -1130,22 +1019,12 @@ namespace Motely.Executors
 
         public void Dispose()
         {
-            // Cleanup DuckDB Appender for Sequential Search results
-            if (_resultsAppender != null)
+            // Cleanup result storage
+            if (ResultStorage is IDisposable disposableStorage)
             {
-                _resultsAppender.Dispose();
-                _resultsAppender = null;
-                
+                disposableStorage.Dispose();
             }
-            
-            // Cleanup MotelySearchDatabase ResultsDatabase
-            if (ResultsDatabase != null)
-            {
-                ResultsDatabase.Checkpoint();
-                ResultsDatabase.Dispose();
-                ResultsDatabase = null;
-                
-            }
+            ResultStorage = null;
             
             _runningSearch?.Dispose();
             _runningSearch = null;

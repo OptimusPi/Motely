@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Motely.DB;
 using Motely.Filters;
 using Motely.Reporting;
-#if !BROWSER
-using Motely.DB;
-#endif
+using Motely.Repository;
 
 namespace Motely.Executors
 {
@@ -16,6 +15,8 @@ namespace Motely.Executors
     /// </summary>
     public static class MotelySearchOrchestrator
     {
+        /// <summary>Set repository implementation. Must be called before using any methods.</summary>
+        public static void SetRepository(IMotelyRepository repository) => RepositoryHost.Set(repository);
         /// <summary>Get top seeds from a result set by searchId.</summary>
         public static List<string> GetTopSeeds(string searchId, int limit)
             => ResultsSetReader.Open(searchId)?.GetTopSeeds(limit) ?? new List<string>();
@@ -101,19 +102,9 @@ namespace Motely.Executors
             string searchId,
             string filterId)
         {
-            // Determine database path
-            var dbPath = parameters.OutputDbPath;
-            if (string.IsNullOrEmpty(dbPath))
-            {
-                // Default path based on filter ID
-                var searchResultsDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Motely", "SearchResults");
-                Directory.CreateDirectory(searchResultsDir);
-                dbPath = Path.Combine(searchResultsDir, $"{filterId}.db");
-            }
-
-            var database = OrchestrateDatabase(dbPath, runConfig, parameters);
+            // Pass moniker to repository - all path resolution handled by Motely.DB
+            var moniker = parameters.OutputDbPath ?? filterId;
+            var database = RepositoryHost.Instance.GetSink(moniker, runConfig);
 
             // Create executor with callback that writes to database
             var executor = new JsonSearchExecutor(config, parameters, result =>
@@ -188,7 +179,8 @@ namespace Motely.Executors
             }
             return sanitized;
         }
-#if !BROWSER
+
+
         // === Legacy methods for backward compatibility (desktop only) ===
         
         public static IMotelySearch LaunchJaml(string jamlPath, JsonSearchParams parameters, Action<MotelySeedScoreTally>? resultCallback = null)
@@ -274,7 +266,7 @@ namespace Motely.Executors
             
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {
-                executor.ResultsDatabase = OrchestrateDatabase(parameters.OutputDbPath, runConfig, parameters);
+                executor.ResultsDatabase = RepositoryHost.Instance.GetSink(parameters.OutputDbPath, runConfig);
             }
 
             return executor.ExecuteAsSearch();
@@ -299,38 +291,11 @@ namespace Motely.Executors
             
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {
-                executor.ResultsDatabase = OrchestrateDatabase(parameters.OutputDbPath, runConfig, parameters);
+                executor.ResultStorage = RepositoryHost.Instance.GetSink(parameters.OutputDbPath, runConfig);
             }
 
             return executor.ExecuteAsSearch();
         }
-
-        private static global::Motely.DB.MotelySearchDatabase OrchestrateDatabase(string dbPath, MotelyRunConfig runConfig, JsonSearchParams parameters)
-        {
-            bool exists = File.Exists(dbPath);
-            bool compatible = exists && global::Motely.DB.MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig, out _);
-
-            if (exists && !compatible)
-            {
-                bool shouldOverwrite = parameters.ForceOverwrite;
-                if (!shouldOverwrite && parameters.SchemaMismatchPrompt != null)
-                {
-                    shouldOverwrite = parameters.SchemaMismatchPrompt(dbPath, "Database schema mismatch. Existing database has different columns or types than current search config.");
-                }
-
-                if (shouldOverwrite)
-                {
-                    try { File.Delete(dbPath); } catch { /* Ignore delete errors, let DB open fail if needed */ }
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Cannot use existing database '{dbPath}' due to schema mismatch. Use --force to overwrite.");
-                }
-            }
-
-            return new global::Motely.DB.MotelySearchDatabase(dbPath, runConfig);
-        }
-#endif
 
         // Helper to load scoring config synchronously (copy of logic from NativeFilterExecutor)
         private static MotelyJsonConfig LoadScoringConfigSync(string configPath)
