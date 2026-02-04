@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
@@ -14,12 +15,9 @@ public struct MotelyJsonPlayingCardFilterDesc(MotelyJsonPlayingCardFilterCriteri
     {
         foreach (var clause in _criteria.Clauses)
         {
-            if (clause.EffectiveAntes != null)
+            foreach (var ante in clause.EffectiveAntes)
             {
-                foreach (var ante in clause.EffectiveAntes)
-                {
-                    ctx.CacheBoosterPackStream(ante);
-                }
+                ctx.CacheBoosterPackStream(ante);
             }
         }
 
@@ -45,8 +43,10 @@ public struct MotelyJsonPlayingCardFilterDesc(MotelyJsonPlayingCardFilterCriteri
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Count == 0)
-                return VectorMask.AllBitsSet;
+            Debug.Assert(
+                _clauses != null && _clauses.Count > 0,
+                "PlayingCard filter created with empty clauses - this is a programming error!"
+            );
 
             // Copy struct members to locals to avoid CS1673
             var clauses = _clauses;
@@ -60,7 +60,7 @@ public struct MotelyJsonPlayingCardFilterDesc(MotelyJsonPlayingCardFilterCriteri
                     {
                         // Count total occurrences across ALL wanted antes
                         int totalCount = 0;
-                        foreach (var ante in clause.EffectiveAntes ?? Array.Empty<int>())
+                        foreach (var ante in clause.EffectiveAntes)
                         {
                             int anteCount = MotelyJsonScoring.CountPlayingCardOccurrences(
                                 ref singleCtx,

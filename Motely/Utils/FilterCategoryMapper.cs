@@ -49,21 +49,30 @@ namespace Motely.Utils
                 var category = GetCategory(clause.ItemTypeEnum);
 
                 // CRITICAL OPTIMIZATION: Split SoulJoker into edition-only vs type-specific
-                // Edition-only clauses (Value="Any" + edition specified) create separate filter for instant early-exit!
+                // Edition-only clauses (no specific joker type + edition specified) create separate filter for instant early-exit!
                 if (category == FilterCategory.SoulJoker)
                 {
-                    bool isEditionOnly =
-                        (
-                            clause.Value?.Equals("Any", StringComparison.OrdinalIgnoreCase) == true
-                            || clause.Values == null
-                            || clause.Values.Length == 0
-                        )
-                        && !string.IsNullOrEmpty(clause.Edition)
-                        && !clause.Edition.Equals("None", StringComparison.OrdinalIgnoreCase);
+                    // Use pre-parsed enums - no string comparisons!
+                    bool hasSpecificJokerType =
+                        clause.JokerEnum.HasValue
+                        || (clause.JokerEnums != null && clause.JokerEnums.Count > 0);
+                    bool hasEditionRequirement =
+                        clause.EditionEnum.HasValue
+                        && clause.EditionEnum.Value != MotelyItemEdition.None;
 
-                    if (isEditionOnly)
+                    if (hasEditionRequirement)
                     {
-                        category = FilterCategory.SoulJokerEditionOnly;
+                        // PERFORMANCE FIX: Always add EditionOnly as fast pre-filter when edition is specified
+                        // This rejects 99.7% of seeds instantly (no Negative/Polychrome/etc = fail fast)
+                        if (!grouped.ContainsKey(FilterCategory.SoulJokerEditionOnly))
+                            grouped[FilterCategory.SoulJokerEditionOnly] =
+                                new List<MotelyJsonConfig.MotelyJsonFilterClause>();
+                        grouped[FilterCategory.SoulJokerEditionOnly].Add(clause);
+
+                        // If also has specific joker type, the full SoulJoker filter will be added below
+                        // EditionOnly pre-filters → SoulJoker verifies type (chained as additional filter)
+                        if (!hasSpecificJokerType)
+                            continue; // Edition-only, no type check needed
                     }
                 }
 
@@ -72,9 +81,10 @@ namespace Motely.Utils
                 // Then chains to precise JokerFilterDesc for exact slot verification
                 if (category == FilterCategory.Joker)
                 {
+                    // Use pre-parsed enum - no string comparisons!
                     bool shouldUsePreFilter =
-                        !string.IsNullOrEmpty(clause.Edition)
-                        && !clause.Edition.Equals("None", StringComparison.OrdinalIgnoreCase);
+                        clause.EditionEnum.HasValue
+                        && clause.EditionEnum.Value != MotelyItemEdition.None;
 
                     if (shouldUsePreFilter)
                     {

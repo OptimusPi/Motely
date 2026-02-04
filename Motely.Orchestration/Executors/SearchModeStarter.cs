@@ -15,18 +15,21 @@ public static class SearchModeStarter
     public static IMotelySearch Start<T>(
         MotelySearchSettings<T> settings,
         JsonSearchParams p,
-        string? duckDbPath)
+        string? duckDbPath
+    )
         where T : struct, IMotelySeedFilter
     {
         if (p.RandomSeeds.HasValue)
             return settings.WithRandomSearch(p.RandomSeeds.Value).Start();
-        
+
         if (p.SeedList != null)
             return settings.WithListSearch(p.SeedList, seedCount: -1).Start();
         if (!string.IsNullOrEmpty(duckDbPath))
         {
             if (RepositoryHost.Instance == null)
-                throw new InvalidOperationException("Repository.Instance must be set to use seed sources.");
+                throw new InvalidOperationException(
+                    "Repository.Instance must be set to use seed sources."
+                );
             var provider = RepositoryHost.Instance.GetSource(duckDbPath);
             return settings.WithProviderSearch(provider).Start();
         }

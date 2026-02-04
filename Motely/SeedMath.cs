@@ -6,7 +6,7 @@ namespace Motely;
 /// <summary>
 /// Helper for Balatro seed math (Bijective Base-35 conversion)
 /// Characters: 123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ (No 0)
-/// 
+///
 /// Bijective notation:
 /// "" = 0
 /// "1" = 1
@@ -15,7 +15,7 @@ namespace Motely;
 /// ...
 /// "Z" = 35
 /// "11" = 36
-/// 
+///
 /// Standard Balatro seeds are 8 characters.
 /// In the global bijective space, 8-character seeds occupy indices:
 /// StartOffset8 = (35^8 - 1) / 34 = 66,231,629,136
@@ -48,7 +48,7 @@ public static class SeedMath
             char c = seed[i];
             if (!CharToVal.TryGetValue(c, out int val))
                 throw new ArgumentException($"Invalid seed character: {c}");
-            
+
             // val is 0-34. Bijective uses 1-35.
             total += (val + 1) * multiplier;
             multiplier *= 35;
@@ -58,8 +58,10 @@ public static class SeedMath
 
     public static string TotalIndexToSeed(long index)
     {
-        if (index == 0) return "";
-        if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+        if (index == 0)
+            return "";
+        if (index < 0)
+            throw new ArgumentOutOfRangeException(nameof(index));
 
         char[] buffer = new char[15];
         int pos = 15;
@@ -95,13 +97,15 @@ public static class SeedMath
     /// </summary>
     public static long GetFirstSeedOfLength(int length)
     {
-        if (length <= 0) return 0;
+        if (length <= 0)
+            return 0;
         long sum = 0;
         long pow = 1;
         for (int i = 0; i < length; i++)
         {
             sum += pow;
-            if (i < length - 1) pow *= 35;
+            if (i < length - 1)
+                pow *= 35;
         }
         return sum;
     }
@@ -118,7 +122,8 @@ public static class SeedMath
     public static long SeedToBatchIndex(string seed, int batchSize)
     {
         int prefixLen = 8 - batchSize;
-        if (prefixLen <= 0) return 0;
+        if (prefixLen <= 0)
+            return 0;
 
         string prefix = seed.Substring(0, prefixLen);
         // Return index relative to the start of all possible prefixes of this length
@@ -128,7 +133,8 @@ public static class SeedMath
     public static string BatchIndexToSeedPrefix(long batchIndex, int batchSize)
     {
         int prefixLen = 8 - batchSize;
-        if (prefixLen <= 0) return "";
+        if (prefixLen <= 0)
+            return "";
         // index is treated as relative
         return SearchIndexToSeed(batchIndex, prefixLen);
     }

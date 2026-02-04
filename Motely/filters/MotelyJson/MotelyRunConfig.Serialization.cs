@@ -11,6 +11,9 @@ public static class MotelyRunConfigSerializationExtensions
 {
     public static string ToJson(this MotelyRunConfig config)
     {
-        return JsonSerializer.Serialize(config, MotelyJsonSerializerContext.Default.MotelyRunConfig);
+        return JsonSerializer.Serialize(
+            config,
+            MotelyJsonSerializerContext.Default.MotelyRunConfig
+        );
     }
 }

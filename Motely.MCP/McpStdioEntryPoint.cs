@@ -1,11 +1,7 @@
-using System.Net.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Motely.MCP.McpProtocol;
-using GenieFeedbackService = global::Motely.API.GenieFeedbackService;
-using SearchManager = global::Motely.API.SearchManager;
 
 namespace Motely.MCP;
 
@@ -33,24 +29,15 @@ public static class McpStdioEntryPoint
     {
         var builder = Host.CreateApplicationBuilder(args ?? Array.Empty<string>());
 
+        // Disable all logging to stdout - MCP uses stdout for JSON-RPC
         builder.Logging.ClearProviders();
-        builder.Logging.AddSimpleConsole(options =>
+        builder.Logging.SetMinimumLevel(LogLevel.Warning);
+        builder.Logging.AddConsole(options =>
         {
-            options.ColorBehavior = Microsoft
-                .Extensions
-                .Logging
-                .Console
-                .LoggerColorBehavior
-                .Disabled;
-            options.SingleLine = true;
+            options.LogToStandardErrorThreshold = LogLevel.Trace; // All logs go to stderr
         });
 
-        builder.Services.AddSingleton(SearchManager.Instance);
-        builder.Services.AddSingleton<GenieFeedbackService>();
-        builder.Services.AddHttpClient();
-        builder.Services.AddScoped<McpServer>();
         builder.Services.AddScoped<McpProtocolServer>();
-
         builder.Services.AddScoped<McpStdioServer>();
 
         var host = builder.Build();

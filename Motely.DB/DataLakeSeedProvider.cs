@@ -30,7 +30,7 @@ public sealed class DataLakeSeedProvider : IMotelySeedProvider, IDisposable
 
     /// <summary>
     /// Create a seed provider from a source path or library reference.
-    /// 
+    ///
     /// Supported formats:
     /// - "seq:{tableName}" - read from SequentialLibrary table
     /// - "gen:{tableName}" - read from GenericLibrary table
@@ -66,7 +66,10 @@ public sealed class DataLakeSeedProvider : IMotelySeedProvider, IDisposable
         }
         catch (Exception ex)
         {
-            throw new Exception($"Failed to initialize DataLakeSeedProvider with source '{source}': {ex.Message}", ex);
+            throw new Exception(
+                $"Failed to initialize DataLakeSeedProvider with source '{source}': {ex.Message}",
+                ex
+            );
         }
     }
 
@@ -124,7 +127,11 @@ public sealed class DataLakeSeedProvider : IMotelySeedProvider, IDisposable
     {
         // Create connection and read all seeds into enumerator
         // DuckDB/DuckLake handles concurrent Parquet reads internally
-        var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(catalogPath, dataPath: null, DuckLakeSchemaName);
+        var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+            catalogPath,
+            dataPath: null,
+            DuckLakeSchemaName
+        );
         var countSql = $"SELECT COUNT(*) FROM {DuckLakeSchemaName}.main.seeds";
         var selectSql = $"SELECT seed FROM {DuckLakeSchemaName}.main.seeds";
 
@@ -166,8 +173,50 @@ public sealed class DataLakeSeedProvider : IMotelySeedProvider, IDisposable
         conn.Open();
 
         var escapedPath = filePath.Replace("'", "''").Replace('\\', '/');
+
+        // Detect column name - use first column if "seed" doesn't exist
+        string? seedColumnName = null;
+        try
+        {
+            // Read one row to detect column names
+            using (var detectCmd = conn.CreateCommand())
+            {
+                detectCmd.CommandText =
+                    $"SELECT * FROM read_csv('{escapedPath}', header=true) LIMIT 1";
+                using (var detectReader = detectCmd.ExecuteReader())
+                {
+                    if (detectReader.Read() && detectReader.FieldCount > 0)
+                    {
+                        // Check all columns for "seed"
+                        for (int i = 0; i < detectReader.FieldCount; i++)
+                        {
+                            var colName = detectReader.GetName(i);
+                            if (colName.Equals("seed", StringComparison.OrdinalIgnoreCase))
+                            {
+                                seedColumnName = "seed";
+                                break;
+                            }
+                        }
+
+                        // If no "seed" column found, use first column
+                        if (seedColumnName == null)
+                        {
+                            seedColumnName = detectReader.GetName(0);
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to "seed" if detection fails
+            seedColumnName = "seed";
+        }
+
         var countSql = $"SELECT COUNT(*) FROM read_csv('{escapedPath}', header=true)";
-        var selectSql = $"SELECT seed FROM read_csv('{escapedPath}', header=true)";
+        // Properly quote column name for DuckDB (handles special characters and numbers)
+        var selectSql =
+            $"SELECT \"{seedColumnName}\" AS seed FROM read_csv('{escapedPath}', header=true)";
 
         using (var countCmd = conn.CreateCommand())
         {
@@ -199,11 +248,13 @@ public sealed class DataLakeSeedProvider : IMotelySeedProvider, IDisposable
         // DuckDB needs absolute paths for read_csv to work reliably
         var fullPath = Path.GetFullPath(filePath);
         var escapedPath = fullPath.Replace("'", "''").Replace('\\', '/');
-        
+
         // read_csv with header=false treats each line as a row with one column (column0)
         // Filter out empty/whitespace-only lines
-        var countSql = $"SELECT COUNT(*) FROM read_csv('{escapedPath}', header=false) WHERE TRIM(column0) != ''";
-        var selectSql = $"SELECT TRIM(column0) AS seed FROM read_csv('{escapedPath}', header=false) WHERE TRIM(column0) != ''";
+        var countSql =
+            $"SELECT COUNT(*) FROM read_csv('{escapedPath}', header=false) WHERE TRIM(column0) != ''";
+        var selectSql =
+            $"SELECT TRIM(column0) AS seed FROM read_csv('{escapedPath}', header=false) WHERE TRIM(column0) != ''";
 
         try
         {
@@ -221,7 +272,10 @@ public sealed class DataLakeSeedProvider : IMotelySeedProvider, IDisposable
         catch (Exception ex)
         {
             conn.Dispose();
-            throw new Exception($"Failed to read text file '{filePath}' using DuckDB read_csv: {ex.Message}", ex);
+            throw new Exception(
+                $"Failed to read text file '{filePath}' using DuckDB read_csv: {ex.Message}",
+                ex
+            );
         }
     }
 
@@ -347,8 +401,12 @@ public sealed class DuckDBSeedProvider : IMotelySeedProvider, IDisposable
     private readonly DataLakeSeedProvider _inner;
 
     public DuckDBSeedProvider(string dbPath) => _inner = new DataLakeSeedProvider(dbPath);
+
     public int SeedCount => _inner.SeedCount;
+
     public ReadOnlySpan<char> NextSeed() => _inner.NextSeed();
+
     public int NextSeeds(string[] seeds) => _inner.NextSeeds(seeds);
+
     public void Dispose() => _inner.Dispose();
 }

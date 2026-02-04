@@ -14,7 +14,8 @@ public static class SearchSettingsBuilder
         MotelySearchSettings<TFilter> settings,
         JsonSearchParams parameters,
         Action<MotelyProgress>? progressCallback = null
-    ) where TFilter : struct, IMotelySeedFilter
+    )
+        where TFilter : struct, IMotelySeedFilter
     {
         settings = settings
             .WithThreadCount(parameters.Threads)
@@ -41,12 +42,18 @@ public static class SearchSettingsBuilder
             settings = settings.WithProgressCallback(parameters.ProgressCallback);
         }
 
-        if (parameters.Deck != null && Enum.TryParse<MotelyDeck>(parameters.Deck, true, out var parsedDeck))
+        if (
+            parameters.Deck != null
+            && Enum.TryParse<MotelyDeck>(parameters.Deck, true, out var parsedDeck)
+        )
         {
             settings = settings.WithDeck(parsedDeck);
         }
 
-        if (parameters.Stake != null && Enum.TryParse<MotelyStake>(parameters.Stake, true, out var parsedStake))
+        if (
+            parameters.Stake != null
+            && Enum.TryParse<MotelyStake>(parameters.Stake, true, out var parsedStake)
+        )
         {
             settings = settings.WithStake(parsedStake);
         }

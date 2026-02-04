@@ -5,7 +5,6 @@ namespace Motely.Tests;
 
 public sealed class ChainedMustClauseSeedTests
 {
-   
     public void ChainedMustClauses_SingleSeed_C7AOGOYY_ShouldMatch()
     {
         var baronClause = new MotelyJsonConfig.MotelyJsonFilterClause

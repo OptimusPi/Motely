@@ -18,8 +18,11 @@ public static class ResultStorageFactory
     /// <exception cref="InvalidOperationException">Results library root not set or invalid searchId.</exception>
     public static IResultStorage CreateResultStorage(string searchId, MotelyRunConfig runConfig)
     {
-        var path = ResultsSetReader.GetPathForFilter(searchId)
-            ?? throw new InvalidOperationException($"Results library root not set or invalid searchId: {searchId}");
+        var path =
+            ResultsSetReader.GetPathForFilter(searchId)
+            ?? throw new InvalidOperationException(
+                $"Results library root not set or invalid searchId: {searchId}"
+            );
         var db = new MotelySearchDatabase(path, runConfig);
         return new ResultStorageAdapter(db);
     }
@@ -36,16 +39,25 @@ public static class ResultStorageFactory
         string dbPath,
         MotelyRunConfig runConfig,
         bool forceOverwrite = false,
-        Func<string, string, bool>? schemaMismatchPrompt = null)
+        Func<string, string, bool>? schemaMismatchPrompt = null
+    )
     {
-        bool exists = File.Exists(DuckLakeHelper.IsDuckLake(dbPath) ? DuckLakeHelper.GetDuckLakeCatalogPath(dbPath) : dbPath);
-        bool compatible = exists && MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig, out _);
+        bool exists = File.Exists(
+            DuckLakeHelper.IsDuckLake(dbPath)
+                ? DuckLakeHelper.GetDuckLakeCatalogPath(dbPath)
+                : dbPath
+        );
+        bool compatible =
+            exists && MotelySearchDatabase.IsSchemaCompatible(dbPath, runConfig, out _);
 
         if (exists && !compatible)
         {
             bool shouldOverwrite = forceOverwrite;
             if (!shouldOverwrite && schemaMismatchPrompt != null)
-                shouldOverwrite = schemaMismatchPrompt(dbPath, "Database schema mismatch. Existing database has different columns or types than current search config.");
+                shouldOverwrite = schemaMismatchPrompt(
+                    dbPath,
+                    "Database schema mismatch. Existing database has different columns or types than current search config."
+                );
 
             if (shouldOverwrite)
             {
@@ -54,19 +66,25 @@ public static class ResultStorageFactory
                     if (DuckLakeHelper.IsDuckLake(dbPath))
                     {
                         var catalogPath = DuckLakeHelper.GetDuckLakeCatalogPath(dbPath);
-                        if (File.Exists(catalogPath)) File.Delete(catalogPath);
+                        if (File.Exists(catalogPath))
+                            File.Delete(catalogPath);
                         var dataPath = DuckLakeHelper.GetDuckLakeDataPath(dbPath);
-                        if (Directory.Exists(dataPath)) Directory.Delete(dataPath, recursive: true);
+                        if (Directory.Exists(dataPath))
+                            Directory.Delete(dataPath, recursive: true);
                     }
                     else if (File.Exists(dbPath))
                     {
                         File.Delete(dbPath);
                     }
                 }
-                catch { /* Ignore; let DB open fail if needed */ }
+                catch
+                { /* Ignore; let DB open fail if needed */
+                }
             }
             else
-                throw new InvalidOperationException($"Cannot use existing database '{dbPath}' due to schema mismatch. Use --force to overwrite.");
+                throw new InvalidOperationException(
+                    $"Cannot use existing database '{dbPath}' due to schema mismatch. Use --force to overwrite."
+                );
         }
 
         return new ResultStorageAdapter(new MotelySearchDatabase(dbPath, runConfig));

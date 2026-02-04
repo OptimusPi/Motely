@@ -13,8 +13,14 @@ namespace Motely.Filters;
     UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip
 )]
 [JsonSerializable(typeof(MotelyJsonConfig))]
-[JsonSerializable(typeof(MotelyJsonConfig.MotelyJsonFilterClause), TypeInfoPropertyName = "MotelyJsonConfigFilterClause")]
-[JsonSerializable(typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>), TypeInfoPropertyName = "MotelyJsonConfigFilterClauseList")]
+[JsonSerializable(
+    typeof(MotelyJsonConfig.MotelyJsonFilterClause),
+    TypeInfoPropertyName = "MotelyJsonConfigFilterClause"
+)]
+[JsonSerializable(
+    typeof(List<MotelyJsonConfig.MotelyJsonFilterClause>),
+    TypeInfoPropertyName = "MotelyJsonConfigFilterClauseList"
+)]
 [JsonSerializable(typeof(MotelyFilterDefaults))]
 [JsonSerializable(typeof(SourcesConfig))]
 [JsonSerializable(typeof(MotelyRunConfig))]
@@ -22,6 +28,4 @@ namespace Motely.Filters;
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(int[]))]
 [JsonSerializable(typeof(List<string>))]
-public partial class MotelyJsonSerializerContext : JsonSerializerContext
-{
-}
+public partial class MotelyJsonSerializerContext : JsonSerializerContext { }

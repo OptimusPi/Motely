@@ -1,9 +1,9 @@
+using System.Text;
 using Motely;
 using Motely.Filters;
 using Motely.Reporting;
 using Motely.Repository;
 using Motely.Utils;
-using System.Text;
 
 namespace Motely.Executors
 {
@@ -19,8 +19,10 @@ namespace Motely.Executors
         {
             /// <summary>Specific seed lookup or in-memory IEnumerable list</summary>
             SeedList,
+
             /// <summary>Seed source by moniker (path or seq:/gen: table)</summary>
             Provider,
+
             /// <summary>No seed source provided - use sequential search</summary>
             Sequential,
         }
@@ -33,6 +35,7 @@ namespace Motely.Executors
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
         private MotelyJsonConfig? _loadedConfig; // Config loaded by ExecuteAsSearch for header printing
+
         /// <summary>Optional result storage.</summary>
         public IResultStorage? ResultStorage { get; set; }
 
@@ -54,7 +57,10 @@ namespace Motely.Executors
             _configPath = configPath;
             _config = null;
             _params = parameters;
-            _format = Path.GetExtension(configPath).EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) ? "jaml" : "json";
+            _format = Path.GetExtension(configPath)
+                .EndsWith(".jaml", StringComparison.OrdinalIgnoreCase)
+                ? "jaml"
+                : "json";
             _customCallback = customCallback;
         }
 
@@ -112,11 +118,13 @@ namespace Motely.Executors
         /// <summary>Run search to completion, print summary, and dispose. For orchestration (caller owns wait/dispose), use ExecuteAsSearch().</summary>
         public int Execute(CancellationToken cancellationToken = default)
         {
-            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
-            
+            var effectiveToken =
+                cancellationToken != default
+                    ? cancellationToken
+                    : _params.CancellationToken ?? default;
+
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
-
 
             // Suppress startup messages in quiet mode
             if (!_params.Quiet)
@@ -152,7 +160,7 @@ namespace Motely.Executors
                 {
                     return 1;
                 }
-                
+
                 PrintResultsHeader(config);
 
                 search.Start(effectiveToken);
@@ -196,8 +204,11 @@ namespace Motely.Executors
         /// </summary>
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
         {
-            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
-            
+            var effectiveToken =
+                cancellationToken != default
+                    ? cancellationToken
+                    : _params.CancellationToken ?? default;
+
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             // Gate colored output based on --nofancy
@@ -238,7 +249,7 @@ namespace Motely.Executors
                 {
                     return 1;
                 }
-                
+
                 PrintResultsHeader(config);
 
                 search.Start(effectiveToken);
@@ -288,12 +299,12 @@ namespace Motely.Executors
             try
             {
                 _loadedConfig = LoadConfig();
-                
+
                 // Load seeds from the configured source
                 SeedSourceResult source = LoadSeeds();
-                
+
                 _runningSearch = CreateSearch(_loadedConfig, source);
-                
+
                 // Return the search handle - caller will call Start(cancellationToken)
                 return _runningSearch;
             }
@@ -306,7 +317,7 @@ namespace Motely.Executors
 
         /// <summary>
         /// Load seeds from the configured source and determine which search mode to use.
-        /// 
+        ///
         /// Priority:
         /// 1. SpecificSeed → SeedList mode (search for one seed)
         /// 2. SeedList → SeedList mode (use provided IEnumerable directly)
@@ -341,7 +352,9 @@ namespace Motely.Executors
             if (!string.IsNullOrEmpty(_params.SeedSources))
             {
                 if (RepositoryHost.Instance == null)
-                    throw new InvalidOperationException("Seed source requires Repository.Instance to be set.");
+                    throw new InvalidOperationException(
+                        "Seed source requires Repository.Instance to be set."
+                    );
                 return new SeedSourceResult(SeedSourceType.Provider, _params.SeedSources);
             }
 
@@ -430,16 +443,19 @@ namespace Motely.Executors
             // 1. Create optimized filter pipeline via MotelyRunConfig factory
             // This ensures AVX/SIMD optimizations are applied!
             var runConfig = MotelyRunConfig.Factory(config);
-            
+
             if (runConfig.FilterPipeline == null)
             {
                 // Fallback for empty/trivial filters (should rarely happen with Factory)
-                 throw new InvalidOperationException("Failed to create filter pipeline from configuration.");
+                throw new InvalidOperationException(
+                    "Failed to create filter pipeline from configuration."
+                );
             }
 
             // 2. Create Search Settings from the pipeline
             // SpecializedFilterFactory now returns IMotelySearchSettings, supporting fluent config
-            var searchSettings = SpecializedFilterFactory.CreateSearchSettings(runConfig.FilterPipeline)
+            var searchSettings = SpecializedFilterFactory
+                .CreateSearchSettings(runConfig.FilterPipeline)
                 .WithThreadCount(_params.Threads)
                 .WithBatchCharacterCount(_params.BatchSize)
                 .WithStartBatchIndex((long)_params.StartBatch)
@@ -451,7 +467,7 @@ namespace Motely.Executors
                 {
                     // DO NOT call _customCallback here - that's for RESULTS only, not progress!
                     // Progress updates should NOT appear as CSV rows
-                    
+
                     // Forward to the main progress callback if set (for API/UI stats)
                     _params.ProgressCallback?.Invoke(progress);
                 });
@@ -459,7 +475,7 @@ namespace Motely.Executors
             // Handle EndBatch (0 means infinite/max)
             if (_params.EndBatch > 0)
             {
-                 searchSettings.WithEndBatchIndex((long)_params.EndBatch);
+                searchSettings.WithEndBatchIndex((long)_params.EndBatch);
             }
 
             // 4. Attach Score Provider with PRINTING callback
@@ -467,7 +483,7 @@ namespace Motely.Executors
             if (config.Should != null && config.Should.Count > 0)
             {
                 // Define the callback that prints the result to the console
-                Action<MotelySeedScoreTally> onResult = (tally) => 
+                Action<MotelySeedScoreTally> onResult = (tally) =>
                 {
                     PrintResultRow(tally, config);
                     _customCallback?.Invoke(tally);
@@ -475,54 +491,67 @@ namespace Motely.Executors
 
                 // Create a new descriptor with the callback
                 var scoreDesc = new MotelyJsonSeedScoreDesc(
-                    config, 
-                    _params.Cutoff, 
-                    _params.CutoffMode, 
+                    config,
+                    _params.Cutoff,
+                    _params.CutoffMode,
                     onResult
                 );
-                
+
                 searchSettings.WithSeedScoreProvider(scoreDesc);
             }
 
             // 3. Configure Seed Source & Start Search
             // Priority: Random -> Palindrome -> SeedList -> DuckDB -> Sequential
-            
+
             var token = _params.CancellationToken ?? default;
-            
+
             if (_params.RandomSeeds.HasValue)
             {
-                 if (!_params.Quiet) Console.WriteLine($"🎲 Random Search: {_params.RandomSeeds} seeds");
-                 return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start(token);
-            }
-            
-            if (_params.PalindromeSeeds)
-            {
-                 if (!_params.Quiet) Console.WriteLine($"🔄 Palindrome Search: generating palindrome seeds lazily");
-                 return searchSettings.WithPalindromeSearch().Start(token);
-            }
-            
-            if (source.SourceType == SeedSourceType.SeedList && _params.SeedList != null)
-            {
-                 // Don't materialize IEnumerable - it's lazy! Seeds come from generator/enumerator in their natural order
-                 // Use known count for keyword generation if available (for progress reporting)
-                 if (!_params.Quiet) Console.WriteLine($"📋 List Search: seeds from provided list (lazy enumeration)");
-                 return searchSettings.WithListSearch(_params.SeedList, seedCount: _params.KeywordSeedCount ?? -1).Start(token);
+                if (!_params.Quiet)
+                    Console.WriteLine($"🎲 Random Search: {_params.RandomSeeds} seeds");
+                return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start(token);
             }
 
-            if (source.SourceType == SeedSourceType.Provider && !string.IsNullOrEmpty(source.SourceMoniker))
+            if (_params.PalindromeSeeds)
+            {
+                if (!_params.Quiet)
+                    Console.WriteLine($"🔄 Palindrome Search: generating palindrome seeds lazily");
+                return searchSettings.WithPalindromeSearch().Start(token);
+            }
+
+            if (source.SourceType == SeedSourceType.SeedList && _params.SeedList != null)
+            {
+                // Don't materialize IEnumerable - it's lazy! Seeds come from generator/enumerator in their natural order
+                // Use known count for keyword generation if available (for progress reporting)
+                if (!_params.Quiet)
+                    Console.WriteLine(
+                        $"📋 List Search: seeds from provided list (lazy enumeration)"
+                    );
+                return searchSettings
+                    .WithListSearch(_params.SeedList, seedCount: _params.KeywordSeedCount ?? -1)
+                    .Start(token);
+            }
+
+            if (
+                source.SourceType == SeedSourceType.Provider
+                && !string.IsNullOrEmpty(source.SourceMoniker)
+            )
             {
                 if (RepositoryHost.Instance == null)
-                    throw new InvalidOperationException("Repository.Instance must be set to use seed sources.");
-                if (!_params.Quiet) Console.WriteLine($"Seed source: {source.SourceMoniker}");
+                    throw new InvalidOperationException(
+                        "Repository.Instance must be set to use seed sources."
+                    );
+                if (!_params.Quiet)
+                    Console.WriteLine($"Seed source: {source.SourceMoniker}");
                 var provider = RepositoryHost.Instance.GetSource(source.SourceMoniker);
                 return searchSettings.WithProviderSearch(provider).Start(token);
             }
 
             // Default: Sequential Search
-            if (!_params.Quiet) Console.WriteLine($"🔄 Sequential Search: 35^{8-_params.BatchSize} batches");
+            if (!_params.Quiet)
+                Console.WriteLine($"🔄 Sequential Search: 35^{8 - _params.BatchSize} batches");
             return searchSettings.WithSequentialSearch().Start(token);
         }
-
 
         private void PrintResultsHeader(MotelyJsonConfig config)
         {
@@ -550,7 +579,7 @@ namespace Motely.Executors
             var tallies = result.TallyColumns;
             var columnValues = result.ColumnValues;
             bool hasStringValues = false;
-            
+
             if (columnValues != null)
             {
                 for (int i = 0; i < columnValues.Count && i < tallies.Count; i++)
@@ -563,7 +592,7 @@ namespace Motely.Executors
                     }
                 }
             }
-            
+
             string line;
             if (hasStringValues)
             {
@@ -575,7 +604,7 @@ namespace Motely.Executors
                 // Pure integer tallies - use the optimized span version with colors!
                 line = TallyColorizer.FormatResultLine(result.Seed, result.Score, tallies);
             }
-            
+
             FancyConsole.WriteLine(line);
         }
 
@@ -690,7 +719,8 @@ namespace Motely.Executors
             if (search.IsSequentialBatchSearch)
             {
                 long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
-                double precisePercent = maxBatches > 0 ? (double)lastBatchIndex * 100.0 / (double)maxBatches : 0.0;
+                double precisePercent =
+                    maxBatches > 0 ? (double)lastBatchIndex * 100.0 / (double)maxBatches : 0.0;
                 Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
             }
             Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
@@ -703,9 +733,10 @@ namespace Motely.Executors
                     ? $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
                     : $"   Total seeds: {search.TotalSeedsSearched:N0}"
             );
-            double speedMs = search.ElapsedTime.TotalMilliseconds > 0 
-                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
-                : 0;
+            double speedMs =
+                search.ElapsedTime.TotalMilliseconds > 0
+                    ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds
+                    : 0;
             double speedPerSecond = speedMs * 1000.0;
             string speedFormatted = FormatSpeed(speedPerSecond);
             Console.WriteLine($"   Speed: {speedFormatted}");
@@ -717,7 +748,7 @@ namespace Motely.Executors
                 Console.WriteLine($"   To continue from here, use: --start {lastBatchIndex}");
             }
         }
-        
+
         /// <summary>
         /// Format speed as M/s (millions per second) for readability.
         /// Examples: 2950678 → "2.95 M/s", 123456 → "123K seeds/s", 1234 → "1.23K seeds/s"
@@ -743,7 +774,7 @@ namespace Motely.Executors
             ResultStorage?.Checkpoint();
             ResultStorage?.Dispose();
             ResultStorage = null;
-            
+
             _runningSearch?.Dispose();
             _runningSearch = null;
         }

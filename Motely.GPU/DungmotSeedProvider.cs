@@ -5,7 +5,7 @@ namespace Motely.GPU;
 /// <summary>
 /// Seed provider that spawns dungmot.exe and reads seeds from stdout.
 /// Implements IMotelySeedProvider for seamless integration with Motely search pipeline.
-/// 
+///
 /// Flow:
 ///   1. Spawns dungmot.exe with --stream flag
 ///   2. Seeds stream to stdout (one per line)
@@ -49,9 +49,9 @@ public sealed class DungmotSeedProvider : IMotelySeedProvider, IDisposable
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             },
-            EnableRaisingEvents = true
+            EnableRaisingEvents = true,
         };
 
         // Forward stderr to console for progress reporting
@@ -68,7 +68,9 @@ public sealed class DungmotSeedProvider : IMotelySeedProvider, IDisposable
         };
 
         Console.Error.WriteLine($"[Motely.GPU] Starting dungmot: {config}");
-        Console.Error.WriteLine($"[Motely.GPU] Command: {config.ExecutablePath} {config.ToArgumentString()}");
+        Console.Error.WriteLine(
+            $"[Motely.GPU] Command: {config.ExecutablePath} {config.ToArgumentString()}"
+        );
 
         try
         {
@@ -79,9 +81,10 @@ public sealed class DungmotSeedProvider : IMotelySeedProvider, IDisposable
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                $"Failed to start dungmot at '{config.ExecutablePath}'. " +
-                $"Ensure dungmot.exe is in PATH or specify full path. Error: {ex.Message}", 
-                ex);
+                $"Failed to start dungmot at '{config.ExecutablePath}'. "
+                    + $"Ensure dungmot.exe is in PATH or specify full path. Error: {ex.Message}",
+                ex
+            );
         }
     }
 
@@ -99,7 +102,7 @@ public sealed class DungmotSeedProvider : IMotelySeedProvider, IDisposable
             try
             {
                 string? line = _stdout.ReadLine();
-                
+
                 if (string.IsNullOrEmpty(line))
                 {
                     // End of stream
@@ -150,7 +153,7 @@ public sealed class DungmotSeedProvider : IMotelySeedProvider, IDisposable
                 try
                 {
                     string? line = _stdout.ReadLine();
-                    
+
                     if (string.IsNullOrEmpty(line))
                         break;
 

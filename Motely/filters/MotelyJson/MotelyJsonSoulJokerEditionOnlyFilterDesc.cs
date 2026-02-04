@@ -58,7 +58,7 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(
         {
             Debug.Assert(
                 _clauses != null && _clauses.Count > 0,
-                "Edition-only filter called with empty clauses"
+                "SoulJokerEditionOnly filter created with empty clauses - this is a programming error!"
             );
 
             // For edition-only checks, we DON'T need to detect soul cards!
@@ -105,32 +105,9 @@ public readonly struct MotelyJsonSoulJokerEditionOnlyFilterDesc(
                     return VectorMask.NoBitsSet;
             }
 
-            // ALWAYS call individual checking to verify soul cards exist in packs!
-            var clauses = _clauses;
-            return ctx.SearchIndividualSeeds(
-                resultMask,
-                (ref MotelySingleSearchContext singleCtx) =>
-                {
-                    // Check if any clause has Min parameter - if so, we CANNOT early exit!
-                    // We need to count ALL occurrences to verify minimum threshold
-                    bool hasMinRequirement = false;
-                    foreach (var clause in clauses)
-                    {
-                        if (clause.Min.HasValue && clause.Min.Value > 1)
-                        {
-                            hasMinRequirement = true;
-                            break;
-                        }
-                    }
-
-                    // Use earlyExit only if NO clause has a Min requirement
-                    return MotelyJsonScoring.CheckSoulJokerForSeed(
-                        clauses,
-                        ref singleCtx,
-                        earlyExit: !hasMinRequirement
-                    );
-                }
-            );
+            // Edition-only filters are wildcard (Any) by definition; no face verification required.
+            // Keep this strictly SIMD-only for maximum hotpath performance.
+            return resultMask;
         }
     }
 }

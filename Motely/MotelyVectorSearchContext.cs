@@ -42,7 +42,7 @@ public struct MotelyVectorResampleStream(MotelyVectorPrngStream initialPrngStrea
     public readonly MotelySingleResampleStream CreateSingleStream(int lane)
     {
         Debug.Assert(!IsInvalid, "Invalid resample stream - cursor setup failed");
-        
+
         MotelySingleResampleStream stream = new()
         {
             InitialPrngStream = InitialPrngStream.CreateSingleStream(lane),
@@ -142,6 +142,7 @@ internal static class MotelyVectorConstants
     public static readonly Vector512<double> PrngMultiplier = Vector512.Create(1.72431234);
     public static readonly Vector512<double> PrngAddend = Vector512.Create(2.134453429141);
     public static readonly Vector512<double> PrngRoundingFactor = Vector512.Create(1e13);
+
     // Magic number for accurate rounding: 2^52 aligns binary point for ties-to-even
     public static readonly Vector512<double> PrngMagicNumber = Vector512.Create(4503599627370496.0);
 
@@ -254,7 +255,10 @@ public readonly unsafe ref partial struct MotelyVectorSearchContext
     {
         Vector512<double> partialHash;
 
-        if ((isCached && !IsAdditionalFilter) || SeedHashCache->HasPartialHash(key.Length))
+        // bugged ???????????????????????????????
+        //if ((isCached && !IsAdditionalFilter) || SeedHashCache->HasPartialHash(key.Length))
+        //fixed?
+        if (!IsAdditionalFilter && (isCached || SeedHashCache->HasPartialHash(key.Length)))
         {
             partialHash = SeedHashCache->GetPartialHashVector(key.Length);
         }
