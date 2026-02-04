@@ -818,7 +818,7 @@ namespace Motely.Executors
         /// <summary>
         /// Create a search with the appropriate seed source (Random, SeedList, DuckDB, or Sequential)
         /// </summary>
-        private IMotelySearch CreateSearch(MotelyJsonConfig config, SeedSourceResult source)
+        private IMotelySearch CreateSearch(MotelyJsonConfig config, SeedSource source)
         {
             // 1. Create optimized filter pipeline via MotelyRunConfig factory
             // This ensures AVX/SIMD optimizations are applied!
