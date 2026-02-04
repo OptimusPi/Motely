@@ -1,0 +1,14 @@
+{
+    "name": "motely-wasm",
+    "version": "1.0.5",
+    "description": "WASM binaries and JS interop for Motely Seed Oracle",
+    "main": "index.js",
+    "types": "index.d.ts",
+    "files": [
+        "pkg/",
+        "index.js",
+        "index.d.ts"
+    ],
+    "dependencies": {},
+    "devDependencies": {}
+}

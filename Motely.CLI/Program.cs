@@ -1,8 +1,10 @@
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
+using Motely.DB;
 using Motely.Executors;
 using Motely.Filters;
 using Motely.GPU;
+using Motely.Repository;
 using Motely.Reporting;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -18,6 +20,8 @@ namespace Motely
 
         static int Main(string[] args)
         {
+            // Initialize repository before any operations
+            RepositoryHost.Set(new MotelyRepository());
             // Wire up Ctrl+C to CancellationTokenSource for immediate cancellation
             // NOTE: Console.CancelKeyPress handlers are synchronous, so we must use Cancel()
             // not CancelAsync(). The cancellation token propagates to all awaiting tasks immediately.

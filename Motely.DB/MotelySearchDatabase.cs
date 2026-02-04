@@ -591,6 +591,20 @@ public sealed class MotelySearchDatabase : IDisposable, IResultStorage
         return comparison.IsCompatible;
     }
 
+    /// <summary>
+    /// Create or open a result database. Handles schema compatibility checks.
+    /// Automatically deletes and recreates if schema is incompatible.
+    /// </summary>
+    public static IResultStorage CreateOrOpen(string dbPath, MotelyRunConfig runConfig, Action<string>? logCallback = null)
+    {
+        if (File.Exists(dbPath) && !IsSchemaCompatible(dbPath, runConfig, out _))
+        {
+            // Schema mismatch - delete and recreate
+            try { File.Delete(dbPath); } catch { /* Ignore delete errors */ }
+        }
+        return new MotelySearchDatabase(dbPath, runConfig, logCallback);
+    }
+
     public class SearchResultRow
     {
         public string Seed { get; set; } = "";

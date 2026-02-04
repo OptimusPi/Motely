@@ -1,9 +1,10 @@
 name: Luchador Double Tag Build
 author: Motely Genie
-description: Luchador boss blind with double tag combo and voucher support for big blind one-shot.
-
+description: Luchado, boss blind with double tag combo, and voucher support for big blind one-shot.
+deck: Plasma
+Stake: White
 must:
-  - boss: The Luchador
+  - joker: The Luchador
     antes: [1]
   - tags: [Investment, Negative, Voucher, Economy]  # Double tags
     antes: [2, 3, 4, 5, 6, 7, 8]
