@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WasmSIMD>true</WasmSIMD>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <WasmEnableThreads>true</WasmEnableThreads>
+    <WasmEnableExceptionHandling>true</WasmEnableExceptionHandling>
+    <WasmBuildNative>true</WasmBuildNative>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <PublishAot>false</PublishAot>
+    <PackageId>Motely.WASM</PackageId>
+    <WasmMainJSPath>main.js</WasmMainJSPath>
+    <WasmGenerateAppBundle>true</WasmGenerateAppBundle>
+    <UseAppHost>false</UseAppHost>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.Orchestration.Browser\Motely.Orchestration.Browser.csproj" />
+  </ItemGroup>
+</Project>
