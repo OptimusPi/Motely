@@ -69,11 +69,10 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
         {
             DebugLogger.Log($"[TAG FILTER] Called with {_clauses?.Count ?? 0} clauses");
 
-            if (_clauses == null || _clauses.Count == 0)
-            {
-                DebugLogger.Log("[TAG FILTER] No clauses - returning AllBitsSet");
-                return VectorMask.AllBitsSet;
-            }
+            Debug.Assert(
+                _clauses != null && _clauses.Count > 0,
+                "Tag filter created with empty clauses - this is a programming error!"
+            );
 
             // Use pre-calculated ante range for maximum performance
             // Stack-allocated clause masks - accumulate results per clause across all antes
@@ -101,22 +100,21 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                 {
                     var clause = _clauses[clauseIndex];
 
-                    // Skip if this ante isn't in clause's effective antes
-                    // PERF: Avoid LINQ .Contains() in SIMD hotpath - use direct array check
-                    if (clause.EffectiveAntes != null)
+                    // Skip if this ante isn't wanted
+                    bool anteWanted = false;
+                    if (clause.EffectiveAntes != null && clause.EffectiveAntes.Length > 0)
                     {
-                        bool foundAnte = false;
                         for (int i = 0; i < clause.EffectiveAntes.Length; i++)
                         {
                             if (clause.EffectiveAntes[i] == ante)
                             {
-                                foundAnte = true;
+                                anteWanted = true;
                                 break;
                             }
                         }
-                        if (!foundAnte)
-                            continue;
                     }
+                    if (!anteWanted)
+                        continue;
 
                     if (
                         clause.TagEnum.HasValue
@@ -179,15 +177,12 @@ public struct MotelyJsonTagFilterDesc(MotelyJsonTagFilterCriteria criteria)
                     var clause = _clauses[i];
                     // Check if this clause has any antes left to check
                     bool hasAntesRemaining = false;
-                    if (clause.EffectiveAntes != null)
+                    foreach (var futureAnte in clause.EffectiveAntes)
                     {
-                        foreach (var futureAnte in clause.EffectiveAntes)
+                        if (futureAnte > ante)
                         {
-                            if (futureAnte > ante)
-                            {
-                                hasAntesRemaining = true;
-                                break;
-                            }
+                            hasAntesRemaining = true;
+                            break;
                         }
                     }
 

@@ -13,7 +13,7 @@ public class SearchManager
 {
     private static SearchManager? _instance;
     private static readonly object _lock = new();
-    
+
     /// <summary>
     /// Singleton instance for MCP compatibility. Initialized via DI or first access.
     /// </summary>
@@ -41,9 +41,11 @@ public class SearchManager
         _searchService = searchService;
         _searchResultsDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Motely", "SearchResults");
+            "Motely",
+            "SearchResults"
+        );
         Directory.CreateDirectory(_searchResultsDir);
-        
+
         // Set singleton instance on DI creation
         lock (_lock)
         {
@@ -61,12 +63,24 @@ public class SearchManager
         int seedCount = 1_000_000,
         int cutoff = 50,
         int threadCount = 0,
-        string? seedSource = null)
+        string? seedSource = null
+    )
     {
-        var options = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
-        var config = System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(jamlOrJson, options)
+        var options = new System.Text.Json.JsonSerializerOptions(
+            System.Text.Json.JsonSerializerDefaults.Web
+        );
+        var config =
+            System.Text.Json.JsonSerializer.Deserialize<MotelyJsonConfig>(jamlOrJson, options)
             ?? throw new ArgumentException("Invalid JAML/JSON configuration", nameof(jamlOrJson));
-        return await StartSearchAsync(config, deck, stake, seedCount, cutoff, threadCount, seedSource);
+        return await StartSearchAsync(
+            config,
+            deck,
+            stake,
+            seedCount,
+            cutoff,
+            threadCount,
+            seedSource
+        );
     }
 
     /// <summary>
@@ -79,7 +93,8 @@ public class SearchManager
         int seedCount = 1_000_000,
         int cutoff = 50,
         int threadCount = 0,
-        string? seedSource = null)
+        string? seedSource = null
+    )
     {
         // Apply deck/stake overrides if provided
         if (!string.IsNullOrEmpty(deck))
@@ -104,7 +119,7 @@ public class SearchManager
             MinScore = cutoff,
             SourceType = sourceType,
             // Note: SeedCount is controlled via SourceType and EndBatch for random searches
-            EndBatch = (ulong)(seedCount / 1225) // ~35^2 seeds per batch
+            EndBatch = (ulong)(seedCount / 1225), // ~35^2 seeds per batch
         };
 
         if (_searchService == null)
@@ -116,13 +131,13 @@ public class SearchManager
         }
 
         var id = await _searchService.StartSearchAsync(config, criteria);
-        
+
         // Initialize metrics tracking
         _metrics.TryAdd(id, new SearchMetrics());
 
         // Wait for results (simplified - real impl would use SignalR or polling)
         await Task.Delay(100); // Give search time to start
-        
+
         var results = new List<SearchResult>();
         // Results will be populated via SignalR - return empty for now
         return (results, id);
@@ -165,7 +180,8 @@ public class SearchManager
         out long currentBatch,
         out long totalBatches,
         out long seedsSearched,
-        out double seedsPerSecond)
+        out double seedsPerSecond
+    )
     {
         if (_metrics.TryGetValue(searchId, out var metrics))
         {

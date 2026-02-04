@@ -188,7 +188,12 @@ namespace Motely.Filters
                         == "standardcard"
                 )
                 {
-                    if (!string.IsNullOrEmpty(item.Value) && !item.IsWildcard && !item.Value.Equals("Any", StringComparison.OrdinalIgnoreCase) && !item.Value.Equals("*", StringComparison.OrdinalIgnoreCase))
+                    if (
+                        !string.IsNullOrEmpty(item.Value)
+                        && !item.IsWildcard
+                        && !item.Value.Equals("Any", StringComparison.OrdinalIgnoreCase)
+                        && !item.Value.Equals("*", StringComparison.OrdinalIgnoreCase)
+                    )
                     {
                         // Special case: allow "X of Y" format
                         if (!item.Value.Contains(" of "))

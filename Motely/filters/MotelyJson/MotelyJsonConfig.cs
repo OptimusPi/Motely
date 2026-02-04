@@ -786,7 +786,13 @@ public class MotelyJsonConfig
                                         "Queen" => MotelyPlayingCardRank.Queen,
                                         "King" => MotelyPlayingCardRank.King,
                                         "Ace" => MotelyPlayingCardRank.Ace,
-                                        _ => Enum.TryParse<MotelyPlayingCardRank>(rankStr, true, out var r) ? r : (MotelyPlayingCardRank?)null,
+                                        _ => Enum.TryParse<MotelyPlayingCardRank>(
+                                            rankStr,
+                                            true,
+                                            out var r
+                                        )
+                                            ? r
+                                            : (MotelyPlayingCardRank?)null,
                                     };
 
                                     // Parse suit
@@ -796,7 +802,13 @@ public class MotelyJsonConfig
                                         "Diamonds" => MotelyPlayingCardSuit.Diamonds,
                                         "Hearts" => MotelyPlayingCardSuit.Hearts,
                                         "Spades" => MotelyPlayingCardSuit.Spades,
-                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(suitStr, true, out var s) ? s : (MotelyPlayingCardSuit?)null,
+                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(
+                                            suitStr,
+                                            true,
+                                            out var s
+                                        )
+                                            ? s
+                                            : (MotelyPlayingCardSuit?)null,
                                     };
 
                                     if (rankEnum.HasValue)
@@ -809,7 +821,7 @@ public class MotelyJsonConfig
                             {
                                 // Try parsing as standalone Rank or Suit (e.g. "Two", "Hearts", "2", "K")
                                 var val = Value.Trim();
-                                
+
                                 // Try Rank first
                                 var rankEnum = val switch
                                 {
@@ -826,14 +838,16 @@ public class MotelyJsonConfig
                                     "Q" => MotelyPlayingCardRank.Queen,
                                     "K" => MotelyPlayingCardRank.King,
                                     "A" => MotelyPlayingCardRank.Ace,
-                                    _ => Enum.TryParse<MotelyPlayingCardRank>(val, true, out var r) ? r : (MotelyPlayingCardRank?)null,
+                                    _ => Enum.TryParse<MotelyPlayingCardRank>(val, true, out var r)
+                                        ? r
+                                        : (MotelyPlayingCardRank?)null,
                                 };
 
                                 if (rankEnum.HasValue)
                                 {
                                     RankEnum = rankEnum.Value;
                                     // Clear Value to satisfy validator which forbids Value+Rank/Suit mixture
-                                    Value = null; 
+                                    Value = null;
                                 }
                                 else
                                 {
@@ -844,7 +858,13 @@ public class MotelyJsonConfig
                                         "D" or "Diamonds" => MotelyPlayingCardSuit.Diamonds,
                                         "H" or "Hearts" => MotelyPlayingCardSuit.Hearts,
                                         "S" or "Spades" => MotelyPlayingCardSuit.Spades,
-                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(val, true, out var s) ? s : (MotelyPlayingCardSuit?)null,
+                                        _ => Enum.TryParse<MotelyPlayingCardSuit>(
+                                            val,
+                                            true,
+                                            out var s
+                                        )
+                                            ? s
+                                            : (MotelyPlayingCardSuit?)null,
                                     };
 
                                     if (suitEnum.HasValue)
@@ -1130,7 +1150,10 @@ public class MotelyJsonConfig
         {
             var json = File.ReadAllText(jsonPath);
 
-            var deserializedConfig = JsonSerializer.Deserialize(json, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
+            var deserializedConfig = JsonSerializer.Deserialize(
+                json,
+                MotelyJsonSerializerContext.Default.MotelyJsonConfig
+            );
             if (deserializedConfig == null)
             {
                 error = "Failed to deserialize JSON - result was null";
@@ -1746,8 +1769,6 @@ public class MotelyJsonConfig
         };
     }
 
-
-
     /// <summary>
     /// Convert to JSON string
     /// </summary>
@@ -1801,13 +1822,13 @@ public class MotelyJsonConfig
         {
             Debug.Assert(clause.Clauses != null);
             Debug.Assert(clause.Clauses.Count > 0);
-            
+
             // Build name from actual values: "Blueprint or Brainstorm"
-            var values = clause.Clauses
-                .Where(c => !string.IsNullOrEmpty(c.Value))
+            var values = clause
+                .Clauses.Where(c => !string.IsNullOrEmpty(c.Value))
                 .Select(c => c.Value!)
                 .ToArray();
-                
+
             if (values.Length > 0)
             {
                 name = string.Join(" or ", values);
@@ -1818,7 +1839,7 @@ public class MotelyJsonConfig
                 var count = clause.Clauses.Count;
                 name = $"{count}_OR";
             }
-            
+
             // Add ante suffix if specified
             if (clause.Antes != null && clause.Antes.Length > 0 && clause.Antes.Length < 8)
             {
@@ -1889,7 +1910,10 @@ public class MotelyJsonConfig
         }
 
         // Add edition prefix if specified (but NOT for "Any" - already handled above)
-        if (!string.IsNullOrEmpty(clause.Edition) && !clause.Value?.Equals("Any", StringComparison.OrdinalIgnoreCase) == true)
+        if (
+            !string.IsNullOrEmpty(clause.Edition)
+            && !clause.Value?.Equals("Any", StringComparison.OrdinalIgnoreCase) == true
+        )
             name = clause.Edition + " " + name; // Space instead of underscore!
 
         // Add ante suffix if specified (human-readable range format)
@@ -1949,11 +1973,13 @@ public class MotelyJsonConfig
     // Create a utility class for centralized parsing logic
     public static class MotelyEnumParser
     {
-        private static readonly Dictionary<string, MotelyJoker> JokerLookup = Enum.GetValues<MotelyJoker>()
-            .ToDictionary(j => j.ToString(), j => j, StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, MotelyJoker> JokerLookup =
+            Enum.GetValues<MotelyJoker>()
+                .ToDictionary(j => j.ToString(), j => j, StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, MotelyVoucher> VoucherLookup = Enum.GetValues<MotelyVoucher>()
-            .ToDictionary(v => v.ToString(), v => v, StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, MotelyVoucher> VoucherLookup =
+            Enum.GetValues<MotelyVoucher>()
+                .ToDictionary(v => v.ToString(), v => v, StringComparer.OrdinalIgnoreCase);
 
         public static bool TryParseJoker(string value, out MotelyJoker joker)
         {

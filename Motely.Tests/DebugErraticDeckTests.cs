@@ -28,10 +28,10 @@ public class DebugErraticDeckTests
         };
 
         // We need to construct a context manually or via helpers to test GetNextErraticDeckCard
-        // This is tricky without the full harness. 
+        // This is tricky without the full harness.
         // Let's rely on inspection first, then maybe build a harness if needed.
         // Or we can invoke the filter on a dummy context if we can mock it.
-        
+
         // For now, this file is just a placeholder to show intent to reference if I need to run code.
         _output.WriteLine("Starting Debug Test");
     }

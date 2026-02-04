@@ -17,13 +17,14 @@ public class FancyConsoleDesktop : FancyConsoleImpl
     static FancyConsoleDesktop()
     {
         // Check if we have a real terminal (not redirected)
-        _isTerminalSupported = !Console.IsOutputRedirected && 
-                               !Console.IsErrorRedirected &&
-                               Environment.GetEnvironmentVariable("TERM") != null ||
-                               RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        _isTerminalSupported =
+            !Console.IsOutputRedirected
+                && !Console.IsErrorRedirected
+                && Environment.GetEnvironmentVariable("TERM") != null
+            || RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
     }
 
-    public new static FancyConsoleDesktop Instance => _desktopInstance;
+    public static new FancyConsoleDesktop Instance => _desktopInstance;
 
     [MethodImpl(MethodImplOptions.Synchronized)]
     public new void SetBottomLine(string? bottomLine)
@@ -99,11 +100,11 @@ public class FancyConsoleDesktop : FancyConsoleImpl
     {
         // Save current position
         _savedCursorTop = Console.CursorTop;
-        
+
         // Calculate bottom row (leave room for bottom line)
         int windowHeight = Console.WindowHeight;
         _bottomLineRow = windowHeight - 1;
-        
+
         // If we're at or past the bottom, scroll up first
         if (_savedCursorTop >= _bottomLineRow)
         {
@@ -111,19 +112,20 @@ public class FancyConsoleDesktop : FancyConsoleImpl
             Console.Write(new string(' ', Console.WindowWidth - 1));
             _savedCursorTop = _bottomLineRow - 1;
         }
-        
+
         // Move to bottom row
         Console.SetCursorPosition(0, _bottomLineRow);
-        
+
         // Clear the line and write new content
-        string truncated = bottomLine.Length > Console.WindowWidth - 1 
-            ? bottomLine.Substring(0, Console.WindowWidth - 1) 
-            : bottomLine;
+        string truncated =
+            bottomLine.Length > Console.WindowWidth - 1
+                ? bottomLine.Substring(0, Console.WindowWidth - 1)
+                : bottomLine;
         Console.Write(truncated.PadRight(Console.WindowWidth - 1));
-        
+
         // Restore cursor position
         Console.SetCursorPosition(0, _savedCursorTop);
-        
+
         _lastPrintedBottomLine = bottomLine;
     }
 
@@ -131,16 +133,16 @@ public class FancyConsoleDesktop : FancyConsoleImpl
     {
         if (_bottomLineRow < 0)
             return;
-            
+
         _savedCursorTop = Console.CursorTop;
-        
+
         // Move to bottom and clear
         Console.SetCursorPosition(0, _bottomLineRow);
         Console.Write(new string(' ', Console.WindowWidth - 1));
-        
+
         // Restore cursor
         Console.SetCursorPosition(0, _savedCursorTop);
-        
+
         _bottomLineRow = -1;
         _lastPrintedBottomLine = null;
     }

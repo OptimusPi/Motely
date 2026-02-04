@@ -21,7 +21,8 @@ public static class ResultsExportHelper
     public static void ExportResultsTo(
         string path,
         IReadOnlyList<string> columnNames,
-        IReadOnlyList<(string seed, int score, IReadOnlyList<object?>? columnValues)> rows)
+        IReadOnlyList<(string seed, int score, IReadOnlyList<object?>? columnValues)> rows
+    )
     {
         if (string.IsNullOrEmpty(path))
             throw new ArgumentNullException(nameof(path));
@@ -43,7 +44,8 @@ public static class ResultsExportHelper
     private static void ExportToDuckDb(
         string dbPath,
         IReadOnlyList<string> columnNames,
-        IReadOnlyList<(string seed, int score, IReadOnlyList<object?>? columnValues)> rows)
+        IReadOnlyList<(string seed, int score, IReadOnlyList<object?>? columnValues)> rows
+    )
     {
         var dbDir = Path.GetDirectoryName(dbPath);
         if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
@@ -82,7 +84,8 @@ public static class ResultsExportHelper
     private static void ExportToDuckLake(
         string catalogPath,
         IReadOnlyList<string> columnNames,
-        IReadOnlyList<(string seed, int score, IReadOnlyList<object?>? columnValues)> rows)
+        IReadOnlyList<(string seed, int score, IReadOnlyList<object?>? columnValues)> rows
+    )
     {
         var path = DuckLakeHelper.GetDuckLakeCatalogPath(catalogPath);
         var catalogDir = Path.GetDirectoryName(path);
@@ -98,7 +101,11 @@ public static class ResultsExportHelper
         }
 
         const string schemaName = "dl";
-        using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(path, dataPath, schemaName);
+        using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+            path,
+            dataPath,
+            schemaName
+        );
         var tableRef = $"{schemaName}.main.results";
 
         var columnDefs = new List<string> { "seed VARCHAR", "score INTEGER" };
@@ -128,7 +135,8 @@ public static class ResultsExportHelper
                 var v = columnValues != null && i < columnValues.Count ? columnValues[i] : null;
                 valueParts.Add("'" + (v?.ToString() ?? "").Replace("'", "''") + "'");
             }
-            var insertSql = $"INSERT INTO {tableRef} ({string.Join(", ", insertCols)}) VALUES ({string.Join(", ", valueParts)})";
+            var insertSql =
+                $"INSERT INTO {tableRef} ({string.Join(", ", insertCols)}) VALUES ({string.Join(", ", valueParts)})";
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = insertSql;
@@ -144,7 +152,11 @@ public static class ResultsExportHelper
     /// <param name="dbPath">Path to the DuckDB results database.</param>
     /// <param name="csvPath">Output CSV file path.</param>
     /// <param name="tableName">Table name (default "results").</param>
-    public static void ExportDuckDbToCsv(string dbPath, string csvPath, string tableName = "results")
+    public static void ExportDuckDbToCsv(
+        string dbPath,
+        string csvPath,
+        string tableName = "results"
+    )
     {
         if (string.IsNullOrEmpty(dbPath))
             throw new ArgumentNullException(nameof(dbPath));
@@ -162,7 +174,7 @@ public static class ResultsExportHelper
 
         using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
         using var cmd = conn.CreateCommand();
-        
+
         // Use DuckDB's native COPY TO CSV - handles quoting, escaping, headers properly
         cmd.CommandText = $"COPY {tableName} TO '{escapedCsvPath}' (FORMAT CSV, HEADER true)";
         cmd.ExecuteNonQuery();
@@ -171,7 +183,11 @@ public static class ResultsExportHelper
     /// <summary>
     /// Export results from DuckLake to CSV using native COPY command.
     /// </summary>
-    public static void ExportDuckLakeToCsv(string catalogPath, string csvPath, string tableName = "results")
+    public static void ExportDuckLakeToCsv(
+        string catalogPath,
+        string csvPath,
+        string tableName = "results"
+    )
     {
         if (string.IsNullOrEmpty(catalogPath))
             throw new ArgumentNullException(nameof(catalogPath));
@@ -189,10 +205,15 @@ public static class ResultsExportHelper
         var escapedCsvPath = csvPath.Replace("'", "''").Replace('\\', '/');
         const string schemaName = "dl";
 
-        using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(path, dataPath: null, schemaName);
+        using var conn = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+            path,
+            dataPath: null,
+            schemaName
+        );
         using var cmd = conn.CreateCommand();
-        
-        cmd.CommandText = $"COPY {schemaName}.main.{tableName} TO '{escapedCsvPath}' (FORMAT CSV, HEADER true)";
+
+        cmd.CommandText =
+            $"COPY {schemaName}.main.{tableName} TO '{escapedCsvPath}' (FORMAT CSV, HEADER true)";
         cmd.ExecuteNonQuery();
     }
 }

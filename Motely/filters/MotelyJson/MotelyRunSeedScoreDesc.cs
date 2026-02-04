@@ -23,7 +23,10 @@ public struct MotelyRunSeedScoreDesc(
         // For now, delegate to the old provider by converting back to MotelyJsonConfig.
         // TODO: Replace with native MotelyRun scoring implementation (Phase2).
         var jsonDto = Config.ToJson(); // round-trip for compatibility
-        var jsonConfig = System.Text.Json.JsonSerializer.Deserialize(jsonDto, MotelyJsonSerializerContext.Default.MotelyJsonConfig);
+        var jsonConfig = System.Text.Json.JsonSerializer.Deserialize(
+            jsonDto,
+            MotelyJsonSerializerContext.Default.MotelyJsonConfig
+        );
         jsonConfig!.PostProcess();
 
         var legacyDesc = new MotelyJsonSeedScoreDesc(jsonConfig, Cutoff, Mode, _onResultFound);

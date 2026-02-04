@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -31,8 +32,10 @@ public struct MotelyJsonEventFilterDesc(MotelyJsonEventFilterCriteria criteria)
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            if (_clauses == null || _clauses.Length == 0)
-                return VectorMask.AllBitsSet;
+            Debug.Assert(
+                _clauses != null && _clauses.Length > 0,
+                "Event filter created with empty clauses - this is a programming error!"
+            );
 
             // Stack-allocated clause masks
             Span<VectorMask> clauseMasks = stackalloc VectorMask[_clauses.Length];
@@ -50,8 +53,8 @@ public struct MotelyJsonEventFilterDesc(MotelyJsonEventFilterCriteria criteria)
                     if (!clause.WantedAntes[anteIndex])
                         continue;
 
-                    // Check the specified roll indices for this event type
-                    var rolls = clause.Rolls ?? Array.Empty<int>();
+                    // Check the specified roll indices for this event type (Rolls is never null; set at clause creation)
+                    var rolls = clause.Rolls;
                     foreach (var rollIndex in rolls)
                     {
                         VectorMask rollMask = CheckEventRoll(

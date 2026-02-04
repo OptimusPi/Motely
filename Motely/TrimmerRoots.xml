@@ -3,40 +3,40 @@
   <!-- Preserve all Motely filter types for JAML deserialization -->
   <assembly fullname="Motely">
     <!-- Preserve all filter-related types -->
-    <type fullname="Motely.Filters.MotelyJsonConfig" preserve="all"/>
-    <type fullname="Motely.Filters.MotelyJsonConfig+MotelyJsonFilterClause" preserve="all"/>
-    <type fullname="Motely.Filters.MotelyFilterDefaults" preserve="all"/>
-    <type fullname="Motely.Filters.SourcesConfig" preserve="all"/>
-    
+    <type fullname="Motely.Filters.MotelyJsonConfig" preserve="all" />
+    <type fullname="Motely.Filters.MotelyJsonConfig+MotelyJsonFilterClause" preserve="all" />
+    <type fullname="Motely.Filters.MotelyFilterDefaults" preserve="all" />
+    <type fullname="Motely.Filters.SourcesConfig" preserve="all" />
+
     <!-- Preserve all enum types used in JAML -->
-    <type fullname="Motely.MotelyFilterItemType" preserve="all"/>
-    <type fullname="Motely.Filters.MotelyJsonConfigWildcards" preserve="all"/>
-    <type fullname="Motely.Filters.MotelyScoreAggregationMode" preserve="all"/>
-    <type fullname="Motely.MotelyJoker" preserve="all"/>
-    <type fullname="Motely.MotelyVoucher" preserve="all"/>
-    <type fullname="Motely.MotelyTarotCard" preserve="all"/>
-    <type fullname="Motely.MotelyPlanetCard" preserve="all"/>
-    <type fullname="Motely.MotelySpectralCard" preserve="all"/>
-    <type fullname="Motely.MotelyTag" preserve="all"/>
-    <type fullname="Motely.MotelyTagType" preserve="all"/>
-    <type fullname="Motely.MotelyBossBlind" preserve="all"/>
-    <type fullname="Motely.MotelyEventType" preserve="all"/>
-    <type fullname="Motely.MotelyItemEdition" preserve="all"/>
-    <type fullname="Motely.MotelyJokerSticker" preserve="all"/>
-    <type fullname="Motely.MotelyPlayingCardSuit" preserve="all"/>
-    <type fullname="Motely.MotelyPlayingCardRank" preserve="all"/>
-    <type fullname="Motely.MotelyItemSeal" preserve="all"/>
-    <type fullname="Motely.MotelyItemEnhancement" preserve="all"/>
+    <type fullname="Motely.MotelyFilterItemType" preserve="all" />
+    <type fullname="Motely.Filters.MotelyJsonConfigWildcards" preserve="all" />
+    <type fullname="Motely.Filters.MotelyScoreAggregationMode" preserve="all" />
+    <type fullname="Motely.MotelyJoker" preserve="all" />
+    <type fullname="Motely.MotelyVoucher" preserve="all" />
+    <type fullname="Motely.MotelyTarotCard" preserve="all" />
+    <type fullname="Motely.MotelyPlanetCard" preserve="all" />
+    <type fullname="Motely.MotelySpectralCard" preserve="all" />
+    <type fullname="Motely.MotelyTag" preserve="all" />
+    <type fullname="Motely.MotelyTagType" preserve="all" />
+    <type fullname="Motely.MotelyBossBlind" preserve="all" />
+    <type fullname="Motely.MotelyEventType" preserve="all" />
+    <type fullname="Motely.MotelyItemEdition" preserve="all" />
+    <type fullname="Motely.MotelyJokerSticker" preserve="all" />
+    <type fullname="Motely.MotelyPlayingCardSuit" preserve="all" />
+    <type fullname="Motely.MotelyPlayingCardRank" preserve="all" />
+    <type fullname="Motely.MotelyItemSeal" preserve="all" />
+    <type fullname="Motely.MotelyItemEnhancement" preserve="all" />
   </assembly>
-  
+
   <!-- Preserve YAML.NET static context generated types -->
   <assembly fullname="Motely">
-    <type fullname="MotelyJaml.MotelyJamlStaticContext" preserve="all"/>
+    <type fullname="MotelyJaml.MotelyJamlStaticContext" preserve="all" />
   </assembly>
-  
+
   <!-- Preserve reflection-required types for YAML deserialization -->
   <assembly fullname="System.Private.CoreLib">
-    <type fullname="System.Collections.Generic.List`1" preserve="all"/>
-    <type fullname="System.Collections.Generic.Dictionary`2" preserve="all"/>
+    <type fullname="System.Collections.Generic.List`1" preserve="all" />
+    <type fullname="System.Collections.Generic.Dictionary`2" preserve="all" />
   </assembly>
 </linker>

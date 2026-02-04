@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 
@@ -40,8 +41,10 @@ public struct MotelyJsonErraticRankAndSuitFilterDesc(
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             int totalClauses = _rankClauses.Length + _suitClauses.Length;
-            if (totalClauses == 0)
-                return VectorMask.AllBitsSet;
+            Debug.Assert(
+                totalClauses > 0,
+                "ErraticRankAndSuit filter created with empty clauses - this is a programming error!"
+            );
 
             // Stack-allocated count vectors for ALL clauses (ranks + suits)
             Span<Vector256<int>> rankCounts = stackalloc Vector256<int>[_rankClauses.Length];

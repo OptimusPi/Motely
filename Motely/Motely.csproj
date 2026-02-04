@@ -11,10 +11,9 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
-  <!-- Output type: Library when multi-targeting, Exe for standalone CLI -->
-  <PropertyGroup>
-    <OutputType>Library</OutputType>
-    <OutputType Condition="!$(TargetFrameworks.Contains(';')) AND '$(Configuration)' != 'BSO_LIBRARY'">Exe</OutputType>
+  <!-- Browser WASM: disable Native AOT conflicts -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <PublishAot>false</PublishAot>
   </PropertyGroup>
 
   <!-- Desktop AOT -->
@@ -23,17 +22,21 @@
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <TrimmerDefaultAction>link</TrimmerDefaultAction>
   </PropertyGroup>
-  
+
   <!-- AOT Trimming Configuration -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <TrimmerRootDescriptor Include="TrimmerRoots.xml" />
   </ItemGroup>
 
-  <!-- Browser WASM AOT -->
+  <!-- Browser WASM configuration (JIT mode; AOT not supported for this RID) -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
     <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
     <WasmSIMD>true</WasmSIMD>
-    <RunAOTCompilation>true</RunAOTCompilation>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <TrimmerDefaultAction>link</TrimmerDefaultAction>
+    <PublishAot>false</PublishAot>
     <!-- Suppress CA1416 warnings - browser-specific APIs (Barrier, Thread) are only called in browser builds -->
     <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>

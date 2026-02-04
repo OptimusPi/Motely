@@ -24,7 +24,7 @@ public static class ColumnDefinitionHelper
         foreach (var clause in config.Should)
         {
             var baseName = GetClauseColumnName(clause);
-            
+
             // Ensure unique column name by adding suffix if duplicate
             var columnName = baseName;
             int suffix = 2;

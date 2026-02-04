@@ -32,7 +32,8 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
         if (_tallyCount < 1024)
         {
             _tallyValues[_tallyCount] = value;
-            if (_columnValues != null) _columnValues[_tallyCount] = null;
+            if (_columnValues != null)
+                _columnValues[_tallyCount] = null;
             _tallyCount++;
         }
     }
@@ -319,6 +320,12 @@ public struct MotelyJsonSeedScoreDesc(
                                                     MotelyJsonSoulJokerFilterClause.FromJsonClause(
                                                         clause
                                                     ),
+                                                },
+                                                minAnte: ante,
+                                                maxAnte: ante,
+                                                maxPackSlotsPerAnte: new Dictionary<int, int>
+                                                {
+                                                    { ante, 6 },
                                                 },
                                                 ref singleCtx,
                                                 earlyExit: true

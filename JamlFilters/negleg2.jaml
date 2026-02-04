@@ -7,20 +7,22 @@ stake: White
 must:
   - smallBlindTag: NegativeTag
     antes: [4]
-  - joker: Showman
-    score: 100
-    antes: [4]
-    sources:
-      shopSlots: [0,1]
-  - joker: Showman
-    score: 100
-    antes: [4]
-    sources:
-      shopSlots: [0,1]
+  - smallBlindTag: NegativeTag
+    antes: [5]
+  - smallBlindTag: NegativeTag
+    antes: [6]
+  - smallBlindTag: NegativeTag
+    antes: [7]
+  - smallBlindTag: NegativeTag
+    antes: [8]
 should:
+  - joker: Showman
+    antes: [1,2,3]
+  - tag: DoubleTag
+  - smallBlindTag: NegativeTag
   - joker: OopsAll6s
     score: 100
-    antes: [4]
+    antes: [4,5,6,7,8]
     sources:
-      shopSlots: [2,3,4,5,6,7,8]
+      shopSlots: [2,3]
 

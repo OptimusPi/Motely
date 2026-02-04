@@ -21,7 +21,8 @@ public static class FilterDatabaseCleanup
     public static async Task CleanupFilterDatabasesAsync(
         string filterName,
         string searchResultsDir,
-        string fertilizerTxtPath)
+        string fertilizerTxtPath
+    )
     {
         if (string.IsNullOrWhiteSpace(filterName) || string.IsNullOrWhiteSpace(searchResultsDir))
             return;
@@ -40,7 +41,10 @@ public static class FilterDatabaseCleanup
             if (name != null && name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 var ext = Path.GetExtension(name).ToLowerInvariant();
-                if (ext is ".db" or ".duckdb" || name.EndsWith(".ducklake", StringComparison.OrdinalIgnoreCase))
+                if (
+                    ext is ".db" or ".duckdb"
+                    || name.EndsWith(".ducklake", StringComparison.OrdinalIgnoreCase)
+                )
                     allDbFiles.Add(path);
             }
         }
@@ -56,8 +60,16 @@ public static class FilterDatabaseCleanup
                     var catalogPath = DuckLakeHelper.GetDuckLakeCatalogPath(dbFile);
                     if (!File.Exists(catalogPath))
                         continue;
-                    using var connection = DuckDBConnectionFactory.CreateConnectionWithDuckLake(catalogPath, null, "dl");
-                    var seeds = DuckDBQueryHelpers.GetAllSeeds(connection, "dl.main.results", "seed");
+                    using var connection = DuckDBConnectionFactory.CreateConnectionWithDuckLake(
+                        catalogPath,
+                        null,
+                        "dl"
+                    );
+                    var seeds = DuckDBQueryHelpers.GetAllSeeds(
+                        connection,
+                        "dl.main.results",
+                        "seed"
+                    );
                     allSeeds.AddRange(seeds);
                 }
                 else
@@ -98,11 +110,21 @@ public static class FilterDatabaseCleanup
         // Delete .wal for this filter's .db / .duckdb only
         foreach (var f in Directory.GetFiles(searchResultsDir, $"{filterName}_*.duckdb.wal"))
         {
-            try { if (File.Exists(f)) File.Delete(f); } catch { }
+            try
+            {
+                if (File.Exists(f))
+                    File.Delete(f);
+            }
+            catch { }
         }
         foreach (var f in Directory.GetFiles(searchResultsDir, $"{filterName}_*.db.wal"))
         {
-            try { if (File.Exists(f)) File.Delete(f); } catch { }
+            try
+            {
+                if (File.Exists(f))
+                    File.Delete(f);
+            }
+            catch { }
         }
         // Delete DuckLake _data dirs only for .ducklake files we just deleted
         foreach (var dbFile in allDbFiles)
@@ -111,7 +133,12 @@ public static class FilterDatabaseCleanup
                 continue;
             var catalogPath = DuckLakeHelper.GetDuckLakeCatalogPath(dbFile);
             var dataPath = DuckLakeHelper.GetDuckLakeDataPath(catalogPath);
-            try { if (Directory.Exists(dataPath)) Directory.Delete(dataPath, recursive: true); } catch { }
+            try
+            {
+                if (Directory.Exists(dataPath))
+                    Directory.Delete(dataPath, recursive: true);
+            }
+            catch { }
         }
 
         await Task.CompletedTask.ConfigureAwait(false);

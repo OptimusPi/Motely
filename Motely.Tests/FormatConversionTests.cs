@@ -32,7 +32,10 @@ namespace Motely.Tests
         {
             // Arrange
             var originalJson = File.ReadAllText(_testConfigPath);
-            var originalConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(originalJson, _jsonOptions);
+            var originalConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(
+                originalJson,
+                _jsonOptions
+            );
             originalConfig!.PostProcess();
 
             // Act - Convert to JAML and back
@@ -73,7 +76,10 @@ namespace Motely.Tests
         {
             // Arrange - First create a JAML from our test JSON
             var originalJson = File.ReadAllText(_testConfigPath);
-            var jsonConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(originalJson, _jsonOptions);
+            var jsonConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(
+                originalJson,
+                _jsonOptions
+            );
             jsonConfig!.PostProcess();
             var originalJaml = JamlFormatter.Format(jsonConfig);
 
@@ -84,7 +90,10 @@ namespace Motely.Tests
             var jsonString = JsonSerializer.Serialize(originalConfig, _jsonOptions);
             Assert.NotNull(jsonString);
 
-            var configFromJson = JsonSerializer.Deserialize<MotelyJsonConfig>(jsonString, _jsonOptions);
+            var configFromJson = JsonSerializer.Deserialize<MotelyJsonConfig>(
+                jsonString,
+                _jsonOptions
+            );
             configFromJson!.PostProcess();
             Assert.NotNull(configFromJson);
 
@@ -141,7 +150,10 @@ should:
             Assert.DoesNotContain("*EARLY_GAME", jsonString);
 
             // Load back from JSON
-            var configFromJson = JsonSerializer.Deserialize<MotelyJsonConfig>(jsonString, _jsonOptions);
+            var configFromJson = JsonSerializer.Deserialize<MotelyJsonConfig>(
+                jsonString,
+                _jsonOptions
+            );
             configFromJson!.PostProcess();
             Assert.NotNull(configFromJson);
 
@@ -168,7 +180,10 @@ should:
         {
             // Arrange - Start with JSON
             var originalJson = File.ReadAllText(_testConfigPath);
-            var originalConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(originalJson, _jsonOptions);
+            var originalConfig = JsonSerializer.Deserialize<MotelyJsonConfig>(
+                originalJson,
+                _jsonOptions
+            );
             originalConfig!.PostProcess();
             Assert.NotNull(originalConfig);
 

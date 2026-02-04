@@ -12,10 +12,7 @@ public static class DuckDBQueryHelpers
     /// <summary>
     /// Get all column names from a table in order
     /// </summary>
-    public static List<string> GetColumnNames(
-        DuckDBConnection connection,
-        string tableName
-    )
+    public static List<string> GetColumnNames(DuckDBConnection connection, string tableName)
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =

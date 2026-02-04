@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <!-- Desktop only. DuckDB.NET.Data does not support net10.0-browser. Browser/WASM does not use DuckDB; orchestration uses callback-only (ResultCallback). -->
     <TargetFramework>net10.0</TargetFramework>
@@ -22,5 +21,4 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <ProjectReference Include="..\Motely.Repository\Motely.Repository.csproj" />
   </ItemGroup>
-
 </Project>

@@ -123,14 +123,16 @@ public struct MotelyCompositeFilterDesc(List<MotelyJsonConfig.MotelyJsonFilterCl
                 ).CreateFilter(ref ctx),
                 FilterCategory.ErraticRankAndSuit => new MotelyJsonErraticRankAndSuitFilterDesc(
                     MotelyJsonFilterClauseExtensions.CreateErraticRankAndSuitCriteria(
-                        clauses.Select(c =>
-                        {
-                            if (c.RankEnum == null && c.SuitEnum == null)
-                                throw new InvalidOperationException(
-                                    "erraticRankAndSuit requires rank and/or suit values"
-                                );
-                            return c;
-                        }).ToList()
+                        clauses
+                            .Select(c =>
+                            {
+                                if (c.RankEnum == null && c.SuitEnum == null)
+                                    throw new InvalidOperationException(
+                                        "erraticRankAndSuit requires rank and/or suit values"
+                                    );
+                                return c;
+                            })
+                            .ToList()
                     )
                 ).CreateFilter(ref ctx),
                 _ => throw new ArgumentException($"Unsupported filter category: {category}"),

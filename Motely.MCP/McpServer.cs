@@ -748,18 +748,35 @@ Return ONLY the cleaned, refined prompt with no explanations or markdown:";
             try
             {
                 var parsed = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(text);
-                if (parsed.TryGetProperty("jaml", out var jamlProp)) return jamlProp.GetString() ?? text;
-                if (parsed.TryGetProperty("text", out var textProp)) return textProp.GetString() ?? text;
+                if (parsed.TryGetProperty("jaml", out var jamlProp))
+                    return jamlProp.GetString() ?? text;
+                if (parsed.TryGetProperty("text", out var textProp))
+                    return textProp.GetString() ?? text;
             }
-            catch { /* Skip and try regex */ }
+            catch
+            { /* Skip and try regex */
+            }
         }
 
         // 2. Remove ANY markdown code blocks
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"^```[^\n]*\n", "", System.Text.RegularExpressions.RegexOptions.Multiline);
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\n```\s*$", "", System.Text.RegularExpressions.RegexOptions.Multiline);
-        
+        text = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            @"^```[^\n]*\n",
+            "",
+            System.Text.RegularExpressions.RegexOptions.Multiline
+        );
+        text = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            @"\n```\s*$",
+            "",
+            System.Text.RegularExpressions.RegexOptions.Multiline
+        );
+
         // 3. Find the first YAML-like key (name:, must:, jokers:, etc) and prune everything before
-        var startMatch = System.Text.RegularExpressions.Regex.Match(text, @"(?m)^(name|description|author|deck|stake|must|should|mustNot):");
+        var startMatch = System.Text.RegularExpressions.Regex.Match(
+            text,
+            @"(?m)^(name|description|author|deck|stake|must|should|mustNot):"
+        );
         if (startMatch.Success && startMatch.Index > 0)
         {
             text = text.Substring(startMatch.Index);
