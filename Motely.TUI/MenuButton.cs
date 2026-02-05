@@ -38,30 +38,26 @@ public class MenuButton : View
         Height = 3;
         CanFocus = true;
         TabStop = TabBehavior.TabStop; // Required for TAB navigation in v2
-        WantContinuousButtonPressed = false;
         SetScheme(colorScheme);
         _useHalfBlock = useHalfBlock;
 
         // Parse hotkey from text (underscore notation)
         ParseHotKey(text);
 
-        // Handle Enter/Space to activate
-        KeyDown += (s, e) =>
-        {
-            if (e.KeyCode == KeyCode.Enter || e.KeyCode == KeyCode.Space)
+        AddCommand(
+            Command.Accept,
+            () =>
             {
+                SetFocus();
                 Accept?.Invoke(this, EventArgs.Empty);
-                e.Handled = true;
+                return true;
             }
-        };
+        );
+        KeyBindings.Add(KeyCode.Enter, Command.Accept);
+        KeyBindings.Add(KeyCode.Space, Command.Accept);
+        MouseBindings.Add(MouseFlags.LeftButtonClicked, Command.Accept);
 
-        // Handle mouse click
-        MouseClick += (s, e) =>
-        {
-            SetFocus();
-            Accept?.Invoke(this, EventArgs.Empty);
-            e.Handled = true;
-        };
+        DrawingContent += (s, e) => DrawContent();
 
         // Force redraw when focus changes (for DynamicFocusHeight visual effect)
         // Also redraw parent so siblings update correctly
@@ -102,7 +98,7 @@ public class MenuButton : View
         Text = _displayText;
     }
 
-    protected override bool OnDrawingContent()
+    private void DrawContent()
     {
         var viewport = Viewport;
         var scheme = GetScheme();
@@ -179,7 +175,5 @@ public class MenuButton : View
             SetAttribute(underlineAttr);
             AddRune(textX + _hotKeyIndex, textY + 1, (System.Text.Rune)'‾'); // Overline as underline visually
         }
-
-        return true;
     }
 }

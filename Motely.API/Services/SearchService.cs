@@ -6,7 +6,9 @@ using Motely;
 using Motely.API.Hubs;
 using Motely.API.Models;
 using Motely.DB;
+using Motely.Executors;
 using Motely.Filters;
+using Motely.Reporting;
 using Motely.Utils;
 
 namespace Motely.API.Services;
@@ -112,29 +114,42 @@ public class SearchService
 
     private async Task RunSearchAsync(SearchState state, SearchCriteriaDto criteria)
     {
-        try
+        if (state.Config == null)
+            throw new InvalidOperationException("Search configuration is missing.");
+
+        _logger.LogInformation("Starting Motely search: {SearchId}", state.SearchId);
+
+        var ct = state.CancellationTokenSource.Token;
+        var parameters = new JsonSearchParams
         {
-            _logger.LogInformation("Starting Motely search: {SearchId}", state.SearchId);
+            Threads = criteria.ThreadCount > 0 ? criteria.ThreadCount : Environment.ProcessorCount,
+            BatchSize = criteria.BatchSize > 0 ? criteria.BatchSize : 4,
+            StartBatch = criteria.StartBatch,
+            EndBatch = criteria.EndBatch,
+            Cutoff = criteria.MinScore,
+            CutoffMode = criteria.MinScore > 0 ? ScoreCutoffMode.Manual : ScoreCutoffMode.None,
+            Quiet = true,
+            OutputDbPath = state.SearchId,
+            CancellationToken = ct,
+        };
 
-            // Validate config
-            if (state.Config == null)
-            {
-                throw new InvalidOperationException("Search configuration is missing.");
-            }
+        using var context = MotelySearchOrchestrator.LaunchWithContext(
+            state.Config,
+            parameters,
+            useInMemoryStorage: false
+        );
+        context.Start(ct);
 
-            // Simulate search logic (replace with actual implementation)
-            await Task.Delay(1000);
+        await context.WaitForCompletionAsync(ct).ConfigureAwait(false);
 
-            state.Status = "completed";
-            SearchCompleted?.Invoke(state.SearchId);
-        }
-        catch (Exception ex)
-        {
-            state.Status = "error";
-            state.ErrorMessage = ex.Message;
-            SearchError?.Invoke(state.SearchId, ex.Message);
-            throw;
-        }
+        state.Status = "completed";
+        state.ResultsFound = context.ResultCount;
+        state.SeedsSearched = context.TotalSeedsSearched;
+        state.Results = context
+            .GetTopResults(1000)
+            .Select(r => new SeedResult { Seed = r.Seed, Score = r.Score })
+            .ToList();
+        SearchCompleted?.Invoke(state.SearchId);
     }
 
     public async Task RunQueuedSearchAsync(
@@ -152,6 +167,16 @@ public class SearchService
             return;
         }
 
+        var state = new SearchState
+        {
+            SearchId = entry.SearchId,
+            Config = config,
+            Status = "running",
+            FilterName = config.Name ?? "Queued Filter",
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct),
+        };
+        _searches[entry.SearchId] = state;
+
         try
         {
             _logger.LogInformation(
@@ -160,61 +185,55 @@ public class SearchService
                 entry.BatchMarker
             );
 
-            // Initialize search state
-            var state = new SearchState
+            ulong startBatch = (ulong)Math.Max(0, entry.BatchMarker);
+            ulong endBatch = startBatch + 100;
+
+            var parameters = new JsonSearchParams
             {
-                SearchId = entry.SearchId,
-                Config = config,
-                Status = "running",
-                FilterName = config.Name ?? "Queued Filter",
-                CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct),
+                Threads = entry.ThreadCount > 0 ? entry.ThreadCount : Environment.ProcessorCount,
+                BatchSize = 4,
+                StartBatch = startBatch,
+                EndBatch = endBatch,
+                Cutoff = 0,
+                CutoffMode = ScoreCutoffMode.None,
+                Quiet = true,
+                OutputDbPath = entry.SearchId,
+                CancellationToken = ct,
             };
 
-            _searches[entry.SearchId] = state;
+            using var context = MotelySearchOrchestrator.LaunchWithContext(
+                config,
+                parameters,
+                useInMemoryStorage: false
+            );
+            context.Start(ct);
 
-            // Simulate search logic (replace with actual implementation)
-            for (
-                ulong batch = (ulong)entry.BatchMarker;
-                batch < (ulong)entry.BatchMarker + 100;
-                batch++
-            )
-            {
-                if (ct.IsCancellationRequested)
-                {
-                    _logger.LogInformation(
-                        "Search {SearchId} was cancelled at batch {Batch}",
-                        entry.SearchId,
-                        batch
-                    );
-                    state.Status = "cancelled";
-                    return;
-                }
+            await context.WaitForCompletionAsync(ct).ConfigureAwait(false);
 
-                // Simulate batch processing
-                await Task.Delay(100, ct);
-                _logger.LogInformation(
-                    "Processed batch {Batch} for search {SearchId}",
-                    batch,
-                    entry.SearchId
-                );
-
-                // Update batch marker in queue
-                entry.BatchMarker = (long)batch;
-                _queue.Update(entry);
-            }
+            entry.BatchMarker = (long)endBatch;
+            _queue.Update(entry);
+            _queue.MarkCompleted(entry.SearchId, context.TotalSeedsSearched, context.ResultCount);
 
             state.Status = "completed";
-            _logger.LogInformation("Search {SearchId} completed successfully.", entry.SearchId);
+            _logger.LogInformation(
+                "Search {SearchId} completed. Seeds: {Seeds}, Results: {Results}",
+                entry.SearchId,
+                context.TotalSeedsSearched,
+                context.ResultCount
+            );
             SearchCompleted?.Invoke(entry.SearchId);
+        }
+        catch (OperationCanceledException)
+        {
+            state.Status = "cancelled";
+            _logger.LogInformation("Search {SearchId} was cancelled.", entry.SearchId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred during queued search {SearchId}", entry.SearchId);
-            if (_searches.TryGetValue(entry.SearchId, out var state))
-            {
-                state.Status = "error";
-                state.ErrorMessage = ex.Message;
-            }
+            _logger.LogError(ex, "Error during queued search {SearchId}", entry.SearchId);
+            state.Status = "error";
+            state.ErrorMessage = ex.Message;
+            _queue.MarkError(entry.SearchId, ex.Message);
             SearchError?.Invoke(entry.SearchId, ex.Message);
         }
         finally

@@ -1,16 +1,16 @@
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using System.Linq;
+using System.Text;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.DB;
 using Motely.Executors;
 using Motely.Filters;
 using Motely.GPU;
-using Motely.Repository;
 using Motely.Reporting;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using System.Linq;
-using System.Text;
+using Motely.Repository;
 
 namespace Motely
 {
@@ -144,7 +144,7 @@ namespace Motely
             );
             var keywordsOption = app.Option<string>(
                 "--keywords <KEYWORDS>",
-                "Comma-separated keywords to search sequentially (e.g., GAY,ASS,OOOO,AAAA)",
+                "Comma-separated keywords to search sequentially (e.g., JOKER,DECK,FOOL)",
                 CommandOptionType.SingleValue
             );
             var paddingOption = app.Option<string>(
@@ -297,6 +297,7 @@ namespace Motely
                     EnableDebug = debugOption.HasValue(),
                     NoFancy = noFancyOption.HasValue(),
                     Quiet = quietMode,
+                    EmitResultsHeader = true,
                     SpecificSeed = seedOption.Value(),
                     SeedSources = seedsOption.Value(),
                     Deck = deckOption.Value(),
@@ -315,7 +316,47 @@ namespace Motely
                 }
                 else
                 {
-                    parameters.SchemaMismatchPrompt = (dbPath, message) => PromptForceOverwrite(dbPath, message, quietMode);
+                    parameters.SchemaMismatchPrompt = (dbPath, message) =>
+                        PromptForceOverwrite(dbPath, message, quietMode);
+                }
+
+                // Check for seed source files that would trigger DB conversion and prompt if DB exists
+                if (seedsOption.HasValue() && !forceOption.HasValue())
+                {
+                    string seedsValue = seedsOption.Value()!;
+                    if (File.Exists(seedsValue))
+                    {
+                        string ext = Path.GetExtension(seedsValue).ToLowerInvariant();
+                        if (ext == ".csv" || ext == ".txt")
+                        {
+                            string derivedDbPath = Path.ChangeExtension(seedsValue, ".db");
+                            if (File.Exists(derivedDbPath))
+                            {
+                                var dbInfo = new FileInfo(derivedDbPath);
+                                var sizeMB = dbInfo.Length / (1024.0 * 1024.0);
+
+                                Console.WriteLine();
+                                Console.WriteLine(
+                                    $"⚠️⚠️⚠️ There is a DuckDB file {Path.GetFileName(derivedDbPath)} [{sizeMB:F0}MB] that would be overwritten."
+                                );
+                                Console.WriteLine(
+                                    $"   Do you want to reconvert from {Path.GetFileName(seedsValue)}? [y/N]"
+                                );
+                                Console.Write("   ");
+
+                                var response = Console.ReadLine()?.Trim().ToLowerInvariant();
+                                if (response == "y" || response == "yes")
+                                {
+                                    parameters.ForceOverwrite = true;
+                                    Console.WriteLine("   ✅ Will reconvert from source file.");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("   ℹ️  Using existing DuckDB file.");
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Progress reporting is handled by MotelySearch.PrintReport() internally
@@ -325,19 +366,25 @@ namespace Motely
                 if (seedsOption.HasValue())
                 {
                     string seedsValue = seedsOption.Value()!;
-                    
+
                     // Check if it's comma-separated seeds (contains comma and doesn't exist as file)
                     if (seedsValue.Contains(',') && !File.Exists(seedsValue))
                     {
                         // Treat as comma-separated seed list
                         var seedList = seedsValue
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Split(
+                                ',',
+                                StringSplitOptions.RemoveEmptyEntries
+                                    | StringSplitOptions.TrimEntries
+                            )
                             .Select(s => s.ToUpperInvariant().Replace('0', 'O'))
                             .Where(s => !string.IsNullOrEmpty(s));
-                        
+
                         if (!parameters.Quiet)
-                            Console.WriteLine($"📋 Using {seedList.Count()} comma-separated seeds from --seeds");
-                        
+                            Console.WriteLine(
+                                $"📋 Using {seedList.Count()} comma-separated seeds from --seeds"
+                            );
+
                         parameters.SeedList = seedList;
                         parameters.SeedSources = null; // Don't use DuckDB for direct seed lists
                     }
@@ -356,11 +403,11 @@ namespace Motely
 
                     // Calculate seed count first (needed for progress reporting)
                     int maxPad = 8 - keyword.Length;
-                    char[] validChars = paddingChars != null 
-                        ? paddingChars.ToUpperInvariant().ToCharArray()
-                        : "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
-                    long seedCount = GetCountOfSeeds(keyword, maxPad, validChars.Length);
-                    
+                    char[] validChars =
+                        paddingChars != null
+                            ? paddingChars.ToUpperInvariant().ToCharArray()
+                            : "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+
                     // Generate seeds as IEnumerable (lazy, no allocation)
                     var keywordSeedList = GenerateKeywordSeeds(
                         keyword,
@@ -371,8 +418,7 @@ namespace Motely
                     // FAST PATH: Use IEnumerable directly (no DuckDB overhead)
                     // This skips all file I/O and locks - perfect for in-memory searching
                     parameters.SeedList = keywordSeedList;
-                    parameters.SeedSources = null; // Don't use DuckDB for keywords
-                    parameters.KeywordSeedCount = (int)Math.Min(seedCount, int.MaxValue);
+                    parameters.SeedSources = null;
 
                     if (!parameters.Quiet)
                         Console.WriteLine($"✅ Seeds ready for search (streaming mode)");
@@ -403,7 +449,9 @@ namespace Motely
                     var seedStr = startSeedOption.ParsedValue.ToUpperInvariant();
                     if (seedStr.Length != 8)
                     {
-                        Console.WriteLine($"❌ Error: startSeed must be 8 characters (got {seedStr.Length})");
+                        Console.WriteLine(
+                            $"❌ Error: startSeed must be 8 characters (got {seedStr.Length})"
+                        );
                         return 1;
                     }
                     try
@@ -412,7 +460,9 @@ namespace Motely
                         parameters.StartBatch = (ulong)batchIndex;
                         if (!parameters.Quiet)
                         {
-                            Console.WriteLine($"📍 Starting at seed {seedStr} = batch {parameters.StartBatch:N0}");
+                            Console.WriteLine(
+                                $"📍 Starting at seed {seedStr} = batch {parameters.StartBatch:N0}"
+                            );
                         }
                     }
                     catch (Exception ex)
@@ -509,7 +559,7 @@ namespace Motely
                 {
                     if (!parameters.Quiet)
                         Console.WriteLine($"💾 Writing results to CSV: {csvPath}");
-                    
+
                     csvWriter = new StreamWriter(csvPath, false, Encoding.UTF8);
                     // Header will be printed by the executor inside the orchestrator
                     // But we need to handle the writing of rows if we want it in CSV.
@@ -524,51 +574,63 @@ namespace Motely
                     {
                         string keywordsValue = keywordsOption.Value()!;
                         var keywords = keywordsValue
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Split(
+                                ',',
+                                StringSplitOptions.RemoveEmptyEntries
+                                    | StringSplitOptions.TrimEntries
+                            )
                             .Select(k => k.ToUpperInvariant())
                             .Where(k => !string.IsNullOrEmpty(k))
                             .ToList();
-                        
+
                         if (keywords.Count == 0)
                         {
-                            Console.Error.WriteLine("❌ Error: --keywords must contain at least one keyword");
+                            Console.Error.WriteLine(
+                                "❌ Error: --keywords must contain at least one keyword"
+                            );
                             return 1;
                         }
-                        
+
                         if (!parameters.Quiet)
-                            Console.WriteLine($"🔑 Running searches for {keywords.Count} keywords: {string.Join(", ", keywords)}");
-                        
+                            Console.WriteLine(
+                                $"🔑 Running searches for {keywords.Count} keywords: {string.Join(", ", keywords)}"
+                            );
+
                         // Save original parameters to restore after each search
                         var originalSeedList = parameters.SeedList;
                         var originalSeedSources = parameters.SeedSources;
-                        
+
                         int completedKeywords = 0;
                         bool wasCancelled = false;
-                        
+
                         for (int i = 0; i < keywords.Count; i++)
                         {
                             string keyword = keywords[i];
-                            
+
                             if (!parameters.Quiet)
                             {
                                 Console.WriteLine();
                                 Console.WriteLine(new string('═', 60));
-                                Console.WriteLine($"🔍 Keyword {i + 1}/{keywords.Count}: '{keyword}'");
+                                Console.WriteLine(
+                                    $"🔍 Keyword {i + 1}/{keywords.Count}: '{keyword}'"
+                                );
                                 Console.WriteLine(new string('═', 60));
                             }
-                            
+
                             // Generate seeds for this keyword (same as --keyword)
-                            string? paddingChars = paddingOption.HasValue() ? paddingOption.Value() : null;
+                            string? paddingChars = paddingOption.HasValue()
+                                ? paddingOption.Value()
+                                : null;
                             var keywordSeedList = GenerateKeywordSeeds(
                                 keyword,
                                 paddingChars,
                                 parameters.Quiet
                             );
-                            
+
                             // Set up parameters for this keyword search
                             parameters.SeedList = keywordSeedList;
                             parameters.SeedSources = null;
-                            
+
                             // Run the search (reuse the same search execution logic)
                             Action<MotelySeedScoreTally> keywordResultCallback = (result) =>
                             {
@@ -576,7 +638,7 @@ namespace Motely
                                 var sb = new StringBuilder();
                                 sb.Append('"').Append(result.Seed).Append('"').Append(',');
                                 sb.Append(result.Score);
-                                
+
                                 // Append tally columns
                                 if (result.TallyColumns != null && result.TallyColumns.Count > 0)
                                 {
@@ -585,35 +647,51 @@ namespace Motely
                                         sb.Append(',').Append(tally);
                                     }
                                 }
-                                
+
                                 string csvLine = sb.ToString();
-                                
+
                                 // Always print to console (quiet mode still shows CSV results)
                                 Console.WriteLine(csvLine);
-                                
+
                                 // Also write to CSV file if specified
                                 if (csvWriter != null)
                                 {
                                     csvWriter.WriteLine(csvLine);
                                 }
                             };
-                            
-                            exitCode = RunSingleSearch(parameters, nativeFilter, jamlOption, jsonOption, 
-                                deckOption, stakeOption, scoreOption, csvWriter, keywordResultCallback);
-                            
+
+                            exitCode = RunSingleSearch(
+                                parameters,
+                                new RunSearchArgs(
+                                    nativeFilter,
+                                    jamlOption != null && jamlOption.HasValue()
+                                        ? jamlOption.Value()
+                                        : null,
+                                    jsonOption != null && jsonOption.HasValue()
+                                        ? jsonOption.Value()
+                                        : null,
+                                    scoreOption != null && scoreOption.HasValue()
+                                        ? scoreOption.Value()
+                                        : null
+                                ),
+                                keywordResultCallback
+                            );
+
                             // Restore original parameters
                             parameters.SeedList = originalSeedList;
                             parameters.SeedSources = originalSeedSources;
-                            
+
                             // Check for cancellation
                             if (parameters.CancellationToken?.IsCancellationRequested == true)
                             {
                                 wasCancelled = true;
                                 if (!parameters.Quiet)
-                                    Console.WriteLine($"\n⚠️  Search cancelled after keyword '{keyword}'");
+                                    Console.WriteLine(
+                                        $"\n⚠️  Search cancelled after keyword '{keyword}'"
+                                    );
                                 break;
                             }
-                            
+
                             // Track completed keywords (only if not cancelled and search succeeded)
                             if (exitCode == 0)
                             {
@@ -621,21 +699,27 @@ namespace Motely
                             }
                             else if (!parameters.Quiet)
                             {
-                                Console.WriteLine($"⚠️  Search for keyword '{keyword}' failed, continuing to next keyword...");
+                                Console.WriteLine(
+                                    $"⚠️  Search for keyword '{keyword}' failed, continuing to next keyword..."
+                                );
                             }
                         }
-                        
+
                         if (!parameters.Quiet)
                         {
                             Console.WriteLine();
                             Console.WriteLine(new string('═', 60));
                             if (wasCancelled)
                             {
-                                Console.WriteLine($"⚠️  Searches cancelled: {completedKeywords}/{keywords.Count} keywords completed");
+                                Console.WriteLine(
+                                    $"⚠️  Searches cancelled: {completedKeywords}/{keywords.Count} keywords completed"
+                                );
                             }
                             else
                             {
-                                Console.WriteLine($"✅ Completed searches for all {completedKeywords}/{keywords.Count} keywords");
+                                Console.WriteLine(
+                                    $"✅ Completed searches for all {completedKeywords}/{keywords.Count} keywords"
+                                );
                             }
                             Console.WriteLine(new string('═', 60));
                         }
@@ -649,7 +733,7 @@ namespace Motely
                             var sb = new StringBuilder();
                             sb.Append('"').Append(result.Seed).Append('"').Append(',');
                             sb.Append(result.Score);
-                            
+
                             // Append tally columns
                             if (result.TallyColumns != null && result.TallyColumns.Count > 0)
                             {
@@ -658,21 +742,35 @@ namespace Motely
                                     sb.Append(',').Append(tally);
                                 }
                             }
-                            
+
                             string csvLine = sb.ToString();
-                            
+
                             // Always print to console (quiet mode still shows CSV results)
                             Console.WriteLine(csvLine);
-                            
+
                             // Also write to CSV file if specified
                             if (csvWriter != null)
                             {
                                 csvWriter.WriteLine(csvLine);
                             }
                         };
-                        
-                        exitCode = RunSingleSearch(parameters, nativeFilter, jamlOption, jsonOption,
-                            deckOption, stakeOption, scoreOption, csvWriter, resultCallback);
+
+                        exitCode = RunSingleSearch(
+                            parameters,
+                            new RunSearchArgs(
+                                nativeFilter,
+                                jamlOption != null && jamlOption.HasValue()
+                                    ? jamlOption.Value()
+                                    : null,
+                                jsonOption != null && jsonOption.HasValue()
+                                    ? jsonOption.Value()
+                                    : null,
+                                scoreOption != null && scoreOption.HasValue()
+                                    ? scoreOption.Value()
+                                    : null
+                            ),
+                            resultCallback
+                        );
                     }
                 }
                 catch (Exception ex)
@@ -741,11 +839,12 @@ namespace Motely
             if (outputJson)
             {
                 // Output as JSON for script consumption using AOT-compatible source-generated serialization
-                var erraticComposition = analysis.ErraticDeckComposition?.Split(
-                    ',',
-                    StringSplitOptions.RemoveEmptyEntries
-                ) ?? Array.Empty<string>();
-                
+                var erraticComposition =
+                    analysis.ErraticDeckComposition?.Split(
+                        ',',
+                        StringSplitOptions.RemoveEmptyEntries
+                    ) ?? Array.Empty<string>();
+
                 var jsonOutput = new SeedAnalysisDto
                 {
                     Seed = seed,
@@ -782,7 +881,7 @@ namespace Motely
                         })
                         .ToArray(),
                 };
-                
+
                 // Use AOT-compatible source-generated serialization context
                 Console.WriteLine(
                     System.Text.Json.JsonSerializer.Serialize(
@@ -810,9 +909,15 @@ namespace Motely
                     return false;
 
                 input = input.Trim();
-                if (input.Equals("y", StringComparison.OrdinalIgnoreCase) || input.Equals("yes", StringComparison.OrdinalIgnoreCase))
+                if (
+                    input.Equals("y", StringComparison.OrdinalIgnoreCase)
+                    || input.Equals("yes", StringComparison.OrdinalIgnoreCase)
+                )
                     return true;
-                if (input.Equals("n", StringComparison.OrdinalIgnoreCase) || input.Equals("no", StringComparison.OrdinalIgnoreCase))
+                if (
+                    input.Equals("n", StringComparison.OrdinalIgnoreCase)
+                    || input.Equals("no", StringComparison.OrdinalIgnoreCase)
+                )
                     return false;
             }
         }
@@ -861,14 +966,14 @@ namespace Motely
                     }
                     paddingSet.Add(c);
                 }
-                
+
                 if (paddingSet.Count == 0)
                 {
                     throw new ArgumentException(
                         "Padding characters must contain at least one valid character (A-Z, 1-9)."
                     );
                 }
-                
+
                 validChars = paddingSet.ToArray();
             }
             else
@@ -876,7 +981,7 @@ namespace Motely
                 // Default: use all valid chars
                 validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789".ToCharArray();
             }
-            
+
             // Final validation - ensure validChars is never null or empty
             if (validChars == null || validChars.Length == 0)
             {
@@ -886,14 +991,11 @@ namespace Motely
             }
 
             int maxPad = 8 - keyword.Length;
-            long count = GetCountOfSeeds(keyword, maxPad, validChars.Length);
 
             if (!quiet)
             {
                 string paddingInfo = paddingChars != null ? $" (padding: {paddingChars})" : "";
-                Console.WriteLine(
-                    $"🔧 Generating {count:N0} seeds containing '{keyword}'{paddingInfo}..."
-                );
+                Console.WriteLine($"🔧 Generating seeds containing '{keyword}'{paddingInfo}...");
             }
 
             return GenerateKeywordSeedsEnumerable(keyword, maxPad, validChars);
@@ -902,18 +1004,19 @@ namespace Motely
         private static IEnumerable<string> GenerateKeywordSeedsEnumerable(
             string keyword,
             int maxPad,
-            char[] validChars)
+            char[] validChars
+        )
         {
             // Defensive null check
             if (validChars == null)
                 throw new ArgumentNullException(nameof(validChars));
-            
+
             if (validChars.Length == 0)
                 throw new ArgumentException("validChars cannot be empty", nameof(validChars));
-            
+
             if (string.IsNullOrEmpty(keyword))
                 throw new ArgumentException("keyword cannot be null or empty", nameof(keyword));
-            
+
             yield return keyword;
 
             // Generate with padding - yield directly (NO SFW filtering during generation)
@@ -921,7 +1024,7 @@ namespace Motely
             {
                 for (int padLen = 1; padLen <= maxPad; padLen++)
                 {
-                    foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
+                    foreach (var seed in Motely.GeneratePaddedSeeds(keyword, padLen, validChars))
                     {
                         yield return seed;
                     }
@@ -929,333 +1032,73 @@ namespace Motely
             }
         }
 
-        private static IEnumerable<string> GeneratePaddedSeeds(
-            string keyword,
-            int padLen,
-            char[] validChars
-        )
-        {
-            // Defensive null and empty checks
-            if (validChars == null)
-                throw new ArgumentNullException(nameof(validChars));
-            
-            if (validChars.Length == 0)
-                throw new ArgumentException("validChars cannot be empty", nameof(validChars));
-            
-            if (string.IsNullOrEmpty(keyword))
-                throw new ArgumentException("keyword cannot be null or empty", nameof(keyword));
-
-            if (padLen <= 0)
-            {
-                yield return keyword;
-                yield break;
-            }
-
-            if (padLen == 1)
-            {
-                foreach (var c in validChars)
-                {
-                    yield return c + keyword;
-                    yield return keyword + c;
-                }
-            }
-            else if (padLen == 2)
-            {
-                foreach (var c1 in validChars)
-                {
-                    foreach (var c2 in validChars)
-                    {
-                        yield return $"{c1}{c2}{keyword}";
-                        yield return $"{keyword}{c1}{c2}";
-                        yield return $"{c1}{keyword}{c2}";
-                    }
-                }
-            }
-            else if (padLen == 3)
-            {
-                foreach (var c1 in validChars)
-                {
-                    foreach (var c2 in validChars)
-                    {
-                        foreach (var c3 in validChars)
-                        {
-                            yield return $"{c1}{c2}{c3}{keyword}";
-                            yield return $"{keyword}{c1}{c2}{c3}";
-                            yield return $"{c1}{keyword}{c2}{c3}";
-                            yield return $"{c1}{c2}{keyword}{c3}";
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // For padLen > 3, generate all positions
-                foreach (var seed in GenerateLargePaddedSeeds(keyword, padLen, validChars))
-                {
-                    yield return seed;
-                }
-            }
-        }
-
-        private static IEnumerable<string> GenerateLargePaddedSeeds(string keyword, int padLen, char[] validChars)
-        {
-            // Defensive null check
-            if (validChars == null)
-                throw new ArgumentNullException(nameof(validChars));
-            
-            if (validChars.Length == 0)
-                throw new ArgumentException("validChars cannot be empty", nameof(validChars));
-            
-            if (padLen <= 0)
-                throw new ArgumentException("padLen must be greater than 0", nameof(padLen));
-            
-            var padding = new char[padLen];
-            return GenerateLargePaddedSeedsRec(keyword, validChars, padding, 0);
-        }
-
-        private static IEnumerable<string> GenerateLargePaddedSeedsRec(string keyword, char[] validChars, char[] padding, int depth)
-        {
-            // Defensive null check (should never be null at this point, but be safe)
-            if (validChars == null || validChars.Length == 0)
-                yield break;
-            
-            if (depth == padding.Length)
-            {
-                // Generate all positions for keyword within padding
-                for (int pos = 0; pos <= padding.Length; pos++)
-                {
-                    var builder = new System.Text.StringBuilder(8);
-                    builder.Append(padding, 0, pos);
-                    builder.Append(keyword);
-                    builder.Append(padding, pos, padding.Length - pos);
-                    yield return builder.ToString();
-                }
-                yield break;
-            }
-
-            foreach (var c in validChars)
-            {
-                padding[depth] = c;
-                foreach (var seed in GenerateLargePaddedSeedsRec(keyword, validChars, padding, depth + 1))
-                {
-                    yield return seed;
-                }
-            }
-        }
-
-        private static IEnumerable<string> GenerateAllCombinations(char[] validChars, int length)
-        {
-            if (length == 0)
-            {
-                yield return "";
-                yield break;
-            }
-
-            var buffer = new char[length];
-            foreach (var combo in GenerateCombinationsRecursive(validChars, buffer, 0))
-            {
-                yield return combo;
-            }
-        }
-
-        private static IEnumerable<string> GenerateCombinationsRecursive(
-            char[] validChars,
-            char[] buffer,
-            int index
-        )
-        {
-            if (index == buffer.Length)
-            {
-                yield return new string(buffer);
-                yield break;
-            }
-
-            foreach (var c in validChars)
-            {
-                buffer[index] = c;
-                // Continue building - only yield when we reach the end (base case above)
-                foreach (var result in GenerateCombinationsRecursive(validChars, buffer, index + 1))
-                {
-                    yield return result;
-                }
-            }
-        }
+        /// <summary>What to run: native filter name, JAML path, or JSON config name. No I/O, no callbacks.</summary>
+        private sealed record RunSearchArgs(
+            string? NativeFilter,
+            string? JamlPath,
+            string? JsonConfig,
+            string? NativeScorePath
+        );
 
         /// <summary>
-        /// Convert a seed string to a batch number for sequential search.
-        /// Batches are organized by the first (8 - BatchSize) characters.
-        /// </summary>
-        private static long ConvertSeedToBatch(string seed, int batchSize)
-        {
-            // Pad seed to max length if needed
-            seed = seed.PadRight(8, '1');
-
-            // Batches are organized by the characters that are NOT varying.
-            // Motely iterates using the LEFT characters (indices 0 to batchSize-1)
-            // as the varying parts within a batch.
-            // The FIXED characters for a batch are the RIGHT characters (indices batchSize to 7).
-
-            int fixedLength = 8 - batchSize;
-            if (fixedLength <= 0)
-                return 0;
-
-            // Get the fixed part (the suffix)
-            string suffix = seed.Substring(batchSize);
-
-            // Convert to batch index:
-            // digit at index batchSize is 35^0
-            // digit at index batchSize+1 is 35^1
-            // ...
-            // digit at index 7 is 35^(fixedLength-1)
-
-            long batchNum = 0;
-            long multiplier = 1;
-
-            for (int i = 0; i < suffix.Length; i++)
-            {
-                char c = suffix[i];
-                int digitIndex = Array.IndexOf(Motely.SeedDigits, c);
-                if (digitIndex < 0)
-                {
-                    throw new ArgumentException(
-                        $"Invalid seed character '{c}' in '{seed}'. Valid chars: 1-9, A-Z"
-                    );
-                }
-
-                batchNum += digitIndex * multiplier;
-                multiplier *= 35;
-            }
-
-            return batchNum;
-        }
-
-        /// <summary>
-        /// Save generated seeds to DuckDB file
-        /// </summary>
-        private static long GetCountOfSeeds(string keyword, int maxPad, int validCharCount)
-        {
-            long total = 1; // The keyword itself
-
-            // Formula: sum( (padLen + 1) * N^padLen ) for padLen 1 to maxPad
-            // where N is validCharCount
-            
-            for (int padLen = 1; padLen <= maxPad; padLen++)
-            {
-                long permutations = (long)Math.Pow(validCharCount, padLen);
-                long positions = padLen + 1;
-                total += positions * permutations;
-            }
-
-            return total;
-        }
-
-        /// <summary>
-        /// Save generated seeds to DuckDB file using Motely.DB optimized storage (via Orchestrator)
-        /// </summary>
-        private static void SaveSeedsToDuckDB(IEnumerable<string> seeds, string dbPath, bool quiet, bool isRegenerating = false)
-        {
-            if (!quiet)
-                Console.WriteLine($"💾 Saving seeds to {dbPath}...");
-            
-            long count = MotelySearchOrchestrator.BulkInsertSeeds(dbPath, seeds, deleteExisting: isRegenerating);
-            
-            if (!quiet)
-                Console.WriteLine($"✅ Saved {count:N0} seeds to {dbPath}");
-        }
-
-        /// <summary>
-        /// Insert a batch of seeds into DuckDB
-        /// </summary>
-
-        /// <summary>
-        /// Run a single search with the given parameters
+        /// Run a single search. Args = what to run. onResult = stream (required; always call it for each result).
         /// </summary>
         private static int RunSingleSearch(
             JsonSearchParams parameters,
-            string? nativeFilter,
-            CommandOption<string>? jamlOption,
-            CommandOption<string>? jsonOption,
-            CommandOption<string> deckOption,
-            CommandOption<string> stakeOption,
-            CommandOption<string>? scoreOption,
-            StreamWriter? csvWriter,
-            Action<MotelySeedScoreTally>? resultCallback)
+            RunSearchArgs args,
+            Action<MotelySeedScoreTally> onResult
+        )
         {
-            // ORCHESTRATOR HANDLES EVERYTHING - just give it the config!
-            // Column names come from JAML labels (handled by GetColumnNames in config)
-            // DB path generation comes from filterId (handled by orchestrator)
             IMotelySearch search;
-            
-            // Use provided callback or create default one
-            Action<MotelySeedScoreTally> callback = resultCallback ?? ((result) =>
-            {
-                // Build CSV line efficiently without intermediate List allocations
-                var sb = new StringBuilder();
-                sb.Append('"').Append(result.Seed).Append('"').Append(',');
-                sb.Append(result.Score);
-                
-                // Append tally columns
-                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
-                {
-                    foreach (var tally in result.TallyColumns)
-                    {
-                        sb.Append(',').Append(tally);
-                    }
-                }
-                
-                string csvLine = sb.ToString();
-                
-                // Always print to console (quiet mode still shows CSV results)
-                Console.WriteLine(csvLine);
-                
-                // Also write to CSV file if specified
-                if (csvWriter != null)
-                {
-                    csvWriter.WriteLine(csvLine);
-                }
-            });
+            string configName;
 
-            string? configName;
-            if (!string.IsNullOrEmpty(nativeFilter))
+            string deck = parameters.Deck ?? "Red";
+            string stake = parameters.Stake ?? "White";
+
+            if (!string.IsNullOrEmpty(args.NativeFilter))
             {
-                configName = nativeFilter;
+                configName = args.NativeFilter;
+                PrintStartupInfo(parameters, configName, deck, stake, null);
                 search = MotelySearchOrchestrator.LaunchNative(
-                    nativeFilter,
+                    args.NativeFilter,
                     parameters,
-                    scoreOption?.Value(),
+                    args.NativeScorePath,
                     new ConsoleTerminalOutput(),
-                    new ConsoleCancelKeyHandler());
+                    new ConsoleCancelKeyHandler()
+                );
             }
             else
             {
-                if (jamlOption?.HasValue() == true)
+                if (!string.IsNullOrEmpty(args.JamlPath))
                 {
-                    configName = jamlOption.Value();
-                    search = MotelySearchOrchestrator.LaunchJaml(jamlOption.Value()!, parameters, callback);
+                    configName = args.JamlPath;
+                    PrintStartupInfo(parameters, configName, deck, stake, null);
+                    search = MotelySearchOrchestrator.LaunchJaml(
+                        args.JamlPath,
+                        parameters,
+                        onResult
+                    );
                 }
                 else
                 {
-                    configName = jsonOption?.Value() ?? "standard";
-                    search = MotelySearchOrchestrator.LaunchJson(configName, parameters, callback);
+                    configName = args.JsonConfig ?? "standard";
+                    PrintStartupInfo(parameters, configName, deck, stake, null);
+                    search = MotelySearchOrchestrator.LaunchJson(configName, parameters, onResult);
                 }
             }
 
-            // Print startup info with column names BEFORE search starts (even in quiet mode)
-            // Column names come from JAML labels (handled by GetColumnNames in config, printed by executor)
-            PrintStartupInfo(search, parameters, configName ?? "standard", deckOption.Value()!, stakeOption.Value()!, null);
-
             search.Start(parameters.CancellationToken ?? default);
-            
+
             // Use AwaitCompletion() for clean blocking - respects cancellation token internally
             search.AwaitCompletion();
-            
+
             // Check if cancelled
             bool wasCancelled = parameters.CancellationToken?.IsCancellationRequested == true;
-            
+
             // Print final summary ALWAYS (even in quiet mode on interrupt/completion)
             PrintSearchSummary(search, parameters, wasCancelled);
             search.Dispose();
-            
+
             return wasCancelled ? 1 : 0;
         }
 
@@ -1264,12 +1107,20 @@ namespace Motely
         /// Always prints, even in quiet mode - users need to know what's running
         /// CSV header is printed by the executor (ONE SOURCE OF TRUTH)
         /// </summary>
-        private static void PrintStartupInfo(IMotelySearch search, JsonSearchParams parameters, string configName, string deck, string stake, MotelyJsonConfig? config)
+        private static void PrintStartupInfo(
+            JsonSearchParams parameters,
+            string configName,
+            string deck,
+            string stake,
+            MotelyJsonConfig? config
+        )
         {
             Console.Out.Flush();
             Console.WriteLine($"🔍 Running filter: {configName}");
             Console.WriteLine($"   Deck: {deck}, Stake: {stake}");
-            Console.WriteLine($"   Threads: {parameters.Threads}, BatchSize: {parameters.BatchSize}");
+            Console.WriteLine(
+                $"   Threads: {parameters.Threads}, BatchSize: {parameters.BatchSize}"
+            );
             if (parameters.StartBatch > 0)
                 Console.WriteLine($"   Starting from batch: {parameters.StartBatch:N0}");
             Console.WriteLine();
@@ -1279,7 +1130,11 @@ namespace Motely
         /// Print search summary after completion or cancellation
         /// Always prints, even in quiet mode - user needs to know how to continue
         /// </summary>
-        private static void PrintSearchSummary(IMotelySearch search, JsonSearchParams parameters, bool wasCancelled)
+        private static void PrintSearchSummary(
+            IMotelySearch search,
+            JsonSearchParams parameters,
+            bool wasCancelled
+        )
         {
             Console.Out.Flush();
             Console.WriteLine("\n" + new string('═', 60));
@@ -1304,10 +1159,11 @@ namespace Motely
                     ? $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
                     : $"   Total seeds: {search.TotalSeedsSearched:N0}"
             );
-            
-            double speed = search.ElapsedTime.TotalSeconds > 0 
-                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds 
-                : 0;
+
+            double speed =
+                search.ElapsedTime.TotalSeconds > 0
+                    ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds
+                    : 0;
             Console.WriteLine($"   Speed: {speed:N0} seeds/second");
 
             if (wasCancelled && search.IsSequentialBatchSearch)
@@ -1316,10 +1172,11 @@ namespace Motely
                 long maxBatches = (long)Math.Pow(35, 8 - parameters.BatchSize);
                 if (maxBatches > 0)
                     precisePercent = (double)lastBatchIndex * 100.0 / (double)maxBatches;
-                Console.WriteLine($"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F4}");
+                Console.WriteLine(
+                    $"💡 To continue: --startBatch {lastBatchIndex} or --startPercent {precisePercent:F4}"
+                );
             }
             Console.WriteLine(new string('═', 60));
         }
-
     }
 }

@@ -43,6 +43,7 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
         private readonly int _minAnte;
         private readonly int _maxAnte;
         private readonly bool _lookingForPetroglyph;
+
         /// <summary>True when every clause has Min null or &lt;= 1; enables SIMD-only fast path (no per-clause count).</summary>
         private readonly bool _allClausesMinOne;
 
@@ -149,7 +150,10 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Vector256<int> GetVoucherMatchVector(VectorEnum256<MotelyVoucher> vouchers, int clauseIndex)
+        private Vector256<int> GetVoucherMatchVector(
+            VectorEnum256<MotelyVoucher> vouchers,
+            int clauseIndex
+        )
         {
             ref readonly var clause = ref _clauses[clauseIndex];
             if (clause.VoucherTypes?.Count > 1)

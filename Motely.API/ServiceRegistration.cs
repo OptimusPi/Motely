@@ -63,7 +63,7 @@ public static class ServiceRegistration
     {
         // Register MultiSearchManager as singleton (manages thread pool for queued searches)
         services.AddSingleton(_ => MultiSearchManager.Instance);
-        
+
         // Always enable all services - no feature flags needed
         services.AddSearchQueueServices();
         services.AddSignalRServices();

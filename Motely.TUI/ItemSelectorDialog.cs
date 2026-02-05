@@ -38,7 +38,6 @@ public class ItemSelectorDialog : Dialog
             Y = 3,
             Width = Dim.Fill() - 2,
             Height = Dim.Fill() - 9,
-            AllowsMarking = false,
             CanFocus = true,
         };
         listView.SetScheme(BalatroTheme.ListView);
@@ -46,7 +45,7 @@ public class ItemSelectorDialog : Dialog
         listView.SelectedItem = 0;
 
         // Update selection label when navigating
-        listView.SelectedItemChanged += (s, e) =>
+        listView.ValueChanged += (s, e) =>
         {
             var idx = listView.SelectedItem ?? 0;
             if (idx >= 0 && idx < items.Length)
@@ -56,7 +55,7 @@ public class ItemSelectorDialog : Dialog
         };
 
         // Double-click to select
-        listView.OpenSelectedItem += (s, e) =>
+        listView.Accepting += (s, e) =>
         {
             var selectedIndex = listView.SelectedItem ?? 0;
             if (selectedIndex >= 0 && selectedIndex < items.Length)
@@ -65,6 +64,7 @@ public class ItemSelectorDialog : Dialog
                 BanItem = banToggled;
                 App?.RequestStop(this);
             }
+            e.Handled = true;
         };
 
         Add(listView);

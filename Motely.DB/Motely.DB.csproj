@@ -29,7 +29,7 @@
     <Compile Remove="SeedSourceProvider.cs" />
     <Compile Remove="SequentialLibrary.cs" />
   </ItemGroup>
-  
+
   <!-- Desktop: exclude browser stubs -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <Compile Remove="MotelySearchDatabase.Browser.cs" />

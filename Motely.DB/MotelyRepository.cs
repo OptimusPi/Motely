@@ -19,12 +19,21 @@ public sealed class MotelyRepository : IMotelyRepository
     {
         // Resolve moniker to full path if it's not already a path
         string dbPath = moniker;
-        if (string.IsNullOrEmpty(dbPath) || (!Path.IsPathRooted(dbPath) && !dbPath.Contains(Path.DirectorySeparatorChar) && !dbPath.Contains(Path.AltDirectorySeparatorChar)))
+        if (
+            string.IsNullOrEmpty(dbPath)
+            || (
+                !Path.IsPathRooted(dbPath)
+                && !dbPath.Contains(Path.DirectorySeparatorChar)
+                && !dbPath.Contains(Path.AltDirectorySeparatorChar)
+            )
+        )
         {
             // Treat as filterId and resolve to default location
             var searchResultsDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Motely", "SearchResults");
+                "Motely",
+                "SearchResults"
+            );
             Directory.CreateDirectory(searchResultsDir);
             dbPath = Path.Combine(searchResultsDir, $"{moniker}.db");
         }

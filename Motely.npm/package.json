@@ -1,14 +1,61 @@
 {
-    "name": "motely-wasm",
-    "version": "1.0.5",
-    "description": "WASM binaries and JS interop for Motely Seed Oracle",
-    "main": "index.js",
-    "types": "index.d.ts",
-    "files": [
-        "pkg/",
-        "index.js",
-        "index.d.ts"
-    ],
-    "dependencies": {},
-    "devDependencies": {}
+  "name": "motely-wasm",
+  "version": "1.0.9",
+  "description": "Browser-only WebAssembly package for Motely Seed Oracle. Use in the browser, not in Node.",
+  "type": "module",
+  "main": "index.js",
+  "browser": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.js",
+      "types": "./index.d.ts"
+    },
+    "./vite-plugin": {
+      "default": "./vite-plugin-motely-wasm.js",
+      "types": "./vite-plugin-motely-wasm.d.ts"
+    },
+    "./next-plugin": {
+      "default": "./next-plugin-motely-wasm.js",
+      "types": "./next-plugin-motely-wasm.d.ts"
+    },
+    "./jaml.schema.json": "./jaml.schema.json"
+  },
+  "files": [
+    "_framework/",
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "jaml.schema.json",
+    "vite-plugin-motely-wasm.js",
+    "vite-plugin-motely-wasm.d.ts",
+    "next-plugin-motely-wasm.js",
+    "next-plugin-motely-wasm.d.ts"
+  ],
+  "keywords": [
+    "balatro",
+    "seed",
+    "wasm",
+    "webassembly",
+    "browser-only",
+    "jaml",
+    "filter",
+    "search"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OptimusPi/Motely.git",
+    "directory": "Motely.npm"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "build:wasm": "cd ../Motely.WASM && dotnet publish -c Release",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
 }

@@ -78,3 +78,4 @@ Personal Cursor preferences should be kept in:
 - Don't use platform-specific commands without checking availability
 - Don't modify external systems without explicit approval
 - Don't assume tools are installed without verification
+- **Never add placeholder, fake, or simulation code** (e.g. `Task.Delay` instead of real work, "simulate search", "TODO implement") to sweep problems under the rug. If something can't be implemented yet, leave a clear throw or fail fast; do not ship fake behavior.
