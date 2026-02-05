@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Motely.DB;
 using Motely.Filters;
 using Motely.Reporting;
 using Motely.Repository;
@@ -16,35 +15,8 @@ namespace Motely.Executors
     public static class MotelySearchOrchestrator
     {
         /// <summary>Set repository implementation. Must be called before using any methods.</summary>
-        public static void SetRepository(IMotelyRepository repository) => RepositoryHost.Set(repository);
-        /// <summary>Get top seeds from a result set by searchId.</summary>
-        public static List<string> GetTopSeeds(string searchId, int limit)
-            => ResultsSetReader.Open(searchId)?.GetTopSeeds(limit) ?? new List<string>();
-
-        /// <summary>Delete a result set (catalog + _data). Only Orchestration touches storage.</summary>
-        public static void DeleteResultSet(string searchId) => ResultsSetReader.Delete(searchId);
-
-        /// <summary>Bulk insert seeds into a DuckDB file. Only Orchestration touches Motely.DB.</summary>
-        public static long BulkInsertSeeds(string dbPath, IEnumerable<string> seeds, bool deleteExisting = false)
-        {
-            if (deleteExisting && File.Exists(dbPath))
-                File.Delete(dbPath);
-            
-            using var storage = new DuckDBSeedStorage(dbPath);
-            return storage.BulkInsertSeeds(seeds);
-        }
-
-        /// <summary>Get top result rows from a result set by searchId.</summary>
-        public static List<Dictionary<string, object?>> GetTopResultsFromDb(string searchId, int offset, int limit)
-            => ResultsSetReader.Open(searchId)?.GetTopResults(offset, limit) ?? new List<Dictionary<string, object?>>();
-
-        /// <summary>Get column names for a result set by searchId.</summary>
-        public static List<string> GetColumnNames(string searchId)
-            => ResultsSetReader.Open(searchId)?.GetColumnNames() ?? new List<string> { "seed", "score" };
-
-        /// <summary>Export results from DuckDB to CSV using native COPY command. Only Orchestration touches Motely.DB.</summary>
-        public static void ExportResultsToCsv(string dbPath, string csvPath, string tableName = "results")
-            => ResultsExportHelper.ExportDuckDbToCsv(dbPath, csvPath, tableName);
+        public static void SetRepository(IMotelyRepository repository) =>
+            RepositoryHost.Set(repository);
 
         /// <summary>Print CSV header row for a config. Call after your startup messages but before search.Start().</summary>
         public static void PrintCsvHeader(MotelyJsonConfig config)
@@ -57,14 +29,10 @@ namespace Motely.Executors
             Console.Out.Flush();
         }
 
-        /// <summary>Get resume cursor for a result set by searchId.</summary>
-        public static (long startBatch, int batchSize, string? lastSeed) GetResumeCursor(string searchId)
-            => ResultsSetReader.Open(searchId)?.GetResumeCursor() ?? (0, 0, null);
-
         /// <summary>
         /// Launch a search and return a context with full result access.
         /// This is the preferred method for UI applications like BSO.
-        /// 
+        ///
         /// Motely owns everything: SearchId, FilterId, database operations, result queries.
         /// The consumer just calls methods on the returned context.
         /// </summary>
@@ -73,16 +41,18 @@ namespace Motely.Executors
         /// <param name="useInMemoryStorage">True for browser/WASM builds, false for desktop</param>
         /// <returns>Search context with full control and result access</returns>
         public static IMotelySearchContext LaunchWithContext(
-            MotelyJsonConfig config, 
+            MotelyJsonConfig config,
             JsonSearchParams parameters,
-            bool useInMemoryStorage = false)
+            bool useInMemoryStorage = false
+        )
         {
             var runConfig = MotelyRunConfig.Factory(config);
-            
+
             // Generate IDs - Motely owns this!
             var filterId = GenerateFilterId(config);
-            var searchId = $"{filterId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
-            
+            var searchId =
+                $"{filterId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString("N")[..8]}";
+
             if (useInMemoryStorage)
             {
                 // Browser/WASM: Use in-memory storage with callback (no DuckDB in NPM package)
@@ -94,23 +64,33 @@ namespace Motely.Executors
             var contextDb = LaunchWithDatabase(config, runConfig, parameters, searchId, filterId);
             return contextDb;
         }
-        
+
         private static MotelySearchContext LaunchWithDatabase(
             MotelyJsonConfig config,
             MotelyRunConfig runConfig,
             JsonSearchParams parameters,
             string searchId,
-            string filterId)
+            string filterId
+        )
         {
             // Pass moniker to repository - all path resolution handled by Motely.DB
             var moniker = parameters.OutputDbPath ?? filterId;
             var database = RepositoryHost.Instance.GetSink(moniker, runConfig);
 
             // Create executor with callback that writes to database
-            var executor = new JsonSearchExecutor(config, parameters, result =>
-            {
-                database.InsertRow(result.Seed, result.Score, result.TallyColumns, result.ColumnValues);
-            });
+            var executor = new JsonSearchExecutor(
+                config,
+                parameters,
+                result =>
+                {
+                    database.InsertRow(
+                        result.Seed,
+                        result.Score,
+                        result.TallyColumns,
+                        result.ColumnValues
+                    );
+                }
+            );
 
             var search = executor.ExecuteAsSearch();
 
@@ -122,33 +102,34 @@ namespace Motely.Executors
             MotelyRunConfig runConfig,
             JsonSearchParams parameters,
             string searchId,
-            string filterId)
+            string filterId
+        )
         {
             // Create executor first (needed to get search instance)
             // We'll create a placeholder callback that will be updated after context creation
             MotelySearchContext? contextRef = null;
-            
+
             // Combined callback: store in context AND call external callback if provided
             Action<MotelySeedScoreTally> combinedCallback = result =>
             {
                 // Store result in context's in-memory storage (contextRef is assigned before Start() is called)
                 contextRef?.StoreResult(result);
-                
+
                 // Also call external callback if provided (e.g., for JS interop)
                 parameters.ResultCallback?.Invoke(result);
             };
-            
+
             var executor = new JsonSearchExecutor(config, parameters, combinedCallback);
             var search = executor.ExecuteAsSearch();
-            
+
             // Create context AFTER executor (context needs search instance)
             // Note: Callback won't be invoked until Start() is called, so contextRef will be set by then
             var context = new MotelySearchContext(search, runConfig, searchId, filterId);
             contextRef = context; // Assign to closure variable
-            
+
             return context;
         }
-        
+
         /// <summary>
         /// Generate a consistent filter ID from config (used for both filterId and searchId prefix).
         /// Public so CLI can use the same logic.
@@ -160,7 +141,7 @@ namespace Motely.Executors
             var stake = config.Stake ?? "White";
             return $"{name}_{deck}_{stake}";
         }
-        
+
         /// <summary>
         /// Sanitize a string for use in file/folder names.
         /// Public so CLI can use the same logic.
@@ -169,7 +150,7 @@ namespace Motely.Executors
         {
             if (string.IsNullOrWhiteSpace(input))
                 return "unknown";
-                
+
             // Replace spaces with underscores, remove invalid chars
             var sanitized = input.Trim().Replace(" ", "");
             var invalidChars = Path.GetInvalidFileNameChars();
@@ -180,10 +161,13 @@ namespace Motely.Executors
             return sanitized;
         }
 
-
         // === Legacy methods for backward compatibility (desktop only) ===
-        
-        public static IMotelySearch LaunchJaml(string jamlPath, JsonSearchParams parameters, Action<MotelySeedScoreTally>? resultCallback = null)
+
+        public static IMotelySearch LaunchJaml(
+            string jamlPath,
+            JsonSearchParams parameters,
+            Action<MotelySeedScoreTally>? resultCallback = null
+        )
         {
             if (!File.Exists(jamlPath))
             {
@@ -191,14 +175,17 @@ namespace Motely.Executors
                 string localPath = Path.Combine("JamlFilters", jamlPath);
                 if (!localPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase))
                     localPath += ".jaml";
-                
+
                 if (File.Exists(localPath))
                     jamlPath = localPath;
                 else
                     throw new FileNotFoundException($"JAML config file not found: {jamlPath}");
             }
 
-            if (!JamlConfigLoader.TryLoadFromJaml(jamlPath, out var config, out var error) || config == null)
+            if (
+                !JamlConfigLoader.TryLoadFromJaml(jamlPath, out var config, out var error)
+                || config == null
+            )
             {
                 throw new InvalidOperationException($"Error loading JAML config: {error}");
             }
@@ -206,7 +193,11 @@ namespace Motely.Executors
             return Launch(config, parameters, resultCallback);
         }
 
-        public static IMotelySearch LaunchJson(string jsonPath, JsonSearchParams parameters, Action<MotelySeedScoreTally>? resultCallback = null)
+        public static IMotelySearch LaunchJson(
+            string jsonPath,
+            JsonSearchParams parameters,
+            Action<MotelySeedScoreTally>? resultCallback = null
+        )
         {
             if (!File.Exists(jsonPath))
             {
@@ -214,7 +205,7 @@ namespace Motely.Executors
                 string localPath = Path.Combine("JsonFilters", jsonPath);
                 if (!localPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                     localPath += ".json";
-                
+
                 if (File.Exists(localPath))
                     jsonPath = localPath;
                 else
@@ -234,24 +225,27 @@ namespace Motely.Executors
             JsonSearchParams parameters,
             string? scoreConfig = null,
             ITerminalOutput? terminal = null,
-            ICancelKeyHandler? cancelKeyHandler = null)
+            ICancelKeyHandler? cancelKeyHandler = null
+        )
         {
             MotelyRunConfig? runConfig = null;
             if (!string.IsNullOrEmpty(scoreConfig))
             {
                 // Try to load score config to get schema
-                try 
+                try
                 {
                     var config = LoadScoringConfigSync(scoreConfig);
                     runConfig = MotelyRunConfig.Factory(config);
                 }
-                catch { /* Ignore, fallback to basic schema */ }
+                catch
+                { /* Ignore, fallback to basic schema */
+                }
             }
 
             // Fallback to basic schema (seed, score) if no scoring config
-            runConfig ??= new MotelyRunConfig 
-            { 
-                Name = filterName, 
+            runConfig ??= new MotelyRunConfig
+            {
+                Name = filterName,
                 Columns = new List<ColumnDefinition>(),
                 Deck = MotelyDeck.Red, // Defaults
                 Stake = MotelyStake.White,
@@ -259,24 +253,37 @@ namespace Motely.Executors
                 MustNot = new List<MotelyJsonFilterClause>(),
                 Should = new List<MotelyJsonFilterClause>(),
                 MaxVoucherAnte = 8,
-                MaxBossAnte = 8
+                MaxBossAnte = 8,
             };
 
-            var executor = new NativeFilterExecutor(filterName, parameters, scoreConfig, terminal, cancelKeyHandler);
-            
+            var executor = new NativeFilterExecutor(
+                filterName,
+                parameters,
+                scoreConfig,
+                terminal,
+                cancelKeyHandler
+            );
+
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {
-                executor.ResultsDatabase = RepositoryHost.Instance.GetSink(parameters.OutputDbPath, runConfig);
+                executor.ResultsDatabase = RepositoryHost.Instance.GetSink(
+                    parameters.OutputDbPath,
+                    runConfig
+                );
             }
 
             return executor.ExecuteAsSearch();
         }
 
-        public static IMotelySearch Launch(MotelyJsonConfig config, JsonSearchParams parameters, Action<MotelySeedScoreTally>? resultCallback = null)
+        public static IMotelySearch Launch(
+            MotelyJsonConfig config,
+            JsonSearchParams parameters,
+            Action<MotelySeedScoreTally>? resultCallback = null
+        )
         {
             // Convert to run config
             var runConfig = MotelyRunConfig.Factory(config);
-            
+
             // Auto-generate database path from config if OutputDbPath is null but user wants to save
             // Orchestrator handles everything - generates filterId from config and creates path
             if (string.IsNullOrEmpty(parameters.OutputDbPath) && parameters.AutoSave)
@@ -286,12 +293,15 @@ namespace Motely.Executors
                 var seedsDir = Path.Combine(Directory.GetCurrentDirectory(), "seeds");
                 parameters.OutputDbPath = Path.Combine(seedsDir, $"{filterId}.db");
             }
-            
+
             var executor = new JsonSearchExecutor(config, parameters, resultCallback);
-            
+
             if (!string.IsNullOrEmpty(parameters.OutputDbPath))
             {
-                executor.ResultStorage = RepositoryHost.Instance.GetSink(parameters.OutputDbPath, runConfig);
+                executor.ResultStorage = RepositoryHost.Instance.GetSink(
+                    parameters.OutputDbPath,
+                    runConfig
+                );
             }
 
             return executor.ExecuteAsSearch();
@@ -304,7 +314,13 @@ namespace Motely.Executors
             {
                 if (configPath.EndsWith(".jaml", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (JamlConfigLoader.TryLoadFromJaml(configPath, out var jamlConfig, out var error))
+                    if (
+                        JamlConfigLoader.TryLoadFromJaml(
+                            configPath,
+                            out var jamlConfig,
+                            out var error
+                        )
+                    )
                         return jamlConfig!;
                     throw new Exception(error);
                 }

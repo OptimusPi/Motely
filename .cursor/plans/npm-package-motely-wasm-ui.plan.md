@@ -1,3 +1,10 @@
+---
+name: ""
+overview: ""
+todos: []
+isProject: false
+---
+
 # NPM Package Plan: motely-wasm-ui (new, post–Motely.WASM delete)
 
 **Context:** Motely.WASM was removed ("100% wrong"). You want a new NPM package so users can `npm install motely-wasm-ui` (or similar) and use Motely in the browser or via Node. When you're back, you'll publish the Node NPM package.
@@ -26,10 +33,10 @@
 
 ## 3. Cleanup (do first)
 
-1. **Remove Motely.WASM from solution**  
-   Edit [Motely.sln](Motely.sln): remove the `Motely.WASM` project entry and its configuration blocks (search for `Motely.WASM` and `F9D6E7A8-C9B0-1234-EF01-567890123456`).
-2. **Update or replace publish workflow**  
-   Edit [.github/workflows/publish-motely-wasm.yml](.github/workflows/publish-motely-wasm.yml): either point `working-directory` to the new project (e.g. `Motely.Node` or new `Motely.WASM`), or rename the workflow (e.g. `publish-motely-npm.yml`) and use the new package layout. If you start with Node-only, the build is `dotnet publish` in the Node project, then `npm pack` / `npm publish` from that project’s output.
+1. **Remove Motely.WASM from solution**
+  Edit [Motely.sln](Motely.sln): remove the `Motely.WASM` project entry and its configuration blocks (search for `Motely.WASM` and `F9D6E7A8-C9B0-1234-EF01-567890123456`).
+2. **Update or replace publish workflow**
+  Edit [.github/workflows/publish-motely-wasm.yml](.github/workflows/publish-motely-wasm.yml): either point `working-directory` to the new project (e.g. `Motely.Node` or new `Motely.WASM`), or rename the workflow (e.g. `publish-motely-npm.yml`) and use the new package layout. If you start with Node-only, the build is `dotnet publish` in the Node project, then `npm pack` / `npm publish` from that project’s output.
 
 ---
 
@@ -45,7 +52,7 @@
 
 ## 5. If you add browser WASM again (motely-wasm-ui as browser)
 
-1. **New project:** e.g. `Motely.Browser` or recreate `Motely.WASM` with `net10.0-browser`, `RuntimeIdentifier=browser-wasm`, `WasmMainJSPath`, etc.
+1. **New project:** e.g. `Motely.Browser` or recreate `Motely.WASM` with `net10.0-browser`, `Microsoft.NET.Sdk.WebAssembly`. (No `RuntimeIdentifier` or `WasmMainJSPath` needed — SDK infers RID; main entry is `dotnet.js` in `_framework/`.)
 2. **Output:** Build produces `_framework/`, wasm, `main.js`; npm package ships these so a host app (or a minimal bundled UI) can load and call the exports.
 3. **Package:** `motely-wasm-ui` on npm; consumers `npm install motely-wasm-ui` and use the dist in their app or run a minimal included UI.
 
@@ -68,11 +75,11 @@
 
 ## 8. Summary checklist (when you're back)
 
-- [ ] Remove Motely.WASM from Motely.sln (or add new project and remove old reference).
-- [ ] Decide: Node-only, browser-only, or both; set package name(s).
-- [ ] Create new project (Motely.Node and/or new browser WASM project).
-- [ ] Update publish workflow (working-directory, name, tag pattern).
-- [ ] Test build and `npm pack` locally.
-- [ ] Publish: tag + push or workflow_dispatch, then `npm publish`.
+- Remove Motely.WASM from Motely.sln (or add new project and remove old reference).
+- Decide: Node-only, browser-only, or both; set package name(s).
+- Create new project (Motely.Node and/or new browser WASM project).
+- Update publish workflow (working-directory, name, tag pattern).
+- Test build and `npm pack` locally.
+- Publish: tag + push or workflow_dispatch, then `npm publish`.
 
 When you're back, pick Option A, B, or C and we can implement the exact project and workflow steps for that choice.

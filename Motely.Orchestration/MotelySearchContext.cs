@@ -18,11 +18,11 @@ public sealed class MotelySearchContext : IMotelySearchContext
     private readonly string _searchId;
     private readonly string _filterId;
     private readonly bool _useInMemoryStorage;
-    
+
     // Browser/WASM: In-memory result storage (sorted by score descending)
     private readonly List<MotelySearchResultRow>? _inMemoryResults;
     private readonly object _inMemoryResultsLock = new object();
-    
+
     /// <summary>
     /// Create a search context with database storage (Desktop/native)
     /// </summary>
@@ -31,7 +31,8 @@ public sealed class MotelySearchContext : IMotelySearchContext
         IResultStorage database,
         MotelyRunConfig runConfig,
         string searchId,
-        string filterId)
+        string filterId
+    )
     {
         _search = search ?? throw new ArgumentNullException(nameof(search));
         _database = database ?? throw new ArgumentNullException(nameof(database));
@@ -48,7 +49,8 @@ public sealed class MotelySearchContext : IMotelySearchContext
         IMotelySearch search,
         MotelyRunConfig runConfig,
         string searchId,
-        string filterId)
+        string filterId
+    )
     {
         _search = search ?? throw new ArgumentNullException(nameof(search));
         _database = null;
@@ -58,7 +60,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
         _useInMemoryStorage = true;
         _inMemoryResults = new List<MotelySearchResultRow>();
     }
-    
+
     /// <summary>
     /// Store a result in in-memory storage (browser/WASM mode).
     /// Called from the result callback during search execution.
@@ -67,15 +69,15 @@ public sealed class MotelySearchContext : IMotelySearchContext
     {
         if (!_useInMemoryStorage || _inMemoryResults == null)
             return;
-            
+
         var tallies = ExtractTalliesFromTally(tally);
         var row = new MotelySearchResultRow
         {
             Seed = tally.Seed,
             Score = tally.Score,
-            Tallies = tallies
+            Tallies = tallies,
         };
-        
+
         lock (_inMemoryResultsLock)
         {
             // Insert in sorted order (score descending) for efficient top-K queries
@@ -92,12 +94,12 @@ public sealed class MotelySearchContext : IMotelySearchContext
             _inMemoryResults.Insert(insertIndex, row);
         }
     }
-    
+
     private List<int>? ExtractTalliesFromTally(MotelySeedScoreTally tally)
     {
         if (tally.TallyValuesSpan.IsEmpty)
             return null;
-            
+
         var tallies = new List<int>();
         foreach (var val in tally.TallyValuesSpan)
         {
@@ -105,13 +107,13 @@ public sealed class MotelySearchContext : IMotelySearchContext
         }
         return tallies.Count > 0 ? tallies : null;
     }
-    
+
     // === IMotelySearchContext implementation ===
-    
+
     public string SearchId => _searchId;
-    
+
     public string FilterId => _filterId;
-    
+
     public int ResultCount
     {
         get
@@ -129,7 +131,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
             return _database?.GetResultCount() ?? 0;
         }
     }
-    
+
     public IReadOnlyList<string> ColumnNames
     {
         get
@@ -139,7 +141,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
             return columns;
         }
     }
-    
+
     public List<MotelySearchResultRow> GetResults(int offset, int limit)
     {
         if (_useInMemoryStorage)
@@ -147,14 +149,14 @@ public sealed class MotelySearchContext : IMotelySearchContext
             // Browser/WASM: Query in-memory storage
             if (_inMemoryResults == null)
                 return new List<MotelySearchResultRow>();
-                
+
             lock (_inMemoryResultsLock)
             {
                 // Results are already sorted by score descending
                 int count = Math.Min(limit, _inMemoryResults.Count - offset);
                 if (count <= 0)
                     return new List<MotelySearchResultRow>();
-                    
+
                 var result = new List<MotelySearchResultRow>(count);
                 for (int i = offset; i < offset + count; i++)
                 {
@@ -170,18 +172,19 @@ public sealed class MotelySearchContext : IMotelySearchContext
 
         var rows = _database.GetResultsPage(offset, limit);
         return rows.Select(r => new MotelySearchResultRow
-        {
-            Seed = r.TryGetValue("seed", out var s) ? s?.ToString() ?? "" : "",
-            Score = r.TryGetValue("score", out var sc) ? Convert.ToInt32(sc) : 0,
-            Tallies = ExtractTallies(r)
-        }).ToList();
+            {
+                Seed = r.TryGetValue("seed", out var s) ? s?.ToString() ?? "" : "",
+                Score = r.TryGetValue("score", out var sc) ? Convert.ToInt32(sc) : 0,
+                Tallies = ExtractTallies(r),
+            })
+            .ToList();
     }
-    
+
     public List<MotelySearchResultRow> GetTopResults(int limit = 1000)
     {
         return GetResults(0, limit);
     }
-    
+
     private List<int>? ExtractTallies(Dictionary<string, object?> row)
     {
         var tallies = new List<int>();
@@ -197,9 +200,9 @@ public sealed class MotelySearchContext : IMotelySearchContext
         }
         return tallies.Count > 0 ? tallies : null;
     }
-    
+
     // === IMotelySearch delegation ===
-    
+
     public MotelySearchStatus Status => _search.Status;
     public bool IsSequentialBatchSearch => _search.IsSequentialBatchSearch;
     public long BatchIndex => _search.BatchIndex;
@@ -208,15 +211,21 @@ public sealed class MotelySearchContext : IMotelySearchContext
     public long TotalSeedsSearched => _search.TotalSeedsSearched;
     public long MatchingSeeds => _search.MatchingSeeds;
     public long FilteredSeeds => _search.FilteredSeeds;
-    
-    public void Start(CancellationToken cancellationToken = default) => _search.Start(cancellationToken);
+
+    public void Start(CancellationToken cancellationToken = default) =>
+        _search.Start(cancellationToken);
+
     public void AwaitCompletion() => _search.AwaitCompletion();
-    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default) 
-        => _search.WaitForCompletionAsync(cancellationToken);
+
+    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default) =>
+        _search.WaitForCompletionAsync(cancellationToken);
+
     public void Pause() => _search.Pause();
+
     public void Cancel() => _search.Cancel();
+
     public void ForceProgressReport() => _search.ForceProgressReport();
-    
+
     public void Dispose()
     {
         _search.Dispose();

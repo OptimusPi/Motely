@@ -243,7 +243,6 @@ public class MainMenuWindow : View
             Y = 3,
             Width = Dim.Fill() - 2,
             Height = Dim.Fill() - 7,
-            AllowsMarking = false,
             CanFocus = true,
         };
         filterList.SetScheme(
@@ -283,7 +282,7 @@ public class MainMenuWindow : View
         };
 
         // Handle mouse double-click
-        filterList.OpenSelectedItem += (sender, e) => StartSearch();
+        filterList.Accepting += (sender, e) => StartSearch();
 
         dialog.Add(filterList);
 

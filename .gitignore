@@ -23,6 +23,7 @@ node_modules/
 /Motely.TUI/obj/
 /Motely/bin/
 /Motely/obj/
+/Motely.npm/dist/
 
 # Web
 /Motely.API/wwwroot/
@@ -63,3 +64,5 @@ mcp-config.json
 /vue-jaml-ui/dist/assets
 /publish-wasm
 /seeds
+/Motely.npm/_framework
+/Motely.npm/pkg

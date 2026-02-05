@@ -16,23 +16,21 @@ public class CleanButton : View
     {
         Height = 1;
         CanFocus = true;
-        WantContinuousButtonPressed = false;
 
-        KeyDown += (s, e) =>
-        {
-            if (e.KeyCode == KeyCode.Enter || e.KeyCode == KeyCode.Space)
+        DrawingContent += (s, e) => DrawContent();
+
+        AddCommand(
+            Command.Accept,
+            () =>
             {
+                SetFocus();
                 Accept?.Invoke(this, EventArgs.Empty);
-                e.Handled = true;
+                return true;
             }
-        };
-
-        MouseClick += (s, e) =>
-        {
-            SetFocus();
-            Accept?.Invoke(this, EventArgs.Empty);
-            e.Handled = true;
-        };
+        );
+        KeyBindings.Add(KeyCode.Enter, Command.Accept);
+        KeyBindings.Add(KeyCode.Space, Command.Accept);
+        MouseBindings.Add(MouseFlags.LeftButtonClicked, Command.Accept);
     }
 
     // Track when Width is explicitly set
@@ -70,7 +68,7 @@ public class CleanButton : View
         set => _textAlignment = value;
     }
 
-    protected override bool OnDrawingContent()
+    private void DrawContent()
     {
         var viewport = Viewport;
         var scheme = GetScheme();
@@ -111,6 +109,5 @@ public class CleanButton : View
         {
             AddRune(textX + i, textY, (System.Text.Rune)text[i]);
         }
-        return true;
     }
 }

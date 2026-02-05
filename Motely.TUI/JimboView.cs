@@ -31,6 +31,7 @@ public class JimboView : View
         Width = scaledWidth;
         Height = (scaledHeight + 1) / 2;
         CanFocus = false;
+        DrawingContent += (s, e) => DrawContent();
     }
 
     private static (Color[,] pixels, int width, int height) LoadFromPng()
@@ -67,7 +68,7 @@ public class JimboView : View
         return (pixels, width, height);
     }
 
-    protected override bool OnDrawingContent()
+    private void DrawContent()
     {
         var viewport = Viewport;
         var transparent = new Color(0, 0, 0, 0);
@@ -130,6 +131,5 @@ public class JimboView : View
                 }
             }
         }
-        return true;
     }
 }

@@ -38,11 +38,13 @@ public class SearchQueueHostedService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            // Prune completed tasks
+            // Prune completed tasks and observe faults (no fire-and-forget; we observe when we remove)
             var completed = _runningTasks.Where(kvp => kvp.Value.IsCompleted).ToList();
             foreach (var kvp in completed)
             {
-                _runningTasks.TryRemove(kvp.Key, out _);
+                _runningTasks.TryRemove(kvp.Key, out var t);
+                if (t != null && t.IsFaulted)
+                    _logger.LogError(t.Exception, "Search {SearchId} failed", kvp.Key);
                 _logger.LogDebug("Removed completed task for search {SearchId}", kvp.Key);
             }
 
@@ -93,30 +95,20 @@ public class SearchQueueHostedService : BackgroundService
 
     private void StartSearch(SearchQueueEntry entry, CancellationToken ct)
     {
-        var task = Task.Run(
-            async () =>
-            {
-                // Parse JAML filter (assume valid - validated at enqueue time)
-                var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-                var config = JsonSerializer.Deserialize<MotelyJsonConfig>(
-                    entry.JamlFilter,
-                    options
-                );
+        // Parse JAML filter (assume valid - validated at enqueue time)
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var config = JsonSerializer.Deserialize<MotelyJsonConfig>(entry.JamlFilter, options);
 
-                // Create criteria with batch limit (100 batches max)
-                var criteria = new SearchCriteriaDto
-                {
-                    ThreadCount = entry.ThreadCount,
-                    StartBatch = (ulong)entry.BatchMarker,
-                    EndBatch = (ulong)Math.Min(entry.BatchMarker + 100, long.MaxValue),
-                };
+        // Create criteria with batch limit (100 batches max)
+        var criteria = new SearchCriteriaDto
+        {
+            ThreadCount = entry.ThreadCount,
+            StartBatch = (ulong)entry.BatchMarker,
+            EndBatch = (ulong)Math.Min(entry.BatchMarker + 100, long.MaxValue),
+        };
 
-                // Run search using existing SearchService logic
-                await _searchService.RunQueuedSearchAsync(config!, entry, ct);
-            },
-            ct
-        );
-
+        // Start search; task is stored and observed when we prune completed tasks in ExecuteAsync
+        var task = _searchService.RunQueuedSearchAsync(config!, entry, ct);
         _runningTasks.TryAdd(entry.SearchId, task);
         _logger.LogInformation("Started queued search {SearchId}", entry.SearchId);
     }

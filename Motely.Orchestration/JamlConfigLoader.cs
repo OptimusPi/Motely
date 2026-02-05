@@ -122,8 +122,6 @@ public static class JamlConfigLoader
             // Build helpful error message
             var errorMsg = new System.Text.StringBuilder();
             errorMsg.AppendLine($"Failed to parse JAML{lineInfo}: {ex.Message}{details}");
-            errorMsg.AppendLine();
-            errorMsg.AppendLine("💡 Common YAML syntax errors:");
 
             // Check for specific error patterns and provide targeted hints
             var errorLower = ex.Message.ToLowerInvariant();
@@ -280,7 +278,7 @@ public static class JamlConfigLoader
                         var commentIndex = valueContent.IndexOf('#');
                         if (commentIndex >= 0)
                             valueContent = valueContent.Substring(0, commentIndex).Trim();
-                        
+
                         if (valueContent.StartsWith('['))
                         {
                             var indent = line.Substring(0, line.IndexOf('-'));
@@ -373,18 +371,30 @@ public static class JamlConfigLoader
 
                     // Special handling for "tags" and "events" - only treat as type-as-key if value is an array
                     // This avoids conflicts with the boolean Tags property in SourcesConfig
-                    if (!matched && (string.Equals(keyPart, "tags", StringComparison.OrdinalIgnoreCase) || string.Equals(keyPart, "events", StringComparison.OrdinalIgnoreCase)))
+                    if (
+                        !matched
+                        && (
+                            string.Equals(keyPart, "tags", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(keyPart, "events", StringComparison.OrdinalIgnoreCase)
+                        )
+                    )
                     {
                         var valueContent = trimmed.Substring(colonIndex + 1).Trim();
                         // Remove inline comments before checking if it's an array
                         var commentIndex = valueContent.IndexOf('#');
                         if (commentIndex >= 0)
                             valueContent = valueContent.Substring(0, commentIndex).Trim();
-                        
+
                         if (valueContent.StartsWith('['))
                         {
                             var indent = line.Substring(0, line.Length - trimmed.Length);
-                            var normalizedType = string.Equals(keyPart, "tags", StringComparison.OrdinalIgnoreCase) ? "Tag" : "Event";
+                            var normalizedType = string.Equals(
+                                keyPart,
+                                "tags",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                                ? "Tag"
+                                : "Event";
                             var originalValue = trimmed.Substring(colonIndex + 1).Trim();
                             result.AppendLine($"{indent}type: {normalizedType}");
                             result.AppendLine($"{indent}values: {originalValue}");

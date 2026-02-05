@@ -42,7 +42,6 @@ public class CategorySelectorDialog : Dialog
             Y = 3,
             Width = Dim.Fill() - 2,
             Height = Dim.Fill() - 5,
-            AllowsMarking = false,
             CanFocus = true,
         };
         listView.SetScheme(BalatroTheme.ListView);
@@ -85,10 +84,11 @@ public class CategorySelectorDialog : Dialog
         };
 
         // Handle mouse click for selection
-        listView.OpenSelectedItem += (s, e) =>
+        listView.Accepting += (s, e) =>
         {
             SelectedCategory = GetCategoryFromIndex(listView.SelectedItem ?? 0);
             App?.RequestStop(this);
+            e.Handled = true;
         };
 
         Add(listView);

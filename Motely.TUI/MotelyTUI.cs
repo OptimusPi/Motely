@@ -1,12 +1,13 @@
 using Motely.API;
 using Terminal.Gui;
+using Terminal.Gui.Views;
 
 namespace Motely.TUI;
 
 public static class MotelyTUI
 {
     private static BalatroShaderBackground? _shaderBackground;
-    private static Toplevel? _mainTop;
+    private static Window? _mainTop;
     private static IApplication? _app;
 
     /// <summary>
@@ -34,7 +35,7 @@ public static class MotelyTUI
 
         try
         {
-            _mainTop = new Toplevel()
+            _mainTop = new Window()
             {
                 X = 0,
                 Y = 0,
@@ -73,11 +74,11 @@ public static class MotelyTUI
             _shaderBackground?.Stop();
             try
             {
-                _app?.Shutdown();
+                (_app as IDisposable)?.Dispose();
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Warning: Application.Shutdown() failed: {ex.Message}");
+                Console.Error.WriteLine($"Warning: Application dispose failed: {ex.Message}");
             }
         }
     }

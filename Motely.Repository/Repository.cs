@@ -3,10 +3,12 @@ namespace Motely.Repository;
 public static class RepositoryHost
 {
     private static IMotelyRepository? _instance;
-    
+
     public static IMotelyRepository Instance
     {
-        get => _instance ?? throw new InvalidOperationException("Repository not initialized. Call Set() first.");
+        get =>
+            _instance
+            ?? throw new InvalidOperationException("Repository not initialized. Call Set() first.");
         private set => _instance = value;
     }
 

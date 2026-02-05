@@ -1,9 +1,9 @@
+using System.Text;
 using Motely;
 using Motely.DB;
 using Motely.Filters;
 using Motely.Reporting;
 using Motely.Utils;
-using System.Text;
 
 namespace Motely.Executors
 {
@@ -20,6 +20,7 @@ namespace Motely.Executors
         private bool _cancelled = false;
         private IMotelySearch? _runningSearch;
         private MotelyJsonConfig? _loadedConfig; // Config loaded by ExecuteAsSearch for header printing
+
         /// <summary>Optional result storage.</summary>
         public IResultStorage? ResultStorage { get; set; }
 
@@ -41,7 +42,10 @@ namespace Motely.Executors
             _configPath = configPath;
             _config = null;
             _params = parameters;
-            _format = Path.GetExtension(configPath).EndsWith(".jaml", StringComparison.OrdinalIgnoreCase) ? "jaml" : "json";
+            _format = Path.GetExtension(configPath)
+                .EndsWith(".jaml", StringComparison.OrdinalIgnoreCase)
+                ? "jaml"
+                : "json";
             _customCallback = customCallback;
         }
 
@@ -96,10 +100,18 @@ namespace Motely.Executors
             }
         }
 
-        public int Execute(bool awaitCompletion = true, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Execute the search synchronously. Blocks the calling thread until completion.
+        /// Uses AwaitCompletion() which blocks on threads (not async), making it safe for console apps.
+        /// For UI frameworks (Avalonia, WPF, etc.), use ExecuteAsync() instead to avoid freezing the UI thread.
+        /// </summary>
+        public int Execute(CancellationToken cancellationToken = default)
         {
-            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
-            
+            var effectiveToken =
+                cancellationToken != default
+                    ? cancellationToken
+                    : _params.CancellationToken ?? default;
+
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             TallyColorizer.ColorEnabled = !_params.NoFancy;
@@ -130,114 +142,32 @@ namespace Motely.Executors
                 IMotelySearch search = CreateSearch(config);
                 if (search == null)
                     return 1;
-                
-                PrintResultsHeader(config);
 
-                // Setup cancellation handler ONLY when NOT in TUI mode
-                // In TUI mode, the UI handles Ctrl+C via KeyDown event and calls Cancel() directly
-                ConsoleCancelEventHandler? cancelHandler = null;
-                if (_customCallback == null)
-                {
-                    try
-                    {
-                        cancelHandler = (sender, e) =>
-                        {
-                            e.Cancel = true;
-                            _cancelled = true;
-                            if (!_params.Quiet)
-                            {
-                                Console.WriteLine("\n🛑 Stopping search...");
-                            }
-                            search.Cancel();
-                        };
-                        Console.CancelKeyPress += cancelHandler;
-                    }
-                    catch (PlatformNotSupportedException)
-                    {
-                        // Console.CancelKeyPress not available on this platform (e.g., WASM)
-                        cancelHandler = null;
-                    }
-                }
+                PrintResultsHeader(config);
 
                 search.Start(effectiveToken);
 
-                if (awaitCompletion)
+                try
                 {
-                    try
-                    {
-                        // Wait for completion - will exit early if cancellation token is signaled
-                        // Wait for completion - check for keys to support manual progress (P) and quit (ESC ESC)
-                        DateTime? lastEscTime = null;
-                        while (!_cancelled && (search.Status == MotelySearchStatus.Running || search.Status == MotelySearchStatus.Paused))
-                        {
-                            if (_params.CancellationToken?.IsCancellationRequested == true)
-                                break;
+                    // Use AwaitCompletion() - blocks on threads (not async), safe for console apps
+                    // Respects cancellation token internally via Thread.Join with timeout checks
+                    search.AwaitCompletion();
 
-                            // Support P for progress, double-ESC to quit
-                            try
-                            {
-                                // Check for key input (only works when stdin isn't redirected)
-                                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                                {
-                                    var key = Console.ReadKey(true);
-                                    if (key.Key == ConsoleKey.P)
-                                    {
-                                        Console.WriteLine("📊 Progress:");
-                                        search.ForceProgressReport();
-                                    }
-                                    else if (key.Key == ConsoleKey.Escape)
-                                    {
-                                        var now = DateTime.UtcNow;
-                                        if (lastEscTime.HasValue && (now - lastEscTime.Value).TotalMilliseconds < 1000)
-                                        {
-                                            // Double-tap ESC within 1 second = quit
-                                            Console.WriteLine();
-                                            Console.WriteLine("🛑 ESC ESC - Stopping search...");
-                                            search.Cancel();
-                                            _cancelled = true;
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            // First ESC - show hint
-                                            lastEscTime = now;
-                                            Console.WriteLine("💡 Double-tap ESC to quit (or Ctrl+C)");
-                                        }
-                                    }
-                                }
-                            }
-                            catch (PlatformNotSupportedException)
-                            {
-                                // Console key input not available on this platform
-                            }
-
-                            // Use a small sleep to avoid pegged CPU on main thread
-                            Thread.Sleep(100);
-                        }
-
-                        // Always print final summary, even in quiet mode
-                        PrintResultsSummary(search, _cancelled);
-                    }
-                    finally
-                    {
-                        // Always dispose, but avoid double-dispose if cancelled and handler already disposed
-                        if (!_cancelled)
-                        {
-                            search.Dispose();
-                        }
-                    }
+                    // Always print final summary, even in quiet mode
+                    PrintResultsSummary(search, _cancelled);
                 }
-                else
+                catch (OperationCanceledException)
                 {
-                    // Store the search for later access/cancellation
-                    _runningSearch = search;
+                    _cancelled = true;
+                    PrintResultsSummary(search, _cancelled);
                 }
-
-                // Cleanup cancel handler if registered
-                if (cancelHandler != null)
+                finally
                 {
-                    try { Console.CancelKeyPress -= cancelHandler; }
-                    catch (PlatformNotSupportedException) { }
+                    // Always dispose, but avoid double-dispose if cancelled and handler already disposed
+                    if (!_cancelled)
+                    {
+                        search.Dispose();
+                    }
                 }
 
                 Console.Out.Flush();
@@ -255,13 +185,17 @@ namespace Motely.Executors
         }
 
         /// <summary>
-        /// Async version of Execute that doesn't block the calling thread.
+        /// Execute the search asynchronously without blocking the calling thread.
         /// Uses WaitForCompletionAsync instead of polling with Thread.Sleep.
+        /// Required for UI frameworks (Avalonia, WPF, etc.) to avoid freezing the UI thread.
         /// </summary>
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
         {
-            var effectiveToken = cancellationToken != default ? cancellationToken : _params.CancellationToken ?? default;
-            
+            var effectiveToken =
+                cancellationToken != default
+                    ? cancellationToken
+                    : _params.CancellationToken ?? default;
+
             DebugLogger.IsEnabled = _params.EnableDebug;
             FancyConsole.IsEnabled = !_params.NoFancy;
             TallyColorizer.ColorEnabled = !_params.NoFancy;
@@ -292,7 +226,7 @@ namespace Motely.Executors
                 IMotelySearch search = CreateSearch(config);
                 if (search == null)
                     return 1;
-                
+
                 PrintResultsHeader(config);
 
                 search.Start(effectiveToken);
@@ -343,6 +277,10 @@ namespace Motely.Executors
             {
                 _loadedConfig = LoadConfig();
                 _runningSearch = CreateSearch(_loadedConfig);
+                if (_params.EmitResultsHeader && _loadedConfig != null)
+                {
+                    PrintResultsHeader(_loadedConfig);
+                }
                 return _runningSearch;
             }
             catch (Exception ex)
@@ -351,309 +289,6 @@ namespace Motely.Executors
                 throw;
             }
         }
-
-        /// <summary>
-        /// Resolve seed source path from moniker. Motely.DB handles reading the file.
-        /// </summary>
-        private string? ResolveSeedSourcePath(string seedSource)
-        {
-            // If the user gave an absolute path or it already exists exactly where it is, respect it!
-            if (File.Exists(seedSource))
-            {
-                string ext = Path.GetExtension(seedSource).ToLowerInvariant();
-                
-                // .txt and .csv files can be read directly by DataLakeSeedProvider - no conversion needed!
-                if (ext == ".txt" || ext == ".csv")
-                {
-                    return seedSource; // Pass directly - DataLakeSeedProvider handles it
-                }
-                
-                if (ext == ".db")
-                {
-                    return seedSource;
-                }
-                
-                throw new NotSupportedException($"Unsupported seed source extension: {ext}");
-            }
-
-            // Fallback for relative, extensionless names (legacy behavior/convenience)
-            // Use unified "seeds" folder (combines SearchResults and SeedSources)
-            string storageDirectory = "seeds";
-            // Directory will be created by MotelySearchDatabase or file operations as needed
-
-            // Special case: if it has an extension, try looking in SeedSources with the exact name
-            if (Path.HasExtension(seedSource))
-            {
-                string directPathInSeedSources = Path.Combine(storageDirectory, seedSource);
-                if (File.Exists(directPathInSeedSources))
-                {
-                    string ext = Path.GetExtension(directPathInSeedSources).ToLowerInvariant();
-                    
-                    // .txt and .csv files can be read directly - no conversion needed!
-                    if (ext == ".txt" || ext == ".csv" || ext == ".db")
-                    {
-                        return directPathInSeedSources;
-                    }
-                    
-                    throw new NotSupportedException($"Unsupported seed source extension: {ext}");
-                }
-            }
-
-            // Priority: .db > .csv > .txt (for extensionless names)
-            // But .txt/.csv can be read directly without conversion!
-            string dbPathInternal = Path.Combine(storageDirectory, seedSource + ".db");
-            string csvPathInternal = Path.Combine(storageDirectory, seedSource + ".csv");
-            string txtPathInternal = Path.Combine(storageDirectory, seedSource + ".txt");
-
-            if (File.Exists(dbPathInternal))
-            {
-                return dbPathInternal; 
-            }
-
-            if (File.Exists(csvPathInternal))
-            {
-                return csvPathInternal; // Read directly - no conversion!
-            }
-
-            if (File.Exists(txtPathInternal))
-            {
-                return txtPathInternal; // Read directly - no conversion!
-            }
-
-            throw new FileNotFoundException(
-                $"Seed source file not found. Checked exact path '{seedSource}' and variants in '{storageDirectory}'"
-            );
-        }
-
-        /// <summary>
-        /// Convert CSV to DuckDB and return dbPath. ONE TRUE WAY!
-        /// </summary>
-        private string? ConvertCsvToDuckDB(string csvPath, string dbPath)
-        {
-            // Check if DB already exists - use it directly
-            if (File.Exists(dbPath))
-            {
-                if (!_params.Quiet)
-                {
-                    Console.WriteLine($"✅ Using existing DuckDB: {dbPath}");
-                }
-                return dbPath;
-            }
-
-            // SAFETY CHECK: Warn before overwriting existing absolute path DuckDB files
-            if (File.Exists(dbPath))
-            {
-                var existingDbInfo = new FileInfo(dbPath);
-                var existingSizeMB = existingDbInfo.Length / (1024.0 * 1024.0);
-                
-                Console.WriteLine();
-                Console.WriteLine($"⚠️⚠️⚠️ There is currently a DUCKDB file called {Path.GetFileName(dbPath)} [{existingSizeMB:F0}MB] that would be deleted.");
-                Console.WriteLine($"   Are you sure you want to [Y]eet the seed sources database {Path.GetFileName(dbPath)}? [y/N]");
-                
-                if (_params.ForceOverwrite)
-                {
-                    Console.WriteLine("   ✅ Force overwrite enabled - proceeding with conversion...");
-                }
-                else
-                {
-                    Console.Write("   ");
-                    var response = Console.ReadLine()?.Trim().ToLowerInvariant();
-                    
-                    if (response != "y" && response != "yes")
-                    {
-                        Console.WriteLine("   ❌ Conversion cancelled by user.");
-                        return null;
-                    }
-                    
-                    Console.WriteLine("   ✅ User confirmed - proceeding with conversion...");
-                }
-                
-                // Delete the existing database file
-                try
-                {
-                    File.Delete(dbPath);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Failed to delete existing database {dbPath}: {ex.Message}", ex);
-                }
-            }
-
-            var fileInfo = new FileInfo(csvPath);
-            var sizeMB = fileInfo.Length / (1024.0 * 1024.0);
-            if (!_params.Quiet)
-            {
-                Console.WriteLine($"🔄 Converting CSV to DuckDB: {csvPath} -> {dbPath}");
-                Console.WriteLine(
-                    $"   File size: {sizeMB:F1} MB - this may take a minute for large files..."
-                );
-            }
-
-            try
-            {
-                using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
-                
-                // Create the seeds table first
-                using var createCmd = conn.CreateCommand();
-                createCmd.CommandText = "CREATE TABLE seeds (seed VARCHAR PRIMARY KEY)";
-                createCmd.ExecuteNonQuery();
-                
-                // Use DuckDB.NET Appender for maximum performance bulk loading
-                using var appender = conn.CreateAppender("seeds");
-                
-                // Read and parse CSV file - prepare all seeds first
-                var lines = File.ReadAllLines(csvPath);
-                var seeds = new List<string>();
-                
-                foreach (var line in lines)
-                {
-                    // Handle comma-separated values
-                    var parts = line.Split(',');
-                    foreach (var part in parts)
-                    {
-                        var trimmedPart = part.Trim();
-                        if (!string.IsNullOrEmpty(trimmedPart))
-                        {
-                            seeds.Add(trimmedPart);
-                        }
-                    }
-                }
-                
-                // Bulk append all seeds at once for maximum performance
-                foreach (var seed in seeds)
-                {
-                    var row = appender.CreateRow();
-                    row.AppendValue(seed);
-                    row.EndRow();
-                }
-                
-                // Dispose() automatically calls Close() and flushes all data to database
-                appender.Dispose();
-                conn.Close();
-                
-                if (!_params.Quiet)
-                {
-                    var dbInfo = new FileInfo(dbPath);
-                    var dbSizeMB = dbInfo.Length / (1024.0 * 1024.0);
-                    Console.WriteLine(
-                        $"✅ Converted CSV to DuckDB: {dbPath} ({dbSizeMB:F1} MB)"
-                    );
-                    Console.WriteLine(
-                        $"   Imported seeds from CSV file"
-                    );
-                }
-
-                // Keep source file - don't delete it! User may need it later.
-                return dbPath;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed to convert CSV to DuckDB: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Convert text file to DuckDB and return dbPath. ONE TRUE WAY!
-        /// </summary>
-        private string? ConvertTextToDuckDB(string textPath, string dbPath)
-        {
-            if (File.Exists(dbPath))
-            {
-                var existingDbInfo = new FileInfo(dbPath);
-                var existingSizeMB = existingDbInfo.Length / (1024.0 * 1024.0);
-                
-                Console.WriteLine();
-                Console.WriteLine($"⚠️⚠️⚠️ There is currently a DUCKDB file called {Path.GetFileName(dbPath)} [{existingSizeMB:F0}MB] that would be deleted.");
-                Console.WriteLine($"   Are you sure you want to [Y]eet the seed sources database {Path.GetFileName(dbPath)}? [y/N]");
-                
-                if (_params.ForceOverwrite)
-                {
-                    Console.WriteLine("   ✅ Force overwrite enabled - proceeding with conversion...");
-                }
-                else
-                {
-                    Console.Write("   ");
-                    var response = Console.ReadLine()?.Trim().ToLowerInvariant();
-                    
-                    if (response != "y" && response != "yes")
-                    {
-                        Console.WriteLine("   ❌ Conversion cancelled by user.");
-                        return null;
-                    }
-                    
-                    Console.WriteLine("   ✅ User confirmed - proceeding with conversion...");
-                }
-                
-                // Delete the existing database file
-                try
-                {
-                    File.Delete(dbPath);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Failed to delete existing database {dbPath}: {ex.Message}", ex);
-                }
-            }
-
-            
-            var fileInfo = new FileInfo(textPath);
-            var sizeMB = fileInfo.Length / (1024.0 * 1024.0);
-            Console.WriteLine($"🔄 Converting text file to DuckDB: {textPath} -> {dbPath}");
-            Console.WriteLine(
-                $"   File size: {sizeMB:F1} MB - this may take a minute for large files..."
-            );
-
-            try
-            {
-                using var conn = DuckDBConnectionFactory.CreateConnection(dbPath);
-                using var cmd = conn.CreateCommand();
-                
-                // Create table
-                cmd.CommandText = "CREATE TABLE seeds (seed VARCHAR)";
-                cmd.ExecuteNonQuery();
-                
-                // Use Appender to stream data - no loading entire file into memory
-                using var appender = conn.CreateAppender("seeds");
-                
-                int totalLines = 0;
-                var seenSeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                
-                // Stream lines from file
-                foreach (var line in File.ReadLines(textPath))
-                {
-                    var trimmed = line.Trim();
-                    if (!string.IsNullOrEmpty(trimmed) && seenSeeds.Add(trimmed))
-                    {
-                        var row = appender.CreateRow();
-                        row.AppendValue(trimmed);
-                        row.EndRow();
-                        totalLines++;
-                    }
-                }
-                
-                appender.Close();
-                conn.Close();
-                
-                if (!_params.Quiet)
-                {
-                    var dbInfo = new FileInfo(dbPath);
-                    var dbSizeMB = dbInfo.Length / (1024.0 * 1024.0);
-                    Console.WriteLine(
-                        $"✅ Converted text file to DuckDB: {dbPath} ({dbSizeMB:F1} MB)"
-                    );
-                    Console.WriteLine(
-                        $"   Imported {totalLines:N0} unique seeds"
-                    );
-                }
-
-                return dbPath;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed to convert text file to DuckDB: {ex.Message}", ex);
-            }
-        }
-
 
         private static IEnumerable<string> EnumerateDirectoriesUpwards(string startDirectory)
         {
@@ -727,11 +362,14 @@ namespace Motely.Executors
         private IMotelySearch CreateSearch(MotelyJsonConfig config)
         {
             var runConfig = MotelyRunConfig.Factory(config);
-            
-            if (runConfig.FilterPipeline == null)
-                throw new InvalidOperationException("Failed to create filter pipeline from configuration.");
 
-            var searchSettings = SpecializedFilterFactory.CreateSearchSettings(runConfig.FilterPipeline)
+            if (runConfig.FilterPipeline == null)
+                throw new InvalidOperationException(
+                    "Failed to create filter pipeline from configuration."
+                );
+
+            var searchSettings = SpecializedFilterFactory
+                .CreateSearchSettings(runConfig.FilterPipeline)
                 .WithThreadCount(_params.Threads)
                 .WithBatchCharacterCount(_params.BatchSize)
                 .WithStartBatchIndex((long)_params.StartBatch)
@@ -746,7 +384,7 @@ namespace Motely.Executors
 
             if (config.Should != null && config.Should.Count > 0)
             {
-                Action<MotelySeedScoreTally> onResult = (tally) => 
+                Action<MotelySeedScoreTally> onResult = (tally) =>
                 {
                     // If custom callback is provided, use it (handles CSV formatting with quotes)
                     // Otherwise, use PrintResultRow (handles colored output)
@@ -760,56 +398,68 @@ namespace Motely.Executors
                     }
                 };
 
-                var scoreDesc = new MotelyJsonSeedScoreDesc(config, _params.Cutoff, _params.CutoffMode, onResult);
+                var scoreDesc = new MotelyJsonSeedScoreDesc(
+                    config,
+                    _params.Cutoff,
+                    _params.CutoffMode,
+                    onResult
+                );
                 searchSettings.WithSeedScoreProvider(scoreDesc);
             }
 
             var token = _params.CancellationToken ?? default;
-            
+
             // Random search
             if (_params.RandomSeeds.HasValue)
             {
-                if (!_params.Quiet) Console.WriteLine($"🎲 Random Search: {_params.RandomSeeds} seeds");
+                if (!_params.Quiet)
+                    Console.WriteLine($"🎲 Random Search: {_params.RandomSeeds} seeds");
                 return searchSettings.WithRandomSearch(_params.RandomSeeds.Value).Start(token);
             }
-            
+
             // Palindrome search
             if (_params.PalindromeSeeds)
             {
-                if (!_params.Quiet) Console.WriteLine($"🔄 Palindrome Search");
+                if (!_params.Quiet)
+                    Console.WriteLine($"🔄 Palindrome Search");
                 return searchSettings.WithPalindromeSearch().Start(token);
             }
-            
+
             // Specific seed -> convert to list
             if (!string.IsNullOrEmpty(_params.SpecificSeed))
             {
-                if (!_params.Quiet) Console.WriteLine($"🔍 Specific seed: {_params.SpecificSeed}");
+                if (!_params.Quiet)
+                    Console.WriteLine($"🔍 Specific seed: {_params.SpecificSeed}");
                 _params.SeedList = new[] { _params.SpecificSeed };
             }
-            
+
             // Seed list search
             if (_params.SeedList != null)
             {
-                if (!_params.Quiet) Console.WriteLine($"📋 List Search");
-                return searchSettings.WithListSearch(_params.SeedList, seedCount: _params.KeywordSeedCount ?? -1).Start(token);
+                if (!_params.Quiet)
+                    Console.WriteLine($"📋 List Search");
+                return searchSettings
+                    .WithListSearch(_params.SeedList, seedCount: _params.KeywordSeedCount ?? -1)
+                    .Start(token);
             }
 
-            // File-based seed source (Motely.DB handles the details)
+            // File-based seed source (Motely.DB handles path resolution and file operations)
             if (!string.IsNullOrEmpty(_params.SeedSources))
             {
-                string? resolvedPath = ResolveSeedSourcePath(_params.SeedSources);
-                if (resolvedPath == null)
-                    throw new OperationCanceledException("Seed source loading cancelled.");
-                    
-                if (!_params.Quiet) Console.WriteLine($"📁 File Search: {resolvedPath}");
-                return searchSettings.WithProviderSearch(new global::Motely.DB.DataLakeSeedProvider(resolvedPath)).Start(token);
+                if (!_params.Quiet)
+                    Console.WriteLine($"📁 File Search: {_params.SeedSources}");
+                return searchSettings
+                    .WithProviderSearch(
+                        new global::Motely.DB.DataLakeSeedProvider(_params.SeedSources)
+                    )
+                    .Start(token);
             }
 
             // Default: Sequential
-            if (!_params.Quiet) Console.WriteLine($"🔄 Sequential Search: 35^{8-_params.BatchSize} batches");
+            if (!_params.Quiet)
+                Console.WriteLine($"🔄 Sequential Search: 35^{8 - _params.BatchSize} batches");
             return searchSettings.WithSequentialSearch().Start(token);
         }
-
 
         private void PrintResultsHeader(MotelyJsonConfig config)
         {
@@ -837,7 +487,7 @@ namespace Motely.Executors
             var tallies = result.TallyColumns;
             var columnValues = result.ColumnValues;
             bool hasStringValues = false;
-            
+
             if (columnValues != null)
             {
                 for (int i = 0; i < columnValues.Count && i < tallies.Count; i++)
@@ -850,7 +500,7 @@ namespace Motely.Executors
                     }
                 }
             }
-            
+
             string line;
             if (hasStringValues)
             {
@@ -862,7 +512,7 @@ namespace Motely.Executors
                 // Pure integer tallies - use the optimized span version with colors!
                 line = TallyColorizer.FormatResultLine(result.Seed, result.Score, tallies);
             }
-            
+
             FancyConsole.WriteLine(line);
         }
 
@@ -977,7 +627,8 @@ namespace Motely.Executors
             if (search.IsSequentialBatchSearch)
             {
                 long maxBatches = (long)Math.Pow(35, 8 - _params.BatchSize);
-                double precisePercent = maxBatches > 0 ? (double)lastBatchIndex * 100.0 / (double)maxBatches : 0.0;
+                double precisePercent =
+                    maxBatches > 0 ? (double)lastBatchIndex * 100.0 / (double)maxBatches : 0.0;
                 Console.WriteLine($"   Last batch: {lastBatchIndex:N0} ({precisePercent:F4}%)");
             }
             Console.WriteLine($"   Seeds passed filter and cutoff: {search.MatchingSeeds}");
@@ -990,9 +641,10 @@ namespace Motely.Executors
                     ? $"   Total seeds: {search.TotalSeedsSearched:N0} ({search.CompletedBatchCount} batches)"
                     : $"   Total seeds: {search.TotalSeedsSearched:N0}"
             );
-            double speedMs = search.ElapsedTime.TotalMilliseconds > 0 
-                ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds 
-                : 0;
+            double speedMs =
+                search.ElapsedTime.TotalMilliseconds > 0
+                    ? (double)search.TotalSeedsSearched / search.ElapsedTime.TotalMilliseconds
+                    : 0;
             double speedPerSecond = speedMs * 1000.0;
             string speedFormatted = FormatSpeed(speedPerSecond);
             Console.WriteLine($"   Speed: {speedFormatted}");
@@ -1004,7 +656,7 @@ namespace Motely.Executors
                 Console.WriteLine($"   To continue from here, use: --start {lastBatchIndex}");
             }
         }
-        
+
         /// <summary>
         /// Format speed as M/s (millions per second) for readability.
         /// Examples: 2950678 → "2.95 M/s", 123456 → "123K seeds/s", 1234 → "1.23K seeds/s"
@@ -1033,7 +685,7 @@ namespace Motely.Executors
                 disposableStorage.Dispose();
             }
             ResultStorage = null;
-            
+
             _runningSearch?.Dispose();
             _runningSearch = null;
         }
@@ -1097,6 +749,11 @@ namespace Motely.Executors
         /// ONE SOURCE OF TRUTH: The executor writes the header format.
         /// </summary>
         public TextWriter? CsvWriter { get; set; }
+
+        /// <summary>
+        /// Emit the CSV header before search starts (for CLI piping).
+        /// </summary>
+        public bool EmitResultsHeader { get; set; } = false;
 
         /// <summary>
         /// Path to export results as CSV after search completes.

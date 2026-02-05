@@ -5,7 +5,7 @@
     <Version>$(MotelyVersion)</Version>
     <AssemblyVersion>$(MotelyVersion)</AssemblyVersion>
     <FileVersion>$(MotelyVersion)</FileVersion>
-    
+
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
