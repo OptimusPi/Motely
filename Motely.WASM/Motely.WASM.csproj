@@ -1,59 +1,59 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
   <PropertyGroup>
     <TargetFramework>net10.0-browser</TargetFramework>
-    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    
+
+    <!-- WASM Build Configuration -->
+    <WasmBuildNative>true</WasmBuildNative>
+    <!-- Bundler-friendly output: not directly runnable in browser; for JS bundlers (Vite/webpack/rollup) to consume -->
+    <WasmBundlerFriendlyBootConfig>true</WasmBundlerFriendlyBootConfig>
+
     <!-- WASM AOT Configuration -->
     <RunAOTCompilation>true</RunAOTCompilation>
     <WasmSIMD>true</WasmSIMD>
     <InvariantGlobalization>true</InvariantGlobalization>
     <WasmEnableExceptionHandling>true</WasmEnableExceptionHandling>
-    
-    <!-- Multi-threading: 4 threads -->
+
+    <!-- Multi-threading: Enabled -->
     <WasmEnableThreads>true</WasmEnableThreads>
-    
+
     <!-- Trimming for smaller WASM output -->
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>link</TrimMode>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-    
+
     <!-- Suppress warnings -->
     <NoWarn>$(NoWarn);CA1416</NoWarn>
-    
-    <!-- Modern WASM Library Mode -->
-    <WasmMainJS>main.js</WasmMainJS>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" PrivateAssets="all" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
   </ItemGroup>
-  
+
   <Target Name="PublishToNpmPackage" AfterTargets="Publish">
     <PropertyGroup>
-       <!-- Output directly to the sibling NPM package folder -->
-       <NpmPkgDir>..\..\Motely.npm\pkg</NpmPkgDir>
+      <NpmFrameworkDir>$(MSBuildProjectDirectory)\..\Motely.npm\_framework</NpmFrameworkDir>
     </PropertyGroup>
-    <Message Text="📦 Packaging WASM for NPM at $(NpmPkgDir)..." Importance="high" />
-    
-    <!-- Clean destination first to avoid zombies -->
-    <RemoveDir Directories="$(NpmPkgDir)" />
-    
+    <Message Text="Packaging WASM for NPM at $(NpmFrameworkDir)..." Importance="high" />
+
     <ItemGroup>
       <WasmFiles Include="$(PublishDir)wwwroot\_framework\**\*.*" />
     </ItemGroup>
-    
-    <Copy SourceFiles="@(WasmFiles)" DestinationFolder="$(NpmPkgDir)\%(RecursiveDir)" SkipUnchangedFiles="true" />
-  </Target>
 
+    <Copy
+      SourceFiles="@(WasmFiles)"
+      DestinationFolder="$(NpmFrameworkDir)\%(RecursiveDir)"
+      SkipUnchangedFiles="true"
+    />
+  </Target>
 </Project>

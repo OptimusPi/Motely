@@ -47,7 +47,6 @@ public class FilterBuilderWindow : Window
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill() - 2,
-            AllowsMarking = false,
             CanFocus = true,
         };
         _mustList.SetScheme(
@@ -100,7 +99,6 @@ public class FilterBuilderWindow : Window
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill() - 2,
-            AllowsMarking = false,
             CanFocus = true,
         };
         _shouldList.SetScheme(
@@ -493,7 +491,6 @@ public class FilterBuilderWindow : Window
             Y = 3,
             Width = Dim.Fill() - 2,
             Height = Dim.Fill() - 7,
-            AllowsMarking = false,
             CanFocus = true,
         };
         filterList.SetScheme(
@@ -609,7 +606,7 @@ public class FilterBuilderWindow : Window
             }
         };
 
-        filterList.OpenSelectedItem += (sender, e) => DoLoad();
+        filterList.Accepting += (sender, e) => DoLoad();
         dialog.Add(filterList);
 
         var loadBtn = new CleanButton()

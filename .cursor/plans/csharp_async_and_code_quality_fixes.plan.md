@@ -32,11 +32,13 @@ isProject: false
 ## Issues Fixed
 
 ### 1. FancyConsole Duplicate Progress Lines (FIXED)
+
 **Files:** `Motely/FancyConsole.cs`, `Motely/FancyConsole.Desktop.cs` (new)
 
 **Problem:** Every `WriteLine` call re-printed the bottom line, causing duplicate progress spam.
 
 **Solution:**
+
 - Created `FancyConsole.Desktop.cs` with proper cursor positioning for terminal apps
 - Base class now tracks `_lastPrintedBottomLine` to prevent duplicate prints
 - `WriteLine` no longer re-prints the bottom line (that was the spam source)
@@ -44,16 +46,19 @@ isProject: false
 - Fallback: only prints progress when value actually changes
 
 ### 2. CSV Export Architecture (FIXED)
+
 **Files:** `Motely.Orchestration/MotelySearchOrchestrator.cs`, `Motely.CLI/Program.cs`
 
 **Problem:** CLI directly called `Motely.DB.ResultsExportHelper` - violated architecture.
 
 **Solution:**
+
 - Added `ExportResultsToCsv()` wrapper method to `MotelySearchOrchestrator`
 - CLI now calls orchestrator method, not DB directly
 - Architecture: CLI → Orchestration → DB (never CLI → DB directly)
 
 ### 3. WASM Progress Loop (FIXED)
+
 **File:** `Motely.WASM/MotelyWasm.cs`
 
 **Problem:** Fire-and-forget `_ = Task.Run(async () =>` with no exception handling.
@@ -61,6 +66,7 @@ isProject: false
 **Solution:** Added try-catch with logging, respects cancellation token properly.
 
 ### 4. TUI Copy Button Delay (FIXED)
+
 **File:** `Motely.TUI/ApiServerWindow.cs`
 
 **Problem:** Fire-and-forget Task.Run for button text reset with no error handling.
@@ -68,6 +74,7 @@ isProject: false
 **Solution:** Added try-catch wrapper to prevent unobserved exceptions.
 
 ### 5. TUI Tunnel Task (FIXED)
+
 **File:** `Motely.TUI/ApiServerWindow.cs`
 
 **Problem:** Task.Run for tunnel start not tracked, no completion handling.
@@ -76,29 +83,70 @@ isProject: false
 
 ## Patterns to Follow
 
-### Good: Background task with tracking
+### Good: Async I/O - Just await it!
+
 ```csharp
-var task = Task.Run(async () => { ... }, ct);
+// For async I/O operations - just await directly
+await SomeAsyncMethod(ct);
+
+// If you need to track it:
+var task = SomeAsyncMethod(ct);
 _runningTasks.TryAdd(id, task);
+await task; // or don't await if truly fire-and-forget
 ```
 
-### Good: Fire-and-forget with exception handling
+### Good: Blocking synchronous work on thread pool (rare - only when needed)
+
 ```csharp
-_ = Task.Run(async () =>
+// ONLY use Task.Run for blocking synchronous work that would deadlock the current thread
+// Example: Test helper that needs to timeout a blocking call
+var joinTask = Task.Run(() => search.AwaitCompletion()); // AwaitCompletion calls Thread.Join
+if (!joinTask.Wait(timeout))
+    throw new TimeoutException();
+```
+
+### Good: Fire-and-forget async with exception handling
+
+```csharp
+// If you MUST fire-and-forget async I/O (rare), handle exceptions
+_ = SomeAsyncMethod(ct).ContinueWith(t =>
 {
-    try { ... }
-    catch (Exception ex) { _logger.LogError(ex, "..."); }
-});
+    if (t.IsFaulted)
+        _logger.LogError(t.Exception, "Background task failed");
+}, TaskContinuationOptions.OnlyOnFaulted);
+```
+
+### Bad: Task.Run wrapping async I/O (ANTI-PATTERN!)
+
+```csharp
+// DON'T DO THIS - wastes thread pool threads!
+var task = Task.Run(async () => await SomeAsyncMethod(ct)); // WRONG!
+_ = Task.Run(async () => { await SomeAsyncMethod(); }); // WRONG!
 ```
 
 ### Bad: Fire-and-forget with no handling
+
 ```csharp
-_ = Task.Run(async () => { ... }); // EXCEPTIONS LOST!
+_ = SomeAsyncMethod(); // EXCEPTIONS LOST!
 ```
 
 ### Bad: Blocking on async
+
 ```csharp
 task.Result;      // DEADLOCK RISK
 task.Wait();      // DEADLOCK RISK  
 task.GetAwaiter().GetResult(); // DEADLOCK RISK
 ```
+
+## Key Principle
+
+**Task.Run is NEVER appropriate in modern C# apps.** 
+
+- **Async I/O** → Just `await` it directly
+- **Fire-and-forget async** → Call the async method and handle exceptions with `ContinueWith`
+- **Synchronous work** → Just call it directly (or make it async if it blocks)
+
+The ONLY exception: Test helpers that need to timeout blocking synchronous calls (like `Thread.Join`). Even then, prefer async alternatives if available.
+
+**Rule: If you're writing `Task.Run`, you're probably doing it wrong.**
+

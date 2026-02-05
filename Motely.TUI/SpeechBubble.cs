@@ -24,14 +24,15 @@ public class SpeechBubble : View
     {
         CanFocus = false;
         Height = 5; // Top border + padding + text + padding + bottom border with tail
+        DrawingContent += (s, e) => DrawContent();
     }
 
-    protected override bool OnDrawingContent()
+    private void DrawContent()
     {
         var viewport = Viewport;
 
         if (string.IsNullOrEmpty(_message) || viewport.Width < 5 || viewport.Height < 3)
-            return true;
+            return;
 
         var attr = new Attribute(BalatroTheme.White, BalatroTheme.DarkGrey);
         var borderAttr = new Attribute(BalatroTheme.LightGrey, BalatroTheme.DarkGrey);
@@ -103,8 +104,6 @@ public class SpeechBubble : View
                 AddRune(lineX + j, startTextY + i, (System.Text.Rune)line[j]);
             }
         }
-
-        return true;
     }
 
     /// <summary>

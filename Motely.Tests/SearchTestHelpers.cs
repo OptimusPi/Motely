@@ -42,8 +42,8 @@ public static class SearchTestHelpers
         var joinTimeout =
             remainingTimeout > TimeSpan.Zero ? remainingTimeout : TimeSpan.FromSeconds(1);
 
-        // Wrap AwaitCompletion in a Task with timeout to prevent infinite blocking
-        // Even if status shows Completed, Thread.Join() can still hang if threads are stuck
+        // AwaitCompletion is blocking (calls Thread.Join), so we need to run it on a thread pool thread
+        // to be able to timeout. This is one of the rare legitimate uses of Task.Run for blocking sync work.
         var joinTask = Task.Run(() => search.AwaitCompletion());
         if (!joinTask.Wait(joinTimeout))
         {

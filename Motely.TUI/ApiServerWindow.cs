@@ -59,11 +59,14 @@ public class ApiServerWindow : Window
         _urlLabel.SetScheme(
             new Scheme() { Normal = new Attribute(BalatroTheme.Blue, BalatroTheme.ModalGrey) }
         );
-        _urlLabel.MouseClick += (s, e) =>
+        _urlLabel.MouseEvent += (s, e) =>
         {
-            CopyToClipboard(_serverUrl);
-            LogMessage($"[CLIPBOARD] Copied URL: {_serverUrl}");
-            e.Handled = true;
+            if (e.Flags.HasFlag(MouseFlags.LeftButtonClicked))
+            {
+                CopyToClipboard(_serverUrl);
+                LogMessage($"[CLIPBOARD] Copied URL: {_serverUrl}");
+                e.Handled = true;
+            }
         };
         Add(_urlLabel);
 
@@ -78,18 +81,21 @@ public class ApiServerWindow : Window
         _tunnelLabel.SetScheme(
             new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
         );
-        _tunnelLabel.MouseClick += (s, e) =>
+        _tunnelLabel.MouseEvent += (s, e) =>
         {
-            if (!string.IsNullOrWhiteSpace(_tunnelLabel.Text.ToString()))
+            if (e.Flags.HasFlag(MouseFlags.LeftButtonClicked))
             {
-                var urlText = _tunnelLabel.Text.ToString();
-                if (urlText.StartsWith("http"))
+                if (!string.IsNullOrWhiteSpace(_tunnelLabel.Text.ToString()))
                 {
-                    CopyToClipboard(urlText);
-                    LogMessage($"[CLIPBOARD] Copied URL: {urlText}");
+                    var urlText = _tunnelLabel.Text.ToString();
+                    if (urlText.StartsWith("http"))
+                    {
+                        CopyToClipboard(urlText);
+                        LogMessage($"[CLIPBOARD] Copied URL: {urlText}");
+                    }
                 }
+                e.Handled = true;
             }
-            e.Handled = true;
         };
         Add(_tunnelLabel);
 
@@ -111,7 +117,7 @@ public class ApiServerWindow : Window
             Text = "Start Tunnel",
         };
         _tunnelButton.SetScheme(BalatroTheme.PurpleButton);
-        _tunnelButton.Accept += (s, e) => StartTunnel();
+        _tunnelButton.Accept += (s, e) => RunTunnelAsync();
         Add(_tunnelButton);
 
         // Endpoints panel removed to make room for log
@@ -136,25 +142,19 @@ public class ApiServerWindow : Window
             Text = "Copy Logs",
         };
         copyLogsButton.SetScheme(BalatroTheme.BackButton); // Orange
-        copyLogsButton.Accept += (s, e) =>
+        copyLogsButton.Accept += async (s, e) =>
         {
-            if (_logView?.Text != null)
+            if (_logView?.Text == null)
+                return;
+            CopyToClipboard(_logView.Text.ToString());
+            copyLogsButton.Text = "COPIED!";
+            copyLogsButton.SetScheme(BalatroTheme.GreenButton);
+            await Task.Delay(1000).ConfigureAwait(false);
+            MotelyTUI.App?.Invoke(() =>
             {
-                CopyToClipboard(_logView.Text.ToString());
-                // Flash message
-                copyLogsButton.Text = "COPIED!";
-                copyLogsButton.SetScheme(BalatroTheme.GreenButton);
-
-                Task.Run(async () =>
-                {
-                    await Task.Delay(1000);
-                    MotelyTUI.App?.Invoke(() =>
-                    {
-                        copyLogsButton.Text = "Copy Logs";
-                        copyLogsButton.SetScheme(BalatroTheme.BackButton);
-                    });
-                });
-            }
+                copyLogsButton.Text = "Copy Logs";
+                copyLogsButton.SetScheme(BalatroTheme.BackButton);
+            });
         };
         logFrame.Add(copyLogsButton);
 
@@ -322,7 +322,8 @@ public class ApiServerWindow : Window
 
     private async Task StopServerOnlyAsync()
     {
-        if (!_isRunning) return;
+        if (!_isRunning)
+            return;
 
         // Update UI immediately - don't wait for anything
         App?.Invoke(() =>
@@ -334,14 +335,18 @@ public class ApiServerWindow : Window
         LogMessage("Stopping server...");
 
         // Cancel token FIRST - signals everything to stop immediately
-        try { _cts?.Cancel(); } catch { }
-
-        // Fire and forget search stop - don't block on it
-        _ = Task.Run(() =>
+        try
         {
-            try { MultiSearchManager.Instance.StopAll("Stopping"); }
-            catch { }
-        });
+            _cts?.Cancel();
+        }
+        catch { }
+
+        // Fire and forget search stop - just call it directly (it's synchronous)
+        try
+        {
+            MultiSearchManager.Instance.StopAll("Stopping");
+        }
+        catch { }
 
         // Force stop server with very short timeout (500ms)
         var server = _server;
@@ -354,7 +359,11 @@ public class ApiServerWindow : Window
             }
             catch { }
 
-            try { await server.DisposeAsync(); } catch { }
+            try
+            {
+                await server.DisposeAsync();
+            }
+            catch { }
         }
 
         App?.Invoke(() => _stopButton.Visible = false);
@@ -432,7 +441,7 @@ public class ApiServerWindow : Window
         return stop;
     }
 
-    private void StartTunnel()
+    private async Task StartTunnelAsync()
     {
         if (_tunnelProcess != null)
         {
@@ -443,73 +452,82 @@ public class ApiServerWindow : Window
         _tunnelButton.Text = "Starting...";
         _tunnelButton.Enabled = false;
 
-        Task.Run(() =>
+        try
         {
-            try
+            var cloudflared = FindCloudflared();
+            if (string.IsNullOrEmpty(cloudflared))
+                throw new FileNotFoundException(
+                    "cloudflared not found. Install from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
+                );
+
+            LogMessage($"[TUNNEL] Found cloudflared: {cloudflared}");
+            LogMessage("[TUNNEL] Starting free trycloudflare.com tunnel...");
+
+            var uri = new Uri(_serverUrl);
+            var port = uri.Port;
+
+            var psi = new ProcessStartInfo
             {
-                var cloudflared = FindCloudflared();
-                if (string.IsNullOrEmpty(cloudflared))
-                    throw new FileNotFoundException(
-                        "cloudflared not found. Install from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
-                    );
+                FileName = cloudflared,
+                Arguments = $"tunnel --url http://localhost:{port}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
 
-                LogMessage($"[TUNNEL] Found cloudflared: {cloudflared}");
-                LogMessage("[TUNNEL] Starting free trycloudflare.com tunnel...");
-
-                var uri = new Uri(_serverUrl);
-                var port = uri.Port;
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = cloudflared,
-                    Arguments = $"tunnel --url http://localhost:{port}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-
-                _tunnelProcess = new Process { StartInfo = psi };
-                _tunnelProcess.OutputDataReceived += (s, e) =>
-                {
-                    if (!string.IsNullOrEmpty(e.Data))
-                    {
-                        LogMessage($"[TUNNEL] {e.Data}");
-                        ParseTunnelOutput(e.Data);
-                    }
-                };
-                _tunnelProcess.ErrorDataReceived += (s, e) =>
-                {
-                    if (!string.IsNullOrEmpty(e.Data))
-                    {
-                        LogMessage($"[TUNNEL] {e.Data}");
-                        ParseTunnelOutput(e.Data);
-                    }
-                };
-
-                _tunnelProcess.Start();
-                _tunnelProcess.BeginOutputReadLine();
-                _tunnelProcess.BeginErrorReadLine();
-
-                App?.Invoke(() =>
-                {
-                    _tunnelButton.Text = "Stop Tunnel";
-                    _tunnelButton.Enabled = true;
-                    _tunnelButton.SetScheme(BalatroTheme.RedButton);
-                });
-            }
-            catch (Exception ex)
+            _tunnelProcess = new Process { StartInfo = psi };
+            _tunnelProcess.OutputDataReceived += (s, e) =>
             {
-                App?.Invoke(() =>
+                if (!string.IsNullOrEmpty(e.Data))
                 {
-                    _tunnelButton.Text = "Start Tunnel";
-                    _tunnelButton.Enabled = true;
-                    _tunnelLabel.Text = "";
-                });
-                LogMessage($"[TUNNEL] Error: {ex.Message}");
-                _tunnelProcess = null;
-            }
-        });
+                    LogMessage($"[TUNNEL] {e.Data}");
+                    ParseTunnelOutput(e.Data);
+                }
+            };
+            _tunnelProcess.ErrorDataReceived += (s, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    LogMessage($"[TUNNEL] {e.Data}");
+                    ParseTunnelOutput(e.Data);
+                }
+            };
+
+            _tunnelProcess.Start();
+            _tunnelProcess.BeginOutputReadLine();
+            _tunnelProcess.BeginErrorReadLine();
+
+            App?.Invoke(() =>
+            {
+                _tunnelButton.Text = "Stop Tunnel";
+                _tunnelButton.Enabled = true;
+                _tunnelButton.SetScheme(BalatroTheme.RedButton);
+            });
+        }
+        catch (Exception ex)
+        {
+            App?.Invoke(() =>
+            {
+                _tunnelButton.Text = "Start Tunnel";
+                _tunnelButton.Enabled = true;
+                _tunnelLabel.Text = "";
+            });
+            LogMessage($"[TUNNEL] Error: {ex.Message}");
+            _tunnelProcess = null;
+        }
+    }
+
+    private async void RunTunnelAsync()
+    {
+        try
+        {
+            await StartTunnelAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"[TUNNEL] Error: {ex.GetBaseException()?.Message}");
+        }
     }
 
     private void ParseTunnelOutput(string line)

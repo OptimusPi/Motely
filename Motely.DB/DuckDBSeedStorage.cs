@@ -1,16 +1,34 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using DuckDB.NET.Data;
 
 namespace Motely.DB;
 
 /// <summary>
-/// specialized storage for seeds using DuckDB Appender for high performance
+/// Specialized storage for seeds using DuckDB Appender for high performance.
+/// All seed-file persistence lives here; callers (CLI, Orchestrator) just call the public API.
 /// </summary>
 public sealed class DuckDBSeedStorage : IDisposable
 {
     private readonly DuckDBConnection _connection;
     private bool _disposed;
+
+    /// <summary>
+    /// Save seeds to a DuckDB file. Creates or replaces the file. All DB logic stays in Motely.DB.
+    /// </summary>
+    /// <returns>Number of seeds written.</returns>
+    public static long SaveSeedsToFile(
+        string dbPath,
+        IEnumerable<string> seeds,
+        bool deleteExisting = false
+    )
+    {
+        if (deleteExisting && File.Exists(dbPath))
+            File.Delete(dbPath);
+        using var storage = new DuckDBSeedStorage(dbPath);
+        return storage.BulkInsertSeeds(seeds);
+    }
 
     public DuckDBSeedStorage(string dbPath)
     {

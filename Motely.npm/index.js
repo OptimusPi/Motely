@@ -1,7 +1,13 @@
-
-// This entry point assumes the WASM files are in ./pkg/
-// Consumers (like Next.js) will copy ./pkg/ to their public dir.
-
-export const info = "Motely WASM Package";
-
-// Future: Add typed exports here if we wrap the dotnet.js logic
+// Motely WASM Package Entry Point
+// Exported methods return marshalled objects (no JSON); shapes match .NET DTOs.
+export async function loadMotely(options) {
+    const base = (options?.baseUrl ?? "/_framework").replace(/\/$/, "") || "/_framework";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://localhost";
+    const url = base.startsWith("http") ? base : new URL(base, origin).href;
+    const dotnetUrl = `${url}/dotnet.js`;
+    const { dotnet } = await import(/* @vite-ignore */ dotnetUrl);
+    const { getAssemblyExports, getConfig } = await dotnet.create();
+    const config = getConfig();
+    const exports = await getAssemblyExports(config.mainAssemblyName);
+    return exports.Motely.WASM.MotelyWasm;
+}

@@ -37,13 +37,12 @@ public class SearchHub : Hub
         try
         {
             var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
-            // Fire and forget - don't wait for send to complete
-            _ = Clients
-                .Others.SendAsync("UserLeft", username)
-                .ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+            await Clients.Others.SendAsync("UserLeft", username).ConfigureAwait(false);
         }
-        catch { }
-        // Always call base immediately, even if send fails
-        await base.OnDisconnectedAsync(exception);
+        catch
+        {
+            // Best-effort notify; don't fail disconnect
+        }
+        await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
     }
 }

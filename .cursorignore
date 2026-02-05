@@ -1,0 +1,24 @@
+# Build artifacts
+Motely.npm/dist/
+Motely.npm/pkg/
+*.DLL
+*.DB
+JamlFilters-old/
+Motely/JsonFilters/
+Motely/JsonFiltersArchive/
+Motely/JsonItemFilters/
+Motely/JsonItemFiltersArchive/
+
+# Publish artifacts
+publish/
+publish-wasm/
+wwwroot/BSO/
+
+# Large static assets
+Motely.API/wwwroot/BSO/Assets/
+Motely.API/wwwroot/JamlGenie/
+
+# Configuration files that change frequently
+mcp-config.json
+tui.json
+*.editorconfig
