@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters;
 
@@ -96,7 +97,7 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                     {
                         if (!_clauses[i].WantedAntes[ante])
                             continue;
-                        Vector256<int> match = GetVoucherMatchVector(vouchers, i);
+                        VectorMask match = GetVoucherMatchVectorMask(vouchers, i);
                         clauseMasks[i] |= match;
 
                         if (_clauses[i].MaxAnte == ante && clauseMasks[i].IsAllFalse())
@@ -123,9 +124,11 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                 {
                     if (!_clauses[i].WantedAntes[ante])
                         continue;
-                    Vector256<int> match = GetVoucherMatchVector(vouchers, i);
+                    VectorMask match = GetVoucherMatchVectorMask(vouchers, i);
+                    // Convert mask to conditional select format for counting
+                    Vector256<int> selectMask = VectorMaskToConditionalSelectMask(match);
                     clauseCounts[i] += Vector256.ConditionalSelect(
-                        match,
+                        selectMask,
                         Vector256<int>.One,
                         Vector256<int>.Zero
                     );
@@ -137,10 +140,11 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
             for (int i = 0; i < _clauses.Length; i++)
             {
                 int minRequired = _clauses[i].Min ?? 0;
-                clauseMasksOut[i] = Vector256.GreaterThanOrEqual(
+                Vector256<int> comparisonResult = Vector256.GreaterThanOrEqual(
                     clauseCounts[i],
                     Vector256.Create(minRequired)
                 );
+                clauseMasksOut[i] = new VectorMask(VectorizedComparisonToMask(comparisonResult));
             }
 
             VectorMask final = VectorMask.AllBitsSet;
@@ -150,7 +154,7 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Vector256<int> GetVoucherMatchVector(
+        private VectorMask GetVoucherMatchVectorMask(
             VectorEnum256<MotelyVoucher> vouchers,
             int clauseIndex
         )
@@ -161,9 +165,10 @@ public struct MotelyJsonVoucherFilterDesc(MotelyJsonVoucherFilterCriteria criter
                 Vector256<int> anyMatch = Vector256<int>.Zero;
                 foreach (var voucherType in clause.VoucherTypes!)
                     anyMatch = Vector256.Max(anyMatch, VectorEnum256.Equals(vouchers, voucherType));
-                return anyMatch;
+                return new VectorMask(VectorizedComparisonToMask(anyMatch));
             }
-            return VectorEnum256.Equals(vouchers, clause.VoucherType);
+            Vector256<int> result = VectorEnum256.Equals(vouchers, clause.VoucherType);
+            return new VectorMask(VectorizedComparisonToMask(result));
         }
     }
 }
