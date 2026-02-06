@@ -8,7 +8,7 @@ namespace Motely.Executors;
 
 /// <summary>
 /// Wraps a search instance and its result storage.
-/// Desktop: IResultStorage (MotelySearchDatabase/DuckDB). Browser/WASM: In-memory only (no Motely.DB in NPM package).
+/// Desktop: IResultStorage from repository (e.g. DuckDB). Browser/WASM: in-memory only.
 /// </summary>
 public sealed class MotelySearchContext : IMotelySearchContext
 {

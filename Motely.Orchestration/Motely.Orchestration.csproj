@@ -12,7 +12,6 @@
     <PublishAot>true</PublishAot>
   </PropertyGroup>
 
-  <!-- Browser WASM -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
     <RunAOTCompilation>true</RunAOTCompilation>
     <PublishAot>false</PublishAot>
@@ -24,6 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
+    <ProjectReference Include="..\Motely.Repository\Motely.Repository.csproj" />
   </ItemGroup>
 </Project>

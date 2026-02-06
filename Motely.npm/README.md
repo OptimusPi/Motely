@@ -39,6 +39,8 @@ export default withMotelyWasm({
 
 On first run the plugin copies `_framework` into `public/_framework` and sets COOP/COEP. No manual copy, no recurring setup.
 
+**Turbopack:** The way `loadMotely()` loads the WASM runtime does not work with Next.js when Turbopack is enabled. Use the default webpack bundler (do not enable `--turbo` / `turbo: true`) when using motely-wasm.
+
 ### Other frameworks (SvelteKit, Astro, Remix, static host, etc.)
 
 No plugin needed. Do the same one-time setup in your stack:
@@ -66,4 +68,4 @@ The package includes the JAML JSON schema for validation and editor IntelliSense
 
 ## License
 
-MIT. See the [Motely repository](https://github.com/OptimusPi/Motely) for details.
+MIT. See the [MotelyJAML repository](https://github.com/OptimusPi/Motely) for details.

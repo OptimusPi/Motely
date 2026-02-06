@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "1.0.9",
+  "version": "1.0.11",
   "description": "Browser-only WebAssembly package for Motely Seed Oracle. Use in the browser, not in Node.",
   "type": "module",
   "main": "index.js",
@@ -13,11 +13,11 @@
       "types": "./index.d.ts"
     },
     "./vite-plugin": {
-      "default": "./vite-plugin-motely-wasm.js",
+      "import": "./vite-plugin-motely-wasm.js",
       "types": "./vite-plugin-motely-wasm.d.ts"
     },
     "./next-plugin": {
-      "default": "./next-plugin-motely-wasm.js",
+      "import": "./next-plugin-motely-wasm.js",
       "types": "./next-plugin-motely-wasm.d.ts"
     },
     "./jaml.schema.json": "./jaml.schema.json"
@@ -41,18 +41,21 @@
     "browser-only",
     "jaml",
     "filter",
-    "search"
+    "finder",
+    "Blueprint",
+    "Brainstorm",
+    "Perkeo",
+    "search",
+    "ALEEB"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/OptimusPi/Motely.git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
     "directory": "Motely.npm"
   },
   "license": "MIT",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "build:wasm": "cd ../Motely.WASM && dotnet publish -c Release",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
