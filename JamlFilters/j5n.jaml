@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../Motely/jaml.schema.json
+# yaml-language-server: $schema=../jaml.schema.json
 name: Polychrome Perkeo / Judgement
 deck: Magic
 stake: White

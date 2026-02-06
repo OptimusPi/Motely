@@ -19,7 +19,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591;CS8032;NU1510</NoWarn>
+    <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

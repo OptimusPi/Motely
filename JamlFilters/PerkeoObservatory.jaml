@@ -6,15 +6,11 @@ stake: White
 
 Must:
   - voucher: Telescope
-    antes: [1]
+    antes: [1,2]
   - voucher: Observatory
-    antes: [2]
-
+    antes: [2,3]
   - soulJoker: Perkeo
-    edition: Negative
-    antes: [1]
-    sources:
-      packSlots: [1]
+    antes: [1,2]
 
 Should:
   - jokers: [Blueprint, Brainstorm]

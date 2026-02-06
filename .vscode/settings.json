@@ -3,9 +3,9 @@
     "*.jaml": "yaml"
   },
   "yaml.schemas": {
-    "./Motely/jaml.schema.json": "*.jaml",
-    "file:///x%3A/BalatroSeedOracle/external/Motely/Motely/jaml.schema.json": "file:///x%3A/BalatroSeedOracle/external/Motely/JamlFilters/erratic.jaml"
+    "jaml.schema.json": "*.jaml"
   },
   "yaml.validate": true,
-  "yaml.completion": true
+  "yaml.completion": true,
+  "json.schemaDownload.enable": true
 }

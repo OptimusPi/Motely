@@ -1,5 +1,5 @@
 {
-  "name": "@balatroseedoracle/motely-mcp-server",
+  "name": "@optimuspi/jaml-mcp-server",
   "version": "1.0.0",
   "description": "MCP server for Balatro seed searching - edit JAML filters, run searches, analyze seeds",
   "main": "dist/index.js",
