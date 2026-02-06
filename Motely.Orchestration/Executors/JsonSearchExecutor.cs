@@ -1,8 +1,8 @@
 using System.Text;
 using Motely;
-using Motely.DB;
 using Motely.Filters;
 using Motely.Reporting;
+using Motely.Repository;
 using Motely.Utils;
 
 namespace Motely.Executors
@@ -443,15 +443,13 @@ namespace Motely.Executors
                     .Start(token);
             }
 
-            // File-based seed source (Motely.DB handles path resolution and file operations)
+            // File-based seed source: resolved via repository (desktop: DuckDB/file, browser: host provides impl or throws)
             if (!string.IsNullOrEmpty(_params.SeedSources))
             {
                 if (!_params.Quiet)
                     Console.WriteLine($"📁 File Search: {_params.SeedSources}");
                 return searchSettings
-                    .WithProviderSearch(
-                        new global::Motely.DB.DataLakeSeedProvider(_params.SeedSources)
-                    )
+                    .WithProviderSearch(RepositoryHost.Instance.GetSource(_params.SeedSources))
                     .Start(token);
             }
 

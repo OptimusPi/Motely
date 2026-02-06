@@ -5,8 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Motely;
-using Motely.DB;
 using Motely.Filters;
+using Motely.Repository;
 
 namespace Motely.Executors;
 
@@ -91,15 +91,19 @@ public sealed class MultiSearchManager
             parameters.StartBatch = requestStartBatch.Value;
         else if (isSequential)
         {
-            try
+            var store = SequentialMetaHost.Instance;
+            if (store != null)
             {
-                var meta = SequentialLibrary.Instance.GetSearchMeta(searchId);
-                if (meta?.LastSeed != null)
-                    parameters.StartBatch =
-                        (ulong)SeedMath.SeedToBatchIndex(meta.LastSeed, parameters.BatchSize) + 1;
-            }
-            catch
-            { /* Library not initialized */
+                try
+                {
+                    var meta = store.GetSearchMeta(searchId);
+                    if (meta?.LastSeed != null)
+                        parameters.StartBatch =
+                            (ulong)SeedMath.SeedToBatchIndex(meta.LastSeed, parameters.BatchSize) + 1;
+                }
+                catch
+                { /* Store not initialized */
+                }
             }
         }
 
@@ -119,28 +123,32 @@ public sealed class MultiSearchManager
         );
         _activeSearches[searchId] = activeSearch;
 
-        // Mark active in DB
+        // Mark active in meta store (when available, e.g. desktop)
         if (isSequential)
         {
-            try
+            var store = SequentialMetaHost.Instance;
+            if (store != null)
             {
-                SequentialLibrary.Instance.UpsertSearchMeta(
-                    new SearchMeta
-                    {
-                        SearchId = searchId,
-                        TableName = searchId,
-                        JamlFilter = config.Name,
-                        Deck = config.Deck,
-                        Stake = config.Stake,
-                        SeedSource = seedSource,
-                        IsActive = true,
-                        LastAccessed = DateTime.UtcNow,
-                        CreatedAt = DateTime.UtcNow,
-                    }
-                );
-            }
-            catch
-            { /* Library not initialized */
+                try
+                {
+                    store.UpsertSearchMeta(
+                        new SearchMeta
+                        {
+                            SearchId = searchId,
+                            TableName = searchId,
+                            JamlFilter = config.Name,
+                            Deck = config.Deck,
+                            Stake = config.Stake,
+                            SeedSource = seedSource,
+                            IsActive = true,
+                            LastAccessed = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
+                        }
+                    );
+                }
+                catch
+                { /* Store not initialized */
+                }
             }
         }
 
@@ -157,23 +165,27 @@ public sealed class MultiSearchManager
 
         search.Context?.Cancel();
 
-        // Persist last position
+        // Persist last position when meta store is available
         if (search.IsSequential && search.Context != null)
         {
-            try
+            var store = SequentialMetaHost.Instance;
+            if (store != null)
             {
-                var prefix = SeedMath.BatchIndexToSeedPrefix(search.Context.BatchIndex, 3);
-                var lastSeed = prefix.PadRight(8, '1');
-                SequentialLibrary.Instance.UpdateLastSeed(
-                    searchId,
-                    lastSeed,
-                    search.Context.TotalSeedsSearched,
-                    search.Context.MatchingSeeds
-                );
-                SequentialLibrary.Instance.SetSearchActive(searchId, false);
-            }
-            catch
-            { /* Library not initialized */
+                try
+                {
+                    var prefix = SeedMath.BatchIndexToSeedPrefix(search.Context.BatchIndex, 3);
+                    var lastSeed = prefix.PadRight(8, '1');
+                    store.UpdateLastSeed(
+                        searchId,
+                        lastSeed,
+                        search.Context.TotalSeedsSearched,
+                        search.Context.MatchingSeeds
+                    );
+                    store.SetSearchActive(searchId, false);
+                }
+                catch
+                { /* Store not initialized */
+                }
             }
         }
 
@@ -217,12 +229,14 @@ public sealed class MultiSearchManager
 
     #region Restore
 
-#if !BROWSER
     public Task<List<string>> RestoreActiveSearchesAsync()
     {
+        var store = SequentialMetaHost.Instance;
+        if (store == null)
+            return Task.FromResult(new List<string>());
         try
         {
-            return Task.FromResult(SequentialLibrary.Instance.GetAllActiveSearchIds());
+            return Task.FromResult(store.GetAllActiveSearchIds());
         }
         catch
         {
@@ -232,18 +246,18 @@ public sealed class MultiSearchManager
 
     public SearchMeta? GetPersistedMeta(string searchId)
     {
+        var store = SequentialMetaHost.Instance;
+        if (store == null)
+            return null;
         try
         {
-            return SequentialLibrary.Instance.GetSearchMeta(searchId);
+            return store.GetSearchMeta(searchId);
         }
         catch
         {
             return null;
         }
     }
-#else
-    public Task<List<string>> RestoreActiveSearchesAsync() => Task.FromResult(new List<string>());
-#endif
 
     #endregion
 

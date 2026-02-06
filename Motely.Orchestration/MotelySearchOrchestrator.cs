@@ -10,7 +10,7 @@ namespace Motely.Executors
 {
     /// <summary>
     /// Static orchestrator to launch searches from various configuration formats.
-    /// Desktop: gate to Motely.DB/DuckDB. Browser/WASM: in-memory only (no DuckDB in NPM package).
+    /// Host sets repository (desktop: DuckDB-backed; browser: in-memory or throws for file/DB).
     /// </summary>
     public static class MotelySearchOrchestrator
     {
@@ -73,7 +73,7 @@ namespace Motely.Executors
             string filterId
         )
         {
-            // Pass moniker to repository - all path resolution handled by Motely.DB
+            // Pass moniker to repository - implementation handles path/storage (desktop: DuckDB, browser: host-provided)
             var moniker = parameters.OutputDbPath ?? filterId;
             var database = RepositoryHost.Instance.GetSink(moniker, runConfig);
 
