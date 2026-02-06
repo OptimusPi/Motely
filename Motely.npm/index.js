@@ -5,7 +5,8 @@ export async function loadMotely(options) {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://localhost";
     const url = base.startsWith("http") ? base : new URL(base, origin).href;
     const dotnetUrl = `${url}/dotnet.js`;
-    const { dotnet } = await import(/* @vite-ignore */ dotnetUrl);
+    // Use a function constructor to hide the dynamic import from Turbopack/Webpack static analysis
+    const { dotnet } = await new Function('url', 'return import(url)')(dotnetUrl);
     const { getAssemblyExports, getConfig } = await dotnet.create();
     const config = getConfig();
     const exports = await getAssemblyExports(config.mainAssemblyName);
