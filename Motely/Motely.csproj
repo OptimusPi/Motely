@@ -30,15 +30,14 @@
 
   <!-- Browser WASM configuration (JIT mode; AOT not supported for this RID) -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
-    <DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
+    <DefineConstants>$(DefineConstants)</DefineConstants>
     <WasmSIMD>true</WasmSIMD>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>link</TrimMode>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <TrimmerDefaultAction>link</TrimmerDefaultAction>
     <PublishAot>false</PublishAot>
-    <!-- Suppress CA1416 warnings - browser-specific APIs (Barrier, Thread) are only called in browser builds -->
-    <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <!-- Packages (versions from Directory.Packages.props) -->
