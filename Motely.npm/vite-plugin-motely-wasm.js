@@ -1,7 +1,8 @@
-"use strict";
+import path from "path";
+import fs from "fs";
+import { createRequire } from "module";
 
-const path = require("path");
-const fs = require("fs");
+const require = createRequire(import.meta.url);
 
 const COOP_COEP = {
   "Cross-Origin-Opener-Policy": "same-origin",
@@ -87,5 +88,4 @@ function motelyWasm() {
   };
 }
 
-module.exports = motelyWasm;
-motelyWasm.default = motelyWasm;
+export default motelyWasm;

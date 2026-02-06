@@ -1,7 +1,8 @@
-"use strict";
+import path from "path";
+import fs from "fs";
+import { createRequire } from "module";
 
-const path = require("path");
-const fs = require("fs");
+const require = createRequire(import.meta.url);
 
 const COOP_COEP = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
@@ -13,11 +14,16 @@ function findFrameworkDir() {
   const candidate = path.join(cwd, "node_modules", "motely-wasm", "_framework");
   if (fs.existsSync(candidate)) return candidate;
   try {
+    // Try to resolve from the current workspace or hoisted node_modules
     const pkg = require.resolve("motely-wasm/package.json", { paths: [cwd] });
-    return path.join(path.dirname(pkg), "_framework");
+    const dir = path.join(path.dirname(pkg), "_framework");
+    if (fs.existsSync(dir)) return dir;
   } catch {
-    return null;
+    // Fallback: check one level up (useful for some monorepo structures)
+    const fallback = path.join(cwd, "..", "node_modules", "motely-wasm", "_framework");
+    if (fs.existsSync(fallback)) return fallback;
   }
+  return null;
 }
 
 function copyDirRecursive(src, dest) {
@@ -61,5 +67,4 @@ function withMotelyWasm(nextConfig = {}) {
   };
 }
 
-module.exports = withMotelyWasm;
-withMotelyWasm.default = withMotelyWasm;
+export default withMotelyWasm;
