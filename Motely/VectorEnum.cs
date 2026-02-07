@@ -78,7 +78,7 @@ public unsafe struct VectorEnum<T>(SimdIntResult hardwareVector)
                 sb.Append(", ");
             sb.Append(this[i]);
         }
-        sb.Append(">");
+        sb.Append('>');
         return sb.ToString();
     }
 
