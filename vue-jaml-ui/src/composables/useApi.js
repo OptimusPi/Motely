@@ -51,8 +51,8 @@ export function useApi() {
     // Extract method for logging
     const method = options.method || 'GET'
     
-    // Log request start
-    const requestIndex = addRequest(method, fullUrl, 'pending')
+    // Log request start (addRequest returns the request object reference)
+    const trackedRequest = addRequest(method, fullUrl, 'pending')
     
     try {
       const response = await fetch(fullUrl, {
@@ -63,11 +63,11 @@ export function useApi() {
         }
       })
       
-      // Update request status
+      // Update request status using object reference (safe with concurrent requests)
       if (response.ok) {
-        updateRequest(0, 'success')
+        updateRequest(trackedRequest, 'success')
       } else {
-        updateRequest(0, 'error', `HTTP ${response.status}: ${response.statusText}`)
+        updateRequest(trackedRequest, 'error', `HTTP ${response.status}: ${response.statusText}`)
       }
       
       if (!response.ok) {
@@ -89,8 +89,8 @@ export function useApi() {
       return await response.text()
     } catch (err) {
       error.value = err
-      // Update request status to error
-      updateRequest(0, 'error', err.message)
+      // Update request status to error (using object reference)
+      updateRequest(trackedRequest, 'error', err.message)
       
       // In dev, suppress HTTP errors and return fallback
       if (import.meta.env.DEV) {

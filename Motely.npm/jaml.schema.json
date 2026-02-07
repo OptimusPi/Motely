@@ -280,11 +280,15 @@
             "9",
             "10",
             "J",
+            "Jack",
             "Q",
+            "Queen",
             "K",
-            "A"
+            "King",
+            "A",
+            "Ace"
           ],
-          "description": "Card rank for playing cards"
+          "description": "Card rank for playing cards (abbreviation or full name)"
         },
         "suit": {
           "type": "string",

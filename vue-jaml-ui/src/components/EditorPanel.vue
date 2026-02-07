@@ -24,7 +24,10 @@
       <button @click="editorMode = 'soft'" class="btn" :class="{ 'btn-active': editorMode === 'soft' }">✨ Soft</button>
       <button v-if="!isMobile" @click="toggleEditor" class="btn">{{ editorMode === 'monaco' ? 'Text' : 'Monaco' }}</button>
       <button @click="handleFormat" class="btn">Format</button>
-      <button @click="$emit('save')" class="btn">💾 Save</button>
+      <button @click="$emit('save')" class="btn">Save</button>
+      <button @click="handleExport" class="btn" title="Download .jaml file">Export</button>
+      <button @click="handleImport" class="btn" title="Import .jaml file from disk">Import</button>
+      <span v-if="isOffline" class="offline-badge" title="API unavailable - using local storage">Standalone</span>
     </div>
 
     <div class="editor-body" :class="{ 'builder-hidden': !showBuilder }">
@@ -64,6 +67,7 @@ import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import yaml from 'js-yaml'
 import { useMonaco } from '../composables/useMonaco'
 import { useApi } from '../composables/useApi'
+import { useFilters } from '../composables/useFilters'
 import { useLayout } from '../composables/useLayout'
 import JamlBuilder from './JamlBuilder.vue'
 import SoftVisualEditor from './SoftVisualEditor.vue'
@@ -91,6 +95,7 @@ const error = ref(null)
 
 const { createEditor, init: initMonaco } = useMonaco()
 const { get } = useApi()
+const { exportFilter, importFilter, isOffline } = useFilters()
 
 let monacoEditor = null
 let monacoCleanup = null
@@ -240,6 +245,20 @@ const loadFilters = async () => {
   }
 }
 
+const handleExport = () => {
+  exportFilter(localJaml.value)
+}
+
+const handleImport = async () => {
+  const text = await importFilter()
+  if (text) {
+    localJaml.value = text
+    if (monacoEditor && monacoEditor.getValue() !== text) {
+      monacoEditor.setValue(text)
+    }
+  }
+}
+
 const handleFormat = async () => {
   try {
     const parsed = yaml.load(localJaml.value)
@@ -362,6 +381,18 @@ onUnmounted(() => {
   line-height: 1.6;
   resize: none;
   outline: none;
+}
+
+.offline-badge {
+  background: var(--balatro-orange, #ff9800);
+  color: #000;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  align-self: center;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {

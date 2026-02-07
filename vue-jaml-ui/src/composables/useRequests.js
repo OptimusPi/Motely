@@ -19,14 +19,27 @@ export function useRequests() {
       requests.value = requests.value.slice(0, 100)
     }
     
+    // Return the request object reference for direct mutation
     return request
   }
 
-  const updateRequest = (index, status, error = null) => {
-    if (requests.value[index]) {
-      requests.value[index].status = status
+  /**
+   * Update a request by object reference or by index.
+   * Prefer passing the request object returned by addRequest.
+   */
+  const updateRequest = (requestOrIndex, status, error = null) => {
+    let target
+    if (typeof requestOrIndex === 'object' && requestOrIndex !== null) {
+      // Direct reference - update the object in-place (it's already in the array)
+      target = requestOrIndex
+    } else {
+      // Legacy index-based lookup
+      target = requests.value[requestOrIndex]
+    }
+    if (target) {
+      target.status = status
       if (error) {
-        requests.value[index].error = error
+        target.error = error
       }
     }
   }

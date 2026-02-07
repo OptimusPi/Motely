@@ -1,32 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// Minimal entry point: boot WASM runtime and run C# Main (keeps runtime alive for JSExport calls).
+// Consumed via npm use loadMotely(); this file is for standalone serve of publish output only.
 
-import { dotnet } from './_framework/dotnet.js'
+import { dotnet } from './_framework/dotnet.js';
 
-const { setModuleImports, getAssemblyExports, getConfig, runMain } = await dotnet
-    .withApplicationArguments("start")
-    .create();
-
-setModuleImports('main.js', {
-    dom: {
-        setInnerText: (selector, time) => document.querySelector(selector).innerText = time
-    }
-});
-
-const config = getConfig();
-const exports = await getAssemblyExports(config.mainAssemblyName);
-
-document.getElementById('reset').addEventListener('click', e => {
-    exports.StopwatchSample.Reset();
-    e.preventDefault();
-});
-
-const pauseButton = document.getElementById('pause');
-pauseButton.addEventListener('click', e => {
-    const isRunning = exports.StopwatchSample.Toggle();
-    pauseButton.innerText = isRunning ? 'Pause' : 'Start';
-    e.preventDefault();
-});
-
-// run the C# Main() method and keep the runtime process running and executing further API calls
+const { runMain } = await dotnet.withApplicationArguments('start').create();
 await runMain();

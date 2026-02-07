@@ -1020,9 +1020,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Atomically mark as disposed to signal threads to exit
         Interlocked.Exchange(ref _status, MotelySearchStatus.Disposed);
 
-        // The cancellation token is already set by Program.cs via SetCancellationToken,
-        // so threads will see _cancellationToken.IsCancellationRequested = true.
-        // This returns immediately without waiting for threads.
+        // Signal completion so WaitForCompletionAsync resolves (threads exit on next status check)
+        _completionSource.TrySetResult(false);
     }
 
     /// <summary>
