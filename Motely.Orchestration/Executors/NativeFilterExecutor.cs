@@ -99,7 +99,6 @@ namespace Motely.Executors
                     : _params.CancellationToken ?? default;
 
             DebugLogger.IsEnabled = _params.EnableDebug;
-            FancyConsole.IsEnabled = !_params.NoFancy;
             // Ensure tally colors respect --nofancy
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 
@@ -232,7 +231,6 @@ namespace Motely.Executors
                     : _params.CancellationToken ?? default;
 
             DebugLogger.IsEnabled = _params.EnableDebug;
-            FancyConsole.IsEnabled = !_params.NoFancy;
             // Ensure tally colors respect --nofancy
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 

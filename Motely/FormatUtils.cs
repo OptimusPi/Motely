@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text;
 
 namespace Motely;
@@ -34,13 +35,13 @@ public static class FormatUtils
         // Add edition if present (AFTER seal)
         if (item.Edition != MotelyItemEdition.None)
         {
-            result.Append(item.Edition).Append(" ");
+            result.Append(item.Edition).Append(' ');
         }
 
         // Add enhancement for playing cards
         if (item.Enhancement != MotelyItemEnhancement.None)
         {
-            result.Append(item.Enhancement).Append(" ");
+            result.Append(item.Enhancement).Append(' ');
         }
 
         // Format based on type
@@ -228,8 +229,8 @@ public static class FormatUtils
             MotelyPlayingCardRank.Queen => "Queen",
             MotelyPlayingCardRank.King => "King",
             MotelyPlayingCardRank.Ace => "Ace",
-            _ => rank.ToString(),
-        };
+            _ => throw new InvalidEnumArgumentException(nameof(rank), (int)rank, typeof(MotelyPlayingCardRank))
+        };  
 
         var suitStr = suit switch
         {
@@ -237,7 +238,7 @@ public static class FormatUtils
             MotelyPlayingCardSuit.Diamonds => "Diamonds",
             MotelyPlayingCardSuit.Hearts => "Hearts",
             MotelyPlayingCardSuit.Spades => "Spades",
-            _ => suit.ToString(),
+            _ => throw new InvalidEnumArgumentException(nameof(rank), (int)rank, typeof(MotelyPlayingCardRank))
         };
 
         return $"{rankStr} of {suitStr}";

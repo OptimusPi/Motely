@@ -1,34 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <!-- Do NOT add Content Include="wwwroot\**" - SDK includes wwwroot automatically; duplicate causes NETSDK1022 -->
   <PropertyGroup>
-    <TargetFramework>net10.0-browser</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Bundler-friendly: output consumed by JS bundlers (Vite etc), not run directly in browser -->
-    <WasmBundlerFriendlyBootConfig>true</WasmBundlerFriendlyBootConfig>
+    <!-- Standard boot: dotnet.js uses fetch() for .wasm/.dat files at runtime.
+         No ES6 import statements for binary files = works natively in all browsers.
+         WasmBundlerFriendlyBootConfig was removed because it generates ES6 imports
+         that no browser can resolve, requiring a custom transform pipeline. -->
+    <!-- AOT: native WASM at publish; SIMD + threads for search performance -->
     <RunAOTCompilation>true</RunAOTCompilation>
     <WasmEnableThreads>true</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
-    <BlazorWebAssemblyJiterpreter>false</BlazorWebAssemblyJiterpreter>
+    <!-- Skip wasm-opt post-link pass; it crashes on this binary (MSB3073).
+         AOT + trimming still apply; the .wasm is just slightly larger. -->
+    <WasmRunWasmOpt>false</WasmRunWasmOpt>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
-    <EmccInitialHeapSize>67108864</EmccInitialHeapSize>
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
   </PropertyGroup>
-
-  <ItemGroup>
-    <StaticWebAssetFingerprintPattern Include="JS" Pattern="*.js" Expression="#[.{fingerprint}]!" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
+    <ProjectReference Include="..\Motely.Repository\Motely.Repository.csproj" />
   </ItemGroup>
 
   <!-- Copy _framework to Motely.npm after publish so npm package contains WASM -->
   <Target Name="PublishToNpmPackage" AfterTargets="Publish">
     <PropertyGroup>
-      <_NpmFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.npm\_framework</_NpmFrameworkPath>
+      <MotelyFrameworkSubdir Condition="'$(MotelyFrameworkSubdir)' == ''">_framework</MotelyFrameworkSubdir>
+      <_NpmFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.npm\$(MotelyFrameworkSubdir)</_NpmFrameworkPath>
     </PropertyGroup>
     <ItemGroup>
       <_FrameworkFiles Include="$(PublishDir)wwwroot\_framework\**\*" />

@@ -597,11 +597,14 @@ public struct MotelySearchParameters
 public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     where TBaseFilter : struct, IMotelySeedFilter
 {
+    /// <summary>Shared lock for console output (replaces removed FancyConsole.ConsoleLock).</summary>
+    internal static readonly object ConsoleLock = new();
+
     private readonly MotelySearchParameters _searchParameters;
 
     private readonly MotelySearchThread[] _threads;
-    private readonly Barrier _pauseBarrier;
-    private readonly Barrier _unpauseBarrier;
+    private readonly IPauseSync _pauseSync;
+    private readonly IPauseSync _unpauseSync;
     private volatile MotelySearchStatus _status;
     public MotelySearchStatus Status => _status;
     public bool IsSequentialBatchSearch => !_isProviderMode;
@@ -739,8 +742,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             _pseudoHashKeyLengths[i] = pseudohashKeyLengths[i];
         }
 
-        _pauseBarrier = new(settings.ThreadCount + 1);
-        _unpauseBarrier = new(settings.ThreadCount + 1);
+        _pauseSync = MotelySearchPlatform.CreatePauseSync(settings.ThreadCount + 1);
+        _unpauseSync = MotelySearchPlatform.CreateUnpauseSync(settings.ThreadCount + 1);
         _status = MotelySearchStatus.Paused;
 
         // Initialize provider-mode thread counter
@@ -759,7 +762,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
 
         // The threads all immediatly enter a paused state
-        _pauseBarrier.SignalAndWait();
+        _pauseSync.SignalAndWait();
     }
 
     public void Start(CancellationToken cancellationToken = default)
@@ -782,13 +785,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Clear bottom line if in CSV mode to prevent interference
         if (_csvOutput && !_quietMode)
         {
-            FancyConsole.SetBottomLine(null);
+            // Clear any bottom-line state (no-op now that FancyConsole is removed)
             // Notify that progress goes to stderr in CSV mode
             Console.Error.WriteLine("# Progress updates will appear here every 2 seconds...");
         }
 
         _elapsedTime.Start();
-        _unpauseBarrier.SignalAndWait();
+        _unpauseSync.SignalAndWait();
     }
 
     public void AwaitCompletion()
@@ -799,7 +802,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         foreach (MotelySearchThread searchThread in _threads)
         {
             // Wait with timeout to check status periodically
-            while (!searchThread.Thread.Join(timeoutMs))
+            while (!searchThread.Worker.Join(TimeSpan.FromMilliseconds(timeoutMs)))
             {
                 // Check if search was cancelled, disposed, or cancellation token was signaled
                 // If cancelled, break immediately - threads will exit due to cancellation check in ThreadMain
@@ -852,7 +855,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Threads check status in their loop and will signal when they see Paused
         try
         {
-            _pauseBarrier.SignalAndWait(TimeSpan.FromSeconds(2));
+            _pauseSync.SignalAndWait(TimeSpan.FromSeconds(2));
         }
         catch (BarrierPostPhaseException)
         {
@@ -988,7 +991,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // Print at end of batch flush, so it appears after any results from that batch
             var progressMsg =
                 $"# Progress: {totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({speedFormatted})";
-            lock (FancyConsole.ConsoleLock)
+            lock (ConsoleLock)
             {
                 Console.Error.WriteLine(progressMsg);
             }
@@ -997,9 +1000,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             // Normal mode - use fancy bottom line
             // DEBUG: Show raw values to verify calculation accuracy
-            FancyConsole.SetBottomLine(
-                $"{totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({speedFormatted}) [batches:{thisCompletedCount}/{totalBatches} t:{elapsedMS}ms]"
-            );
+            // Simple bottom-line progress to Console (no cursor tricks)
+            lock (ConsoleLock)
+            {
+                Console.WriteLine(
+                    $"{totalPortionFinished * 100:F8}% | Found: {MatchingSeeds:N0}/{seedsSearched:N0} | ~{timeLeftFormatted} remaining ({speedFormatted}) [batches:{thisCompletedCount}/{totalBatches} t:{elapsedMS}ms]"
+                );
+            }
         }
     }
 
@@ -1061,7 +1068,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // Signal barrier to wake them up - if it fails, threads will still exit on next status check
             try
             {
-                _unpauseBarrier.SignalAndWait(TimeSpan.FromSeconds(5));
+                _unpauseSync.SignalAndWait(TimeSpan.FromSeconds(5));
             }
             catch (BarrierPostPhaseException)
             {
@@ -1081,11 +1088,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Wait for threads to finish (they should exit when they see Disposed status)
         foreach (MotelySearchThread thread in _threads)
         {
-            if (thread.Thread.IsAlive)
+            if (thread.Worker.IsAlive)
             {
                 // Give threads a moment to see the Disposed status and exit
                 // Use shorter timeout since threads should already be exiting due to cancellation
-                if (!thread.Thread.Join(TimeSpan.FromMilliseconds(500)))
+                if (!thread.Worker.Join(TimeSpan.FromMilliseconds(500)))
                 {
                     // Thread didn't exit in time - this shouldn't happen but handle gracefully
                     // The thread should exit when it checks _status in ThreadMain
@@ -1113,7 +1120,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
-        public readonly Thread Thread;
+        public readonly IWorkerHandle Worker;
 
         public long MaxBatch { get; internal set; }
         public long SeedsPerBatch { get; internal set; }
@@ -1160,7 +1167,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             Search = search;
             ThreadIndex = threadIndex;
 
-            Thread = new(ThreadMain) { Name = $"Motely Search Thread {ThreadIndex}" };
+            Worker = MotelySearchPlatform.CreateWorker(ThreadMain);
 
             // Initialize the result buffer elements BEFORE starting thread to avoid race condition
             for (int i = 0; i < _resultBuffer.Length; i++)
@@ -1210,7 +1217,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
             }
 
-            Thread.Start();
+            Worker.Start();
         }
 
         private void ThreadMain()
@@ -1222,9 +1229,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
                 if (status == MotelySearchStatus.Paused)
                 {
-                    Search._pauseBarrier.SignalAndWait();
+                    Search._pauseSync.SignalAndWait();
                     // ...PAUSED...
-                    Search._unpauseBarrier.SignalAndWait();
+                    Search._unpauseSync.SignalAndWait();
                     continue;
                 }
 
@@ -1492,7 +1499,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     if (!Search._csvOutput)
                     {
                         string seedStr = new Span<char>(seed, length).ToString();
-                        FancyConsole.WriteLine(seedStr);
+                        Console.WriteLine(seedStr);
                     }
                 }
             }
@@ -1699,7 +1706,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         public void Dispose()
         {
-            Thread.Join();
+            Worker.Join(TimeSpan.FromSeconds(5));
 
             // FIX: Check if _filterSeedBatches is not null before freeing
             if (_filterSeedBatches != null)

@@ -9,13 +9,15 @@ const COOP_COEP = {
   "Cross-Origin-Embedder-Policy": "require-corp",
 };
 
-function findFrameworkDir() {
+function findFrameworkDir(subdir) {
   const cwd = process.cwd();
-  const candidate = path.join(cwd, "node_modules", "motely-wasm", "_framework");
+  const candidate = path.join(cwd, "node_modules", "motely-wasm", subdir);
   if (fs.existsSync(candidate)) return candidate;
   try {
     const pkg = require.resolve("motely-wasm/package.json", { paths: [cwd] });
-    return path.join(path.dirname(pkg), "_framework");
+    const dir = path.join(path.dirname(pkg), subdir);
+    if (fs.existsSync(dir)) return dir;
+    return null;
   } catch {
     return null;
   }
@@ -33,17 +35,18 @@ function copyDirRecursive(src, dest) {
 
 /**
  * Vite plugin: serves _framework in dev, copies to dist on build, sets COOP/COEP.
- * One-time setup: add to plugins and you're done.
  * @returns {import('vite').Plugin}
  */
 function motelyWasm() {
-  let frameworkDir = null;
+  let frameworkDirs = [];
   let outDir = "dist";
 
   return {
     name: "motely-wasm",
     config(config) {
-      frameworkDir = findFrameworkDir();
+      frameworkDirs = [
+        { subdir: "_framework", dir: findFrameworkDir("_framework") },
+      ].filter(x => x.dir);
       const headers = { ...COOP_COEP };
       const existing = config.server?.headers;
       if (existing && typeof existing === "object") Object.assign(headers, existing);
@@ -57,33 +60,43 @@ function motelyWasm() {
       outDir = config.build?.outDir ?? "dist";
     },
     configureServer(server) {
-      if (!frameworkDir || !fs.existsSync(frameworkDir)) return;
-      const { fs: vfs } = server;
-      server.middlewares.use("/_framework", (req, res, next) => {
-        const p = path.join(frameworkDir, req.url === "/" ? "" : req.url).split("?")[0];
-        if (!p.startsWith(frameworkDir)) return next();
-        try {
-          const stat = fs.statSync(p);
-          if (stat.isFile()) {
-            res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-            res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-            const stream = fs.createReadStream(p);
-            const ext = path.extname(p);
-            const types = { ".js": "text/javascript", ".wasm": "application/wasm", ".json": "application/json" };
-            if (types[ext]) res.setHeader("Content-Type", types[ext]);
-            stream.pipe(res);
-            return;
-          }
-        } catch (_) {}
-        next();
-      });
+      if (!frameworkDirs.length) return;
+      const types = {
+        ".js": "text/javascript",
+        ".mjs": "text/javascript",
+        ".wasm": "application/wasm",
+        ".json": "application/json",
+        ".dat": "application/octet-stream",
+      };
+      for (const { subdir, dir } of frameworkDirs) {
+        if (!dir || !fs.existsSync(dir)) continue;
+        server.middlewares.use(`/${subdir}`, (req, res, next) => {
+          const p = path.resolve(dir, (req.url === "/" ? "" : req.url).split("?")[0].replace(/^\//, ""));
+          if (!p.startsWith(path.resolve(dir))) return next();
+          try {
+            const stat = fs.statSync(p);
+            if (stat.isFile()) {
+              res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+              res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+              const ext = path.extname(p);
+              if (types[ext]) res.setHeader("Content-Type", types[ext]);
+              const stream = fs.createReadStream(p);
+              stream.pipe(res);
+              return;
+            }
+          } catch (_) {}
+          next();
+        });
+      }
     },
     closeBundle() {
-      if (!frameworkDir || !fs.existsSync(frameworkDir)) return;
       const absOut = path.isAbsolute(outDir) ? outDir : path.resolve(process.cwd(), outDir);
       if (!fs.existsSync(absOut)) return;
-      const dest = path.join(absOut, "_framework");
-      copyDirRecursive(frameworkDir, dest);
+      for (const { subdir, dir } of frameworkDirs) {
+        if (!dir || !fs.existsSync(dir)) continue;
+        const dest = path.join(absOut, subdir);
+        copyDirRecursive(dir, dest);
+      }
     },
   };
 }

@@ -3,8 +3,6 @@ deck: Anaglyph
 stake: White
 must:
   - smallBlindTag: negativeTag
-    antes: [2]
-  - smallBlindTag: negativeTag
     antes: [5]
   - soulJoker: Perkeo
     antes: [1,2,3,4]
