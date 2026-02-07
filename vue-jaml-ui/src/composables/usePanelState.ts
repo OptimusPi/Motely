@@ -172,7 +172,10 @@ export function usePanelState() {
   }
 
   function isBasePanel(panel: Panel) {
-    return panel.id === panel.baseId
+    // IDs are generated as `${baseId}-${counter}`, so they never equal baseId directly.
+    // A panel is "base" if it's the first (original) instance of its type.
+    const sameTypePanels = panels.value.filter(p => p.baseId === panel.baseId)
+    return sameTypePanels.length === 0 || sameTypePanels[0].id === panel.id
   }
 
   function onPanelResize(panelId: string, newHeight: number) {

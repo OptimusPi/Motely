@@ -24,7 +24,7 @@ export default defineConfig({
 });
 ```
 
-Dev: `_framework` is served at `/_framework`, headers set. Build: `_framework` is copied into `dist/_framework`.
+Dev: `_framework` is served at `/_framework`, headers set. Build: `_framework` and `_framework_nt` are copied into `dist/`.
 
 ### Next.js
 
@@ -37,7 +37,7 @@ export default withMotelyWasm({
 });
 ```
 
-On first run the plugin copies `_framework` into `public/_framework` and sets COOP/COEP. No manual copy, no recurring setup.
+On first run the plugin copies `_framework` and `_framework_nt` into `public/` and sets COOP/COEP. No manual copy, no recurring setup.
 
 **Turbopack:** The way `loadMotely()` loads the WASM runtime does not work with Next.js when Turbopack is enabled. Use the default webpack bundler (do not enable `--turbo` / `turbo: true`) when using motely-wasm.
 
@@ -45,10 +45,10 @@ On first run the plugin copies `_framework` into `public/_framework` and sets CO
 
 No plugin needed. Do the same one-time setup in your stack:
 
-1. **Serve `_framework`** at `/_framework` (or any path): copy `node_modules/motely-wasm/_framework` into your static/public folder, or configure your dev/server to serve that folder at `/_framework`.
+1. **Serve `_framework` and `_framework_nt`**: copy `node_modules/motely-wasm/_framework` and `node_modules/motely-wasm/_framework_nt` into your static/public folder, or configure your dev/server to serve those folders at `/_framework` and `/_framework_nt`.
 2. **Set headers** on the page (and optionally on `/_framework/*`): `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`.
 
-Then call `loadMotely()` (defaults to `/_framework`) or `loadMotely({ baseUrl: "/your/path" })` if you used a different path.
+Then call `loadMotely()` (auto-detects threads) or `loadMotely({ baseUrl: "/your/path" })` if you used a different path.
 
 ## Usage
 
@@ -56,11 +56,12 @@ Then call `loadMotely()` (defaults to `/_framework`) or `loadMotely({ baseUrl: "
 import { loadMotely } from "motely-wasm";
 
 const api = await loadMotely();
-const version = api.GetVersion();
-const result = api.AnalyzeSeed("TACO1111", "Red", "White", 1, 8, "{}");
+const version = api.getVersion();
+const result = api.analyzeSeed("TACO1111", "Red", "White");
 ```
 
-Optional custom base URL (e.g. CDN): `loadMotely({ baseUrl: "https://cdn.example/assets" })`. Default is `/_framework`.
+Optional custom base URL (e.g. CDN): `loadMotely({ baseUrl: "https://cdn.example/assets" })`.
+Optional threading mode: `loadMotely({ threads: "auto" | "on" | "off" })` (default: auto).
 
 ## JAML schema
 
