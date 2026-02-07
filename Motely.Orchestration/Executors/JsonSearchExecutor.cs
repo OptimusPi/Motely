@@ -113,7 +113,6 @@ namespace Motely.Executors
                     : _params.CancellationToken ?? default;
 
             DebugLogger.IsEnabled = _params.EnableDebug;
-            FancyConsole.IsEnabled = !_params.NoFancy;
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 
             if (!_params.Quiet)
@@ -197,7 +196,6 @@ namespace Motely.Executors
                     : _params.CancellationToken ?? default;
 
             DebugLogger.IsEnabled = _params.EnableDebug;
-            FancyConsole.IsEnabled = !_params.NoFancy;
             TallyColorizer.ColorEnabled = !_params.NoFancy;
 
             if (!_params.Quiet)
@@ -511,7 +509,7 @@ namespace Motely.Executors
                 line = TallyColorizer.FormatResultLine(result.Seed, result.Score, tallies);
             }
 
-            FancyConsole.WriteLine(line);
+            Console.WriteLine(line);
         }
 
         /// <summary>

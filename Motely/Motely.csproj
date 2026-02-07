@@ -48,16 +48,19 @@
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
-  <!-- Exclude desktop-only from browser. Same MotelySearch.cs (real implementation) for both desktop and browser. -->
+  <!-- Exclude platform-specific and desktop-only code from respective builds -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Compile Remove="API\**\*.cs" />
+    <Compile Remove="TUI\**\*.cs" />
+    <Compile Remove="MotelySearchSync.Browser.cs" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
     <Compile Remove="TUI\**\*.cs" />
     <Compile Remove="API\**\*.cs" />
     <Compile Remove="Executors\**\*.cs" />
     <Compile Remove="Program.cs" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <Compile Remove="API\**\*.cs" />
-    <Compile Remove="TUI\**\*.cs" />
+    <Compile Remove="FancyConsole.Desktop.cs" />
+    <Compile Remove="MotelySearchSync.Desktop.cs" />
   </ItemGroup>
 </Project>

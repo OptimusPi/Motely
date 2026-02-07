@@ -9,19 +9,17 @@ const COOP_COEP = [
   { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
 ];
 
-function findFrameworkDir() {
+function findFrameworkDir(subdir) {
   const cwd = process.cwd();
-  const candidate = path.join(cwd, "node_modules", "motely-wasm", "_framework");
+  const candidate = path.join(cwd, "node_modules", "motely-wasm", subdir);
   if (fs.existsSync(candidate)) return candidate;
   try {
-    // Try to resolve from the current workspace or hoisted node_modules
     const pkg = require.resolve("motely-wasm/package.json", { paths: [cwd] });
-    const dir = path.join(path.dirname(pkg), "_framework");
+    const dir = path.join(path.dirname(pkg), subdir);
     if (fs.existsSync(dir)) return dir;
   } catch {
-    // Fallback: check one level up (useful for some monorepo structures)
-    const fallback = path.join(cwd, "..", "node_modules", "motely-wasm", "_framework");
-    if (fs.existsSync(fallback)) return fallback;
+    const fallbackDir = path.join(cwd, "..", "node_modules", "motely-wasm", subdir);
+    if (fs.existsSync(fallbackDir)) return fallbackDir;
   }
   return null;
 }
@@ -38,16 +36,30 @@ function copyDirRecursive(src, dest) {
 
 /**
  * Next.js plugin: copies _framework to public/_framework and sets COOP/COEP.
- * One-time setup: wrap config with withMotelyWasm(nextConfig).
+ * Usage: export default withMotelyWasm({ ...yourNextConfig });
  * @param {import('next').NextConfig} nextConfig
  * @returns {import('next').NextConfig}
  */
 function withMotelyWasm(nextConfig = {}) {
-  const frameworkDir = findFrameworkDir();
+  const frameworkDirs = [
+    { subdir: "_framework", dir: findFrameworkDir("_framework") },
+  ];
   const publicDir = path.join(process.cwd(), "public");
-  if (frameworkDir && fs.existsSync(frameworkDir) && fs.existsSync(publicDir)) {
-    const dest = path.join(publicDir, "_framework");
-    copyDirRecursive(frameworkDir, dest);
+
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+  let copiedAny = false;
+  for (const { subdir, dir } of frameworkDirs) {
+    if (dir && fs.existsSync(dir)) {
+      const dest = path.join(publicDir, subdir);
+      copyDirRecursive(dir, dest);
+      console.log(`[motely-wasm] Copied ${subdir} to public/${subdir}`);
+      copiedAny = true;
+    }
+  }
+  if (!copiedAny) {
+    console.warn("[motely-wasm] _framework directory not found. Run: npm install motely-wasm");
   }
 
   const existingHeaders = nextConfig.headers;

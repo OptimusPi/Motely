@@ -14,8 +14,7 @@ public static partial class Motely
 
     public static readonly char[] SeedDigits = [.. "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
     public const int MaxSeedLength = 8;
-
-    // MaxVectorWidth is defined in platform-specific partial files
+    public const int MaxVectorWidth = 8;
 
     public const int ItemTypeMask = 0xFFFF;
 

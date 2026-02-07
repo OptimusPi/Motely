@@ -6,34 +6,52 @@ stake: White
 
 Must:
   - voucher: Telescope
-    antes: [1,2]
   - voucher: Observatory
-    antes: [2,3]
   - soulJoker: Perkeo
-    antes: [1,2]
+  - joker: Blueprint
+  - jokers: [Brainstorm, Blueprint, InvisibleJoker]
+    edition: Negative
 
 Should:
-  - jokers: [Blueprint, Brainstorm]
-    antes: [1, 2, 3]
-    score: 225
-  - jokers: [Astronomer, Constellation, HangingChad, Showman]
-    antes: [1, 2, 3]
-    score: 125
-  - jokers:
-      [Astronomer, Constellation, Blueprint, Brainstorm, HangingChad, Showman]
-    antes: [1, 2, 3]
-    edition: Negative
-    score: 208
+  - jokers: Blueprint
+    antes: [1,2,3,4]
+    score: 67
+  - jokers: Brainstorm
+    antes: [1,2,3,4]
+    score: 66
+  - jokers: InvisibleJoker
+    antes: [1,2,3,4]
+    score: 65
 
-  - jokers: [Blueprint, Brainstorm]
-    antes: [4, 5, 6, 7]
-    score: 20
-  - jokers: [Astronomer, Constellation, HangingChad, Showman]
-    antes: [4, 5, 6, 7]
-    score: 10
+  - jokers: Blueprint
+    antes: [1,2,3,4]
+    score: 38
+  - jokers: Brainstorm
+    antes: [1,2,3,4]
+    score: 35
+  - jokers: InvisibleJoker
+    antes: [1,2,3,4]
+    score: 25
 
-  - jokers:
-      [Astronomer, Constellation, Blueprint, Brainstorm, HangingChad, Showman]
-    antes: [4, 5, 6, 7]
-    edition: Negative
-    score: 99
+  - jokers: Blueprint
+    antes: [5,6,7,8]
+    sources: 
+      judgement: [0,1,2,3,4,5,6,7,8,9]
+      minShopSlot: 0
+      maxShopSlot: 100
+    score: 38
+  - jokers: Brainstorm
+    antes: [5,6,7,8]
+    sources: 
+      judgement: [0,1,2,3,4,5,6,7,8,9]
+      minShopSlot: 0
+      maxShopSlot: 100
+    score: 35
+  - jokers: InvisibleJoker
+    antes: [5,6,7,8]
+    sources: 
+      judgement: [0,1,2,3,4,5,6,7,8,9]
+      minShopSlot: 0
+      maxShopSlot: 100
+    score: 25
+  
