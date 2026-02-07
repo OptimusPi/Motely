@@ -70,6 +70,10 @@ export interface SearchOptions {
     specificSeed?: string;
     randomSeeds?: number;
     palindrome?: boolean;
+    /** Called with native primitives every ~500ms during search. No JSON overhead. */
+    onProgress?: (searchId: string, totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
+    /** Called with native primitives for each new result found. No JSON overhead. */
+    onResult?: (searchId: string, seed: string, score: number) => void;
 }
 export interface ErrorResult {
     error: string;
@@ -95,29 +99,44 @@ export interface MotelyWasmApi {
      */
     validateJaml(jamlContent: string): ValidateResult;
     /**
-     * Start a JAML search. Returns a searchId for polling.
+     * Start a JAML search. Returns a Promise that resolves with final SearchStatusInfo.
+     * Progress is pushed to onProgress/onResult callbacks (native primitives, no JSON).
      * @param jamlContent - The JAML filter content
-     * @param options - Optional search parameters
-     * @returns searchId string
+     * @param options - Search parameters + onProgress/onResult callbacks
+     * @returns Promise resolving to final search status with results
      */
-    startJamlSearch(jamlContent: string, options?: SearchOptions): string;
+    startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo>;
     /**
-     * Get status and top results for an active search.
-     * @param searchId - The search ID returned by startJamlSearch
+     * Get status and top results for an active search (on-demand query).
+     * @param searchId - The search ID
      * @param resultLimit - Max results to include (default 50)
      */
     getSearchStatus(searchId: string, resultLimit?: number): SearchStatusInfo;
-    /** Stop a running search */
+    /** Stop a running search (non-blocking, sets cancellation flag) */
     stopSearch(searchId: string): void;
-    /** Dispose a completed/stopped search and free memory */
-    disposeSearch(searchId: string): void;
+    /** Dispose a completed/stopped search and free memory. Returns Promise. */
+    disposeSearch(searchId: string): Promise<void>;
 }
 export interface LoadMotelyOptions {
     /** Base URL for _framework (e.g. "/_framework" or "https://cdn.example/assets"). Default "/_framework". */
     baseUrl?: string;
+    /**
+     * Threading mode:
+     * - "auto": detect SharedArrayBuffer + crossOriginIsolated (default)
+     * - "on": force threads build (_framework)
+     * - "off": force no-threads build (_framework_nt)
+     */
+    threads?: "auto" | "on" | "off";
+}
+declare global {
+    var __motelyOnProgress: (searchId: string, totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
+    var __motelyOnResult: (searchId: string, seed: string, score: number) => void;
 }
 /**
  * Load the Motely WASM runtime and return the API.
  * Call once at app startup; the returned object is reusable.
+ *
+ * The _framework/dotnet.js entry point is the standard .NET WASM boot file.
+ * See: https://github.com/dotnet/runtime/blob/main/src/mono/wasm/features.md
  */
 export declare function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWasmApi>;

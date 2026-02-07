@@ -25,11 +25,8 @@ export function useSignalR(callbacks = {}) {
       // In prod, use same-origin hub.
       // Use window.location.origin to support both dev (via proxy) and prod
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      // If we are in dev mode, we might need to point to the specific backend IP if proxy isn't set up for WSS
-      // But typically relative path '/searchHub' works best with Vite proxy
-      const hubUrl = import.meta.env.DEV
-        ? 'http://192.168.0.171:3141/searchHub' // Keep specific dev URL for now as per previous config
-        : '/searchHub'
+      // Use VITE_SIGNALR_URL env var if set, otherwise relative path (works with Vite proxy in dev, same-origin in prod)
+      const hubUrl = import.meta.env.VITE_SIGNALR_URL || '/searchHub'
 
       connection.value = new signalR.HubConnectionBuilder()
         .withUrl(hubUrl)

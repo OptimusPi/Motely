@@ -11,13 +11,36 @@ namespace Motely.BrowserWasm;
 
 /// <summary>
 /// All [JSExport] methods for the Motely WASM npm package.
-/// JSON-in, JSON-out. Main-thread only (search runs on background threads, JS polls).
+/// Async push-based: StartJamlSearch returns Task (Promise), progress pushed via [JSImport].
 /// Uses MotelyAotJsonContext for AOT-safe serialization.
 /// </summary>
 [SupportedOSPlatform("browser")]
 public static partial class MotelyWasmExports
 {
     private static readonly ConcurrentDictionary<string, IMotelySearchContext> _activeSearches = new();
+
+    // Cached immutable values (computed once, reused forever)
+    private static string? _cachedVersion;
+    private static string[]? _cachedFeatures;
+
+    // ──────────────────────────────── JS Push Callbacks ([JSImport]) ────────────────────────────────
+    // C# calls these to push progress/results to JS without polling.
+    // JS registers the actual handlers on globalThis before starting a search.
+    // Native primitive marshaling -- no JSON on the hot path.
+
+    [JSImport("globalThis.__motelyOnProgress")]
+    private static partial void JsPushProgress(
+        string searchId,
+        double totalSeedsSearched,
+        double matchingSeeds,
+        double elapsedMs,
+        int resultCount);
+
+    [JSImport("globalThis.__motelyOnResult")]
+    private static partial void JsPushResult(
+        string searchId,
+        string seed,
+        int score);
 
     // ──────────────────────────────── Version / Capabilities ────────────────────────────────
 
@@ -26,7 +49,7 @@ public static partial class MotelyWasmExports
     {
         var dto = new VersionDto
         {
-            Version = typeof(MotelyWasmExports).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            Version = GetCachedVersion(),
             Runtime = "browser-wasm",
             Features = GetFeatureList(),
         };
@@ -42,7 +65,7 @@ public static partial class MotelyWasmExports
             Threads = IsThreadingEnabled(),
             ProcessorCount = GetProcessorCount(),
             Runtime = "browser-wasm",
-            Version = typeof(MotelyWasmExports).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            Version = GetCachedVersion(),
             Timestamp = DateTime.UtcNow.ToString("O"),
         };
         return JsonSerializer.Serialize(dto, WasmJsonContext.Default.CapabilitiesDto);
@@ -136,14 +159,14 @@ public static partial class MotelyWasmExports
         }
     }
 
-    // ──────────────────────────────── Search (async via polling) ────────────────────────────────
+    // ──────────────────────────────── Search (async push-based) ────────────────────────────────
 
     /// <summary>
-    /// Start a JAML search. Returns searchId string (not JSON).
-    /// JS polls GetSearchStatus(searchId) for progress and results.
+    /// Start a JAML search. Returns Task&lt;string&gt; (Promise on JS side).
+    /// C# pushes progress to JS via [JSImport] callbacks. Promise resolves with final status JSON.
     /// </summary>
     [JSExport]
-    public static string StartJamlSearch(string jamlContent, string optionsJson)
+    public static async Task<string> StartJamlSearch(string jamlContent, string optionsJson)
     {
         try
         {
@@ -164,7 +187,7 @@ public static partial class MotelyWasmExports
                 Threads = options?.ThreadCount ?? Math.Max(1, Environment.ProcessorCount - 1),
                 BatchSize = options?.BatchSize ?? 4,
                 Cutoff = options?.Cutoff != null ? int.Parse(options.Cutoff) : 0,
-                Quiet = true, // No console output in browser
+                Quiet = true,
                 NoFancy = true,
             };
 
@@ -179,38 +202,60 @@ public static partial class MotelyWasmExports
             if (options?.Palindrome == true)
                 parameters.PalindromeSeeds = true;
 
-            // Override deck/stake from options if provided
             if (!string.IsNullOrEmpty(config.Deck))
                 parameters.Deck = config.Deck;
             if (!string.IsNullOrEmpty(config.Stake))
                 parameters.Stake = config.Stake;
 
-            // Launch with in-memory storage (no DuckDB in browser)
             var context = MotelySearchOrchestrator.LaunchWithContext(
                 config, parameters, useInMemoryStorage: true);
 
             var searchId = context.SearchId;
             _activeSearches[searchId] = context;
 
-            // Start search on background thread (JSExport is main-thread only)
-            var thread = new Thread(() =>
+            // Start search on background web workers
+            var worker = MotelySearchPlatform.CreateWorker(() =>
             {
+                try { context.Start(); }
+                catch (Exception ex) { Console.Error.WriteLine($"Search {searchId} failed: {ex.Message}"); }
+            });
+            worker.Start();
+
+            // Push progress to JS until search completes.
+            // await Task.Delay yields the main thread back to the JS event loop (maps to setTimeout).
+            int lastResultCount = 0;
+            while (context.Status == MotelySearchStatus.Running)
+            {
+                await Task.Delay(500);
+
+                // Push progress with native primitive marshaling (no JSON)
                 try
                 {
-                    context.Start();
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Search {searchId} failed: {ex.Message}");
-                }
-            })
-            {
-                IsBackground = true,
-                Name = $"MotelySearch-{searchId[..Math.Min(16, searchId.Length)]}",
-            };
-            thread.Start();
+                    JsPushProgress(
+                        searchId,
+                        context.TotalSeedsSearched,
+                        context.MatchingSeeds,
+                        context.ElapsedTime.TotalMilliseconds,
+                        context.ResultCount);
 
-            return searchId;
+                    // Push new individual results since last update
+                    int currentCount = context.ResultCount;
+                    if (currentCount > lastResultCount)
+                    {
+                        var newResults = context.GetResults(lastResultCount, currentCount - lastResultCount);
+                        foreach (var r in newResults)
+                            JsPushResult(searchId, r.Seed, r.Score);
+                        lastResultCount = currentCount;
+                    }
+                }
+                catch
+                {
+                    // JS callback may not be registered; continue search regardless
+                }
+            }
+
+            // Return final status JSON when Promise resolves
+            return BuildStatusJson(searchId, context);
         }
         catch (Exception ex)
         {
@@ -219,7 +264,8 @@ public static partial class MotelyWasmExports
     }
 
     /// <summary>
-    /// Get status + top results for an active search. Returns JSON ProgressDto.
+    /// Get status + top results for an active search. Returns JSON.
+    /// Available for on-demand queries (e.g. user clicks "show results").
     /// </summary>
     [JSExport]
     public static string GetSearchStatus(string searchId, int resultLimit)
@@ -229,27 +275,7 @@ public static partial class MotelyWasmExports
 
         try
         {
-            var limit = resultLimit > 0 ? resultLimit : 50;
-            var results = context.GetTopResults(limit);
-
-            var dto = new SearchStatusDto
-            {
-                SearchId = searchId,
-                Status = context.Status.ToString(),
-                IsRunning = context.Status == MotelySearchStatus.Running,
-                TotalSeedsSearched = context.TotalSeedsSearched,
-                MatchingSeeds = context.MatchingSeeds,
-                ResultCount = context.ResultCount,
-                ElapsedMs = (long)context.ElapsedTime.TotalMilliseconds,
-                Results = results.Select(r => new SearchHitDto
-                {
-                    Seed = r.Seed,
-                    Score = r.Score,
-                    Tallies = r.Tallies?.ToArray(),
-                }).ToArray(),
-            };
-
-            return JsonSerializer.Serialize(dto, WasmJsonContext.Default.SearchStatusDto);
+            return BuildStatusJson(searchId, context, resultLimit);
         }
         catch (Exception ex)
         {
@@ -258,7 +284,7 @@ public static partial class MotelyWasmExports
     }
 
     /// <summary>
-    /// Stop an active search.
+    /// Stop a running search. Non-blocking (sets cancellation flag).
     /// </summary>
     [JSExport]
     public static void StopSearch(string searchId)
@@ -270,13 +296,16 @@ public static partial class MotelyWasmExports
     }
 
     /// <summary>
-    /// Dispose and remove a completed/stopped search from memory.
+    /// Dispose a completed/stopped search and free memory.
+    /// Returns Task (Promise on JS side) that resolves when cleanup is done.
     /// </summary>
     [JSExport]
-    public static void DisposeSearch(string searchId)
+    public static async Task DisposeSearch(string searchId)
     {
         if (_activeSearches.TryRemove(searchId, out var context))
         {
+            context.Cancel();
+            await context.WaitForCompletionAsync();
             context.Dispose();
         }
     }
@@ -287,12 +316,42 @@ public static partial class MotelyWasmExports
         JsonSerializer.Serialize(new ErrorDto { Error = message },
             MotelyAotJsonContext.Default.ErrorDto);
 
+    private static string BuildStatusJson(string searchId, IMotelySearchContext context, int resultLimit = 50)
+    {
+        var limit = resultLimit > 0 ? resultLimit : 50;
+        var results = context.GetTopResults(limit);
+
+        var dto = new SearchStatusDto
+        {
+            SearchId = searchId,
+            Status = context.Status.ToString(),
+            IsRunning = context.Status == MotelySearchStatus.Running,
+            TotalSeedsSearched = context.TotalSeedsSearched,
+            MatchingSeeds = context.MatchingSeeds,
+            ResultCount = context.ResultCount,
+            ElapsedMs = (long)context.ElapsedTime.TotalMilliseconds,
+            Results = results.Select(r => new SearchHitDto
+            {
+                Seed = r.Seed,
+                Score = r.Score,
+                Tallies = r.Tallies?.ToArray(),
+            }).ToArray(),
+        };
+
+        return JsonSerializer.Serialize(dto, WasmJsonContext.Default.SearchStatusDto);
+    }
+
+    private static string GetCachedVersion() =>
+        _cachedVersion ??= typeof(MotelyWasmExports).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+
     private static string[] GetFeatureList()
     {
+        if (_cachedFeatures is not null) return _cachedFeatures;
         var features = new List<string> { "analyzer", "jaml-search", "jaml-validate" };
         if (IsSimdEnabled()) features.Add("simd");
         if (IsThreadingEnabled()) features.Add("threads");
-        return features.ToArray();
+        _cachedFeatures = features.ToArray();
+        return _cachedFeatures;
     }
 
     private static SeedAnalysisDto MapAnalysisToDto(
