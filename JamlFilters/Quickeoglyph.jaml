@@ -5,13 +5,17 @@ deck: Ghost
 stake: White
 
 must:
-  - soulJoker: Any
+  - soulJoker: Perkeo
     antes: [1]
     edition: Negative
   - soulJoker: Any
     antes: [2,3,4,5,6,7]
     edition: Negative
   
+  - spectralCard: Immolate
+    antes: [1,2,3,4]
+    shopSlots: [0, 1, 2, 3]
+    score: 1
 
   - spectralCard: Ouija
     antes: [1,2,3,4]

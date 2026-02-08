@@ -13,6 +13,9 @@ using Motely.Utils;
 
 namespace Motely.API.Services;
 
+/// <summary>
+/// Runs JAML seed searches (burst or queued) and notifies the queue and SignalR hub on completion or error.
+/// </summary>
 public class SearchService
 {
     private readonly ConcurrentDictionary<string, SearchState> _searches = new();
@@ -20,10 +23,18 @@ public class SearchService
     private readonly IHubContext<SearchHub> _hubContext;
     private readonly SearchQueueService _queue;
 
-    // Events for queue service
+    /// <summary>Raised when a search finishes successfully. Argument is the search ID.</summary>
     public event Action<string>? SearchCompleted;
+
+    /// <summary>Raised when a search fails. Arguments are search ID and error message.</summary>
     public event Action<string, string>? SearchError;
 
+    /// <summary>
+    /// Creates a new SearchService.
+    /// </summary>
+    /// <param name="logger">Logger for search lifecycle.</param>
+    /// <param name="queue">Queue service for enqueueing and completion updates.</param>
+    /// <param name="hubContext">SignalR hub context for real-time client updates.</param>
     public SearchService(
         ILogger<SearchService> logger,
         SearchQueueService queue,
@@ -35,6 +46,12 @@ public class SearchService
         _queue = queue;
     }
 
+    /// <summary>
+    /// Starts a search: runs immediately for burst (single/seed-sources) mode, or enqueues for batch mode.
+    /// </summary>
+    /// <param name="config">JAML filter configuration.</param>
+    /// <param name="criteria">Seed range, thread count, cutoff, etc.</param>
+    /// <returns>The assigned search ID.</returns>
     public async Task<string> StartSearchAsync(MotelyJsonConfig config, SearchCriteriaDto criteria)
     {
         var searchId = Guid.NewGuid().ToString();
@@ -152,6 +169,12 @@ public class SearchService
         SearchCompleted?.Invoke(state.SearchId);
     }
 
+    /// <summary>
+    /// Runs one queued search (called by the queue hosted service). Updates queue and raises events on completion or error.
+    /// </summary>
+    /// <param name="config">JAML filter configuration.</param>
+    /// <param name="entry">Queue entry with search ID, batch marker, thread count.</param>
+    /// <param name="ct">Cancellation token.</param>
     public async Task RunQueuedSearchAsync(
         MotelyJsonConfig config,
         SearchQueueEntry entry,

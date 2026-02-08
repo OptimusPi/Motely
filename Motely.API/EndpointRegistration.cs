@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Motely;
 using Motely.Analysis;
 using Motely.API.Hubs;
 using Motely.API.Models;
-using Motely.API.Services;
 using Motely.Executors;
+using Motely.Repository;
 
 namespace Motely.API;
 
@@ -116,7 +117,7 @@ public static class EndpointRegistration
         // Search endpoints
         endpoints.MapPost(
             "/search",
-            async (SearchStartRequest request) =>
+            async (HttpContext context, SearchStartRequest request) =>
             {
                 try
                 {
@@ -128,11 +129,12 @@ public static class EndpointRegistration
                     if (threads < 1)
                         threads = 1;
 
-                    var filterJaml = FilterService.GetFilterJaml(request.FilterId);
+                    var library = context.RequestServices.GetRequiredService<ILibraryMetadata>();
+                    var filterJaml = library.GetFilterJaml(request.FilterId ?? "");
                     if (string.IsNullOrEmpty(filterJaml))
                         return Results.BadRequest(new { error = "Filter not found" });
 
-                    var (immediateResults, searchId) =
+                    var (_, searchId) =
                         await MultiSearchManager.Instance.StartSearchAsync(
                             filterJaml,
                             request.Deck,

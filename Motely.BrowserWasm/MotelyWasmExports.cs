@@ -29,7 +29,7 @@ public static partial class MotelyWasmExports
     // Native primitive marshaling -- no JSON on the hot path.
 
     [JSImport("globalThis.__motelyOnProgress")]
-    private static partial void JsPushProgress(
+    static partial void JsPushProgress(
         string searchId,
         double totalSeedsSearched,
         double matchingSeeds,
@@ -37,15 +37,16 @@ public static partial class MotelyWasmExports
         int resultCount);
 
     [JSImport("globalThis.__motelyOnResult")]
-    private static partial void JsPushResult(
+    static partial void JsPushResult(
         string searchId,
         string seed,
         int score);
 
     // ──────────────────────────────── Version / Capabilities ────────────────────────────────
+    // Async exports required: with threading enabled, JS cannot call synchronous C# methods.
 
     [JSExport]
-    public static string GetVersion()
+    public static Task<string> GetVersionAsync()
     {
         var dto = new VersionDto
         {
@@ -53,11 +54,11 @@ public static partial class MotelyWasmExports
             Runtime = "browser-wasm",
             Features = GetFeatureList(),
         };
-        return JsonSerializer.Serialize(dto, MotelyAotJsonContext.Default.VersionDto);
+        return Task.FromResult(JsonSerializer.Serialize(dto, MotelyAotJsonContext.Default.VersionDto));
     }
 
     [JSExport]
-    public static string GetCapabilities()
+    public static Task<string> GetCapabilitiesAsync()
     {
         var dto = new CapabilitiesDto
         {
@@ -68,10 +69,9 @@ public static partial class MotelyWasmExports
             Version = GetCachedVersion(),
             Timestamp = DateTime.UtcNow.ToString("O"),
         };
-        return JsonSerializer.Serialize(dto, WasmJsonContext.Default.CapabilitiesDto);
+        return Task.FromResult(JsonSerializer.Serialize(dto, WasmJsonContext.Default.CapabilitiesDto));
     }
 
-    [JSExport]
     public static bool IsSimdEnabled()
     {
 #if NET10_0_OR_GREATER
@@ -81,11 +81,9 @@ public static partial class MotelyWasmExports
 #endif
     }
 
-    [JSExport]
     public static bool IsThreadingEnabled() => Thread.CurrentThread.ManagedThreadId >= 0
         && Environment.ProcessorCount > 0; // Will be > 1 if threads are enabled
 
-    [JSExport]
     public static int GetProcessorCount() => Environment.ProcessorCount;
 
     // ──────────────────────────────── Analyzer ────────────────────────────────
@@ -93,7 +91,6 @@ public static partial class MotelyWasmExports
     /// <summary>
     /// Analyze a single seed. Returns JSON SeedAnalysisDto.
     /// </summary>
-    [JSExport]
     public static string AnalyzeSeed(string seed, string deck, string stake)
     {
         try
@@ -123,12 +120,15 @@ public static partial class MotelyWasmExports
         }
     }
 
+    [JSExport]
+    public static Task<string> AnalyzeSeedAsync(string seed, string deck, string stake) =>
+        Task.FromResult(AnalyzeSeed(seed, deck, stake));
+
     // ──────────────────────────────── JAML Validation ────────────────────────────────
 
     /// <summary>
     /// Validate a JAML string. Returns JSON ValidateResultDto.
     /// </summary>
-    [JSExport]
     public static string ValidateJaml(string jamlContent)
     {
         try
@@ -158,6 +158,10 @@ public static partial class MotelyWasmExports
                 MotelyAotJsonContext.Default.ValidateResultDto);
         }
     }
+
+    [JSExport]
+    public static Task<string> ValidateJamlAsync(string jamlContent) =>
+        Task.FromResult(ValidateJaml(jamlContent));
 
     // ──────────────────────────────── Search (async push-based) ────────────────────────────────
 
@@ -267,7 +271,6 @@ public static partial class MotelyWasmExports
     /// Get status + top results for an active search. Returns JSON.
     /// Available for on-demand queries (e.g. user clicks "show results").
     /// </summary>
-    [JSExport]
     public static string GetSearchStatus(string searchId, int resultLimit)
     {
         if (!_activeSearches.TryGetValue(searchId, out var context))
@@ -283,16 +286,26 @@ public static partial class MotelyWasmExports
         }
     }
 
+    [JSExport]
+    public static Task<string> GetSearchStatusAsync(string searchId, int resultLimit) =>
+        Task.FromResult(GetSearchStatus(searchId, resultLimit));
+
     /// <summary>
     /// Stop a running search. Non-blocking (sets cancellation flag).
     /// </summary>
-    [JSExport]
     public static void StopSearch(string searchId)
     {
         if (_activeSearches.TryGetValue(searchId, out var context))
         {
             context.Cancel();
         }
+    }
+
+    [JSExport]
+    public static Task StopSearchAsync(string searchId)
+    {
+        StopSearch(searchId);
+        return Task.CompletedTask;
     }
 
     /// <summary>

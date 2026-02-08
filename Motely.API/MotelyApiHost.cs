@@ -17,10 +17,16 @@ using Motely.API;
 using Motely.API.Hubs;
 using Motely.API.Models;
 using Motely.API.Services;
-using Motely.DB;
 using Motely.Executors;
 
-// Request records
+/// <summary>Request body for starting a seed search (filter, range, deck/stake).</summary>
+/// <param name="FilterId">Optional filter ID or name.</param>
+/// <param name="SeedCount">Optional total seed count limit.</param>
+/// <param name="StartBatch">Optional starting batch index.</param>
+/// <param name="Cutoff">Optional score cutoff.</param>
+/// <param name="SeedSource">Optional seed source identifier.</param>
+/// <param name="Deck">Deck for the search (default Red).</param>
+/// <param name="Stake">Stake for the search (default White).</param>
 public record SearchStartRequest(
     string? FilterId,
     long? SeedCount,
@@ -31,10 +37,18 @@ public record SearchStartRequest(
     [property: JsonConverter(typeof(JsonStringEnumConverter))] MotelyStake Stake = MotelyStake.White
 );
 
+/// <summary>Request body for stopping a running search.</summary>
+/// <param name="SearchId">The search ID to stop.</param>
 public record SearchStopRequest(string? SearchId);
 
+/// <summary>Builds and configures the Motely API web application (endpoints, static files, SignalR, COOP/COEP).</summary>
 public static class MotelyApiHost
 {
+    /// <summary>
+    /// Creates and configures the ASP.NET Core web application. Does not start the host.
+    /// </summary>
+    /// <param name="args">Command-line arguments (e.g. --urls).</param>
+    /// <returns>Configured <see cref="WebApplication"/> ready to run.</returns>
     public static WebApplication CreateHost(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -67,10 +81,6 @@ public static class MotelyApiHost
 
         // Initialize MotelyPaths with ContentRoot and configuration
         MotelyPaths.Initialize(app.Environment, app.Configuration);
-
-        // Repository + library root for DuckLake storage
-        MotelySearchOrchestrator.SetRepository(new MotelyRepository());
-        ResultsSetReader.SetLibraryRoot(MotelyPaths.SearchResultsDir);
 
         // Register shutdown handler to close SignalR connections quickly
         {
@@ -113,7 +123,7 @@ public static class MotelyApiHost
             }
         );
 
-        // /BSO and /BSO/ -> /BSO/index.html (MUST be before UseStaticFiles)
+        // SPA-style rewrites: /BSO and /JamlUI-v99 (and trailing slash) -> index.html (MUST be before UseStaticFiles)
         app.Use(
             (context, next) =>
             {
@@ -121,6 +131,10 @@ public static class MotelyApiHost
                 if (path.Equals("/BSO", StringComparison.OrdinalIgnoreCase))
                 {
                     context.Request.Path = "/BSO/index.html";
+                }
+                else if (path.Equals("/JamlUI-v99", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Request.Path = "/JamlUI-v99/index.html";
                 }
                 return next();
             }

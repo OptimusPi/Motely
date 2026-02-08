@@ -17,28 +17,39 @@ export async function loadMotely(options) {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://localhost";
     const url = base.startsWith("http") ? base : new URL(base, origin).href;
     const dotnetUrl = `${url}/dotnet.js`;
-    // Dynamic import of the .NET WASM entry point. @vite-ignore / webpackIgnore prevent bundlers from analyzing the URL.
-    // With standard boot config, dotnet.js uses fetch() for .wasm/.dat at runtime.
-    const { dotnet } = await import(/* @vite-ignore */ /* webpackIgnore: true */ dotnetUrl);
+    // Dynamic import of the .NET WASM entry point.
+    // @vite-ignore / webpackIgnore prevent bundlers from analyzing the URL.
+    // With standard boot config (no WasmBundlerFriendlyBootConfig), dotnet.js uses fetch() for .wasm/.dat at runtime.
+    const { dotnet } = await import(
+    /* @vite-ignore */ /* webpackIgnore: true */ dotnetUrl);
     const runtime = await dotnet.create();
     const config = runtime.getConfig();
     const allExports = await runtime.getAssemblyExports(config.mainAssemblyName);
     const raw = allExports.Motely.BrowserWasm.MotelyWasmExports;
     runtime.runMain().catch(err => console.error("[motely-wasm] runMain failed:", err));
+    const [versionJson, capabilitiesJson] = await Promise.all([
+        raw.GetVersionAsync(),
+        raw.GetCapabilitiesAsync(),
+    ]);
+    const cachedVersion = JSON.parse(versionJson);
+    const cachedCapabilities = JSON.parse(capabilitiesJson);
     const api = {
-        getVersion: () => JSON.parse(raw.GetVersion()),
-        getCapabilities: () => JSON.parse(raw.GetCapabilities()),
-        isSimdEnabled: () => raw.IsSimdEnabled(),
-        isThreadingEnabled: () => raw.IsThreadingEnabled(),
-        getProcessorCount: () => raw.GetProcessorCount(),
-        analyzeSeed(seed, deck, stake) {
-            const json = raw.AnalyzeSeed(seed, deck, stake);
+        getVersion: () => cachedVersion,
+        getCapabilities: () => cachedCapabilities,
+        isSimdEnabled: () => cachedCapabilities.simd,
+        isThreadingEnabled: () => cachedCapabilities.threads,
+        getProcessorCount: () => cachedCapabilities.processorCount,
+        async analyzeSeed(seed, deck, stake) {
+            const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
             const result = JSON.parse(json);
             if (result.error && !result.seed)
                 throw new Error(result.error);
             return result;
         },
-        validateJaml: (jaml) => JSON.parse(raw.ValidateJaml(jaml)),
+        async validateJaml(jaml) {
+            const json = await raw.ValidateJamlAsync(jaml);
+            return JSON.parse(json);
+        },
         async startJamlSearch(jamlContent, options) {
             const { onProgress, onResult, ...searchParams } = options ?? {};
             globalThis.__motelyOnProgress = onProgress ?? (() => { });
@@ -53,14 +64,14 @@ export async function loadMotely(options) {
                 throw new Error(result.error);
             return result;
         },
-        getSearchStatus(searchId, resultLimit) {
-            const json = raw.GetSearchStatus(searchId, resultLimit ?? 50);
+        async getSearchStatus(searchId, resultLimit) {
+            const json = await raw.GetSearchStatusAsync(searchId, resultLimit ?? 50);
             const result = JSON.parse(json);
             if (result.error && !result.searchId)
                 throw new Error(result.error);
             return result;
         },
-        stopSearch: (searchId) => raw.StopSearch(searchId),
+        stopSearch: (searchId) => { raw.StopSearchAsync(searchId).catch(() => { }); },
         disposeSearch: (searchId) => raw.DisposeSearch(searchId),
     };
     return api;

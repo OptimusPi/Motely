@@ -4,21 +4,28 @@ using Microsoft.AspNetCore.Mvc;
 using Motely;
 using Motely.API;
 using Motely.API.Models;
-using Motely.API.Services;
 using Motely.Executors;
+using Motely.Repository;
 
 namespace Motely.API;
 
 public static class Endpoints
 {
-    public static IResult GetFilters()
+    public static IResult GetFilters(ILibraryMetadata library)
     {
         try
         {
-            var filters = FilterService.LoadFiltersFromDisk(
-                MotelyPaths.JamlFiltersDir,
-                cfg => false
-            );
+            var list = library.GetLibraryMetadata();
+            var filters = list.Select(f => new
+            {
+                id = f.Id,
+                name = f.Name,
+                author = f.Author,
+                filterId = f.Id,
+                filePath = f.FilePath,
+                searchId = f.SearchId,
+                columns = f.Columns,
+            }).ToList();
             return Results.Ok(filters);
         }
         catch (Exception ex)
@@ -89,13 +96,13 @@ public static class Endpoints
         return Results.Ok(new { searches });
     }
 
-    public static async Task<IResult> StartSearch(HttpRequest req)
+    public static async Task<IResult> StartSearch(HttpRequest req, ILibraryMetadata library)
     {
         var request = await req.ReadFromJsonAsync<SearchStartRequest>();
         if (request?.FilterId == null)
             return Results.BadRequest();
 
-        var filterJaml = FilterService.GetFilterJaml(request.FilterId);
+        var filterJaml = library.GetFilterJaml(request.FilterId);
         if (string.IsNullOrEmpty(filterJaml))
             return Results.BadRequest("Filter not found");
 

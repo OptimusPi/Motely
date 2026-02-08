@@ -82,28 +82,51 @@ public class SearchCriteriaDto
     public SearchSourceType SourceType { get; set; } = SearchSourceType.Unknown;
 }
 
+/// <summary>
+/// Response from starting a search.
+/// </summary>
 public class SearchResponse
 {
+    /// <summary>Unique identifier for the search.</summary>
     public string SearchId { get; set; } = string.Empty;
+    /// <summary>Current status (e.g. running, completed).</summary>
     public string Status { get; set; } = string.Empty;
+    /// <summary>Human-readable message.</summary>
     public string Message { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Current status and progress of a search.
+/// </summary>
 public class SearchStatusResponse
 {
+    /// <summary>Unique identifier for the search.</summary>
     public string SearchId { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty; // running, completed, cancelled, error
+    /// <summary>Status: running, completed, cancelled, or error.</summary>
+    public string Status { get; set; } = string.Empty;
+    /// <summary>Name of the JAML filter.</summary>
     public string FilterName { get; set; } = string.Empty;
+    /// <summary>Number of seeds matching the filter so far.</summary>
     public int ResultsFound { get; set; }
+    /// <summary>Total number of seeds searched so far.</summary>
     public long SeedsSearched { get; set; }
+    /// <summary>Progress as a percentage (0–100).</summary>
     public double ProgressPercent { get; set; }
+    /// <summary>Error message if status is error.</summary>
     public string? ErrorMessage { get; set; }
+    /// <summary>Top results (seeds and scores).</summary>
     public List<SeedResult>? Results { get; set; }
 }
 
+/// <summary>
+/// A single seed result from a search.
+/// </summary>
 public class SeedResult
 {
+    /// <summary>The seed string.</summary>
     public string Seed { get; set; } = string.Empty;
+    /// <summary>Score from the filter.</summary>
     public int Score { get; set; }
+    /// <summary>Optional per-seed details.</summary>
     public Dictionary<string, object>? Details { get; set; }
 }

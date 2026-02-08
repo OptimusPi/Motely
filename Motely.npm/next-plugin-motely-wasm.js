@@ -49,17 +49,21 @@ function withMotelyWasm(nextConfig = {}) {
   if (!fs.existsSync(publicDir)) {
     fs.mkdirSync(publicDir, { recursive: true });
   }
+  const logKey = "__motelyWasmNextPluginLogged";
   let copiedAny = false;
   for (const { subdir, dir } of frameworkDirs) {
     if (dir && fs.existsSync(dir)) {
       const dest = path.join(publicDir, subdir);
       copyDirRecursive(dir, dest);
-      console.log(`[motely-wasm] Copied ${subdir} to public/${subdir}`);
       copiedAny = true;
     }
   }
+  if (copiedAny && !globalThis[logKey]) {
+    globalThis[logKey] = true;
+    console.log("[motely-wasm] public/_framework ready");
+  }
   if (!copiedAny) {
-    console.warn("[motely-wasm] _framework directory not found. Run: npm install motely-wasm");
+    console.warn("[motely-wasm] _framework not found. Run: npm install motely-wasm");
   }
 
   const existingHeaders = nextConfig.headers;

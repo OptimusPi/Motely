@@ -4,6 +4,9 @@ namespace Motely.TUI;
 
 public class MainMenuWindow : View
 {
+    /// <summary>Workaround for Terminal.Gui v2 issue #3989: Transparent viewport can trigger NullReferenceException in View.DoDrawBorderAndPadding. Set true when upstream is fixed.</summary>
+    private static bool UseTransparentViewport => false;
+
     public MainMenuWindow()
     {
         X = 0;
@@ -12,13 +15,13 @@ public class MainMenuWindow : View
         Height = Dim.Fill();
         CanFocus = true;
 
-        // Enable transparency so shader background shows through!
-        ViewportSettings |= ViewportSettingsFlags.Transparent;
+        if (UseTransparentViewport)
+            ViewportSettings |= ViewportSettingsFlags.Transparent;
         SetScheme(BalatroTheme.Title); // Title has transparent background
 
-        // Jimbo sprite - ADD FIRST so text layers on top!
+        // Jimbo sprite - ADD FIRST so text layers on top! (use Width for anchor; Frame may be 0 before layout)
         var jimboView = new JimboView() { Y = 1 };
-        jimboView.X = Pos.AnchorEnd(jimboView.Frame.Width + 4);
+        jimboView.X = Pos.AnchorEnd(jimboView.DisplayWidth + 4);
         Add(jimboView);
 
         // Big logo - aligned left with padding, white text
@@ -53,8 +56,9 @@ public class MainMenuWindow : View
             Width = 62,
             Height = 5,
             CanFocus = true,
-            ViewportSettings = ViewportSettingsFlags.Transparent, // No grey block - transparent!
         };
+        if (UseTransparentViewport)
+            dockBar.ViewportSettings |= ViewportSettingsFlags.Transparent;
         dockBar.SetScheme(BalatroTheme.Title); // Transparent scheme
         Add(dockBar);
 

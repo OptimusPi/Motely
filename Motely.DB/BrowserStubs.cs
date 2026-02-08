@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using Motely;
 using Motely.Filters;
