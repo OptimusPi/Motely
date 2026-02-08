@@ -28,6 +28,8 @@ public class SearchQueueHostedService : BackgroundService
         _searchService = searchService;
         _logger = logger;
         _maxThreads = maxThreads;
+        _searchService.SearchCompleted += OnSearchCompleted;
+        _searchService.SearchError += OnSearchError;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -76,6 +78,9 @@ public class SearchQueueHostedService : BackgroundService
 
             await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken).ConfigureAwait(false);
         }
+
+        _searchService.SearchCompleted -= OnSearchCompleted;
+        _searchService.SearchError -= OnSearchError;
     }
 
     private void ResumeRunning()

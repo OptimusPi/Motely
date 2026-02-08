@@ -93,11 +93,11 @@ export interface MotelyWasmApi {
      * Analyze a single seed. Returns full ante-by-ante breakdown.
      * @throws If the result contains an `error` field
      */
-    analyzeSeed(seed: string, deck: string, stake: string): SeedAnalysisInfo;
+    analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo>;
     /**
      * Validate a JAML filter string.
      */
-    validateJaml(jamlContent: string): ValidateResult;
+    validateJaml(jamlContent: string): Promise<ValidateResult>;
     /**
      * Start a JAML search. Returns a Promise that resolves with final SearchStatusInfo.
      * Progress is pushed to onProgress/onResult callbacks (native primitives, no JSON).
@@ -111,7 +111,7 @@ export interface MotelyWasmApi {
      * @param searchId - The search ID
      * @param resultLimit - Max results to include (default 50)
      */
-    getSearchStatus(searchId: string, resultLimit?: number): SearchStatusInfo;
+    getSearchStatus(searchId: string, resultLimit?: number): Promise<SearchStatusInfo>;
     /** Stop a running search (non-blocking, sets cancellation flag) */
     stopSearch(searchId: string): void;
     /** Dispose a completed/stopped search and free memory. Returns Promise. */
@@ -121,12 +121,11 @@ export interface LoadMotelyOptions {
     /** Base URL for _framework (e.g. "/_framework" or "https://cdn.example/assets"). Default "/_framework". */
     baseUrl?: string;
     /**
-     * Threading mode:
-     * - "auto": detect SharedArrayBuffer + crossOriginIsolated (default)
-     * - "on": force threads build (_framework)
-     * - "off": force no-threads build (_framework_nt)
+     * Threading mode. Only the threaded build (_framework) is shipped.
+     * - "auto": use _framework (default)
+     * - "on": use _framework
      */
-    threads?: "auto" | "on" | "off";
+    threads?: "auto" | "on";
 }
 declare global {
     var __motelyOnProgress: (searchId: string, totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;

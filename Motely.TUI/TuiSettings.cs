@@ -59,7 +59,7 @@ public class SettingsService
     {
         try
         {
-            if (!File.Exists(_fileName))
+            if (string.IsNullOrEmpty(_fileName) || !File.Exists(_fileName))
                 return;
 
             var json = File.ReadAllText(_fileName);
@@ -73,9 +73,9 @@ public class SettingsService
                 TuiSettings.ApiServerPort = settings.ApiServerPort ?? 3141;
             }
         }
-        catch
+        catch (Exception)
         {
-            // If load fails, just use defaults
+            // If load fails, just use defaults; never throw
         }
     }
 

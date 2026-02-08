@@ -213,6 +213,14 @@ public class MotelyJsonConfig
     [YamlMember(Alias = "startSeed")]
     public string? StartSeed { get; set; }
 
+    /// <summary>
+    /// Raw JAML under the `seeds` key so callers can preserve custom metadata.
+    /// </summary>
+    [JsonPropertyName("seeds")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [YamlIgnore]
+    public string? SeedsRaw { get; set; }
+
     // AOT-compatible: Templates and Anchors are YAML metadata not used in filter logic
     // Marking as ignored to avoid List<object> deserialization issues in AOT
     [JsonIgnore]

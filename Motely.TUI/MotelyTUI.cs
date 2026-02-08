@@ -6,6 +6,31 @@ namespace Motely.TUI;
 
 public static class MotelyTUI
 {
+    private static string CrashLogPath => global::Motely.Program.CrashLogPath;
+
+    private static void LogCrash(string phase, Exception ex)
+    {
+        var msg = $"{phase}: {ex.Message}";
+        Console.WriteLine(msg);
+        Console.WriteLine(ex.StackTrace);
+        try { File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O} [{phase}]\n{ex}"); } catch { }
+    }
+
+    private static View MakeErrorFallback(string message)
+    {
+        var v = new View()
+        {
+            X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(),
+            CanFocus = true,
+        };
+        var label = new Label() { X = 2, Y = 2, Width = Dim.Fill() - 4, Height = 5, Text = message };
+        var exitBtn = new CleanButton() { X = Pos.Center(), Y = 8, Text = " Exit " };
+        exitBtn.Accept += (_, _) => _app?.RequestStop();
+        v.Add(label, exitBtn);
+        exitBtn.SetFocus();
+        return v;
+    }
+
     private static BalatroShaderBackground? _shaderBackground;
     private static Window? _mainTop;
     private static IApplication? _app;
@@ -18,55 +43,56 @@ public static class MotelyTUI
 
     public static int Run(string? configName = null, string? configFormat = null)
     {
-        // Load persisted settings from tui.json
-        TuiSettings.Load();
+        try { TuiSettings.Load(); }
+        catch (Exception ex) { Console.WriteLine($"Failed to load TUI settings: {ex.Message}"); }
 
         try
         {
-            // v2 instance-based approach
             _app = Application.Create();
             _app.Init();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to initialize Terminal.Gui: {ex.Message}");
+            LogCrash("Terminal.Gui init", ex);
             return 1;
         }
 
         try
         {
-            _mainTop = new Window()
+            _mainTop = new Window() { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill() };
+
+            try
             {
-                X = 0,
-                Y = 0,
-                Width = Dim.Fill(),
-                Height = Dim.Fill(),
-            };
+                _shaderBackground = new BalatroShaderBackground();
+                _mainTop.Add(_shaderBackground);
+                _shaderBackground.Start();
+            }
+            catch (Exception ex) { LogCrash("Shader init (continuing without shader)", ex); }
 
-            _shaderBackground = new BalatroShaderBackground();
-            _mainTop.Add(_shaderBackground);
-            _shaderBackground.Start();
-
+            View mainContent;
             if (!string.IsNullOrEmpty(configName) && !string.IsNullOrEmpty(configFormat))
             {
-                var searchWindow = new SearchWindow(configName, configFormat);
-                searchWindow.SetScheme(BalatroTheme.Window);
-                _mainTop.Add(searchWindow);
+                mainContent = new SearchWindow(configName, configFormat);
+                mainContent.SetScheme(BalatroTheme.Window);
             }
             else
             {
-                // Go straight to main menu (no ColorScheme - let shader show through)
-                var mainMenu = new MainMenuWindow();
-                _mainTop.Add(mainMenu);
-                mainMenu.SetFocus();
+                try { mainContent = new MainMenuWindow(); }
+                catch (Exception ex)
+                {
+                    LogCrash("Main menu init", ex);
+                    mainContent = MakeErrorFallback($"Main menu failed: {ex.Message}");
+                }
+                mainContent.SetFocus();
             }
 
+            _mainTop.Add(mainContent);
             _app.Run(_mainTop);
             return 0;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"TUI Error: {ex.Message}");
+            LogCrash("TUI run", ex);
             return 1;
         }
         finally

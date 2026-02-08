@@ -17,7 +17,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
@@ -28,7 +28,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="DuckDB.NET.Data.Full" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
+    <ProjectReference Include="..\Motely.Repository\Motely.Repository.csproj" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
   </ItemGroup>

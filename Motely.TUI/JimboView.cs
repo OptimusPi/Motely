@@ -18,6 +18,9 @@ public class JimboView : View
     private readonly int _pixelHeight;
     private readonly double _scale;
 
+    /// <summary>Width in character cells (for layout).</summary>
+    public int DisplayWidth => (int)(_pixelWidth * _scale);
+
     public JimboView(double scale = 0.65)
     {
         _scale = scale;
@@ -36,36 +39,44 @@ public class JimboView : View
 
     private static (Color[,] pixels, int width, int height) LoadFromPng()
     {
-        // Load from embedded resource
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = "Motely.TUI.Jimbo.png";
-
-        using var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream == null)
+        try
         {
-            // Fallback: return a small placeholder
-            var placeholder = new Color[8, 8];
-            for (int x = 0; x < 8; x++)
-            for (int y = 0; y < 8; y++)
-                placeholder[x, y] = new Color(255, 0, 255); // Magenta = missing
-            return (placeholder, 8, 8);
-        }
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = "Motely.TUI.Jimbo.png";
 
-        using var image = SLImage.Load<Rgba32>(stream);
-        int width = image.Width;
-        int height = image.Height;
-        var pixels = new Color[width, height];
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+                return CreatePlaceholder(8, 8);
 
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+            using var image = SLImage.Load<Rgba32>(stream);
+            int width = image.Width;
+            int height = image.Height;
+            var pixels = new Color[width, height];
+
+            for (int y = 0; y < height; y++)
             {
-                var pixel = image[x, y];
-                pixels[x, y] = new Color(pixel.R, pixel.G, pixel.B, pixel.A);
+                for (int x = 0; x < width; x++)
+                {
+                    var pixel = image[x, y];
+                    pixels[x, y] = new Color(pixel.R, pixel.G, pixel.B, pixel.A);
+                }
             }
-        }
 
-        return (pixels, width, height);
+            return (pixels, width, height);
+        }
+        catch
+        {
+            return CreatePlaceholder(8, 8);
+        }
+    }
+
+    private static (Color[,] pixels, int width, int height) CreatePlaceholder(int w, int h)
+    {
+        var placeholder = new Color[w, h];
+        for (int x = 0; x < w; x++)
+        for (int y = 0; y < h; y++)
+            placeholder[x, y] = new Color(255, 0, 255);
+        return (placeholder, w, h);
     }
 
     private void DrawContent()

@@ -4,66 +4,75 @@ description: Luchado, boss blind with double tag combo, and voucher support for 
 deck: Plasma
 Stake: White
 must:
-
-  - smallBlindTag: DoubleTag
-    antes: [1,2]
-  - smallBlindTag: DoubleTag
-    antes: [3]
-  - joker: Luchador
+  - joker: Stuntman
     antes: [1,2,3]
     sources:
       packSlots: [0,1]
       shopSlots: [0,1]
-  - smallBlindTag: DoubleTag
-    antes: [3,4,5]
-  - bigBlindTag: CouponTag
-    antes: [3,4,5]
-  - tag: VoucherTag
-    antes: [5,6]
-  - tag: VoucherTag
-    antes: [7,8]
+  - joker: Luchador
+    antes: [2,3,4]
+    sources:
+      packSlots: [0,1]
+      shopSlots: [0,1]
 should:
+  - tag: VoucherTag
+    antes: [5,6,7,8]
+  - joker: DietCola
+    antes: [1,2,3]
+    score: 10
+  - spectralCard: Ankh
+    packSlots: [1]
+    antes: [1]
+    score: 10
   - And:
+    label: "Ante 2 HIT!"
     score: 100
     clauses:
-      - smallBlindTag: DoubleTag
+      - smallBlindTags: [EconomyTag, InvestmentTag, CouponTag, CharmTag, EtherealTag]
+        antes: [2]
+      - bigBlindTag: CharmTag
+        antes: [2]
+      - joker: Luchador
+        antes: [2]
+        sources:
+          packSlots: [0,1]
+          shopSlots: [0,1]
+  - And:
+    label: "Ante 3 HIT!"
+    score: 100
+    clauses:
+      - smallBlindTags: [EconomyTag, InvestmentTag, CouponTag, CharmTag, EtherealTag]
         antes: [3]
-      - bigBlindTag: BuffoonTag
+      - bigBlindTag: CharmTag
         antes: [3]
       - joker: Luchador
         antes: [3]
         sources:
           packSlots: [0,1]
+          shopSlots: [0,1]
   - And:
+    label: "Ante 3 HIT!"
     score: 100
     clauses:
-      - smallBlindTag: DoubleTag
+      - smallBlindTags: [EconomyTag, InvestmentTag, CouponTag, CharmTag, EtherealTag]
+        antes: [3]
+      - bigBlindTag: CharmTag
+        antes: [3]
+      - joker: Luchador
+        antes: [3]
+        sources:
+          packSlots: [0,1]
+          shopSlots: [0,1]
+  - And:
+    label: "Ante 4 HIT!"
+    score: 100
+    clauses:
+      - smallBlindTags: [EconomyTag, InvestmentTag, CouponTag, CharmTag, EtherealTag]
         antes: [4]
-      - bigBlindTag: BuffoonTag
+      - bigBlindTag: CharmTag
         antes: [4]
       - joker: Luchador
         antes: [4]
         sources:
           packSlots: [0,1]
-  - And:
-    score: 100
-    clauses:
-      - smallBlindTag: DoubleTag
-        antes: [5]
-      - bigBlindTag: BuffoonTag
-        antes: [5]
-      - joker: Luchador
-        antes: [5]
-        sources:
-          packSlots: [0,1]
-  - And:
-    score: 100
-    clauses:
-      - smallBlindTag: DoubleTag
-        antes: [6]
-      - bigBlindTag: BuffoonTag
-        antes: [6]
-      - joker: Luchador
-        antes: [6]
-        sources:
-          packSlots: [0,1]
+          shopSlots: [0,1]

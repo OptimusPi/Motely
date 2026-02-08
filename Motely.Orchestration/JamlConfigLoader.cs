@@ -58,15 +58,15 @@ public static class JamlConfigLoader
 
         try
         {
-            // Pre-process JAML ONLY for type-as-key syntax expansion (Joker: Showman -> type: Joker, value: Showman)
-            // YamlDotNet handles case-insensitive matching natively via .WithCaseInsensitivePropertyMatching()
-            jamlContent = PreProcessJamlForTypeAsKey(jamlContent);
+            var seedsSection = ExtractSeedsSection(jamlContent);
+            var preprocessedContent = PreProcessJamlForTypeAsKey(jamlContent);
 
             // AOT-compatible: Use StaticDeserializerBuilder with pre-generated context
             // Note: WithNodeDeserializer and WithCaseInsensitivePropertyMatching are supported by StaticDeserializerBuilder
             var deserializer = new StaticDeserializerBuilder(new MotelyJamlStaticContext())
                 .WithNamingConvention(NullNamingConvention.Instance)
                 .WithCaseInsensitivePropertyMatching()
+                .IgnoreUnmatchedProperties()
                 .WithNodeDeserializer(
                     new JamlTypeAsKeyNodeDeserializer(),
                     s =>
@@ -75,7 +75,7 @@ public static class JamlConfigLoader
                 .Build();
 
             // Wrap with MergingParser to support YAML merge keys (<<)
-            var parser = new Parser(new StringReader(jamlContent));
+            var parser = new Parser(new StringReader(preprocessedContent));
             var mergingParser = new MergingParser(parser);
             var deserializedConfig = deserializer.Deserialize<MotelyJsonConfig>(mergingParser);
 
@@ -86,10 +86,9 @@ public static class JamlConfigLoader
             }
 
             deserializedConfig.PostProcess();
-
-            // Validate config
             MotelyJsonConfigValidator.ValidateConfig(deserializedConfig);
 
+            deserializedConfig.SeedsRaw = seedsSection;
             config = deserializedConfig;
             return true;
         }
@@ -494,5 +493,43 @@ public static class JamlConfigLoader
             "or" => "Or",
             _ => typeKey,
         };
+    }
+
+    private static string? ExtractSeedsSection(string jamlContent)
+    {
+        if (string.IsNullOrWhiteSpace(jamlContent))
+            return null;
+
+        var lines = jamlContent.Replace("\r\n", "\n").Split('\n');
+        var sb = new System.Text.StringBuilder();
+        bool capturing = false;
+        int baseIndent = 0;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.TrimEnd('\r');
+            var trimmed = line.TrimStart();
+
+            if (!capturing)
+            {
+                if (trimmed.StartsWith("seeds:", StringComparison.OrdinalIgnoreCase))
+                {
+                    capturing = true;
+                    baseIndent = line.Length - trimmed.Length;
+                    sb.AppendLine(line);
+                }
+            }
+            else
+            {
+                var indent = line.Length - trimmed.Length;
+                if (!string.IsNullOrWhiteSpace(line) && indent <= baseIndent)
+                    break;
+
+                sb.AppendLine(line);
+            }
+        }
+
+        var result = sb.ToString().TrimEnd();
+        return string.IsNullOrWhiteSpace(result) ? null : result;
     }
 }
