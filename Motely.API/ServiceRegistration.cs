@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Motely.API.Hubs;
 using Motely.API.Services;
 using Motely.Executors;
+using Motely.Repository;
 
 namespace Motely.API;
 
@@ -14,6 +16,26 @@ namespace Motely.API;
 /// </summary>
 public static class ServiceRegistration
 {
+    /// <summary>
+    /// Register filter library metadata (file-based; DB-backed impl can be swapped via Motely.DB).
+    /// </summary>
+    public static IServiceCollection AddLibraryMetadata(this IServiceCollection services)
+    {
+        services.AddSingleton<ILibraryMetadata>(sp =>
+        {
+            var env = sp.GetRequiredService<IWebHostEnvironment>();
+            var config = sp.GetRequiredService<IConfiguration>();
+            var root = env.ContentRootPath ?? Directory.GetCurrentDirectory();
+            var overridePath = config["Motely:Paths:JamlFiltersDir"];
+            var jamlFiltersDir = string.IsNullOrWhiteSpace(overridePath)
+                ? Path.Combine(root, "JamlFilters")
+                : Path.IsPathRooted(overridePath)
+                    ? overridePath
+                    : Path.Combine(root, overridePath);
+            return new FilterFileLibrary(jamlFiltersDir, _ => false);
+        });
+        return services;
+    }
     /// <summary>
     /// Register search queue services (for multiplayer seed searches)
     /// </summary>
@@ -63,6 +85,8 @@ public static class ServiceRegistration
     {
         // Register MultiSearchManager as singleton (manages thread pool for queued searches)
         services.AddSingleton(_ => MultiSearchManager.Instance);
+
+        services.AddLibraryMetadata();
 
         // Always enable all services - no feature flags needed
         services.AddSearchQueueServices();

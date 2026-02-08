@@ -5,7 +5,6 @@
 The JAML Genie is an AI-powered chat widget that helps users create JAML (Joker Ante Markup Language) filters for Balatro seed searching through natural language interaction. It integrates with the MCP (Model Context Protocol) API backend to generate valid JAML filters and provides a knowledge base for answering questions about game mechanics.
 
 ## Purpose
-
 The JAML Genie widget serves as an intelligent assistant that:
 - **Generates JAML filters** from natural language prompts (e.g., "Create a filter for Blueprint joker")
 - **Answers questions** about jokers, vouchers, decks, and game mechanics

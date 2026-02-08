@@ -117,12 +117,12 @@ export interface MotelyWasmApi {
    * Analyze a single seed. Returns full ante-by-ante breakdown.
    * @throws If the result contains an `error` field
    */
-  analyzeSeed(seed: string, deck: string, stake: string): SeedAnalysisInfo;
+  analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo>;
 
   /**
    * Validate a JAML filter string.
    */
-  validateJaml(jamlContent: string): ValidateResult;
+  validateJaml(jamlContent: string): Promise<ValidateResult>;
 
   /**
    * Start a JAML search. Returns a Promise that resolves with final SearchStatusInfo.
@@ -138,7 +138,7 @@ export interface MotelyWasmApi {
    * @param searchId - The search ID
    * @param resultLimit - Max results to include (default 50)
    */
-  getSearchStatus(searchId: string, resultLimit?: number): SearchStatusInfo;
+  getSearchStatus(searchId: string, resultLimit?: number): Promise<SearchStatusInfo>;
 
   /** Stop a running search (non-blocking, sets cancellation flag) */
   stopSearch(searchId: string): void;
@@ -151,28 +151,24 @@ export interface LoadMotelyOptions {
   /** Base URL for _framework (e.g. "/_framework" or "https://cdn.example/assets"). Default "/_framework". */
   baseUrl?: string;
   /**
-   * Threading mode:
-   * - "auto": detect SharedArrayBuffer + crossOriginIsolated (default)
-   * - "on": force threads build (_framework)
-   * - "off": force no-threads build (_framework_nt)
+   * Threading mode. Only the threaded build (_framework) is shipped.
+   * - "auto": use _framework (default)
+   * - "on": use _framework
    */
-  threads?: "auto" | "on" | "off";
+  threads?: "auto" | "on";
 }
 
 // ──────────────────────────────── Raw Export Shape ────────────────────────────────
 
-/** Shape of the raw [JSExport] methods from .NET */
+/** Shape of the raw [JSExport] methods from .NET (async where required for threaded WASM) */
 interface RawExports {
-  GetVersion(): string;
-  GetCapabilities(): string;
-  IsSimdEnabled(): boolean;
-  IsThreadingEnabled(): boolean;
-  GetProcessorCount(): number;
-  AnalyzeSeed(seed: string, deck: string, stake: string): string;
-  ValidateJaml(jamlContent: string): string;
+  GetVersionAsync(): Promise<string>;
+  GetCapabilitiesAsync(): Promise<string>;
+  AnalyzeSeedAsync(seed: string, deck: string, stake: string): Promise<string>;
+  ValidateJamlAsync(jamlContent: string): Promise<string>;
   StartJamlSearch(jamlContent: string, optionsJson: string): Promise<string>;
-  GetSearchStatus(searchId: string, resultLimit: number): string;
-  StopSearch(searchId: string): void;
+  GetSearchStatusAsync(searchId: string, resultLimit: number): Promise<string>;
+  StopSearchAsync(searchId: string): Promise<void>;
   DisposeSearch(searchId: string): Promise<void>;
 }
 
@@ -225,21 +221,31 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
 
   runtime.runMain().catch(err => console.error("[motely-wasm] runMain failed:", err));
 
-  const api: MotelyWasmApi = {
-    getVersion: () => JSON.parse(raw.GetVersion()) as VersionInfo,
-    getCapabilities: () => JSON.parse(raw.GetCapabilities()) as CapabilitiesInfo,
-    isSimdEnabled: () => raw.IsSimdEnabled(),
-    isThreadingEnabled: () => raw.IsThreadingEnabled(),
-    getProcessorCount: () => raw.GetProcessorCount(),
+  const [versionJson, capabilitiesJson] = await Promise.all([
+    raw.GetVersionAsync(),
+    raw.GetCapabilitiesAsync(),
+  ]);
+  const cachedVersion = JSON.parse(versionJson) as VersionInfo;
+  const cachedCapabilities = JSON.parse(capabilitiesJson) as CapabilitiesInfo;
 
-    analyzeSeed(seed: string, deck: string, stake: string): SeedAnalysisInfo {
-      const json = raw.AnalyzeSeed(seed, deck, stake);
+  const api: MotelyWasmApi = {
+    getVersion: () => cachedVersion,
+    getCapabilities: () => cachedCapabilities,
+    isSimdEnabled: () => cachedCapabilities.simd,
+    isThreadingEnabled: () => cachedCapabilities.threads,
+    getProcessorCount: () => cachedCapabilities.processorCount,
+
+    async analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo> {
+      const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
       const result = JSON.parse(json);
       if (result.error && !result.seed) throw new Error(result.error);
       return result as SeedAnalysisInfo;
     },
 
-    validateJaml: (jaml: string) => JSON.parse(raw.ValidateJaml(jaml)) as ValidateResult,
+    async validateJaml(jaml: string): Promise<ValidateResult> {
+      const json = await raw.ValidateJamlAsync(jaml);
+      return JSON.parse(json) as ValidateResult;
+    },
 
     async startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo> {
       const { onProgress, onResult, ...searchParams } = options ?? {};
@@ -259,14 +265,14 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       return result as SearchStatusInfo;
     },
 
-    getSearchStatus(searchId: string, resultLimit?: number): SearchStatusInfo {
-      const json = raw.GetSearchStatus(searchId, resultLimit ?? 50);
+    async getSearchStatus(searchId: string, resultLimit?: number): Promise<SearchStatusInfo> {
+      const json = await raw.GetSearchStatusAsync(searchId, resultLimit ?? 50);
       const result = JSON.parse(json);
       if (result.error && !result.searchId) throw new Error(result.error);
       return result as SearchStatusInfo;
     },
 
-    stopSearch: (searchId: string) => raw.StopSearch(searchId),
+    stopSearch: (searchId: string) => { raw.StopSearchAsync(searchId).catch(() => {}); },
     disposeSearch: (searchId: string) => raw.DisposeSearch(searchId),
   };
 

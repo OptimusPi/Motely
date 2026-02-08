@@ -1089,8 +1089,16 @@ namespace Motely
 
             search.Start(parameters.CancellationToken ?? default);
 
-            // Use AwaitCompletion() for clean blocking - respects cancellation token internally
-            search.AwaitCompletion();
+            var escapeWatcher = StartEscapeWatcher(() => _cts.Cancel());
+            try
+            {
+                // Use AwaitCompletion() for clean blocking - respects cancellation token internally
+                search.AwaitCompletion();
+            }
+            finally
+            {
+                escapeWatcher?.Dispose();
+            }
 
             // Check if cancelled
             bool wasCancelled = parameters.CancellationToken?.IsCancellationRequested == true;
@@ -1177,6 +1185,69 @@ namespace Motely
                 );
             }
             Console.WriteLine(new string('═', 60));
+        }
+
+        private static EscapeKeyWatcher? StartEscapeWatcher(Action onEscape)
+        {
+            if (Console.IsInputRedirected)
+                return null;
+
+            var watcherCts = new CancellationTokenSource();
+            var watchTask = Task.Run(async () =>
+            {
+                try
+                {
+                    while (!watcherCts.Token.IsCancellationRequested)
+                    {
+                        if (Console.KeyAvailable)
+                        {
+                            var keyInfo = Console.ReadKey(true);
+                            if (keyInfo.Key == ConsoleKey.Escape)
+                            {
+                                onEscape();
+                                break;
+                            }
+                        }
+
+                        await Task.Delay(150, watcherCts.Token).ConfigureAwait(false);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            }, watcherCts.Token);
+
+            return new EscapeKeyWatcher(watcherCts, watchTask);
+        }
+
+        private sealed class EscapeKeyWatcher : IDisposable
+        {
+            private readonly CancellationTokenSource _watcherCts;
+            private readonly Task _watchTask;
+
+            public EscapeKeyWatcher(CancellationTokenSource watcherCts, Task watchTask)
+            {
+                _watcherCts = watcherCts;
+                _watchTask = watchTask;
+            }
+
+            public void Dispose()
+            {
+                _watcherCts.Cancel();
+                try
+                {
+                    _watchTask.GetAwaiter().GetResult();
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is OperationCanceledException))
+                {
+                }
+            }
         }
     }
 }

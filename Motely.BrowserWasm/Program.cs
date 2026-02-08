@@ -6,7 +6,7 @@ using Motely.Executors;
 using Motely.Repository;
 
 // Route Console output to browser console
-JsConsoleWriter.Attach();
+JsConsole.Attach();
 
 // Register browser repository (no DuckDB, no filesystem)
 MotelySearchOrchestrator.SetRepository(BrowserRepository.Instance);
@@ -18,40 +18,37 @@ await Task.Delay(Timeout.Infinite);
 internal static partial class JsConsole
 {
     [JSImport("globalThis.console.log")]
-    internal static partial void Log([JSMarshalAs<JSType.String>] string message);
+    static partial void Log([JSMarshalAs<JSType.String>] string message);
 
     [JSImport("globalThis.console.error")]
-    internal static partial void Error([JSMarshalAs<JSType.String>] string message);
-}
+    static partial void Error([JSMarshalAs<JSType.String>] string message);
 
-internal sealed class JsConsoleWriter : TextWriter
-{
-    private readonly bool _isError;
-
-    internal JsConsoleWriter(bool isError)
+    internal static void Attach()
     {
-        _isError = isError;
+        Console.SetOut(new Writer(isError: false));
+        Console.SetError(new Writer(isError: true));
     }
 
-    public override Encoding Encoding => Encoding.UTF8;
-
-    public static void Attach()
+    private sealed class Writer : TextWriter
     {
-        Console.SetOut(new JsConsoleWriter(isError: false));
-        Console.SetError(new JsConsoleWriter(isError: true));
-    }
+        private readonly bool _isError;
 
-    public override void Write(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return;
-        if (_isError) JsConsole.Error(value);
-        else JsConsole.Log(value);
-    }
+        internal Writer(bool isError) => _isError = isError;
 
-    public override void WriteLine(string? value)
-    {
-        if (value is null) return;
-        if (_isError) JsConsole.Error(value);
-        else JsConsole.Log(value);
+        public override Encoding Encoding => Encoding.UTF8;
+
+        public override void Write(string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return;
+            if (_isError) Error(value);
+            else Log(value);
+        }
+
+        public override void WriteLine(string? value)
+        {
+            if (value is null) return;
+            if (_isError) Error(value);
+            else Log(value);
+        }
     }
 }
