@@ -13,7 +13,9 @@ public sealed class FilterFileLibrary : ILibraryMetadata
     private readonly string _jamlFiltersDir;
     private readonly Func<global::Motely.Filters.MotelyJsonConfig?, bool> _hasErraticFilters;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public FilterFileLibrary(string jamlFiltersDir, Func<global::Motely.Filters.MotelyJsonConfig?, bool>? hasErraticFilters = null)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _jamlFiltersDir = jamlFiltersDir ?? throw new ArgumentNullException(nameof(jamlFiltersDir));
         _hasErraticFilters = hasErraticFilters ?? (_ => false);

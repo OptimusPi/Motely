@@ -27,13 +27,27 @@ public class SearchRequest
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SearchSourceType
 {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     Unknown = 0,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     Single,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     SeedSources,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     Wordlist,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     DbList,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     Random,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     Sequential,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }
 
 /// <summary>
