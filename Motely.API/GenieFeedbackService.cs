@@ -14,7 +14,9 @@ public class GenieFeedbackService
     private readonly string _failuresFile;
     private readonly string _feedbackFile;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public GenieFeedbackService(ILogger<GenieFeedbackService> logger)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _logger = logger;
         _feedbackDir = "GenieFeedback";
@@ -23,7 +25,9 @@ public class GenieFeedbackService
         _feedbackFile = Path.Combine(_feedbackDir, "feedback.jsonl");
     }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public void LogFailure(
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
         string prompt,
         string generatedJaml,
         string aiReasoning,
@@ -46,7 +50,9 @@ public class GenieFeedbackService
         _logger.LogWarning($"Genie failure logged: {error}");
     }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public void LogFeedback(string prompt, string searchId, bool success, string? feedback = null)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var feedbackEntry = new
         {
@@ -62,7 +68,9 @@ public class GenieFeedbackService
         _logger.LogInformation($"Genie feedback logged: {(success ? "success" : "failure")}");
     }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public List<GenieFailure> GetRecentFailures(int count = 50)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var failures = new List<GenieFailure>();
 
@@ -89,7 +97,9 @@ public class GenieFeedbackService
         return failures;
     }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public List<GenieFeedback> GetRecentFeedback(int count = 50)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var feedbacks = new List<GenieFeedback>();
 
@@ -116,7 +126,9 @@ public class GenieFeedbackService
         return feedbacks;
     }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string GetFailureContextForPrompt(int recentFailureCount = 5)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var failures = GetRecentFailures(recentFailureCount);
         if (failures.Count == 0)
@@ -142,21 +154,47 @@ public class GenieFeedbackService
     }
 }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 public class GenieFailure
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public DateTime Timestamp { get; set; }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string Prompt { get; set; } = string.Empty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string GeneratedJaml { get; set; } = string.Empty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string AiReasoning { get; set; } = string.Empty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string Error { get; set; } = string.Empty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public object? Context { get; set; }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 public class GenieFeedback
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public DateTime Timestamp { get; set; }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string Prompt { get; set; } = string.Empty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string SearchId { get; set; } = string.Empty;
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public bool Success { get; set; }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public string? Feedback { get; set; }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }

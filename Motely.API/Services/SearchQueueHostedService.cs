@@ -8,7 +8,9 @@ using Motely.Filters;
 
 namespace Motely.API.Services;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 public class SearchQueueHostedService : BackgroundService
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 {
     private readonly SearchQueueService _queue;
     private readonly SearchService _searchService;
@@ -17,7 +19,9 @@ public class SearchQueueHostedService : BackgroundService
     private readonly int _maxThreads;
     private readonly int _burstReserved = 1;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public SearchQueueHostedService(
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
         SearchQueueService queue,
         SearchService searchService,
         ILogger<SearchQueueHostedService> logger,
@@ -32,7 +36,9 @@ public class SearchQueueHostedService : BackgroundService
         _searchService.SearchError += OnSearchError;
     }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         // Cleanup stale entries and resume running on startup
         _queue.CleanupStale(TimeSpan.FromDays(3.14));
@@ -130,7 +136,9 @@ public class SearchQueueHostedService : BackgroundService
         _logger.LogError("Search {SearchId} failed: {Error}", searchId, error);
     }
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public void NotifyCompleted(string searchId)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var removed = _runningTasks.TryRemove(searchId, out _);
         if (removed)
