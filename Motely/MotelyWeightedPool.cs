@@ -112,7 +112,9 @@ public unsafe class MotelyWeightedPool<T> : IDisposable
         }
     }
 
+#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
     public void Dispose()
+#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
     {
         Marshal.FreeHGlobal((nint)_pool);
     }

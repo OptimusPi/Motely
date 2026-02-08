@@ -13,7 +13,9 @@ public class SearchBroadcaster : ISearchBroadcaster
     private readonly IHubContext<SearchHub> _hubContext;
     private readonly ILogger<SearchBroadcaster> _logger;
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     public SearchBroadcaster(IHubContext<SearchHub> hubContext, ILogger<SearchBroadcaster> logger)
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _hubContext = hubContext;
         _logger = logger;
