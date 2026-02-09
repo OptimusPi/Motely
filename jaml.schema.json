@@ -46,6 +46,67 @@
       "default": "Red",
       "description": "Balatro deck to search with"
     },
+    "seeds": {
+      "type": "array",
+      "description": "List of specific seeds to analyze (overrides batch search) for the Minigame Daily Ritual",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]{8}$"
+      }
+    },
+    "minigame": {
+      "type": "object",
+      "description": "Minigame Definition Metadata (UI Layout, Hero Cards, etc.)",
+      "properties": {
+        "id": { 
+          "type": "string",
+          "description": "Unique deterministic ID for the minigame (used for seed shuffling)"
+        },
+        "epoch": { 
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC start date for the minigame"
+        },
+        "title": { "type": "string" },
+        "layout": { 
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of UI blocks to render"
+        },
+        "heroCards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ante": { "type": "integer" },
+              "title": { "type": "string" },
+              "items": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" }
+            }
+          }
+        },
+        "scoring": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "points": { "type": "integer" },
+              "mult": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
     "stake": {
       "type": "string",
       "enum": [
