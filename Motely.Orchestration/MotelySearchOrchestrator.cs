@@ -48,20 +48,6 @@ namespace Motely.Executors
         {
             var runConfig = MotelyRunConfig.Factory(config);
 
-            // If specific seeds are provided in the JAML config, verify them
-            // This overrides the normal batch/random search logic
-            if (config.Seeds != null && config.Seeds.Count > 0)
-            {
-                // Convert list to WordList format for processing
-                // For now, we just log this capability.
-                Console.WriteLine($"[Orchestrator] Configuration contains {config.Seeds.Count} specific seeds.");
-                Console.WriteLine($"[Orchestrator] These will be used for analysis/minigame mode.");
-            }
-            else if (!string.IsNullOrEmpty(config.StartSeed))
-            {
-                parameters.StartBatch = (ulong)SeedMath.SeedToSearchIndex(config.StartSeed);
-            }
-
             // Generate IDs - Motely owns this!
             var filterId = GenerateFilterId(config);
             var searchId =

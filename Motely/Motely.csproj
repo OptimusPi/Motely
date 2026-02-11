@@ -58,6 +58,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
     <Compile Remove="TUI\**\*.cs" />
     <Compile Remove="API\**\*.cs" />
+    <Compile Remove="Executors\**\*.cs" />
     <Compile Remove="Program.cs" />
     <Compile Remove="FancyConsole.Desktop.cs" />
     <Compile Remove="MotelySearchSync.Desktop.cs" />
