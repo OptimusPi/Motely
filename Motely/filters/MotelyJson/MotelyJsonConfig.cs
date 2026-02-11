@@ -214,22 +214,12 @@ public class MotelyJsonConfig
     public string? StartSeed { get; set; }
 
     /// <summary>
-    /// List of specific seeds for this minigame/search.
+    /// Raw JAML under the `seeds` key so callers can preserve custom metadata.
     /// </summary>
     [JsonPropertyName("seeds")]
-    [YamlMember(Alias = "seeds")]
-    public List<string>? Seeds { get; set; }
-
-    [JsonIgnore]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [YamlIgnore]
     public string? SeedsRaw { get; set; }
-
-    /// <summary>
-    /// Minigame UI configuration (layout, hero cards).
-    /// </summary>
-    [JsonPropertyName("minigame")]
-    [YamlMember(Alias = "minigame")]
-    public MinigameConfig? Minigame { get; set; }
 
     // AOT-compatible: Templates and Anchors are YAML metadata not used in filter logic
     // Marking as ignored to avoid List<object> deserialization issues in AOT
@@ -1167,27 +1157,6 @@ public class MotelyJsonConfig
         try
         {
             var json = File.ReadAllText(jsonPath);
-
-            // JAML Support: If file extension is .jaml, use JamlConfigLoader to convert to JSON first
-            if (Path.GetExtension(jsonPath).Equals(".jaml", StringComparison.OrdinalIgnoreCase))
-            {
-                // This logic is already handled by JamlConfigLoader upstream, but for direct calls:
-                // We rely on the caller to have used JamlConfigLoader.LoadJaml() first if it's JAML.
-                // However, since this method reads the file text directly, we should support JAML content.
-                
-                // Simple heuristic: if it doesn't start with { or [, assume YAML/JAML
-                var trimmed = json.TrimStart();
-                if (!trimmed.StartsWith("{") && !trimmed.StartsWith("["))
-                {
-                    // It's YAML - convert to JSON using our JamlConfigLoader
-                    // Note: We need to reference Motely.Orchestration for JamlConfigLoader, 
-                    // but Motely.Orchestration depends on Motely project (circular dep).
-                    // So we can't do the conversion here. The CALLER must convert JAML to JSON.
-                    
-                    // Fallback: Try deserializing as JSON anyway, it will likely fail and report error.
-                    // Ideally we'd throw a specific error here.
-                }
-            }
 
             var deserializedConfig = JsonSerializer.Deserialize(
                 json,
