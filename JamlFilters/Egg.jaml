@@ -1,17 +1,23 @@
-name: Egg
-author: ShadowBulb (M)s Unconscious Desire
-description: 🥚
-deck: Anaglyph
+# Egg.jaml
+name: EGG!
+author: The Egg Man
+description: I love Eggs
+deck: Ghost
 stake: White
 
 must:
-
-  - joker: egg
+  - soulJoker: Any
+    antes: [1]
+    sources:
+      packSlots: [1]
     edition: Negative
-  
+  - joker: Showman
+    antes: [1]
+    sources:
+      packSlots: [0]
 should:
-  - joker: egg
-    score: 1
-  - joker: egg
-    edition: Negative
-    score: 10
+  - joker: Egg
+    antes: [1,2]
+    sources:
+      packSlots: [0,1]
+      shopSlots: [0,1,2,3,4,5]
