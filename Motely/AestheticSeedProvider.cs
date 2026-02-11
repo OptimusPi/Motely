@@ -14,8 +14,8 @@ public static class AestheticSeedProvider
     )
     {
         validChars ??= Motely.SeedDigits;
-        var seeds = Motely.GeneratePaddedSeeds(keyword, maxPadding, validChars);
-        return new LazyEnumerableSeedProvider(seeds.ToList());
+        var seeds = Motely.GeneratePaddedSeeds(keyword, maxPadding, validChars).ToList();
+        return new LazyEnumerableSeedProvider(seeds);
     }
 
     /// <summary>Multiple keywords, each processed independently.</summary>
