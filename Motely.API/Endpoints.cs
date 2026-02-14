@@ -9,13 +9,12 @@ using Motely.Repository;
 
 namespace Motely.API;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 public static class Endpoints
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Gets all available filters</summary>
+    /// <param name="library">Library metadata provider</param>
+    /// <returns>List of filters with metadata</returns>
     public static IResult GetFilters(ILibraryMetadata library)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         try
         {
@@ -38,9 +37,9 @@ public static class Endpoints
         }
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Gets all available seed sources</summary>
+    /// <returns>List of seed sources</returns>
     public static IResult GetSeedSources()
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var results = new List<object>
         {
@@ -81,9 +80,9 @@ public static class Endpoints
         return Results.Ok(new { sources = results });
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Gets all active searches</summary>
+    /// <returns>List of searches with status</returns>
     public static IResult GetSearches()
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var allSearches = MultiSearchManager.Instance.GetAllStatuses();
         var searches = allSearches
@@ -104,9 +103,11 @@ public static class Endpoints
         return Results.Ok(new { searches });
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Starts a new search</summary>
+    /// <param name="req">HTTP request containing search parameters</param>
+    /// <param name="library">Library metadata provider</param>
+    /// <returns>Search ID</returns>
     public static async Task<IResult> StartSearch(HttpRequest req, ILibraryMetadata library)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var request = await req.ReadFromJsonAsync<SearchStartRequest>();
         if (request?.FilterId == null)
@@ -126,25 +127,29 @@ public static class Endpoints
         return Results.Ok(new { searchId });
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Gets search status and results</summary>
+    /// <param name="id">Search ID</param>
+    /// <returns>Search results and progress</returns>
     public static IResult GetSearch(string id)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var (results, progress) = MultiSearchManager.Instance.GetSearchStatusWithResults(id);
         return Results.Ok(new { results, progress });
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Stops a running search</summary>
+    /// <param name="id">Search ID</param>
+    /// <returns>Empty result</returns>
     public static IResult StopSearch(string id)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         MultiSearchManager.Instance.Stop(id);
         return Results.Ok();
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Saves a filter to disk</summary>
+    /// <param name="id">Filter ID from route</param>
+    /// <param name="req">HTTP request containing filter JAML</param>
+    /// <returns>File path of saved filter</returns>
     public static async Task<IResult> SaveFilter(string id, HttpRequest req)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var request = await req.ReadFromJsonAsync<FilterSaveRequest>();
         if (request?.FilterJaml == null)
@@ -170,9 +175,10 @@ public static class Endpoints
         return Results.Ok(new { filePath = fileName });
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Deletes a filter from disk</summary>
+    /// <param name="id">Filter ID</param>
+    /// <returns>Empty result or not found</returns>
     public static IResult DeleteFilter(string id)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var safeName = Path.GetFileName(id);
         var fullPath = Path.Combine(MotelyPaths.JamlFiltersDir, safeName);

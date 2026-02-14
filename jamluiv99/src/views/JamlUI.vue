@@ -122,7 +122,8 @@ const {
   isBasePanel,
   onPanelResize,
   onPanelCollapse,
-  expandPanel
+  expandPanel,
+  loadPanelState
 } = usePanelState()
 
 const showSettings = ref(false)

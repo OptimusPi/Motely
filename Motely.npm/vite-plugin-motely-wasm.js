@@ -37,13 +37,27 @@ function copyDirRecursive(src, dest) {
  * Vite plugin: serves _framework in dev, copies to dist on build, sets COOP/COEP.
  * @returns {import('vite').Plugin}
  */
+function findPackageRoot() {
+  const cwd = process.cwd();
+  const candidate = path.join(cwd, "node_modules", "motely-wasm");
+  if (fs.existsSync(candidate)) return candidate;
+  try {
+    const pkg = require.resolve("motely-wasm/package.json", { paths: [cwd] });
+    return path.dirname(pkg);
+  } catch {
+    return null;
+  }
+}
+
 function motelyWasm() {
   let frameworkDirs = [];
   let outDir = "dist";
+  let packageRoot = null;
 
   return {
     name: "motely-wasm",
     config(config) {
+      packageRoot = findPackageRoot();
       frameworkDirs = [
         { subdir: "_framework", dir: findFrameworkDir("_framework") },
       ].filter(x => x.dir);
@@ -84,7 +98,7 @@ function motelyWasm() {
               stream.pipe(res);
               return;
             }
-          } catch (_) {}
+          } catch (_) { }
           next();
         });
       }

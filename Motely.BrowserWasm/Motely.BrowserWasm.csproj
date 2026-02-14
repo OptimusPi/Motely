@@ -16,6 +16,7 @@
     <!-- Skip wasm-opt post-link pass; it crashes on this binary (MSB3073).
          AOT + trimming still apply; the .wasm is just slightly larger. -->
     <WasmRunWasmOpt>false</WasmRunWasmOpt>
+    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
   </PropertyGroup>
@@ -23,7 +24,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
-    <ProjectReference Include="..\Motely.Repository\Motely.Repository.csproj" />
   </ItemGroup>
 
   <!-- Copy _framework to Motely.npm after publish so npm package contains WASM -->

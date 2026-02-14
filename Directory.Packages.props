@@ -6,7 +6,7 @@
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.4.4" />
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.0" />
-    <PackageVersion Include="Terminal.Gui" Version="2.0.0-develop.4971" />
+    <PackageVersion Include="Terminal.Gui" Version="2.0.0-develop.5027" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <PackageVersion Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" Version="16.3.0" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />

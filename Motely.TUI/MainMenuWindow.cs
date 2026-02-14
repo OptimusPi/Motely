@@ -5,7 +5,7 @@ namespace Motely.TUI;
 public class MainMenuWindow : View
 {
     /// <summary>Workaround for Terminal.Gui v2 issue #3989: Transparent viewport can trigger NullReferenceException in View.DoDrawBorderAndPadding. Set true when upstream is fixed.</summary>
-    private static bool UseTransparentViewport => false;
+    private static bool UseTransparentViewport => true;
 
     public MainMenuWindow()
     {
@@ -88,7 +88,7 @@ public class MainMenuWindow : View
         btnDesigner.Accept += (s, e) =>
         {
             var filterBuilder = new FilterBuilderWindow();
-            App?.Run(filterBuilder);
+            MotelyTUI.ShowWindow(filterBuilder);
         };
         dockBar.Add(btnDesigner);
 
@@ -125,13 +125,11 @@ public class MainMenuWindow : View
         };
         btnHostApi.Accept += (s, e) =>
         {
-            MotelyTUI.ShaderBackground?.Stop();
             var serverWindow = new ApiServerWindow(
                 TuiSettings.ApiServerHost,
                 TuiSettings.ApiServerPort
             );
-            App?.Run(serverWindow);
-            MotelyTUI.ShaderBackground?.Start();
+            MotelyTUI.ShowWindow(serverWindow);
         };
         dockBar.Add(btnHostApi);
 
@@ -151,7 +149,7 @@ public class MainMenuWindow : View
                 case KeyCode.D:
                     btnDesigner.SetFocus();
                     var fb = new FilterBuilderWindow();
-                    App?.Run(fb);
+                    MotelyTUI.ShowWindow(fb);
                     e.Handled = true;
                     break;
                 case KeyCode.X:
@@ -165,13 +163,11 @@ public class MainMenuWindow : View
                     break;
                 case KeyCode.H:
                     btnHostApi.SetFocus();
-                    MotelyTUI.ShaderBackground?.Stop();
                     var srv = new ApiServerWindow(
                         TuiSettings.ApiServerHost,
                         TuiSettings.ApiServerPort
                     );
-                    App?.Run(srv);
-                    MotelyTUI.ShaderBackground?.Start();
+                    MotelyTUI.ShowWindow(srv);
                     e.Handled = true;
                     break;
                 case KeyCode.Esc:
@@ -271,7 +267,7 @@ public class MainMenuWindow : View
                 App?.RequestStop(dialog);
 
                 var searchWindow = new SearchWindow(selected.fullPath, selected.format);
-                App?.Run(searchWindow);
+                MotelyTUI.ShowWindow(searchWindow);
             }
         }
 

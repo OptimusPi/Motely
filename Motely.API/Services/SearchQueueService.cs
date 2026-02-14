@@ -12,17 +12,21 @@ public class SearchQueueService : IDisposable
     private readonly MotelySearchQueueDatabase _database;
     private readonly ILogger<SearchQueueService> _logger;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Initializes a new search queue service</summary>
+    /// <param name="logger">Logger instance</param>
+    /// <param name="dbPath">Path to the queue database file</param>
     public SearchQueueService(ILogger<SearchQueueService> logger, string dbPath = "searchqueue.db")
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _logger = logger;
         _database = new MotelySearchQueueDatabase(dbPath);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Enqueues a search request to the queue</summary>
+    /// <param name="searchId">Unique search identifier</param>
+    /// <param name="jamlFilter">JAML filter configuration</param>
+    /// <param name="threadCount">Number of threads to use</param>
+    /// <param name="isBurst">Whether this is a burst-mode search</param>
     public void Enqueue(
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
         string searchId,
         string jamlFilter,
         int threadCount = 1,
@@ -33,37 +37,43 @@ public class SearchQueueService : IDisposable
         _logger.LogInformation("Enqueued search {SearchId}", searchId);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Dequeues the next pending search entry</summary>
+    /// <returns>The next search entry, or null if queue is empty</returns>
     public SearchQueueEntry? DequeueNext()
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         return _database.DequeueNext();
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Marks a search as currently running</summary>
+    /// <param name="searchId">Unique search identifier</param>
     public void MarkRunning(string searchId)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _database.MarkRunning(searchId);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Marks a search as completed with results</summary>
+    /// <param name="searchId">Unique search identifier</param>
+    /// <param name="seedsSearched">Total seeds searched</param>
+    /// <param name="resultsFound">Number of matching seeds found</param>
     public void MarkCompleted(string searchId, long seedsSearched, int resultsFound)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _database.MarkCompleted(searchId, seedsSearched, resultsFound);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Marks a search as failed with an error</summary>
+    /// <param name="searchId">Unique search identifier</param>
+    /// <param name="error">Error message</param>
     public void MarkError(string searchId, string error)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _database.MarkError(searchId, error);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Updates progress for a running search</summary>
+    /// <param name="searchId">Unique search identifier</param>
+    /// <param name="seedsSearched">Total seeds searched so far</param>
+    /// <param name="resultsFound">Number of matching seeds found so far</param>
+    /// <param name="batchMarker">Current batch position</param>
     public void UpdateProgress(
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
         string searchId,
         long seedsSearched,
         int resultsFound,
@@ -73,33 +83,30 @@ public class SearchQueueService : IDisposable
         _database.UpdateProgress(searchId, seedsSearched, resultsFound, batchMarker);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Removes stale queue entries older than the specified time</summary>
+    /// <param name="olderThan">Time threshold for stale entries</param>
     public void CleanupStale(TimeSpan olderThan)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _database.CleanupStale(olderThan);
         _logger.LogInformation("Cleaned up stale search queue entries");
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Gets all queue entries</summary>
+    /// <returns>List of all search queue entries</returns>
     public List<SearchQueueEntry> GetAll()
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         return _database.GetAll();
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Updates a queue entry in the database</summary>
+    /// <param name="entry">The entry to update</param>
     public void Update(SearchQueueEntry entry)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _database.Update(entry);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
+    /// <summary>Disposes the database connection</summary>
     public void Dispose()
-#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _database?.Dispose();
     }

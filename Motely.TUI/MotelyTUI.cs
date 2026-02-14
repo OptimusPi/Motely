@@ -32,7 +32,8 @@ public static class MotelyTUI
     }
 
     private static BalatroShaderBackground? _shaderBackground;
-    private static Window? _mainTop;
+    private static Window? _desktop;
+    private static MainMenuWindow? _mainMenu;
     private static IApplication? _app;
 
     /// <summary>
@@ -40,6 +41,32 @@ public static class MotelyTUI
     /// Views should use View.App property, but this is available for static access if needed.
     /// </summary>
     public static IApplication? App => _app;
+
+    /// <summary>
+    /// Show a window as a non-modal overlay on the desktop.
+    /// The main menu is hidden and the new window is focused.
+    /// </summary>
+    public static void ShowWindow(Window window)
+    {
+        if (_desktop == null) return;
+        if (_mainMenu != null) _mainMenu.Visible = false;
+        _desktop.Add(window);
+        window.SetFocus();
+    }
+
+    /// <summary>
+    /// Close an overlay window and return to the main menu.
+    /// </summary>
+    public static void CloseWindow(Window window)
+    {
+        if (_desktop == null) return;
+        _desktop.Remove(window);
+        if (_mainMenu != null)
+        {
+            _mainMenu.Visible = true;
+            _mainMenu.SetFocus();
+        }
+    }
 
     public static int Run(string? configName = null, string? configFormat = null)
     {
@@ -59,35 +86,43 @@ public static class MotelyTUI
 
         try
         {
-            _mainTop = new Window() { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill() };
+            // Desktop: full-screen container for shader + overlapping windows
+            _desktop = new Window()
+            {
+                X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(),
+                CanFocus = true,
+            };
 
             try
             {
                 _shaderBackground = new BalatroShaderBackground();
-                _mainTop.Add(_shaderBackground);
+                _desktop.Add(_shaderBackground);
                 _shaderBackground.Start();
             }
             catch (Exception ex) { LogCrash("Shader init (continuing without shader)", ex); }
 
-            View mainContent;
             if (!string.IsNullOrEmpty(configName) && !string.IsNullOrEmpty(configFormat))
             {
-                mainContent = new SearchWindow(configName, configFormat);
-                mainContent.SetScheme(BalatroTheme.Window);
+                // Direct search mode (CLI arg) — show search window immediately
+                var searchWindow = new SearchWindow(configName, configFormat);
+                _desktop.Add(searchWindow);
             }
             else
             {
-                try { mainContent = new MainMenuWindow(); }
+                try
+                {
+                    _mainMenu = new MainMenuWindow();
+                    _desktop.Add(_mainMenu);
+                    _mainMenu.SetFocus();
+                }
                 catch (Exception ex)
                 {
                     LogCrash("Main menu init", ex);
-                    mainContent = MakeErrorFallback($"Main menu failed: {ex.Message}");
+                    _desktop.Add(MakeErrorFallback($"Main menu failed: {ex.Message}"));
                 }
-                mainContent.SetFocus();
             }
 
-            _mainTop.Add(mainContent);
-            _app.Run(_mainTop);
+            _app.Run(_desktop);
             return 0;
         }
         catch (Exception ex)
@@ -106,6 +141,10 @@ public static class MotelyTUI
             {
                 Console.Error.WriteLine($"Warning: Application dispose failed: {ex.Message}");
             }
+
+            // Wipe terminal so shell prompt isn't drawn over TUI remnants
+            try { Console.Clear(); }
+            catch { }
         }
     }
 

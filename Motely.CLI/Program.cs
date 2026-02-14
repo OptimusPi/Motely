@@ -236,6 +236,11 @@ namespace Motely
                 "Suppress all progress output (CSV only)",
                 CommandOptionType.NoValue
             );
+            var sampleOption = app.Option<int>(
+                "--sample <COUNT>",
+                "Collect top N seeds during search and save to JAML file on completion (default: 100)",
+                CommandOptionType.SingleValue
+            );
 
             // Set defaults for performance options
             threadsOption.DefaultValue = Environment.ProcessorCount;
@@ -246,6 +251,7 @@ namespace Motely
             deckOption.DefaultValue = "Red";
             stakeOption.DefaultValue = "White";
             timeOption.DefaultValue = 2; // 2 seconds
+            sampleOption.DefaultValue = 100;
 
             app.OnExecute(() =>
             {
@@ -567,6 +573,11 @@ namespace Motely
                 }
 
                 int exitCode = 0;
+                string? jamlPathForSample = jamlOption.HasValue() ? jamlOption.Value() : null;
+                
+                // Track if we auto-stopped due to sample being full
+                bool autoStopped = false;
+                
                 try
                 {
                     // Handle --keywords: Run searches sequentially for each keyword
@@ -640,7 +651,7 @@ namespace Motely
                                 sb.Append(result.Score);
 
                                 // Append tally columns
-                                if (result.TallyColumns != null && result.TallyColumns.Count > 0)
+                                if (result.Score != null && result.TallyColumns.Count > 0)
                                 {
                                     foreach (var tally in result.TallyColumns)
                                     {
@@ -705,6 +716,12 @@ namespace Motely
                             }
                         }
 
+                        // Save sampled seeds to JAML after all keywords complete
+                        if (seedSampler != null && !string.IsNullOrEmpty(jamlPathForSample))
+                        {
+                            SaveSampledJaml(jamlPathForSample, seedSampler, parameters.Quiet);
+                        }
+
                         if (!parameters.Quiet)
                         {
                             Console.WriteLine();
@@ -729,6 +746,18 @@ namespace Motely
                         // Single search (original behavior)
                         Action<MotelySeedScoreTally> resultCallback = (result) =>
                         {
+                            // Add to sampler if --sample is enabled
+                            seedSampler?.AddSeed(result.Seed, result.Score);
+                            
+                            // Auto-stop if sampler is full
+                            if (seedSampler?.IsFull == true && !autoStopped)
+                            {
+                                autoStopped = true;
+                                _cts.Cancel();
+                                if (!parameters.Quiet)
+                                    Console.WriteLine($"\n✅ Sample full! Collected {seedSampler.Count} seeds. Stopping search...");
+                            }
+                            
                             // Build CSV line efficiently without intermediate List allocations
                             var sb = new StringBuilder();
                             sb.Append('"').Append(result.Seed).Append('"').Append(',');
@@ -771,6 +800,12 @@ namespace Motely
                             ),
                             resultCallback
                         );
+                        
+                        // Save sampled seeds to JAML after search completes
+                        if (seedSampler != null && !string.IsNullOrEmpty(jamlPathForSample))
+                        {
+                            SaveSampledJaml(jamlPathForSample, seedSampler, parameters.Quiet);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -919,6 +954,91 @@ namespace Motely
                     || input.Equals("no", StringComparison.OrdinalIgnoreCase)
                 )
                     return false;
+            }
+        }
+
+        /// <summary>
+        /// Save sampled seeds to a JAML file.
+        /// </summary>
+        private static void SaveSampledJaml(string originalJamlPath, SeedSampler sampler, bool quiet)
+        {
+            try
+            {
+                // Generate output path: original_name_sampled.jaml
+                string? dir = Path.GetDirectoryName(originalJamlPath);
+                string name = Path.GetFileNameWithoutExtension(originalJamlPath);
+                string outPath = Path.Combine(dir ?? "", $"{name}_sampled.jaml");
+
+                // Read original JAML content
+                string originalContent = File.Exists(originalJamlPath) 
+                    ? File.ReadAllText(originalJamlPath) 
+                    : "# Auto-generated JAML\n";
+
+                // Remove any existing seeds section
+                var lines = originalContent.Split('\n').ToList();
+                var sb = new StringBuilder();
+                bool inSeedsSection = false;
+                int baseIndent = -1;
+                
+                foreach (var line in lines)
+                {
+                    var trimmed = line.TrimStart();
+                    var indent = line.Length - trimmed.Length;
+                    
+                    if (!inSeedsSection)
+                    {
+                        if (trimmed.StartsWith("seeds:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            inSeedsSection = true;
+                            baseIndent = indent;
+                            continue; // Skip this line
+                        }
+                        sb.AppendLine(line);
+                    }
+                    else
+                    {
+                        // We're in seeds section, check if line is still part of it
+                        if (string.IsNullOrWhiteSpace(line))
+                        {
+                            continue; // Skip empty lines in seeds section
+                        }
+                        if (indent <= baseIndent)
+                        {
+                            // Line is not indented more than seeds:, exit seeds section
+                            inSeedsSection = false;
+                            sb.AppendLine(line);
+                        }
+                        // Otherwise skip (it's a seed entry)
+                    }
+                }
+
+                // Append new seeds section
+                var seeds = sampler.GetSeedsWithScores();
+                if (seeds.Length > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine($"# Sampled {seeds.Length} seeds from search");
+                    sb.AppendLine("seeds:");
+                    foreach (var (seed, score) in seeds)
+                    {
+                        sb.AppendLine($"  - {seed}  # score: {score}");
+                    }
+                }
+
+                File.WriteAllText(outPath, sb.ToString().TrimEnd() + "\n");
+                
+                if (!quiet)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"💾 Saved {seeds.Length} sampled seeds to: {outPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                if (!quiet)
+                {
+                    Console.Error.WriteLine($"⚠️ Failed to save sampled JAML: {ex.Message}");
+                }
             }
         }
 
