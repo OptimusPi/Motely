@@ -8,7 +8,6 @@ using Motely.Analysis;
 using Motely.DB;
 using Motely.Executors;
 using Motely.Filters;
-using Motely.GPU;
 using Motely.Reporting;
 using Motely.Repository;
 
@@ -215,17 +214,6 @@ namespace Motely
                 CommandOptionType.NoValue
             );
 
-            // GPU acceleration options
-            var dungmotOption = app.Option(
-                "--dungmot",
-                "Use GPU-accelerated dungmot as seed pre-filter",
-                CommandOptionType.NoValue
-            );
-            var dungmotPathOption = app.Option<string>(
-                "--dungmot-path <PATH>",
-                "Path to dungmot executable (default: auto-detect based on filter type)",
-                CommandOptionType.SingleValue
-            );
             var noFancyOption = app.Option(
                 "--nofancy",
                 "Suppress fancy output",
