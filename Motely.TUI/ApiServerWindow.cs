@@ -10,15 +10,12 @@ namespace Motely.TUI;
 
 public class ApiServerWindow : Window
 {
-    private TextView _logView;
-    private Label _statusLabel;
-    private Label _urlLabel;
-    private Label _tunnelLabel;
-    private CleanButton _stopButton;
-    private CleanButton _tunnelButton;
+    private TextView _logView = null!;
+    private Label _statusLabel = null!;
+    private Label _urlLabel = null!;
+    private CleanButton _stopButton = null!;
     private WebApplication? _server;
     private CancellationTokenSource? _cts;
-    private Process? _tunnelProcess;
     private Task? _serverTask;
     private bool _isRunning = false;
     private string _serverUrl = "";
@@ -27,7 +24,6 @@ public class ApiServerWindow : Window
     {
         _serverUrl = $"http://{host}:{port}/";
 
-        // Wide window to accommodate long cloudflare URLs
         Title = "API Server";
         X = Pos.Center();
         Y = Pos.Center();
@@ -70,35 +66,6 @@ public class ApiServerWindow : Window
         };
         Add(_urlLabel);
 
-        // Tunnel status & button - full width to show complete URL
-        _tunnelLabel = new Label()
-        {
-            X = 1,
-            Y = 3,
-            Width = Dim.Fill() - 2, // Full width minus margins
-            Text = "",
-        };
-        _tunnelLabel.SetScheme(
-            new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
-        );
-        _tunnelLabel.MouseEvent += (s, e) =>
-        {
-            if (e.Flags.HasFlag(MouseFlags.LeftButtonClicked))
-            {
-                if (!string.IsNullOrWhiteSpace(_tunnelLabel.Text.ToString()))
-                {
-                    var urlText = _tunnelLabel.Text.ToString();
-                    if (urlText.StartsWith("http"))
-                    {
-                        CopyToClipboard(urlText);
-                        LogMessage($"[CLIPBOARD] Copied URL: {urlText}");
-                    }
-                }
-                e.Handled = true;
-            }
-        };
-        Add(_tunnelLabel);
-
         // Open Web UI button - launches browser with local URL
         var openWebButton = new CleanButton()
         {
@@ -110,16 +77,7 @@ public class ApiServerWindow : Window
         openWebButton.Accept += (s, e) => OpenInBrowser(_serverUrl);
         Add(openWebButton);
 
-        _tunnelButton = new CleanButton()
-        {
-            X = Pos.AnchorEnd(18),
-            Y = 1,
-            Text = "Start Tunnel",
-        };
-        _tunnelButton.SetScheme(BalatroTheme.PurpleButton);
-        _tunnelButton.Accept += (s, e) => RunTunnelAsync();
-        Add(_tunnelButton);
-
+        // Removed tunnel button - user can do that on their own
         // Endpoints panel removed to make room for log
 
         // Request log (expanded to fill space)
@@ -142,19 +100,20 @@ public class ApiServerWindow : Window
             Text = "Copy Logs",
         };
         copyLogsButton.SetScheme(BalatroTheme.BackButton); // Orange
-        copyLogsButton.Accept += async (s, e) =>
+        copyLogsButton.Accept += (s, e) =>
         {
-            if (_logView?.Text == null)
-                return;
-            CopyToClipboard(_logView.Text.ToString());
+            CopyToClipboard(_logView.Text);
             copyLogsButton.Text = "COPIED!";
             copyLogsButton.SetScheme(BalatroTheme.GreenButton);
-            await Task.Delay(1000).ConfigureAwait(false);
-            MotelyTUI.App?.Invoke(() =>
-            {
-                copyLogsButton.Text = "Copy Logs";
-                copyLogsButton.SetScheme(BalatroTheme.BackButton);
-            });
+            MotelyTUI.App?.AddTimeout(
+                TimeSpan.FromSeconds(1),
+                () =>
+                {
+                    copyLogsButton.Text = "Copy Logs";
+                    copyLogsButton.SetScheme(BalatroTheme.BackButton);
+                    return false;
+                }
+            );
         };
         logFrame.Add(copyLogsButton);
 
@@ -187,7 +146,7 @@ public class ApiServerWindow : Window
             TextAlignment = Alignment.Center,
         };
         _stopButton.SetScheme(BalatroTheme.RedButton);
-        _stopButton.Accept += async (s, e) => await StopServerOnlyAsync();
+        _stopButton.Accept += (s, e) => _ = StopServerSafeAsync();
         Add(_stopButton);
 
         // Back button - orange
@@ -252,7 +211,9 @@ public class ApiServerWindow : Window
                 );
             });
 
-            LogMessage($"Clean API started on {_serverUrl}");
+            var version = typeof(MotelyApiHost).Assembly.GetName().Version?.ToString(3) ?? "?";
+            LogMessage($"Hosting Motely API v{version}");
+            LogMessage($"Listening on {_serverUrl}");
             LogMessage("Web UI available at same URL");
             await _server.WaitForShutdownAsync(_cts.Token);
         }
@@ -320,6 +281,12 @@ public class ApiServerWindow : Window
         }
     }
 
+    private async Task StopServerSafeAsync()
+    {
+        try { await StopServerOnlyAsync(); }
+        catch (Exception ex) { LogMessage($"[ERROR] Stop failed: {ex.Message}"); }
+    }
+
     private async Task StopServerOnlyAsync()
     {
         if (!_isRunning)
@@ -366,6 +333,7 @@ public class ApiServerWindow : Window
             catch { }
         }
 
+        LogMessage("Server stopped.");
         App?.Invoke(() => _stopButton.Visible = false);
     }
 
@@ -384,8 +352,7 @@ public class ApiServerWindow : Window
     private async Task StopAndCloseAsync()
     {
         await StopServerOnlyAsync();
-        StopTunnel();
-        App?.Invoke(() => App?.RequestStop());
+        App?.Invoke(() => MotelyTUI.CloseWindow(this));
     }
 
     private bool ShowStopConfirmDialog()
@@ -439,206 +406,6 @@ public class ApiServerWindow : Window
 
         MotelyTUI.App?.Run(dialog);
         return stop;
-    }
-
-    private async Task StartTunnelAsync()
-    {
-        if (_tunnelProcess != null)
-        {
-            LogMessage("[TUNNEL] Already running");
-            return;
-        }
-
-        _tunnelButton.Text = "Starting...";
-        _tunnelButton.Enabled = false;
-
-        try
-        {
-            var cloudflared = FindCloudflared();
-            if (string.IsNullOrEmpty(cloudflared))
-                throw new FileNotFoundException(
-                    "cloudflared not found. Install from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
-                );
-
-            LogMessage($"[TUNNEL] Found cloudflared: {cloudflared}");
-            LogMessage("[TUNNEL] Starting free trycloudflare.com tunnel...");
-
-            var uri = new Uri(_serverUrl);
-            var port = uri.Port;
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = cloudflared,
-                Arguments = $"tunnel --url http://localhost:{port}",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            _tunnelProcess = new Process { StartInfo = psi };
-            _tunnelProcess.OutputDataReceived += (s, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    LogMessage($"[TUNNEL] {e.Data}");
-                    ParseTunnelOutput(e.Data);
-                }
-            };
-            _tunnelProcess.ErrorDataReceived += (s, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    LogMessage($"[TUNNEL] {e.Data}");
-                    ParseTunnelOutput(e.Data);
-                }
-            };
-
-            _tunnelProcess.Start();
-            _tunnelProcess.BeginOutputReadLine();
-            _tunnelProcess.BeginErrorReadLine();
-
-            App?.Invoke(() =>
-            {
-                _tunnelButton.Text = "Stop Tunnel";
-                _tunnelButton.Enabled = true;
-                _tunnelButton.SetScheme(BalatroTheme.RedButton);
-            });
-        }
-        catch (Exception ex)
-        {
-            App?.Invoke(() =>
-            {
-                _tunnelButton.Text = "Start Tunnel";
-                _tunnelButton.Enabled = true;
-                _tunnelLabel.Text = "";
-            });
-            LogMessage($"[TUNNEL] Error: {ex.Message}");
-            _tunnelProcess = null;
-        }
-    }
-
-    private async void RunTunnelAsync()
-    {
-        try
-        {
-            await StartTunnelAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"[TUNNEL] Error: {ex.GetBaseException()?.Message}");
-        }
-    }
-
-    private void ParseTunnelOutput(string line)
-    {
-        if (line.Contains("trycloudflare.com"))
-        {
-            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part in parts)
-            {
-                if (part.StartsWith("https://") && part.Contains("trycloudflare.com"))
-                {
-                    var tunnelUrl = part.TrimEnd('/', '.', ',');
-                    App?.Invoke(() => _tunnelLabel.Text = tunnelUrl);
-                    LogMessage($"[TUNNEL] Public URL: {tunnelUrl}");
-                    break;
-                }
-            }
-        }
-    }
-
-    private string? FindCloudflared()
-    {
-        var candidates = new List<string>();
-        if (OperatingSystem.IsWindows())
-        {
-            candidates.Add("cloudflared.exe");
-            candidates.Add(
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                    "cloudflared",
-                    "cloudflared.exe"
-                )
-            );
-            candidates.Add(
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Programs",
-                    "cloudflared",
-                    "cloudflared.exe"
-                )
-            );
-            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
-                if (!string.IsNullOrEmpty(dir))
-                    candidates.Add(Path.Combine(dir, "cloudflared.exe"));
-        }
-        else
-        {
-            candidates.Add("cloudflared");
-            candidates.Add("/usr/local/bin/cloudflared");
-            candidates.Add("/usr/bin/cloudflared");
-            candidates.Add(
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    ".local",
-                    "bin",
-                    "cloudflared"
-                )
-            );
-            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':'))
-                if (!string.IsNullOrEmpty(dir))
-                    candidates.Add(Path.Combine(dir, "cloudflared"));
-        }
-
-        foreach (var candidate in candidates)
-        {
-            try
-            {
-                if (File.Exists(candidate))
-                    return candidate;
-                if (candidate == "cloudflared" || candidate == "cloudflared.exe")
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = candidate,
-                        Arguments = "--version",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                    };
-                    using var proc = Process.Start(psi);
-                    proc?.WaitForExit(2000);
-                    if (proc?.ExitCode == 0)
-                        return candidate;
-                }
-            }
-            catch { }
-        }
-        return null;
-    }
-
-    private void StopTunnel()
-    {
-        if (_tunnelProcess != null && !_tunnelProcess.HasExited)
-        {
-            try
-            {
-                _tunnelProcess.Kill();
-                _tunnelProcess.Dispose();
-                LogMessage("[TUNNEL] Stopped");
-            }
-            catch { }
-        }
-        _tunnelProcess = null;
-        App?.Invoke(() =>
-        {
-            _tunnelLabel.Text = "";
-            _tunnelButton.Text = "Start Tunnel";
-            _tunnelButton.Enabled = true;
-            _tunnelButton.SetScheme(BalatroTheme.PurpleButton);
-        });
     }
 
     private void CopyToClipboard(string text)
@@ -725,11 +492,8 @@ public class ApiServerWindow : Window
         {
             App?.Invoke(() =>
             {
-                if (_logView != null)
-                {
-                    _logView.Text += message;
-                    _logView.MoveEnd();
-                }
+                _logView.Text += message + "\n";
+                _logView.MoveEnd();
             });
         }
         catch (ObjectDisposedException)
@@ -764,7 +528,7 @@ public class ApiServerWindow : Window
     // Custom writer to capture API console output and redirect to TUI Request Log
     private class ApiLogWriter : System.IO.TextWriter
     {
-        private ApiServerWindow _window;
+        private readonly ApiServerWindow _window;
 
         public ApiLogWriter(ApiServerWindow window)
         {
@@ -773,107 +537,19 @@ public class ApiServerWindow : Window
 
         public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
 
-        public override void Write(char value)
-        {
-            try
-            {
-                MotelyTUI.App?.Invoke(() =>
-                {
-                    _window?.LogMessage(value.ToString());
-                });
-            }
-            catch (ObjectDisposedException)
-            {
-                // Window closed while writing - ignore
-            }
-        }
+        // LogMessage already dispatches via App.Invoke — call it directly, no double-Invoke.
+        public override void Write(char value) => _window.LogMessage(value.ToString());
 
         public override void Write(string? value)
         {
-            if (value == null)
-                return;
-
-            // Strip ANSI escape codes that cause weird characters in TUI
-            value = StripAnsiCodes(value);
-
-            // Filter out verbose API messages that clutter the TUI
-            if (ShouldFilterMessage(value))
-                return;
-
-            try
-            {
-                MotelyTUI.App?.Invoke(() =>
-                {
-                    _window?.LogMessage(value);
-                });
-            }
-            catch (ObjectDisposedException)
-            {
-                // Window closed while writing - ignore
-            }
+            if (value != null)
+                _window.LogMessage(value);
         }
 
         public override void WriteLine(string? value)
         {
-            if (value == null)
-                return;
-
-            // Strip ANSI escape codes that cause weird characters in TUI
-            value = StripAnsiCodes(value);
-
-            // Filter out verbose API messages that clutter the TUI
-            if (ShouldFilterMessage(value))
-                return;
-
-            try
-            {
-                MotelyTUI.App?.Invoke(() =>
-                {
-                    _window?.LogMessage(value);
-                });
-            }
-            catch (ObjectDisposedException)
-            {
-                // Window closed while writing - ignore
-            }
-        }
-
-        private string StripAnsiCodes(string input)
-        {
-            // Remove ANSI escape sequences that cause display issues in TUI
-            // Pattern matches: \x1b[...m or \x1b[...H or similar ANSI codes
-            return System.Text.RegularExpressions.Regex.Replace(input, @"\x1b\[[0-9;]*[mHJK]", "");
-        }
-
-        private bool ShouldFilterMessage(string message)
-        {
-            // Filter out verbose API logging that clutters the TUI interface
-            var filters = new[]
-            {
-                "[Scheduler]",
-                "[SearchManager]",
-                "Error reading",
-                "Error deleting",
-                "Error canceling",
-                "Error waiting",
-                "Error exporting",
-                "Error checkpointing",
-                "Error disposing",
-                "Error saving",
-                "Failed to read",
-                "Failed to read from",
-                "Failed to dump",
-                "Error parsing",
-                "Warning: Failed",
-                "Search failed:",
-                "was cancelled",
-                "Checkpoint failed",
-                "SaveBatchPosition failed",
-            };
-
-            return filters.Any(filter =>
-                message.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            );
+            if (value != null)
+                _window.LogMessage(value);
         }
     }
 }

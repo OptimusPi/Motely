@@ -1,4 +1,4 @@
-import { ref, computed, shallowRef, markRaw } from 'vue'
+import { ref, computed, shallowRef, markRaw, watch } from 'vue'
 import EditorPanel from '../components/EditorPanel.vue'
 import BlueprintPanel from '../components/BlueprintPanel.vue'
 import ActiveSearchesPanel from '../components/ActiveSearchesPanel.vue'
@@ -203,6 +203,46 @@ export function usePanelState() {
     }
   }
 
+  // ── Persistence ──
+  const PANEL_STORAGE_KEY = 'jaml-ui-panels'
+
+  function savePanelState() {
+    try {
+      const state = panels.value.map(p => ({
+        id: p.id, baseId: p.baseId, side: p.side,
+        collapsed: p.collapsed, defaultHeight: p.defaultHeight
+      }))
+      localStorage.setItem(PANEL_STORAGE_KEY, JSON.stringify(state))
+    } catch (err) {
+      console.warn('Failed to save panel state:', err)
+    }
+  }
+
+  function loadPanelState() {
+    try {
+      const saved = localStorage.getItem(PANEL_STORAGE_KEY)
+      if (!saved) return
+      const state = JSON.parse(saved) as { id: string; baseId: string; side: 'left' | 'right'; collapsed: boolean; defaultHeight: number }[]
+      state.forEach(s => {
+        const panel = panels.value.find(p => p.id === s.id || p.baseId === s.baseId)
+        if (panel) {
+          panel.side = s.side || panel.side
+          panel.collapsed = s.collapsed ?? panel.collapsed
+          if (s.defaultHeight) panel.defaultHeight = s.defaultHeight
+        }
+      })
+    } catch (err) {
+      console.warn('Failed to load panel state:', err)
+    }
+  }
+
+  // Auto-save on layout changes
+  watch(
+    () => panels.value.map(p => ({ side: p.side, collapsed: p.collapsed, defaultHeight: p.defaultHeight })),
+    () => savePanelState(),
+    { deep: true }
+  )
+
   function duplicatePanel(panelId: string) {
     const panel = panels.value.find(p => p.id === panelId)
     if (!panel) return { success: false, message: 'Panel not found' }
@@ -239,6 +279,8 @@ export function usePanelState() {
     onPanelCollapse,
     expandPanel,
     updatePanelFilterId,
-    duplicatePanel
+    duplicatePanel,
+    savePanelState,
+    loadPanelState
   }
 }

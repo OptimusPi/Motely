@@ -8,6 +8,36 @@ using YamlDotNet.Serialization;
 namespace Motely.Filters;
 
 /// <summary>
+/// Transitional stub for legacy MotelyJsonConfig. Will be replaced by JamlConfig SourceConfig hierarchy.
+/// </summary>
+public class SourcesConfig
+{
+    [JsonPropertyName("shopSlots")]
+    public int[]? ShopSlots { get; set; }
+
+    [JsonPropertyName("packSlots")]
+    public int[]? PackSlots { get; set; }
+
+    [JsonPropertyName("tags")]
+    public bool Tags { get; set; }
+
+    [JsonPropertyName("requireMega")]
+    public bool RequireMega { get; set; }
+
+    [JsonPropertyName("minShopSlot")]
+    public int? MinShopSlot { get; set; }
+
+    [JsonPropertyName("maxShopSlot")]
+    public int? MaxShopSlot { get; set; }
+
+    [JsonPropertyName("minPackSlot")]
+    public int? MinPackSlot { get; set; }
+
+    [JsonPropertyName("maxPackSlot")]
+    public int? MaxPackSlot { get; set; }
+}
+
+/// <summary>
 /// Constants for slot limits in Balatro
 /// </summary>
 internal static class MotelySlotLimits
@@ -271,56 +301,6 @@ public class MotelyJsonConfig
     [YamlIgnore]
     public MotelyJsonFilterClause[] ShouldNonVouchers { get; private set; } =
         Array.Empty<MotelyJsonFilterClause>();
-
-    // PERFORMANCE: Pre-converted typed clauses (converted ONCE in PostProcess, not per-seed)
-    // These arrays hold the same clauses as Must/Should but converted to their typed form
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonJokerFilterClause[] MustJokers { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonJokerFilterClause[] ShouldJokers { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonSoulJokerFilterClause[] MustSoulJokers { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonSoulJokerFilterClause[] ShouldSoulJokers { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonTarotFilterClause[] MustTarots { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonTarotFilterClause[] ShouldTarots { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonSpectralFilterClause[] MustSpectrals { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonSpectralFilterClause[] ShouldSpectrals { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonPlanetFilterClause[] MustPlanets { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonPlanetFilterClause[] ShouldPlanets { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonVoucherFilterClause[] MustVouchersTyped { get; private set; } = [];
-
-    [JsonIgnore]
-    [YamlIgnore]
-    public MotelyJsonVoucherFilterClause[] ShouldVouchersTyped { get; private set; } = [];
 
     public class MotelyJsonFilterClause
     {
@@ -1227,13 +1207,13 @@ public class MotelyJsonConfig
                 error = baseError;
             }
 
-            DebugLogger.Log($"Config loading failed for {jsonPath}: {error}");
+            // // DebugLogger.Log($"Config loading failed for {jsonPath}: {error}");
             return false;
         }
         catch (Exception ex)
         {
             error = ex.Message;
-            DebugLogger.Log($"Config loading failed for {jsonPath}: {ex.Message}");
+            // DebugLogger.Log($"Config loading failed for {jsonPath}: {ex.Message}");
             return false;
         }
     }
@@ -1290,9 +1270,7 @@ public class MotelyJsonConfig
         bool sourcesWasExplicitlySpecified = item.Sources != null;
 
         // Merge flat properties into Sources
-        DebugLogger.Log(
-            $"[MERGE] Type={item.Type}, Value={item.Value}, flat ShopSlots={(item.ShopSlots == null ? "null" : $"[{string.Join(",", item.ShopSlots)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}"
-        );
+        // DebugLogger.Log($"[MERGE] Type={item.Type}, Value={item.Value}, flat ShopSlots={(item.ShopSlots == null ? "null" : $"[{string.Join(",", item.ShopSlots)}]")}, MinShop={item.MinShopSlot}, MaxShop={item.MaxShopSlot}");
         if (
             item.PackSlots != null
             || item.ShopSlots != null
@@ -1311,9 +1289,7 @@ public class MotelyJsonConfig
             }
             if (item.ShopSlots != null)
             {
-                DebugLogger.Log(
-                    $"[MERGE] Copying flat ShopSlots [{string.Join(",", item.ShopSlots)}] to Sources.ShopSlots"
-                );
+                // DebugLogger.Log($"[MERGE] Copying flat ShopSlots [{string.Join(",", item.ShopSlots)}] to Sources.ShopSlots");
                 item.Sources.ShopSlots = item.ShopSlots;
             }
             if (item.RequireMega != null)
@@ -1488,7 +1464,7 @@ public class MotelyJsonConfig
     /// </summary>
     public void PostProcess()
     {
-        DebugLogger.Log($"[PostProcess] START");
+        // DebugLogger.Log($"[PostProcess] START");
 
         // Parse top-level mode (score aggregation)
         if (!string.IsNullOrWhiteSpace(Mode))
@@ -1513,7 +1489,7 @@ public class MotelyJsonConfig
             }
         }
 
-        DebugLogger.Log($"[PostProcess] About to process clauses");
+        // DebugLogger.Log($"[PostProcess] About to process clauses");
 
         // Process all filter items recursively (handles nested And/Or clauses)
         var sections = new[]
@@ -1524,9 +1500,7 @@ public class MotelyJsonConfig
         };
         foreach (var (sectionName, items) in sections)
         {
-            DebugLogger.Log(
-                $"[PostProcess] Processing section: {sectionName}, count={items.Count}"
-            );
+            // DebugLogger.Log($"[PostProcess] Processing section: {sectionName}, count={items.Count}");
             for (int i = 0; i < items.Count; i++)
             {
                 try
@@ -1540,9 +1514,7 @@ public class MotelyJsonConfig
             }
         }
 
-        DebugLogger.Log(
-            $"[PostProcess] Finished processing clauses. Starting voucher partitioning. Must.Count={Must?.Count}, Should.Count={Should?.Count}"
-        );
+        // DebugLogger.Log($"[PostProcess] Finished processing clauses. Starting voucher partitioning. Must.Count={Must?.Count}, Should.Count={Should?.Count}");
 
         // PERFORMANCE: Pre-partition clauses by type to avoid repeated iteration in hot paths
         // Count first to avoid List reallocation
@@ -1599,62 +1571,6 @@ public class MotelyJsonConfig
         ShouldVouchers = shouldVouchers;
         ShouldNonVouchers = shouldNonVouchers;
 
-        // Pre-convert clauses to typed versions ONCE (not per-seed in hot path)
-        // This eliminates FromJsonClause() calls in the search hot path
-        MustJokers = (Must ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker)
-            .Select(MotelyJsonJokerFilterClause.FromJsonClause)
-            .ToArray();
-        ShouldJokers = (Should ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.Joker)
-            .Select(MotelyJsonJokerFilterClause.FromJsonClause)
-            .ToArray();
-        MustSoulJokers = (Must ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
-            .Select(MotelyJsonSoulJokerFilterClause.FromJsonClause)
-            .ToArray();
-        ShouldSoulJokers = (Should ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SoulJoker)
-            .Select(MotelyJsonSoulJokerFilterClause.FromJsonClause)
-            .ToArray();
-        MustTarots = (Must ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard)
-            .Select(MotelyJsonTarotFilterClause.FromJsonClause)
-            .ToArray();
-        ShouldTarots = (Should ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.TarotCard)
-            .Select(MotelyJsonTarotFilterClause.FromJsonClause)
-            .ToArray();
-        MustSpectrals = (Must ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
-            .Select(MotelyJsonSpectralFilterClause.FromJsonClause)
-            .ToArray();
-        ShouldSpectrals = (Should ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.SpectralCard)
-            .Select(MotelyJsonSpectralFilterClause.FromJsonClause)
-            .ToArray();
-        MustPlanets = (Must ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard)
-            .Select(MotelyJsonPlanetFilterClause.FromJsonClause)
-            .ToArray();
-        ShouldPlanets = (Should ?? [])
-            .Where(c => c.ItemTypeEnum == MotelyFilterItemType.PlanetCard)
-            .Select(MotelyJsonPlanetFilterClause.FromJsonClause)
-            .ToArray();
-        MustVouchersTyped = MustVouchers
-            .Select(MotelyJsonVoucherFilterClause.FromJsonClause)
-            .ToArray();
-        ShouldVouchersTyped = ShouldVouchers
-            .Select(MotelyJsonVoucherFilterClause.FromJsonClause)
-            .ToArray();
-
-        DebugLogger.Log(
-            $"[PostProcess] Partitioned. MustVouchers={MustVouchers.Length}, ShouldVouchers={ShouldVouchers.Length}"
-        );
-        DebugLogger.Log(
-            $"[PostProcess] Typed: Jokers={MustJokers.Length}/{ShouldJokers.Length}, Tarots={MustTarots.Length}/{ShouldTarots.Length}"
-        );
-
         // Compute MaxVoucherAnte once during PostProcess (use pre-partitioned arrays!)
         int maxAnte = 0;
         foreach (var clause in MustVouchers)
@@ -1672,9 +1588,6 @@ public class MotelyJsonConfig
             );
         }
         MaxVoucherAnte = maxAnte;
-#if DEBUG
-        DebugLogger.Log($"[Config] MaxVoucherAnte calculated as: {MaxVoucherAnte}");
-#endif
 
         // Compute MaxBossAnte once during PostProcess (check BOTH Must and Should)
         int maxBossAnte = 0;
@@ -1695,9 +1608,6 @@ public class MotelyJsonConfig
                 );
         }
         MaxBossAnte = maxBossAnte;
-#if DEBUG
-        DebugLogger.Log($"[Config] MaxBossAnte calculated as: {MaxBossAnte}");
-#endif
 
         // CRITICAL VALIDATION: Ensure all MUST clauses are properly parsed
         foreach (var clause in Must ?? [])
@@ -2001,4 +1911,51 @@ public class MotelyJsonConfig
 
         // Add similar methods for other enums as needed
     }
+}
+
+// ============================================================================
+// Transitional stubs for deleted utility classes. Will be removed when
+// MotelyJsonConfig is fully replaced by JamlConfig.
+// ============================================================================
+
+internal static class MotelyJsonPerformanceUtils
+{
+    private static readonly Dictionary<string, MotelyFilterItemType> ItemTypeLookup =
+        Enum.GetValues<MotelyFilterItemType>()
+            .ToDictionary(v => v.ToString(), v => v, StringComparer.OrdinalIgnoreCase);
+
+    public static MotelyFilterItemType ParseItemType(string type)
+    {
+        if (string.IsNullOrEmpty(type))
+            return default;
+        // Handle legacy aliases
+        var normalized = type.ToLowerInvariant() switch
+        {
+            "tag" => "SmallBlindTag",
+            "playingcard" => "PlayingCard",
+            "standardcard" => "PlayingCard",
+            _ => type,
+        };
+        return ItemTypeLookup.TryGetValue(normalized, out var result) ? result : default;
+    }
+
+    private static readonly Dictionary<string, MotelyJsonConfigWildcards> WildcardLookup =
+        Enum.GetValues<MotelyJsonConfigWildcards>()
+            .ToDictionary(v => v.ToString(), v => v, StringComparer.OrdinalIgnoreCase);
+
+    public static (bool IsWildcard, MotelyJsonConfigWildcards? Wildcard) ParseWildcard(string value)
+    {
+        if (WildcardLookup.TryGetValue(value, out var wildcard))
+            return (true, wildcard);
+        return (false, null);
+    }
+}
+
+[JsonSerializable(typeof(MotelyJsonConfig))]
+[JsonSerializable(typeof(SourcesConfig))]
+internal partial class MotelyJsonSerializerContext : JsonSerializerContext { }
+
+internal static class MotelyJsonConfigValidator
+{
+    public static void ValidateConfig(MotelyJsonConfig config) { }
 }

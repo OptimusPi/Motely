@@ -27,27 +27,20 @@ public class SearchRequest
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SearchSourceType
 {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Unknown or unspecified source</summary>
     Unknown = 0,
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Single seed search</summary>
     Single,
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Search from seed sources file</summary>
     SeedSources,
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Search from wordlist</summary>
     Wordlist,
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Search from database list</summary>
     DbList,
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Random seed search</summary>
     Random,
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Sequential seed search</summary>
     Sequential,
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 }
 
 /// <summary>

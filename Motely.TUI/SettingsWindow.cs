@@ -191,7 +191,7 @@ public class SettingsWindow : Window
         try
         {
             // Validate and save thread count
-            if (int.TryParse(_threadCountField.Text.ToString(), out int threadCount))
+            if (int.TryParse(_threadCountField.Text, out int threadCount))
             {
                 if (threadCount < 1 || threadCount > Environment.ProcessorCount)
                 {
@@ -210,7 +210,7 @@ public class SettingsWindow : Window
             }
 
             // Validate and save batch character count
-            if (int.TryParse(_batchCharCountField.Text.ToString(), out int batchCharCount))
+            if (int.TryParse(_batchCharCountField.Text, out int batchCharCount))
             {
                 if (batchCharCount < 1 || batchCharCount > 7)
                 {
@@ -232,7 +232,7 @@ public class SettingsWindow : Window
             }
 
             // Validate and save API host
-            var host = _apiHostField.Text.ToString();
+            var host = _apiHostField.Text;
             if (string.IsNullOrWhiteSpace(host))
             {
                 ShowErrorDialog("Invalid API Host", "API host cannot be empty");
@@ -241,7 +241,7 @@ public class SettingsWindow : Window
             TuiSettings.ApiServerHost = host;
 
             // Validate and save API port
-            if (int.TryParse(_apiPortField.Text.ToString(), out int port))
+            if (int.TryParse(_apiPortField.Text, out int port))
             {
                 if (port < 1 || port > 65535)
                 {

@@ -17,7 +17,10 @@ namespace Motely.BrowserWasm;
 [SupportedOSPlatform("browser")]
 public static partial class MotelyWasmExports
 {
-    private static readonly ConcurrentDictionary<string, IMotelySearchContext> _activeSearches = new();
+    // SINGLE search only - no dictionary needed for Blueprint
+    private static IMotelySearchContext? _currentSearch;
+    private static readonly object _searchLock = new object();
+    private static readonly ConcurrentQueue<(string Seed, int Score)> _resultQueue = new();
 
     // Cached immutable values (computed once, reused forever)
     private static string? _cachedVersion;
@@ -29,16 +32,16 @@ public static partial class MotelyWasmExports
     // Native primitive marshaling -- no JSON on the hot path.
 
     [JSImport("globalThis.__motelyOnProgress")]
+    [return: JSMarshalAs<JSType.Discard>]
     static partial void JsPushProgress(
-        string searchId,
         double totalSeedsSearched,
         double matchingSeeds,
         double elapsedMs,
         int resultCount);
 
     [JSImport("globalThis.__motelyOnResult")]
+    [return: JSMarshalAs<JSType.Discard>]
     static partial void JsPushResult(
-        string searchId,
         string seed,
         int score);
 
@@ -188,7 +191,9 @@ public static partial class MotelyWasmExports
 
             var parameters = new JsonSearchParams
             {
-                Threads = options?.ThreadCount ?? Math.Max(1, Environment.ProcessorCount - 1),
+                // Threads are enabled via WasmEnableThreads in .csproj and threads: "on" in loadMotely.
+                // We use the requested thread count from options, defaulting to 4.
+                Threads = options?.ThreadCount ?? 4,
                 BatchSize = options?.BatchSize ?? 4,
                 Cutoff = options?.Cutoff != null ? int.Parse(options.Cutoff) : 0,
                 Quiet = true,
@@ -211,55 +216,43 @@ public static partial class MotelyWasmExports
             if (!string.IsNullOrEmpty(config.Stake))
                 parameters.Stake = config.Stake;
 
+            // Cancel any existing search first (only one at a time)
+            StopSearch();
+
+            parameters.ResultCallback = result =>
+            {
+                _resultQueue.Enqueue((result.Seed, (int)result.Score));
+            };
+
             var context = MotelySearchOrchestrator.LaunchWithContext(
                 config, parameters, useInMemoryStorage: true);
 
-            var searchId = context.SearchId;
-            _activeSearches[searchId] = context;
-
-            // Start search on background web workers
-            var worker = MotelySearchPlatform.CreateWorker(() =>
+            lock (_searchLock)
             {
-                try { context.Start(); }
-                catch (Exception ex) { Console.Error.WriteLine($"Search {searchId} failed: {ex.Message}"); }
-            });
-            worker.Start();
-
-            // Push progress to JS until search completes.
-            // await Task.Delay yields the main thread back to the JS event loop (maps to setTimeout).
-            int lastResultCount = 0;
-            while (context.Status == MotelySearchStatus.Running)
-            {
-                await Task.Delay(500);
-
-                // Push progress with native primitive marshaling (no JSON)
-                try
-                {
-                    JsPushProgress(
-                        searchId,
-                        context.TotalSeedsSearched,
-                        context.MatchingSeeds,
-                        context.ElapsedTime.TotalMilliseconds,
-                        context.ResultCount);
-
-                    // Push new individual results since last update
-                    int currentCount = context.ResultCount;
-                    if (currentCount > lastResultCount)
-                    {
-                        var newResults = context.GetResults(lastResultCount, currentCount - lastResultCount);
-                        foreach (var r in newResults)
-                            JsPushResult(searchId, r.Seed, r.Score);
-                        lastResultCount = currentCount;
-                    }
-                }
-                catch
-                {
-                    // JS callback may not be registered; continue search regardless
-                }
+                _currentSearch = context;
             }
 
-            // Return final status JSON when Promise resolves
-            return BuildStatusJson(searchId, context);
+            // Start search directly — internal threads are already launched by the constructor.
+            // Do NOT wrap in another Task.Run; that's redundant double-indirection.
+            context.Start();
+
+            // Main-thread drain loop: read shared memory counters + drain result queue.
+            // Workers never call [JSImport] — they only write to ConcurrentQueue and atomic counters.
+            // 15ms cadence (~66 FPS) — fast progress updates without starving browser event loop.
+            var completionTask = context.WaitForCompletionAsync();
+            while (!completionTask.IsCompleted)
+            {
+                DrainResultQueue();
+                try { JsPushProgress(context.TotalSeedsSearched, context.MatchingSeeds, context.ElapsedTime.TotalMilliseconds, context.ResultCount); }
+                catch { }
+                await Task.Delay(15);
+            }
+            // Final drain + progress push
+            DrainResultQueue();
+            try { JsPushProgress(context.TotalSeedsSearched, context.MatchingSeeds, context.ElapsedTime.TotalMilliseconds, context.ResultCount); }
+            catch { }
+
+            return BuildStatusJson(context);
         }
         catch (Exception ex)
         {
@@ -268,58 +261,52 @@ public static partial class MotelyWasmExports
     }
 
     /// <summary>
-    /// Get status + top results for an active search. Returns JSON.
-    /// Available for on-demand queries (e.g. user clicks "show results").
+    /// Stop the current running search. Non-blocking (sets cancellation flag).
+    /// No searchId needed - only one search runs at a time.
     /// </summary>
-    public static string GetSearchStatus(string searchId, int resultLimit)
-    {
-        if (!_activeSearches.TryGetValue(searchId, out var context))
-            return ErrorJson($"Unknown search: {searchId}");
-
-        try
-        {
-            return BuildStatusJson(searchId, context, resultLimit);
-        }
-        catch (Exception ex)
-        {
-            return ErrorJson(ex.Message);
-        }
-    }
-
     [JSExport]
-    public static Task<string> GetSearchStatusAsync(string searchId, int resultLimit) =>
-        Task.FromResult(GetSearchStatus(searchId, resultLimit));
-
-    /// <summary>
-    /// Stop a running search. Non-blocking (sets cancellation flag).
-    /// </summary>
-    public static void StopSearch(string searchId)
+    public static void StopSearch()
     {
-        if (_activeSearches.TryGetValue(searchId, out var context))
+        lock (_searchLock)
         {
-            context.Cancel();
+            _currentSearch?.Cancel();
         }
-    }
-
-    [JSExport]
-    public static Task StopSearchAsync(string searchId)
-    {
-        StopSearch(searchId);
-        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Dispose a completed/stopped search and free memory.
-    /// Returns Task (Promise on JS side) that resolves when cleanup is done.
+    /// Dispose the current search and free memory.
+    /// No searchId needed - only one search runs at a time.
     /// </summary>
     [JSExport]
-    public static async Task DisposeSearch(string searchId)
+    public static async Task DisposeSearch()
     {
-        if (_activeSearches.TryRemove(searchId, out var context))
+        IMotelySearchContext? context;
+        lock (_searchLock)
+        {
+            context = _currentSearch;
+            _currentSearch = null;
+        }
+
+        if (context != null)
         {
             context.Cancel();
             await context.WaitForCompletionAsync();
             context.Dispose();
+        }
+    }
+
+    // ──────────────────────────────── Result Queue Drain ────────────────────────────────
+
+    /// <summary>
+    /// Drain queued results from worker threads and push to JS.
+    /// Called from main thread only — safe to call [JSImport].
+    /// </summary>
+    private static void DrainResultQueue()
+    {
+        while (_resultQueue.TryDequeue(out var r))
+        {
+            try { JsPushResult(r.Seed, r.Score); }
+            catch { }
         }
     }
 
@@ -329,14 +316,12 @@ public static partial class MotelyWasmExports
         JsonSerializer.Serialize(new ErrorDto { Error = message },
             MotelyAotJsonContext.Default.ErrorDto);
 
-    private static string BuildStatusJson(string searchId, IMotelySearchContext context, int resultLimit = 50)
+    private static string BuildStatusJson(IMotelySearchContext context)
     {
-        var limit = resultLimit > 0 ? resultLimit : 50;
-        var results = context.GetTopResults(limit);
+        var results = context.GetTopResults(50);
 
         var dto = new SearchStatusDto
         {
-            SearchId = searchId,
             Status = context.Status.ToString(),
             IsRunning = context.Status == MotelySearchStatus.Running,
             TotalSeedsSearched = context.TotalSeedsSearched,

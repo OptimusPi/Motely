@@ -57,7 +57,6 @@ export interface SearchResultInfo {
 }
 
 export interface SearchStatusInfo {
-  searchId: string;
   status: string;
   isRunning: boolean;
   totalSeedsSearched: number;
@@ -85,10 +84,10 @@ export interface SearchOptions {
   specificSeed?: string;
   randomSeeds?: number;
   palindrome?: boolean;
-  /** Called with native primitives every ~500ms during search. No JSON overhead. */
-  onProgress?: (searchId: string, totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
+  /** Called with native primitives every ~15ms during search. No JSON overhead. */
+  onProgress?: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
   /** Called with native primitives for each new result found. No JSON overhead. */
-  onResult?: (searchId: string, seed: string, score: number) => void;
+  onResult?: (seed: string, score: number) => void;
 }
 
 export interface ErrorResult {
@@ -127,24 +126,18 @@ export interface MotelyWasmApi {
   /**
    * Start a JAML search. Returns a Promise that resolves with final SearchStatusInfo.
    * Progress is pushed to onProgress/onResult callbacks (native primitives, no JSON).
+   * Only ONE search can run at a time. Starting a new search cancels any existing one.
    * @param jamlContent - The JAML filter content
    * @param options - Search parameters + onProgress/onResult callbacks
    * @returns Promise resolving to final search status with results
    */
   startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo>;
 
-  /**
-   * Get status and top results for an active search (on-demand query).
-   * @param searchId - The search ID
-   * @param resultLimit - Max results to include (default 50)
-   */
-  getSearchStatus(searchId: string, resultLimit?: number): Promise<SearchStatusInfo>;
+  /** Stop the current running search (non-blocking, sets cancellation flag) */
+  stopSearch(): void;
 
-  /** Stop a running search (non-blocking, sets cancellation flag) */
-  stopSearch(searchId: string): void;
-
-  /** Dispose a completed/stopped search and free memory. Returns Promise. */
-  disposeSearch(searchId: string): Promise<void>;
+  /** Dispose the current search and free memory. Returns Promise. */
+  disposeSearch(): Promise<void>;
 }
 
 export interface LoadMotelyOptions {
@@ -167,17 +160,16 @@ interface RawExports {
   AnalyzeSeedAsync(seed: string, deck: string, stake: string): Promise<string>;
   ValidateJamlAsync(jamlContent: string): Promise<string>;
   StartJamlSearch(jamlContent: string, optionsJson: string): Promise<string>;
-  GetSearchStatusAsync(searchId: string, resultLimit: number): Promise<string>;
-  StopSearchAsync(searchId: string): Promise<void>;
-  DisposeSearch(searchId: string): Promise<void>;
+  StopSearch(): void;
+  DisposeSearch(): Promise<void>;
 }
 
 // ──────────────────────────────── Loader ────────────────────────────────
 
 // Default no-op callbacks. C# [JSImport] calls these via globalThis.
 declare global {
-  var __motelyOnProgress: (searchId: string, totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
-  var __motelyOnResult: (searchId: string, seed: string, score: number) => void;
+  var __motelyOnProgress: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
+  var __motelyOnResult: (seed: string, score: number) => void;
 }
 /**
  * Load the Motely WASM runtime and return the API.
@@ -187,6 +179,18 @@ declare global {
  * See: https://github.com/dotnet/runtime/blob/main/src/mono/wasm/features.md
  */
 export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWasmApi> {
+  // Diagnostic: warn if cross-origin isolation is missing (threads + SharedArrayBuffer require it)
+  if (typeof globalThis.crossOriginIsolated !== "undefined" && !globalThis.crossOriginIsolated) {
+    console.warn(
+      "[motely-wasm] crossOriginIsolated is false. " +
+      "Multi-threading and SharedArrayBuffer are DISABLED. " +
+      "Your server must send these headers on ALL responses:\n" +
+      "  Cross-Origin-Opener-Policy: same-origin\n" +
+      "  Cross-Origin-Embedder-Policy: require-corp\n" +
+      "See: https://web.dev/articles/coop-coep"
+    );
+  }
+
   // Install no-op callbacks before the runtime boots so [JSImport] bindings resolve
   globalThis.__motelyOnProgress = () => {};
   globalThis.__motelyOnResult = () => {};
@@ -249,6 +253,8 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
 
     async startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo> {
       const { onProgress, onResult, ...searchParams } = options ?? {};
+
+      // Wire up callbacks - no searchId needed, single search only
       globalThis.__motelyOnProgress = onProgress ?? (() => {});
       globalThis.__motelyOnResult = onResult ?? (() => {});
 
@@ -261,20 +267,14 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       globalThis.__motelyOnResult = () => {};
 
       const result = JSON.parse(resultJson);
-      if (result.error && !result.searchId) throw new Error(result.error);
+      if (result.error) throw new Error(result.error);
       return result as SearchStatusInfo;
     },
 
-    async getSearchStatus(searchId: string, resultLimit?: number): Promise<SearchStatusInfo> {
-      const json = await raw.GetSearchStatusAsync(searchId, resultLimit ?? 50);
-      const result = JSON.parse(json);
-      if (result.error && !result.searchId) throw new Error(result.error);
-      return result as SearchStatusInfo;
-    },
-
-    stopSearch: (searchId: string) => { raw.StopSearchAsync(searchId).catch(() => {}); },
-    disposeSearch: (searchId: string) => raw.DisposeSearch(searchId),
+    stopSearch: () => { raw.StopSearch(); },
+    disposeSearch: () => raw.DisposeSearch(),
   };
 
   return api;
 }
+

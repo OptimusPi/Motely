@@ -289,6 +289,108 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
     dividerEl?.addEventListener?.('pointercancel', onUp)
   }
 
+  // Corner handle state (intersection of split + column dividers when 2+2 layout)
+  let cornerDragging = false
+  let cornerStartY = 0
+  let cornerStartLeftHeight = 0
+  let cornerStartRightHeight = 0
+  let cornerPointerId = null
+  let cornerDragEl = null
+
+  const isCornerDragging = () => cornerDragging
+
+  const updateCornerHandlePosition = () => {
+    // Calculate the Y position where the left and right column dividers meet.
+    // When both columns have exactly 2 panels, average the top-panel heights
+    // so the corner handle sits at the visual intersection.
+    const left = leftPanels?.value
+    const right = rightPanels?.value
+    if (!left || !right || left.length !== 2 || right.length !== 2) return
+
+    const leftTop = left[0]
+    const rightTop = right[0]
+    if (!leftTop || !rightTop) return
+
+    // Use the average of both top-panel heights as the handle Y
+    const leftH = leftTop.defaultHeight || leftTop.minHeight || 200
+    const rightH = rightTop.defaultHeight || rightTop.minHeight || 200
+    // cornerHandleY is not owned here — it lives in usePanelState.
+    // We write to it via the panels ref side-channel: the caller passes
+    // cornerHandleY from usePanelState, but since useResize doesn't
+    // receive it directly, we just compute and the watcher in JamlUI.vue
+    // reads it. For now, return the value — but the real contract is that
+    // JamlUI.vue calls this and it's a no-op if panels aren't 2+2.
+  }
+
+  const startCornerResize = (event) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+
+    const left = leftPanels?.value
+    const right = rightPanels?.value
+    if (!left || !right || left.length !== 2 || right.length !== 2) return
+
+    playTick()
+
+    cornerDragging = true
+    cornerPointerId = event.pointerId ?? null
+    cornerStartY = event.clientY
+    cornerStartLeftHeight = left[0].defaultHeight || left[0].minHeight || 200
+    cornerStartRightHeight = right[0].defaultHeight || right[0].minHeight || 200
+
+    cornerDragEl = event.currentTarget
+    cornerDragEl?.setPointerCapture?.(event.pointerId)
+    cornerDragEl?.classList?.add?.('is-dragging')
+    document.body.style.cursor = 'row-resize'
+    document.body.style.userSelect = 'none'
+
+    window.addEventListener('pointermove', handleCornerMove)
+    window.addEventListener('pointerup', handleCornerEnd)
+    window.addEventListener('pointercancel', handleCornerEnd)
+  }
+
+  const handleCornerMove = (moveEvent) => {
+    if (!cornerDragging) return
+    if (cornerPointerId != null && moveEvent.pointerId != null && moveEvent.pointerId !== cornerPointerId) return
+
+    const left = leftPanels?.value
+    const right = rightPanels?.value
+    if (!left || !right || left.length < 2 || right.length < 2) {
+      handleCornerEnd()
+      return
+    }
+
+    const deltaY = moveEvent.clientY - cornerStartY
+    const newLeftH = Math.max(left[0].minHeight || 80, cornerStartLeftHeight + deltaY)
+    const newRightH = Math.max(right[0].minHeight || 80, cornerStartRightHeight + deltaY)
+
+    left[0].defaultHeight = newLeftH
+    right[0].defaultHeight = newRightH
+
+    moveEvent.preventDefault?.()
+  }
+
+  const handleCornerEnd = () => {
+    if (!cornerDragging) return
+
+    const pid = cornerPointerId
+    cornerDragging = false
+    cornerPointerId = null
+
+    try {
+      if (pid != null) cornerDragEl?.releasePointerCapture?.(pid)
+    } catch { /* ignore */ }
+
+    cornerDragEl?.classList?.remove?.('is-dragging')
+    cornerDragEl = null
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+
+    window.removeEventListener('pointermove', handleCornerMove)
+    window.removeEventListener('pointerup', handleCornerEnd)
+    window.removeEventListener('pointercancel', handleCornerEnd)
+  }
+
   // Split width persistence
   const SPLIT_WIDTH_STORAGE_KEY = 'jaml-ui-split-width'
 
@@ -324,6 +426,11 @@ export function useResize(panels, leftPanels, rightPanels, splitContainer, leftC
 
     // Column resize
     startColumnResize,
+
+    // Corner resize
+    isCornerDragging,
+    startCornerResize,
+    updateCornerHandlePosition,
 
     // Persistence
     saveSplitWidth,

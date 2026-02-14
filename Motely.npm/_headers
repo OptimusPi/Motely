@@ -1,0 +1,7 @@
+# Netlify / Cloudflare Pages headers file
+# Required for SharedArrayBuffer + multi-threading in WebAssembly
+# Place this file in your site root (alongside index.html)
+
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp

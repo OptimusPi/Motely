@@ -11,7 +11,6 @@ public struct NegativeTagFilterDesc()
             ctx.CacheTagStream(ante);
 
         var filter = new NegativeTagFilter();
-        DebugLogger.Log($"Created NegativeTagFilter: {filter}");
         return filter;
     }
 

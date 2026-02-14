@@ -55,11 +55,13 @@ public static class MotelyApiHost
 
         builder.Services.AddEndpointsApiExplorer();
 
-        // Configure logging to use simple formatter (no ANSI colors)
+        // Configure logging to use simple formatter with ANSI colors disabled
+        // (TUI captures Console.Out into a TextView which can't render escape codes)
         builder.Logging.ClearProviders();
-        builder.Logging.AddConsole(options =>
+        builder.Logging.AddSimpleConsole(options =>
         {
-            options.FormatterName = "Simple";
+            options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Disabled;
+            options.SingleLine = true;
         });
 
         builder.Services.AddCors(options =>
@@ -140,13 +142,8 @@ public static class MotelyApiHost
             }
         );
 
-        // Static file hosting - check project folder first, then parent folder (for dotnet run vs publish)
+        // Static file hosting - wwwroot lives inside Motely.API/
         var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
-        if (!Directory.Exists(wwwrootPath))
-        {
-            // Fallback: wwwroot is in parent directory (when running dotnet run from Motely.API)
-            wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "..", "wwwroot");
-        }
         if (Directory.Exists(wwwrootPath))
         {
             var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(

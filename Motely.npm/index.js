@@ -9,6 +9,15 @@
  * See: https://github.com/dotnet/runtime/blob/main/src/mono/wasm/features.md
  */
 export async function loadMotely(options) {
+    // Diagnostic: warn if cross-origin isolation is missing (threads + SharedArrayBuffer require it)
+    if (typeof globalThis.crossOriginIsolated !== "undefined" && !globalThis.crossOriginIsolated) {
+        console.warn("[motely-wasm] crossOriginIsolated is false. " +
+            "Multi-threading and SharedArrayBuffer are DISABLED. " +
+            "Your server must send these headers on ALL responses:\n" +
+            "  Cross-Origin-Opener-Policy: same-origin\n" +
+            "  Cross-Origin-Embedder-Policy: require-corp\n" +
+            "See: https://web.dev/articles/coop-coep");
+    }
     // Install no-op callbacks before the runtime boots so [JSImport] bindings resolve
     globalThis.__motelyOnProgress = () => { };
     globalThis.__motelyOnResult = () => { };
@@ -52,6 +61,7 @@ export async function loadMotely(options) {
         },
         async startJamlSearch(jamlContent, options) {
             const { onProgress, onResult, ...searchParams } = options ?? {};
+            // Wire up callbacks - no searchId needed, single search only
             globalThis.__motelyOnProgress = onProgress ?? (() => { });
             globalThis.__motelyOnResult = onResult ?? (() => { });
             const optionsJson = Object.keys(searchParams).length > 0
@@ -60,19 +70,12 @@ export async function loadMotely(options) {
             globalThis.__motelyOnProgress = () => { };
             globalThis.__motelyOnResult = () => { };
             const result = JSON.parse(resultJson);
-            if (result.error && !result.searchId)
+            if (result.error)
                 throw new Error(result.error);
             return result;
         },
-        async getSearchStatus(searchId, resultLimit) {
-            const json = await raw.GetSearchStatusAsync(searchId, resultLimit ?? 50);
-            const result = JSON.parse(json);
-            if (result.error && !result.searchId)
-                throw new Error(result.error);
-            return result;
-        },
-        stopSearch: (searchId) => { raw.StopSearchAsync(searchId).catch(() => { }); },
-        disposeSearch: (searchId) => raw.DisposeSearch(searchId),
+        stopSearch: () => { raw.StopSearch(); },
+        disposeSearch: () => raw.DisposeSearch(),
     };
     return api;
 }
