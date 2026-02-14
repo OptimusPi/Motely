@@ -114,16 +114,11 @@ ref partial struct MotelyVectorSearchContext
     {
         if (stream.IsNull)
         {
-            if (DebugLogger.IsEnabled)
-                DebugLogger.Log($"[SPECTRAL] Stream is null! ResampleKey={stream.ResampleKey}");
             return new MotelyItemVector(Vector256<int>.Zero);
         }
 
         Vector256<int> items = Vector256<int>.Zero;
         Vector512<double> activeMask = mask;
-
-        if (DebugLogger.IsEnabled)
-            DebugLogger.Log($"[SPECTRAL] Initial activeMask={activeMask}");
 
         if (stream.IsSoulBlackHoleable)
         {
@@ -161,10 +156,6 @@ ref partial struct MotelyVectorSearchContext
 
         if (Vector512.EqualsAll(activeMask, Vector512<double>.Zero))
         {
-            if (DebugLogger.IsEnabled)
-                DebugLogger.Log(
-                    $"[SPECTRAL] Early return - activeMask is all zeros, items={items}"
-                );
             return new MotelyItemVector(items);
         }
 
@@ -182,11 +173,6 @@ ref partial struct MotelyVectorSearchContext
         );
         var shrunkMask = MotelyVectorUtils.ShrinkDoubleMaskToInt(activeMask);
         items = Vector256.ConditionalSelect(shrunkMask, spectralItems, items);
-
-        if (DebugLogger.IsEnabled)
-            DebugLogger.Log(
-                $"[SPECTRAL] activeMask={activeMask}, shrunkMask={shrunkMask}, spectralEnums={spectralEnums}, spectralItems={spectralItems}, items={items}"
-            );
 
         int resampleCount = 0;
         while (true)

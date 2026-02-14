@@ -13,9 +13,10 @@ public class SearchBroadcaster : ISearchBroadcaster
     private readonly IHubContext<SearchHub> _hubContext;
     private readonly ILogger<SearchBroadcaster> _logger;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Initializes a new search broadcaster</summary>
+    /// <param name="hubContext">SignalR hub context</param>
+    /// <param name="logger">Logger instance</param>
     public SearchBroadcaster(IHubContext<SearchHub> hubContext, ILogger<SearchBroadcaster> logger)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _hubContext = hubContext;
         _logger = logger;
@@ -24,6 +25,7 @@ public class SearchBroadcaster : ISearchBroadcaster
     /// <summary>
     /// Broadcasts a message to all connected clients
     /// </summary>
+    /// <param name="message">Message to broadcast</param>
     public async Task BroadcastAsync(string message)
     {
         try
@@ -39,6 +41,8 @@ public class SearchBroadcaster : ISearchBroadcaster
     /// <summary>
     /// Broadcasts a message to clients subscribed to a specific search
     /// </summary>
+    /// <param name="searchId">Search ID</param>
+    /// <param name="json">JSON message to broadcast</param>
     public async Task BroadcastToSearchAsync(string searchId, string json)
     {
         try
@@ -149,6 +153,8 @@ public class SearchBroadcaster : ISearchBroadcaster
     /// <summary>
     /// Broadcasts an object to clients subscribed to a specific search (serializes automatically)
     /// </summary>
+    /// <param name="searchId">Search ID</param>
+    /// <param name="message">Object to broadcast</param>
     public async Task BroadcastToSearchAsync(string searchId, object message)
     {
         try

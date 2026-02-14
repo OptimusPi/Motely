@@ -17,7 +17,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
@@ -34,6 +34,6 @@
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
     <ProjectReference Include="..\Motely.Repository\Motely.Repository.csproj" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
+    <ProjectReference Include="..\Motely.DB.Desktop\Motely.DB.Desktop.csproj" />
   </ItemGroup>
 </Project>

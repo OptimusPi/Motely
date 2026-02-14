@@ -45,8 +45,56 @@ On first run the plugin copies `_framework` and `_framework_nt` into `public/` a
 
 No plugin needed. Do the same one-time setup in your stack:
 
-1. **Serve `_framework` and `_framework_nt`**: copy `node_modules/motely-wasm/_framework` and `node_modules/motely-wasm/_framework_nt` into your static/public folder, or configure your dev/server to serve those folders at `/_framework` and `/_framework_nt`.
-2. **Set headers** on the page (and optionally on `/_framework/*`): `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`.
+1. **Serve `_framework`**: copy `node_modules/motely-wasm/_framework` into your static/public folder, or configure your dev/server to serve that folder at `/_framework`.
+2. **Set COOP/COEP headers** on **all** responses. Without these, the browser silently disables SharedArrayBuffer and multi-threading — your search will run single-threaded without any error:
+   ```
+   Cross-Origin-Opener-Policy: same-origin
+   Cross-Origin-Embedder-Policy: require-corp
+   ```
+
+#### Server config examples
+
+**Netlify / Cloudflare Pages** — copy `node_modules/motely-wasm/_headers` to your site root, or add to your own `_headers`:
+```
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+```
+
+**Nginx:**
+```nginx
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Cross-Origin-Embedder-Policy "require-corp" always;
+```
+
+**Apache (.htaccess):**
+```apache
+Header set Cross-Origin-Opener-Policy "same-origin"
+Header set Cross-Origin-Embedder-Policy "require-corp"
+```
+
+**IIS (web.config):**
+```xml
+<system.webServer>
+  <httpProtocol>
+    <customHeaders>
+      <add name="Cross-Origin-Opener-Policy" value="same-origin" />
+      <add name="Cross-Origin-Embedder-Policy" value="require-corp" />
+    </customHeaders>
+  </httpProtocol>
+</system.webServer>
+```
+
+**Node/Express:**
+```js
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
+```
+
+**Verify:** open DevTools Console and run `self.crossOriginIsolated` — must return `true`.
 
 Then call `loadMotely()` (auto-detects threads) or `loadMotely({ baseUrl: "/your/path" })` if you used a different path.
 

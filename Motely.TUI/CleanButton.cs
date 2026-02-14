@@ -28,8 +28,10 @@ public class CleanButton : View
                 return true;
             }
         );
+        KeyBindings.Clear();
         KeyBindings.Add(KeyCode.Enter, Command.Accept);
         KeyBindings.Add(KeyCode.Space, Command.Accept);
+        MouseBindings.Clear();
         MouseBindings.Add(MouseFlags.LeftButtonClicked, Command.Accept);
     }
 

@@ -195,7 +195,7 @@ public class FilterBuilderWindow : Window
             TextAlignment = Alignment.Center,
         };
         backBtn.SetScheme(BalatroTheme.BackButton);
-        backBtn.Accept += (s, e) => App?.RequestStop();
+        backBtn.Accept += (s, e) => MotelyTUI.CloseWindow(this);
         Add(backBtn);
 
         // Keyboard shortcuts
@@ -268,14 +268,11 @@ public class FilterBuilderWindow : Window
 
                 if (choice == 0) // Main Menu
                 {
-                    // Return to main menu
-                    App?.RequestStop();
+                    MotelyTUI.CloseWindow(this);
                 }
                 else if (choice == 1) // Exit
                 {
-                    // Exit the entire application
-                    App?.RequestStop();
-                    Environment.Exit(0);
+                    MotelyTUI.App?.RequestStop();
                 }
                 // choice == 2 (Cancel) - do nothing, stay in filter builder
 
@@ -749,7 +746,7 @@ public class FilterBuilderWindow : Window
                 : "json";
             _statusLabel.Text = $"Starting search with loaded filter...";
             var searchWindow = new SearchWindow(_loadedFilterPath, format);
-            App?.Run(searchWindow);
+            MotelyTUI.ShowWindow(searchWindow);
             return;
         }
 
@@ -803,7 +800,7 @@ public class FilterBuilderWindow : Window
 
             // Launch search window with full file path
             var searchWindow = new SearchWindow(filePath, "jaml");
-            App?.Run(searchWindow);
+            MotelyTUI.ShowWindow(searchWindow);
         }
         catch (Exception ex)
         {

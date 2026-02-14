@@ -147,6 +147,15 @@
       "items": {
         "$ref": "#/definitions/clause"
       }
+    },
+    "seeds": {
+      "type": "array",
+      "description": "Pre-specified seeds for this filter (optional). These seeds will be loaded into the seed list for viewing while searching runs.",
+      "items": {
+        "type": "string",
+        "pattern": "^[1-9A-Z]{1,8}$",
+        "description": "Balatro seed (1-8 alphanumeric characters, no zeros)"
+      }
     }
   },
   "definitions": {

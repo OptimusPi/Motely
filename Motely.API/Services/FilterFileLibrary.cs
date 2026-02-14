@@ -13,9 +13,10 @@ public sealed class FilterFileLibrary : ILibraryMetadata
     private readonly string _jamlFiltersDir;
     private readonly Func<global::Motely.Filters.MotelyJsonConfig?, bool> _hasErraticFilters;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Initializes a new filter file library</summary>
+    /// <param name="jamlFiltersDir">Directory containing JAML filter files</param>
+    /// <param name="hasErraticFilters">Optional function to check for Erratic deck filters</param>
     public FilterFileLibrary(string jamlFiltersDir, Func<global::Motely.Filters.MotelyJsonConfig?, bool>? hasErraticFilters = null)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         _jamlFiltersDir = jamlFiltersDir ?? throw new ArgumentNullException(nameof(jamlFiltersDir));
         _hasErraticFilters = hasErraticFilters ?? (_ => false);

@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "1.2.8",
+  "version": "1.2.11",
   "description": "Run the classic Analyzer on a Balatro seed, and more all in your browser!",
   "type": "module",
   "main": "index.js",

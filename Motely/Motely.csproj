@@ -28,10 +28,13 @@
     <TrimmerRootDescriptor Include="TrimmerRoots.xml" />
   </ItemGroup>
 
-  <!-- Browser WASM configuration (JIT mode; AOT not supported for this RID) -->
+  <!-- Browser WASM configuration -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
     <DefineConstants>$(DefineConstants)</DefineConstants>
-    <WasmSIMD>true</WasmSIMD>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <WasmEnableThreads>true</WasmEnableThreads>
+    <WasmEnableExceptionHandling>true</WasmEnableExceptionHandling>
+    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>link</TrimMode>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>

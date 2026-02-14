@@ -1,10 +1,10 @@
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
-using System.Threading;
 using Motely.Filters;
 
 namespace Motely;
@@ -45,7 +45,9 @@ public interface IMotelySeedScoreDesc<TScoreProvider> : IMotelySeedScoreDesc
 
 public interface IMotelySeedScore
 {
-    public string Seed { get; }
+    string Seed { get; }
+    int Score { get; }
+    byte[] Tally { get; }
 }
 
 public interface IMotelySeedScoreProvider
@@ -54,7 +56,7 @@ public interface IMotelySeedScoreProvider
     public VectorMask Score(
         ref MotelyVectorSearchContext searchContext,
         MotelySeedScoreTally[] buffer,
-        VectorMask baseFilterMask = default,
+        VectorMask baseFilterMask,
         int scoreThreshold = 0
     );
 }
@@ -87,44 +89,35 @@ public sealed class MotelyRandomSeedProvider(int count) : IMotelySeedProvider
 {
     public int SeedCount { get; } = count;
 
-    private readonly ThreadLocal<Random> _randomInstances = new();
-    private int _seedsGenerated = 0;
+    private int _seedsGenerated;
 
     public ReadOnlySpan<char> NextSeed()
     {
-        // Check if we've generated enough seeds
         if (Interlocked.Increment(ref _seedsGenerated) > SeedCount)
-        {
-            return ReadOnlySpan<char>.Empty;
-        }
+            return [];
 
-        Random? random = _randomInstances.Value ??= new();
-
-        Span<char> seed = stackalloc char[Motely.MaxSeedLength];
-
-        for (int i = 0; i < seed.Length; i++)
-        {
-            seed[i] = Motely.SeedDigits[random.Next(Motely.SeedDigits.Length)];
-        }
-
-        return new string(seed);
+        // Random.Shared is thread-safe; string.Create writes directly into the
+        // string's backing buffer — zero stackalloc, zero intermediate copies.
+        return string.Create(Motely.MaxSeedLength, (object?)null, static (buf, _) =>
+            Random.Shared.GetItems(Motely.SeedDigits, buf));
     }
 
     public int NextSeeds(string[] seeds)
     {
-        if (seeds == null || seeds.Length == 0)
+        if (seeds is not { Length: > 0 })
             return 0;
 
-        int count = 0;
+        int filled = 0;
         for (int i = 0; i < seeds.Length; i++)
         {
-            var seed = NextSeed();
-            if (seed.IsEmpty)
+            if (Interlocked.Increment(ref _seedsGenerated) > SeedCount)
                 break;
-            seeds[i] = seed.ToString(); // Convert span to string for storage
-            count++;
+
+            seeds[i] = string.Create(Motely.MaxSeedLength, (object?)null, static (buf, _) =>
+                Random.Shared.GetItems(Motely.SeedDigits, buf));
+            filled++;
         }
-        return count;
+        return filled;
     }
 }
 
@@ -569,7 +562,6 @@ public interface IMotelySearch : IDisposable
     public void Start(CancellationToken cancellationToken = default);
     public void AwaitCompletion();
     public Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
-    public void Pause();
     public void Cancel();
     public void ForceProgressReport();
 }
@@ -582,7 +574,7 @@ internal unsafe interface IInternalMotelySearch : IMotelySearch
 
 public enum MotelySearchStatus
 {
-    Paused,
+    Created,
     Running,
     Completed,
     Disposed,
@@ -603,8 +595,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private readonly MotelySearchParameters _searchParameters;
 
     private readonly MotelySearchThread[] _threads;
-    private readonly IPauseSync _pauseSync;
-    private readonly IPauseSync _unpauseSync;
     private volatile MotelySearchStatus _status;
     public MotelySearchStatus Status => _status;
     public bool IsSequentialBatchSearch => !_isProviderMode;
@@ -634,6 +624,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     private long _matchingSeeds;
     private long _actualBatchesCompleted; // Aggregated from thread-local counters
     private long _seedsSearched; // Provider-mode: actual seeds pulled (deterministic)
+    
+    // Thread-local counters to eliminate Interlocked contention
+    private readonly long[] _threadMatchingSeeds;
+    private readonly long[] _threadBatchesCompleted;
 
     public long BatchIndex => _batchIndex;
 
@@ -642,6 +636,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     {
         get
         {
+            // Aggregate from thread-local arrays (no Interlocked contention!)
+            long totalBatches = 0;
+            for (int i = 0; i < _threadBatchesCompleted.Length; i++)
+            {
+                totalBatches += _threadBatchesCompleted[i];
+            }
+            _actualBatchesCompleted = totalBatches; // Cache for other uses
+            
             // Both modes track _actualBatchesCompleted - no need to recalculate from seeds
             // In provider mode, _startBatchIndex doesn't apply (batches aren't sequential)
             return _isProviderMode
@@ -662,8 +664,21 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             return _actualBatchesCompleted * (_threads.Length > 0 ? _threads[0].SeedsPerBatch : 0);
         }
     }
-    public long MatchingSeeds => _matchingSeeds;
-    public long FilteredSeeds => Filters.MotelyJsonSeedScoreDesc.FilteredSeedCount;
+    public long MatchingSeeds
+    {
+        get
+        {
+            // Aggregate from thread-local arrays (no Interlocked contention!)
+            long totalSeeds = 0;
+            for (int i = 0; i < _threadMatchingSeeds.Length; i++)
+            {
+                totalSeeds += _threadMatchingSeeds[i];
+            }
+            _matchingSeeds = totalSeeds; // Cache for other uses
+            return _matchingSeeds;
+        }
+    }
+    public long FilteredSeeds => 0; // TODO: rebuild score desc on JamlConfig
 
     public TimeSpan ElapsedTime => _elapsedTime.Elapsed;
 
@@ -742,15 +757,18 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             _pseudoHashKeyLengths[i] = pseudohashKeyLengths[i];
         }
 
-        _pauseSync = MotelySearchPlatform.CreatePauseSync(settings.ThreadCount + 1);
-        _unpauseSync = MotelySearchPlatform.CreateUnpauseSync(settings.ThreadCount + 1);
-        _status = MotelySearchStatus.Paused;
+        _status = MotelySearchStatus.Created;
 
         // Initialize provider-mode thread counter
         _activeProviderThreads =
             settings.Mode == MotelySearchMode.Provider ? settings.ThreadCount : 0;
 
         _threads = new MotelySearchThread[settings.ThreadCount];
+        
+        // Initialize thread-local counter arrays to eliminate Interlocked contention
+        _threadMatchingSeeds = new long[settings.ThreadCount];
+        _threadBatchesCompleted = new long[settings.ThreadCount];
+        
         for (int i = 0; i < _threads.Length; i++)
         {
             _threads[i] = settings.Mode switch
@@ -761,8 +779,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             };
         }
 
-        // The threads all immediatly enter a paused state
-        _pauseSync.SignalAndWait();
     }
 
     public void Start(CancellationToken cancellationToken = default)
@@ -772,26 +788,23 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // Set cancellation token before starting
         _cancellationToken = cancellationToken;
 
-        // Atomically replace paused status with running
+        // Atomically replace Created status with Running
         if (
             Interlocked.CompareExchange(
                 ref _status,
                 MotelySearchStatus.Running,
-                MotelySearchStatus.Paused
-            ) != MotelySearchStatus.Paused
+                MotelySearchStatus.Created
+            ) != MotelySearchStatus.Created
         )
             return;
 
         // Clear bottom line if in CSV mode to prevent interference
         if (_csvOutput && !_quietMode)
         {
-            // Clear any bottom-line state (no-op now that FancyConsole is removed)
-            // Notify that progress goes to stderr in CSV mode
             Console.Error.WriteLine("# Progress updates will appear here every 2 seconds...");
         }
 
         _elapsedTime.Start();
-        _unpauseSync.SignalAndWait();
     }
 
     public void AwaitCompletion()
@@ -808,7 +821,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 // If cancelled, break immediately - threads will exit due to cancellation check in ThreadMain
                 if (
                     _status == MotelySearchStatus.Disposed
-                    || _status == MotelySearchStatus.Paused
                     || _cancellationToken.IsCancellationRequested
                 )
                 {
@@ -836,37 +848,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
 
         return _completionSource.Task;
-    }
-
-    public void Pause()
-    {
-        ObjectDisposedException.ThrowIf(_status == MotelySearchStatus.Disposed, this);
-        // Atomically replace running status with paused
-        if (
-            Interlocked.CompareExchange(
-                ref _status,
-                MotelySearchStatus.Paused,
-                MotelySearchStatus.Running
-            ) != MotelySearchStatus.Running
-        )
-            return;
-
-        // Wait for all threads to reach the pause barrier
-        // Threads check status in their loop and will signal when they see Paused
-        try
-        {
-            _pauseSync.SignalAndWait(TimeSpan.FromSeconds(2));
-        }
-        catch (BarrierPostPhaseException)
-        {
-            // Barrier already broken; treat pause as best-effort.
-        }
-        catch (TimeoutException)
-        {
-            // One or more threads didn't reach the pause barrier in time; treat pause as best-effort.
-        }
-
-        _elapsedTime.Stop();
     }
 
     public void ForceProgressReport()
@@ -1046,43 +1027,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     public void Dispose()
     {
-        // If cancellation was requested, don't try to pause - let threads exit naturally
-        // Trying to pause after cancellation causes delays due to barrier timeouts
-        if (_status == MotelySearchStatus.Running && !_cancellationToken.IsCancellationRequested)
-        {
-            Pause();
-        }
-
         // Atomically replace current state with Disposed state
-        MotelySearchStatus oldStatus = Interlocked.Exchange(
+        Interlocked.Exchange(
             ref _status,
             MotelySearchStatus.Disposed
         );
-
-        // If we were paused, threads are waiting on unpauseBarrier
-        // Signal it so they wake up and see Disposed status, then exit
-        if (oldStatus == MotelySearchStatus.Paused)
-        {
-            // Threads will see Disposed status in their loop and exit
-            // Signal barrier to wake them up - if it fails, threads will still exit on next status check
-            try
-            {
-                _unpauseSync.SignalAndWait(TimeSpan.FromSeconds(5));
-            }
-            catch (BarrierPostPhaseException)
-            {
-                // Barrier already broken - threads will exit when they check status
-            }
-            catch (TimeoutException)
-            {
-                // Threads didn't respond in time - they'll exit when they check Disposed status
-            }
-        }
-        else if (oldStatus == MotelySearchStatus.Running)
-        {
-            // Threads are running - they'll see Disposed status and exit
-            // No barrier synchronization needed
-        }
 
         // Wait for threads to finish (they should exit when they see Disposed status)
         foreach (MotelySearchThread thread in _threads)
@@ -1119,7 +1068,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
-        public readonly IWorkerHandle Worker;
+        public readonly ThreadWorkerHandle Worker;
 
         public long MaxBatch { get; internal set; }
         public long SeedsPerBatch { get; internal set; }
@@ -1165,8 +1114,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             Search = search;
             ThreadIndex = threadIndex;
-
-            Worker = MotelySearchPlatform.CreateWorker(ThreadMain);
+            Worker = new ThreadWorkerHandle(ThreadMain);
 
             // Initialize the result buffer elements BEFORE starting thread to avoid race condition
             for (int i = 0; i < _resultBuffer.Length; i++)
@@ -1221,18 +1169,16 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         private void ThreadMain()
         {
-            // PERFORMANCE: Keep thread alive until Disposed to prevent barrier deadlocks
+            // Spin-wait until the search transitions from Created to Running (or Disposed)
+            SpinWait spinner = default;
+            while (Search._status == MotelySearchStatus.Created)
+            {
+                spinner.SpinOnce();
+            }
+
             while (Search._status != MotelySearchStatus.Disposed)
             {
                 var status = Search._status;
-
-                if (status == MotelySearchStatus.Paused)
-                {
-                    Search._pauseSync.SignalAndWait();
-                    // ...PAUSED...
-                    Search._unpauseSync.SignalAndWait();
-                    continue;
-                }
 
                 if (status == MotelySearchStatus.Completed)
                 {
@@ -1246,8 +1192,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     break;
                 }
 
-                // Provider-mode: threads that are exhausted should remain alive but idle.
-                // This prevents repeated decrements and keeps Pause() barriers consistent.
+                // Provider-mode: threads that are exhausted should idle.
                 if (_providerExhausted)
                 {
                     // Check for cancellation even while idling!
@@ -1321,13 +1266,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
 
-                // 2. Flush counters periodically
+                // 2. Flush counters periodically using thread-local arrays (no Interlocked contention!)
                 if (_localMatchingSeeds > 0)
                 {
-                    Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
+                    Search._threadMatchingSeeds[ThreadIndex] += _localMatchingSeeds;
                     _localMatchingSeeds = 0;
                 }
-                Interlocked.Add(ref Search._actualBatchesCompleted, _localBatchesCompleted);
+                Search._threadBatchesCompleted[ThreadIndex] += _localBatchesCompleted;
                 _localBatchesCompleted = 0;
 
                 // 3. Report progress (uses aggregated state from above) - throttled internally
@@ -1358,15 +1303,15 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FlushLocalCounters()
         {
-            // Flush any remaining local counters to global
+            // Flush any remaining local counters to global (no Interlocked contention!)
             if (_localMatchingSeeds > 0)
             {
-                Interlocked.Add(ref Search._matchingSeeds, _localMatchingSeeds);
+                Search._threadMatchingSeeds[ThreadIndex] += _localMatchingSeeds;
                 _localMatchingSeeds = 0;
             }
             if (_localBatchesCompleted > 0)
             {
-                Interlocked.Add(ref Search._actualBatchesCompleted, _localBatchesCompleted);
+                Search._threadBatchesCompleted[ThreadIndex] += _localBatchesCompleted;
                 _localBatchesCompleted = 0;
             }
         }
@@ -1387,17 +1332,12 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             if (searchResultMask.IsPartiallyTrue())
             {
-                DebugLogger.Log($"[BASE FILTER] Mask has partial results - routing to next stage");
                 if (Search._additionalFilters.Length == 0)
                 {
-                    // If we have no additional filters, we can just report the results from the base filter
-                    DebugLogger.Log($"[BASE FILTER] No additional filters - reporting directly");
                     ReportSeeds(searchResultMask, in searchContextParams);
                 }
                 else
                 {
-                    // Otherwise, we need to queue up the seeds for the first additional filter.
-                    DebugLogger.Log($"[BASE FILTER] Batching seeds for additional filter 0");
                     BatchSeeds(0, searchResultMask, in searchContextParams);
                 }
             }
@@ -1421,7 +1361,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // and fall back to ReportBasicSeeds (printing every raw seed).
             if (Search.TryGetScoreProvider(out var scoreProvider))
             {
-                DebugLogger.Log($"[REPORT] Using score provider path (CSV={Search._csvOutput})");
                 // Create search context for scoring
                 MotelyVectorSearchContext searchContext = new(
                     in Search._searchParameters,
@@ -1437,15 +1376,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     0
                 );
 
-                DebugLogger.Log(
-                    $"[REPORT] Score provider returned mask with {(scoredMask.IsPartiallyTrue() ? "matches" : "NO matches")}"
-                );
                 // Report the scored results!
                 ReportScoredResults(scoredMask, in searchParams);
             }
             else
             {
-                DebugLogger.Log($"[REPORT] Using basic seeds path (no score provider or CSV off)");
                 // No score provider - report basic seeds
                 ReportBasicSeeds(searchResultMask, in searchParams);
             }
@@ -1519,23 +1454,11 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 $"Invalid filterIndex {filterIndex}, _additionalFilters={(Search._additionalFilters == null ? "NULL" : $"Length={Search._additionalFilters.Length}")}"
             );
 
-            // Validate searchParams
-            if (searchParams.SeedHashCache == null)
-            {
-                DebugLogger.Log($"[BATCH] ERROR: SeedHashCache is null");
-                return;
-            }
+            Debug.Assert(searchParams.SeedHashCache != null, "SeedHashCache is null");
 
             FilterSeedBatch* filterBatch = &_filterSeedBatches[filterIndex];
 
-            // Validate filterBatch->SeedHashes is allocated
-            if (filterBatch->SeedHashes == null)
-            {
-                DebugLogger.Log(
-                    $"[BATCH] ERROR: filterBatch->SeedHashes is null for filterIndex {filterIndex}"
-                );
-                return;
-            }
+            Debug.Assert(filterBatch->SeedHashes != null, $"filterBatch->SeedHashes is null for filterIndex {filterIndex}");
 
             Debug.Assert(
                 searchResultMask.IsPartiallyTrue(),
@@ -1664,13 +1587,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 in searchParams
             );
 
-            DebugLogger.Log($"[BATCH] About to call additional filter {filterIndex}");
             VectorMask searchResultMask = Search
                 ._additionalFilters[filterIndex]
                 .Filter(ref searchContext);
-            DebugLogger.Log(
-                $"[BATCH] Additional filter {filterIndex} returned mask: {searchResultMask.Value:X}"
-            );
 
             if (searchResultMask.IsPartiallyTrue())
             {
@@ -1691,9 +1610,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                     else
                     {
-                        DebugLogger.Log(
-                            $"[BATCH] ERROR: nextFilterIndex {nextFilterIndex} >= _additionalFilters.Length {Search._additionalFilters.Length}"
-                        );
+                        Debug.Assert(false, $"nextFilterIndex {nextFilterIndex} >= _additionalFilters.Length {Search._additionalFilters.Length}");
                     }
                 }
             }
@@ -1771,10 +1688,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         protected override void SearchBatch(long batchIdx)
         {
-            // NOTE: With global seed index (DuckDBSeedProvider), batchIdx doesn't correspond
-            // to actual seeds processed. Just try to get seeds and process them - NextSeed()
-            // will return empty when all seeds are exhausted.
-
             // Batch retrieve seeds in one lock operation - much faster!
             // Use thread-local buffer to avoid allocations per batch
             int actualSeedCount = SeedProvider.NextSeeds(_seedBatchBuffer);
@@ -2117,7 +2030,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             // Check for cancellation/disposal periodically to make large batches responsive
             if (
                 Search._status == MotelySearchStatus.Disposed
-                || Search._status == MotelySearchStatus.Paused
                 || Search._cancellationToken.IsCancellationRequested
             )
             {
@@ -2178,7 +2090,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                         // Abort loop immediately if cancellation occurred in recursive call
                         if (
                             Search._status == MotelySearchStatus.Disposed
-                            || Search._status == MotelySearchStatus.Paused
                             || Search._cancellationToken.IsCancellationRequested
                         )
                         {

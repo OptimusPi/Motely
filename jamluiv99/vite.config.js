@@ -6,6 +6,10 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
     base: '/JamlUI-v99/', // when served by Motely.API at /JamlUI-v99/
+    build: {
+        outDir: path.resolve(__dirname, '../wwwroot/JamlUI-v99'),
+        emptyOutDir: true,
+    },
     plugins: [
         vue(),
         motelyWasm(), // Serves _framework in dev, copies to dist on build, sets COOP/COEP headers

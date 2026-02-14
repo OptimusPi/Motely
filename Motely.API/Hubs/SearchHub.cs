@@ -3,28 +3,28 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Motely.API.Hubs;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+/// <summary>SignalR hub for search updates and chat</summary>
 public class SearchHub : Hub
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 {
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Joins a search group to receive updates</summary>
+    /// <param name="searchId">Search ID to join</param>
     public async Task JoinSearchGroup(string searchId)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"search_{searchId}");
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Leaves a search group</summary>
+    /// <param name="searchId">Search ID to leave</param>
     public async Task LeaveSearchGroup(string searchId)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"search_{searchId}");
     }
 
     // Chat methods
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Sends a message to all connected clients</summary>
+    /// <param name="text">Message text</param>
+    /// <param name="timestamp">Message timestamp</param>
     public async Task SendMessage(string text, long timestamp)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         // Get a simple username from connection (could be enhanced with auth)
         var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
@@ -33,18 +33,17 @@ public class SearchHub : Hub
         await Clients.All.SendAsync("ReceiveMessage", username, text, timestamp);
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Called when a client connects</summary>
     public override async Task OnConnectedAsync()
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         var username = Context.User?.Identity?.Name ?? $"User_{Context.ConnectionId[..8]}";
         await Clients.Others.SendAsync("UserJoined", username);
         await base.OnConnectedAsync();
     }
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+    /// <summary>Called when a client disconnects</summary>
+    /// <param name="exception">Disconnect exception, if any</param>
     public override async Task OnDisconnectedAsync(Exception? exception)
-#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
     {
         try
         {
