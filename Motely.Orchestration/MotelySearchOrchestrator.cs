@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Motely.Filters;
 
 namespace Motely.Executors
@@ -11,46 +9,67 @@ namespace Motely.Executors
     /// </summary>
     public static class MotelySearchOrchestrator
     {
-        /// <summary>
-        /// Launch a search and return a context.
-        /// </summary>
         public static IMotelySearchContext LaunchWithContext(
-            MotelyJsonConfig config,
-            JsonSearchParams parameters,
-            bool useInMemoryStorage = false
+            JamlConfig config,
+            JsonSearchParams parameters
         )
         {
+
             var searchId = GenerateShortSearchId(config);
             var filterId = GenerateFilterId(config);
-
-            // Create executor with callback
-            var executor = new JsonSearchExecutor(config, parameters, parameters.ResultCallback);
-            var search = executor.ExecuteAsSearch();
+            var search = BuildSearchFromJaml(config, parameters);
             return new MotelySearchContext(search, searchId, filterId);
         }
 
-        /// <summary>
-        /// Generate a SHORT search ID for browser/WASM.
-        /// </summary>
-        public static string GenerateShortSearchId(MotelyJsonConfig config)
+        private static IMotelySearch BuildSearchFromJaml(JamlConfig config, JsonSearchParams parameters)
         {
-            var name = SanitizeForId(config.Name ?? "Unknown", maxLength: 12);
-            var deck = config.Deck ?? "Red";
-            var stake = config.Stake ?? "White";
-            var timestamp = DateTime.UtcNow.ToString("HHmmss");
-            var random = Guid.NewGuid().ToString("N")[..4];
-            return $"{name}_{deck}_{stake}_{timestamp}_{random}";
+            var settings = JamlSearchBuilder.CreateSettings(config)
+                .WithDeck(config.Deck)
+                .WithStake(config.Stake)
+                .WithThreadCount(Math.Max(1, parameters.Threads))
+                .WithBatchCharacterCount(Math.Clamp(parameters.BatchSize, 1, 7));
+
+            if (parameters.StartBatch > 0)
+                settings.WithStartBatchIndex((long)Math.Min(parameters.StartBatch, (ulong)long.MaxValue));
+
+            if (parameters.EndBatch > 0)
+                settings.WithEndBatchIndex((long)Math.Min(parameters.EndBatch, (ulong)long.MaxValue));
+
+            if (!string.IsNullOrWhiteSpace(parameters.SpecificSeed))
+                settings.WithListSearch(new[] { parameters.SpecificSeed.ToUpperInvariant() });
+            else if (parameters.RandomSeeds > 0)
+                settings.WithRandomSearch(parameters.RandomSeeds);
+            else if (parameters.PalindromeSeeds)
+                settings.WithPalindromeSearch();
+            else
+                settings.WithSequentialSearch();
+
+            return settings.Start();
         }
 
-        /// <summary>
-        /// Generate a consistent filter ID from config.
-        /// </summary>
-        public static string GenerateFilterId(MotelyJsonConfig config)
+        public static string GenerateShortSearchId(JamlConfig config)
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+
+        public static string GenerateFilterId(JamlConfig config)
         {
             var name = SanitizeForId(config.Name ?? "Unknown", maxLength: 30);
-            var deck = config.Deck ?? "Red";
-            var stake = config.Stake ?? "White";
+            var deck = config.Deck.ToString();
+            var stake = config.Stake.ToString();
             return $"{name}_{deck}_{stake}";
+        }
+
+        private readonly struct PassAllFilterDesc
+            : IMotelySeedFilterDesc<PassAllFilterDesc.PassAllFilter>
+        {
+            public PassAllFilter CreateFilter(ref MotelyFilterCreationContext ctx) => new();
+
+            public readonly struct PassAllFilter : IMotelySeedFilter
+            {
+                public VectorMask Filter(ref MotelyVectorSearchContext searchContext) =>
+                    VectorMask.AllBitsSet;
+            }
         }
 
         /// <summary>

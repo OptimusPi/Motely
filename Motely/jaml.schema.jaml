@@ -1,0 +1,161 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  JAML — Jimbo's Ante Markup Language — Schema Reference    ║
+# ║  Version: 2.0.0                                            ║
+# ║  This file IS valid JAML. It documents itself. 🃏          ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ─── Top-Level Fields ────────────────────────────────────────
+# name:        string   — Display name of the filter
+# description: string   — What this filter searches for
+# author:      string   — Who made this
+# deck: Red | Blue | Yellow | Green | Black | Magic | Nebula
+#       | Ghost | Abandoned | Checkered | Zodiac | Painted
+#       | Anaglyph | Plasma | Erratic | Challenge
+# stake: White | Red | Green | Black | Blue | Purple | Orange | Gold
+
+name: "JAML Schema Reference"
+author: pifreak
+deck: Red
+stake: White
+
+# ─── defaults (optional) ────────────────────────────────────
+# Applied to clauses when not specified on the clause itself.
+defaults:
+  antes: [1, 2, 3, 4, 5, 6, 7, 8] # which antes to check (0-39)
+  boosterPacks: [0, 1, 2, 3, 4, 5] # which pack offering in the shop (0=1st, 1=2nd, NOT cards inside)
+  shopItems: [0, 1, 2, 3, 4, 5] # which shop item position (0=1st item, 1=2nd, etc.)
+  score: 1 # default score for should clauses
+
+# ═══════════════════════════════════════════════════════════════
+# must: []     — ALL clauses must match (required filters)
+# should: []   — Clauses add SCORE, do NOT filter
+# mustNot: []  — If ANY clause matches, seed is REJECTED
+# ═══════════════════════════════════════════════════════════════
+
+must:
+  # ─── SHORTHAND KEYS (type-as-key) ────────────────────────
+  # Single item:
+  #   joker: Blueprint
+  # Multiple items (any match):
+  #   jokers: [Blueprint, Brainstorm]
+  #
+  # ┌──────────────────┬───────────────────────────────────────┐
+  # │ Key              │ What it searches                      │
+  # ├──────────────────┼───────────────────────────────────────┤
+  # │ joker / jokers   │ Any joker by name                     │
+  # │ commonJoker(s)   │ Common-rarity jokers only             │
+  # │ uncommonJoker(s) │ Uncommon-rarity jokers only           │
+  # │ rareJoker(s)     │ Rare-rarity jokers only               │
+  # │ mixedJoker(s)    │ Mixed-rarity jokers                   │
+  # │ legendaryJoker        │ Soul joker (Perkeo, Triboulet, etc.)  │
+  # │ voucher/vouchers │ Shop voucher                          │
+  # │ tarot / tarotCard│ Tarot card                            │
+  # │ spectral / spectralCard │ Spectral card                  │
+  # │ planet / planetCard     │ Planet card                    │
+  # │ boss             │ Boss blind                            │
+  # │ tag              │ Tag (any blind position)              │
+  # │ smallBlindTag    │ Tag at small blind                    │
+  # │ bigBlindTag      │ Tag at big blind                      │
+  # │ standardCard     │ Playing card                          │
+  # │ erraticRank      │ Erratic deck rank                     │
+  # │ erraticSuit      │ Erratic deck suit                     │
+  # │ erraticCard      │ Erratic deck card                     │
+  # │ event / eventType│ Event (LuckyMoney, etc.)              │
+  # └──────────────────┴───────────────────────────────────────┘
+
+  - joker: Blueprint
+
+  # ─── COMMON CLAUSE PROPERTIES ────────────────────────────
+  # These can go on ANY clause:
+  #
+  #   antes:       [int]     — which antes to search (overrides defaults)
+  #   min:         int       — minimum matches required (default: 1)
+  #   max:         int       — maximum matches
+  #   score:       int       — weight for 'should' clauses (default: 1)
+  #   label:       string    — custom display label
+  #   edition:     Foil | Holographic | Polychrome | Negative
+  #   stickers:    [string]  — joker sticker requirements
+  #   seal:        Red | Blue | Gold | Purple
+  #   enhancement: Bonus | Mult | Wild | Glass | Steel | Stone | Lucky | Gold
+  #   rank:        2-10 | J | Jack | Q | Queen | K | King | A | Ace
+  #   suit:        Hearts | Diamonds | Clubs | Spades
+  #   rolls:       [int]    — event occurrence indices (0-based)
+  #
+  # FLAT SOURCE SHORTCUTS (on the clause directly, outside sources:):
+  #   shopItems:    [int]    — shop item positions
+  #   boosterPacks: [int]   — pack offering positions
+
+  # ─── SOURCES: {} ─────────────────────────────────────────
+  # WHERE the item can be found.  sources is an OBJECT, not a list!
+  #
+  # Example:
+  - joker: OopsAll6s
+    antes: [2]
+    edition: Polychrome
+    min: 1
+    sources:
+      shopItems: [2, 3, 4] # 3rd, 4th, 5th shop item position
+      # boosterPacks: [0, 1, 2]     # 1st, 2nd, 3rd pack offering (NOT cards inside!)
+      # tags: true                   # can come from tags
+      # requireMega: true            # pack must be Mega
+      # ── Tarot/Spectral/Joker event sources ──
+      # judgement: [0, 1]            # Judgement tarot joker rolls
+      # rareTag: [0]                 # Rare tag joker rolls
+      # uncommonTag: [0]             # Uncommon tag joker rolls
+      # riffRaff: [0, 1]            # RiffRaff joker rolls
+      # emperor: [0, 1]             # Emperor tarot card rolls
+      # sixthSense: [0]             # SixthSense spectral rolls
+      # seance: [0, 1]              # Seance spectral rolls
+      # purpleSealOrEightBall: [0]  # Purple Seal / 8Ball tarot rolls
+      # wraith: [0]                  # Wraith joker rolls
+      # soulCard: [0]               # Soul card spectral rolls
+      # certificate: [0]            # Certificate card rolls
+      # incantation: [0]            # Incantation spectral rolls
+      # familiar: [0]               # Familiar spectral rolls
+      # grim: [0]                    # Grim spectral rolls
+      # deckDraw: [0, 1, 2]         # Deck draw positions
+      # ── Raw stream pre-filters (FAST, bypass shop type check) ──
+      # uncommonShopJokers: [0, 1]
+      # rareShopJokers: [0]
+      # commonShopJokers: [0, 1]
+      # allShopJokers: [0, 1, 2]
+      # ── Range generators ──
+      # minShopSlot: 0              # generates shopItems [min..max]
+      # maxShopSlot: 5
+      # minPackSlot: 0              # generates boosterPacks [min..max]
+      # maxPackSlot: 5
+
+  # ─── EVENT CLAUSES ──────────────────────────────────────
+  # Events: LuckyMoney | LuckyMult | MisprintMult
+  #         | WheelOfFortune | CavendishExtinct | GrosMichelExtinct
+  #
+  # - event: LuckyMoney
+  #   rolls: [0]                    # which occurrence (0-based)
+
+  # ─── LOGIC COMBINATORS ──────────────────────────────────
+  # And: []  — all sub-clauses must match
+  # Or:  []  — any sub-clause can match
+  #
+  # - And:
+  #     - joker: Blueprint
+  #     - joker: Brainstorm
+  #
+  # - Or:
+  #     - joker: Perkeo
+  #     - joker: Triboulet
+
+# ─── should: [] ──────────────────────────────────────────────
+# Same clause syntax as must. These do NOT filter — they add SCORE.
+# Output format: SEED\tTOTAL\tTALLY0\tTALLY1\t...\tTALLYN
+should:
+  - smallBlindTag: NegativeTag
+    antes: [2]
+    score: 10 # high value — we really want this
+
+  - joker: Baron
+    score: 5 # nice to have
+
+# ─── mustNot: [] ─────────────────────────────────────────────
+# Same clause syntax. If ANY matches, seed is REJECTED.
+# mustNot:
+#   - boss: TheNeedle

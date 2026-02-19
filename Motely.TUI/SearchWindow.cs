@@ -1,5 +1,6 @@
 using Motely.Executors;
 using Motely.Filters;
+using System.Text.Json;
 
 namespace Motely.TUI;
 
@@ -152,12 +153,15 @@ public class SearchWindow : Window
                 });
             };
 
-            _search = _configFormat.ToLower() switch
-            {
-                "jaml" => MotelySearchOrchestrator.LaunchJaml(_configPath, parameters, onResult),
-                "json" => MotelySearchOrchestrator.LaunchJson(_configPath, parameters, onResult),
-                _ => MotelySearchOrchestrator.LaunchJson(_configPath, parameters, onResult),
-            };
+            if (!TryLoadConfig(_configPath, _configFormat, out var config, out var configError) || config == null)
+                throw new InvalidOperationException(configError ?? "Failed to load search config.");
+
+            parameters.Deck = config.Deck.ToString();
+            parameters.Stake = config.Stake.ToString();
+            parameters.ResultCallback = onResult;
+
+            _search = MotelySearchOrchestrator
+                .LaunchWithContext(config, parameters);
 
             App?.Invoke(() =>
             {
@@ -191,7 +195,7 @@ public class SearchWindow : Window
                     _progressLabel.Text =
                         $"{searched:N0} seeds | {matches} matches | {speed:N0} seeds/sec | {elapsed:hh\\:mm\\:ss}";
 
-                    if (_search.Status == MotelySearchStatus.Completed)
+                    if (_search.IsCompleted)
                     {
                         OnSearchComplete();
                         return false;
@@ -291,5 +295,32 @@ public class SearchWindow : Window
         catch { }
 
         MotelyTUI.CloseWindow(this);
+    }
+
+    private static bool TryLoadConfig(
+        string path,
+        string configFormat,
+        out JamlConfig? config,
+        out string? error)
+    {
+        config = null;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            error = "Config path is required.";
+            return false;
+        }
+
+        if (!File.Exists(path))
+        {
+            error = $"Config file not found: {path}";
+            return false;
+        }
+
+        var content = File.ReadAllText(path);
+        var format = configFormat.ToLowerInvariant();
+
+        return JamlConfigLoader.TryLoad(content, out config, out error);
     }
 }

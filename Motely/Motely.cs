@@ -1,14 +1,7 @@
 namespace Motely;
 
-/// <summary>
-/// Core Motely constants and utilities
-/// Platform-specific MaxVectorWidth implementations:
-/// - Desktop: Motely.Desktop.cs - Vector512 (8 lanes)
-/// - Browser: Motely.Browser.cs - Vector128 (2 lanes)
-/// - Android: Motely.Android.cs - Vector256 (4 lanes)
-/// - iOS: Motely.iOS.cs - Vector256 (4 lanes)
-/// </summary>
-public static partial class Motely
+
+public static partial class MotelyCore
 {
     public const int MaxCachedPseudoHashKeyLength = 32;
 

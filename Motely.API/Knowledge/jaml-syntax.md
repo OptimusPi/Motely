@@ -101,12 +101,12 @@ mustNot:
 
 ### Jokers
 - **`joker`**: Regular joker card
-- **`soulJoker`**: Soul joker (legendary jokers)
+- **`legendaryJoker`**: Soul joker (legendary jokers)
 
 ```yaml
 - joker: Blueprint
 - joker: Brainstorm
-- soulJoker: Perkeo
+- legendaryJoker: Perkeo
 ```
 
 ### Vouchers
@@ -180,7 +180,7 @@ Required edition for jokers/vouchers.
 - Options: `Foil`, `Holo`, `Polychrome`, `Negative`
 
 ```yaml
-- soulJoker: Perkeo
+- legendaryJoker: Perkeo
   edition: Negative
 ```
 
@@ -263,7 +263,7 @@ Instead of `type: Joker, value: Blueprint`, use:
 must:
   - joker: Blueprint
   - voucher: Telescope
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
 ```
 
 ### Plural Arrays
@@ -331,7 +331,7 @@ must:
   - voucher: Observatory
     antes: [2, 3]
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1, 2]
     score: 100
@@ -341,11 +341,11 @@ should:
 ```yaml
 name: Negative Perkeo Early
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
     score: 100
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [2]
     score: 96
@@ -417,7 +417,7 @@ should:
 ### Edition Requirements
 ```yaml
 must:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
 ```

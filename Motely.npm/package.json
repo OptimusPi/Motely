@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "1.2.11",
+  "version": "1.3.0",
   "description": "Run the classic Analyzer on a Balatro seed, and more all in your browser!",
   "type": "module",
   "main": "index.js",
@@ -12,14 +12,6 @@
       "require": "./index.js",
       "types": "./index.d.ts"
     },
-    "./vite-plugin": {
-      "import": "./vite-plugin-motely-wasm.js",
-      "types": "./vite-plugin-motely-wasm.d.ts"
-    },
-    "./next-plugin": {
-      "import": "./next-plugin-motely-wasm.js",
-      "types": "./next-plugin-motely-wasm.d.ts"
-    },
     "./jaml.schema.json": "./jaml.schema.json"
   },
   "files": [
@@ -27,11 +19,7 @@
     "index.js",
     "index.d.ts",
     "README.md",
-    "jaml.schema.json",
-    "vite-plugin-motely-wasm.js",
-    "vite-plugin-motely-wasm.d.ts",
-    "next-plugin-motely-wasm.js",
-    "next-plugin-motely-wasm.d.ts"
+    "jaml.schema.json"
   ],
   "keywords": [
     "balatro",
@@ -42,11 +30,7 @@
     "jaml",
     "filter",
     "finder",
-    "Blueprint",
-    "Brainstorm",
-    "Perkeo",
-    "search",
-    "ALEEB"
+    "search"
   ],
   "repository": {
     "type": "git",

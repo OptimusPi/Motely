@@ -114,7 +114,7 @@ ref partial struct MotelySingleSearchContext
         {
             if (GetNextRandom(ref tarotStream.SoulPrngStream) > 0.997)
             {
-                return MotelyItemType.Soul;
+                return MotelyItemType.TheSoul;
             }
         }
 
@@ -136,11 +136,11 @@ ref partial struct MotelySingleSearchContext
         in MotelySingleItemSet itemSet
     )
     {
-        if (tarotStream.IsSoulable && !itemSet.Contains(MotelyItemType.Soul))
+        if (tarotStream.IsSoulable && !itemSet.Contains(MotelyItemType.TheSoul))
         {
             if (GetNextRandom(ref tarotStream.SoulPrngStream) > 0.997)
             {
-                return MotelyItemType.Soul;
+                return MotelyItemType.TheSoul;
             }
         }
 

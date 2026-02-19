@@ -20,30 +20,50 @@ internal static partial class JsConsole
 
     internal static void Attach()
     {
-        Console.SetOut(new Writer(isError: false));
-        Console.SetError(new Writer(isError: true));
+        Console.SetOut(new BufferedWriter(isError: false));
+        Console.SetError(new BufferedWriter(isError: true));
     }
 
-    private sealed class Writer : TextWriter
+    private sealed class BufferedWriter : TextWriter
     {
         private readonly bool _isError;
+        private readonly StringBuilder _buffer = new();
 
-        internal Writer(bool isError) => _isError = isError;
+        internal BufferedWriter(bool isError) => _isError = isError;
 
         public override Encoding Encoding => Encoding.UTF8;
+
+        public override void Write(char value)
+        {
+            if (value == '\n')
+            {
+                FlushBuffer();
+            }
+            else if (value != '\r')
+            {
+                _buffer.Append(value);
+            }
+        }
 
         public override void Write(string? value)
         {
             if (string.IsNullOrEmpty(value)) return;
-            if (_isError) Error(value);
-            else Log(value);
+            foreach (var c in value)
+            {
+                Write(c);
+            }
         }
 
-        public override void WriteLine(string? value)
+        private void FlushBuffer()
         {
-            if (value is null) return;
-            if (_isError) Error(value);
-            else Log(value);
+            if (_buffer.Length > 0)
+            {
+                var msg = _buffer.ToString();
+                if (_isError) Error(msg);
+                else Log(msg);
+
+                _buffer.Clear();
+            }
         }
     }
 }
