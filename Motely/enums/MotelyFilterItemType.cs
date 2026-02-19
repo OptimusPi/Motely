@@ -6,6 +6,10 @@ namespace Motely;
 public enum MotelyFilterItemType
 {
     Joker,
+    CommonJoker,
+    UncommonJoker,
+    RareJoker,
+    MixedJoker,
     SoulJoker,
     TarotCard,
     PlanetCard,
@@ -19,6 +23,9 @@ public enum MotelyFilterItemType
     ErraticRank, // Erratic Deck starting composition - rank filter
     ErraticSuit, // Erratic Deck starting composition - suit filter
     ErraticCard, // Erratic Deck starting composition - specific card filter (e.g., "K_C", "2_H")
+    CavendishExtinct, // Cavendish banana extinction check
+    GrosMichelExtinct, // Gros Michel banana extinction check
+    StartingDraw, // Starting hand draw filter
     And, // Logical AND - all nested clauses must match
     Or, // Logical OR - at least one nested clause must match
 }

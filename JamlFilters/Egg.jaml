@@ -17,7 +17,7 @@ must:
       packSlots: [0]
 should:
   - joker: Egg
-    antes: [1,2]
+    antes: [1, 2]
     sources:
-      packSlots: [0,1]
-      shopSlots: [0,1,2,3,4,5]
+      packSlots: [0, 1]
+      shopSlots: [0, 1, 2, 3, 4, 5]

@@ -136,7 +136,7 @@ ref partial struct MotelySingleSearchContext
         {
             if (GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997)
             {
-                return MotelyItemType.Soul;
+                return MotelyItemType.TheSoul;
             }
 
             if (GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997)
@@ -157,7 +157,7 @@ ref partial struct MotelySingleSearchContext
 
         while (true)
         {
-            if (spectral != MotelyItemType.Soul && spectral != MotelyItemType.BlackHole)
+            if (spectral != MotelyItemType.TheSoul && spectral != MotelyItemType.BlackHole)
             {
                 return spectral;
             }
@@ -186,11 +186,11 @@ ref partial struct MotelySingleSearchContext
         if (spectralStream.IsSoulBlackHoleable)
         {
             if (
-                !itemSet.Contains(MotelyItemType.Soul)
+                !itemSet.Contains(MotelyItemType.TheSoul)
                 && GetNextRandom(ref spectralStream.SoulBlackHolePrngStream) > 0.997
             )
             {
-                return MotelyItemType.Soul;
+                return MotelyItemType.TheSoul;
             }
 
             if (
@@ -216,7 +216,7 @@ ref partial struct MotelySingleSearchContext
         {
             if (
                 !itemSet.Contains(spectral)
-                && spectral != MotelyItemType.Soul
+                && spectral != MotelyItemType.TheSoul
                 && spectral != MotelyItemType.BlackHole
             )
             {

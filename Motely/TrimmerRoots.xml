@@ -1,18 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <linker>
-  <!-- Preserve all Motely filter types for JAML deserialization -->
   <assembly fullname="Motely">
-    <!-- Preserve all filter-related types -->
-    <type fullname="Motely.Filters.MotelyJsonConfig" preserve="all" />
-    <type fullname="Motely.Filters.MotelyJsonConfig+MotelyJsonFilterClause" preserve="all" />
-    <type fullname="Motely.Filters.MotelyFilterDefaults" preserve="all" />
-    <type fullname="Motely.Filters.SourcesConfig" preserve="all" />
 
-    <!-- Preserve all enum types used in JAML -->
+    <!-- ── JAML YAML DTOs (deserialized by YamlDotNet) ── -->
+    <type fullname="Motely.Filters.JamlDto" preserve="all" />
+    <type fullname="Motely.Filters.JamlDefaultsDto" preserve="all" />
+    <type fullname="Motely.Filters.JamlClauseDto" preserve="all" />
+    <type fullname="Motely.Filters.JamlSourcesDto" preserve="all" />
+
+    <!-- ── JAML runtime config ── -->
+    <type fullname="Motely.Filters.JamlConfig" preserve="all" />
+    <type fullname="Motely.Filters.JamlConfigLoader" preserve="all" />
+    <type fullname="Motely.Filters.JamlSearchBuilder" preserve="all" />
+
+    <!-- ── JAML typed clause POCOs ── -->
+    <type fullname="Motely.Filters.JamlClauseBase" preserve="all" />
+    <type fullname="Motely.Filters.AndClause" preserve="all" />
+    <type fullname="Motely.Filters.OrClause" preserve="all" />
+    <type fullname="Motely.Filters.JokerClause" preserve="all" />
+    <type fullname="Motely.Filters.SoulJokerClause" preserve="all" />
+    <type fullname="Motely.Filters.VoucherClause" preserve="all" />
+    <type fullname="Motely.Filters.TarotCardClause" preserve="all" />
+    <type fullname="Motely.Filters.SpectralCardClause" preserve="all" />
+    <type fullname="Motely.Filters.PlanetCardClause" preserve="all" />
+    <type fullname="Motely.Filters.BossClause" preserve="all" />
+    <type fullname="Motely.Filters.TagClause" preserve="all" />
+    <type fullname="Motely.Filters.StandardCardClause" preserve="all" />
+    <type fullname="Motely.Filters.ErraticRankClause" preserve="all" />
+    <type fullname="Motely.Filters.ErraticSuitClause" preserve="all" />
+    <type fullname="Motely.Filters.LuckyMoneyClause" preserve="all" />
+    <type fullname="Motely.Filters.LuckyMultClause" preserve="all" />
+    <type fullname="Motely.Filters.MisprintMultClause" preserve="all" />
+    <type fullname="Motely.Filters.WheelOfFortuneClause" preserve="all" />
+    <type fullname="Motely.Filters.CavendishExtinctClause" preserve="all" />
+    <type fullname="Motely.Filters.GrosMichelExtinctClause" preserve="all" />
+
+    <!-- ── JAML source configs ── -->
+    <type fullname="Motely.Filters.JokerSourceConfig" preserve="all" />
+    <type fullname="Motely.Filters.SoulJokerSourceConfig" preserve="all" />
+    <type fullname="Motely.Filters.TarotCardSourceConfig" preserve="all" />
+    <type fullname="Motely.Filters.SpectralCardSourceConfig" preserve="all" />
+    <type fullname="Motely.Filters.PlanetSourceConfig" preserve="all" />
+    <type fullname="Motely.Filters.StandardCardSourceConfig" preserve="all" />
+
+    <!-- ── JAML enums ── -->
+    <type fullname="Motely.Filters.TagPosition" preserve="all" />
+
+    <!-- ── Game enums (used by both JAML and MotelyJson) ── -->
     <type fullname="Motely.MotelyFilterItemType" preserve="all" />
-    <type fullname="Motely.Filters.MotelyJsonConfigWildcards" preserve="all" />
-    <type fullname="Motely.Filters.MotelyScoreAggregationMode" preserve="all" />
     <type fullname="Motely.MotelyJoker" preserve="all" />
+    <type fullname="Motely.MotelyJokerCommon" preserve="all" />
+    <type fullname="Motely.MotelyJokerUncommon" preserve="all" />
+    <type fullname="Motely.MotelyJokerRare" preserve="all" />
+    <type fullname="Motely.MotelyJokerLegendary" preserve="all" />
+    <type fullname="Motely.MotelyJokerRarity" preserve="all" />
+    <type fullname="Motely.MotelyJokerSticker" preserve="all" />
     <type fullname="Motely.MotelyVoucher" preserve="all" />
     <type fullname="Motely.MotelyTarotCard" preserve="all" />
     <type fullname="Motely.MotelyPlanetCard" preserve="all" />
@@ -20,13 +62,23 @@
     <type fullname="Motely.MotelyTag" preserve="all" />
     <type fullname="Motely.MotelyTagType" preserve="all" />
     <type fullname="Motely.MotelyBossBlind" preserve="all" />
+    <type fullname="Motely.MotelyBossBlindType" preserve="all" />
     <type fullname="Motely.MotelyEventType" preserve="all" />
     <type fullname="Motely.MotelyItemEdition" preserve="all" />
-    <type fullname="Motely.MotelyJokerSticker" preserve="all" />
-    <type fullname="Motely.MotelyPlayingCardSuit" preserve="all" />
-    <type fullname="Motely.MotelyPlayingCardRank" preserve="all" />
-    <type fullname="Motely.MotelyItemSeal" preserve="all" />
     <type fullname="Motely.MotelyItemEnhancement" preserve="all" />
+    <type fullname="Motely.MotelyItemSeal" preserve="all" />
+    <type fullname="Motely.MotelyItemType" preserve="all" />
+    <type fullname="Motely.MotelyItemTypeCategory" preserve="all" />
+    <type fullname="Motely.MotelyPlayingCardRank" preserve="all" />
+    <type fullname="Motely.MotelyPlayingCardSuit" preserve="all" />
+    <type fullname="Motely.MotelyPlayingCard" preserve="all" />
+    <type fullname="Motely.MotelyDeck" preserve="all" />
+    <type fullname="Motely.MotelyStake" preserve="all" />
+    <type fullname="Motely.MotelySearchMode" preserve="all" />
+    <type fullname="Motely.MotelyBoosterPack" preserve="all" />
+    <type fullname="Motely.MotelyBoosterPackType" preserve="all" />
+    <type fullname="Motely.MotelyBoosterPackSize" preserve="all" />
+
   </assembly>
 
   <!-- Preserve YAML.NET static context generated types -->

@@ -202,7 +202,7 @@ ref partial struct MotelyVectorSearchContext
         return new(
             Vector256.ConditionalSelect(
                 MotelyVectorUtils.ShrinkDoubleMaskToInt(soulMask),
-                Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
+                Vector256.Create(new MotelyItem(MotelyItemType.TheSoul).Value),
                 tarots
             )
         );
@@ -219,7 +219,7 @@ ref partial struct MotelyVectorSearchContext
         if (tarotStream.IsSoulable)
         {
             Vector512<double> soulValidMask = MotelyVectorUtils.ExtendIntMaskToDouble(
-                ~itemSet.Contains(MotelyItemType.Soul)
+                ~itemSet.Contains(MotelyItemType.TheSoul)
             );
             soulMaskDbl =
                 soulValidMask
@@ -286,7 +286,7 @@ ref partial struct MotelyVectorSearchContext
         return new(
             Vector256.ConditionalSelect(
                 soulMaskInt,
-                Vector256.Create(new MotelyItem(MotelyItemType.Soul).Value),
+                Vector256.Create(new MotelyItem(MotelyItemType.TheSoul).Value),
                 tarots
             )
         );
@@ -308,7 +308,7 @@ ref partial struct MotelyVectorSearchContext
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     tarot.Value,
-                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(tarotType, targetTarot);
@@ -338,7 +338,7 @@ ref partial struct MotelyVectorSearchContext
             var tarotType = new VectorEnum256<MotelyTarotCard>(
                 Vector256.BitwiseAnd(
                     tarot.Value,
-                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
                 )
             );
 

@@ -84,7 +84,7 @@
                     ],
                     "description": "Default antes to check if not specified in clause"
                 },
-                "packSlots": {
+                "boosterPacks": {
                     "type": "array",
                     "items": {
                         "type": "integer",
@@ -101,7 +101,7 @@
                     ],
                     "description": "Default pack slots (ante 1 limited to 0-3, ante 2+ uses 0-5)"
                 },
-                "shopSlots": {
+                "shopItems": {
                     "type": "array",
                     "items": {
                         "type": "integer",
@@ -210,9 +210,9 @@
                     "type": "string",
                     "description": "Shorthand for Joker type. Example: 'joker: Blueprint'"
                 },
-                "soulJoker": {
+                "legendaryJoker": {
                     "type": "string",
-                    "description": "Shorthand for SoulJoker type. Example: 'soulJoker: Perkeo'"
+                    "description": "Shorthand for SoulJoker type. Example: 'legendaryJoker: Perkeo'"
                 },
                 "voucher": {
                     "type": "string",
@@ -363,14 +363,14 @@
                 "sources": {
                     "type": "object",
                     "properties": {
-                        "shopSlots": {
+                        "shopItems": {
                             "type": "array",
                             "items": {
                                 "type": "integer"
                             },
                             "description": "Shop slot indices (0-based). If empty array [], will be populated from minShopSlot/maxShopSlot if provided."
                         },
-                        "packSlots": {
+                        "boosterPacks": {
                             "type": "array",
                             "items": {
                                 "type": "integer"

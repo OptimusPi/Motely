@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using Motely.Filters;
-using MotelyJaml;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -10,7 +10,7 @@ public class FilterBuilderWindow : Window
 {
     private ListView _mustList;
     private ListView _shouldList;
-    private List<string> _mustItems = new();
+    private List<string> _mustItems = new(); // TODO use REAL motely enums
     private List<string> _shouldItems = new();
     private List<string> _mustNotItems = new();
     private Label _statusLabel;
@@ -386,43 +386,42 @@ public class FilterBuilderWindow : Window
         }
     }
 
-    private MotelyJsonConfig.MotelyJsonFilterClause ParseDisplayTextToClause(string displayText)
+    private JamlClauseDto ParseDisplayTextToClause(string displayText)
     {
-        // Parse format: "ItemName (Category)"
         var lastParenIndex = displayText.LastIndexOf('(');
         if (lastParenIndex < 0)
-            return new MotelyJsonConfig.MotelyJsonFilterClause
-            {
-                Type = "Joker",
-                Value = displayText,
-                Antes = new[] { 1, 2, 3, 4, 5, 6, 7, 8 }, // Default: search all antes
-            };
+            return new JamlClauseDto { Joker = displayText };
 
         var itemName = displayText.Substring(0, lastParenIndex).Trim();
         var category = displayText.Substring(lastParenIndex + 1).TrimEnd(')').Trim();
 
-        // Map category to type
-        var type = category switch
+        return category switch
         {
-            "Joker" => "Joker",
-            "Legendary" => "SoulJoker",
-            "Card" => "PlayingCard",
-            "Tarot" => "TarotCard",
-            "Spectral" => "SpectralCard",
-            "Planet" => "PlanetCard",
-            "Voucher" => "Voucher",
-            "Boss" => "BossBlind",
-            "Tags" => "Tag",
-            _ => "Joker",
-        };
-
-        return new MotelyJsonConfig.MotelyJsonFilterClause
-        {
-            Type = type,
-            Value = itemName,
-            Antes = new[] { 1, 2, 3, 4, 5, 6, 7, 8 }, // Default: search all antes
+            "Legendary" => new JamlClauseDto { SoulJoker = itemName },
+            "Tarot" => new JamlClauseDto { Tarot = itemName },
+            "Spectral" => new JamlClauseDto { Spectral = itemName },
+            "Planet" => new JamlClauseDto { Planet = itemName },
+            "Voucher" => new JamlClauseDto { Voucher = itemName },
+            "Boss" => new JamlClauseDto { Boss = itemName },
+            "Tags" => new JamlClauseDto { Tag = itemName },
+            "Card" => new JamlClauseDto { StandardCard = itemName },
+            _ => new JamlClauseDto { Joker = itemName },
         };
     }
+
+    private static string ClauseToDisplayText(JamlClauseBase clause) => clause switch
+    {
+        JokerClause c => $"{c.Joker} (Joker)",
+        SoulJokerClause c => $"{c.Joker} (Legendary)",
+        TarotCardClause c => $"{c.Tarot} (Tarot)",
+        SpectralCardClause c => $"{c.Spectral} (Spectral)",
+        PlanetClause c => $"{c.Planet} (Planet)",
+        VoucherClause c => $"{c.Voucher} (Voucher)",
+        BossClause c => $"{(c.Bosses.Length > 0 ? c.Bosses[0].ToString() : "?")} (Boss)",
+        TagClause c => $"{(c.Tags.Length > 0 ? c.Tags[0].ToString() : "?")} (Tags)",
+        StandardCardClause c => $"{c.Rank} {c.Suit} (Card)",
+        _ => clause.GetType().Name,
+    };
 
     private string? _loadedFilterPath; // Track loaded filter path for Start Search
 
@@ -510,69 +509,21 @@ public class FilterBuilderWindow : Window
                 var selected = filters[selectedIndex];
                 try
                 {
-                    // Load the config
                     var content = File.ReadAllText(selected.fullPath);
-                    MotelyJsonConfig? config = selected.format.ToLower() switch
-                    {
-                        "json" => ConfigFormatConverter.LoadFromJsonString(content),
-                        "jaml" => ConfigFormatConverter.LoadFromJamlString(content),
-                        _ => ConfigFormatConverter.LoadFromJsonString(content),
-                    };
-
-                    if (config == null)
+                    if (!JamlConfigLoader.TryLoad(content, out var config, out _) || config == null)
                     {
                         ShowErrorDialog("Load Error", "Failed to parse filter file");
                         return;
                     }
 
-                    // Clear current items
                     _mustItems.Clear();
                     _shouldItems.Clear();
                     _mustNotItems.Clear();
 
-                    // Load MUST items
-                    if (config.Must != null)
-                    {
-                        foreach (var clause in config.Must)
-                        {
-                            var category = clause.Type switch
-                            {
-                                "Joker" => "Joker",
-                                "SoulJoker" => "Legendary",
-                                "PlayingCard" => "Card",
-                                "TarotCard" => "Tarot",
-                                "SpectralCard" => "Spectral",
-                                "PlanetCard" => "Planet",
-                                "Voucher" => "Voucher",
-                                "BossBlind" => "Boss",
-                                "Tag" => "Tags",
-                                _ => "Joker",
-                            };
-                            _mustItems.Add($"{clause.Value} ({category})");
-                        }
-                    }
-
-                    // Load SHOULD items
-                    if (config.Should != null)
-                    {
-                        foreach (var clause in config.Should)
-                        {
-                            var category = clause.Type switch
-                            {
-                                "Joker" => "Joker",
-                                "SoulJoker" => "Legendary",
-                                "PlayingCard" => "Card",
-                                "TarotCard" => "Tarot",
-                                "SpectralCard" => "Spectral",
-                                "PlanetCard" => "Planet",
-                                "Voucher" => "Voucher",
-                                "BossBlind" => "Boss",
-                                "Tag" => "Tags",
-                                _ => "Joker",
-                            };
-                            _shouldItems.Add($"{clause.Value} ({category})");
-                        }
-                    }
+                    foreach (var clause in config.Must)
+                        _mustItems.Add(ClauseToDisplayText(clause));
+                    foreach (var clause in config.Should)
+                        _shouldItems.Add(ClauseToDisplayText(clause));
 
                     // Update list views
                     _mustList.SetSource(new ObservableCollection<string>(_mustItems));
@@ -675,20 +626,17 @@ public class FilterBuilderWindow : Window
 
             try
             {
-                // Build MotelyJsonConfig
-                var config = new MotelyJsonConfig
+                var config = new JamlDto
                 {
                     Name = name,
                     Description = "Created with Filter Builder TUI",
                     Author = Environment.UserName,
-                    DateCreated = DateTime.UtcNow,
                     Must = _mustItems.Select(ParseDisplayTextToClause).ToList(),
                     Should = _shouldItems.Select(ParseDisplayTextToClause).ToList(),
                     MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
                 };
 
-                // AOT-compatible: Use StaticSerializerBuilder with pre-generated context
-                var serializer = new StaticSerializerBuilder(new MotelyJamlStaticContext())
+                var serializer = new SerializerBuilder()
                     .WithNamingConvention(NullNamingConvention.Instance)
                     .DisableAliases() // Prevent &o0/*o0 anchor/alias references
                     .ConfigureDefaultValuesHandling(
@@ -759,20 +707,17 @@ public class FilterBuilderWindow : Window
             return;
         }
 
-        // Build MotelyJsonConfig
-        var config = new MotelyJsonConfig
+        var config = new JamlDto
         {
             Name = "TUI_QuickFilter",
             Description = "Quick filter from TUI",
             Author = Environment.UserName,
-            DateCreated = DateTime.UtcNow,
             Must = _mustItems.Select(ParseDisplayTextToClause).ToList(),
             Should = _shouldItems.Select(ParseDisplayTextToClause).ToList(),
             MustNot = _mustNotItems.Select(ParseDisplayTextToClause).ToList(),
         };
 
-        // AOT-compatible: Use StaticSerializerBuilder with pre-generated context
-        var serializer = new StaticSerializerBuilder(new MotelyJamlStaticContext())
+        var serializer = new SerializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
             .DisableAliases() // Prevent &o0/*o0 anchor/alias references
             .ConfigureDefaultValuesHandling(

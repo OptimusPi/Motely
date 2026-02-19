@@ -8,7 +8,7 @@ ref partial struct MotelySingleSearchContext
         CreatePrngStream(MotelyPrngKeys.JokerMisprint, isCached);
 
     public int GetNextMisprintMult(ref MotelySinglePrngStream misprintStream) =>
-        GetNextRandomInt(ref misprintStream, Motely.JokerMisprintMin, Motely.JokerMisprintMax + 1);
+        GetNextRandomInt(ref misprintStream, MotelyCore.JokerMisprintMin, MotelyCore.JokerMisprintMax + 1);
     #endregion
 
     #region Lucky Cards
@@ -17,13 +17,13 @@ ref partial struct MotelySingleSearchContext
         CreatePrngStream(MotelyPrngKeys.CardLuckyMoney, isCached);
 
     public bool GetNextLuckyMoney(ref MotelySinglePrngStream moneyStream, double baseLuck = 1) =>
-        GetNextRandom(ref moneyStream) < baseLuck / Motely.EnhancementLuckyMoneyChance;
+        GetNextRandom(ref moneyStream) < baseLuck / MotelyCore.EnhancementLuckyMoneyChance;
 
     public MotelySinglePrngStream CreateLuckyCardMultStream(bool isCached = false) =>
         CreatePrngStream(MotelyPrngKeys.CardLuckyMult, isCached);
 
     public bool GetNextLuckyMult(ref MotelySinglePrngStream multStream, double baseLuck = 1) =>
-        GetNextRandom(ref multStream) < baseLuck / Motely.EnhancementLuckyMultChance;
+        GetNextRandom(ref multStream) < baseLuck / MotelyCore.EnhancementLuckyMultChance;
 
     #endregion
 
@@ -36,7 +36,7 @@ ref partial struct MotelySingleSearchContext
         double baseLuck = 1
     )
     {
-        if (GetNextRandom(ref wheelStream) >= baseLuck / Motely.TarrotWheelChance)
+        if (GetNextRandom(ref wheelStream) >= baseLuck / MotelyCore.TarrotWheelChance)
             return MotelyItemEdition.None;
 
         // The game picks which joker to apply the effect to, but we don't implement that
@@ -62,7 +62,7 @@ ref partial struct MotelySingleSearchContext
     public bool GetNextCavendishExtinct(
         ref MotelySinglePrngStream cavendishStream,
         double baseLuck = 1
-    ) => GetNextRandom(ref cavendishStream) < baseLuck / Motely.JokerCavendishChance;
+    ) => GetNextRandom(ref cavendishStream) < baseLuck / MotelyCore.JokerCavendishChance;
 
     public MotelySinglePrngStream CreateGrosMichelPrngStream(bool isCached = false) =>
         CreatePrngStream(MotelyPrngKeys.JokerGrosMichel, isCached);
@@ -70,7 +70,7 @@ ref partial struct MotelySingleSearchContext
     public bool GetNextGrosMichelExtinct(
         ref MotelySinglePrngStream grosMichelStream,
         double baseLuck = 1
-    ) => GetNextRandom(ref grosMichelStream) < baseLuck / Motely.JokerGrosMichelChance;
+    ) => GetNextRandom(ref grosMichelStream) < baseLuck / MotelyCore.JokerGrosMichelChance;
 
     #endregion
 

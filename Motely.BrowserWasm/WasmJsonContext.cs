@@ -13,5 +13,11 @@ namespace Motely.BrowserWasm;
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
 )]
 [JsonSerializable(typeof(CapabilitiesDto))]
+[JsonSerializable(typeof(VersionDto))]
+[JsonSerializable(typeof(ErrorDto))]
+[JsonSerializable(typeof(ValidateResultDto))]
+[JsonSerializable(typeof(SearchOptionsDto))]
 [JsonSerializable(typeof(SearchStatusDto))]
+[JsonSerializable(typeof(SearchHitDto[]))]
+[JsonSerializable(typeof(SeedAnalysisDto))]
 public partial class WasmJsonContext : JsonSerializerContext { }

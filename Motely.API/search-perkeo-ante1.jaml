@@ -1,8 +1,0 @@
-name: Perkeo Ante 1
-deck: Red
-stake: White
-must:
-  - soulJoker: Perkeo
-    antes: [1]
-should: []
-mustNot: []

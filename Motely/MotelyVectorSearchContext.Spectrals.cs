@@ -131,7 +131,7 @@ ref partial struct MotelyVectorSearchContext
             Vector256<int> maskSoulInt = MotelyVectorUtils.ShrinkDoubleMaskToInt(maskSoul);
             items = Vector256.ConditionalSelect(
                 maskSoulInt,
-                Vector256.Create((int)MotelyItemType.Soul),
+                Vector256.Create((int)MotelyItemType.TheSoul),
                 items
             );
             activeMask = Vector512.AndNot(activeMask, maskSoul);
@@ -178,7 +178,7 @@ ref partial struct MotelyVectorSearchContext
         while (true)
         {
             Vector256<int> resampleMaskInt =
-                Vector256.Equals(items, Vector256.Create((int)MotelyItemType.Soul))
+                Vector256.Equals(items, Vector256.Create((int)MotelyItemType.TheSoul))
                 | Vector256.Equals(items, Vector256.Create((int)MotelyItemType.BlackHole));
             if (Vector256.EqualsAll(resampleMaskInt, Vector256<int>.Zero))
                 break;
@@ -356,7 +356,7 @@ ref partial struct MotelyVectorSearchContext
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     spectral.Value,
-                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
                 )
             );
             VectorMask isTarget = VectorEnum256.Equals(spectralType, targetSpectral);
@@ -386,7 +386,7 @@ ref partial struct MotelyVectorSearchContext
             var spectralType = new VectorEnum256<MotelySpectralCard>(
                 Vector256.BitwiseAnd(
                     spectral.Value,
-                    Vector256.Create(Motely.ItemTypeMask & ~Motely.ItemTypeCategoryMask)
+                    Vector256.Create(MotelyCore.ItemTypeMask & ~MotelyCore.ItemTypeCategoryMask)
                 )
             );
 

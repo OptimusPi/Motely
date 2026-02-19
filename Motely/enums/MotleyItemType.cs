@@ -44,7 +44,7 @@ public enum MotelyItemType
     Trance = MotelyItemTypeCategory.SpectralCard | MotelySpectralCard.Trance,
     Medium = MotelyItemTypeCategory.SpectralCard | MotelySpectralCard.Medium,
     Cryptid = MotelyItemTypeCategory.SpectralCard | MotelySpectralCard.Cryptid,
-    Soul = MotelyItemTypeCategory.SpectralCard | MotelySpectralCard.Soul,
+    TheSoul = MotelyItemTypeCategory.SpectralCard | MotelySpectralCard.TheSoul,
     BlackHole = MotelyItemTypeCategory.SpectralCard | MotelySpectralCard.BlackHole,
 
     // Tarot Cards
