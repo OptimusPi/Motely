@@ -1,5 +1,5 @@
 {"prompt": "2 blueprints in ante 1", "jaml": "name: Two Blueprints\nmust:\n  - joker: Blueprint\n    antes: [1]\n  - joker: Blueprint\n    antes: [1]"}
-{"prompt": "negative perkeo early", "jaml": "name: Negative Perkeo Early\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96"}
+{"prompt": "negative perkeo early", "jaml": "name: Negative Perkeo Early\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96"}
 {"prompt": "observatory telescope combo", "jaml": "name: Observatory Telescope\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]"}
 {"prompt": "blueprint and brainstorm together", "jaml": "name: Copy Build\nmust:\n  - joker: Blueprint\n    antes: [1]\n  - joker: Brainstorm\n    antes: [1, 2]"}
 {"prompt": "showman in ante 1 or 2", "jaml": "name: Showman Early\nshould:\n  - joker: Showman\n    antes: [1, 2]\n    score: 50"}
@@ -9,45 +9,45 @@
 {"prompt": "wee joker with eternal sticker", "jaml": "name: Wee Joker Eternal\ndeck: Erratic\nmust:\n  - joker: WeeJoker\n    stickers: [Eternal]\n    antes: [1]"}
 {"prompt": "3 blueprints total", "jaml": "name: Three Blueprints\nmust:\n  - joker: Blueprint\n  - joker: Blueprint\n  - joker: Blueprint"}
 {"prompt": "blueprint in shop ante 1", "jaml": "name: Blueprint Shop\nmust:\n  - joker: Blueprint\n    sources: [shop]\n    antes: [1]"}
-{"prompt": "perkeo negative in first 3 antes", "jaml": "name: Perkeo Negative Early\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 90\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [3]\n    score: 80"}
+{"prompt": "perkeo negative in first 3 antes", "jaml": "name: Perkeo Negative Early\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 90\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [3]\n    score: 80"}
 {"prompt": "telescope before ante 3", "jaml": "name: Telescope Early\nmust:\n  - voucher: Telescope\n    antes: [1, 2]"}
 {"prompt": "observatory by ante 4", "jaml": "name: Observatory Mid\nmust:\n  - voucher: Observatory\n    antes: [1, 2, 3, 4]"}
 {"prompt": "brainstorm and blueprint both in ante 1", "jaml": "name: Copy Combo Ante 1\nmust:\n  - joker: Blueprint\n    antes: [1]\n  - joker: Brainstorm\n    antes: [1]"}
 {"prompt": "steel joker with mime", "jaml": "name: Steel Build\nmust:\n  - joker: SteelJoker\n    antes: [1, 2]\nshould:\n  - joker: Mime\n    antes: [1, 2]\n    score: 50"}
-{"prompt": "any legendary joker", "jaml": "name: Any Legendary\nshould:\n  - or:\n      - soulJoker: Canio\n      - soulJoker: Triboulet\n      - soulJoker: Yorick\n      - soulJoker: Chicot\n      - soulJoker: Perkeo\n    antes: [1, 2, 3]\n    score: 100"}
+{"prompt": "any legendary joker", "jaml": "name: Any Legendary\nshould:\n  - or:\n      - legendaryJoker: Canio\n      - legendaryJoker: Triboulet\n      - legendaryJoker: Yorick\n      - legendaryJoker: Chicot\n      - legendaryJoker: Perkeo\n    antes: [1, 2, 3]\n    score: 100"}
 {"prompt": "blueprint or brainstorm in ante 1", "jaml": "name: Copy Joker Early\nmust:\n  - or:\n      - joker: Blueprint\n      - joker: Brainstorm\n    antes: [1]"}
 {"prompt": "2 telescopes", "jaml": "name: Double Telescope\nmust:\n  - voucher: Telescope\n  - voucher: Telescope"}
-{"prompt": "perkeo negative in ante 1 score 100", "jaml": "name: Perkeo Negative Priority\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100"}
+{"prompt": "perkeo negative in ante 1 score 100", "jaml": "name: Perkeo Negative Priority\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100"}
 {"prompt": "hieroglyph and petroglyph", "jaml": "name: Glyph Combo\nmust:\n  - voucher: Hieroglyph\n    antes: [1, 2, 3]\n  - voucher: Petroglyph\n    antes: [1, 2, 3]"}
 {"prompt": "blueprint from pack", "jaml": "name: Blueprint Pack\nmust:\n  - joker: Blueprint\n    sources: [pack]\n    antes: [1, 2]"}
 {"prompt": "showman early high score", "jaml": "name: Showman Priority\nshould:\n  - joker: Showman\n    antes: [1]\n    score: 100\n  - joker: Showman\n    antes: [2]\n    score: 50"}
 {"prompt": "avoid the ox boss", "jaml": "name: Avoid The Ox\nmustNot:\n  - boss: TheOx\n    antes: [1, 2, 3, 4, 5, 6, 7, 8]"}
 {"prompt": "blueprint brainstorm showman combo", "jaml": "name: Triple Copy\nmust:\n  - joker: Blueprint\n    antes: [1]\n  - joker: Brainstorm\n    antes: [1, 2]\nshould:\n  - joker: Showman\n    antes: [1, 2]\n    score: 50"}
-{"prompt": "telescope observatory perkeo negative", "jaml": "name: Observatory Perkeo\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1, 2]\n    score: 100"}
+{"prompt": "telescope observatory perkeo negative", "jaml": "name: Observatory Perkeo\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1, 2]\n    score: 100"}
 {"prompt": "wee joker erratic deck", "jaml": "name: Wee Joker Erratic\ndeck: Erratic\nmust:\n  - joker: WeeJoker\n    antes: [1]"}
 {"prompt": "blueprint in first 2 antes", "jaml": "name: Blueprint Early\nshould:\n  - joker: Blueprint\n    antes: [1]\n    score: 100\n  - joker: Blueprint\n    antes: [2]\n    score: 50"}
 {"prompt": "baron with multiple gold jokers", "jaml": "name: Baron Gold Stack\nmust:\n  - joker: Baron\n    antes: [1, 2]\nshould:\n  - joker: GoldenJoker\n    antes: [1]\n    score: 50\n  - joker: GoldenJoker\n    antes: [2]\n    score: 30"}
 {"prompt": "hieroglyph early", "jaml": "name: Hieroglyph Early\nmust:\n  - voucher: Hieroglyph\n    antes: [1, 2]"}
-{"prompt": "perkeo negative telescope observatory", "jaml": "name: Perkeo Observatory Build\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100"}
+{"prompt": "perkeo negative telescope observatory", "jaml": "name: Perkeo Observatory Build\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100"}
 {"prompt": "blueprint from shop or pack", "jaml": "name: Blueprint Flexible\nmust:\n  - joker: Blueprint\n    sources: [shop, pack]\n    antes: [1, 2]"}
 {"prompt": "showman and blueprint together", "jaml": "name: Showman Blueprint\nmust:\n  - joker: Blueprint\n    antes: [1]\nshould:\n  - joker: Showman\n    antes: [1, 2]\n    score: 50"}
 {"prompt": "avoid the plant boss", "jaml": "name: Avoid The Plant\nmustNot:\n  - boss: ThePlant\n    antes: [1, 2, 3, 4, 5, 6, 7, 8]"}
 {"prompt": "brainstorm early", "jaml": "name: Brainstorm Early\nshould:\n  - joker: Brainstorm\n    antes: [1]\n    score: 100\n  - joker: Brainstorm\n    antes: [2]\n    score: 50"}
 {"prompt": "telescope by ante 2", "jaml": "name: Telescope Ante 2\nmust:\n  - voucher: Telescope\n    antes: [1, 2]"}
-{"prompt": "observatory telescope perkeo negative", "jaml": "name: Full Observatory\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96"}
+{"prompt": "observatory telescope perkeo negative", "jaml": "name: Full Observatory\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96"}
 {"prompt": "blueprint brainstorm mime", "jaml": "name: Copy Mime Build\nmust:\n  - joker: Blueprint\n    antes: [1]\n  - joker: Brainstorm\n    antes: [1, 2]\nshould:\n  - joker: Mime\n    antes: [1, 2]\n    score: 30"}
 {"prompt": "hieroglyph petroglyph combo", "jaml": "name: Glyph Duo\nmust:\n  - voucher: Hieroglyph\n    antes: [1, 2, 3]\n  - voucher: Petroglyph\n    antes: [1, 2, 3]"}
-{"prompt": "perkeo negative in first 2 antes", "jaml": "name: Perkeo Negative Very Early\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96"}
+{"prompt": "perkeo negative in first 2 antes", "jaml": "name: Perkeo Negative Very Early\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96"}
 {"prompt": "blueprint from any source", "jaml": "name: Blueprint Any Source\nmust:\n  - joker: Blueprint\n    antes: [1, 2, 3]"}
 {"prompt": "showman with high priority", "jaml": "name: Showman High Priority\nshould:\n  - joker: Showman\n    antes: [1]\n    score: 100"}
 {"prompt": "telescope observatory early", "jaml": "name: Observatory Early\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]"}
 {"prompt": "blueprint and brainstorm both early", "jaml": "name: Copy Combo Early\nmust:\n  - joker: Blueprint\n    antes: [1, 2]\n  - joker: Brainstorm\n    antes: [1, 2]"}
-{"prompt": "perkeo negative telescope", "jaml": "name: Perkeo Telescope\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1, 2]\n    score: 100"}
+{"prompt": "perkeo negative telescope", "jaml": "name: Perkeo Telescope\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1, 2]\n    score: 100"}
 {"prompt": "hieroglyph in first 3 antes", "jaml": "name: Hieroglyph Early\nmust:\n  - voucher: Hieroglyph\n    antes: [1, 2, 3]"}
 {"prompt": "blueprint brainstorm showman all together", "jaml": "name: Full Copy Build\nmust:\n  - joker: Blueprint\n    antes: [1]\n  - joker: Brainstorm\n    antes: [1, 2]\nshould:\n  - joker: Showman\n    antes: [1, 2]\n    score: 50"}
 {"prompt": "avoid the serpent boss", "jaml": "name: Avoid The Serpent\nmustNot:\n  - boss: TheSerpent\n    antes: [1, 2, 3, 4, 5, 6, 7, 8]"}
 {"prompt": "wee joker with stickers erratic", "jaml": "name: Wee Joker Stickers\ndeck: Erratic\nmust:\n  - joker: WeeJoker\n    stickers: [Eternal]\n    antes: [1]"}
 {"prompt": "blueprint in ante 1 score 100", "jaml": "name: Blueprint Priority\nshould:\n  - joker: Blueprint\n    antes: [1]\n    score: 100"}
-{"prompt": "telescope observatory perkeo negative build", "jaml": "name: Complete Observatory\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - soulJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96\n  - joker: Blueprint\n    antes: [1, 2, 3]\n    score: 1"}
+{"prompt": "telescope observatory perkeo negative build", "jaml": "name: Complete Observatory\nmust:\n  - voucher: Telescope\n    antes: [1, 2]\n  - voucher: Observatory\n    antes: [2, 3]\nshould:\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [1]\n    score: 100\n  - legendaryJoker: Perkeo\n    edition: Negative\n    antes: [2]\n    score: 96\n  - joker: Blueprint\n    antes: [1, 2, 3]\n    score: 1"}
 
 

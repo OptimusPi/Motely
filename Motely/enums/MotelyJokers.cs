@@ -168,10 +168,10 @@ public enum MotelyJokerLegendary
 
 public enum MotelyJokerRarity
 {
-    Common = 0b00 << Motely.JokerRarityOffset,
-    Uncommon = 0b01 << Motely.JokerRarityOffset,
-    Rare = 0b10 << Motely.JokerRarityOffset,
-    Legendary = 0b11 << Motely.JokerRarityOffset,
+    Common = 0b00 << MotelyCore.JokerRarityOffset,
+    Uncommon = 0b01 << MotelyCore.JokerRarityOffset,
+    Rare = 0b10 << MotelyCore.JokerRarityOffset,
+    Legendary = 0b11 << MotelyCore.JokerRarityOffset,
 }
 
 public enum MotelyJoker

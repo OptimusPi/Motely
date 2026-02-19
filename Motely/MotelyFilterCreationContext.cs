@@ -15,6 +15,8 @@ public ref struct MotelyFilterCreationContext
     public readonly MotelyStake Stake => _searchParameters.Stake;
     public readonly MotelyDeck Deck => _searchParameters.Deck;
 
+    public Action<string>? SeedMatchCallback;
+
     public MotelyFilterCreationContext(ref readonly MotelySearchParameters searchParameters)
     {
         _searchParameters = ref searchParameters;

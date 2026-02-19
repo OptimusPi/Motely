@@ -103,7 +103,7 @@ ref partial struct MotelySingleSearchContext
                         ref stream.EnhancementPrngStream,
                         1,
                         MotelyEnum<MotelyItemEnhancement>.ValueCount
-                    ) << Motely.ItemEnhancementOffset
+                    ) << MotelyCore.ItemEnhancementOffset
                 )
             );
         }

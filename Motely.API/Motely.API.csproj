@@ -1,39 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <PublishTrimmed>false</PublishTrimmed>
-    <!-- Performance optimizations -->
-    <Optimize>true</Optimize>
-    <TieredCompilation>true</TieredCompilation>
-    <TieredPGO>true</TieredPGO>
-    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
-    <TieredCompilationQuickJitForLoops>false</TieredCompilationQuickJitForLoops>
-    <ServerGarbageCollection>true</ServerGarbageCollection>
-    <EnableHardwareIntrinsics>true</EnableHardwareIntrinsics>
-    <EnableAVX2>true</EnableAVX2>
-    <EnableAVX512F>true</EnableAVX512F>
-    <EnableAVX512BW>true</EnableAVX512BW>
-  </PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OutputType>Library</OutputType>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
+
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
+
   <ItemGroup>
-    <PackageReference Include="DuckDB.NET.Data.Full" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
-    <ProjectReference Include="..\Motely.Repository\Motely.Repository.csproj" />
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <ProjectReference Include="..\Motely.DB.Desktop\Motely.DB.Desktop.csproj" />
+    <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
   </ItemGroup>
+
 </Project>

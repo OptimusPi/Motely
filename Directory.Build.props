@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Solution-wide version - change this one place to update all projects -->
-    <MotelyVersion>1.2.11</MotelyVersion>
+    <MotelyVersion>1.3.0</MotelyVersion>
     <Version>$(MotelyVersion)</Version>
     <AssemblyVersion>$(MotelyVersion)</AssemblyVersion>
     <FileVersion>$(MotelyVersion)</FileVersion>

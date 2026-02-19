@@ -36,10 +36,10 @@ public static class MotelyPlayingCardRankExt
 
 public enum MotelyPlayingCardSuit
 {
-    Clubs = 0b00 << Motely.PlayingCardSuitOffset,
-    Diamonds = 0b01 << Motely.PlayingCardSuitOffset,
-    Hearts = 0b10 << Motely.PlayingCardSuitOffset,
-    Spades = 0b11 << Motely.PlayingCardSuitOffset,
+    Clubs = 0b00 << MotelyCore.PlayingCardSuitOffset,
+    Diamonds = 0b01 << MotelyCore.PlayingCardSuitOffset,
+    Hearts = 0b10 << MotelyCore.PlayingCardSuitOffset,
+    Spades = 0b11 << MotelyCore.PlayingCardSuitOffset,
 }
 
 public static class MotelyPlayingCardSuitExt
@@ -47,7 +47,7 @@ public static class MotelyPlayingCardSuitExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetOrdinal(this MotelyPlayingCardSuit suit)
     {
-        return (int)suit >> Motely.PlayingCardSuitOffset;
+        return (int)suit >> MotelyCore.PlayingCardSuitOffset;
     }
 }
 
@@ -115,12 +115,12 @@ public static class MotelyPlayingCardExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MotelyPlayingCardSuit GetSuit(this MotelyPlayingCard card)
     {
-        return (MotelyPlayingCardSuit)((int)card & Motely.PlayingCardSuitMask);
+        return (MotelyPlayingCardSuit)((int)card & MotelyCore.PlayingCardSuitMask);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static MotelyPlayingCardRank GetRank(this MotelyPlayingCard card)
     {
-        return (MotelyPlayingCardRank)((int)card & Motely.PlayingCardRankMask);
+        return (MotelyPlayingCardRank)((int)card & MotelyCore.PlayingCardRankMask);
     }
 }

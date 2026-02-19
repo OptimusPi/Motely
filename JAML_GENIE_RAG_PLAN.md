@@ -313,7 +313,7 @@ export default {
 
 ## JAML Syntax (key rules):
 - Use \`must:\` for required items, \`should:\` for scored optional items
-- Types: joker, voucher, soulJoker, tarot, planet, spectral, boss, tag, event
+- Types: joker, voucher, legendaryJoker, tarot, planet, spectral, boss, tag, event
 - Modifiers: antes (1-8), edition (Foil/Holo/Polychrome/Negative), score, sources
 
 ## Retrieved Context (similar examples and knowledge):

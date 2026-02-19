@@ -39,11 +39,11 @@ must:
   - voucher: Observatory
     antes: [2, 3]
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
     score: 100
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [2]
     score: 96
@@ -158,15 +158,15 @@ Uses Perkeo (Negative edition) to generate negative copies of consumables. Extre
 ```yaml
 name: Negative Perkeo
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
     score: 100
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [2]
     score: 96
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [3]
     score: 95
@@ -177,7 +177,7 @@ should:
 **Early Perkeo** (highest priority):
 ```yaml
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
     score: 100
@@ -191,7 +191,7 @@ must:
   - voucher: Observatory
     antes: [2, 3]
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
     score: 100
@@ -408,7 +408,7 @@ must:
   - joker: Blueprint
     antes: [1]
 should:
-  - soulJoker: Perkeo
+  - legendaryJoker: Perkeo
     edition: Negative
     antes: [1]
     score: 100
