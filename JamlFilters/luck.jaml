@@ -4,37 +4,17 @@ description: showmanthen oops skipper!
 deck: Anaglyph
 stake: Black
 must:
+  - legendaryJoker: Perkeo
+    sources:
+      antes: [ 1, 2]
   - smallBlindTag: NegativeTag
-    antes: [2]
+    antes: [1, 2, 3, 4, 5, 6, 7, 8]
 should:
-  - smallBlindTag: NegativeTag
-    antes: [4]
-    score: 1000
-  - smallBlindTag: NegativeTag
-    antes: [6]
-    score: 1000
-
-  - joker: showman
-    antes: [1,2]
-    score: 45
-  - soulJoker: Perkeo
-    antes: [1,2,3,4]    
-    score: 95
-
-  - joker: OopsAll6s
-    antes: [2]
-    sources:
-      shopSlots: [2,3]
+  - legendaryJoker: Perkeo
+    antes: [1, 2]
     score: 100
-
-  - joker: OopsAll6s
-    antes: [4]
+  - uncommonJoker: Juggler
+    antes: [1, 2]
+    score: 50
     sources:
-      shopSlots: [2,3,4,5]
-    score: 100
-
-  - joker: OopsAll6s
-    antes: [6]
-    sources:
-      shopSlots: [2,3,4,5,6,7,8]
-    score: 100
+      antes: [ 1, 2]

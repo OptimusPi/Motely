@@ -8,6 +8,7 @@ namespace Motely.Filters;
 public sealed class StartingDrawClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public MotelyPlayingCardRank? Rank { get; init; }
     public MotelyPlayingCardSuit? Suit { get; init; }
     public int[] Antes { get; init; } = [];

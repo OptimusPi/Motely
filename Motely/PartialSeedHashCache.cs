@@ -106,7 +106,10 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     public void CachePartialHash(int keyLength, Vector512<double> partialHash)
     {
         Debug.Assert(keyLength < MotelyCore.MaxCachedPseudoHashKeyLength);
-        Debug.Assert(!HasPartialHash(keyLength));
+
+        // Skip if already cached (score provider re-runs filters on same context)
+        if (HasPartialHash(keyLength))
+            return;
 
         int dynamicEntryIndex = DynamicCacheEntryCount++;
 

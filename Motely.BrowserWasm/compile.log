@@ -1,0 +1,17 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.AwaitCompletion()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.Cancel()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.ForceProgressReport()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.GetResults()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+
+Build FAILED.
+
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.AwaitCompletion()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.Cancel()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.ForceProgressReport()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+x:\BalatroSeedOracle\src\MotelyJAML\Motely\MotelySearch.cs(624,56): error CS0535: 'MotelySearch<TBaseFilter>' does not implement interface member 'IMotelySearch.GetResults()' [x:\BalatroSeedOracle\src\MotelyJAML\Motely\Motely.csproj::TargetFramework=net10.0]
+    0 Warning(s)
+    4 Error(s)
+
+Time Elapsed 00:00:02.59

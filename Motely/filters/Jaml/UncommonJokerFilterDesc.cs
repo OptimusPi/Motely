@@ -1,31 +1,17 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Motely;
 using static Motely.MotelyVectorUtils;
-using System.Collections.Generic;
 using System.Runtime.Intrinsics;
 
 namespace Motely.Filters;
 
-public sealed class JokerClause : IJamlClause
+public struct UncommonJokerFilterDesc(UncommonJokerClause clause)
+    : IMotelySeedFilterDesc<UncommonJokerFilterDesc.UncommonJokerFilter>
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyJoker[] Jokers { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-}
+    private readonly UncommonJokerClause _clause = clause;
 
-public struct JokerFilterDesc(JokerClause clause)
-    : IMotelySeedFilterDesc<JokerFilterDesc.JokerFilter>
-{
-    private readonly JokerClause _clause = clause;
-
-    public JokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
+    public UncommonJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
         foreach (var ante in _clause.Antes)
         {
@@ -43,7 +29,7 @@ public struct JokerFilterDesc(JokerClause clause)
             }
             else
             {
-                throw new InvalidOperationException($"Joker {_clause.Jokers[i]} not found in MotelyItemType");
+                throw new InvalidOperationException($"Uncommon joker {_clause.Jokers[i]} not found in MotelyItemType");
             }
         }
 
@@ -59,18 +45,18 @@ public struct JokerFilterDesc(JokerClause clause)
         foreach (var idx in boosterIndices)
             if (idx > maxBoosterPack) maxBoosterPack = idx;
 
-        return new JokerFilter(_clause, targetTypes, shopIndices.ToArray(), boosterIndices.ToArray(), maxShopItem, maxBoosterPack);
+        return new UncommonJokerFilter(_clause, targetTypes, shopIndices.ToArray(), boosterIndices.ToArray(), maxShopItem, maxBoosterPack);
     }
 
-    public struct JokerFilter(
-        JokerClause clause,
+    public struct UncommonJokerFilter(
+        UncommonJokerClause clause,
         MotelyItemType[] targetTypes,
         int[] shopIndices,
         int[] boosterIndices,
         int maxShopItem,
         int maxBoosterPack) : IMotelySeedFilter
     {
-        private readonly JokerClause _clause = clause;
+        private readonly UncommonJokerClause _clause = clause;
         private readonly MotelyItemType[] _targetTypes = targetTypes;
         private readonly int[] _shopIndices = shopIndices;
         private readonly int[] _boosterIndices = boosterIndices;
@@ -82,7 +68,7 @@ public struct JokerFilterDesc(JokerClause clause)
         {
             Debug.Assert(_clause.Jokers.Length > 0);
             int needed = _clause.Min;
-            Debug.Assert(needed > 0, "JokerClause.Min must be > 0 — loader bug.");
+            Debug.Assert(needed > 0, "UncommonJokerClause.Min must be > 0 — loader bug.");
             Vector256<int> matchCounts = Vector256<int>.Zero;
 
             var shopIndices = _shopIndices;
@@ -235,54 +221,4 @@ public struct JokerFilterDesc(JokerClause clause)
             }
         }
     }
-}
-
-// ── Rarity-specific joker clauses ──
-
-public sealed class CommonJokerClause : IJamlClause
-{
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyJokerCommon[] Jokers { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-}
-
-public sealed class UncommonJokerClause : IJamlClause
-{
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyJokerUncommon[] Jokers { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-}
-
-public sealed class RareJokerClause : IJamlClause
-{
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyJokerRare[] Jokers { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
-}
-
-public sealed class MixedJokerClause : IJamlClause
-{
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
-    public required MotelyJoker[] Jokers { get; init; }
-    public MotelyItemEdition? Edition { get; init; }
-    public MotelyJokerSticker[] Stickers { get; init; } = [];
-    public JokerSourceConfig Sources { get; init; } = new();
-    public int[] Antes { get; init; } = [];
-    public int Min { get; init; } = 1;
 }

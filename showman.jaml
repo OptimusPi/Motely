@@ -1,0 +1,35 @@
+name: Showman
+author: pifreak
+description: Showman needed
+deck: Anaglyph
+stake: White
+must:
+  - joker: Showman
+    antes: [1,2]
+    sources:
+      shopItems: [0,1,2,3,4,5]
+      boosterPacks: [0,1,2,3]
+
+should:
+  - legendaryJoker: Perkeo
+    antes: [1,2,3,4,5,6,7,8]
+    sources:
+      boosterPacks: [0,1,2,3, 4, 5]
+    score: 100
+  - jokers: [Perkeo, Canio, Triboulet, Chicot, Yorick]
+    antes: [1,2,3,4,5,6,7,8]
+    sources:
+      boosterPacks: [0,1,2,3, 4, 5]
+    score: 89
+  - joker: Showman
+    antes: [1,2]
+    sources:
+      shopItems: [0,1]
+      boosterPacks: [0,1]
+    score: 10
+  - joker: OopsAll6s
+    antes: [1,2,3,4,5,6]
+    score: 1
+
+    
+    

@@ -10,17 +10,20 @@ namespace Motely.Filters;
 public interface IJamlClause
 {
     string Label { get; init; }
+    int Score { get; init; }
 }
 
 public sealed class AndClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required IJamlClause[] Clauses { get; init; }
 }
 
 public sealed class OrClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required IJamlClause[] Clauses { get; init; }
     public int Min { get; init; } = 1;
 }
@@ -31,7 +34,8 @@ public sealed class OrClause : IJamlClause
 public record JamlSearchPlan(
     IMotelySearchSettings Settings,
     string[] MustLabels,
-    string[] ShouldLabels);
+    string[] ShouldLabels
+);
 
 /// <summary>
 /// Builds MotelySearchSettings from a JamlConfig by adding one filter per clause
@@ -39,8 +43,8 @@ public record JamlSearchPlan(
 /// </summary>
 public static class JamlSearchBuilder
 {
-    public static IMotelySearchSettings CreateSettings(JamlConfig config)
-        => CreatePlan(config).Settings;
+    public static IMotelySearchSettings CreateSettings(JamlConfig config) =>
+        CreatePlan(config).Settings;
 
     public static JamlSearchPlan CreatePlan(JamlConfig config)
     {
@@ -48,61 +52,167 @@ public static class JamlSearchBuilder
             throw new InvalidOperationException("JamlConfig has no clauses.");
 
         // ── MUST: required filters (AND logic) ──
-        var mustDescs = new List<(IMotelySeedFilterDesc desc, string label)>();
-        AddDescsFromSet(mustDescs, config.Must);
+        var mustDescs = new List<IMotelySeedFilterDesc>();
+        var mustLabels = new List<string>();
+        AddDescsFromSet(mustDescs, mustLabels, config.Must);
 
         // If no must but we have should, use a passthrough base filter
         if (mustDescs.Count == 0 && config.Should.HasAnyClauses)
-            mustDescs.Add((new PassthroughFilterDesc(), "(passthrough)"));
+        {
+            mustDescs.Add(new PassthroughFilterDesc());
+            mustLabels.Add("(passthrough)");
+        }
 
         if (mustDescs.Count == 0)
             throw new InvalidOperationException("JamlConfig produced no filter descriptors.");
 
         // Build settings: first must desc = base filter, rest = additional required filters
-        var settings = CreateSettingsFromDesc(mustDescs[0].desc);
+        var settings = CreateSettingsFromDesc(mustDescs[0]);
         for (int i = 1; i < mustDescs.Count; i++)
-            settings.WithAdditionalFilter(mustDescs[i].desc);
+            settings.WithAdditionalFilter(mustDescs[i]);
 
         // ── SHOULD: score provider (optional, contributes to seed score) ──
-        var shouldDescs = new List<(IMotelySeedFilterDesc desc, string label)>();
+        string[] shouldLabelsArray = [];
         if (config.Should.HasAnyClauses)
         {
-            AddDescsFromSet(shouldDescs, config.Should);
-            (IMotelySeedFilterDesc desc, int score, string label)[] scored = shouldDescs.Select(d => (d.desc, 1, d.label)).ToArray();
-            (IMotelySeedFilterDesc desc, string label)[] mustArr = mustDescs.Select(d => (d.desc, d.label)).ToArray();
+            var shouldDescs = new List<IMotelySeedFilterDesc>();
+            var shouldLabels = new List<string>();
+            AddDescsFromSet(shouldDescs, shouldLabels, config.Should);
+
+            (IMotelySeedFilterDesc desc, int score, string label)[] scored = shouldDescs
+                .Zip(shouldLabels, (desc, label) => (desc, 1, label))
+                .ToArray();
+            (IMotelySeedFilterDesc desc, string label)[] mustArr = mustDescs
+                .Zip(mustLabels, (desc, label) => (desc, label))
+                .ToArray();
             settings.WithSeedScoreProvider(new JamlShouldScoreDesc(mustArr, scored));
+            shouldLabelsArray = shouldLabels.ToArray();
         }
 
-        var mustLabels = mustDescs.Select(d => $"Must: {d.label}").ToArray();
-        var shouldLabels = shouldDescs.Select(d => $"Should: {d.label}").ToArray();
-
-        return new JamlSearchPlan(settings, mustLabels, shouldLabels);
+        return new JamlSearchPlan(settings, mustLabels.ToArray(), shouldLabelsArray);
     }
 
-    private static void AddDescsFromSet(List<(IMotelySeedFilterDesc desc, string label)> descs, JamlClauseSet set)
+    private static void AddDescsFromSet(
+        List<IMotelySeedFilterDesc> descs,
+        List<string> labels,
+        JamlClauseSet set
+    )
     {
-        foreach (var c in set.Jokers) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.CommonJokers) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.UncommonJokers) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.RareJokers) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.LegendaryJokers) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.Vouchers) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.TarotCards) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.SpectralCards) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.PlanetCards) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.Bosses) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.Tags) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.StandardCards) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.ErraticRanks) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.ErraticSuits) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.ErraticCards) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.LuckyMoney) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.LuckyMult) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.MisprintMult) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.WheelOfFortune) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.CavendishExtinct) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.GrosMichelExtinct) descs.Add((CreateDesc(c), c.Label));
-        foreach (var c in set.StartingDraw) descs.Add((CreateDesc(c), c.Label));
+        foreach (var c in set.Jokers)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.CommonJokers)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.UncommonJokers)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.RareJokers)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.MixedJokers)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.LegendaryJokers)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.Vouchers)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.TarotCards)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.SpectralCards)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.PlanetCards)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.Bosses)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.Tags)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.StandardCards)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.ErraticRanks)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.ErraticSuits)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.ErraticCards)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.LuckyMoney)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.LuckyMult)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.MisprintMult)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.WheelOfFortune)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.CavendishExtinct)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.GrosMichelExtinct)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
+        foreach (var c in set.StartingDraw)
+        {
+            descs.Add(CreateDesc(c));
+            labels.Add(c.Label);
+        }
     }
 
     private static IMotelySearchSettings CreateSettingsFromDesc(IMotelySeedFilterDesc desc)
@@ -110,25 +220,53 @@ public static class JamlSearchBuilder
         return desc switch
         {
             JokerFilterDesc d => new MotelySearchSettings<JokerFilterDesc.JokerFilter>(d),
-            LegendaryJokerFilterDesc d => new MotelySearchSettings<LegendaryJokerFilterDesc.LegendaryJokerFilter>(d),
+            CommonJokerFilterDesc d =>
+                new MotelySearchSettings<CommonJokerFilterDesc.CommonJokerFilter>(d),
+            UncommonJokerFilterDesc d =>
+                new MotelySearchSettings<UncommonJokerFilterDesc.UncommonJokerFilter>(d),
+            RareJokerFilterDesc d => new MotelySearchSettings<RareJokerFilterDesc.RareJokerFilter>(
+                d
+            ),
+            MixedJokerFilterDesc d =>
+                new MotelySearchSettings<MixedJokerFilterDesc.MixedJokerFilter>(d),
+            LegendaryJokerFilterDesc d =>
+                new MotelySearchSettings<LegendaryJokerFilterDesc.LegendaryJokerFilter>(d),
             VoucherFilterDesc d => new MotelySearchSettings<VoucherFilterDesc.VoucherFilter>(d),
-            TarotCardFilterDesc d => new MotelySearchSettings<TarotCardFilterDesc.TarotCardFilter>(d),
-            SpectralCardFilterDesc d => new MotelySearchSettings<SpectralCardFilterDesc.SpectralCardFilter>(d),
-            PlanetCardFilterDesc d => new MotelySearchSettings<PlanetCardFilterDesc.PlanetCardFilter>(d),
+            TarotCardFilterDesc d => new MotelySearchSettings<TarotCardFilterDesc.TarotCardFilter>(
+                d
+            ),
+            SpectralCardFilterDesc d =>
+                new MotelySearchSettings<SpectralCardFilterDesc.SpectralCardFilter>(d),
+            PlanetCardFilterDesc d =>
+                new MotelySearchSettings<PlanetCardFilterDesc.PlanetCardFilter>(d),
             BossFilterDesc d => new MotelySearchSettings<BossFilterDesc.BossFilter>(d),
             TagFilterDesc d => new MotelySearchSettings<TagFilterDesc.TagFilter>(d),
-            StandardCardFilterDesc d => new MotelySearchSettings<StandardCardFilterDesc.StandardCardFilter>(d),
-            ErraticRankFilterDesc d => new MotelySearchSettings<ErraticRankFilterDesc.ErraticRankFilter>(d),
-            ErraticSuitFilterDesc d => new MotelySearchSettings<ErraticSuitFilterDesc.ErraticSuitFilter>(d),
-            ErraticCardFilterDesc d => new MotelySearchSettings<ErraticCardFilterDesc.ErraticCardFilter>(d),
-            LuckyMoneyFilterDesc d => new MotelySearchSettings<LuckyMoneyFilterDesc.LuckyMoneyFilter>(d),
-            LuckyMultFilterDesc d => new MotelySearchSettings<LuckyMultFilterDesc.LuckyMultFilter>(d),
-            MisprintMultFilterDesc d => new MotelySearchSettings<MisprintMultFilterDesc.MisprintMultFilter>(d),
-            WheelOfFortuneFilterDesc d => new MotelySearchSettings<WheelOfFortuneFilterDesc.WheelOfFortuneFilter>(d),
-            CavendishExtinctFilterDesc d => new MotelySearchSettings<CavendishExtinctFilterDesc.CavendishExtinctFilter>(d),
-            GrosMichelExtinctFilterDesc d => new MotelySearchSettings<GrosMichelExtinctFilterDesc.GrosMichelExtinctFilter>(d),
-            PassthroughFilterDesc d => new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(d),
-            _ => throw new NotSupportedException($"Unknown filter desc type: {desc.GetType().Name}")
+            StandardCardFilterDesc d =>
+                new MotelySearchSettings<StandardCardFilterDesc.StandardCardFilter>(d),
+            ErraticRankFilterDesc d =>
+                new MotelySearchSettings<ErraticRankFilterDesc.ErraticRankFilter>(d),
+            ErraticSuitFilterDesc d =>
+                new MotelySearchSettings<ErraticSuitFilterDesc.ErraticSuitFilter>(d),
+            ErraticCardFilterDesc d =>
+                new MotelySearchSettings<ErraticCardFilterDesc.ErraticCardFilter>(d),
+            LuckyMoneyFilterDesc d =>
+                new MotelySearchSettings<LuckyMoneyFilterDesc.LuckyMoneyFilter>(d),
+            LuckyMultFilterDesc d => new MotelySearchSettings<LuckyMultFilterDesc.LuckyMultFilter>(
+                d
+            ),
+            MisprintMultFilterDesc d =>
+                new MotelySearchSettings<MisprintMultFilterDesc.MisprintMultFilter>(d),
+            WheelOfFortuneFilterDesc d =>
+                new MotelySearchSettings<WheelOfFortuneFilterDesc.WheelOfFortuneFilter>(d),
+            CavendishExtinctFilterDesc d =>
+                new MotelySearchSettings<CavendishExtinctFilterDesc.CavendishExtinctFilter>(d),
+            GrosMichelExtinctFilterDesc d =>
+                new MotelySearchSettings<GrosMichelExtinctFilterDesc.GrosMichelExtinctFilter>(d),
+            PassthroughFilterDesc d =>
+                new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(d),
+            _ => throw new NotSupportedException(
+                $"Unknown filter desc type: {desc.GetType().Name}"
+            ),
         };
     }
 
@@ -138,6 +276,10 @@ public static class JamlSearchBuilder
         return clause switch
         {
             JokerClause c => new JokerFilterDesc(c),
+            CommonJokerClause c => new CommonJokerFilterDesc(c),
+            UncommonJokerClause c => new UncommonJokerFilterDesc(c),
+            RareJokerClause c => new RareJokerFilterDesc(c),
+            MixedJokerClause c => new MixedJokerFilterDesc(c),
             LegendaryJokerClause c => new LegendaryJokerFilterDesc(c),
             VoucherClause c => new VoucherFilterDesc(c),
             TarotCardClause c => new TarotCardFilterDesc(c),
@@ -156,7 +298,7 @@ public static class JamlSearchBuilder
             CavendishExtinctClause c => new CavendishExtinctFilterDesc(c),
             GrosMichelExtinctClause c => new GrosMichelExtinctFilterDesc(c),
             StartingDrawClause c => new StartingDrawFilterDesc(c),
-            _ => throw new NotSupportedException($"Unknown clause type: {clause.GetType().Name}")
+            _ => throw new NotSupportedException($"Unknown clause type: {clause.GetType().Name}"),
         };
     }
 }

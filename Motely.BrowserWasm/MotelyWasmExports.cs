@@ -151,14 +151,20 @@ public static partial class MotelyWasmExports
     /// Start a JAML search. Returns immediately with initial status JSON.
     /// JS polls progress via GetSearchStatus(). No blocking drain loop.
     /// </summary>
+    [JSImport("globalThis.__motelyOnProgress")]
+    public static partial void JsOnProgress(long totalSeedsSearched, long matchingSeeds, long elapsedMs, int resultCount);
+
+    [JSImport("globalThis.__motelyOnResult")]
+    public static partial void JsOnResult([JSMarshalAs<JSType.String>] string seed, int score);
+
     [JSExport]
-    public static Task<string> StartJamlSearch(string jamlContent, string optionsJson)
+    public static async Task<string> StartJamlSearch(string jamlContent, string optionsJson)
     {
         try
         {
             if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var parseError)
                 || config == null)
-                return Task.FromResult(ErrorJson(parseError ?? "Failed to parse JAML filter"));
+                return ErrorJson(parseError ?? "Failed to parse JAML filter");
 
             // Parse search options (required for explicit runtime behavior under AOT)
             SearchOptionsDto? options = null;
@@ -169,37 +175,46 @@ public static partial class MotelyWasmExports
             }
 
             if (options == null)
-                return Task.FromResult(ErrorJson("Search options are required. Provide threadCount and batchSize."));
+                return ErrorJson("Search options are required. Provide threadCount and batchSize.");
 
             if (!options.ThreadCount.HasValue || options.ThreadCount.Value < 1)
-                return Task.FromResult(ErrorJson("Invalid options.threadCount. Provide an integer >= 1."));
+                return ErrorJson("Invalid options.threadCount. Provide an integer >= 1.");
 
             if (!options.BatchSize.HasValue || options.BatchSize.Value < 1 || options.BatchSize.Value > 7)
-                return Task.FromResult(ErrorJson("Invalid options.batchSize. Provide an integer in range 1..7."));
+                return ErrorJson("Invalid options.batchSize. Provide an integer in range 1..7.");
 
             if (options.ThreadCount.Value > 1 && !IsThreadingEnabled())
             {
-                return Task.FromResult(ErrorJson(
+                return ErrorJson(
                     "WASM threading is not active at runtime. Ensure COOP/COEP headers are set and the loader enables threads."
-                ));
+                );
             }
 
             if (options.ThreadCount.Value > Environment.ProcessorCount)
             {
-                return Task.FromResult(ErrorJson(
+                return ErrorJson(
                     $"Invalid options.threadCount. Requested {options.ThreadCount.Value}, but runtime reports {Environment.ProcessorCount} available processor(s)."
-                ));
+                );
             }
 
             // Cancel any existing search first (only one at a time)
             StopSearch();
+            
+            _drainedResults.Clear();
+            _resultQueue.Clear();
 
             var settings = JamlSearchBuilder.CreateSettings(config)
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(options.ThreadCount.Value)
                 .WithBatchCharacterCount(options.BatchSize.Value)
-                .WithSeedMatchCallback(seed => _resultQueue.Enqueue((seed, 0)));
+                .WithSeedMatchCallback(seed => {
+                    JsOnResult(seed, 0);
+                    _resultQueue.Enqueue((seed, 0));
+                })
+                .WithProgressCallback(prog => {
+                    JsOnProgress(prog.TotalSeedsSearched, prog.MatchingSeeds, (long)prog.ElapsedTime.TotalMilliseconds, _drainedResults.Count + _resultQueue.Count);
+                });
 
             if (options.StartBatch.HasValue)
                 settings = settings.WithStartBatchIndex(options.StartBatch.Value);
@@ -224,12 +239,20 @@ public static partial class MotelyWasmExports
                 _currentCts = cts;
             }
 
-            // Return initial status — JS will poll GetSearchStatus() for updates.
-            return Task.FromResult(BuildStatusJson(search));
+            // Wait until completion
+            await search.WaitForCompletionAsync();
+
+            lock (_searchLock) {
+                _currentSearch = null;
+                _currentCts = null;
+            }
+
+            DrainResultQueue();
+            return BuildStatusJson(search);
         }
         catch (Exception ex)
         {
-            return Task.FromResult(ErrorJson(ex.Message));
+            return ErrorJson(ex.Message);
         }
     }
 

@@ -6,6 +6,7 @@ namespace Motely.Filters;
 public sealed class BossClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelyBossBlind[] Bosses { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;

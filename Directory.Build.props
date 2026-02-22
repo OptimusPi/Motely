@@ -7,7 +7,7 @@
     <FileVersion>$(MotelyVersion)</FileVersion>
 
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <!-- Android SDK Settings -->
