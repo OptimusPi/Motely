@@ -15,6 +15,7 @@ public sealed class JamlClauseSet
     public List<CommonJokerClause> CommonJokers { get; set; } = [];
     public List<UncommonJokerClause> UncommonJokers { get; set; } = [];
     public List<RareJokerClause> RareJokers { get; set; } = [];
+    public List<MixedJokerClause> MixedJokers { get; set; } = [];
     public List<LegendaryJokerClause> LegendaryJokers { get; set; } = [];
     public List<VoucherClause> Vouchers { get; set; } = [];
     public List<TarotCardClause> TarotCards { get; set; } = [];
@@ -36,7 +37,7 @@ public sealed class JamlClauseSet
 
     public bool HasAnyClauses =>
         Jokers.Count > 0 || CommonJokers.Count > 0 || UncommonJokers.Count > 0 ||
-        RareJokers.Count > 0 || LegendaryJokers.Count > 0 ||
+        RareJokers.Count > 0 || MixedJokers.Count > 0 || LegendaryJokers.Count > 0 ||
         Vouchers.Count > 0 || TarotCards.Count > 0 || SpectralCards.Count > 0 ||
         PlanetCards.Count > 0 || StandardCards.Count > 0 ||
         Bosses.Count > 0 || Tags.Count > 0 ||
@@ -300,6 +301,7 @@ public static class JamlConfigLoader
             case CommonJokerClause c: set.CommonJokers.Add(c); break;
             case UncommonJokerClause c: set.UncommonJokers.Add(c); break;
             case RareJokerClause c: set.RareJokers.Add(c); break;
+            case MixedJokerClause c: set.MixedJokers.Add(c); break;
             case LegendaryJokerClause c: set.LegendaryJokers.Add(c); break;
             case VoucherClause c: set.Vouchers.Add(c); break;
             case TarotCardClause c: set.TarotCards.Add(c); break;
@@ -329,11 +331,13 @@ public static class JamlConfigLoader
     {
         var antes = c.Antes ?? defaultAntes;
         int min = c.Min ?? 1;
+        int score = c.Score ?? 1;
 
         if (c.And != null)
         {
             return new AndClause
             {
+                Score = score,
                 Clauses = c.And.Select(sub => CreateClauseFromDto(sub, [], defaults)).ToArray()
             };
         }
@@ -341,6 +345,7 @@ public static class JamlConfigLoader
         {
             return new OrClause
             {
+                Score = score,
                 Min = min,
                 Clauses = c.Or.Select(sub => CreateClauseFromDto(sub, [], defaults)).ToArray()
             };
@@ -369,7 +374,7 @@ public static class JamlConfigLoader
         {
             MotelyFilterItemType.Joker => new JokerClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Jokers = value != null
                     ? [Enum.Parse<MotelyJoker>(value, true)]
                     : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
@@ -388,7 +393,7 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.CommonJoker => new CommonJokerClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Jokers = value != null
                     ? [Enum.Parse<MotelyJokerCommon>(value, true)]
                     : (c.CommonJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerCommon>(j, true)).ToArray() ?? [],
@@ -407,7 +412,7 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.UncommonJoker => new UncommonJokerClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Jokers = value != null
                     ? [Enum.Parse<MotelyJokerUncommon>(value, true)]
                     : (c.UncommonJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerUncommon>(j, true)).ToArray() ?? [],
@@ -426,7 +431,7 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.RareJoker => new RareJokerClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Jokers = value != null
                     ? [Enum.Parse<MotelyJokerRare>(value, true)]
                     : (c.RareJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerRare>(j, true)).ToArray() ?? [],
@@ -445,7 +450,7 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.MixedJoker => new MixedJokerClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Jokers = value != null
                     ? [Enum.Parse<MotelyJoker>(value, true)]
                     : (c.MixedJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
@@ -464,7 +469,7 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.SoulJoker => new LegendaryJokerClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Jokers = value != null
                     ? [Enum.Parse<MotelyJoker>(value, true)]
                     : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
@@ -477,14 +482,14 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.Voucher => new VoucherClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Vouchers = value != null
                     ? [Enum.Parse<MotelyVoucher>(value, true)]
                     : c.Vouchers?.Select(v => Enum.Parse<MotelyVoucher>(v, true)).ToArray() ?? [],
             },
             MotelyFilterItemType.TarotCard => new TarotCardClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Tarots = value != null ? [Enum.Parse<MotelyTarotCard>(value, true)] : [],
                 Sources = new TarotCardSourceConfig
                 {
@@ -495,7 +500,7 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.SpectralCard => new SpectralCardClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Spectrals = value != null ? [Enum.Parse<MotelySpectralCard>(value, true)] : [],
                 Sources = new SpectralCardSourceConfig
                 {
@@ -506,7 +511,7 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.PlanetCard => new PlanetCardClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Planets = value != null ? [Enum.Parse<MotelyPlanetCard>(value, true)] : [],
                 Sources = new PlanetSourceConfig
                 {
@@ -515,24 +520,24 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.Boss => new BossClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Bosses = value != null ? [Enum.Parse<MotelyBossBlind>(value, true)] : [],
             },
             MotelyFilterItemType.SmallBlindTag => new TagClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Tags = value != null ? [Enum.Parse<MotelyTag>(value, true)] : [],
                 Position = TagPosition.SmallBlind,
             },
             MotelyFilterItemType.BigBlindTag => new TagClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Tags = value != null ? [Enum.Parse<MotelyTag>(value, true)] : [],
                 Position = TagPosition.BigBlind,
             },
             MotelyFilterItemType.PlayingCard => new StandardCardClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Rank = ParseEnum<MotelyPlayingCardRank>(c.Rank),
                 Suit = ParseEnum<MotelyPlayingCardSuit>(c.Suit),
                 Enhancement = ParseEnum<MotelyItemEnhancement>(c.Enhancement),
@@ -548,29 +553,29 @@ public static class JamlConfigLoader
             },
             MotelyFilterItemType.ErraticRank => new ErraticRankClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Rank = ParseEnum<MotelyPlayingCardRank>(c.Rank ?? value)
                     ?? throw new NotSupportedException("ErraticRank clause requires a rank value."),
             },
             MotelyFilterItemType.ErraticSuit => new ErraticSuitClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Suit = ParseEnum<MotelyPlayingCardSuit>(c.Suit ?? value)
                     ?? throw new NotSupportedException("ErraticSuit clause requires a suit value."),
             },
-            MotelyFilterItemType.ErraticCard => CreateErraticCardClause(c, value, antes, min),
+            MotelyFilterItemType.ErraticCard => CreateErraticCardClause(c, value, antes, min, score),
             MotelyFilterItemType.StartingDraw => new StartingDrawClause
             {
-                Label = label, Antes = antes, Min = min,
+                Label = label, Score = score, Antes = antes, Min = min,
                 Rank = ParseEnum<MotelyPlayingCardRank>(c.Rank),
                 Suit = ParseEnum<MotelyPlayingCardSuit>(c.Suit),
             },
-            MotelyFilterItemType.Event => CreateEventClause(c.Event, c.Rolls, antes, min),
+            MotelyFilterItemType.Event => CreateEventClause(c.Event, c.Rolls, antes, min, score),
             _ => throw new NotSupportedException($"Unsupported clause type: {itemType}"),
         };
     }
 
-    private static ErraticCardClause CreateErraticCardClause(JamlClauseDto c, string? value, int[] antes, int min)
+    private static ErraticCardClause CreateErraticCardClause(JamlClauseDto c, string? value, int[] antes, int min, int score)
     {
         var rank = ParseEnum<MotelyPlayingCardRank>(c.Rank ?? value);
         var suit = ParseEnum<MotelyPlayingCardSuit>(c.Suit ?? value);
@@ -579,7 +584,7 @@ public static class JamlConfigLoader
         {
             return new ErraticCardClause
             {
-                Antes = antes, Min = min,
+                Score = score, Antes = antes, Min = min,
                 Rank = rank.Value,
                 Suit = suit.Value,
             };
@@ -599,7 +604,7 @@ public static class JamlConfigLoader
         throw new NotSupportedException("ErraticCard clause requires rank and suit.");
     }
 
-    private static IRollClause CreateEventClause(string? eventName, int[]? rolls, int[] antes, int min)
+    private static IRollClause CreateEventClause(string? eventName, int[]? rolls, int[] antes, int min, int score)
     {
         if (string.IsNullOrEmpty(eventName))
             throw new NotSupportedException("Event clause is missing event type name.");
@@ -607,12 +612,12 @@ public static class JamlConfigLoader
         var r = rolls ?? [];
         return Enum.Parse<MotelyEventType>(eventName, true) switch
         {
-            MotelyEventType.LuckyMoney => new LuckyMoneyClause { Antes = antes, Min = min, Rolls = r },
-            MotelyEventType.LuckyMult => new LuckyMultClause { Antes = antes, Min = min, Rolls = r },
-            MotelyEventType.MisprintMult => new MisprintMultClause { Antes = antes, Min = min, Rolls = r },
-            MotelyEventType.WheelOfFortune => new WheelOfFortuneClause { Antes = antes, Min = min, Rolls = r },
-            MotelyEventType.CavendishExtinct => new CavendishExtinctClause { Antes = antes, Min = min, Rolls = r },
-            MotelyEventType.GrosMichelExtinct => new GrosMichelExtinctClause { Antes = antes, Min = min, Rolls = r },
+            MotelyEventType.LuckyMoney => new LuckyMoneyClause { Score = score, Antes = antes, Min = min, Rolls = r },
+            MotelyEventType.LuckyMult => new LuckyMultClause { Score = score, Antes = antes, Min = min, Rolls = r },
+            MotelyEventType.MisprintMult => new MisprintMultClause { Score = score, Antes = antes, Min = min, Rolls = r },
+            MotelyEventType.WheelOfFortune => new WheelOfFortuneClause { Score = score, Antes = antes, Min = min, Rolls = r },
+            MotelyEventType.CavendishExtinct => new CavendishExtinctClause { Score = score, Antes = antes, Min = min, Rolls = r },
+            MotelyEventType.GrosMichelExtinct => new GrosMichelExtinctClause { Score = score, Antes = antes, Min = min, Rolls = r },
             _ => throw new NotSupportedException($"Unsupported event type: {eventName}")
         };
     }
