@@ -174,7 +174,7 @@ public class SearchWindow : Window
                 );
             });
 
-            _search.Start(_cts.Token);
+            var searchTask = _search.Start(_cts.Token);
 
             // Poll progress on a timer
             MotelyTUI.App?.AddTimeout(
@@ -206,7 +206,7 @@ public class SearchWindow : Window
             );
 
             // Wait for completion
-            _search.WaitForCompletionAsync(_cts.Token).ContinueWith(t =>
+            searchTask.ContinueWith(t =>
             {
                 if (!t.IsCanceled)
                     App?.Invoke(() => OnSearchComplete());
@@ -278,8 +278,7 @@ public class SearchWindow : Window
         _stopBtn.Enabled = false;
         _stopBtn.Text = "Stopping...";
 
-        try { _search?.Cancel(); }
-        catch { }
+        // Cancellation goes through CTS — _search observes the token
         try { _cts?.Cancel(); }
         catch { }
 

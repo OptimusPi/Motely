@@ -9,6 +9,7 @@ namespace Motely.Filters;
 public sealed class VoucherClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelyVoucher[] Vouchers { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;

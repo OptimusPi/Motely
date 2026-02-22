@@ -8,6 +8,7 @@ namespace Motely.Filters;
 public sealed class SpectralCardClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelySpectralCard[] Spectrals { get; init; }
     public SpectralCardSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];

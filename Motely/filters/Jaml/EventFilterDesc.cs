@@ -10,6 +10,7 @@ namespace Motely.Filters;
 public sealed class ErraticCardClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public MotelyPlayingCardRank? Rank { get; init; }
     public MotelyPlayingCardSuit? Suit { get; init; }
     public int[] Antes { get; init; } = [];
@@ -23,6 +24,7 @@ public interface IRollClause : IJamlClause { int[] Rolls { get; } }
 public sealed class LuckyMoneyClause : IRollClause 
 { 
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required int[] Rolls { get; init; } 
     public int[] Antes { get; init; } = []; 
     public int Min { get; init; } = 1; 
@@ -31,6 +33,7 @@ public sealed class LuckyMoneyClause : IRollClause
 public sealed class LuckyMultClause : IRollClause 
 { 
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required int[] Rolls { get; init; } 
     public int[] Antes { get; init; } = []; 
     public int Min { get; init; } = 1; 
@@ -39,6 +42,7 @@ public sealed class LuckyMultClause : IRollClause
 public sealed class MisprintMultClause : IRollClause 
 { 
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required int[] Rolls { get; init; } 
     public int[] Antes { get; init; } = []; 
     public int Min { get; init; } = 1; 
@@ -47,6 +51,7 @@ public sealed class MisprintMultClause : IRollClause
 public sealed class WheelOfFortuneClause : IRollClause 
 { 
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required int[] Rolls { get; init; } 
     public int[] Antes { get; init; } = []; 
     public int Min { get; init; } = 1; 
@@ -55,6 +60,7 @@ public sealed class WheelOfFortuneClause : IRollClause
 public sealed class CavendishExtinctClause : IRollClause 
 { 
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required int[] Rolls { get; init; } 
     public int[] Antes { get; init; } = []; 
     public int Min { get; init; } = 1; 
@@ -63,6 +69,7 @@ public sealed class CavendishExtinctClause : IRollClause
 public sealed class GrosMichelExtinctClause : IRollClause 
 { 
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required int[] Rolls { get; init; } 
     public int[] Antes { get; init; } = []; 
     public int Min { get; init; } = 1; 

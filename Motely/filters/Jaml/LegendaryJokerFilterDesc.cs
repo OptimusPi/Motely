@@ -8,6 +8,7 @@ namespace Motely.Filters;
 public sealed class LegendaryJokerClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelyJoker[] Jokers { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public SoulJokerSourceConfig Sources { get; init; } = new();

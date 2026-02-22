@@ -8,6 +8,7 @@ namespace Motely.Filters;
 public sealed class ErraticRankClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelyPlayingCardRank Rank { get; init; }
     public int[] Antes { get; init; } = [];
     public int Min { get; init; } = 1;

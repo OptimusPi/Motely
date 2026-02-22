@@ -34,19 +34,13 @@ public sealed class MotelySearchContext : IMotelySearchContext
     public List<MotelySearchResultRow> GetResults(int offset, int limit) => new();
     public List<MotelySearchResultRow> GetTopResults(int limit = 1067) => new();
 
-    public void Start(CancellationToken cancellationToken = default)
+    public Task Start(CancellationToken cancellationToken = default)
     {
         if (_runTask is { IsCompleted: false })
-            return;
-        _runTask = Task.Run(() => _search.Start(cancellationToken), cancellationToken);
+            return _runTask;
+        _runTask = _search.Start(cancellationToken);
+        return _runTask;
     }
 
-    public void AwaitCompletion() => (_runTask ?? Task.CompletedTask).GetAwaiter().GetResult();
-
-    public Task WaitForCompletionAsync(CancellationToken cancellationToken = default) =>
-        (_runTask ?? Task.CompletedTask).WaitAsync(cancellationToken);
-
-    public void Cancel() => _search.Cancel();
-    public void ForceProgressReport() => _search.ForceProgressReport();
     public void Dispose() => _search.Dispose();
 }
