@@ -12,7 +12,11 @@ partial class Program
 
     static int Main(string[] args)
     {
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; _cts.Cancel(); };
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            _cts.Cancel();
+        };
 
         var app = new CommandLineApplication
         {
@@ -22,71 +26,226 @@ partial class Program
         };
         app.HelpOption("-?|-h|--help");
 
-        var jamlOption = app.Option<string>("--jaml <JAML>", "JAML config file", CommandOptionType.SingleValue);
-        var analyzeOption = app.Option<string>("--analyze <SEED>", "Analyze a specific seed", CommandOptionType.SingleValue);
-        var outputJsonOption = app.Option("--output-json", "Output analysis as JSON", CommandOptionType.NoValue);
-        var threadsOption = app.Option<int>("--threads <N>", "Thread count", CommandOptionType.SingleValue);
-        var batchSizeOption = app.Option<int>("--batchSize <N>", "Batch character count", CommandOptionType.SingleValue);
-        var startBatchOption = app.Option<long>("--startBatch <N>", "Starting batch index", CommandOptionType.SingleValue);
-        var endBatchOption = app.Option<long>("--endBatch <N>", "Ending batch index", CommandOptionType.SingleValue);
-        var randomOption = app.Option<int>("--random <N>", "Random seed count", CommandOptionType.SingleValue);
-        var palindromeOption = app.Option("--palindrome", "Palindrome seeds", CommandOptionType.NoValue);
-        var seedOption = app.Option<string>("--seed <SEED>", "Single seed to test", CommandOptionType.SingleValue);
-        var seedsOption = app.Option<string>("--seeds <LIST>", "Comma-separated seeds", CommandOptionType.SingleValue);
-        var deckOption = app.Option<string>("--deck <DECK>", "Deck override", CommandOptionType.SingleValue);
-        var stakeOption = app.Option<string>("--stake <STAKE>", "Stake override", CommandOptionType.SingleValue);
-        var cutoffOption = app.Option<string>("--cutoff <VALUE>", "Minimum score to print, or 'auto' to only show new highs", CommandOptionType.SingleValue);
-        var keywordOption = app.Option<string>("--keyword <WORD>", "Search seeds containing this keyword (pads to 8 chars)", CommandOptionType.SingleValue);
+        var jamlOption = app.Option<string>(
+            "--jaml <JAML>",
+            "JAML config file",
+            CommandOptionType.SingleValue
+        );
+        var analyzeOption = app.Option<string>(
+            "--analyze <SEED>",
+            "Analyze a specific seed",
+            CommandOptionType.SingleValue
+        );
+        var outputJsonOption = app.Option(
+            "--output-json",
+            "Output analysis as JSON",
+            CommandOptionType.NoValue
+        );
+        var threadsOption = app.Option<int>(
+            "--threads <N>",
+            "Thread count",
+            CommandOptionType.SingleValue
+        );
+        var batchSizeOption = app.Option<int>(
+            "--batchSize <N>",
+            "Batch character count",
+            CommandOptionType.SingleValue
+        );
+        var startBatchOption = app.Option<long>(
+            "--startBatch <N>",
+            "Starting batch index",
+            CommandOptionType.SingleValue
+        );
+        var endBatchOption = app.Option<long>(
+            "--endBatch <N>",
+            "Ending batch index",
+            CommandOptionType.SingleValue
+        );
+        var randomOption = app.Option<int>(
+            "--random <N>",
+            "Random seed count",
+            CommandOptionType.SingleValue
+        );
+        var palindromeOption = app.Option(
+            "--palindrome",
+            "Palindrome seeds",
+            CommandOptionType.NoValue
+        );
+        var seedOption = app.Option<string>(
+            "--seed <SEED>",
+            "Single seed to test",
+            CommandOptionType.SingleValue
+        );
+        var seedsOption = app.Option<string>(
+            "--seeds <LIST>",
+            "Comma-separated seeds",
+            CommandOptionType.SingleValue
+        );
+        var deckOption = app.Option<string>(
+            "--deck <DECK>",
+            "Deck override",
+            CommandOptionType.SingleValue
+        );
+        var stakeOption = app.Option<string>(
+            "--stake <STAKE>",
+            "Stake override",
+            CommandOptionType.SingleValue
+        );
+        var cutoffOption = app.Option<string>(
+            "--cutoff <VALUE>",
+            "Minimum score to print, or 'auto' to only show new highs",
+            CommandOptionType.SingleValue
+        );
+        var keywordOption = app.Option<string>(
+            "--keyword <WORD>",
+            "Search seeds containing this keyword (pads to 8 chars)",
+            CommandOptionType.SingleValue
+        );
 
         threadsOption.DefaultValue = Environment.ProcessorCount;
         batchSizeOption.DefaultValue = 2;
 
-        app.OnExecute(() =>
+        app.OnExecuteAsync(async _ =>
         {
-            if (args.Length == 0) { app.ShowHelp(); return 0; }
+            if (args.Length == 0)
+            {
+                app.ShowHelp();
+                return 0;
+            }
 
             // --analyze mode
             if (analyzeOption.HasValue())
-                return ExecuteAnalyze(analyzeOption.ParsedValue,
+                return ExecuteAnalyze(
+                    analyzeOption.ParsedValue,
                     deckOption.HasValue() ? deckOption.Value()! : "Red",
                     stakeOption.HasValue() ? stakeOption.Value()! : "White",
-                    outputJsonOption.HasValue());
+                    outputJsonOption.HasValue()
+                );
 
             // --jaml mode
-            if (!jamlOption.HasValue()) { Console.Error.WriteLine("Error: --jaml <path> required."); return 1; }
+            if (!jamlOption.HasValue())
+            {
+                Console.Error.WriteLine("Error: --jaml <path> required.");
+                return 1;
+            }
 
-            if (!JamlConfigLoader.TryLoadFromFile(jamlOption.ParsedValue, out var config, out var loadError))
-            { Console.Error.WriteLine($"Error: {loadError}"); return 1; }
+            if (
+                !JamlConfigLoader.TryLoadFromFile(
+                    jamlOption.ParsedValue,
+                    out var config,
+                    out var loadError
+                )
+            )
+            {
+                Console.Error.WriteLine($"Error: {loadError}");
+                return 1;
+            }
 
-            if (!config.HasAnyClauses) { Console.Error.WriteLine("Error: no clauses in JAML."); return 1; }
+            if (!config.HasAnyClauses)
+            {
+                Console.Error.WriteLine("Error: no clauses in JAML.");
+                return 1;
+            }
 
-            var deck = deckOption.HasValue() && Enum.TryParse<MotelyDeck>(deckOption.Value(), true, out var d) ? d : config.Deck;
-            var stake = stakeOption.HasValue() && Enum.TryParse<MotelyStake>(stakeOption.Value(), true, out var s) ? s : config.Stake;
-            int threads = threadsOption.HasValue() ? threadsOption.ParsedValue : Environment.ProcessorCount;
+            var deck =
+                deckOption.HasValue()
+                && Enum.TryParse<MotelyDeck>(deckOption.Value(), true, out var d)
+                    ? d
+                    : config.Deck;
+            var stake =
+                stakeOption.HasValue()
+                && Enum.TryParse<MotelyStake>(stakeOption.Value(), true, out var s)
+                    ? s
+                    : config.Stake;
+            int threads = threadsOption.HasValue()
+                ? threadsOption.ParsedValue
+                : Environment.ProcessorCount;
             int batchSize = batchSizeOption.HasValue() ? batchSizeOption.ParsedValue : 2;
 
             var plan = JamlSearchBuilder.CreatePlan(config);
-            var settings = plan.Settings
-                .WithDeck(deck).WithStake(stake)
-                .WithThreadCount(threads).WithBatchCharacterCount(batchSize);
+            var settings = plan
+                .Settings.WithDeck(deck)
+                .WithStake(stake)
+                .WithThreadCount(threads)
+                .WithBatchCharacterCount(batchSize);
 
-            if (startBatchOption.HasValue()) settings.WithStartBatchIndex(startBatchOption.ParsedValue);
-            if (endBatchOption.HasValue()) settings.WithEndBatchIndex(endBatchOption.ParsedValue);
+            if (startBatchOption.HasValue())
+                settings.WithStartBatchIndex(startBatchOption.ParsedValue);
+            if (endBatchOption.HasValue())
+                settings.WithEndBatchIndex(endBatchOption.ParsedValue);
 
-            if (seedOption.HasValue()) settings.WithListSearch([seedOption.ParsedValue.ToUpperInvariant()]);
-            else if (seedsOption.HasValue()) settings.WithListSearch(
-                seedsOption.ParsedValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Select(x => x.ToUpperInvariant()));
+            if (seedOption.HasValue())
+                settings.WithListSearch([seedOption.ParsedValue.ToUpperInvariant()]);
+            else if (seedsOption.HasValue())
+            {
+                string seedsValue = seedsOption.ParsedValue;
+
+                // Check if it's a file path
+                if (File.Exists(seedsValue))
+                {
+                    string ext = Path.GetExtension(seedsValue).ToLowerInvariant();
+                    if (ext == ".db")
+                    {
+                        Console.Error.WriteLine(
+                            "Error: .db database files are not supported in this build."
+                        );
+                        return 1;
+                    }
+                    else
+                    {
+                        // Other file types - treat as seed list file
+                        var seedLines = File.ReadAllLines(seedsValue)
+                            .Where(line => !string.IsNullOrWhiteSpace(line))
+                            .Select(line =>
+                            {
+                                // CSV support: take first column, strip quotes
+                                var span = line.AsSpan();
+                                int comma = span.IndexOf(',');
+                                if (comma >= 0) span = span[..comma];
+                                if (span.Length >= 2 && span[0] == '"' && span[^1] == '"')
+                                    span = span[1..^1];
+                                return span.ToString().ToUpperInvariant().Replace('0', 'O');
+                            })
+                            .Where(line => !string.IsNullOrEmpty(line));
+                        settings.WithListSearch(seedLines);
+                    }
+                }
+                else if (seedsValue.Contains(','))
+                {
+                    // Comma-separated seeds
+                    var seedList = seedsValue
+                        .Split(
+                            ',',
+                            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                        )
+                        .Select(x => x.ToUpperInvariant());
+                    settings.WithListSearch(seedList);
+                }
+                else
+                {
+                    // Single seed
+                    settings.WithListSearch([seedsValue.ToUpperInvariant()]);
+                }
+            }
             else if (keywordOption.HasValue())
             {
                 string kw = keywordOption.ParsedValue.ToUpperInvariant();
                 int padLen = MotelyCore.MaxSeedLength - kw.Length;
-                if (padLen < 0) { Console.Error.WriteLine($"Error: keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars)."); return 1; }
+                if (padLen < 0)
+                {
+                    Console.Error.WriteLine(
+                        $"Error: keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars)."
+                    );
+                    return 1;
+                }
                 settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
             }
-            else if (randomOption.HasValue()) settings.WithRandomSearch(randomOption.ParsedValue);
-            else if (palindromeOption.HasValue()) settings.WithPalindromeSearch();
-            else settings.WithSequentialSearch();
+            else if (randomOption.HasValue())
+                settings.WithRandomSearch(randomOption.ParsedValue);
+            else if (palindromeOption.HasValue())
+                settings.WithPalindromeSearch();
+            else
+                settings.WithSequentialSearch();
 
             // CLI output — seeds to stdout, progress to stderr
             // Parse cutoff: number = fixed threshold, "best" = only print new highs
@@ -95,11 +254,18 @@ partial class Program
             if (cutoffOption.HasValue())
             {
                 string cutoffVal = cutoffOption.Value()!;
-                if (cutoffVal.Equals("best", StringComparison.OrdinalIgnoreCase) ||
-                    cutoffVal.Equals("auto", StringComparison.OrdinalIgnoreCase))
+                if (
+                    cutoffVal.Equals("best", StringComparison.OrdinalIgnoreCase)
+                    || cutoffVal.Equals("auto", StringComparison.OrdinalIgnoreCase)
+                )
                     cutoffBest = true;
                 else if (!int.TryParse(cutoffVal, out cutoffNum))
-                { Console.Error.WriteLine($"Error: --cutoff must be a number or 'auto', got '{cutoffVal}'."); return 1; }
+                {
+                    Console.Error.WriteLine(
+                        $"Error: --cutoff must be a number or 'auto', got '{cutoffVal}'."
+                    );
+                    return 1;
+                }
             }
 
             int bestScoreSoFar = 0;
@@ -109,14 +275,23 @@ partial class Program
             {
                 // Parse score from format: SEED,SCORE,...
                 int firstComma = line.IndexOf(',');
-                if (firstComma < 0) { Console.WriteLine(line); return; }
+                if (firstComma < 0)
+                {
+                    Console.WriteLine(line);
+                    return;
+                }
 
                 int secondComma = line.IndexOf(',', firstComma + 1);
-                var scoreSpan = secondComma >= 0
-                    ? line.AsSpan(firstComma + 1, secondComma - firstComma - 1)
-                    : line.AsSpan(firstComma + 1);
+                var scoreSpan =
+                    secondComma >= 0
+                        ? line.AsSpan(firstComma + 1, secondComma - firstComma - 1)
+                        : line.AsSpan(firstComma + 1);
 
-                if (!int.TryParse(scoreSpan, out int score)) { Console.WriteLine(line); return; }
+                if (!int.TryParse(scoreSpan, out int score))
+                {
+                    Console.WriteLine(line);
+                    return;
+                }
 
                 if (cutoffBest)
                 {
@@ -137,23 +312,39 @@ partial class Program
             settings.WithProgressMessageCallback(msg => Console.Error.WriteLine(msg));
 
             var header = "SEED,SCORE";
-            foreach (var l in plan.MustLabels)   header += $",\"{l}\"";
-            foreach (var l in plan.ShouldLabels) header += $",\"{l}\"";
+            foreach (var l in plan.MustLabels)
+                header += $",\"{l}\"";
+            foreach (var l in plan.ShouldLabels)
+                header += $",\"{l}\"";
             Console.WriteLine(header);
 
-            Console.Error.WriteLine($"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batch={batchSize}");
+            Console.Error.WriteLine(
+                $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batch={batchSize}"
+            );
 
-            using var search = settings.Start(_cts.Token);
-            search.AwaitCompletion();
+            using var search = settings.Start();
+            try { await search.Start(_cts.Token); }
+            catch (OperationCanceledException) { }
 
             bool cancelled = _cts.Token.IsCancellationRequested;
             PrintSummary(search, batchSize, cancelled);
             return cancelled ? 1 : 0;
         });
 
-        try { return app.Execute(args); }
-        catch (UnrecognizedCommandParsingException ex) { Console.Error.WriteLine($"Error: {ex.Message}"); return 1; }
-        catch (CommandParsingException ex) { Console.Error.WriteLine($"Error: {ex.Message}"); return 1; }
+        try
+        {
+            return app.Execute(args);
+        }
+        catch (UnrecognizedCommandParsingException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
+        catch (CommandParsingException ex)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            return 1;
+        }
     }
 
     // ── Summary ──
@@ -163,9 +354,14 @@ partial class Program
         Console.Out.Flush();
         Console.WriteLine();
         Console.WriteLine(cancelled ? "STOPPED" : "COMPLETED");
-        Console.WriteLine($"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds} matched");
+        Console.WriteLine(
+            $"  Seeds: {search.TotalSeedsSearched:N0} searched, {search.MatchingSeeds} matched"
+        );
         Console.WriteLine($"  Time:  {search.ElapsedTime:hh\\:mm\\:ss\\.fff}");
-        double speed = search.ElapsedTime.TotalSeconds > 0 ? search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds : 0;
+        double speed =
+            search.ElapsedTime.TotalSeconds > 0
+                ? search.TotalSeedsSearched / search.ElapsedTime.TotalSeconds
+                : 0;
         Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
         if (search.IsSequentialBatchSearch)
         {
@@ -181,33 +377,61 @@ partial class Program
 
     static int ExecuteAnalyze(string seed, string deckName, string stakeName, bool json)
     {
-        if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d)) { Console.Error.WriteLine($"Invalid deck: {deckName}"); return 1; }
-        if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s)) { Console.Error.WriteLine($"Invalid stake: {stakeName}"); return 1; }
+        if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
+        {
+            Console.Error.WriteLine($"Invalid deck: {deckName}");
+            return 1;
+        }
+        if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s))
+        {
+            Console.Error.WriteLine($"Invalid stake: {stakeName}");
+            return 1;
+        }
 
         var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(seed, d, s));
 
         if (json)
         {
-            var erratic = analysis.ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? [];
+            var erratic =
+                analysis.ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                ?? [];
             var dto = new SeedAnalysisDto
             {
-                Seed = seed, Deck = d.ToString(), Stake = s.ToString(),
+                Seed = seed,
+                Deck = d.ToString(),
+                Stake = s.ToString(),
                 ErraticDeckComposition = erratic,
                 Twos = erratic.Count(c => c.StartsWith("2_")),
                 Error = analysis.Error,
-                Antes = analysis.Antes.Select(a => new AnteAnalysisDto
-                {
-                    Ante = a.Ante,
-                    Boss = FormatUtils.FormatBoss(a.Boss),
-                    Voucher = FormatUtils.FormatVoucher(a.Voucher),
-                    SmallBlindTag = FormatUtils.FormatTag(a.SmallBlindTag),
-                    BigBlindTag = FormatUtils.FormatTag(a.BigBlindTag),
-                    DrawOrder = a.DrawOrder ?? "",
-                    ShopQueue = a.ShopQueue.Select(item => new ShopItemDto { Id = item.ToString(), Name = FormatUtils.FormatItem(item) }).ToArray(),
-                    Packs = a.Packs.Select(p => new PackDto { Type = FormatUtils.FormatPackName(p.Type), Items = p.Items.Select(FormatUtils.FormatItem).ToArray() }).ToArray(),
-                }).ToArray(),
+                Antes = analysis
+                    .Antes.Select(a => new AnteAnalysisDto
+                    {
+                        Ante = a.Ante,
+                        Boss = FormatUtils.FormatBoss(a.Boss),
+                        Voucher = FormatUtils.FormatVoucher(a.Voucher),
+                        SmallBlindTag = FormatUtils.FormatTag(a.SmallBlindTag),
+                        BigBlindTag = FormatUtils.FormatTag(a.BigBlindTag),
+                        DrawOrder = a.DrawOrder ?? "",
+                        ShopQueue = a
+                            .ShopQueue.Select(item => new ShopItemDto
+                            {
+                                Id = item.ToString(),
+                                Name = FormatUtils.FormatItem(item),
+                            })
+                            .ToArray(),
+                        Packs = a
+                            .Packs.Select(p => new PackDto
+                            {
+                                Type = FormatUtils.FormatPackName(p.Type),
+                                Items = p.Items.Select(FormatUtils.FormatItem).ToArray(),
+                            })
+                            .ToArray(),
+                    })
+                    .ToArray(),
             };
-            Console.WriteLine(JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto));
+            Console.WriteLine(
+                JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+            );
         }
         else
         {

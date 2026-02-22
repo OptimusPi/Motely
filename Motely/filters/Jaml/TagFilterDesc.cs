@@ -8,6 +8,7 @@ public enum TagPosition { Any, SmallBlind, BigBlind }
 public sealed class TagClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelyTag[] Tags { get; init; }
     public TagPosition Position { get; init; } = TagPosition.Any;
     public int[] Antes { get; init; } = [];

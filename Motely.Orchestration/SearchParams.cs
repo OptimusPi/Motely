@@ -46,11 +46,7 @@ public interface IMotelySearchContext : IDisposable
     IReadOnlyList<string> ColumnNames { get; }
     List<MotelySearchResultRow> GetResults(int offset, int limit);
     List<MotelySearchResultRow> GetTopResults(int limit = 1000);
-    void Start(CancellationToken cancellationToken = default);
-    void AwaitCompletion();
-    Task WaitForCompletionAsync(CancellationToken cancellationToken = default);
-    void Cancel();
-    void ForceProgressReport();
+    Task Start(CancellationToken cancellationToken = default);
 }
 
 public sealed class MotelySearchResultRow

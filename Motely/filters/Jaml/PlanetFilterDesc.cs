@@ -1,11 +1,14 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using Motely;
 
 namespace Motely.Filters;
 
 public sealed class PlanetCardClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelyPlanetCard[] Planets { get; init; }
     public PlanetSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
@@ -42,106 +45,148 @@ public struct PlanetCardFilterDesc(PlanetCardClause clause)
         return new PlanetCardFilter(_clause, maxShopItem, maxBoosterPack);
     }
 
-    public struct PlanetCardFilter(PlanetCardClause clause, int maxShopItem, int maxBoosterPack) : IMotelySeedFilter
+    public struct PlanetCardFilter(PlanetCardClause clause, int maxShopItem, int maxBoosterPack)
+        : IMotelySeedFilter
     {
         private readonly PlanetCardClause _clause = clause;
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Planets.Length > 0);
             var clause = _clause;
             int maxShopItem = _maxShopItem;
             int maxBoosterPack = _maxBoosterPack;
+            int needed = clause.Min;
+            Debug.Assert(needed > 0, "PlanetCardClause.Min must be > 0 — loader bug.");
 
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
+            Vector256<int> matchCounts = Vector256<int>.Zero;
+            var shopIndices = clause.Sources.ShopItems;
+            var boosterPacks = clause.Sources.BoosterPacks;
+
+            foreach (var ante in clause.Antes)
             {
-                int needed = clause.Min;
-                Debug.Assert(needed > 0, "PlanetCardClause.Min must be > 0 — loader bug.");
-
-                int count = 0;
-                var shopItems = clause.Sources.ShopItems;
-                var boosterPacks = clause.Sources.BoosterPacks;
-
-                foreach (var ante in clause.Antes)
+                // ── Shop items SIMD ──
+                if (shopIndices.Length > 0)
                 {
-                    // ── Shop items ──
-                    if (shopItems.Length > 0)
+                    var shopStream = ctx.CreateShopItemStream(ante);
+
+                    for (int slot = 0; slot <= maxShopItem; slot++)
                     {
-                        var shopStream = singleCtx.CreateShopItemStream(ante);
-
-                        for (int slot = 0; slot <= maxShopItem; slot++)
+                        var item = ctx.GetNextShopItem(ref shopStream);
+                        bool isTarget = false;
+                        for (int i = 0; i < shopIndices.Length; i++)
                         {
-                            var item = singleCtx.GetNextShopItem(ref shopStream);
-                            bool isTarget = false;
-                            for (int i = 0; i < shopItems.Length; i++)
+                            if (shopIndices[i] == slot)
                             {
-                                if (shopItems[i] == slot) { isTarget = true; break; }
-                            }
-
-                            if (isTarget
-                                && item.TypeCategory == MotelyItemTypeCategory.PlanetCard
-                                && MatchesPlanet(item, clause))
-                            {
-                                count++;
+                                isTarget = true;
+                                break;
                             }
                         }
-                    }
 
-                    // ── Celestial packs ──
-                    if (boosterPacks.Length > 0)
-                    {
-                        var packStream = singleCtx.CreateBoosterPackStream(ante);
-                        var planetStream = singleCtx.CreateCelestialPackPlanetStream(ante);
+                        if (!isTarget)
+                            continue;
 
-                        for (int p = 0; p <= maxBoosterPack; p++)
+                        VectorMask isPlanet = VectorEnum256.Equals(
+                            item.TypeCategory,
+                            MotelyItemTypeCategory.PlanetCard
+                        );
+                        VectorMask match = MatchPlanets(item, clause) & isPlanet;
+
+                        if (match.IsPartiallyTrue())
                         {
-                            var pack = singleCtx.GetNextBoosterPack(ref packStream);
-                            bool isTarget = false;
-                            for (int i = 0; i < boosterPacks.Length; i++)
-                            {
-                                if (boosterPacks[i] == p) { isTarget = true; break; }
-                            }
-
-                            if (isTarget && pack.GetPackType() == MotelyBoosterPackType.Celestial)
-                            {
-                                var contents = singleCtx.GetNextCelestialPackContents(
-                                    ref planetStream, pack.GetPackSize());
-                                for (int i = 0; i < contents.Length; i++)
-                                {
-                                    if (MatchesPlanet(contents[i], clause))
-                                        count++;
-                                }
-                            }
-                            else if (pack.GetPackType() == MotelyBoosterPackType.Celestial)
-                            {
-                                singleCtx.GetNextCelestialPackContents(
-                                    ref planetStream, pack.GetPackSize());
-                            }
+                            matchCounts = Vector256.Add(
+                                matchCounts,
+                                Vector256.ConditionalSelect(
+                                    MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
+                                    Vector256.Create(1),
+                                    Vector256<int>.Zero
+                                )
+                            );
                         }
                     }
-
-                    if (count >= needed) break;
                 }
 
-                return count >= needed;
-            });
+                // ── Celestial packs SIMD ──
+                if (boosterPacks.Length > 0)
+                {
+                    var packStream = ctx.CreateBoosterPackStream(ante);
+                    var planetStream = ctx.CreateCelestialPackPlanetStream(ante);
+
+                    for (int p = 0; p <= maxBoosterPack; p++)
+                    {
+                        var pack = ctx.GetNextBoosterPack(ref packStream);
+                        bool isTarget = false;
+                        for (int i = 0; i < boosterPacks.Length; i++)
+                        {
+                            if (boosterPacks[i] == p)
+                            {
+                                isTarget = true;
+                                break;
+                            }
+                        }
+
+                        var packType = pack.GetPackType();
+                        VectorMask isCelestial = VectorEnum256.Equals(
+                            packType,
+                            MotelyBoosterPackType.Celestial
+                        );
+                        if (isCelestial.IsPartiallyTrue())
+                        {
+                            var contents = ctx.GetNextCelestialPackContents(
+                                ref planetStream,
+                                MotelyBoosterPackSize.Normal
+                            );
+
+                            if (isTarget)
+                            {
+                                for (int i = 0; i < contents.Length; i++)
+                                {
+                                    VectorMask match = MatchPlanets(contents[i], clause);
+                                    if (match.IsPartiallyTrue())
+                                    {
+                                        matchCounts = Vector256.Add(
+                                            matchCounts,
+                                            Vector256.ConditionalSelect(
+                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(
+                                                    match
+                                                ),
+                                                Vector256.Create(1),
+                                                Vector256<int>.Zero
+                                            )
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Vector256<int> comparison = Vector256.GreaterThan(
+                matchCounts,
+                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
+            );
+            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool MatchesPlanet(MotelyItem item, PlanetCardClause clause)
+        internal static VectorMask MatchPlanets(MotelyItemVector items, PlanetCardClause clause)
         {
-            Debug.Assert(clause.Planets.Length > 0, "PlanetCardClause.Planets must not be empty — loader bug.");
+            VectorMask mask = VectorMask.NoBitsSet;
+            var itemTypes = items.Type;
 
-            var itemType = item.Type;
             for (int i = 0; i < clause.Planets.Length; i++)
             {
-                if (itemType == (MotelyItemType)((int)MotelyItemTypeCategory.PlanetCard | (int)clause.Planets[i]))
-                    return true;
+                var targetType = (int)MotelyItemTypeCategory.PlanetCard | (int)clause.Planets[i];
+                mask |= VectorEnum256.Equals(itemTypes, (MotelyItemType)targetType);
             }
-            return false;
+
+            return mask;
         }
     }
 }

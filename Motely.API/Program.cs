@@ -3,9 +3,6 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.OpenApi;
-using Motely;
-using Motely.Filters;
-using Motely.Executors;
 
 namespace Motely.API;
 

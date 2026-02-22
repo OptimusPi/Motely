@@ -8,6 +8,7 @@ namespace Motely.Filters;
 public sealed class TarotCardClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public required MotelyTarotCard[] Tarots { get; init; }
     public TarotCardSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];

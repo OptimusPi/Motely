@@ -6,6 +6,7 @@ namespace Motely.Filters;
 public sealed class StandardCardClause : IJamlClause
 {
     public string Label { get; init; } = "";
+    public int Score { get; init; }
     public MotelyPlayingCardRank? Rank { get; init; }
     public MotelyPlayingCardSuit? Suit { get; init; }
     public MotelyItemEnhancement? Enhancement { get; init; }
