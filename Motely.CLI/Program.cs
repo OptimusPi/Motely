@@ -201,7 +201,8 @@ partial class Program
                                 // CSV support: take first column, strip quotes
                                 var span = line.AsSpan();
                                 int comma = span.IndexOf(',');
-                                if (comma >= 0) span = span[..comma];
+                                if (comma >= 0)
+                                    span = span[..comma];
                                 if (span.Length >= 2 && span[0] == '"' && span[^1] == '"')
                                     span = span[1..^1];
                                 return span.ToString().ToUpperInvariant().Replace('0', 'O');
@@ -323,7 +324,11 @@ partial class Program
             );
 
             using var search = settings.Start();
-            try { await search.Start(_cts.Token); }
+            try
+            {
+                search.Start(_cts.Token);
+                await search.WaitForCompletionAsync(_cts.Token);
+            }
             catch (OperationCanceledException) { }
 
             bool cancelled = _cts.Token.IsCancellationRequested;

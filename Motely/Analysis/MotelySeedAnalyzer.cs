@@ -128,7 +128,7 @@ public static partial class MotelySeedAnalyzer
                 .WithThreadCount(1);
 
             using var search = searchSettings.Start();
-            search.Start().Wait();
+            search.AwaitCompletion();
 
             Debug.Assert(filterDesc.LastAnalysis != null);
 
