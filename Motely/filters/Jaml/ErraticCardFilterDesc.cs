@@ -22,7 +22,9 @@ public struct ErraticCardFilterDesc(ErraticCardClause clause)
     {
         private readonly ErraticCardClause _clause = clause;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;
@@ -33,21 +35,24 @@ public struct ErraticCardFilterDesc(ErraticCardClause clause)
             for (int i = 0; i < 52; i++)
             {
                 var card = ctx.GetNextErraticDeckCard(ref stream);
-                
+
                 VectorMask match = VectorMask.AllBitsSet;
-                
+
                 if (clause.Rank.HasValue)
                     match &= VectorEnum256.Equals(card.PlayingCardRank, clause.Rank.Value);
-                
+
                 if (clause.Suit.HasValue)
                     match &= VectorEnum256.Equals(card.PlayingCardSuit, clause.Suit.Value);
 
                 count += Vector256.ConditionalSelect(
-                    VectorMaskToConditionalSelectMask(match), 
-                    Vector256<int>.One, 
-                    Vector256<int>.Zero);
+                    VectorMaskToConditionalSelectMask(match),
+                    Vector256<int>.One,
+                    Vector256<int>.Zero
+                );
             }
-            return new VectorMask(VectorizedComparisonToMask(Vector256.GreaterThanOrEqual(count, min)));
+            return new VectorMask(
+                VectorizedComparisonToMask(Vector256.GreaterThanOrEqual(count, min))
+            );
         }
     }
 }

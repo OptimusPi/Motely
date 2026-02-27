@@ -38,12 +38,18 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         // Pre-compute target joker type (cold path)
         var jokerTypes = new MotelyItemType[_clause.Jokers.Length];
         for (int i = 0; i < _clause.Jokers.Length; i++)
-            jokerTypes[i] = (MotelyItemType)((int)MotelyItemTypeCategory.Joker | (int)_clause.Jokers[i]);
+            jokerTypes[i] = (MotelyItemType)(
+                (int)MotelyItemTypeCategory.Joker | (int)_clause.Jokers[i]
+            );
 
         return new LegendaryJokerFilter(_clause, maxBoosterPack, jokerTypes);
     }
 
-    public struct LegendaryJokerFilter(LegendaryJokerClause clause, int maxBoosterPack, MotelyItemType[] targetTypes) : IMotelySeedFilter
+    public struct LegendaryJokerFilter(
+        LegendaryJokerClause clause,
+        int maxBoosterPack,
+        MotelyItemType[] targetTypes
+    ) : IMotelySeedFilter
     {
         private readonly LegendaryJokerClause _clause = clause;
         private readonly int _maxBoosterPack = maxBoosterPack;
@@ -105,7 +111,11 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                 bool isTarget = false;
                 for (int i = 0; i < boosterPacks.Length; i++)
                 {
-                    if (boosterPacks[i] == p) { isTarget = true; break; }
+                    if (boosterPacks[i] == p)
+                    {
+                        isTarget = true;
+                        break;
+                    }
                 }
 
                 if (pack.GetPackType() == MotelyBoosterPackType.Arcana)
@@ -116,7 +126,13 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                         tarotStream = singleCtx.CreateArcanaPackTarotStream(ante, true);
                     }
 
-                    if (isTarget && singleCtx.GetNextArcanaPackHasTheSoul(ref tarotStream, pack.GetPackSize()))
+                    if (
+                        isTarget
+                        && singleCtx.GetNextArcanaPackHasTheSoul(
+                            ref tarotStream,
+                            pack.GetPackSize()
+                        )
+                    )
                         return true;
                 }
 
@@ -128,7 +144,13 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                         spectralStream = singleCtx.CreateSpectralPackSpectralStream(ante, true);
                     }
 
-                    if (isTarget && singleCtx.GetNextSpectralPackHasTheSoul(ref spectralStream, pack.GetPackSize()))
+                    if (
+                        isTarget
+                        && singleCtx.GetNextSpectralPackHasTheSoul(
+                            ref spectralStream,
+                            pack.GetPackSize()
+                        )
+                    )
                         return true;
                 }
             }
@@ -136,7 +158,9 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             return false;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Jokers.Length > 0);
@@ -148,22 +172,32 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             int needed = clause.Min;
             Debug.Assert(needed > 0, "SoulJokerClause.Min must be > 0 — loader bug.");
 
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-            {
-                int matchCount = 0;
-
-                foreach (var ante in clause.Antes)
+            return ctx.SearchIndividualSeeds(
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    if (CheckSoulJokerInAnte(ante, clause, maxBoosterPack, targetTypes, ref singleCtx))
-                    {
-                        matchCount++;
-                        if (matchCount >= needed)
-                            return true;
-                    }
-                }
+                    int matchCount = 0;
 
-                return false;
-            });
+                    foreach (var ante in clause.Antes)
+                    {
+                        if (
+                            CheckSoulJokerInAnte(
+                                ante,
+                                clause,
+                                maxBoosterPack,
+                                targetTypes,
+                                ref singleCtx
+                            )
+                        )
+                        {
+                            matchCount++;
+                            if (matchCount >= needed)
+                                return true;
+                        }
+                    }
+
+                    return false;
+                }
+            );
         }
     }
 }

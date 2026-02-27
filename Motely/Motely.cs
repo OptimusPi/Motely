@@ -1,6 +1,5 @@
 namespace Motely;
 
-
 public static partial class MotelyCore
 {
     public const int MaxCachedPseudoHashKeyLength = 32;

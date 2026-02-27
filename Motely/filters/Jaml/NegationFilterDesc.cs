@@ -20,7 +20,9 @@ public struct NegationFilterDesc(IMotelySeedFilterDesc inner)
     {
         private readonly IMotelySeedFilter _inner = inner;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             // Invert: seeds that match the inner filter should be REJECTED

@@ -47,7 +47,8 @@ public sealed class MotelyResultsDb : IDisposable
     /// </summary>
     public void AppendResults(ReadOnlySpan<ResultRow> rows)
     {
-        if (rows.Length == 0) return;
+        if (rows.Length == 0)
+            return;
 
         lock (_lock)
         {

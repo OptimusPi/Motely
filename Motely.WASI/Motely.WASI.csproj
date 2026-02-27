@@ -28,9 +28,11 @@
     <ItemGroup>
       <_WasmOutputFiles Include="$(OutputPath)publish\**\*.wasm" />
     </ItemGroup>
-    <Copy SourceFiles="@(_WasmOutputFiles)"
-          DestinationFolder="$(_NpmWasmPath)"
-          SkipUnchangedFiles="true"
-          Condition="'@(_WasmOutputFiles)' != ''" />
+    <Copy
+      SourceFiles="@(_WasmOutputFiles)"
+      DestinationFolder="$(_NpmWasmPath)"
+      SkipUnchangedFiles="true"
+      Condition="'@(_WasmOutputFiles)' != ''"
+    />
   </Target>
 </Project>

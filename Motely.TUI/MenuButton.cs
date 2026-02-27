@@ -53,12 +53,12 @@ public class MenuButton : View
                 return true;
             }
         );
-        
+
         // Clear default bindings that might conflict, then add ours
         KeyBindings.Clear();
         KeyBindings.Add(KeyCode.Enter, Command.Accept);
         KeyBindings.Add(KeyCode.Space, Command.Accept);
-        
+
         MouseBindings.Clear();
         MouseBindings.Add(MouseFlags.LeftButtonClicked, Command.Accept);
 

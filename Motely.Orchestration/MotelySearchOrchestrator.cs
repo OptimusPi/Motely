@@ -14,26 +14,33 @@ namespace Motely.Executors
             JsonSearchParams parameters
         )
         {
-
             var searchId = GenerateShortSearchId(config);
             var filterId = GenerateFilterId(config);
             var search = BuildSearchFromJaml(config, parameters);
             return new MotelySearchContext(search, searchId, filterId);
         }
 
-        private static IMotelySearch BuildSearchFromJaml(JamlConfig config, JsonSearchParams parameters)
+        private static IMotelySearch BuildSearchFromJaml(
+            JamlConfig config,
+            JsonSearchParams parameters
+        )
         {
-            var settings = JamlSearchBuilder.CreateSettings(config)
+            var settings = JamlSearchBuilder
+                .CreateSettings(config)
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(Math.Max(1, parameters.Threads))
                 .WithBatchCharacterCount(Math.Clamp(parameters.BatchSize, 1, 7));
 
             if (parameters.StartBatch > 0)
-                settings.WithStartBatchIndex((long)Math.Min(parameters.StartBatch, (ulong)long.MaxValue));
+                settings.WithStartBatchIndex(
+                    (long)Math.Min(parameters.StartBatch, (ulong)long.MaxValue)
+                );
 
             if (parameters.EndBatch > 0)
-                settings.WithEndBatchIndex((long)Math.Min(parameters.EndBatch, (ulong)long.MaxValue));
+                settings.WithEndBatchIndex(
+                    (long)Math.Min(parameters.EndBatch, (ulong)long.MaxValue)
+                );
 
             if (!string.IsNullOrWhiteSpace(parameters.SpecificSeed))
                 settings.WithListSearch(new[] { parameters.SpecificSeed.ToUpperInvariant() });
@@ -80,17 +87,20 @@ namespace Motely.Executors
             if (string.IsNullOrWhiteSpace(input))
                 return "unknown";
 
-            var firstPart = input.Split(new[] { ",", " - ", "–", "—", ";", ". " }, StringSplitOptions.None)[0];
+            var firstPart = input.Split(
+                new[] { ",", " - ", "–", "—", ";", ". " },
+                StringSplitOptions.None
+            )[0];
             var sanitized = firstPart.Trim().Replace(" ", "");
             var invalidChars = Path.GetInvalidFileNameChars();
             foreach (var c in invalidChars)
             {
                 sanitized = sanitized.Replace(c, '_');
             }
-            
+
             if (sanitized.Length > maxLength)
                 sanitized = sanitized[..maxLength];
-                
+
             return sanitized;
         }
     }

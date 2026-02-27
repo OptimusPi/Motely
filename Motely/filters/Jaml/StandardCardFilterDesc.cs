@@ -47,91 +47,114 @@ public struct StandardCardFilterDesc(StandardCardClause clause)
         return new StandardCardFilter(_clause, maxShopItem, maxBoosterPack);
     }
 
-    public struct StandardCardFilter(StandardCardClause clause, int maxShopItem, int maxBoosterPack) : IMotelySeedFilter
+    public struct StandardCardFilter(StandardCardClause clause, int maxShopItem, int maxBoosterPack)
+        : IMotelySeedFilter
     {
         private readonly StandardCardClause _clause = clause;
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;
             int maxShopItem = _maxShopItem;
             int maxBoosterPack = _maxBoosterPack;
 
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-            {
-                int needed = clause.Min;
-                Debug.Assert(needed > 0, "StandardCardClause.Min must be > 0 — loader bug.");
-
-                int count = 0;
-                var shopItems = clause.Sources.ShopItems;
-                var boosterPacks = clause.Sources.BoosterPacks;
-
-                foreach (var ante in clause.Antes)
+            return ctx.SearchIndividualSeeds(
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    // ── Shop items ──
-                    if (shopItems.Length > 0)
+                    int needed = clause.Min;
+                    Debug.Assert(needed > 0, "StandardCardClause.Min must be > 0 — loader bug.");
+
+                    int count = 0;
+                    var shopItems = clause.Sources.ShopItems;
+                    var boosterPacks = clause.Sources.BoosterPacks;
+
+                    foreach (var ante in clause.Antes)
                     {
-                        var shopStream = singleCtx.CreateShopItemStream(ante);
-
-                        for (int slot = 0; slot <= maxShopItem; slot++)
+                        // ── Shop items ──
+                        if (shopItems.Length > 0)
                         {
-                            var item = singleCtx.GetNextShopItem(ref shopStream);
-                            bool isTarget = false;
-                            for (int i = 0; i < shopItems.Length; i++)
-                            {
-                                if (shopItems[i] == slot) { isTarget = true; break; }
-                            }
+                            var shopStream = singleCtx.CreateShopItemStream(ante);
 
-                            if (isTarget
-                                && item.TypeCategory == MotelyItemTypeCategory.PlayingCard
-                                && MatchesStandardCard(item, clause))
+                            for (int slot = 0; slot <= maxShopItem; slot++)
                             {
-                                count++;
-                            }
-                        }
-                    }
-
-                    // ── Standard packs ──
-                    if (boosterPacks.Length > 0)
-                    {
-                        var packStream = singleCtx.CreateBoosterPackStream(ante);
-                        var cardStream = singleCtx.CreateStandardPackCardStream(ante);
-
-                        for (int p = 0; p <= maxBoosterPack; p++)
-                        {
-                            var pack = singleCtx.GetNextBoosterPack(ref packStream);
-                            bool isTarget = false;
-                            for (int i = 0; i < boosterPacks.Length; i++)
-                            {
-                                if (boosterPacks[i] == p) { isTarget = true; break; }
-                            }
-
-                            if (isTarget && pack.GetPackType() == MotelyBoosterPackType.Standard)
-                            {
-                                var contents = singleCtx.GetNextStandardPackContents(
-                                    ref cardStream, pack.GetPackSize());
-                                for (int i = 0; i < contents.Length; i++)
+                                var item = singleCtx.GetNextShopItem(ref shopStream);
+                                bool isTarget = false;
+                                for (int i = 0; i < shopItems.Length; i++)
                                 {
-                                    if (MatchesStandardCard(contents[i], clause))
-                                        count++;
+                                    if (shopItems[i] == slot)
+                                    {
+                                        isTarget = true;
+                                        break;
+                                    }
+                                }
+
+                                if (
+                                    isTarget
+                                    && item.TypeCategory == MotelyItemTypeCategory.PlayingCard
+                                    && MatchesStandardCard(item, clause)
+                                )
+                                {
+                                    count++;
                                 }
                             }
-                            else if (pack.GetPackType() == MotelyBoosterPackType.Standard)
+                        }
+
+                        // ── Standard packs ──
+                        if (boosterPacks.Length > 0)
+                        {
+                            var packStream = singleCtx.CreateBoosterPackStream(ante);
+                            var cardStream = singleCtx.CreateStandardPackCardStream(ante);
+
+                            for (int p = 0; p <= maxBoosterPack; p++)
                             {
-                                singleCtx.GetNextStandardPackContents(
-                                    ref cardStream, pack.GetPackSize());
+                                var pack = singleCtx.GetNextBoosterPack(ref packStream);
+                                bool isTarget = false;
+                                for (int i = 0; i < boosterPacks.Length; i++)
+                                {
+                                    if (boosterPacks[i] == p)
+                                    {
+                                        isTarget = true;
+                                        break;
+                                    }
+                                }
+
+                                if (
+                                    isTarget
+                                    && pack.GetPackType() == MotelyBoosterPackType.Standard
+                                )
+                                {
+                                    var contents = singleCtx.GetNextStandardPackContents(
+                                        ref cardStream,
+                                        pack.GetPackSize()
+                                    );
+                                    for (int i = 0; i < contents.Length; i++)
+                                    {
+                                        if (MatchesStandardCard(contents[i], clause))
+                                            count++;
+                                    }
+                                }
+                                else if (pack.GetPackType() == MotelyBoosterPackType.Standard)
+                                {
+                                    singleCtx.GetNextStandardPackContents(
+                                        ref cardStream,
+                                        pack.GetPackSize()
+                                    );
+                                }
                             }
                         }
+
+                        if (count >= needed)
+                            break;
                     }
 
-                    if (count >= needed) break;
+                    return count >= needed;
                 }
-
-                return count >= needed;
-            });
+            );
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

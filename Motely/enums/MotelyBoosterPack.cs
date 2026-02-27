@@ -59,7 +59,8 @@ public enum MotelyBoosterPack
         (MotelyBoosterPackType.Arcana << MotelyCore.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Jumbo,
     MegaArcana =
-        (MotelyBoosterPackType.Arcana << MotelyCore.BoosterPackTypeOffset) | MotelyBoosterPackSize.Mega,
+        (MotelyBoosterPackType.Arcana << MotelyCore.BoosterPackTypeOffset)
+        | MotelyBoosterPackSize.Mega,
     Celestial =
         (MotelyBoosterPackType.Celestial << MotelyCore.BoosterPackTypeOffset)
         | MotelyBoosterPackSize.Normal,

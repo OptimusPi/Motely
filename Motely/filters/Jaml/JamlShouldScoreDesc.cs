@@ -10,10 +10,11 @@ namespace Motely.Filters;
 /// Must tallies: ANSI colored ■ (green=pass, red=fail).
 /// Should tallies: plain int (score weight or 0).
 /// </summary>
-public struct JamlShouldScoreDesc : IMotelySeedScoreDesc<JamlShouldScoreDesc.JamlShouldScoreProvider>
+public struct JamlShouldScoreDesc
+    : IMotelySeedScoreDesc<JamlShouldScoreDesc.JamlShouldScoreProvider>
 {
     private const string GreenBlock = "\u001b[32m\u25a0\u001b[0m";
-    private const string RedBlock   = "\u001b[31m\u25a0\u001b[0m";
+    private const string RedBlock = "\u001b[31m\u25a0\u001b[0m";
 
     private readonly (IMotelySeedFilterDesc desc, string label)[] _mustDescs;
     private readonly (IMotelySeedFilterDesc desc, int score, string label)[] _shouldDescs;
@@ -22,7 +23,8 @@ public struct JamlShouldScoreDesc : IMotelySeedScoreDesc<JamlShouldScoreDesc.Jam
     public JamlShouldScoreDesc(
         (IMotelySeedFilterDesc desc, string label)[] mustDescs,
         (IMotelySeedFilterDesc desc, int score, string label)[] shouldDescs,
-        Action<string>? seedMatchCallback = null)
+        Action<string>? seedMatchCallback = null
+    )
     {
         _mustDescs = mustDescs;
         _shouldDescs = shouldDescs;
@@ -39,7 +41,11 @@ public struct JamlShouldScoreDesc : IMotelySeedScoreDesc<JamlShouldScoreDesc.Jam
         for (int i = 0; i < _shouldDescs.Length; i++)
             shouldFilters[i] = (_shouldDescs[i].desc.CreateFilter(ref ctx), _shouldDescs[i].score);
 
-        return new JamlShouldScoreProvider(mustFilters, shouldFilters, _seedMatchCallback ?? ctx.SeedMatchCallback);
+        return new JamlShouldScoreProvider(
+            mustFilters,
+            shouldFilters,
+            _seedMatchCallback ?? ctx.SeedMatchCallback
+        );
     }
 
     public struct JamlShouldScoreProvider : IMotelySeedScoreProvider
@@ -51,19 +57,23 @@ public struct JamlShouldScoreDesc : IMotelySeedScoreDesc<JamlShouldScoreDesc.Jam
         public JamlShouldScoreProvider(
             IMotelySeedFilter[] mustFilters,
             (IMotelySeedFilter filter, int score)[] shouldClauses,
-            Action<string>? seedMatchCallback)
+            Action<string>? seedMatchCallback
+        )
         {
             _mustFilters = mustFilters;
             _shouldClauses = shouldClauses;
             _seedMatchCallback = seedMatchCallback;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public unsafe VectorMask Score(
             ref MotelyVectorSearchContext searchContext,
             MotelySeedScoreTally[] buffer,
             VectorMask baseFilterMask,
-            int scoreThreshold = 0)
+            int scoreThreshold = 0
+        )
         {
             int shouldCount = _shouldClauses.Length;
 
@@ -75,11 +85,14 @@ public struct JamlShouldScoreDesc : IMotelySeedScoreDesc<JamlShouldScoreDesc.Jam
             {
                 shouldMasks[i] = _shouldClauses[i].filter.Filter(ref searchContext);
                 var scoreVec = Vector256.Create(_shouldClauses[i].score);
-                scores = Vector256.Add(scores,
+                scores = Vector256.Add(
+                    scores,
                     Vector256.ConditionalSelect(
                         VectorMaskToConditionalSelectMask(shouldMasks[i]),
                         scoreVec,
-                        Vector256<int>.Zero));
+                        Vector256<int>.Zero
+                    )
+                );
             }
 
             var resultMask = baseFilterMask;
@@ -87,7 +100,8 @@ public struct JamlShouldScoreDesc : IMotelySeedScoreDesc<JamlShouldScoreDesc.Jam
 
             for (int lane = 0; lane < MotelyCore.MaxVectorWidth; lane++)
             {
-                if (!baseFilterMask[lane] || !searchContext.IsLaneValid(lane)) continue;
+                if (!baseFilterMask[lane] || !searchContext.IsLaneValid(lane))
+                    continue;
 
                 int laneScore = scores.GetElement(lane);
                 int length = searchContext.GetSeed(lane, seed);
@@ -98,7 +112,9 @@ public struct JamlShouldScoreDesc : IMotelySeedScoreDesc<JamlShouldScoreDesc.Jam
                 if (_seedMatchCallback != null)
                 {
                     int mustCount = _mustFilters.Length;
-                    var sb = new System.Text.StringBuilder(seedStr.Length + 8 + mustCount * 4 + shouldCount * 2);
+                    var sb = new System.Text.StringBuilder(
+                        seedStr.Length + 8 + mustCount * 4 + shouldCount * 2
+                    );
                     sb.Append(seedStr);
                     sb.Append(',');
                     sb.Append(laneScore);

@@ -3,7 +3,12 @@ using System.Runtime.CompilerServices;
 
 namespace Motely.Filters;
 
-public enum TagPosition { Any, SmallBlind, BigBlind }
+public enum TagPosition
+{
+    Any,
+    SmallBlind,
+    BigBlind,
+}
 
 public sealed class TagClause : IJamlClause
 {
@@ -15,8 +20,7 @@ public sealed class TagClause : IJamlClause
     public int Min { get; init; } = 1;
 }
 
-public struct TagFilterDesc(TagClause clause)
-    : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>
+public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterDesc.TagFilter>
 {
     private readonly TagClause _clause = clause;
 
@@ -34,7 +38,9 @@ public struct TagFilterDesc(TagClause clause)
     {
         private readonly TagClause _clause = clause;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Tags.Length > 0);
@@ -51,7 +57,8 @@ public struct TagFilterDesc(TagClause clause)
                 foreach (var t in clause.Tags)
                     result |= MatchTag(smallTag, bigTag, t, clause.Position);
 
-                if (result.IsAllTrue()) return result;
+                if (result.IsAllTrue())
+                    return result;
             }
 
             return result;
@@ -62,7 +69,8 @@ public struct TagFilterDesc(TagClause clause)
             VectorEnum256<MotelyTag> smallTag,
             VectorEnum256<MotelyTag> bigTag,
             MotelyTag target,
-            TagPosition position)
+            TagPosition position
+        )
         {
             return position switch
             {

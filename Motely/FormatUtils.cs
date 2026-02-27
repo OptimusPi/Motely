@@ -229,8 +229,12 @@ public static class FormatUtils
             MotelyPlayingCardRank.Queen => "Queen",
             MotelyPlayingCardRank.King => "King",
             MotelyPlayingCardRank.Ace => "Ace",
-            _ => throw new InvalidEnumArgumentException(nameof(rank), (int)rank, typeof(MotelyPlayingCardRank))
-        };  
+            _ => throw new InvalidEnumArgumentException(
+                nameof(rank),
+                (int)rank,
+                typeof(MotelyPlayingCardRank)
+            ),
+        };
 
         var suitStr = suit switch
         {
@@ -238,7 +242,11 @@ public static class FormatUtils
             MotelyPlayingCardSuit.Diamonds => "Diamonds",
             MotelyPlayingCardSuit.Hearts => "Hearts",
             MotelyPlayingCardSuit.Spades => "Spades",
-            _ => throw new InvalidEnumArgumentException(nameof(rank), (int)rank, typeof(MotelyPlayingCardRank))
+            _ => throw new InvalidEnumArgumentException(
+                nameof(rank),
+                (int)rank,
+                typeof(MotelyPlayingCardRank)
+            ),
         };
 
         return $"{rankStr} of {suitStr}";

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <linker>
   <assembly fullname="Motely">
-
     <!-- ── JAML YAML DTOs (deserialized by YamlDotNet) ── -->
     <type fullname="Motely.Filters.JamlDto" preserve="all" />
     <type fullname="Motely.Filters.JamlDefaultsDto" preserve="all" />
@@ -78,7 +77,6 @@
     <type fullname="Motely.MotelyBoosterPack" preserve="all" />
     <type fullname="Motely.MotelyBoosterPackType" preserve="all" />
     <type fullname="Motely.MotelyBoosterPackSize" preserve="all" />
-
   </assembly>
 
   <!-- Preserve YAML.NET static context generated types -->
