@@ -5,17 +5,29 @@ namespace Motely
     partial class Program
     {
         /// <summary>Crash log path next to the executable.</summary>
-        internal static string CrashLogPath => Path.Combine(AppContext.BaseDirectory, "motely-tui-crash.txt");
+        internal static string CrashLogPath =>
+            Path.Combine(AppContext.BaseDirectory, "motely-tui-crash.txt");
 
         static int Main(string[] args)
         {
             // Log unhandled exceptions from any thread so we see native/callback failures
             AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             {
-                try { File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O} [Unhandled]\n{(Exception)e.ExceptionObject}"); } catch { }
+                try
+                {
+                    File.WriteAllText(
+                        CrashLogPath,
+                        $"{DateTime.UtcNow:O} [Unhandled]\n{(Exception)e.ExceptionObject}"
+                    );
+                }
+                catch { }
             };
 
-            try { File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O} Main entered\n"); } catch { }
+            try
+            {
+                File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O} Main entered\n");
+            }
+            catch { }
 
             try
             {
@@ -31,7 +43,11 @@ namespace Motely
             {
                 Console.Error.WriteLine("Motely TUI failed to start:");
                 Console.Error.WriteLine(ex.ToString());
-                try { File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O}\n{ex}"); } catch { }
+                try
+                {
+                    File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O}\n{ex}");
+                }
+                catch { }
                 return 1;
             }
         }

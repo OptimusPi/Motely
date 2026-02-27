@@ -15,9 +15,12 @@ public class Program
         if (args.Length > 0 && args[0] == "--version")
         {
             var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-            Console.WriteLine(JsonSerializer.Serialize(
-                new WasiCapabilitiesDto { Version = version, Runtime = "wasi-wasm" },
-                WasiJsonContext.Default.WasiCapabilitiesDto));
+            Console.WriteLine(
+                JsonSerializer.Serialize(
+                    new WasiCapabilitiesDto { Version = version, Runtime = "wasi-wasm" },
+                    WasiJsonContext.Default.WasiCapabilitiesDto
+                )
+            );
             return;
         }
 
@@ -25,7 +28,8 @@ public class Program
         string? line;
         while ((line = Console.ReadLine()) != null)
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
             string result = ProcessCommand(line);
             Console.WriteLine(result);
             Console.Out.Flush();
@@ -37,15 +41,16 @@ public class Program
         try
         {
             var req = JsonSerializer.Deserialize(json, WasiJsonContext.Default.RpcRequest);
-            if (req == null) return Error("Failed to parse request");
+            if (req == null)
+                return Error("Failed to parse request");
 
             return req.Method switch
             {
                 "validate_jaml" => HandleValidateJaml(req.Params),
-                "analyze_seed"  => HandleAnalyzeSeed(req.Params),
+                "analyze_seed" => HandleAnalyzeSeed(req.Params),
                 "get_capabilities" => HandleGetCapabilities(),
                 "search" => HandleSearch(req.Params),
-                _ => Error($"Unknown method: {req.Method}")
+                _ => Error($"Unknown method: {req.Method}"),
             };
         }
         catch (Exception ex)
@@ -58,15 +63,23 @@ public class Program
     {
         var jaml = p?.Jaml ?? "";
         if (!JamlConfigLoader.TryLoad(jaml, out var config, out var parseError) || config == null)
-            return Result(new WasiValidateResultDto { Valid = false, Error = parseError ?? "Failed to parse JAML" });
+            return Result(
+                new WasiValidateResultDto
+                {
+                    Valid = false,
+                    Error = parseError ?? "Failed to parse JAML",
+                }
+            );
 
-        return Result(new WasiValidateResultDto
-        {
-            Valid = true,
-            Name = config.Name,
-            Deck = config.Deck.ToString(),
-            Stake = config.Stake.ToString()
-        });
+        return Result(
+            new WasiValidateResultDto
+            {
+                Valid = true,
+                Name = config.Name,
+                Deck = config.Deck.ToString(),
+                Stake = config.Stake.ToString(),
+            }
+        );
     }
 
     private static string HandleAnalyzeSeed(JsonParamsDto? p)
@@ -88,17 +101,33 @@ public class Program
 
         var dto = new WasiSeedAnalysisDto
         {
-            Seed = seed, Deck = deck, Stake = stake,
-            Antes = analysis.Antes.Select(a => new WasiAnteDto
-            {
-                Ante = a.Ante,
-                Boss = a.Boss.ToString(),
-                Voucher = a.Voucher.ToString(),
-                SmallBlindTag = a.SmallBlindTag.ToString(),
-                BigBlindTag = a.BigBlindTag.ToString(),
-                ShopQueue = a.ShopQueue.Select(i => new WasiShopItemDto { Id = i.Type.ToString(), Name = i.ToString() }).ToArray(),
-                Packs = a.Packs.Select(pk => new WasiPackDto { Type = pk.Type.ToString(), Items = pk.Items.Select(i => i.ToString()).ToArray() }).ToArray(),
-            }).ToArray()
+            Seed = seed,
+            Deck = deck,
+            Stake = stake,
+            Antes = analysis
+                .Antes.Select(a => new WasiAnteDto
+                {
+                    Ante = a.Ante,
+                    Boss = a.Boss.ToString(),
+                    Voucher = a.Voucher.ToString(),
+                    SmallBlindTag = a.SmallBlindTag.ToString(),
+                    BigBlindTag = a.BigBlindTag.ToString(),
+                    ShopQueue = a
+                        .ShopQueue.Select(i => new WasiShopItemDto
+                        {
+                            Id = i.Type.ToString(),
+                            Name = i.ToString(),
+                        })
+                        .ToArray(),
+                    Packs = a
+                        .Packs.Select(pk => new WasiPackDto
+                        {
+                            Type = pk.Type.ToString(),
+                            Items = pk.Items.Select(i => i.ToString()).ToArray(),
+                        })
+                        .ToArray(),
+                })
+                .ToArray(),
         };
         return Result(dto);
     }
@@ -123,7 +152,9 @@ public class Program
             {
                 resultCount++;
                 var res = new WasiSearchResultDto { Seed = seed, Score = 100 };
-                Console.WriteLine(JsonSerializer.Serialize(res, WasiJsonContext.Default.WasiSearchResultDto));
+                Console.WriteLine(
+                    JsonSerializer.Serialize(res, WasiJsonContext.Default.WasiSearchResultDto)
+                );
                 Console.Out.Flush();
             })
             .WithProgressCallback(prog =>
@@ -133,9 +164,11 @@ public class Program
                     SeedsSearched = prog.SeedsSearched,
                     MatchingSeeds = resultCount,
                     ElapsedMs = (long)prog.ElapsedTime.TotalMilliseconds,
-                    ResultCount = resultCount
+                    ResultCount = resultCount,
                 };
-                Console.WriteLine(JsonSerializer.Serialize(progDto, WasiJsonContext.Default.WasiSearchProgressDto));
+                Console.WriteLine(
+                    JsonSerializer.Serialize(progDto, WasiJsonContext.Default.WasiSearchProgressDto)
+                );
                 Console.Out.Flush();
             });
 
@@ -158,12 +191,16 @@ public class Program
             SeedsSearched = search.TotalSeedsSearched,
             MatchingSeeds = resultCount,
             ElapsedMs = (long)search.ElapsedTime.TotalMilliseconds,
-            ResultCount = resultCount
+            ResultCount = resultCount,
         };
-        Console.WriteLine(JsonSerializer.Serialize(finalProg, WasiJsonContext.Default.WasiSearchProgressDto));
-        
+        Console.WriteLine(
+            JsonSerializer.Serialize(finalProg, WasiJsonContext.Default.WasiSearchProgressDto)
+        );
+
         var completeDto = new WasiSearchCompleteDto { SearchId = searchId };
-        Console.WriteLine(JsonSerializer.Serialize(completeDto, WasiJsonContext.Default.WasiSearchCompleteDto));
+        Console.WriteLine(
+            JsonSerializer.Serialize(completeDto, WasiJsonContext.Default.WasiSearchCompleteDto)
+        );
         Console.Out.Flush();
 
         // Return empty string as we already streamed the result via stdout
@@ -172,31 +209,43 @@ public class Program
 
     private static string HandleGetCapabilities()
     {
-        return Result(new WasiCapabilitiesDto
-        {
-            Runtime = "wasi-wasm",
-            Simd =
+        return Result(
+            new WasiCapabilitiesDto
+            {
+                Runtime = "wasi-wasm",
+                Simd =
 #if NET10_0_OR_GREATER
                 System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated,
 #else
-                false,
+                    false,
 #endif
-            Threads = false,
-            ProcessorCount = Environment.ProcessorCount,
-            Version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0"
-        });
+                Threads = false,
+                ProcessorCount = Environment.ProcessorCount,
+                Version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+            }
+        );
     }
 
     // ── Serialization helpers using WasiJsonContext ──
 
     private static string Result(WasiValidateResultDto dto) =>
-        "{\"result\":" + JsonSerializer.Serialize(dto, WasiJsonContext.Default.WasiValidateResultDto) + "}";
+        "{\"result\":"
+        + JsonSerializer.Serialize(dto, WasiJsonContext.Default.WasiValidateResultDto)
+        + "}";
 
     private static string Result(WasiSeedAnalysisDto dto) =>
-        "{\"result\":" + JsonSerializer.Serialize(dto, WasiJsonContext.Default.WasiSeedAnalysisDto) + "}";
+        "{\"result\":"
+        + JsonSerializer.Serialize(dto, WasiJsonContext.Default.WasiSeedAnalysisDto)
+        + "}";
 
     private static string Result(WasiCapabilitiesDto dto) =>
-        "{\"result\":" + JsonSerializer.Serialize(dto, WasiJsonContext.Default.WasiCapabilitiesDto) + "}";
+        "{\"result\":"
+        + JsonSerializer.Serialize(dto, WasiJsonContext.Default.WasiCapabilitiesDto)
+        + "}";
 
     private static string Error(string message) =>
-        JsonSerializer.Serialize(new WasiErrorDto { Error = message }, WasiJsonContext.Default.WasiErrorDto);}
+        JsonSerializer.Serialize(
+            new WasiErrorDto { Error = message },
+            WasiJsonContext.Default.WasiErrorDto
+        );
+}

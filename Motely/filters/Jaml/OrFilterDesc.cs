@@ -24,7 +24,9 @@ public struct OrFilterDesc(IMotelySeedFilterDesc[] filters, int min = 1)
         private readonly IMotelySeedFilter[] _filters = filters;
         private readonly int _min = min;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             if (_min == 1) // Optimization for standard OR
@@ -42,7 +44,14 @@ public struct OrFilterDesc(IMotelySeedFilterDesc[] filters, int min = 1)
             for (int i = 0; i < len2; i++)
             {
                 var mask = filters[i].Filter(ref ctx);
-                count = Vector256.Add(count, Vector256.ConditionalSelect(VectorMaskToConditionalSelectMask(mask), Vector256<int>.One, Vector256<int>.Zero));
+                count = Vector256.Add(
+                    count,
+                    Vector256.ConditionalSelect(
+                        VectorMaskToConditionalSelectMask(mask),
+                        Vector256<int>.One,
+                        Vector256<int>.Zero
+                    )
+                );
             }
             return Vector256.GreaterThanOrEqual(count, Vector256.Create(_min));
         }

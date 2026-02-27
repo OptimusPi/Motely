@@ -20,8 +20,9 @@ namespace Motely.Repository
         public DesktopFilterRepository()
         {
             // Initialize filters directory
-            var baseDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) 
-                         ?? AppDomain.CurrentDomain.BaseDirectory;
+            var baseDir =
+                Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
+                ?? AppDomain.CurrentDomain.BaseDirectory;
             _filtersDirectory = Path.Combine(baseDir, "JsonItemFilters");
             Directory.CreateDirectory(_filtersDirectory);
 
@@ -30,7 +31,12 @@ namespace Motely.Repository
             {
                 WriteIndented = true,
                 PropertyNameCaseInsensitive = true,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                DefaultIgnoreCondition = System
+                    .Text
+                    .Json
+                    .Serialization
+                    .JsonIgnoreCondition
+                    .WhenWritingNull,
             };
         }
 
@@ -46,7 +52,7 @@ namespace Motely.Repository
                 Stake = Motely.MotelyStake.White,
                 Must = new JamlClauseSet(),
                 Should = new JamlClauseSet(),
-                MustNot = new JamlClauseSet()
+                MustNot = new JamlClauseSet(),
             };
 
             await SaveFilterAsync(filter);
@@ -76,8 +82,9 @@ namespace Motely.Repository
 
             try
             {
-                var files = Directory.GetFiles(_filtersDirectory, "*.json")
-                                   .Where(f => !Path.GetFileName(f).StartsWith("_")); // Skip temp files
+                var files = Directory
+                    .GetFiles(_filtersDirectory, "*.json")
+                    .Where(f => !Path.GetFileName(f).StartsWith("_")); // Skip temp files
 
                 foreach (var file in files)
                 {
@@ -118,7 +125,10 @@ namespace Motely.Repository
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to save filter '{filter.Name}': {ex.Message}", ex);
+                throw new InvalidOperationException(
+                    $"Failed to save filter '{filter.Name}': {ex.Message}",
+                    ex
+                );
             }
         }
 

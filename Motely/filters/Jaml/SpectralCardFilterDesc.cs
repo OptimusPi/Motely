@@ -56,10 +56,22 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                 maxSeance = _clause.Sources.Seance[i];
         }
 
-        return new SpectralCardFilter(_clause, maxShopItem, maxBoosterPack, maxSixthSense, maxSeance);
+        return new SpectralCardFilter(
+            _clause,
+            maxShopItem,
+            maxBoosterPack,
+            maxSixthSense,
+            maxSeance
+        );
     }
 
-    public struct SpectralCardFilter(SpectralCardClause clause, int maxShopItem, int maxBoosterPack, int maxSixthSense, int maxSeance) : IMotelySeedFilter
+    public struct SpectralCardFilter(
+        SpectralCardClause clause,
+        int maxShopItem,
+        int maxBoosterPack,
+        int maxSixthSense,
+        int maxSeance
+    ) : IMotelySeedFilter
     {
         private readonly SpectralCardClause _clause = clause;
         private readonly int _maxShopItem = maxShopItem;
@@ -67,7 +79,9 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
         private readonly int _maxSixthSense = maxSixthSense;
         private readonly int _maxSeance = maxSeance;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Spectrals.Length > 0);
@@ -98,21 +112,31 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < shopIndices.Length; i++)
                         {
-                            if (shopIndices[i] == slot) { isTarget = true; break; }
+                            if (shopIndices[i] == slot)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
-                        if (!isTarget) continue;
+                        if (!isTarget)
+                            continue;
 
-                        VectorMask isSpectral = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.SpectralCard);
+                        VectorMask isSpectral = VectorEnum256.Equals(
+                            item.TypeCategory,
+                            MotelyItemTypeCategory.SpectralCard
+                        );
                         VectorMask match = MatchSpectrals(item, clause) & isSpectral;
 
                         if (match.IsPartiallyTrue())
                         {
-                            matchCounts = Vector256.Add(matchCounts,
+                            matchCounts = Vector256.Add(
+                                matchCounts,
                                 Vector256.ConditionalSelect(
                                     MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
                                     Vector256.Create(1),
-                                    Vector256<int>.Zero)
+                                    Vector256<int>.Zero
+                                )
                             );
                         }
                     }
@@ -132,17 +156,27 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < boosterPacks.Length; i++)
                         {
-                            if (boosterPacks[i] == p) { isTarget = true; break; }
+                            if (boosterPacks[i] == p)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
                         var packType = pack.GetPackType();
-                        VectorMask isSpectral = VectorEnum256.Equals(packType, MotelyBoosterPackType.Spectral);
+                        VectorMask isSpectral = VectorEnum256.Equals(
+                            packType,
+                            MotelyBoosterPackType.Spectral
+                        );
                         if (isSpectral.IsPartiallyTrue())
                         {
                             // Spectral Normal = 2 cards, Jumbo/Mega = 4.
                             // Use Normal as baseline.
-                            var contents = ctx.GetNextSpectralPackContents(ref spectralStream, MotelyBoosterPackSize.Normal);
-                            
+                            var contents = ctx.GetNextSpectralPackContents(
+                                ref spectralStream,
+                                MotelyBoosterPackSize.Normal
+                            );
+
                             if (isTarget)
                             {
                                 for (int i = 0; i < contents.Length; i++)
@@ -150,11 +184,15 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                                     VectorMask match = MatchSpectrals(contents[i], clause);
                                     if (match.IsPartiallyTrue())
                                     {
-                                        matchCounts = Vector256.Add(matchCounts,
+                                        matchCounts = Vector256.Add(
+                                            matchCounts,
                                             Vector256.ConditionalSelect(
-                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
+                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(
+                                                    match
+                                                ),
                                                 Vector256.Create(1),
-                                                Vector256<int>.Zero)
+                                                Vector256<int>.Zero
+                                            )
                                         );
                                     }
                                 }
@@ -174,7 +212,11 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < sixthSenseRolls.Length; i++)
                         {
-                            if (sixthSenseRolls[i] == roll) { isTarget = true; break; }
+                            if (sixthSenseRolls[i] == roll)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
                         if (isTarget)
@@ -182,11 +224,13 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                             VectorMask match = MatchSpectrals(item, clause);
                             if (match.IsPartiallyTrue())
                             {
-                                matchCounts = Vector256.Add(matchCounts,
+                                matchCounts = Vector256.Add(
+                                    matchCounts,
                                     Vector256.ConditionalSelect(
                                         MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
                                         Vector256.Create(1),
-                                        Vector256<int>.Zero)
+                                        Vector256<int>.Zero
+                                    )
                                 );
                             }
                         }
@@ -204,7 +248,11 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < seanceRolls.Length; i++)
                         {
-                            if (seanceRolls[i] == roll) { isTarget = true; break; }
+                            if (seanceRolls[i] == roll)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
                         if (isTarget)
@@ -212,11 +260,13 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                             VectorMask match = MatchSpectrals(item, clause);
                             if (match.IsPartiallyTrue())
                             {
-                                matchCounts = Vector256.Add(matchCounts,
+                                matchCounts = Vector256.Add(
+                                    matchCounts,
                                     Vector256.ConditionalSelect(
                                         MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
                                         Vector256.Create(1),
-                                        Vector256<int>.Zero)
+                                        Vector256<int>.Zero
+                                    )
                                 );
                             }
                         }
@@ -224,7 +274,10 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
                 }
             }
 
-            Vector256<int> comparison = Vector256.GreaterThan(matchCounts, Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1)));
+            Vector256<int> comparison = Vector256.GreaterThan(
+                matchCounts,
+                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
+            );
             return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
         }
 
@@ -236,7 +289,8 @@ public struct SpectralCardFilterDesc(SpectralCardClause clause)
 
             for (int i = 0; i < clause.Spectrals.Length; i++)
             {
-                var targetType = (int)MotelyItemTypeCategory.SpectralCard | (int)clause.Spectrals[i];
+                var targetType =
+                    (int)MotelyItemTypeCategory.SpectralCard | (int)clause.Spectrals[i];
                 mask |= VectorEnum256.Equals(itemTypes, (MotelyItemType)targetType);
             }
 

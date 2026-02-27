@@ -51,7 +51,8 @@ public class SearchConsistencyTests(ITestOutputHelper output)
             $"JAML parse failed: {error}"
         );
 
-        var settings = JamlSearchBuilder.CreateSettings(config!)
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
             .WithListSearch(KnownMatchingSeeds, KnownMatchingSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true);
@@ -71,12 +72,11 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     [Fact]
     public async Task NonMatchingSeeds_ProduceZeroMatches()
     {
-        Assert.True(
-            JamlConfigLoader.TryLoad(ShowmanJaml, out var config, out _)
-        );
+        Assert.True(JamlConfigLoader.TryLoad(ShowmanJaml, out var config, out _));
 
         string[] badSeeds = ["AAAAAAAA", "BBBBBBBB", "CCCCCCCC"];
-        var settings = JamlSearchBuilder.CreateSettings(config!)
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
             .WithListSearch(badSeeds, badSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true);
@@ -97,19 +97,32 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     [InlineData(4)]
     public async Task MatchCount_ConsistentAcrossThreadCounts(int threadCount)
     {
-        Assert.True(
-            JamlConfigLoader.TryLoad(ShowmanJaml, out var config, out _)
-        );
+        Assert.True(JamlConfigLoader.TryLoad(ShowmanJaml, out var config, out _));
 
         // Pad with non-matching seeds so batching works properly
         var allSeeds = KnownMatchingSeeds
-            .Concat(["AAAAAAAA", "BBBBBBBB", "CCCCCCCC", "DDDDDDDD",
-                      "EEEEEEEE", "FFFFFFFF", "GGGGGGGG", "HHHHHHHH",
-                      "IIIIIIII", "JJJJJJJJ", "KKKKKKKK", "LLLLLLLL",
-                      "MMMMMMMM", "NNNNNNNN", "OOOOOOOO", "PPPPPPPP"])
+            .Concat([
+                "AAAAAAAA",
+                "BBBBBBBB",
+                "CCCCCCCC",
+                "DDDDDDDD",
+                "EEEEEEEE",
+                "FFFFFFFF",
+                "GGGGGGGG",
+                "HHHHHHHH",
+                "IIIIIIII",
+                "JJJJJJJJ",
+                "KKKKKKKK",
+                "LLLLLLLL",
+                "MMMMMMMM",
+                "NNNNNNNN",
+                "OOOOOOOO",
+                "PPPPPPPP",
+            ])
             .ToArray();
 
-        var settings = JamlSearchBuilder.CreateSettings(config!)
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
             .WithListSearch(allSeeds, allSeeds.Length)
             .WithThreadCount(threadCount)
             .WithQuietMode(true);
@@ -117,7 +130,9 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         using var search = settings.Start();
         await search.Start(CancellationToken.None);
 
-        output.WriteLine($"threads={threadCount}: searched={search.TotalSeedsSearched}, matched={search.MatchingSeeds}");
+        output.WriteLine(
+            $"threads={threadCount}: searched={search.TotalSeedsSearched}, matched={search.MatchingSeeds}"
+        );
         Assert.Equal(KnownMatchingSeeds.Length, search.MatchingSeeds);
     }
 
@@ -128,12 +143,11 @@ public class SearchConsistencyTests(ITestOutputHelper output)
     [Fact]
     public async Task CallbackReportsCorrectSeeds()
     {
-        Assert.True(
-            JamlConfigLoader.TryLoad(ShowmanJaml, out var config, out _)
-        );
+        Assert.True(JamlConfigLoader.TryLoad(ShowmanJaml, out var config, out _));
 
         var capturedSeeds = new ConcurrentBag<string>();
-        var settings = JamlSearchBuilder.CreateSettings(config!)
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
             .WithListSearch(KnownMatchingSeeds, KnownMatchingSeeds.Length)
             .WithThreadCount(1)
             .WithQuietMode(true)

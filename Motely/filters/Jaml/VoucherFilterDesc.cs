@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Motely;
 using System.Runtime.Intrinsics;
+using Motely;
 using static Motely.MotelyVectorUtils;
 
 namespace Motely.Filters;
@@ -26,7 +26,8 @@ public struct VoucherFilterDesc(VoucherClause clause)
         for (int i = 0; i < _clause.Antes.Length; i++)
         {
             ctx.CacheAnteFirstVoucher(_clause.Antes[i]);
-            if (_clause.Antes[i] > maxAnte) maxAnte = _clause.Antes[i];
+            if (_clause.Antes[i] > maxAnte)
+                maxAnte = _clause.Antes[i];
         }
 
         return new VoucherFilter(_clause, maxAnte);
@@ -37,7 +38,9 @@ public struct VoucherFilterDesc(VoucherClause clause)
         private readonly VoucherClause _clause = clause;
         private readonly int _maxAnte = maxAnte;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Vouchers.Length > 0);
@@ -53,16 +56,22 @@ public struct VoucherFilterDesc(VoucherClause clause)
                 bool isTarget = false;
                 for (int i = 0; i < clause.Antes.Length; i++)
                 {
-                    if (clause.Antes[i] == ante) { isTarget = true; break; }
+                    if (clause.Antes[i] == ante)
+                    {
+                        isTarget = true;
+                        break;
+                    }
                 }
-                if (!isTarget) continue;
+                if (!isTarget)
+                    continue;
 
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
                 result |= GetVoucherMatch(vouchers, clause);
 
                 voucherState.ActivateVoucher(vouchers);
 
-                if (result.IsAllTrue()) return result;
+                if (result.IsAllTrue())
+                    return result;
             }
 
             return result;
@@ -71,7 +80,8 @@ public struct VoucherFilterDesc(VoucherClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static VectorMask GetVoucherMatch(
             VectorEnum256<MotelyVoucher> vouchers,
-            VoucherClause clause)
+            VoucherClause clause
+        )
         {
             if (clause.Vouchers.Length == 1)
             {

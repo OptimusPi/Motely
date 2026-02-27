@@ -59,7 +59,13 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         return new TarotCardFilter(_clause, maxShopItem, maxBoosterPack, maxEmperor, maxPurpleSeal);
     }
 
-    public struct TarotCardFilter(TarotCardClause clause, int maxShopItem, int maxBoosterPack, int maxEmperor, int maxPurpleSeal) : IMotelySeedFilter
+    public struct TarotCardFilter(
+        TarotCardClause clause,
+        int maxShopItem,
+        int maxBoosterPack,
+        int maxEmperor,
+        int maxPurpleSeal
+    ) : IMotelySeedFilter
     {
         private readonly TarotCardClause _clause = clause;
         private readonly int _maxShopItem = maxShopItem;
@@ -67,7 +73,9 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
         private readonly int _maxEmperor = maxEmperor;
         private readonly int _maxPurpleSeal = maxPurpleSeal;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Tarots.Length > 0);
@@ -98,21 +106,31 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < shopIndices.Length; i++)
                         {
-                            if (shopIndices[i] == slot) { isTarget = true; break; }
+                            if (shopIndices[i] == slot)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
-                        if (!isTarget) continue;
+                        if (!isTarget)
+                            continue;
 
-                        VectorMask isTarot = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.TarotCard);
+                        VectorMask isTarot = VectorEnum256.Equals(
+                            item.TypeCategory,
+                            MotelyItemTypeCategory.TarotCard
+                        );
                         VectorMask match = MatchTarots(item, clause) & isTarot;
 
                         if (match.IsPartiallyTrue())
                         {
-                            matchCounts = Vector256.Add(matchCounts,
+                            matchCounts = Vector256.Add(
+                                matchCounts,
                                 Vector256.ConditionalSelect(
                                     MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
                                     Vector256.Create(1),
-                                    Vector256<int>.Zero)
+                                    Vector256<int>.Zero
+                                )
                             );
                         }
                     }
@@ -132,16 +150,26 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < boosterPacks.Length; i++)
                         {
-                            if (boosterPacks[i] == p) { isTarget = true; break; }
+                            if (boosterPacks[i] == p)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
                         var packType = pack.GetPackType();
-                        VectorMask isArcana = VectorEnum256.Equals(packType, MotelyBoosterPackType.Arcana);
+                        VectorMask isArcana = VectorEnum256.Equals(
+                            packType,
+                            MotelyBoosterPackType.Arcana
+                        );
                         if (isArcana.IsPartiallyTrue())
                         {
                             // Use Normal size (3 cards) as the baseline — all Arcana packs
                             // have at least 3 cards. Jumbo/Mega have 5.
-                            var contents = ctx.GetNextArcanaPackContents(ref tarotStream, MotelyBoosterPackSize.Normal);
+                            var contents = ctx.GetNextArcanaPackContents(
+                                ref tarotStream,
+                                MotelyBoosterPackSize.Normal
+                            );
 
                             if (isTarget)
                             {
@@ -150,11 +178,15 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                                     VectorMask match = MatchTarots(contents[i], clause);
                                     if (match.IsPartiallyTrue())
                                     {
-                                        matchCounts = Vector256.Add(matchCounts,
+                                        matchCounts = Vector256.Add(
+                                            matchCounts,
                                             Vector256.ConditionalSelect(
-                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
+                                                MotelyVectorUtils.VectorMaskToConditionalSelectMask(
+                                                    match
+                                                ),
                                                 Vector256.Create(1),
-                                                Vector256<int>.Zero)
+                                                Vector256<int>.Zero
+                                            )
                                         );
                                     }
                                 }
@@ -174,7 +206,11 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < emperorRolls.Length; i++)
                         {
-                            if (emperorRolls[i] == roll) { isTarget = true; break; }
+                            if (emperorRolls[i] == roll)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
                         if (isTarget)
@@ -183,9 +219,23 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                             VectorMask match2 = MatchTarots(tarots[1], clause);
 
                             if (match1.IsPartiallyTrue())
-                                matchCounts = Vector256.Add(matchCounts, Vector256.ConditionalSelect(MotelyVectorUtils.VectorMaskToConditionalSelectMask(match1), Vector256.Create(1), Vector256<int>.Zero));
+                                matchCounts = Vector256.Add(
+                                    matchCounts,
+                                    Vector256.ConditionalSelect(
+                                        MotelyVectorUtils.VectorMaskToConditionalSelectMask(match1),
+                                        Vector256.Create(1),
+                                        Vector256<int>.Zero
+                                    )
+                                );
                             if (match2.IsPartiallyTrue())
-                                matchCounts = Vector256.Add(matchCounts, Vector256.ConditionalSelect(MotelyVectorUtils.VectorMaskToConditionalSelectMask(match2), Vector256.Create(1), Vector256<int>.Zero));
+                                matchCounts = Vector256.Add(
+                                    matchCounts,
+                                    Vector256.ConditionalSelect(
+                                        MotelyVectorUtils.VectorMaskToConditionalSelectMask(match2),
+                                        Vector256.Create(1),
+                                        Vector256<int>.Zero
+                                    )
+                                );
                         }
                     }
                 }
@@ -201,7 +251,11 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                         bool isTarget = false;
                         for (int i = 0; i < sealRolls.Length; i++)
                         {
-                            if (sealRolls[i] == roll) { isTarget = true; break; }
+                            if (sealRolls[i] == roll)
+                            {
+                                isTarget = true;
+                                break;
+                            }
                         }
 
                         if (isTarget)
@@ -209,11 +263,13 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                             VectorMask match = MatchTarots(item, clause);
                             if (match.IsPartiallyTrue())
                             {
-                                matchCounts = Vector256.Add(matchCounts,
+                                matchCounts = Vector256.Add(
+                                    matchCounts,
                                     Vector256.ConditionalSelect(
                                         MotelyVectorUtils.VectorMaskToConditionalSelectMask(match),
                                         Vector256.Create(1),
-                                        Vector256<int>.Zero)
+                                        Vector256<int>.Zero
+                                    )
                                 );
                             }
                         }
@@ -221,7 +277,10 @@ public struct TarotCardFilterDesc(TarotCardClause clause)
                 }
             }
 
-            Vector256<int> comparison = Vector256.GreaterThan(matchCounts, Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1)));
+            Vector256<int> comparison = Vector256.GreaterThan(
+                matchCounts,
+                Vector256.Subtract(Vector256.Create(needed), Vector256.Create(1))
+            );
             return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
         }
 

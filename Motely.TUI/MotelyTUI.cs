@@ -13,18 +13,37 @@ public static class MotelyTUI
         var msg = $"{phase}: {ex.Message}";
         Console.WriteLine(msg);
         Console.WriteLine(ex.StackTrace);
-        try { File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O} [{phase}]\n{ex}"); } catch { }
+        try
+        {
+            File.WriteAllText(CrashLogPath, $"{DateTime.UtcNow:O} [{phase}]\n{ex}");
+        }
+        catch { }
     }
 
     private static View MakeErrorFallback(string message)
     {
         var v = new View()
         {
-            X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(),
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
             CanFocus = true,
         };
-        var label = new Label() { X = 2, Y = 2, Width = Dim.Fill() - 4, Height = 5, Text = message };
-        var exitBtn = new CleanButton() { X = Pos.Center(), Y = 8, Text = " Exit " };
+        var label = new Label()
+        {
+            X = 2,
+            Y = 2,
+            Width = Dim.Fill() - 4,
+            Height = 5,
+            Text = message,
+        };
+        var exitBtn = new CleanButton()
+        {
+            X = Pos.Center(),
+            Y = 8,
+            Text = " Exit ",
+        };
         exitBtn.Accept += (_, _) => _app?.RequestStop();
         v.Add(label, exitBtn);
         exitBtn.SetFocus();
@@ -48,8 +67,10 @@ public static class MotelyTUI
     /// </summary>
     public static void ShowWindow(Window window)
     {
-        if (_desktop == null) return;
-        if (_mainMenu != null) _mainMenu.Visible = false;
+        if (_desktop == null)
+            return;
+        if (_mainMenu != null)
+            _mainMenu.Visible = false;
         _desktop.Add(window);
         window.SetFocus();
     }
@@ -59,7 +80,8 @@ public static class MotelyTUI
     /// </summary>
     public static void CloseWindow(Window window)
     {
-        if (_desktop == null) return;
+        if (_desktop == null)
+            return;
         _desktop.Remove(window);
         if (_mainMenu != null)
         {
@@ -70,8 +92,14 @@ public static class MotelyTUI
 
     public static int Run(string? configName = null, string? configFormat = null)
     {
-        try { TuiSettings.Load(); }
-        catch (Exception ex) { Console.WriteLine($"Failed to load TUI settings: {ex.Message}"); }
+        try
+        {
+            TuiSettings.Load();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load TUI settings: {ex.Message}");
+        }
 
         try
         {
@@ -89,7 +117,10 @@ public static class MotelyTUI
             // Desktop: full-screen container for shader + overlapping windows
             _desktop = new Window()
             {
-                X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(),
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill(),
                 CanFocus = true,
             };
 
@@ -99,7 +130,10 @@ public static class MotelyTUI
                 _desktop.Add(_shaderBackground);
                 _shaderBackground.Start();
             }
-            catch (Exception ex) { LogCrash("Shader init (continuing without shader)", ex); }
+            catch (Exception ex)
+            {
+                LogCrash("Shader init (continuing without shader)", ex);
+            }
 
             if (!string.IsNullOrEmpty(configName) && !string.IsNullOrEmpty(configFormat))
             {
@@ -143,7 +177,10 @@ public static class MotelyTUI
             }
 
             // Wipe terminal so shell prompt isn't drawn over TUI remnants
-            try { Console.Clear(); }
+            try
+            {
+                Console.Clear();
+            }
             catch { }
         }
     }

@@ -22,7 +22,8 @@ public readonly struct BossFilterDesc(BossClause clause)
         int maxAnte = 0;
         for (int i = 0; i < _clause.Antes.Length; i++)
         {
-            if (_clause.Antes[i] > maxAnte) maxAnte = _clause.Antes[i];
+            if (_clause.Antes[i] > maxAnte)
+                maxAnte = _clause.Antes[i];
         }
         return new BossFilter(_clause, maxAnte);
     }
@@ -32,7 +33,9 @@ public readonly struct BossFilterDesc(BossClause clause)
         private readonly BossClause _clause = clause;
         private readonly int _maxAnte = maxAnte;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Bosses.Length > 0);
@@ -40,37 +43,45 @@ public readonly struct BossFilterDesc(BossClause clause)
             var clause = _clause;
             int maxAnte = _maxAnte;
 
-            return ctx.SearchIndividualSeeds((ref MotelySingleSearchContext singleCtx) =>
-            {
-                var state = new MotelyRunState();
-
-                if (maxAnte > 0)
+            return ctx.SearchIndividualSeeds(
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    var cachedBosses = new MotelyBossBlind[maxAnte + 1];
-                    var bossStream = singleCtx.CreateBossStream();
-                    for (int ante = 1; ante <= maxAnte; ante++)
-                        cachedBosses[ante] = singleCtx.GetBossForAnte(ref bossStream, ante, ref state);
-                    state.CachedBosses = cachedBosses;
-                }
+                    var state = new MotelyRunState();
 
-                int totalCount = 0;
-                foreach (var ante in clause.Antes)
-                {
-                    if (ante < 1 || ante > maxAnte) continue;
-                    bool found = false;
-                    for (int i = 0; i < clause.Bosses.Length; i++)
+                    if (maxAnte > 0)
                     {
-                        if (clause.Bosses[i] == state.CachedBosses![ante])
-                        {
-                            found = true;
-                            break;
-                        }
+                        var cachedBosses = new MotelyBossBlind[maxAnte + 1];
+                        var bossStream = singleCtx.CreateBossStream();
+                        for (int ante = 1; ante <= maxAnte; ante++)
+                            cachedBosses[ante] = singleCtx.GetBossForAnte(
+                                ref bossStream,
+                                ante,
+                                ref state
+                            );
+                        state.CachedBosses = cachedBosses;
                     }
-                    if (found) totalCount++;
-                }
 
-                return totalCount >= clause.Min;
-            });
+                    int totalCount = 0;
+                    foreach (var ante in clause.Antes)
+                    {
+                        if (ante < 1 || ante > maxAnte)
+                            continue;
+                        bool found = false;
+                        for (int i = 0; i < clause.Bosses.Length; i++)
+                        {
+                            if (clause.Bosses[i] == state.CachedBosses![ante])
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found)
+                            totalCount++;
+                    }
+
+                    return totalCount >= clause.Min;
+                }
+            );
         }
     }
 }

@@ -3,7 +3,8 @@ using System.Runtime.Intrinsics;
 
 namespace Motely.Filters;
 
-public struct AndFilterDesc(IMotelySeedFilterDesc[] filters) : IMotelySeedFilterDesc<AndFilterDesc.AndFilter>
+public struct AndFilterDesc(IMotelySeedFilterDesc[] filters)
+    : IMotelySeedFilterDesc<AndFilterDesc.AndFilter>
 {
     private readonly IMotelySeedFilterDesc[] _filters = filters;
 
@@ -19,7 +20,9 @@ public struct AndFilterDesc(IMotelySeedFilterDesc[] filters) : IMotelySeedFilter
     {
         private readonly IMotelySeedFilter[] _filters = filters;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var mask = VectorMask.AllBitsSet;
