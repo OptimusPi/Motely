@@ -29,7 +29,9 @@ public struct ErraticRankFilterDesc(ErraticRankClause clause)
     {
         private readonly ErraticRankClause _clause = clause;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             var clause = _clause;

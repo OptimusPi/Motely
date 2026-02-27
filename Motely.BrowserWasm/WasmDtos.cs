@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 namespace Motely.BrowserWasm;
 
 /// <summary>WASM-only DTOs that supplement the shared MotelyAotJsonContext types.</summary>
-
 public sealed class CapabilitiesDto
 {
     [JsonPropertyName("simd")]

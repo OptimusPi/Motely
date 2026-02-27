@@ -1,6 +1,6 @@
+using System.Text.Json;
 using Motely.Executors;
 using Motely.Filters;
-using System.Text.Json;
 
 namespace Motely.TUI;
 
@@ -153,15 +153,17 @@ public class SearchWindow : Window
                 });
             };
 
-            if (!TryLoadConfig(_configPath, _configFormat, out var config, out var configError) || config == null)
+            if (
+                !TryLoadConfig(_configPath, _configFormat, out var config, out var configError)
+                || config == null
+            )
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
 
             parameters.Deck = config.Deck.ToString();
             parameters.Stake = config.Stake.ToString();
             parameters.ResultCallback = onResult;
 
-            _search = MotelySearchOrchestrator
-                .LaunchWithContext(config, parameters);
+            _search = MotelySearchOrchestrator.LaunchWithContext(config, parameters);
 
             App?.Invoke(() =>
             {
@@ -239,10 +241,7 @@ public class SearchWindow : Window
         _searchRunning = false;
         _statusLabel.Text = "Completed";
         _statusLabel.SetScheme(
-            new Scheme()
-            {
-                Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey),
-            }
+            new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
         );
         _stopBtn.Visible = false;
 
@@ -262,10 +261,7 @@ public class SearchWindow : Window
         _searchRunning = false;
         _statusLabel.Text = "Stopped";
         _statusLabel.SetScheme(
-            new Scheme()
-            {
-                Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey),
-            }
+            new Scheme() { Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey) }
         );
         _stopBtn.Visible = false;
     }
@@ -279,7 +275,10 @@ public class SearchWindow : Window
         _stopBtn.Text = "Stopping...";
 
         // Cancellation goes through CTS — _search observes the token
-        try { _cts?.Cancel(); }
+        try
+        {
+            _cts?.Cancel();
+        }
         catch { }
 
         OnSearchStopped();
@@ -290,7 +289,10 @@ public class SearchWindow : Window
         if (_searchRunning)
             StopSearch();
 
-        try { _search?.Dispose(); }
+        try
+        {
+            _search?.Dispose();
+        }
         catch { }
 
         MotelyTUI.CloseWindow(this);
@@ -300,7 +302,8 @@ public class SearchWindow : Window
         string path,
         string configFormat,
         out JamlConfig? config,
-        out string? error)
+        out string? error
+    )
     {
         config = null;
         error = null;

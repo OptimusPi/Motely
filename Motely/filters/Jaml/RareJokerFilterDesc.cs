@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using Motely;
 using static Motely.MotelyVectorUtils;
-using System.Runtime.Intrinsics;
 
 namespace Motely.Filters;
 
@@ -29,7 +29,9 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
             }
             else
             {
-                throw new InvalidOperationException($"Rare joker {_clause.Jokers[i]} not found in MotelyItemType");
+                throw new InvalidOperationException(
+                    $"Rare joker {_clause.Jokers[i]} not found in MotelyItemType"
+                );
             }
         }
 
@@ -39,13 +41,22 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
 
         int maxShopItem = 0;
         foreach (var idx in shopIndices)
-            if (idx > maxShopItem) maxShopItem = idx;
+            if (idx > maxShopItem)
+                maxShopItem = idx;
 
         int maxBoosterPack = 0;
         foreach (var idx in boosterIndices)
-            if (idx > maxBoosterPack) maxBoosterPack = idx;
+            if (idx > maxBoosterPack)
+                maxBoosterPack = idx;
 
-        return new RareJokerFilter(_clause, targetTypes, shopIndices.ToArray(), boosterIndices.ToArray(), maxShopItem, maxBoosterPack);
+        return new RareJokerFilter(
+            _clause,
+            targetTypes,
+            shopIndices.ToArray(),
+            boosterIndices.ToArray(),
+            maxShopItem,
+            maxBoosterPack
+        );
     }
 
     public struct RareJokerFilter(
@@ -54,7 +65,8 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
         int[] shopIndices,
         int[] boosterIndices,
         int maxShopItem,
-        int maxBoosterPack) : IMotelySeedFilter
+        int maxBoosterPack
+    ) : IMotelySeedFilter
     {
         private readonly RareJokerClause _clause = clause;
         private readonly MotelyItemType[] _targetTypes = targetTypes;
@@ -63,7 +75,9 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
         private readonly int _maxShopItem = maxShopItem;
         private readonly int _maxBoosterPack = maxBoosterPack;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(
+            MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization
+        )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
             Debug.Assert(_clause.Jokers.Length > 0);
@@ -94,16 +108,19 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
                             }
                         }
 
-                        if (!isTarget) continue;
+                        if (!isTarget)
+                            continue;
 
                         VectorMask jokerMatch = MatchJokers(shopItem);
                         if (jokerMatch.IsPartiallyTrue())
                         {
-                            matchCounts = Vector256.Add(matchCounts, 
+                            matchCounts = Vector256.Add(
+                                matchCounts,
                                 Vector256.ConditionalSelect(
                                     VectorMaskToConditionalSelectMask(jokerMatch),
                                     Vector256.Create(1),
-                                    Vector256<int>.Zero)
+                                    Vector256<int>.Zero
+                                )
                             );
                         }
                     }
@@ -128,31 +145,53 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
                             }
                         }
 
-                        if (!isTarget) continue;
+                        if (!isTarget)
+                            continue;
 
-                        VectorMask isBuffoon = VectorEnum256.Equals(pack.GetPackType(), MotelyBoosterPackType.Buffoon);
+                        VectorMask isBuffoon = VectorEnum256.Equals(
+                            pack.GetPackType(),
+                            MotelyBoosterPackType.Buffoon
+                        );
 
                         if (isBuffoon.IsPartiallyTrue())
                         {
-                            VectorMask isNormalSize = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Normal);
-                            VectorMask isJumboSize = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Jumbo);
-                            VectorMask isMegaSize = VectorEnum256.Equals(pack.GetPackSize(), MotelyBoosterPackSize.Mega);
+                            VectorMask isNormalSize = VectorEnum256.Equals(
+                                pack.GetPackSize(),
+                                MotelyBoosterPackSize.Normal
+                            );
+                            VectorMask isJumboSize = VectorEnum256.Equals(
+                                pack.GetPackSize(),
+                                MotelyBoosterPackSize.Jumbo
+                            );
+                            VectorMask isMegaSize = VectorEnum256.Equals(
+                                pack.GetPackSize(),
+                                MotelyBoosterPackSize.Mega
+                            );
 
                             if ((isBuffoon & isNormalSize).IsPartiallyTrue())
                             {
-                                var contents = ctx.GetNextBuffoonPackContents(ref jokerStream, MotelyBoosterPackSize.Normal);
+                                var contents = ctx.GetNextBuffoonPackContents(
+                                    ref jokerStream,
+                                    MotelyBoosterPackSize.Normal
+                                );
                                 MatchBuffoonContents(contents, isTarget, ref matchCounts);
                             }
 
                             if ((isBuffoon & isJumboSize).IsPartiallyTrue())
                             {
-                                var contents = ctx.GetNextBuffoonPackContents(ref jokerStream, MotelyBoosterPackSize.Jumbo);
+                                var contents = ctx.GetNextBuffoonPackContents(
+                                    ref jokerStream,
+                                    MotelyBoosterPackSize.Jumbo
+                                );
                                 MatchBuffoonContents(contents, isTarget, ref matchCounts);
                             }
 
                             if ((isBuffoon & isMegaSize).IsPartiallyTrue())
                             {
-                                var contents = ctx.GetNextBuffoonPackContents(ref jokerStream, MotelyBoosterPackSize.Mega);
+                                var contents = ctx.GetNextBuffoonPackContents(
+                                    ref jokerStream,
+                                    MotelyBoosterPackSize.Mega
+                                );
                                 MatchBuffoonContents(contents, isTarget, ref matchCounts);
                             }
                         }
@@ -161,7 +200,10 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
             }
 
             Vector256<int> minVec = Vector256.Create(_clause.Min);
-            Vector256<int> comparison = Vector256.GreaterThan(matchCounts, Vector256.Subtract(minVec, Vector256.Create(1)));
+            Vector256<int> comparison = Vector256.GreaterThan(
+                matchCounts,
+                Vector256.Subtract(minVec, Vector256.Create(1))
+            );
             return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
         }
 
@@ -205,18 +247,22 @@ public struct RareJokerFilterDesc(RareJokerClause clause)
         private readonly void MatchBuffoonContents(
             in MotelyVectorItemSet contents,
             bool isTarget,
-            ref Vector256<int> matchCounts)
+            ref Vector256<int> matchCounts
+        )
         {
-            if (!isTarget) return;
+            if (!isTarget)
+                return;
 
             for (int i = 0; i < contents.Length; i++)
             {
                 VectorMask match = MatchJokers(contents[i]);
-                matchCounts = Vector256.Add(matchCounts, 
+                matchCounts = Vector256.Add(
+                    matchCounts,
                     Vector256.ConditionalSelect(
                         VectorMaskToConditionalSelectMask(match),
                         Vector256.Create(1),
-                        Vector256<int>.Zero)
+                        Vector256<int>.Zero
+                    )
                 );
             }
         }

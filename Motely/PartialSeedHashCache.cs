@@ -22,9 +22,13 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     public PartialSeedHashCache(IInternalMotelySearch search, Vector512<double>* partialSeedHashes)
     {
         Cache = (Vector512<double>**)
-            Marshal.AllocHGlobal(sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength);
+            Marshal.AllocHGlobal(
+                sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+            );
         InitialCache = (Vector512<double>**)
-            Marshal.AllocHGlobal(sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength);
+            Marshal.AllocHGlobal(
+                sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+            );
 
         // Initialize the dynamic cache
         DynamicCacheMemory = (Vector512<double>*)

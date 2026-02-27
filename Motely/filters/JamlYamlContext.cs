@@ -7,6 +7,4 @@ namespace Motely.Filters;
 [YamlSerializable(typeof(JamlClauseDto))]
 [YamlSerializable(typeof(JamlDefaultsDto))]
 [YamlSerializable(typeof(JamlSourcesDto))]
-public partial class JamlYamlContext : StaticContext
-{
-}
+public partial class JamlYamlContext : StaticContext { }

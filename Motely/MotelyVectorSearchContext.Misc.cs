@@ -10,7 +10,11 @@ ref partial struct MotelyVectorSearchContext
         CreatePrngStream(MotelyPrngKeys.JokerMisprint, isCached);
 
     public Vector256<int> GetNextMisprintMult(ref MotelyVectorPrngStream misprintStream) =>
-        GetNextRandomInt(ref misprintStream, MotelyCore.JokerMisprintMin, MotelyCore.JokerMisprintMax + 1);
+        GetNextRandomInt(
+            ref misprintStream,
+            MotelyCore.JokerMisprintMin,
+            MotelyCore.JokerMisprintMax + 1
+        );
     #endregion
 
     #region Lucky Cards

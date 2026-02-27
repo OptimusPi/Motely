@@ -283,8 +283,14 @@ public class ApiServerWindow : Window
 
     private async Task StopServerSafeAsync()
     {
-        try { await StopServerOnlyAsync(); }
-        catch (Exception ex) { LogMessage($"[ERROR] Stop failed: {ex.Message}"); }
+        try
+        {
+            await StopServerOnlyAsync();
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"[ERROR] Stop failed: {ex.Message}");
+        }
     }
 
     private async Task StopServerOnlyAsync()

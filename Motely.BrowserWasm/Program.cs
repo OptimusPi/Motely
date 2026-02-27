@@ -47,7 +47,8 @@ internal static partial class JsConsole
 
         public override void Write(string? value)
         {
-            if (string.IsNullOrEmpty(value)) return;
+            if (string.IsNullOrEmpty(value))
+                return;
             foreach (var c in value)
             {
                 Write(c);
@@ -59,8 +60,10 @@ internal static partial class JsConsole
             if (_buffer.Length > 0)
             {
                 var msg = _buffer.ToString();
-                if (_isError) Error(msg);
-                else Log(msg);
+                if (_isError)
+                    Error(msg);
+                else
+                    Log(msg);
 
                 _buffer.Clear();
             }
