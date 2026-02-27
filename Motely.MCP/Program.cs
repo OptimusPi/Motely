@@ -162,7 +162,32 @@ public static class Program
 
         try
         {
-            var config = JamlFormatter.Parse(jaml);
+            // Parse JAML using YamlDotNet deserializer
+            var deserializer = new YamlDotNet.Serialization.Deserializer();
+            var jamlDto = deserializer.Deserialize<JamlDto>(jaml);
+
+            // Convert DTO to JamlConfig manually
+            var config = new JamlConfig
+            {
+                Name = jamlDto?.Name,
+                Description = jamlDto?.Description,
+                Author = jamlDto?.Author,
+                Deck = (
+                    jamlDto?.Deck != null
+                    && System.Enum.TryParse<MotelyDeck>(jamlDto.Deck, true, out var deck)
+                        ? deck
+                        : MotelyDeck.Red
+                ),
+                Stake = (
+                    jamlDto?.Stake != null
+                    && System.Enum.TryParse<MotelyStake>(jamlDto.Stake, true, out var stake)
+                        ? stake
+                        : MotelyStake.White
+                ),
+                Must = new JamlClauseSet(),
+                Should = new JamlClauseSet(),
+                MustNot = new JamlClauseSet(),
+            };
             var must = config.Must?.Count ?? 0;
             var should = config.Should?.Count ?? 0;
             var mustNot = config.MustNot?.Count ?? 0;
