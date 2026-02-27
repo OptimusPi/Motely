@@ -13,17 +13,19 @@ public interface IJamlClause
     int Score { get; init; }
 }
 
-public sealed class AndClause : IJamlClause
+public abstract class LogicClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
+}
+
+public sealed class AndClause : LogicClause
+{
     public required IJamlClause[] Clauses { get; init; }
 }
 
-public sealed class OrClause : IJamlClause
+public sealed class OrClause : LogicClause
 {
-    public string Label { get; init; } = "";
-    public int Score { get; init; }
     public required IJamlClause[] Clauses { get; init; }
     public int Min { get; init; } = 1;
 }

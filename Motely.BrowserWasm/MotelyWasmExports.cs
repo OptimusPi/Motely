@@ -231,7 +231,7 @@ public static partial class MotelyWasmExports
                 settings = settings.WithSequentialSearch();
 
             var cts = new CancellationTokenSource();
-            var search = settings.Start(cts.Token);
+            var search = settings.Start().WaitForCompletionAsync(cts.Token);
 
             lock (_searchLock)
             {

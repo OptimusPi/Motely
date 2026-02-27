@@ -31,15 +31,25 @@ public sealed class MotelySearchContext : IMotelySearchContext
     public long FilteredSeeds => _search.FilteredSeeds;
     public int ResultCount => 0; // Results flow via callback, not stored
     public IReadOnlyList<string> ColumnNames => Array.Empty<string>();
-    public List<MotelySearchResultRow> GetResults(int offset, int limit) => new();
-    public List<MotelySearchResultRow> GetTopResults(int limit = 1067) => new();
 
     public Task Start(CancellationToken cancellationToken = default)
     {
         if (_runTask is { IsCompleted: false })
             return _runTask;
-        _runTask = _search.Start(cancellationToken);
+        _runTask = Task.Run(() => _search.Start().WaitForCompletionAsync(cancellationToken));
         return _runTask;
+    }
+
+    public List<MotelySearchResultRow> GetResults(int offset, int limit)
+    {
+        // Results flow via callback, not stored - return empty list
+        return new List<MotelySearchResultRow>();
+    }
+
+    public List<MotelySearchResultRow> GetTopResults(int limit = 1000)
+    {
+        // Results flow via callback, not stored - return empty list
+        return new List<MotelySearchResultRow>();
     }
 
     public void Dispose() => _search.Dispose();
