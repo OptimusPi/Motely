@@ -172,10 +172,10 @@ public static partial class MotelyWasmExports
     /// </summary>
     [JSImport("globalThis.__motelyOnProgress")]
     public static partial void JsOnProgress(
-        long totalSeedsSearched,
-        long matchingSeeds,
-        long elapsedMs,
-        int resultCount
+        [JSMarshalAs<JSType.Number>] long totalSeedsSearched,
+        [JSMarshalAs<JSType.Number>] long matchingSeeds,
+        [JSMarshalAs<JSType.Number>] long elapsedMs,
+        [JSMarshalAs<JSType.Number>] int resultCount
     );
 
     [JSImport("globalThis.__motelyOnResult")]
@@ -387,7 +387,6 @@ public static partial class MotelyWasmExports
             IsRunning = !search.IsCompleted,
             TotalSeedsSearched = search.TotalSeedsSearched,
             MatchingSeeds = search.MatchingSeeds,
-            ResultCount = _drainedResults.Count,
             ElapsedMs = (long)search.ElapsedTime.TotalMilliseconds,
             Results = _drainedResults
                 .Select(r => new SearchHitDto
