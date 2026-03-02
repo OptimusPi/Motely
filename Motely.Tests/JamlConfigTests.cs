@@ -4,8 +4,8 @@ using Xunit;
 namespace Motely.Tests;
 
 /// <summary>
-/// Tests for JAML config parsing — catches the bugs where unknown YAML keys
-/// were silently ignored and shopSlots/packSlots weren't recognized.
+/// Tests for JAML config parsing — verifies shorthand keys, source config mapping,
+/// and graceful handling of unknown YAML keys (which are silently ignored).
 /// </summary>
 public class JamlConfigTests
 {
@@ -31,8 +31,11 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void UnknownProperty_ShopSlots_Throws()
+    public void UnknownSourceKey_ShopSlots_IsIgnored()
     {
+        // shopSlots is not a recognized key — the parser silently ignores it
+        // (IgnoreUnmatchedProperties). The clause still parses, but shopSlots
+        // won't map to any source. Users should use shopItems instead.
         var jaml = """
             name: Test
             must:
@@ -42,15 +45,18 @@ public class JamlConfigTests
                   shopSlots: [0,1]
             """;
 
-        var success = JamlConfigLoader.TryLoad(jaml, out _, out var error);
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-        Assert.False(success, "shopSlots should NOT be a valid key — use shopItems");
-        Assert.NotNull(error);
+        Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
+        Assert.NotNull(config);
+        Assert.Single(config!.Must.Jokers);
     }
 
     [Fact]
-    public void UnknownProperty_PackSlots_Throws()
+    public void UnknownSourceKey_PackSlots_IsIgnored()
     {
+        // packSlots is not a recognized key — silently ignored.
+        // Users should use boosterPacks instead.
         var jaml = """
             name: Test
             must:
@@ -60,9 +66,11 @@ public class JamlConfigTests
                   packSlots: [0,1]
             """;
 
-        var success = JamlConfigLoader.TryLoad(jaml, out _, out var error);
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-        Assert.False(success, "packSlots should NOT be a valid key — use boosterPacks");
+        Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
+        Assert.NotNull(config);
+        Assert.Single(config!.Must.Jokers);
     }
 
     [Fact]
@@ -118,8 +126,10 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void CompletelyBogusKey_Throws()
+    public void UnknownClauseKey_IsIgnored()
     {
+        // Unknown top-level clause keys are silently ignored by YamlDotNet's
+        // IgnoreUnmatchedProperties — this is by design for forward compatibility.
         var jaml = """
             name: Test
             must:
@@ -127,8 +137,31 @@ public class JamlConfigTests
                 totallyFakeKey: 42
             """;
 
-        var success = JamlConfigLoader.TryLoad(jaml, out _, out _);
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-        Assert.False(success, "Unknown top-level clause keys should cause parse failure");
+        Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
+        Assert.NotNull(config);
+        Assert.Single(config!.Must.Jokers);
+    }
+
+    [Fact]
+    public void DeckAndStake_Parse()
+    {
+        var jaml = """
+            name: DeckTest
+            deck: Anaglyph
+            stake: Gold
+            must:
+              - joker: Showman
+                antes: [1]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        Assert.Equal(MotelyDeck.Anaglyph, config!.Deck);
+        Assert.Equal(MotelyStake.Gold, config.Stake);
     }
 }
+

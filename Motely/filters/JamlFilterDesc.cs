@@ -70,6 +70,11 @@ public static class JamlSearchBuilder
 
         // Build settings: first must desc = base filter, rest = additional required filters
         var settings = CreateSettingsFromDesc(mustDescs[0]);
+
+        // Propagate deck and stake from JamlConfig into the search settings
+        settings.WithDeck(config.Deck);
+        settings.WithStake(config.Stake);
+
         for (int i = 1; i < mustDescs.Count; i++)
             settings.WithAdditionalFilter(mustDescs[i]);
 
@@ -266,6 +271,8 @@ public static class JamlSearchBuilder
                 new MotelySearchSettings<GrosMichelExtinctFilterDesc.GrosMichelExtinctFilter>(d),
             PassthroughFilterDesc d =>
                 new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(d),
+            StartingDrawFilterDesc d =>
+                new MotelySearchSettings<StartingDrawFilterDesc.StartingDrawFilter>(d),
             _ => throw new NotSupportedException(
                 $"Unknown filter desc type: {desc.GetType().Name}"
             ),

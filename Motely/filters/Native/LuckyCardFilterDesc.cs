@@ -15,9 +15,7 @@ public struct LuckCardFilterDesc() : IMotelySeedFilterDesc<LuckCardFilterDesc.Lu
     {
         public VectorMask Filter(ref MotelyVectorSearchContext searchContext)
         {
-            // MotelyVectorPrngStream luckyMoney = searchContext.CreatePrngStreamCached("lucky_money");
             MotelyVectorPrngStream luckyMoney = searchContext.CreatePrngStream("lucky_money");
-            // MotelyVectorPrngStream luckyMoney = searchContext.CreatePrngStreamCached("space");
 
             VectorMask mask = VectorMask.AllBitsSet;
             Vector512<double> values;

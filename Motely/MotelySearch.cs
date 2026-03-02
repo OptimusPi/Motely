@@ -688,6 +688,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 return Interlocked.Read(ref _seedsSearched);
             }
 
+            // Aggregate from thread-local arrays
+            long totalBatches = 0;
+            for (int i = 0; i < _planBatchesCompleted.Length; i++)
+            {
+                totalBatches += _planBatchesCompleted[i];
+            }
+            _actualBatchesCompleted = totalBatches;
+
             return _actualBatchesCompleted * _plans[0].SeedsPerBatch;
         }
     }

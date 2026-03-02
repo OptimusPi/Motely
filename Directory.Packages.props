@@ -48,5 +48,8 @@
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageVersion Include="SkiaSharp" Version="2.88.8" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="2.88.8" />
+    <!-- WASI/Componentize-hosted backend -->
+    <PackageVersion Include="BytecodeAlliance.Componentize.DotNet.Wasm.SDK" Version="0.2.0-preview00004" />
+    <PackageVersion Include="runtime.win-x64.microsoft.dotnet.ilcompiler.llvm" Version="10.0.0-rc.1.26117.1" />
   </ItemGroup>
 </Project>

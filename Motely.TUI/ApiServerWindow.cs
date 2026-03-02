@@ -192,10 +192,7 @@ public class ApiServerWindow : Window
 
             // Create the API using the API Program
             var args = new[] { "--urls", $"http://{host}:{port}" };
-            _server = MotelyApiHost.CreateHost(args);
-
-            // Apply TUI thread budget to API search manager (multi-search allocator uses this budget)
-            MultiSearchManager.Instance.SetTotalThreads(TuiSettings.ThreadCount);
+            _server = Motely.API.Program.CreateHost(args);
 
             await _server.StartAsync(_cts.Token);
 
@@ -211,7 +208,7 @@ public class ApiServerWindow : Window
                 );
             });
 
-            var version = typeof(MotelyApiHost).Assembly.GetName().Version?.ToString(3) ?? "?";
+            var version = typeof(Motely.API.Program).Assembly.GetName().Version?.ToString(3) ?? "?";
             LogMessage($"Hosting Motely API v{version}");
             LogMessage($"Listening on {_serverUrl}");
             LogMessage("Web UI available at same URL");
@@ -311,13 +308,6 @@ public class ApiServerWindow : Window
         try
         {
             _cts?.Cancel();
-        }
-        catch { }
-
-        // Fire and forget search stop - just call it directly (it's synchronous)
-        try
-        {
-            MultiSearchManager.Instance.StopAll("Stopping");
         }
         catch { }
 
@@ -558,4 +548,5 @@ public class ApiServerWindow : Window
                 _window.LogMessage(value);
         }
     }
+
 }
