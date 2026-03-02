@@ -1,16 +1,10 @@
 using System.Collections.Concurrent;
 using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.OpenApi;
 
 namespace Motely.API;
 
-// DTOs
 public record CreateFilterRequest(string Name, string Content);
-
 public record UpdateFilterRequest(string Content);
-
 public record FilterInfo(string Name, DateTime LastModified);
 
 public record StartSearchRequest(
@@ -29,34 +23,28 @@ public record SearchInfo(
     TimeSpan ElapsedTime
 );
 
-public record SearchResult(string Seed, int Score);
-
 public class Program
 {
-    public static void Main(string[] args)
+    public static void Main(string[] args) => CreateHost(args).Run();
+
+    /// <summary>
+    /// Builds the WebApplication without starting it.
+    /// Called by TUI ApiServerWindow to host in-process.
+    /// </summary>
+    public static WebApplication CreateHost(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Add services to the container
-        builder.Services.AddOpenApi();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
-        {
-            c.SwaggerDoc("v1", new() { Title = "Motely API", Version = "v1" });
-        });
+            c.SwaggerDoc("v1", new() { Title = "Motely API", Version = "v1" }));
 
-        // Add CORS for Blueprint frontend
         builder.Services.AddCors(options =>
-        {
             options.AddDefaultPolicy(policy =>
-            {
-                policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-            });
-        });
+                policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
         var app = builder.Build();
 
-        // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
@@ -65,204 +53,103 @@ public class Program
 
         app.UseHttpsRedirection();
         app.UseCors();
-
-        // Serve static files (Blueprint frontend)
         app.UseStaticFiles();
 
-        // JAML storage directory
         var jamlDir = Path.Combine(Directory.GetCurrentDirectory(), "jaml-filters");
         Directory.CreateDirectory(jamlDir);
 
-        // In-memory search storage
         var searches = new ConcurrentDictionary<string, IMotelySearch>();
 
-        // JAML Filter Management
-        app.MapGet(
-                "/api/filters",
-                () =>
-                {
-                    var filters = Directory
-                        .GetFiles(jamlDir, "*.jaml")
-                        .Select(file => new FilterInfo(
-                            Path.GetFileNameWithoutExtension(file),
-                            File.GetLastWriteTime(file)
-                        ))
-                        .OrderBy(f => f.Name);
+        // ── Filters ──
 
-                    return Results.Ok(filters);
-                }
-            )
-            .WithName("GetFilters")
-            .WithOpenApi();
+        app.MapGet("/api/filters", () =>
+        {
+            var filters = Directory.GetFiles(jamlDir, "*.jaml")
+                .Select(f => new FilterInfo(
+                    Path.GetFileNameWithoutExtension(f),
+                    File.GetLastWriteTime(f)))
+                .OrderBy(f => f.Name);
+            return Results.Ok(filters);
+        }).WithName("GetFilters");
 
-        app.MapGet(
-                "/api/filters/{name}",
-                (string name) =>
-                {
-                    var filePath = Path.Combine(jamlDir, $"{name}.jaml");
-                    if (!File.Exists(filePath))
-                        return Results.NotFound();
+        app.MapGet("/api/filters/{name}", (string name) =>
+        {
+            var path = Path.Combine(jamlDir, $"{name}.jaml");
+            return !File.Exists(path)
+                ? Results.NotFound()
+                : Results.Text(File.ReadAllText(path), "text/yaml");
+        }).WithName("GetFilter");
 
-                    var content = File.ReadAllText(filePath);
-                    return Results.Text(content, "text/yaml");
-                }
-            )
-            .WithName("GetFilter")
-            .WithOpenApi();
+        app.MapPost("/api/filters", (CreateFilterRequest req) =>
+        {
+            var path = Path.Combine(jamlDir, $"{req.Name}.jaml");
+            if (File.Exists(path))
+                return Results.Conflict($"Filter '{req.Name}' already exists");
+            File.WriteAllText(path, req.Content);
+            return Results.Created($"/api/filters/{req.Name}", new FilterInfo(req.Name, DateTime.Now));
+        }).WithName("CreateFilter");
 
-        app.MapPost(
-                "/api/filters",
-                (CreateFilterRequest request) =>
-                {
-                    var filePath = Path.Combine(jamlDir, $"{request.Name}.jaml");
-                    if (File.Exists(filePath))
-                        return Results.Conflict($"Filter '{request.Name}' already exists");
+        app.MapPut("/api/filters/{name}", (string name, UpdateFilterRequest req) =>
+        {
+            var path = Path.Combine(jamlDir, $"{name}.jaml");
+            if (!File.Exists(path)) return Results.NotFound();
+            File.WriteAllText(path, req.Content);
+            return Results.Ok(new FilterInfo(name, DateTime.Now));
+        }).WithName("UpdateFilter");
 
-                    File.WriteAllText(filePath, request.Content);
-                    return Results.Created(
-                        $"/api/filters/{request.Name}",
-                        new FilterInfo(request.Name, DateTime.Now)
-                    );
-                }
-            )
-            .WithName("CreateFilter")
-            .WithOpenApi();
+        app.MapDelete("/api/filters/{name}", (string name) =>
+        {
+            var path = Path.Combine(jamlDir, $"{name}.jaml");
+            if (!File.Exists(path)) return Results.NotFound();
+            File.Delete(path);
+            return Results.NoContent();
+        }).WithName("DeleteFilter");
 
-        app.MapPut(
-                "/api/filters/{name}",
-                (string name, UpdateFilterRequest request) =>
-                {
-                    var filePath = Path.Combine(jamlDir, $"{name}.jaml");
-                    if (!File.Exists(filePath))
-                        return Results.NotFound();
+        // ── Search ──
 
-                    File.WriteAllText(filePath, request.Content);
-                    return Results.Ok(new FilterInfo(name, DateTime.Now));
-                }
-            )
-            .WithName("UpdateFilter")
-            .WithOpenApi();
+        app.MapPost("/api/search/start", (StartSearchRequest req) =>
+        {
+            var filterPath = Path.Combine(jamlDir, $"{req.FilterName}.jaml");
+            if (!File.Exists(filterPath))
+                return Results.NotFound($"Filter '{req.FilterName}' not found");
 
-        app.MapDelete(
-                "/api/filters/{name}",
-                (string name) =>
-                {
-                    var filePath = Path.Combine(jamlDir, $"{name}.jaml");
-                    if (!File.Exists(filePath))
-                        return Results.NotFound();
+            try
+            {
+                var jaml = File.ReadAllText(filterPath);
+                if (!Filters.JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+                    return Results.BadRequest($"Invalid JAML: {error}");
 
-                    File.Delete(filePath);
-                    return Results.NoContent();
-                }
-            )
-            .WithName("DeleteFilter")
-            .WithOpenApi();
+                var search = Filters.JamlSearchBuilder.CreateSettings(config).Start();
+                var id = Guid.NewGuid().ToString();
+                searches[id] = search;
+                return Results.Ok(new SearchInfo(id, req.FilterName, false, 0, 0, TimeSpan.Zero));
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest($"Failed to start search: {ex.Message}");
+            }
+        }).WithName("StartSearch");
 
-        // Search Management
-        app.MapPost(
-                "/api/search/start",
-                (StartSearchRequest request) =>
-                {
-                    var filterPath = Path.Combine(jamlDir, $"{request.FilterName}.jaml");
-                    if (!File.Exists(filterPath))
-                        return Results.NotFound($"Filter '{request.FilterName}' not found");
+        app.MapGet("/api/search/{id}", (string id) =>
+        {
+            if (!searches.TryGetValue(id, out var search))
+                return Results.NotFound();
+            return Results.Ok(new SearchInfo(
+                id, "Unknown", search.IsCompleted,
+                search.TotalSeedsSearched, search.MatchingSeeds, search.ElapsedTime));
+        }).WithName("GetSearch");
 
-                    var searchId = Guid.NewGuid().ToString();
+        app.MapPost("/api/search/{id}/stop", (string id) =>
+        {
+            if (!searches.TryRemove(id, out var search))
+                return Results.NotFound();
+            search.Cancel();
+            search.Dispose();
+            return Results.Ok();
+        }).WithName("StopSearch");
 
-                    try
-                    {
-                        var jamlContent = File.ReadAllText(filterPath);
-                        if (
-                            !Filters.JamlConfigLoader.TryLoad(
-                                jamlContent,
-                                out var config,
-                                out var error
-                            )
-                        )
-                            return Results.BadRequest($"Invalid JAML configuration: {error}");
-
-                        var settings = Filters.JamlSearchBuilder.CreateSettings(config);
-                        var search = settings.Start();
-
-                        searches[searchId] = search;
-
-                        return Results.Ok(
-                            new SearchInfo(searchId, request.FilterName, false, 0, 0, TimeSpan.Zero)
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        return Results.BadRequest($"Failed to start search: {ex.Message}");
-                    }
-                }
-            )
-            .WithName("StartSearch")
-            .WithOpenApi();
-
-        app.MapGet(
-                "/api/search/{id}",
-                (string id) =>
-                {
-                    if (!searches.TryGetValue(id, out var search))
-                        return Results.NotFound();
-
-                    var context = new MotelySearchContext(search, id, id);
-
-                    return Results.Ok(
-                        new SearchInfo(
-                            id,
-                            "Unknown",
-                            context.IsCompleted,
-                            context.TotalSeedsSearched,
-                            context.MatchingSeeds,
-                            context.ElapsedTime
-                        )
-                    );
-                }
-            )
-            .WithName("GetSearch")
-            .WithOpenApi();
-
-        app.MapGet(
-                "/api/search/{id}/results",
-                (string id) =>
-                {
-                    if (!searches.TryGetValue(id, out var search))
-                        return Results.NotFound();
-
-                    var context = new MotelySearchContext(search, id, id);
-                    var results = context.GetTopResults(1067); // The meme number!
-
-                    var searchResults = results
-                        .Select(r => new SearchResult(r.Seed, r.Score))
-                        .ToList();
-
-                    return Results.Ok(searchResults);
-                }
-            )
-            .WithName("GetSearchResults")
-            .WithOpenApi();
-
-        app.MapPost(
-                "/api/search/{id}/stop",
-                (string id) =>
-                {
-                    if (!searches.TryGetValue(id, out var search))
-                        return Results.NotFound();
-
-                    // Note: We'd need to add cancellation support to MotelySearch
-                    // For now, just mark as completed
-                    searches.TryRemove(id, out _);
-
-                    return Results.Ok();
-                }
-            )
-            .WithName("StopSearch")
-            .WithOpenApi();
-
-        // Fallback to Blueprint frontend
         app.MapFallbackToFile("/index.html");
 
-        app.Run();
+        return app;
     }
 }

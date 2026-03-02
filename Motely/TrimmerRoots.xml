@@ -13,11 +13,16 @@
     <type fullname="Motely.Filters.JamlSearchBuilder" preserve="all" />
 
     <!-- ── JAML typed clause POCOs ── -->
-    <type fullname="Motely.Filters.JamlClauseBase" preserve="all" />
+    <type fullname="Motely.Filters.IJamlClause" preserve="all" />
+    <type fullname="Motely.Filters.LogicClause" preserve="all" />
     <type fullname="Motely.Filters.AndClause" preserve="all" />
     <type fullname="Motely.Filters.OrClause" preserve="all" />
     <type fullname="Motely.Filters.JokerClause" preserve="all" />
-    <type fullname="Motely.Filters.SoulJokerClause" preserve="all" />
+    <type fullname="Motely.Filters.CommonJokerClause" preserve="all" />
+    <type fullname="Motely.Filters.UncommonJokerClause" preserve="all" />
+    <type fullname="Motely.Filters.RareJokerClause" preserve="all" />
+    <type fullname="Motely.Filters.MixedJokerClause" preserve="all" />
+    <type fullname="Motely.Filters.LegendaryJokerClause" preserve="all" />
     <type fullname="Motely.Filters.VoucherClause" preserve="all" />
     <type fullname="Motely.Filters.TarotCardClause" preserve="all" />
     <type fullname="Motely.Filters.SpectralCardClause" preserve="all" />
@@ -77,6 +82,8 @@
     <type fullname="Motely.MotelyBoosterPack" preserve="all" />
     <type fullname="Motely.MotelyBoosterPackType" preserve="all" />
     <type fullname="Motely.MotelyBoosterPackSize" preserve="all" />
+
+
   </assembly>
 
   <!-- Preserve YAML.NET static context generated types -->

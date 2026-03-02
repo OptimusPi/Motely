@@ -409,15 +409,15 @@ public class FilterBuilderWindow : Window
         };
     }
 
-    private static string ClauseToDisplayText(JamlClauseBase clause) =>
+    private static string ClauseToDisplayText(IJamlClause clause) =>
         clause switch
         {
-            JokerClause c => $"{c.Joker} (Joker)",
-            SoulJokerClause c => $"{c.Joker} (Legendary)",
-            TarotCardClause c => $"{c.Tarot} (Tarot)",
-            SpectralCardClause c => $"{c.Spectral} (Spectral)",
-            PlanetClause c => $"{c.Planet} (Planet)",
-            VoucherClause c => $"{c.Voucher} (Voucher)",
+            JokerClause c => $"{(c.Jokers.Length > 0 ? c.Jokers[0].ToString() : "?")} (Joker)",
+            LegendaryJokerClause c => $"{(c.Jokers.Length > 0 ? c.Jokers[0].ToString() : "?")} (Legendary)",
+            TarotCardClause c => $"{(c.Tarots.Length > 0 ? c.Tarots[0].ToString() : "?")} (Tarot)",
+            SpectralCardClause c => $"{(c.Spectrals.Length > 0 ? c.Spectrals[0].ToString() : "?")} (Spectral)",
+            PlanetCardClause c => $"{(c.Planets.Length > 0 ? c.Planets[0].ToString() : "?")} (Planet)",
+            VoucherClause c => $"{(c.Vouchers.Length > 0 ? c.Vouchers[0].ToString() : "?")} (Voucher)",
             BossClause c => $"{(c.Bosses.Length > 0 ? c.Bosses[0].ToString() : "?")} (Boss)",
             TagClause c => $"{(c.Tags.Length > 0 ? c.Tags[0].ToString() : "?")} (Tags)",
             StandardCardClause c => $"{c.Rank} {c.Suit} (Card)",

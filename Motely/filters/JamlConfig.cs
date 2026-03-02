@@ -8,7 +8,7 @@ namespace Motely.Filters;
 /// Typed clause lists for one JAML section (must / should / mustNot).
 /// Each element = one filter in the chain.
 /// </summary>
-public sealed class JamlClauseSet
+public sealed class JamlClauseSet : IEnumerable<IJamlClause>
 {
     public List<JokerClause> Jokers { get; set; } = [];
     public List<CommonJokerClause> CommonJokers { get; set; } = [];
@@ -61,6 +61,35 @@ public sealed class JamlClauseSet
         + StartingDraw.Count;
 
     public bool HasAnyClauses => Count > 0;
+
+    public IEnumerator<IJamlClause> GetEnumerator()
+    {
+        foreach (var c in Jokers) yield return c;
+        foreach (var c in CommonJokers) yield return c;
+        foreach (var c in UncommonJokers) yield return c;
+        foreach (var c in RareJokers) yield return c;
+        foreach (var c in MixedJokers) yield return c;
+        foreach (var c in LegendaryJokers) yield return c;
+        foreach (var c in Vouchers) yield return c;
+        foreach (var c in TarotCards) yield return c;
+        foreach (var c in SpectralCards) yield return c;
+        foreach (var c in PlanetCards) yield return c;
+        foreach (var c in StandardCards) yield return c;
+        foreach (var c in Bosses) yield return c;
+        foreach (var c in Tags) yield return c;
+        foreach (var c in ErraticRanks) yield return c;
+        foreach (var c in ErraticSuits) yield return c;
+        foreach (var c in ErraticCards) yield return c;
+        foreach (var c in LuckyMoney) yield return c;
+        foreach (var c in LuckyMult) yield return c;
+        foreach (var c in MisprintMult) yield return c;
+        foreach (var c in WheelOfFortune) yield return c;
+        foreach (var c in CavendishExtinct) yield return c;
+        foreach (var c in GrosMichelExtinct) yield return c;
+        foreach (var c in StartingDraw) yield return c;
+    }
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
 /// <summary>
@@ -71,7 +100,7 @@ public sealed class JamlConfig
     public string? Name { get; set; }
     public string? Description { get; set; }
     public string? Author { get; set; }
-    public System.DateTime DateCreated { get; set; } = System.DateTime.UtcNow;
+    public string DateCreated { get; set; } = System.DateTime.UtcNow.ToString("O");
     public MotelyDeck Deck { get; set; } = MotelyDeck.Red;
     public MotelyStake Stake { get; set; } = MotelyStake.White;
 
@@ -79,63 +108,8 @@ public sealed class JamlConfig
     public JamlClauseSet Should { get; set; } = new();
     public JamlClauseSet MustNot { get; set; } = new();
 
-    // Compatibility properties for MotelyJsonConfig migration
-    public List<MotleyJsonFilterClause> MustClauses => ConvertToLegacyClauses(Must);
-    public List<MotleyJsonFilterClause> ShouldClauses => ConvertToLegacyClauses(Should);
-    public List<MotleyJsonFilterClause> MustNotClauses => ConvertToLegacyClauses(MustNot);
-
     public bool HasAnyClauses =>
         Must.HasAnyClauses || Should.HasAnyClauses || MustNot.HasAnyClauses;
-
-    private List<MotleyJsonFilterClause> ConvertToLegacyClauses(JamlClauseSet clauseSet)
-    {
-        var result = new List<MotleyJsonFilterClause>();
-
-        // Convert each typed list to legacy format
-        foreach (var joker in clauseSet.Jokers)
-            result.Add(new MotleyJsonFilterClause { Type = "joker", Value = joker.ToString() });
-        foreach (var voucher in clauseSet.Vouchers)
-            result.Add(new MotleyJsonFilterClause { Type = "voucher", Value = voucher.ToString() });
-        foreach (var tarot in clauseSet.TarotCards)
-            result.Add(new MotleyJsonFilterClause { Type = "tarot", Value = tarot.ToString() });
-        foreach (var spectral in clauseSet.SpectralCards)
-            result.Add(
-                new MotleyJsonFilterClause { Type = "spectral", Value = spectral.ToString() }
-            );
-        foreach (var planet in clauseSet.PlanetCards)
-            result.Add(new MotleyJsonFilterClause { Type = "planet", Value = planet.ToString() });
-        foreach (var standard in clauseSet.StandardCards)
-            result.Add(
-                new MotleyJsonFilterClause { Type = "standard", Value = standard.ToString() }
-            );
-        foreach (var boss in clauseSet.Bosses)
-            result.Add(new MotleyJsonFilterClause { Type = "boss", Value = boss.ToString() });
-        foreach (var tag in clauseSet.Tags)
-            result.Add(new MotleyJsonFilterClause { Type = "tag", Value = tag.ToString() });
-
-        return result;
-    }
-
-    // Legacy compatibility class
-    public class MotleyJsonFilterClause
-    {
-        public string Type { get; set; } = "";
-        public string Value { get; set; } = "";
-        public List<string> Values { get; set; } = new();
-        public List<string> Antes { get; set; } = new();
-        public List<string> Sources { get; set; } = new();
-        public List<string> Stickers { get; set; } = new();
-        public List<MotleyJsonFilterClause> Clauses { get; set; } = new();
-        public int Score { get; set; }
-        public string Edition { get; set; } = "";
-        public string Seal { get; set; } = "";
-        public string Enhancement { get; set; } = "";
-        public string Rank { get; set; } = "";
-        public string Suit { get; set; } = "";
-        public string Label { get; set; } = "";
-        public string Mode { get; set; } = "";
-        public int Min { get; set; }
-    }
 }
 
 // Flat data bags for YamlDotNet deserialization. Match jaml.schema.json.
@@ -228,8 +202,11 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "mixedJokers")]
     public List<string>? MixedJokers { get; set; }
 
-    [YamlMember(Alias = "legendaryJoker")]
+    [YamlMember(Alias = "soulJoker")]
     public string? SoulJoker { get; set; }
+
+    [YamlMember(Alias = "legendaryJoker")]
+    public string? LegendaryJoker { get; set; }
 
     [YamlMember(Alias = "voucher")]
     public string? Voucher { get; set; }
@@ -695,6 +672,8 @@ public static class JamlConfigLoader
                 .Range(minPack.Value, maxPack.Value - minPack.Value + 1)
                 .ToArray();
 
+        var (shRank, shSuit) = ParseCardShorthand(value ?? "");
+
         return itemType switch
         {
             MotelyFilterItemType.Joker => new JokerClause
@@ -935,8 +914,8 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Rank = ParseEnum<MotelyPlayingCardRank>(c.Rank),
-                Suit = ParseEnum<MotelyPlayingCardSuit>(c.Suit),
+                Rank = ParseRank(c.Rank) ?? shRank,
+                Suit = ParseSuit(c.Suit) ?? shSuit,
                 Enhancement = ParseEnum<MotelyItemEnhancement>(c.Enhancement),
                 Seal = ParseEnum<MotelyItemSeal>(c.Seal),
                 Edition = edition,
@@ -958,7 +937,7 @@ public static class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Rank =
-                    ParseEnum<MotelyPlayingCardRank>(c.Rank ?? value)
+                    ParseRank(c.Rank ?? value)
                     ?? throw new NotSupportedException("ErraticRank clause requires a rank value."),
             },
             MotelyFilterItemType.ErraticSuit => new ErraticSuitClause
@@ -968,7 +947,7 @@ public static class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Suit =
-                    ParseEnum<MotelyPlayingCardSuit>(c.Suit ?? value)
+                    ParseSuit(c.Suit ?? value)
                     ?? throw new NotSupportedException("ErraticSuit clause requires a suit value."),
             },
             MotelyFilterItemType.ErraticCard => CreateErraticCardClause(
@@ -984,10 +963,10 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
-                Rank = ParseEnum<MotelyPlayingCardRank>(c.Rank),
-                Suit = ParseEnum<MotelyPlayingCardSuit>(c.Suit),
+                Rank = ParseRank(c.Rank) ?? shRank,
+                Suit = ParseSuit(c.Suit) ?? shSuit,
             },
-            MotelyFilterItemType.Event => CreateEventClause(c.Event, c.Rolls, antes, min, score),
+            MotelyFilterItemType.Event => CreateEventClause(c.Event ?? value, c.Rolls, antes, min, score),
             _ => throw new NotSupportedException($"Unsupported clause type: {itemType}"),
         };
     }
@@ -1000,8 +979,9 @@ public static class JamlConfigLoader
         int score
     )
     {
-        var rank = ParseEnum<MotelyPlayingCardRank>(c.Rank ?? value);
-        var suit = ParseEnum<MotelyPlayingCardSuit>(c.Suit ?? value);
+        var (shRank, shSuit) = ParseCardShorthand(value ?? "");
+        var rank = ParseRank(c.Rank) ?? shRank;
+        var suit = ParseSuit(c.Suit) ?? shSuit;
 
         if (rank != null && suit != null)
         {
@@ -1040,7 +1020,7 @@ public static class JamlConfigLoader
         if (string.IsNullOrEmpty(eventName))
             throw new NotSupportedException("Event clause is missing event type name.");
 
-        var r = rolls ?? [];
+        var r = (rolls == null || rolls.Length == 0) ? new int[] { 0 } : rolls;
         return Enum.Parse<MotelyEventType>(eventName, true) switch
         {
             MotelyEventType.LuckyMoney => new LuckyMoneyClause
@@ -1116,6 +1096,8 @@ public static class JamlConfigLoader
             return (MotelyFilterItemType.MixedJoker, null);
         if (c.SoulJoker != null)
             return (MotelyFilterItemType.SoulJoker, c.SoulJoker);
+        if (c.LegendaryJoker != null)
+            return (MotelyFilterItemType.SoulJoker, c.LegendaryJoker);
         if (c.Voucher != null)
             return (MotelyFilterItemType.Voucher, c.Voucher);
         if (c.Vouchers != null)
@@ -1181,9 +1163,16 @@ public static class JamlConfigLoader
             "SmallBlindTag" => MotelyFilterItemType.SmallBlindTag,
             "BigBlindTag" => MotelyFilterItemType.BigBlindTag,
             "StandardCard" => MotelyFilterItemType.PlayingCard,
-            "Event" => MotelyFilterItemType.Event,
+            "Event"
+            or "LuckyMoney"
+            or "LuckyMult"
+            or "MisprintMult"
+            or "WheelOfFortune"
+            or "CavendishExtinct"
+            or "GrosMichelExtinct" => MotelyFilterItemType.Event,
             "ErraticRank" => MotelyFilterItemType.ErraticRank,
-            "GrosMichelExtinct" => MotelyFilterItemType.GrosMichelExtinct,
+            "ErraticSuit" => MotelyFilterItemType.ErraticSuit,
+            "ErraticCard" => MotelyFilterItemType.ErraticCard,
             "StartingDraw" => MotelyFilterItemType.StartingDraw,
             _ => throw new NotSupportedException($"Unknown clause type: {type}"),
         };
@@ -1193,6 +1182,56 @@ public static class JamlConfigLoader
     private static T? ParseEnum<T>(string? value)
         where T : struct, Enum =>
         value != null && Enum.TryParse<T>(value, true, out var result) ? result : null;
+
+    private static MotelyPlayingCardRank? ParseRank(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return null;
+        return value.ToUpperInvariant() switch
+        {
+            "2" => MotelyPlayingCardRank.Two,
+            "3" => MotelyPlayingCardRank.Three,
+            "4" => MotelyPlayingCardRank.Four,
+            "5" => MotelyPlayingCardRank.Five,
+            "6" => MotelyPlayingCardRank.Six,
+            "7" => MotelyPlayingCardRank.Seven,
+            "8" => MotelyPlayingCardRank.Eight,
+            "9" => MotelyPlayingCardRank.Nine,
+            "10" or "T" => MotelyPlayingCardRank.Ten,
+            "J" => MotelyPlayingCardRank.Jack,
+            "Q" => MotelyPlayingCardRank.Queen,
+            "K" => MotelyPlayingCardRank.King,
+            "A" => MotelyPlayingCardRank.Ace,
+            _ => ParseEnum<MotelyPlayingCardRank>(value),
+        };
+    }
+
+    private static MotelyPlayingCardSuit? ParseSuit(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return null;
+        return value.ToUpperInvariant() switch
+        {
+            "C" or "CLUBS" => MotelyPlayingCardSuit.Clubs,
+            "D" or "DIAMONDS" => MotelyPlayingCardSuit.Diamonds,
+            "H" or "HEARTS" => MotelyPlayingCardSuit.Hearts,
+            "S" or "SPADES" => MotelyPlayingCardSuit.Spades,
+            _ => ParseEnum<MotelyPlayingCardSuit>(value),
+        };
+    }
+
+    private static (MotelyPlayingCardRank? rank, MotelyPlayingCardSuit? suit) ParseCardShorthand(
+        string value
+    )
+    {
+        if (string.IsNullOrEmpty(value))
+            return (null, null);
+        if (Enum.TryParse<MotelyPlayingCard>(value, true, out var card))
+        {
+            return (card.GetRank(), card.GetSuit());
+        }
+        return (null, null);
+    }
 }
 
 public sealed class JokerSource

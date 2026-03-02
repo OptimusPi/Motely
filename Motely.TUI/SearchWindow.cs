@@ -12,7 +12,7 @@ public class SearchWindow : Window
     private Label _progressLabel;
     private TextView _resultsView;
     private CleanButton _stopBtn;
-    private IMotelySearch? _search;
+    private IMotelySearchContext? _search;
     private CancellationTokenSource? _cts;
     private bool _searchRunning = false;
     private int _resultCount = 0;
