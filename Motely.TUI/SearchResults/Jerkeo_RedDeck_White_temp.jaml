@@ -6,11 +6,11 @@ must:
   - legendaryJoker: Perkeo
     antes: [1]
     sources:
-      packSlots: [1]
+      boosterPacks: [1]
   - tarotCard: Judgement
     antes: [1, 2]
     sources:
-      shopSlots: [0, 1, 2, 3]
+      shopItems: [0, 1, 2, 3]
 should:
   - joker: Blueprint
     label: "BP from Judg0"
@@ -43,13 +43,13 @@ should:
     score: 85
     antes: [1]
     sources:
-      shopSlots: [0, 1, 2, 3]
+      shopItems: [0, 1, 2, 3]
 
   - tarotCard: Judgement
     label: "judgeAnte2Shop"
     score: 80
     antes: [1]
     sources:
-      shopSlots: [0, 1, 2, 3]
+      shopItems: [0, 1, 2, 3]
 deck: Ghost
 stake: White

@@ -57,13 +57,13 @@ description: OopsAll6s jokers in shop slot clusters [2,3,4], [4,5,6], [6,7,8]
 # Template content (clause structure)
 - Or:
   - joker: OopsAll6s
-    ShopSlots: [2,3,4]
+    shopItems: [2,3,4]
     score: 100
   - joker: OopsAll6s
-    ShopSlots: [4,5,6]
+    shopItems: [4,5,6]
     score: 100
   - joker: OopsAll6s
-    ShopSlots: [6,7,8]
+    shopItems: [6,7,8]
     score: 100
 ```
 
@@ -183,7 +183,7 @@ Allow templates to accept parameters:
 # Template with parameter placeholder
 - Or:
   - joker: OopsAll6s
-    ShopSlots: [2,3,4]
+    shopItems: [2,3,4]
     score: 100
     Antes: ${ANTES}  # Parameter placeholder
 
@@ -213,7 +213,7 @@ parameters:
 # Template content
 - Or:
   - joker: OopsAll6s
-    ShopSlots: [2,3,4]
+    shopItems: [2,3,4]
     score: 100
     Antes: ${antes}
   # ... etc
@@ -228,13 +228,13 @@ description: OopsAll6s jokers in shop slot clusters
 
 - Or:
   - joker: OopsAll6s
-    ShopSlots: [2,3,4]
+    shopItems: [2,3,4]
     score: 100
   - joker: OopsAll6s
-    ShopSlots: [4,5,6]
+    shopItems: [4,5,6]
     score: 100
   - joker: OopsAll6s
-    ShopSlots: [6,7,8]
+    shopItems: [6,7,8]
     score: 100
 ```
 
@@ -249,15 +249,15 @@ description: NegativeTag skip reward + joker cluster pattern
     Antes: ${antes}
   - Or:
     - joker: OopsAll6s
-      ShopSlots: [2,3,4]
+      shopItems: [2,3,4]
       score: 100
       Antes: ${antes}
     - joker: OopsAll6s
-      ShopSlots: [4,5,6]
+      shopItems: [4,5,6]
       score: 100
       Antes: ${antes}
     - joker: OopsAll6s
-      ShopSlots: [6,7,8]
+      shopItems: [6,7,8]
       score: 100
       Antes: ${antes}
 ```

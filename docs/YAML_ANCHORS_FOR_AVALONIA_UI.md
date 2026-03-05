@@ -241,11 +241,11 @@ When editing templates:
 oops_cluster: &oops_cluster
   - joker: OopsAll6s
     Antes: [2]
-    ShopSlots: [2,3,4]
+    shopItems: [2,3,4]
     score: 100
   - joker: OopsAll6s
     Antes: [2]
-    ShopSlots: [4,5,6]
+    shopItems: [4,5,6]
     score: 100
 
 # Use template
@@ -289,7 +289,7 @@ Should:
 # Nested structure
 joker_pattern: &joker_pattern
   joker: OopsAll6s
-  ShopSlots: [2,3,4]
+  shopItems: [2,3,4]
   score: 100
 
 or_cluster: &or_cluster
@@ -401,13 +401,13 @@ Should:
         - Or:
             - joker: OopsAll6s
               Antes: [2]
-              ShopSlots: [2,3,4]
+              shopItems: [2,3,4]
             - joker: OopsAll6s
               Antes: [2]
-              ShopSlots: [4,5,6]
+              shopItems: [4,5,6]
             - joker: OopsAll6s
               Antes: [2]
-              ShopSlots: [6,7,8]
+              shopItems: [6,7,8]
   - And:  # Same structure, different antes
       Mode: Sum
       Score: 100
@@ -417,7 +417,7 @@ Should:
         - Or:
             - joker: OopsAll6s
               Antes: [3]
-              ShopSlots: [2,3,4]
+              shopItems: [2,3,4]
             # ... etc
 ```
 
@@ -426,13 +426,13 @@ Should:
 # Define reusable patterns
 oops_or_pattern: &oops_or_pattern
   - joker: OopsAll6s
-    ShopSlots: [2,3,4]
+    shopItems: [2,3,4]
     score: 100
   - joker: OopsAll6s
-    ShopSlots: [4,5,6]
+    shopItems: [4,5,6]
     score: 100
   - joker: OopsAll6s
-    ShopSlots: [6,7,8]
+    shopItems: [6,7,8]
     score: 100
 
 ante_and_pattern: &ante_and_pattern

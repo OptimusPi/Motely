@@ -21,8 +21,8 @@ classDiagram
 
     class Defaults {
         +int[] antes
-        +int[] packSlots
-        +int[] shopSlots
+        +int[] boosterPacks
+        +int[] shopItems
         +int score
     }
 
@@ -43,8 +43,8 @@ classDiagram
     }
 
     class Sources {
-        +int[] shopSlots
-        +int[] packSlots
+        +int[] shopItems
+        +int[] boosterPacks
         +int minShopSlot
         +int maxShopSlot
         +int minPackSlot
@@ -241,8 +241,8 @@ flowchart LR
         S[sources]
     end
 
-    S --> Shop["Shop Slots<br/>shopSlots: [0,1,2]<br/>minShopSlot/maxShopSlot"]
-    S --> Pack["Pack Slots<br/>packSlots: [0,1,2,3]<br/>minPackSlot/maxPackSlot<br/>requireMega"]
+    S --> Shop["Shop Slots<br/>shopItems: [0,1,2]<br/>minShopSlot/maxShopSlot"]
+    S --> Pack["Pack Slots<br/>boosterPacks: [0,1,2,3]<br/>minPackSlot/maxPackSlot<br/>requireMega"]
     S --> Tag["Tags<br/>rareTag: [0]<br/>uncommonTag: [0]<br/>tags: true"]
     S --> Special["Special Sources<br/>judgement: [0,1]<br/>riffRaff: [0,1]<br/>emperor: [0,1]<br/>sixthSense: [0]<br/>seance: [0,1]<br/>purpleSealOrEightBall: [0]"]
     S --> Stream["Stream Pre-filters<br/>uncommonShopJokers: [0,1,2]<br/>rareShopJokers: [0]<br/>commonShopJokers: [0,1]"]
