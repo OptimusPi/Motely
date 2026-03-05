@@ -84,7 +84,7 @@
                     ],
                     "description": "Default antes to check if not specified in clause"
                 },
-                "packSlots": {
+                "boosterPacks": {
                     "type": "array",
                     "items": {
                         "type": "integer",
@@ -101,7 +101,7 @@
                     ],
                     "description": "Default pack slots (ante 1 limited to 0-3, ante 2+ uses 0-5)"
                 },
-                "shopSlots": {
+                "shopItems": {
                     "type": "array",
                     "items": {
                         "type": "integer",
@@ -363,14 +363,14 @@
                 "sources": {
                     "type": "object",
                     "properties": {
-                        "shopSlots": {
+                        "shopItems": {
                             "type": "array",
                             "items": {
                                 "type": "integer"
                             },
                             "description": "Shop slot indices (0-based). If empty array [], will be populated from minShopSlot/maxShopSlot if provided."
                         },
-                        "packSlots": {
+                        "boosterPacks": {
                             "type": "array",
                             "items": {
                                 "type": "integer"
@@ -381,25 +381,25 @@
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 1023,
-                            "description": "Minimum shop slot index (inclusive). If specified with maxShopSlot, generates shopSlots array [minShopSlot..maxShopSlot]."
+                            "description": "Minimum shop slot index (inclusive). If specified with maxShopSlot, generates shopItems array [minShopSlot..maxShopSlot]."
                         },
                         "maxShopSlot": {
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 1023,
-                            "description": "Maximum shop slot index (inclusive). If specified with minShopSlot, generates shopSlots array [minShopSlot..maxShopSlot]."
+                            "description": "Maximum shop slot index (inclusive). If specified with minShopSlot, generates shopItems array [minShopSlot..maxShopSlot]."
                         },
                         "minPackSlot": {
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 5,
-                            "description": "Minimum pack slot index (inclusive). If specified with maxPackSlot, generates packSlots array [minPackSlot..maxPackSlot]."
+                            "description": "Minimum pack slot index (inclusive). If specified with maxPackSlot, generates boosterPacks array [minPackSlot..maxPackSlot]."
                         },
                         "maxPackSlot": {
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 5,
-                            "description": "Maximum pack slot index (inclusive). If specified with minPackSlot, generates packSlots array [minPackSlot..maxPackSlot]."
+                            "description": "Maximum pack slot index (inclusive). If specified with minPackSlot, generates boosterPacks array [minPackSlot..maxPackSlot]."
                         },
                         "tags": {
                             "type": "boolean",

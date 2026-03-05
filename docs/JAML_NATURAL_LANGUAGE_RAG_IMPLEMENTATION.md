@@ -120,15 +120,15 @@ Create a new file: `knowledge-base/balatro-knowledge.json`
     "sources": {
       "definition": "Where items appear",
       "types": {
-        "shopSlots": "Shop positions [0-6]",
-        "packSlots": "Pack positions [0-4]",
+        "shopItems": "Shop positions [0-6]",
+        "boosterPacks": "Pack positions [0-4]",
         "buffoonPack": "Joker packs",
         "arcana": "Tarot packs",
         "celestial": "Planet packs"
       },
       "jaml_examples": [
-        "sources:\n  shopSlots: [0,1,2]",
-        "sources:\n  packSlots: [0]"
+        "sources:\n  shopItems: [0,1,2]",
+        "sources:\n  boosterPacks: [0]"
       ]
     },
     "editions": {
@@ -158,7 +158,7 @@ Create a new file: `knowledge-base/balatro-knowledge.json`
     {
       "intent": "joker in shop slot",
       "natural_language": ["get {joker} in shop slot {slot}", "{joker} in position {slot}"],
-      "jaml_template": "- joker: {joker}\n  sources:\n    shopSlots: [{slot}]"
+      "jaml_template": "- joker: {joker}\n  sources:\n    shopItems: [{slot}]"
     },
     {
       "intent": "joker with edition",
@@ -339,8 +339,8 @@ must:  # Required criteria (AND logic)
     antes: [1,2,3]  # optional
     edition: EditionName  # optional (Foil, Holographic, Polychrome, Negative)
     sources:  # optional
-      shopSlots: [0,1,2]
-      packSlots: [0]
+      shopItems: [0,1,2]
+      boosterPacks: [0]
   
   - smallBlindTag: TagName
     antes: [4]
@@ -379,7 +379,7 @@ must:
     antes: [4]
   - joker: OopsAll6s
     sources:
-      shopSlots: [0,1,2,3,4,5,6]
+      shopItems: [0,1,2,3,4,5,6]
 \`\`\`
 
 Generate only valid JAML. If unclear, ask for clarification.`;
@@ -817,7 +817,7 @@ must:
     edition: Polychrome
     antes: [1]
     sources:
-      shopSlots: [0]
+      shopItems: [0]
 
 # Query 4
 name: ShowmanPack
@@ -825,7 +825,7 @@ must:
   - joker: Showman
     antes: [1]
     sources:
-      packSlots: [0]
+      boosterPacks: [0]
 
 # Query 5
 name: OopsBlueInvis
