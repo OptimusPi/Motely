@@ -40,15 +40,15 @@ Replaced `List<T>.ToArray()` patterns with exact-size array allocation:
 #### Slot Population
 ```csharp
 // Before: List overhead + reallocation + ToArray
-var shopSlots = new List<int>();
-for (int i = minSlot; i <= maxSlot; i++) shopSlots.Add(i);
-item.Sources.ShopSlots = shopSlots.ToArray();
+var shopItems = new List<int>();
+for (int i = minSlot; i <= maxSlot; i++) shopItems.Add(i);
+item.Sources.shopItems = shopItems.ToArray();
 
 // After: Single allocation, direct population
 int count = maxSlot - minSlot + 1;
-int[] shopSlots = new int[count];
-for (int i = 0; i < count; i++) shopSlots[i] = minSlot + i;
-item.Sources.ShopSlots = shopSlots;
+int[] shopItems = new int[count];
+for (int i = 0; i < count; i++) shopItems[i] = minSlot + i;
+item.Sources.shopItems = shopItems;
 ```
 
 #### Voucher Partitioning
@@ -74,18 +74,18 @@ MustVouchers = mustVouchers;
 Removed LINQ `Where().ToArray()` with count-first allocation:
 ```csharp
 // Before: LINQ allocations
-return ante == 1 ? PackSlots.Where(s => s <= 3).ToArray() : PackSlots;
+return ante == 1 ? boosterPacks.Where(s => s <= 3).ToArray() : boosterPacks;
 
 // After: Count, allocate, populate
 if (ante == 1) {
     int count = 0;
-    foreach (var slot in PackSlots) if (slot <= 3) count++;
+    foreach (var slot in boosterPacks) if (slot <= 3) count++;
     int[] result = new int[count];
     int index = 0;
-    foreach (var slot in PackSlots) if (slot <= 3) result[index++] = slot;
+    foreach (var slot in boosterPacks) if (slot <= 3) result[index++] = slot;
     return result;
 }
-return PackSlots;
+return boosterPacks;
 ```
 
 **Impact**: Removes LINQ overhead in ante-specific slot calculations.
