@@ -14,6 +14,7 @@ namespace Motely.BrowserWasm;
 [JsonSerializable(typeof(ErrorDto))]
 [JsonSerializable(typeof(ValidateResultDto))]
 [JsonSerializable(typeof(SearchOptionsDto))]
+[JsonSerializable(typeof(ProgressCallbackDto))]
 [JsonSerializable(typeof(SearchStatusDto))]
 [JsonSerializable(typeof(SearchHitDto[]))]
 [JsonSerializable(typeof(SeedAnalysisDto))]

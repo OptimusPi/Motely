@@ -1,6 +1,7 @@
 // Motely WASM Package Entry Point
 // Thin loader that calls [JSExport] methods and parses JSON responses.
 // The .NET WASM runtime is the source of truth; this is just the JS bridge.
+// ──────────────────────────────── Loader ────────────────────────────────
 /**
  * Load the Motely WASM runtime and return the API.
  * Call once at app startup; the returned object is reusable.
@@ -18,9 +19,6 @@ export async function loadMotely(options) {
             "  Cross-Origin-Embedder-Policy: require-corp\n" +
             "See: https://web.dev/articles/coop-coep");
     }
-    // Install no-op callbacks before the runtime boots so [JSImport] bindings resolve
-    globalThis.__motelyOnProgress = () => { };
-    globalThis.__motelyOnResult = () => { };
     const defaultBase = "/_framework";
     const base = (options?.baseUrl ?? defaultBase).replace(/\/$/, "") || defaultBase;
     const origin = typeof window !== "undefined" ? window.location.origin : "https://localhost";
@@ -61,19 +59,20 @@ export async function loadMotely(options) {
         },
         async startJamlSearch(jamlContent, options) {
             const { onProgress, onResult, ...searchParams } = options ?? {};
-            // Wire up callbacks - no searchId needed, single search only
-            globalThis.__motelyOnProgress = onProgress ?? (() => { });
-            globalThis.__motelyOnResult = onResult ?? (() => { });
-            // Apply defaults: batchCharCount=4 (1.5M seeds/block), threadCount=all available cores
             const withDefaults = {
                 threadCount: cachedCapabilities.processorCount,
                 batchCharCount: 4,
                 ...searchParams,
             };
             const optionsJson = JSON.stringify(withDefaults);
-            const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson);
-            globalThis.__motelyOnProgress = () => { };
-            globalThis.__motelyOnResult = () => { };
+            const progressCb = onProgress
+                ? (json) => {
+                    const p = JSON.parse(json);
+                    onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
+                }
+                : () => { };
+            const resultCb = onResult ?? (() => { });
+            const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
             const result = JSON.parse(resultJson);
             if (result.error)
                 throw new Error(result.error);

@@ -158,18 +158,17 @@ interface RawExports {
   GetCapabilitiesAsync(): Promise<string>;
   AnalyzeSeedAsync(seed: string, deck: string, stake: string): Promise<string>;
   ValidateJamlAsync(jamlContent: string): Promise<string>;
-  StartJamlSearch(jamlContent: string, optionsJson: string): Promise<string>;
+  StartJamlSearch(
+    jamlContent: string,
+    optionsJson: string,
+    onProgress: (progressJson: string) => void,
+    onResult: (seed: string, score: number) => void,
+  ): Promise<string>;
   StopSearch(): void;
   DisposeSearch(): Promise<void>;
 }
 
 // ──────────────────────────────── Loader ────────────────────────────────
-
-// Default no-op callbacks. C# [JSImport] calls these via globalThis.
-declare global {
-  var __motelyOnProgress: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
-  var __motelyOnResult: (seed: string, score: number) => void;
-}
 /**
  * Load the Motely WASM runtime and return the API.
  * Call once at app startup; the returned object is reusable.
@@ -189,10 +188,6 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       "See: https://web.dev/articles/coop-coep"
     );
   }
-
-  // Install no-op callbacks before the runtime boots so [JSImport] bindings resolve
-  globalThis.__motelyOnProgress = () => {};
-  globalThis.__motelyOnResult = () => {};
 
   const defaultBase = "/_framework";
   const base = (options?.baseUrl ?? defaultBase).replace(/\/$/, "") || defaultBase;
@@ -253,11 +248,6 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
     async startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchStatusInfo> {
       const { onProgress, onResult, ...searchParams } = options ?? {};
 
-      // Wire up callbacks - no searchId needed, single search only
-      globalThis.__motelyOnProgress = onProgress ?? (() => {});
-      globalThis.__motelyOnResult = onResult ?? (() => {});
-
-      // Apply defaults: batchCharCount=4 (1.5M seeds/block), threadCount=all available cores
       const withDefaults = {
         threadCount: cachedCapabilities.processorCount,
         batchCharCount: 4,
@@ -265,10 +255,15 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       };
       const optionsJson = JSON.stringify(withDefaults);
 
-      const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson);
+      const progressCb = onProgress
+        ? (json: string) => {
+            const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
+            onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
+          }
+        : () => {};
+      const resultCb = onResult ?? (() => {});
 
-      globalThis.__motelyOnProgress = () => {};
-      globalThis.__motelyOnResult = () => {};
+      const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
 
       const result = JSON.parse(resultJson);
       if (result.error) throw new Error(result.error);

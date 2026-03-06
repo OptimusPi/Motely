@@ -120,10 +120,6 @@ export interface LoadMotelyOptions {
      */
     threads?: "auto" | "on";
 }
-declare global {
-    var __motelyOnProgress: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
-    var __motelyOnResult: (seed: string, score: number) => void;
-}
 /**
  * Load the Motely WASM runtime and return the API.
  * Call once at app startup; the returned object is reusable.

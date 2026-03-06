@@ -93,6 +93,21 @@ public sealed class SearchOptionsDto
     public bool? Palindrome { get; set; }
 }
 
+public sealed class ProgressCallbackDto
+{
+    [JsonPropertyName("seedsSearched")]
+    public long SeedsSearched { get; set; }
+
+    [JsonPropertyName("matchingSeeds")]
+    public long MatchingSeeds { get; set; }
+
+    [JsonPropertyName("elapsedMs")]
+    public long ElapsedMs { get; set; }
+
+    [JsonPropertyName("resultCount")]
+    public int ResultCount { get; set; }
+}
+
 public sealed class SearchStatusDto
 {
     [JsonPropertyName("searchId")]
