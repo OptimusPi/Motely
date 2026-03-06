@@ -1,0 +1,11 @@
+[2026-03-03T05:33:23.187Z] START
+[2026-03-03T05:33:23.190Z] Framework: X:\JammySeedFinder\src\MotelyJAML\Motely.npm\test-extract\package\_framework
+[2026-03-03T05:33:23.190Z] Loading...
+[2026-03-03T05:33:23.193Z] ERROR: Assert failed: This build of dotnet is multi-threaded, it doesn't support shell environments like V8 or NodeJS. See also https://aka.ms/dotnet-wasm-features
+[2026-03-03T05:33:23.193Z] STACK: Error: Assert failed: This build of dotnet is multi-threaded, it doesn't support shell environments like V8 or NodeJS. See also https://aka.ms/dotnet-wasm-features
+    at qe (file:///X:/JammySeedFinder/src/MotelyJAML/Motely.npm/test-extract/package/_framework/dotnet.js:4:23172)
+    at file:///X:/JammySeedFinder/src/MotelyJAML/Motely.npm/test-extract/package/_framework/dotnet.js:4:39248
+    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)
+    at async loadMotelyNode (file:///X:/JammySeedFinder/src/MotelyJAML/motely-node-loader.mjs:38:22)
+    at async file:///X:/JammySeedFinder/src/MotelyJAML/debug-test.mjs:18:18

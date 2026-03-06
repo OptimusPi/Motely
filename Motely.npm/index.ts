@@ -45,7 +45,6 @@ export interface SeedAnalysisInfo {
   deck: string;
   stake: string;
   erraticDeckComposition: string[];
-  twos: number;
   error?: string | null;
   antes: AnteAnalysisInfo[];
 }
@@ -77,7 +76,7 @@ export interface ValidateResult {
 
 export interface SearchOptions {
   threadCount?: number;
-  batchSize?: number;
+  batchCharCount?: number;
   startBatch?: number;
   endBatch?: number;
   cutoff?: string;
@@ -258,8 +257,13 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       globalThis.__motelyOnProgress = onProgress ?? (() => {});
       globalThis.__motelyOnResult = onResult ?? (() => {});
 
-      const optionsJson = Object.keys(searchParams).length > 0
-        ? JSON.stringify(searchParams) : "{}";
+      // Apply defaults: batchCharCount=4 (1.5M seeds/block), threadCount=all available cores
+      const withDefaults = {
+        threadCount: cachedCapabilities.processorCount,
+        batchCharCount: 4,
+        ...searchParams,
+      };
+      const optionsJson = JSON.stringify(withDefaults);
 
       const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson);
 

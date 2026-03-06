@@ -1,12 +1,9 @@
 using System.Text.Json.Serialization;
 using Motely;
+using Motely.Analysis;
 
 namespace Motely.BrowserWasm;
 
-/// <summary>
-/// AOT-compatible JSON context for WASM-only DTOs.
-/// Shared DTOs (SeedAnalysisDto, ErrorDto, etc.) use MotelyAotJsonContext from the core library.
-/// </summary>
 [JsonSourceGenerationOptions(
     WriteIndented = false,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -20,4 +17,7 @@ namespace Motely.BrowserWasm;
 [JsonSerializable(typeof(SearchStatusDto))]
 [JsonSerializable(typeof(SearchHitDto[]))]
 [JsonSerializable(typeof(SeedAnalysisDto))]
+[JsonSerializable(typeof(AnteAnalysisDto))]
+[JsonSerializable(typeof(ShopItemDto))]
+[JsonSerializable(typeof(PackDto))]
 public partial class WasmJsonContext : JsonSerializerContext { }

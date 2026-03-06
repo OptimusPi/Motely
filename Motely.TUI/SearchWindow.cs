@@ -137,7 +137,7 @@ public class SearchWindow : Window
             var parameters = new JsonSearchParams
             {
                 Threads = TuiSettings.ThreadCount,
-                BatchSize = TuiSettings.BatchCharacterCount,
+                BatchCharCount = TuiSettings.BatchCharacterCount,
                 Quiet = true,
             };
 

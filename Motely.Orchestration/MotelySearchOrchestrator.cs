@@ -30,7 +30,7 @@ namespace Motely.Executors
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(Math.Max(1, parameters.Threads))
-                .WithBatchCharacterCount(Math.Clamp(parameters.BatchSize, 1, 7));
+                .WithBatchCharacterCount(Math.Clamp(parameters.BatchCharCount, 1, 7));
 
             if (parameters.StartBatch > 0)
                 settings.WithStartBatchIndex(

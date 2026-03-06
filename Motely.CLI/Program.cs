@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using McMaster.Extensions.CommandLineUtils;
@@ -9,14 +10,42 @@ namespace Motely;
 partial class Program
 {
     private static readonly CancellationTokenSource _cts = new();
+    private static volatile IMotelySearch? _activeSearch;
+
+    static void OnTermination(PosixSignalContext _)
+    {
+        try { _activeSearch?.Cancel(); } catch { }
+        _cts.Cancel();
+    }
 
     static int Main(string[] args)
     {
+        // .NET 10: runtime no longer provides default SIGTERM/SIGINT handlers (see
+        // https://learn.microsoft.com/en-us/dotnet/core/compatibility/core-libraries/10.0/sigterm-signal-handler).
+        // Register handlers so Ctrl+C and termination signals cancel the search gracefully.
+        using var _sigint = PosixSignalRegistration.Create(PosixSignal.SIGINT, OnTermination);
+        using var _sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, OnTermination);
+        using var _sighup = PosixSignalRegistration.Create(PosixSignal.SIGHUP, OnTermination);
+
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
-            _cts.Cancel();
+            OnTermination(default);
         };
+
+        // ESC key to quit (same as Ctrl+C) while a search is running
+        var escCts = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            while (!escCts.Token.IsCancellationRequested)
+            {
+                await Task.Delay(100, escCts.Token).ConfigureAwait(false);
+                if (_activeSearch == null) continue;
+                if (!Console.KeyAvailable) continue;
+                if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                    OnTermination(default);
+            }
+        }, escCts.Token);
 
         var app = new CommandLineApplication
         {
@@ -46,9 +75,9 @@ partial class Program
             "Thread count",
             CommandOptionType.SingleValue
         );
-        var batchSizeOption = app.Option<int>(
-            "--batchSize <N>",
-            "Batch character count",
+        var batchCharCountOption = app.Option<int>(
+            "--batchCharCount <N>",
+            "Batch character count (1-7, default 2)",
             CommandOptionType.SingleValue
         );
         var startBatchOption = app.Option<long>(
@@ -103,7 +132,7 @@ partial class Program
         );
 
         threadsOption.DefaultValue = Environment.ProcessorCount;
-        batchSizeOption.DefaultValue = 2;
+        batchCharCountOption.DefaultValue = 4;
 
         app.OnExecuteAsync(async _ =>
         {
@@ -160,14 +189,14 @@ partial class Program
             int threads = threadsOption.HasValue()
                 ? threadsOption.ParsedValue
                 : Environment.ProcessorCount;
-            int batchSize = batchSizeOption.HasValue() ? batchSizeOption.ParsedValue : 2;
+            int batchCharCount = batchCharCountOption.HasValue() ? batchCharCountOption.ParsedValue : 4;
 
             var plan = JamlSearchBuilder.CreatePlan(config);
             var settings = plan
                 .Settings.WithDeck(deck)
                 .WithStake(stake)
                 .WithThreadCount(threads)
-                .WithBatchCharacterCount(batchSize);
+                .WithBatchCharacterCount(batchCharCount);
 
             if (startBatchOption.HasValue())
                 settings.WithStartBatchIndex(startBatchOption.ParsedValue);
@@ -320,19 +349,24 @@ partial class Program
             Console.WriteLine(header);
 
             Console.Error.WriteLine(
-                $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batch={batchSize}"
+                $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batchCharCount={batchCharCount}"
             );
 
             using var search = settings.Start();
+            _activeSearch = search;
             try
             {
                 search.Start(_cts.Token);
                 await search.WaitForCompletionAsync(_cts.Token);
             }
             catch (OperationCanceledException) { }
+            finally
+            {
+                _activeSearch = null;
+            }
 
             bool cancelled = _cts.Token.IsCancellationRequested;
-            PrintSummary(search, batchSize, cancelled);
+            PrintSummary(search, batchCharCount, cancelled);
             return cancelled ? 1 : 0;
         });
 
@@ -350,11 +384,15 @@ partial class Program
             Console.Error.WriteLine($"Error: {ex.Message}");
             return 1;
         }
+        finally
+        {
+            escCts.Cancel();
+        }
     }
 
     // ── Summary ──
 
-    static void PrintSummary(IMotelySearch search, int batchSize, bool cancelled)
+    static void PrintSummary(IMotelySearch search, int batchCharCount, bool cancelled)
     {
         Console.Out.Flush();
         Console.WriteLine();
@@ -370,7 +408,7 @@ partial class Program
         Console.WriteLine($"  Speed: {speed:N0} seeds/sec");
         if (search.IsSequentialBatchSearch)
         {
-            long max = (long)Math.Pow(35, 8 - batchSize);
+            long max = (long)Math.Pow(35, 8 - batchCharCount);
             double pct = max > 0 ? (double)search.CompletedBatchCount * 100.0 / max : 0;
             Console.WriteLine($"  Batch: {search.CompletedBatchCount:N0} / {max:N0} ({pct:F4}%)");
             if (cancelled)

@@ -171,7 +171,7 @@ public static partial class MotelyWasmExports
     /// JS polls progress via GetSearchStatus(). No blocking drain loop.
     /// </summary>
     [JSImport("globalThis.__motelyOnProgress")]
-    public static partial void JsOnProgress(
+    static partial void JsOnProgress(
         [JSMarshalAs<JSType.Number>] long totalSeedsSearched,
         [JSMarshalAs<JSType.Number>] long matchingSeeds,
         [JSMarshalAs<JSType.Number>] long elapsedMs,
@@ -179,7 +179,7 @@ public static partial class MotelyWasmExports
     );
 
     [JSImport("globalThis.__motelyOnResult")]
-    public static partial void JsOnResult([JSMarshalAs<JSType.String>] string seed, int score);
+    static partial void JsOnResult([JSMarshalAs<JSType.String>] string seed, int score);
 
     [JSExport]
     public static async Task<string> StartJamlSearch(string jamlContent, string optionsJson)
@@ -203,29 +203,27 @@ public static partial class MotelyWasmExports
             }
 
             if (options == null)
-                return ErrorJson("Search options are required. Provide threadCount and batchSize.");
+                return ErrorJson("Search options are required. Provide threadCount and batchCharCount.");
 
             if (!options.ThreadCount.HasValue || options.ThreadCount.Value < 1)
                 return ErrorJson("Invalid options.threadCount. Provide an integer >= 1.");
 
             if (
-                !options.BatchSize.HasValue
-                || options.BatchSize.Value < 1
-                || options.BatchSize.Value > 7
+                !options.BatchCharCount.HasValue
+                || options.BatchCharCount.Value < 1
+                || options.BatchCharCount.Value > 7
             )
-                return ErrorJson("Invalid options.batchSize. Provide an integer in range 1..7.");
+                return ErrorJson("Invalid options.batchCharCount. Provide an integer in range 1..7.");
 
-            if (options.ThreadCount.Value > 1 && !IsThreadingEnabled())
+            // Browser WASM: force single-thread (no thread pool in browser by default)
+            int threadCount = 1;
+            if (options.ThreadCount.Value > 1 && IsThreadingEnabled())
+                threadCount = Math.Min(options.ThreadCount.Value, Environment.ProcessorCount);
+
+            if (threadCount > Environment.ProcessorCount)
             {
                 return ErrorJson(
-                    "WASM threading is not active at runtime. Ensure COOP/COEP headers are set and the loader enables threads."
-                );
-            }
-
-            if (options.ThreadCount.Value > Environment.ProcessorCount)
-            {
-                return ErrorJson(
-                    $"Invalid options.threadCount. Requested {options.ThreadCount.Value}, but runtime reports {Environment.ProcessorCount} available processor(s)."
+                    $"Invalid options.threadCount. Requested {threadCount}, but runtime reports {Environment.ProcessorCount} available processor(s)."
                 );
             }
 
@@ -240,7 +238,7 @@ public static partial class MotelyWasmExports
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
                 .WithThreadCount(options.ThreadCount.Value)
-                .WithBatchCharacterCount(options.BatchSize.Value)
+                .WithBatchCharacterCount(options.BatchCharCount.Value)
                 .WithSeedMatchCallback(seed =>
                 {
                     JsOnResult(seed, 0);
@@ -263,6 +261,16 @@ public static partial class MotelyWasmExports
 
             if (options.SpecificSeed != null)
                 settings = settings.WithListSearch([options.SpecificSeed], 1);
+            else if (options.Seeds is { Length: > 0 })
+                settings = settings.WithListSearch(options.Seeds);
+            else if (!string.IsNullOrEmpty(options.Keyword))
+            {
+                string kw = options.Keyword.ToUpperInvariant();
+                int padLen = MotelyCore.MaxSeedLength - kw.Length;
+                if (padLen < 0)
+                    return ErrorJson($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars).");
+                settings = settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
+            }
             else if (options.RandomSeeds.HasValue)
                 settings = settings.WithRandomSearch(options.RandomSeeds.Value);
             else if (options.Palindrome == true)
@@ -271,7 +279,7 @@ public static partial class MotelyWasmExports
                 settings = settings.WithSequentialSearch();
 
             var cts = new CancellationTokenSource();
-            var search = settings.Start();
+            var search = settings.CreateSearch();
 
             lock (_searchLock)
             {
@@ -279,13 +287,17 @@ public static partial class MotelyWasmExports
                 _currentCts = cts;
             }
 
-            // Wait until completion
-            await search.WaitForCompletionAsync();
-
-            lock (_searchLock)
+            try
             {
-                _currentSearch = null;
-                _currentCts = null;
+                search.Start(cts.Token);
+            }
+            finally
+            {
+                lock (_searchLock)
+                {
+                    _currentSearch = null;
+                    _currentCts = null;
+                }
             }
 
             DrainResultQueue();
@@ -351,7 +363,22 @@ public static partial class MotelyWasmExports
         if (search != null)
         {
             cts?.Cancel();
-            await search.WaitForCompletionAsync();
+            try
+            {
+                // Wait for graceful shutdown with timeout
+                await Task.WhenAny(
+                    search.WaitForCompletionAsync(),
+                    Task.Delay(TimeSpan.FromSeconds(5))
+                );
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation works
+            }
+            catch
+            {
+                // Ignore other errors during shutdown
+            }
             search.Dispose();
         }
     }
@@ -403,7 +430,7 @@ public static partial class MotelyWasmExports
 
     private static string GetCachedVersion() =>
         _cachedVersion ??=
-            typeof(MotelyWasmExports).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+            MotelyBuildVersion.For(typeof(MotelyWasmExports).Assembly);
 
     private static string[] GetFeatureList()
     {

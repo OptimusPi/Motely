@@ -3,53 +3,14 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.4.4" />
-    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
-    <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.0" />
-    <PackageVersion Include="Terminal.Gui" Version="2.0.0-develop.5027" />
-    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
-    <PackageVersion Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" Version="16.3.0" />
-    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.1" />
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.0.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="7.2.0" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="1.2.3" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
-    <PackageVersion Include="Verify.Xunit" Version="28.8.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-    <PackageVersion
-      Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"
-      Version="10.0.0"
-    />
-    <PackageVersion Include="ClosedXML" Version="0.106.0" />
-    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.1.0" />
-    <PackageVersion Include="System.IO.Packaging" Version="8.0.6" />
-    <!-- BalatroSeedOracle packages -->
-    <PackageVersion Include="Avalonia" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.Desktop" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.Svg" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.ReactiveUI" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.AvaloniaEdit" Version="11.2.1" />
-    <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.2.1" />
-    <PackageVersion Include="AvaloniaEdit.TextMate" Version="11.2.1" />
-    <PackageVersion Include="IconPacks.Avalonia.FeatherIcons" Version="9.1.0" />
-    <PackageVersion Include="IconPacks.Avalonia.Material" Version="9.1.0" />
-    <PackageVersion Include="MessageBox.Avalonia" Version="3.1.0.1" />
-    <PackageVersion Include="SoundFlow" Version="2.1.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
-    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-    <PackageVersion Include="SkiaSharp" Version="2.88.8" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="2.88.8" />
-    <!-- WASI/Componentize-hosted backend -->
-    <PackageVersion Include="BytecodeAlliance.Componentize.DotNet.Wasm.SDK" Version="0.2.0-preview00004" />
-    <PackageVersion Include="runtime.win-x64.microsoft.dotnet.ilcompiler.llvm" Version="10.0.0-rc.1.26117.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageVersion Include="Vecc.YamlDotNet.Analyzers.StaticGenerator" Version="16.3.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.0" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>

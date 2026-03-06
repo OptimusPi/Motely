@@ -13,7 +13,7 @@ public enum ScoreCutoffMode
 public sealed class JsonSearchParams
 {
     public int Threads { get; set; } = 1;
-    public int BatchSize { get; set; } = 4;
+    public int BatchCharCount { get; set; } = 4;
     public ulong StartBatch { get; set; }
     public ulong EndBatch { get; set; }
     public string? SpecificSeed { get; set; }

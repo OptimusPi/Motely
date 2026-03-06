@@ -1,0 +1,64 @@
+{
+  "name": "motely-node",
+  "version": "2.2.2",
+  "description": "MotelyJAML for Node.js/V8 - Balatro seed analyzer and JAML filter engine using .NET WASM",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "types": "./index.d.ts"
+    },
+    "./jaml.schema.json": "./jaml.schema.json"
+  },
+  "files": [
+    "_framework/",
+    "index.js",
+    "index.cjs",
+    "index.d.ts",
+    "README.md",
+    "jaml.schema.json"
+  ],
+  "keywords": [
+    "balatro",
+    "seed",
+    "wasm",
+    "webassembly",
+    "dotnet",
+    "node",
+    "v8",
+    "jaml",
+    "filter",
+    "finder",
+    "search"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
+    "directory": "Motely.node"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {},
+  "optionalDependencies": {
+    "node-api-dotnet": "^0.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.24.0"
+  },
+  "scripts": {
+    "build": "npm run copy-dotnet-types && tsc && npm run build:cjs",
+    "copy-dotnet-types": "node -e \"const fs=require('fs'); const p='_framework'; if(fs.existsSync(p)) { fs.copyFileSync('dotnet-framework.d.ts', p+'/dotnet.d.ts'); }\"",
+    "build:cjs": "esbuild index.ts --outfile=index.cjs --format=cjs --platform=node",
+    "copy-framework": "node copy-framework.js",
+    "prepare": "npm run build && npm run copy-framework",
+    "prepublishOnly": "npm run build",
+    "prove": "node prove-node.mjs && node -e \"console.log(require('fs').readFileSync('prove-node-result.txt','utf8'))\""
+  }
+}

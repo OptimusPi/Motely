@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
+using Motely.DistributedWorker;
+using Motely.Filters;
 
 namespace Motely.API;
 
@@ -10,8 +12,9 @@ public record FilterInfo(string Name, DateTime LastModified);
 public record StartSearchRequest(
     string FilterName,
     string? Seed = null,
-    int ThreadCount = 4,
-    int BatchSize = 3
+    int ThreadCount = -1,
+    int BatchCharCount = 4,
+    bool Palindrome = false
 );
 
 public record SearchInfo(
@@ -43,6 +46,9 @@ public class Program
             options.AddDefaultPolicy(policy =>
                 policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+        builder.Services.Configure<PoolWorkerOptions>(builder.Configuration.GetSection(PoolWorkerOptions.SectionName));
+        builder.Services.AddHostedService<PoolWorkerHostedService>();
+
         var app = builder.Build();
 
         if (app.Environment.IsDevelopment())
@@ -51,9 +57,21 @@ public class Program
             app.UseSwaggerUI();
         }
 
-        app.UseHttpsRedirection();
+        // No UseHttpsRedirection — breaks plain HTTP behind Cloudflare Tunnel / reverse proxy
         app.UseCors();
+
+        // Required for WASM threads (SharedArrayBuffer). Browser blocks it without COOP/COEP.
+        app.Use(async (ctx, next) =>
+        {
+            ctx.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+            ctx.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+            await next();
+        });
+
         app.UseStaticFiles();
+        app.UseDefaultFiles();
+        app.MapGet("/BSO", () => Results.Redirect("/BSO/", permanent: false));
+        app.MapGet("/jammy-seed-searcher", () => Results.Redirect("/jammy-seed-searcher/", permanent: false));
 
         var jamlDir = Path.Combine(Directory.GetCurrentDirectory(), "jaml-filters");
         Directory.CreateDirectory(jamlDir);
@@ -105,7 +123,7 @@ public class Program
             return Results.NoContent();
         }).WithName("DeleteFilter");
 
-        // ── Search ──
+        // ── Local Search (single-machine) ──
 
         app.MapPost("/api/search/start", (StartSearchRequest req) =>
         {
@@ -116,11 +134,30 @@ public class Program
             try
             {
                 var jaml = File.ReadAllText(filterPath);
-                if (!Filters.JamlConfigLoader.TryLoad(jaml, out var config, out var error))
+                if (!JamlConfigLoader.TryLoad(jaml, out var config, out var error) || config is null)
                     return Results.BadRequest($"Invalid JAML: {error}");
 
-                var search = Filters.JamlSearchBuilder.CreateSettings(config).Start();
-                var id = Guid.NewGuid().ToString();
+                var threads = req.ThreadCount < 1
+                    ? Environment.ProcessorCount
+                    : Math.Clamp(req.ThreadCount, 1, Environment.ProcessorCount);
+                var batchCharCount = Math.Clamp(req.BatchCharCount, 1, 7);
+
+                var settings = JamlSearchBuilder
+                    .CreateSettings(config)
+                    .WithDeck(config.Deck)
+                    .WithStake(config.Stake)
+                    .WithThreadCount(threads)
+                    .WithBatchCharacterCount(batchCharCount);
+
+                if (!string.IsNullOrEmpty(req.Seed))
+                    settings = settings.WithListSearch([req.Seed.ToUpperInvariant()]);
+                else if (req.Palindrome)
+                    settings = settings.WithPalindromeSearch();
+                else
+                    settings = settings.WithSequentialSearch();
+
+                var search = settings.Start();
+                var id = Guid.NewGuid().ToString("N");
                 searches[id] = search;
                 return Results.Ok(new SearchInfo(id, req.FilterName, false, 0, 0, TimeSpan.Zero));
             }
@@ -147,6 +184,38 @@ public class Program
             search.Dispose();
             return Results.Ok();
         }).WithName("StopSearch");
+
+        // ── Server Status (Dashboard) ──
+
+        var serverStart = DateTime.UtcNow;
+
+        app.MapGet("/api/status", () =>
+        {
+            var activeSearches = searches.Select(kvp =>
+            {
+                var s = kvp.Value;
+                return new
+                {
+                    Id = kvp.Key,
+                    IsCompleted = s.IsCompleted,
+                    SeedsSearched = s.TotalSeedsSearched,
+                    Matches = s.MatchingSeeds,
+                    Elapsed = s.ElapsedTime.ToString(@"hh\:mm\:ss"),
+                };
+            });
+
+            return Results.Ok(new
+            {
+                Hostname = Environment.MachineName,
+                ProcessorCount = Environment.ProcessorCount,
+                OS = $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription}",
+                Runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+                Uptime = (DateTime.UtcNow - serverStart).ToString(@"d\.hh\:mm\:ss"),
+                ActiveSearches = activeSearches,
+                FilterCount = Directory.GetFiles(jamlDir, "*.jaml").Length,
+                PoolUrl = "https://www.seedfinder.app",
+            });
+        }).WithName("GetStatus");
 
         app.MapFallbackToFile("/index.html");
 
