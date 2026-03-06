@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <!-- Do NOT add Content Include="wwwroot\**" - SDK includes wwwroot automatically; duplicate causes NETSDK1022 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- AOT & Naive Build -->
+    <RunAOTCompilation>true</RunAOTCompilation>
+    <WasmBuildNative>true</WasmBuildNative>
+    <WasmEnableThreads>true</WasmEnableThreads>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+
+    <!-- Trimming & Optimization -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
+
+    <!-- SIZE REDUCTION: Disable symbols, debug levels, and default compression -->
+    <WasmIncludeFullSymbols>false</WasmIncludeFullSymbols>
+    <WasmDebugLevel>0</WasmDebugLevel>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+
+    <WasmEmitCompressedAssets>false</WasmEmitCompressedAssets>
+    <BlazorEnableCompression>false</BlazorEnableCompression>
+
+    <!-- Globalization: Search doesn't need ICU data (~2.5MB saved) -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <BlazorWebAssemblyPreserveCollationData>false</BlazorWebAssemblyPreserveCollationData>
+
+    <!-- Skip wasm-opt as it crashes on this specific binary output -->
+    <WasmRunWasmOpt>false</WasmRunWasmOpt>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference
+      Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"
+      PrivateAssets="all"
+    />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Motely\Motely.csproj" />
+  </ItemGroup>
+
+  <Target Name="PublishToNpmPackage" AfterTargets="Publish">
+    <PropertyGroup>
+      <_NpmFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.npm\_framework</_NpmFrameworkPath>
+    </PropertyGroup>
+
+    <!-- Filter out debug/tmp folders which cause the 350MB explosion -->
+    <ItemGroup>
+      <_FrameworkFiles
+        Include="$(PublishDir)wwwroot\_framework\**\*"
+        Exclude="$(PublishDir)wwwroot\_framework\debug\**\*;$(PublishDir)wwwroot\_framework\tmp\**\*"
+      />
+    </ItemGroup>
+
+    <Message Importance="high" Text="Motely: Purging and Syncing ~6MB Wasm Bundle to NPM..." />
+    <!-- Clean destination first to remove stale files -->
+    <RemoveDir Directories="$(_NpmFrameworkPath)" />
+    <MakeDir Directories="$(_NpmFrameworkPath)" />
+
+    <!-- Copy filtered files -->
+    <Copy
+      SourceFiles="@(_FrameworkFiles)"
+      DestinationFiles="@(_FrameworkFiles->'$(_NpmFrameworkPath)\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+    />
+  </Target>
+</Project>

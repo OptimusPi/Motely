@@ -106,7 +106,30 @@ import { loadMotely } from "motely-wasm";
 const api = await loadMotely();
 const version = api.getVersion();
 const result = api.analyzeSeed("TACO1111", "Red", "White");
+
+// Analyze seed with ante-by-ante breakdown
+result.antes.forEach(ante => {
+  console.log(`Ante ${ante.ante}: Boss=${ante.boss}, Draw order=${ante.drawOrder}`);
+  ante.shopQueue.forEach(item => console.log(`  Shop: ${item.name}`));
+});
+
+// Search with JAML filter
+const searchResult = await api.startJamlSearch(jamlContent, {
+  threadCount: 4,       // auto-detected if omitted; defaults to processorCount
+  batchCharCount: 4,    // default: 4 (1.5M seeds per batch, range 1-7)
+  onProgress: (searched, matches, elapsed, count) => {
+    console.log(`Searched: ${searched}, Matches: ${matches}`);
+  },
+  onResult: (seed, score) => {
+    console.log(`Found: ${seed}`);
+  }
+});
 ```
+
+**Batch size tuning:**
+- `batchCharCount=4` (default): 1.5M seeds/batch, good balance between responsiveness and JS interop overhead
+- `batchCharCount=3`: 175K seeds/batch, more responsive UI updates
+- `batchCharCount=5`: 52M seeds/batch, fewer JS calls, less responsive
 
 Optional custom base URL (e.g. CDN): `loadMotely({ baseUrl: "https://cdn.example/assets" })`.
 Optional threading mode: `loadMotely({ threads: "auto" | "on" | "off" })` (default: auto).

@@ -22,13 +22,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <LangVersion>preview</LangVersion>
+    <WasmNativeStrip>false</WasmNativeStrip>
+    <IlcExportUnmanagedEntrypoints>true</IlcExportUnmanagedEntrypoints>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
-    <!-- componentize-dotnet: NativeAOT-LLVM → standalone .wasm -->
-    <PackageReference Include="BytecodeAlliance.Componentize.DotNet.Wasm.SDK" />
-    <PackageReference Include="runtime.win-x64.microsoft.dotnet.ilcompiler.llvm" />
   </ItemGroup>
 
   <!-- Post-build: Copy .wasm to NPM package -->

@@ -34,7 +34,6 @@ export interface SeedAnalysisInfo {
     deck: string;
     stake: string;
     erraticDeckComposition: string[];
-    twos: number;
     error?: string | null;
     antes: AnteAnalysisInfo[];
 }
@@ -62,7 +61,7 @@ export interface ValidateResult {
 }
 export interface SearchOptions {
     threadCount?: number;
-    batchSize?: number;
+    batchCharCount?: number;
     startBatch?: number;
     endBatch?: number;
     cutoff?: string;

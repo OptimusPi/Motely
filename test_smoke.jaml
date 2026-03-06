@@ -1,7 +1,0 @@
-name: Smoke Test
-author: Motely
-description: Basic smoke test for JAML
-must:
-  - Or:
-      - joker: Cavendish
-      - joker: GrosMichel

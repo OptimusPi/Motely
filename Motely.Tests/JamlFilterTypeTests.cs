@@ -1,10 +1,9 @@
 using Motely.Filters;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Motely.Tests;
 
-public class JamlFilterTypeTests(ITestOutputHelper output)
+public class JamlFilterTypeTests
 {
     private void TestFilterCompilesAndRuns(string jaml)
     {
