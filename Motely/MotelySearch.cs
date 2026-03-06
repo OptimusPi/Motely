@@ -338,6 +338,8 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
     IMotelySearchSettings WithProgressMessageCallback(Action<string> callback);
+    /// <summary>Create a search instance without starting it. Call Start() on a background thread to allow progress polling.</summary>
+    IMotelySearch CreateSearch();
     IMotelySearch Start(CancellationToken cancellationToken = default);
 }
 
@@ -530,8 +532,12 @@ public sealed class MotelySearchSettings<TBaseFilter>(
         Action<string> callback
     ) => WithProgressMessageCallback(callback);
 
+    IMotelySearch IMotelySearchSettings.CreateSearch() => CreateSearch();
+
     IMotelySearch IMotelySearchSettings.Start(CancellationToken cancellationToken) =>
         Start(cancellationToken);
+
+    public IMotelySearch CreateSearch() => new MotelySearch<TBaseFilter>(this);
 
     public MotelySearchSettings<TBaseFilter> WithDeck(MotelyDeck deck)
     {

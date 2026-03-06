@@ -31,10 +31,10 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void UnknownSourceKey_ShopSlots_IsIgnored()
+    public void UnknownSourceKey_shopItems_IsIgnored()
     {
-        // shopSlots is not a recognized key — the parser silently ignores it
-        // (IgnoreUnmatchedProperties). The clause still parses, but shopSlots
+        // shopItems is not a recognized key — the parser silently ignores it
+        // (IgnoreUnmatchedProperties). The clause still parses, but shopItems
         // won't map to any source. Users should use shopItems instead.
         var jaml = """
             name: Test
@@ -42,7 +42,7 @@ public class JamlConfigTests
               - joker: Showman
                 antes: [1]
                 sources:
-                  shopSlots: [0,1]
+                  shopItems: [0,1]
             """;
 
         var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
@@ -53,9 +53,9 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void UnknownSourceKey_PackSlots_IsIgnored()
+    public void UnknownSourceKey_boosterPacks_IsIgnored()
     {
-        // packSlots is not a recognized key — silently ignored.
+        // boosterPacks is not a recognized key — silently ignored.
         // Users should use boosterPacks instead.
         var jaml = """
             name: Test
@@ -63,7 +63,7 @@ public class JamlConfigTests
               - joker: Showman
                 antes: [1]
                 sources:
-                  packSlots: [0,1]
+                  boosterPacks: [0,1]
             """;
 
         var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);

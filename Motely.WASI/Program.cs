@@ -14,7 +14,7 @@ public class Program
     {
         if (args.Length > 0 && args[0] == "--version")
         {
-            var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+            var version = MotelyBuildVersion.For(typeof(Program).Assembly);
             Console.WriteLine(
                 JsonSerializer.Serialize(
                     new WasiCapabilitiesDto { Version = version, Runtime = "wasi-wasm" },
@@ -221,7 +221,7 @@ public class Program
 #endif
                 Threads = false,
                 ProcessorCount = Environment.ProcessorCount,
-                Version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+                Version = MotelyBuildVersion.For(typeof(Program).Assembly),
             }
         );
     }

@@ -31,8 +31,8 @@ stake: White
 
 defaults:
   antes: [1, 2, 3, 4, 5, 6, 7, 8]
-  packSlots: [0, 1, 2, 3, 4, 5]
-  shopSlots: [0, 1, 2, 3, 4, 5]
+  boosterPacks: [0, 1, 2, 3, 4, 5]
+  shopItems: [0, 1, 2, 3, 4, 5]
   score: 1
 
 must:
@@ -293,8 +293,8 @@ Set default values for clauses to avoid repetition:
 ```yaml
 defaults:
   antes: [1, 2, 3, 4, 5, 6, 7, 8]
-  packSlots: [0, 1, 2, 3, 4, 5]
-  shopSlots: [0, 1, 2, 3, 4, 5]
+  boosterPacks: [0, 1, 2, 3, 4, 5]
+  shopItems: [0, 1, 2, 3, 4, 5]
   score: 1
 
 must:

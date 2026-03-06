@@ -64,8 +64,13 @@ export async function loadMotely(options) {
             // Wire up callbacks - no searchId needed, single search only
             globalThis.__motelyOnProgress = onProgress ?? (() => { });
             globalThis.__motelyOnResult = onResult ?? (() => { });
-            const optionsJson = Object.keys(searchParams).length > 0
-                ? JSON.stringify(searchParams) : "{}";
+            // Apply defaults: batchCharCount=4 (1.5M seeds/block), threadCount=all available cores
+            const withDefaults = {
+                threadCount: cachedCapabilities.processorCount,
+                batchCharCount: 4,
+                ...searchParams,
+            };
+            const optionsJson = JSON.stringify(withDefaults);
             const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson);
             globalThis.__motelyOnProgress = () => { };
             globalThis.__motelyOnResult = () => { };

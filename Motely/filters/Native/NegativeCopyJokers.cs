@@ -30,7 +30,7 @@ public struct NegativeCopyFilterDesc()
                     MotelyJokerStreamFlags.Default
                 );
 
-                int shopSlots = ante switch
+                int shopItems = ante switch
                 {
                     1 => 4,
                     2 => 12,
@@ -39,7 +39,7 @@ public struct NegativeCopyFilterDesc()
                 };
 
                 // Check ALL shop slots
-                for (int i = 0; i < shopSlots; i++)
+                for (int i = 0; i < shopItems; i++)
                 {
                     var shopItem = searchContext.GetNextShopItem(ref shopStream);
                     hasPotential |= VectorEnum256.Equals(shopItem.Type, MotelyItemType.Showman);
@@ -53,8 +53,8 @@ public struct NegativeCopyFilterDesc()
                 );
                 var buffoonStream = searchContext.CreateBuffoonPackJokerStream(ante);
 
-                int maxPackSlots = ante == 1 ? 4 : 6;
-                for (int i = 0; i < maxPackSlots; i++)
+                int maxboosterPacks = ante == 1 ? 4 : 6;
+                for (int i = 0; i < maxboosterPacks; i++)
                 {
                     var pack = searchContext.GetNextBoosterPack(ref boosterPackStream);
 
@@ -158,7 +158,7 @@ public struct NegativeCopyFilterDesc()
                             MotelyJokerStreamFlags.Default
                         );
 
-                        int shopSlots = ante switch
+                        int shopItems = ante switch
                         {
                             1 => 4,
                             2 => 12,
@@ -171,7 +171,7 @@ public struct NegativeCopyFilterDesc()
                             _ => 25,
                         };
 
-                        for (int i = 0; i < shopSlots; i++)
+                        for (int i = 0; i < shopItems; i++)
                         {
                             var shopItem = ctx.GetNextShopItem(ref shopStream);
 
@@ -204,8 +204,8 @@ public struct NegativeCopyFilterDesc()
                         var boosterPackStream = ctx.CreateBoosterPackStream(ante, ante > 1, false);
                         var buffoonStream = ctx.CreateBuffoonPackJokerStream(ante);
 
-                        int maxPackSlots = ante == 1 ? 4 : 6;
-                        for (int i = 0; i < maxPackSlots; i++)
+                        int maxboosterPacks = ante == 1 ? 4 : 6;
+                        for (int i = 0; i < maxboosterPacks; i++)
                         {
                             var pack = ctx.GetNextBoosterPack(ref boosterPackStream);
 

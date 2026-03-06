@@ -74,6 +74,8 @@ public static class Program
 
     private static JsonRpcResponse HandleInitialize(JsonRpcRequest request)
     {
+        var version = MotelyBuildVersion.For(typeof(Program).Assembly);
+
         return new JsonRpcResponse
         {
             Id = request.Id,
@@ -81,7 +83,7 @@ public static class Program
             {
                 protocolVersion = "2024-11-05",
                 capabilities = new { tools = new { } },
-                serverInfo = new { name = "motely", version = "1.0.0" },
+                serverInfo = new { name = "motely", version },
             },
         };
     }
