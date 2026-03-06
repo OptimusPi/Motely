@@ -166,23 +166,14 @@ public static partial class MotelyWasmExports
 
     // ──────────────────────────────── Search (non-blocking, JS polls status) ────────────────────────────────
 
-    /// <summary>
-    /// Start a JAML search. Returns immediately with initial status JSON.
-    /// JS polls progress via GetSearchStatus(). No blocking drain loop.
-    /// </summary>
-    [JSImport("globalThis.__motelyOnProgress")]
-    static partial void JsOnProgress(
-        [JSMarshalAs<JSType.Number>] long totalSeedsSearched,
-        [JSMarshalAs<JSType.Number>] long matchingSeeds,
-        [JSMarshalAs<JSType.Number>] long elapsedMs,
-        [JSMarshalAs<JSType.Number>] int resultCount
-    );
-
-    [JSImport("globalThis.__motelyOnResult")]
-    static partial void JsOnResult([JSMarshalAs<JSType.String>] string seed, int score);
-
     [JSExport]
-    public static async Task<string> StartJamlSearch(string jamlContent, string optionsJson)
+    public static async Task<string> StartJamlSearch(
+        string jamlContent,
+        string optionsJson,
+        [JSMarshalAs<JSType.Function<JSType.String>>]
+        Action<string> onProgress,
+        [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>]
+        Action<string, int> onResult)
     {
         try
         {
@@ -241,17 +232,18 @@ public static partial class MotelyWasmExports
                 .WithBatchCharacterCount(options.BatchCharCount.Value)
                 .WithSeedMatchCallback(seed =>
                 {
-                    JsOnResult(seed, 0);
+                    onResult(seed, 0);
                     _resultQueue.Enqueue((seed, 0));
                 })
                 .WithProgressCallback(prog =>
                 {
-                    JsOnProgress(
-                        prog.SeedsSearched,
-                        prog.MatchingSeeds,
-                        (long)prog.ElapsedTime.TotalMilliseconds,
-                        _drainedResults.Count + _resultQueue.Count
-                    );
+                    onProgress(JsonSerializer.Serialize(new ProgressCallbackDto
+                    {
+                        SeedsSearched = prog.SeedsSearched,
+                        MatchingSeeds = prog.MatchingSeeds,
+                        ElapsedMs = (long)prog.ElapsedTime.TotalMilliseconds,
+                        ResultCount = _drainedResults.Count + _resultQueue.Count,
+                    }, WasmJsonContext.Default.ProgressCallbackDto));
                 });
 
             if (options.StartBatch.HasValue)

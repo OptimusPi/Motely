@@ -31,6 +31,7 @@ namespace Motely.Executors
                 .WithStake(config.Stake)
                 .WithThreadCount(Math.Max(1, parameters.Threads))
                 .WithBatchCharacterCount(Math.Clamp(parameters.BatchCharCount, 1, 7));
+            // TODO: when IMotelySearchSettings has WithResultCallback(parameters.ResultCallback), wire it so UI Results collection fills
 
             if (parameters.StartBatch > 0)
                 settings.WithStartBatchIndex(

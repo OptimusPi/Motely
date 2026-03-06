@@ -38,17 +38,6 @@ export interface SearchResultInfo {
     seed: string;
     score: number;
 }
-export interface SearchProgressInfo {
-    type: 'progress';
-    seedsSearched: number;
-    matchingSeeds: number;
-    elapsedMs: number;
-    resultCount: number;
-}
-export interface SearchCompleteInfo {
-    type: 'done';
-    searchId: string;
-}
 export interface ValidateResult {
     valid: boolean;
     error?: string | null;
@@ -67,11 +56,10 @@ export interface SearchOptions {
     endBatch?: number;
     specificSeed?: string;
     palindrome?: boolean;
+    /** Called every ~2 seconds by the .NET search engine with current progress. */
     onProgress?: (seedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
+    /** Called each time a matching seed is found during search. */
     onResult?: (seed: string, score: number) => void;
-}
-export interface ErrorResult {
-    error: string;
 }
 export interface MotelyNodeApi {
     /** Get runtime capabilities (SIMD, threads, etc.) */
@@ -81,26 +69,18 @@ export interface MotelyNodeApi {
     /** Validate a JAML filter string. */
     validateJaml(jamlContent: string): Promise<ValidateResult>;
     /**
-     * Start a JAML search. Returns a Promise that resolves when search completes.
-     * Progress is pushed to onProgress/onResult callbacks.
+     * Run a JAML search. Resolves with all matching seeds when search completes.
+     * onProgress is called ~every 2s with stats; onResult is called per match as found.
      */
-    startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<void>;
-    /** Dispose and cleanup */
+    startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchResultInfo[]>;
+    /** Stop any running search and release resources. */
     dispose(): void;
 }
-declare global {
-    var __motelyOnProgress: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
-    var __motelyOnResult: (seed: string, score: number) => void;
-}
 export interface LoadMotelyOptions {
-    /** When set, load the .NET addon via node-api-dotnet (in-process). Requires dependency "node-api-dotnet" and a built Motely.NodeAddon.dll. */
-    addonPath?: string;
-    /** When using WASM, path to the folder containing dotnet.js (default: package _framework). */
+    /** Path to the folder containing dotnet.js (default: package _framework). */
     frameworkPath?: string;
 }
 /**
- * Load Motely for Node.js. Prefer node-api-dotnet addon when addonPath is set; otherwise use WASM.
- * Call once at app startup; the returned object is reusable.
- * @see https://microsoft.github.io/node-api-dotnet/reference/js/
+ * Load the Motely WASM engine for Node.js. Call once at startup; reuse the returned API.
  */
 export declare function loadMotely(options?: LoadMotelyOptions): Promise<MotelyNodeApi>;
