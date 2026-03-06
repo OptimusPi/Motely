@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://seedsearcher.app/jaml.schema.json",
-  "version": "2.2.2",
+  "$id": "https://seedfinder.app/jaml.schema.json",
+  "version": "2.2.3",
   "title": "JAML - Jimbo's Ante Markup Language",
-  "description": "Schema for Balatro seed filter configuration files (.jaml). Current schema version is 2.2.2 and includes Event type-as-key shorthand plus full source support (Judgement, RiffRaff, Seance, SixthSense, Emperor, PurpleSealOrEightBall, RareTag, UncommonTag).",
+  "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
   "properties": {
     "name": {
@@ -204,15 +204,75 @@
         },
         "event": {
           "type": "string",
-          "enum": [
-            "LuckyMoney",
-            "LuckyMult",
-            "MisprintMult",
-            "WheelOfFortune",
-            "CavendishExtinct",
-            "GrosMichelExtinct"
-          ],
-          "description": "Shorthand for Event type (type-as-key). Example: 'event: LuckyMoney' is equivalent to 'type: Event, value: LuckyMoney'. Use with 'rolls' to specify which occurrences to check."
+          "description": "Shorthand for Event type (type-as-key). Example: 'event: LuckyMoney'"
+        },
+        "joker": {
+          "type": "string",
+          "description": "Shorthand for Joker type. Example: 'joker: Blueprint'"
+        },
+        "legendaryJoker": {
+          "type": "string",
+          "description": "Shorthand for SoulJoker type. Example: 'legendaryJoker: Perkeo'"
+        },
+        "voucher": {
+          "type": "string",
+          "description": "Shorthand for Voucher type."
+        },
+        "tarot": {
+          "type": "string",
+          "description": "Shorthand for TarotCard type."
+        },
+        "tarotCard": {
+          "type": "string",
+          "description": "Shorthand for TarotCard type."
+        },
+        "planet": {
+          "type": "string",
+          "description": "Shorthand for PlanetCard type."
+        },
+        "planetCard": {
+          "type": "string",
+          "description": "Shorthand for PlanetCard type."
+        },
+        "spectral": {
+          "type": "string",
+          "description": "Shorthand for SpectralCard type."
+        },
+        "spectralCard": {
+          "type": "string",
+          "description": "Shorthand for SpectralCard type."
+        },
+        "standardCard": {
+          "type": "string",
+          "description": "Shorthand for StandardCard type."
+        },
+        "boss": {
+          "type": "string",
+          "description": "Shorthand for Boss type."
+        },
+        "tag": {
+          "type": "string",
+          "description": "Shorthand for Tag type."
+        },
+        "smallBlindTag": {
+          "type": "string",
+          "description": "Shorthand for SmallBlindTag type."
+        },
+        "bigBlindTag": {
+          "type": "string",
+          "description": "Shorthand for BigBlindTag type."
+        },
+        "erraticRank": {
+          "type": "string",
+          "description": "Shorthand for ErraticRank type."
+        },
+        "erraticSuit": {
+          "type": "string",
+          "description": "Shorthand for ErraticSuit type."
+        },
+        "erraticCard": {
+          "type": "string",
+          "description": "Shorthand for ErraticCard type."
         },
         "antes": {
           "type": "array",
@@ -308,38 +368,38 @@
               "items": {
                 "type": "integer"
               },
-              "description": "Shop slot indices (0-based). If empty array [], will be populated from minShopSlot/maxShopSlot if provided."
+              "description": "Shop slot indices (0-based). If empty array [], will be populated from minshopItem/maxshopItem if provided."
             },
             "boosterPacks": {
               "type": "array",
               "items": {
                 "type": "integer"
               },
-              "description": "Pack slot indices (0-based). If empty array [], will be populated from minPackSlot/maxPackSlot if provided."
+              "description": "Pack slot indices (0-based). If empty array [], will be populated from minboosterPack/maxboosterPack if provided."
             },
-            "minShopSlot": {
+            "minshopItem": {
               "type": "integer",
               "minimum": 0,
               "maximum": 1023,
-              "description": "Minimum shop slot index (inclusive). If specified with maxShopSlot, generates shopItems array [minShopSlot..maxShopSlot]."
+              "description": "Minimum shop slot index (inclusive). If specified with maxshopItem, generates shopItems array [minshopItem..maxshopItem]."
             },
-            "maxShopSlot": {
+            "maxshopItem": {
               "type": "integer",
               "minimum": 0,
               "maximum": 1023,
-              "description": "Maximum shop slot index (inclusive). If specified with minShopSlot, generates shopItems array [minShopSlot..maxShopSlot]."
+              "description": "Maximum shop slot index (inclusive). If specified with minshopItem, generates shopItems array [minshopItem..maxshopItem]."
             },
-            "minPackSlot": {
+            "minboosterPack": {
               "type": "integer",
               "minimum": 0,
               "maximum": 5,
-              "description": "Minimum pack slot index (inclusive). If specified with maxPackSlot, generates boosterPacks array [minPackSlot..maxPackSlot]."
+              "description": "Minimum pack slot index (inclusive). If specified with maxboosterPack, generates boosterPacks array [minboosterPack..maxboosterPack]."
             },
-            "maxPackSlot": {
+            "maxboosterPack": {
               "type": "integer",
               "minimum": 0,
               "maximum": 5,
-              "description": "Maximum pack slot index (inclusive). If specified with minPackSlot, generates boosterPacks array [minPackSlot..maxPackSlot]."
+              "description": "Maximum pack slot index (inclusive). If specified with minboosterPack, generates boosterPacks array [minboosterPack..maxboosterPack]."
             },
             "tags": {
               "type": "boolean",

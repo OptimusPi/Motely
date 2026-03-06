@@ -19,4 +19,13 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
+
+  <!-- Canonical Node package entry: edit NodePackage/index.ts; it is copied to Motely.node on build -->
+  <ItemGroup>
+    <Content Include="NodePackage\index.ts" CopyToOutputDirectory="Never" />
+  </ItemGroup>
+
+  <Target Name="ExportNodePackageIndex" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)NodePackage\index.ts" DestinationFiles="$(MSBuildThisFileDirectory)..\Motely.node\index.ts" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

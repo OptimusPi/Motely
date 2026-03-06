@@ -14,14 +14,21 @@ Goal: bump version if requested, clean, restore, build, AOT publish both WASM ta
 
 ## Files to update
 
-Set all of these to the same version:
+Set the same version in:
 
-- `X:\JammySeedFinder\src\MotelyJAML\Directory.Build.props`
+- `X:\JammySeedFinder\src\MotelyJAML\Directory.Build.props` (MotelyVersion)
 - `X:\JammySeedFinder\src\MotelyJAML\Motely.npm\package.json`
 - `X:\JammySeedFinder\src\MotelyJAML\Motely.node\package.json`
-- `X:\JammySeedFinder\src\MotelyJAML\jaml.schema.json`
-- `X:\JammySeedFinder\src\MotelyJAML\public\jaml.schema.json`
-- `X:\JammySeedFinder\src\MotelyJAML\Motely.npm\jaml.schema.json`
+- `X:\JammySeedFinder\src\MotelyJAML\jaml.schema.json` (root — **single source** for schema)
+
+Then **copy** root schema to the other locations (so there is only one schema file to edit):
+
+```powershell
+$root = "X:\JammySeedFinder\src\MotelyJAML\jaml.schema.json"
+Copy-Item -Path $root -Destination "X:\JammySeedFinder\src\MotelyJAML\public\jaml.schema.json" -Force
+Copy-Item -Path $root -Destination "X:\JammySeedFinder\src\MotelyJAML\Motely.npm\jaml.schema.json" -Force
+Copy-Item -Path $root -Destination "X:\JammySeedFinder\src\MotelyJAML\Motely.node\jaml.schema.json" -Force
+```
 
 Print the version you set so the user can confirm it.
 
