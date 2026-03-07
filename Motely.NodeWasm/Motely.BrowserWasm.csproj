@@ -7,8 +7,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
 
     <!-- AOT & Naive Build -->
-    <RunAOTCompilation>true</RunAOTCompilation>
-    <WasmBuildNative>true</WasmBuildNative>
     <WasmEnableThreads>true</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
 

@@ -8,8 +8,9 @@
       "applicationUrl": "http://192.168.0.171:3141",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "SEARCH_POOL_TOKEN": "ABCD1234",
-        "POOL_URL": "https://www.seedfinder.app/api/search/helper"
+        "POOL_TOKEN": "ABCD1234",
+        "POOL_SEARCH_TOKEN": "ABCD1234",
+        "POOL_URL": "https://www.seedsearcher.app/api/search/helper"
       }
     }
   }

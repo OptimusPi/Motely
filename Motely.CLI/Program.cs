@@ -12,10 +12,15 @@ partial class Program
     private static readonly CancellationTokenSource _cts = new();
     private static volatile IMotelySearch? _activeSearch;
 
-    static void OnTermination(PosixSignalContext _)
+    static void RequestTermination()
     {
         try { _activeSearch?.Cancel(); } catch { }
         _cts.Cancel();
+    }
+
+    static void OnTermination(PosixSignalContext _)
+    {
+        RequestTermination();
     }
 
     static int Main(string[] args)
@@ -30,7 +35,7 @@ partial class Program
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
-            OnTermination(default);
+            RequestTermination();
         };
 
         // ESC key to quit (same as Ctrl+C) while a search is running
@@ -43,7 +48,7 @@ partial class Program
                 if (_activeSearch == null) continue;
                 if (!Console.KeyAvailable) continue;
                 if (Console.ReadKey(true).Key == ConsoleKey.Escape)
-                    OnTermination(default);
+                    RequestTermination();
             }
         }, escCts.Token);
 
@@ -130,12 +135,25 @@ partial class Program
             "Search seeds containing this keyword (pads to 8 chars)",
             CommandOptionType.SingleValue
         );
+        var writeJamlSchemaOption = app.Option(
+            "--write-jaml-schema",
+            "Generate and sync the JAML JSON schema files from the current code model",
+            CommandOptionType.NoValue
+        );
 
         threadsOption.DefaultValue = Environment.ProcessorCount;
         batchCharCountOption.DefaultValue = 4;
 
         app.OnExecuteAsync(async _ =>
         {
+            if (writeJamlSchemaOption.HasValue())
+            {
+                string repoRoot = JamlSchemaGenerator.FindRepoRoot(AppContext.BaseDirectory);
+                JamlSchemaGenerator.GenerateAndWriteAll(repoRoot);
+                Console.WriteLine($"JAML schema written using MotelyVersion={JamlSchemaGenerator.ReadMotelyVersion(repoRoot)}");
+                return 0;
+            }
+
             if (args.Length == 0)
             {
                 app.ShowHelp();

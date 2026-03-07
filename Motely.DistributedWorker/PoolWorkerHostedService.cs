@@ -47,8 +47,15 @@ public sealed class PoolWorkerHostedService : BackgroundService
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Pool claim failed, retrying in 5s");
-                await Task.Delay(5000, stoppingToken).ConfigureAwait(false);
+                _logger?.LogWarning(ex, "Pool claim failed, retrying in 10s");
+                try
+                {
+                    await Task.Delay(10000, stoppingToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
                 continue;
             }
 

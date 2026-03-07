@@ -21,25 +21,34 @@ internal sealed class PoolClient : IDisposable
         _http.Timeout = TimeSpan.FromSeconds(30);
     }
 
-    /// <summary>POST /api/search/pool/claim — claim one block from the next filter needing help.</summary>
+    /// <summary>POST /api/search/helper action=request — claim one block from the next filter needing help.</summary>
     public async Task<PoolClaimResponseDto> ClaimAsync(string? workerId, CancellationToken ct = default)
     {
-        var url = $"{_poolUrl}/api/search/pool/claim";
+        var url = _poolUrl;
         var body = new PoolClaimRequestDto { WorkerId = workerId };
         var resp = await _http.PostAsJsonAsync(url, body, WorkerJsonContext.Default.PoolClaimRequestDto, ct);
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errorBody = await resp.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException($"Pool claim failed with {(int)resp.StatusCode} {resp.ReasonPhrase}: {errorBody}");
+        }
         var result = await resp.Content.ReadFromJsonAsync(
             WorkerJsonContext.Default.PoolClaimResponseDto, ct
         );
         return result ?? throw new InvalidOperationException("Null pool claim response");
     }
 
-    /// <summary>POST /api/search/sessions/{sessionId}/results — submit results for a completed batch range.</summary>
+    /// <summary>POST /api/search/helper action=submit — submit results for a completed batch range.</summary>
     public async Task<SubmitResponseDto> SubmitResultsAsync(string sessionId, SubmitResultsDto results, CancellationToken ct = default)
     {
-        var url = $"{_poolUrl}/api/search/sessions/{sessionId}/results";
+        var url = _poolUrl;
+        results.FilterId = sessionId; // Attach filterId to the DTO
         var resp = await _http.PostAsJsonAsync(url, results, WorkerJsonContext.Default.SubmitResultsDto, ct);
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errorBody = await resp.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException($"Pool submit failed with {(int)resp.StatusCode} {resp.ReasonPhrase}: {errorBody}");
+        }
         var result = await resp.Content.ReadFromJsonAsync(
             WorkerJsonContext.Default.SubmitResponseDto, ct
         );

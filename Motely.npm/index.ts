@@ -140,14 +140,15 @@ export interface MotelyWasmApi {
 }
 
 export interface LoadMotelyOptions {
-  /** Base URL for _framework (e.g. "/_framework" or "https://cdn.example/assets"). Default "/_framework". */
+  /** Base URL for runtime assets. Defaults to this package's bundled framework folder. */
   baseUrl?: string;
   /**
-   * Threading mode. Only the threaded build (_framework) is shipped.
-   * - "auto": use _framework (default)
-   * - "on": use _framework
+   * Threading mode.
+   * - "auto": use threads when cross-origin isolation is available, otherwise fall back to the single-thread bundle
+   * - "on": require the threaded bundle
+   * - "off": force the single-thread bundle
    */
-  threads?: "auto" | "on";
+  threads?: "auto" | "on" | "off";
 }
 
 // ──────────────────────────────── Raw Export Shape ────────────────────────────────
@@ -168,6 +169,14 @@ interface RawExports {
   DisposeSearch(): Promise<void>;
 }
 
+function resolveFrameworkUrl(baseUrl: string | undefined, frameworkFolder: "_framework" | "_framework_st"): string {
+  if (baseUrl) {
+    return (baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl) || baseUrl;
+  }
+
+  return new URL(`./${frameworkFolder}/`, import.meta.url).href.replace(/\/$/, "");
+}
+
 // ──────────────────────────────── Loader ────────────────────────────────
 /**
  * Load the Motely WASM runtime and return the API.
@@ -178,10 +187,15 @@ interface RawExports {
  */
 export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWasmApi> {
   // Diagnostic: warn if cross-origin isolation is missing (threads + SharedArrayBuffer require it)
-  if (typeof globalThis.crossOriginIsolated !== "undefined" && !globalThis.crossOriginIsolated) {
+  const supportsIsolation = typeof globalThis.crossOriginIsolated === "undefined" || globalThis.crossOriginIsolated;
+  const threadingMode = options?.threads ?? "auto";
+
+  if (!supportsIsolation && threadingMode !== "off") {
     console.warn(
       "[motely-wasm] crossOriginIsolated is false. " +
-      "Multi-threading and SharedArrayBuffer are DISABLED. " +
+      (threadingMode === "on"
+        ? "Multi-threading and SharedArrayBuffer are REQUIRED by threads: \"on\" and will likely fail to initialize. "
+        : "Multi-threading and SharedArrayBuffer are DISABLED. Falling back to the single-thread runtime bundle. ") +
       "Your server must send these headers on ALL responses:\n" +
       "  Cross-Origin-Opener-Policy: same-origin\n" +
       "  Cross-Origin-Embedder-Policy: require-corp\n" +
@@ -189,10 +203,10 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
     );
   }
 
-  const defaultBase = "/_framework";
-  const base = (options?.baseUrl ?? defaultBase).replace(/\/$/, "") || defaultBase;
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://localhost";
-  const url = base.startsWith("http") ? base : new URL(base, origin).href;
+  const frameworkFolder = threadingMode === "off" || (!supportsIsolation && threadingMode === "auto")
+    ? "_framework_st"
+    : "_framework";
+  const url = resolveFrameworkUrl(options?.baseUrl, frameworkFolder);
   const dotnetUrl = `${url}/dotnet.js`;
 
   // Dynamic import of the .NET WASM entry point.
