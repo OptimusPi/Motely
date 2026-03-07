@@ -174,7 +174,11 @@ function resolveFrameworkUrl(baseUrl: string | undefined, frameworkFolder: "_fra
     return (baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl) || baseUrl;
   }
 
-  return new URL(`./${frameworkFolder}/`, import.meta.url).href.replace(/\/$/, "");
+  if (frameworkFolder === "_framework_st") {
+    return new URL("./_framework_st/", import.meta.url).href.replace(/\/$/, "");
+  }
+
+  return new URL("./_framework/", import.meta.url).href.replace(/\/$/, "");
 }
 
 // ──────────────────────────────── Loader ────────────────────────────────
@@ -271,11 +275,11 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
 
       const progressCb = onProgress
         ? (json: string) => {
-            const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
-            onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
-          }
-        : () => {};
-      const resultCb = onResult ?? (() => {});
+          const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
+          onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
+        }
+        : () => { };
+      const resultCb = onResult ?? (() => { });
 
       const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
 

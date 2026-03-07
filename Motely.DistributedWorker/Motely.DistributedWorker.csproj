@@ -19,7 +19,7 @@
     <AssemblyName>MotelyWorker</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PublishAot>true</PublishAot>
+    <PublishAot Condition="'$(RuntimeIdentifier)' != 'browser-wasm' and '$(DesignTimeBuild)' != 'true'">true</PublishAot>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
