@@ -1,13 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
   <PropertyGroup>
     <TargetFramework>net10.0-browser</TargetFramework>
+    <Version>$(MotelyVersion)</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RunAOTCompilation>true</RunAOTCompilation>
+    <PublishReadyToRun>false</PublishReadyToRun>
 
     <!-- AOT Build - NO THREADS for Node.js compatibility -->
-    <RunAOTCompilation>true</RunAOTCompilation>
-    <WasmBuildNative>true</WasmBuildNative>
     <WasmEnableThreads>false</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
 
@@ -43,15 +44,25 @@
   <Target Name="CopyToNodePackage" AfterTargets="Publish">
     <PropertyGroup>
       <_NodeFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.node\_framework</_NodeFrameworkPath>
+      <_BrowserSingleThreadFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.npm\_framework_st</_BrowserSingleThreadFrameworkPath>
+      <_SingleThreadNpmFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.npm.singlethread\_framework</_SingleThreadNpmFrameworkPath>
     </PropertyGroup>
     <Message Importance="high" Text="Copying WASM to Motely.node/_framework..." />
     <RemoveDir Directories="$(_NodeFrameworkPath)" />
     <MakeDir Directories="$(_NodeFrameworkPath)" />
+    <RemoveDir Directories="$(_BrowserSingleThreadFrameworkPath)" />
+    <MakeDir Directories="$(_BrowserSingleThreadFrameworkPath)" />
+    <RemoveDir Directories="$(_SingleThreadNpmFrameworkPath)" />
+    <MakeDir Directories="$(_SingleThreadNpmFrameworkPath)" />
     <ItemGroup>
       <_FrameworkFiles Include="$(PublishDir)wwwroot\_framework\**\*" 
-                       Exclude="$(PublishDir)wwwroot\_framework\debug\**\*;$(PublishDir)wwwroot\_framework\tmp\**\*" />
+                       Exclude="$(PublishDir)wwwroot\_framework\debug\**\*;$(PublishDir)wwwroot\_framework\tmp\**\*;$(PublishDir)wwwroot\_framework\**\*.br;$(PublishDir)wwwroot\_framework\**\*.gz" />
     </ItemGroup>
     <Copy SourceFiles="@(_FrameworkFiles)" 
           DestinationFiles="@(_FrameworkFiles->'$(_NodeFrameworkPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(_FrameworkFiles)"
+          DestinationFiles="@(_FrameworkFiles->'$(_BrowserSingleThreadFrameworkPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(_FrameworkFiles)"
+          DestinationFiles="@(_FrameworkFiles->'$(_SingleThreadNpmFrameworkPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 </Project>

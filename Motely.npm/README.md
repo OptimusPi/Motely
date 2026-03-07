@@ -96,7 +96,7 @@ app.use((req, res, next) => {
 
 **Verify:** open DevTools Console and run `self.crossOriginIsolated` — must return `true`.
 
-Then call `loadMotely()` (auto-detects threads) or `loadMotely({ baseUrl: "/your/path" })` if you used a different path.
+Then call `loadMotely()` (auto-detects threads and falls back to the bundled single-thread runtime when isolation is unavailable) or `loadMotely({ baseUrl: "/your/path" })` if you hosted the runtime assets somewhere else.
 
 ## Usage
 
@@ -133,6 +133,9 @@ const searchResult = await api.startJamlSearch(jamlContent, {
 
 Optional custom base URL (e.g. CDN): `loadMotely({ baseUrl: "https://cdn.example/assets" })`.
 Optional threading mode: `loadMotely({ threads: "auto" | "on" | "off" })` (default: auto).
+- `auto`: use the threaded browser runtime when `crossOriginIsolated` is available, otherwise fall back to the bundled single-thread runtime
+- `on`: require the threaded browser runtime
+- `off`: force the bundled single-thread runtime
 
 ## JAML schema
 

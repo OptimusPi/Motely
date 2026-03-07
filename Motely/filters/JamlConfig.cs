@@ -122,6 +122,9 @@ public sealed class JamlDto
     [YamlMember(Alias = "author")]
     public string? Author { get; set; }
 
+    [YamlMember(Alias = "dateCreated")]
+    public string? DateCreated { get; set; }
+
     [YamlMember(Alias = "description")]
     public string? Description { get; set; }
 

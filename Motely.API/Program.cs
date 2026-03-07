@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.IO;
+using System.Text.Json.Serialization;
 using Motely.DistributedWorker;
 using Motely.Filters;
 
@@ -26,6 +27,23 @@ public record SearchInfo(
     TimeSpan ElapsedTime
 );
 
+public record ActiveSearchInfo(string Id, bool IsCompleted, long SeedsSearched, long Matches, string Elapsed);
+public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, string PoolUrl);
+
+[JsonSerializable(typeof(CreateFilterRequest))]
+[JsonSerializable(typeof(UpdateFilterRequest))]
+[JsonSerializable(typeof(FilterInfo))]
+[JsonSerializable(typeof(FilterInfo[]))]
+[JsonSerializable(typeof(IEnumerable<FilterInfo>))]
+[JsonSerializable(typeof(StartSearchRequest))]
+[JsonSerializable(typeof(SearchInfo))]
+[JsonSerializable(typeof(ActiveSearchInfo))]
+[JsonSerializable(typeof(ActiveSearchInfo[]))]
+[JsonSerializable(typeof(ServerStatusResponse))]
+internal partial class ApiJsonSerializerContext : JsonSerializerContext
+{
+}
+
 public class Program
 {
     public static void Main(string[] args) => CreateHost(args).Run();
@@ -37,6 +55,11 @@ public class Program
     public static WebApplication CreateHost(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.TypeInfoResolverChain.Insert(0, ApiJsonSerializerContext.Default);
+        });
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
@@ -194,27 +217,25 @@ public class Program
             var activeSearches = searches.Select(kvp =>
             {
                 var s = kvp.Value;
-                return new
-                {
-                    Id = kvp.Key,
-                    IsCompleted = s.IsCompleted,
-                    SeedsSearched = s.TotalSeedsSearched,
-                    Matches = s.MatchingSeeds,
-                    Elapsed = s.ElapsedTime.ToString(@"hh\:mm\:ss"),
-                };
-            });
+                return new ActiveSearchInfo(
+                    kvp.Key,
+                    s.IsCompleted,
+                    s.TotalSeedsSearched,
+                    s.MatchingSeeds,
+                    s.ElapsedTime.ToString(@"hh\:mm\:ss")
+                );
+            }).ToArray();
 
-            return Results.Ok(new
-            {
-                Hostname = Environment.MachineName,
-                ProcessorCount = Environment.ProcessorCount,
-                OS = $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription}",
-                Runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
-                Uptime = (DateTime.UtcNow - serverStart).ToString(@"d\.hh\:mm\:ss"),
-                ActiveSearches = activeSearches,
-                FilterCount = Directory.GetFiles(jamlDir, "*.jaml").Length,
-                PoolUrl = "https://www.seedfinder.app",
-            });
+            return Results.Ok(new ServerStatusResponse(
+                Environment.MachineName,
+                Environment.ProcessorCount,
+                $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription}",
+                System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+                (DateTime.UtcNow - serverStart).ToString(@"d\.hh\:mm\:ss"),
+                activeSearches,
+                Directory.GetFiles(jamlDir, "*.jaml").Length,
+                "https://www.seedfinder.app"
+            ));
         }).WithName("GetStatus");
 
         app.MapFallbackToFile("/index.html");

@@ -2,13 +2,13 @@
   <!-- Do NOT add Content Include="wwwroot\**" - SDK includes wwwroot automatically; duplicate causes NETSDK1022 -->
   <PropertyGroup>
     <TargetFramework>net10.0-browser</TargetFramework>
+    <Version>$(MotelyVersion)</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <PublishReadyToRun>false</PublishReadyToRun>
 
     <!-- AOT & Naive Build -->
-    <RunAOTCompilation>true</RunAOTCompilation>
-    <WasmBuildNative>true</WasmBuildNative>
     <WasmEnableThreads>true</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
 
@@ -54,7 +54,7 @@
     <ItemGroup>
       <_FrameworkFiles
         Include="$(PublishDir)wwwroot\_framework\**\*"
-        Exclude="$(PublishDir)wwwroot\_framework\debug\**\*;$(PublishDir)wwwroot\_framework\tmp\**\*"
+        Exclude="$(PublishDir)wwwroot\_framework\debug\**\*;$(PublishDir)wwwroot\_framework\tmp\**\*;$(PublishDir)wwwroot\_framework\**\*.br;$(PublishDir)wwwroot\_framework\**\*.gz"
       />
     </ItemGroup>
 

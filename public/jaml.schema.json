@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "2.2.2",
-  "title": "JAML - Jimbo's Ante Markup Language",
+  "version": "2.3.1",
+  "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
   "properties": {
@@ -40,11 +40,10 @@
         "Painted",
         "Anaglyph",
         "Plasma",
-        "Erratic",
-        "Challenge"
+        "Erratic"
       ],
-      "default": "Red",
-      "description": "Balatro deck to search with"
+      "description": "Balatro deck to search with",
+      "default": "Red"
     },
     "stake": {
       "type": "string",
@@ -58,12 +57,19 @@
         "Orange",
         "Gold"
       ],
-      "default": "White",
-      "description": "Balatro stake level"
+      "description": "Balatro stake level",
+      "default": "White"
+    },
+    "seeds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Known seed examples associated with this filter."
     },
     "defaults": {
       "type": "object",
-      "description": "Default values applied to clauses when not specified",
+      "description": "Default values applied to clauses when a clause does not specify its own values.",
       "properties": {
         "antes": {
           "type": "array",
@@ -72,6 +78,7 @@
             "minimum": 0,
             "maximum": 39
           },
+          "description": "Default antes to check if a clause does not specify antes.",
           "default": [
             1,
             2,
@@ -81,8 +88,7 @@
             6,
             7,
             8
-          ],
-          "description": "Default antes to check if not specified in clause"
+          ]
         },
         "boosterPacks": {
           "type": "array",
@@ -91,6 +97,7 @@
             "minimum": 0,
             "maximum": 5
           },
+          "description": "Default pack offering slots to inspect.",
           "default": [
             0,
             1,
@@ -98,8 +105,7 @@
             3,
             4,
             5
-          ],
-          "description": "Default pack slots (ante 1 limited to 0-3, ante 2+ uses 0-5)"
+          ]
         },
         "shopItems": {
           "type": "array",
@@ -108,6 +114,7 @@
             "minimum": 0,
             "maximum": 5
           },
+          "description": "Default shop item slots to inspect.",
           "default": [
             0,
             1,
@@ -115,35 +122,34 @@
             3,
             4,
             5
-          ],
-          "description": "Default shop slots (ante 1 limited to 0-3, ante 2+ uses 0-5)"
+          ]
         },
         "score": {
           "type": "integer",
           "minimum": 0,
-          "default": 1,
-          "description": "Default score for 'should' clauses"
+          "description": "Default score for should clauses.",
+          "default": 1
         }
       },
       "additionalProperties": false
     },
     "must": {
       "type": "array",
-      "description": "Items that MUST appear in the seed (required)",
+      "description": "Required clauses. All listed clauses must match.",
       "items": {
         "$ref": "#/definitions/clause"
       }
     },
     "should": {
       "type": "array",
-      "description": "Items that SHOULD appear for bonus scoring (optional)",
+      "description": "Scored clauses. Matching clauses add score but do not gate the seed by themselves.",
       "items": {
         "$ref": "#/definitions/clause"
       }
     },
     "mustNot": {
       "type": "array",
-      "description": "Items that MUST NOT appear in the seed (banned)",
+      "description": "Rejected clauses. If any listed clause matches, the seed is rejected.",
       "items": {
         "$ref": "#/definitions/clause"
       }
@@ -157,6 +163,10 @@
           "type": "string",
           "enum": [
             "Joker",
+            "CommonJoker",
+            "UncommonJoker",
+            "RareJoker",
+            "MixedJoker",
             "SoulJoker",
             "Voucher",
             "TarotCard",
@@ -171,16 +181,24 @@
             "BossBlind",
             "StandardCard",
             "Event",
+            "LuckyMoney",
+            "LuckyMult",
+            "MisprintMult",
+            "WheelOfFortune",
+            "CavendishExtinct",
+            "GrosMichelExtinct",
             "ErraticRank",
             "ErraticSuit",
+            "ErraticCard",
+            "StartingDraw",
             "And",
             "Or"
           ],
-          "description": "Type of item to search for"
+          "description": "Explicit clause type when using the type/value form."
         },
         "value": {
           "type": "string",
-          "description": "Name of the specific item (e.g., 'Perkeo', 'Hieroglyph'). For Event type, this is the event type name (e.g., 'LuckyMoney', 'LuckyMult'). Shorthand: use 'event: LuckyMoney' instead of 'type: Event, value: LuckyMoney'"
+          "description": "Primary clause value when using the explicit type/value form."
         },
         "eventType": {
           "type": "string",
@@ -192,87 +210,1067 @@
             "CavendishExtinct",
             "GrosMichelExtinct"
           ],
-          "description": "Event type (alternative to 'value' for Event clauses). Shorthand: use 'event: LuckyMoney' instead."
-        },
-        "rolls": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "description": "Roll indices for Event clauses (e.g. [0, 1] for first two occurrences of the event). Only valid for type: Event. Example: 'rolls: [0]' checks the first occurrence"
-        },
-        "event": {
-          "type": "string",
-          "description": "Shorthand for Event type (type-as-key). Example: 'event: LuckyMoney'"
+          "description": "Event clause value for the explicit type/eventType form."
         },
         "joker": {
           "type": "string",
-          "description": "Shorthand for Joker type. Example: 'joker: Blueprint'"
+          "enum": [
+            "Joker",
+            "GreedyJoker",
+            "LustyJoker",
+            "WrathfulJoker",
+            "GluttonousJoker",
+            "JollyJoker",
+            "ZanyJoker",
+            "MadJoker",
+            "CrazyJoker",
+            "DrollJoker",
+            "SlyJoker",
+            "WilyJoker",
+            "CleverJoker",
+            "DeviousJoker",
+            "CraftyJoker",
+            "HalfJoker",
+            "CreditCard",
+            "Banner",
+            "MysticSummit",
+            "EightBall",
+            "Misprint",
+            "RaisedFist",
+            "ChaostheClown",
+            "ScaryFace",
+            "AbstractJoker",
+            "DelayedGratification",
+            "GrosMichel",
+            "EvenSteven",
+            "OddTodd",
+            "Scholar",
+            "BusinessCard",
+            "Supernova",
+            "RideTheBus",
+            "Egg",
+            "Runner",
+            "IceCream",
+            "Splash",
+            "BlueJoker",
+            "FacelessJoker",
+            "GreenJoker",
+            "Superposition",
+            "ToDoList",
+            "Cavendish",
+            "RedCard",
+            "SquareJoker",
+            "RiffRaff",
+            "Photograph",
+            "ReservedParking",
+            "MailInRebate",
+            "Hallucination",
+            "FortuneTeller",
+            "Juggler",
+            "Drunkard",
+            "GoldenJoker",
+            "Popcorn",
+            "WalkieTalkie",
+            "SmileyFace",
+            "GoldenTicket",
+            "Swashbuckler",
+            "HangingChad",
+            "ShootTheMoon",
+            "JokerStencil",
+            "FourFingers",
+            "Mime",
+            "CeremonialDagger",
+            "MarbleJoker",
+            "LoyaltyCard",
+            "Dusk",
+            "Fibonacci",
+            "SteelJoker",
+            "Hack",
+            "Pareidolia",
+            "SpaceJoker",
+            "Burglar",
+            "Blackboard",
+            "SixthSense",
+            "Constellation",
+            "Hiker",
+            "CardSharp",
+            "Madness",
+            "Seance",
+            "Vampire",
+            "Shortcut",
+            "Hologram",
+            "Cloud9",
+            "Rocket",
+            "MidasMask",
+            "Luchador",
+            "GiftCard",
+            "TurtleBean",
+            "Erosion",
+            "ToTheMoon",
+            "StoneJoker",
+            "LuckyCat",
+            "Bull",
+            "DietCola",
+            "TradingCard",
+            "FlashCard",
+            "SpareTrousers",
+            "Ramen",
+            "Seltzer",
+            "Castle",
+            "MrBones",
+            "Acrobat",
+            "SockAndBuskin",
+            "Troubadour",
+            "Certificate",
+            "SmearedJoker",
+            "Throwback",
+            "RoughGem",
+            "Bloodstone",
+            "Arrowhead",
+            "OnyxAgate",
+            "GlassJoker",
+            "Showman",
+            "FlowerPot",
+            "MerryAndy",
+            "OopsAll6s",
+            "TheIdol",
+            "SeeingDouble",
+            "Matador",
+            "Satellite",
+            "Cartomancer",
+            "Astronomer",
+            "Bootstraps",
+            "DNA",
+            "Vagabond",
+            "Baron",
+            "Obelisk",
+            "BaseballCard",
+            "AncientJoker",
+            "Campfire",
+            "Blueprint",
+            "WeeJoker",
+            "HitTheRoad",
+            "TheDuo",
+            "TheTrio",
+            "TheFamily",
+            "TheOrder",
+            "TheTribe",
+            "Stuntman",
+            "InvisibleJoker",
+            "Brainstorm",
+            "DriversLicense",
+            "BurntJoker",
+            "Canio",
+            "Triboulet",
+            "Yorick",
+            "Chicot",
+            "Perkeo"
+          ],
+          "description": "Joker clause."
+        },
+        "jokers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Joker clause matching any listed joker names."
+        },
+        "commonJoker": {
+          "type": "string",
+          "enum": [
+            "Joker",
+            "GreedyJoker",
+            "LustyJoker",
+            "WrathfulJoker",
+            "GluttonousJoker",
+            "JollyJoker",
+            "ZanyJoker",
+            "MadJoker",
+            "CrazyJoker",
+            "DrollJoker",
+            "SlyJoker",
+            "WilyJoker",
+            "CleverJoker",
+            "DeviousJoker",
+            "CraftyJoker",
+            "HalfJoker",
+            "CreditCard",
+            "Banner",
+            "MysticSummit",
+            "EightBall",
+            "Misprint",
+            "RaisedFist",
+            "ChaostheClown",
+            "ScaryFace",
+            "AbstractJoker",
+            "DelayedGratification",
+            "GrosMichel",
+            "EvenSteven",
+            "OddTodd",
+            "Scholar",
+            "BusinessCard",
+            "Supernova",
+            "RideTheBus",
+            "Egg",
+            "Runner",
+            "IceCream",
+            "Splash",
+            "BlueJoker",
+            "FacelessJoker",
+            "GreenJoker",
+            "Superposition",
+            "ToDoList",
+            "Cavendish",
+            "RedCard",
+            "SquareJoker",
+            "RiffRaff",
+            "Photograph",
+            "ReservedParking",
+            "MailInRebate",
+            "Hallucination",
+            "FortuneTeller",
+            "Juggler",
+            "Drunkard",
+            "GoldenJoker",
+            "Popcorn",
+            "WalkieTalkie",
+            "SmileyFace",
+            "GoldenTicket",
+            "Swashbuckler",
+            "HangingChad",
+            "ShootTheMoon"
+          ],
+          "description": "Common Joker clause."
+        },
+        "commonJokers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Common Joker clause matching any listed common joker names."
+        },
+        "uncommonJoker": {
+          "type": "string",
+          "enum": [
+            "JokerStencil",
+            "FourFingers",
+            "Mime",
+            "CeremonialDagger",
+            "MarbleJoker",
+            "LoyaltyCard",
+            "Dusk",
+            "Fibonacci",
+            "SteelJoker",
+            "Hack",
+            "Pareidolia",
+            "SpaceJoker",
+            "Burglar",
+            "Blackboard",
+            "SixthSense",
+            "Constellation",
+            "Hiker",
+            "CardSharp",
+            "Madness",
+            "Seance",
+            "Vampire",
+            "Shortcut",
+            "Hologram",
+            "Cloud9",
+            "Rocket",
+            "MidasMask",
+            "Luchador",
+            "GiftCard",
+            "TurtleBean",
+            "Erosion",
+            "ToTheMoon",
+            "StoneJoker",
+            "LuckyCat",
+            "Bull",
+            "DietCola",
+            "TradingCard",
+            "FlashCard",
+            "SpareTrousers",
+            "Ramen",
+            "Seltzer",
+            "Castle",
+            "MrBones",
+            "Acrobat",
+            "SockAndBuskin",
+            "Troubadour",
+            "Certificate",
+            "SmearedJoker",
+            "Throwback",
+            "RoughGem",
+            "Bloodstone",
+            "Arrowhead",
+            "OnyxAgate",
+            "GlassJoker",
+            "Showman",
+            "FlowerPot",
+            "MerryAndy",
+            "OopsAll6s",
+            "TheIdol",
+            "SeeingDouble",
+            "Matador",
+            "Satellite",
+            "Cartomancer",
+            "Astronomer",
+            "Bootstraps"
+          ],
+          "description": "Uncommon Joker clause."
+        },
+        "uncommonJokers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Uncommon Joker clause matching any listed uncommon joker names."
+        },
+        "rareJoker": {
+          "type": "string",
+          "enum": [
+            "DNA",
+            "Vagabond",
+            "Baron",
+            "Obelisk",
+            "BaseballCard",
+            "AncientJoker",
+            "Campfire",
+            "Blueprint",
+            "WeeJoker",
+            "HitTheRoad",
+            "TheDuo",
+            "TheTrio",
+            "TheFamily",
+            "TheOrder",
+            "TheTribe",
+            "Stuntman",
+            "InvisibleJoker",
+            "Brainstorm",
+            "DriversLicense",
+            "BurntJoker"
+          ],
+          "description": "Rare Joker clause."
+        },
+        "rareJokers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Rare Joker clause matching any listed rare joker names."
+        },
+        "mixedJoker": {
+          "type": "string",
+          "enum": [
+            "Joker",
+            "GreedyJoker",
+            "LustyJoker",
+            "WrathfulJoker",
+            "GluttonousJoker",
+            "JollyJoker",
+            "ZanyJoker",
+            "MadJoker",
+            "CrazyJoker",
+            "DrollJoker",
+            "SlyJoker",
+            "WilyJoker",
+            "CleverJoker",
+            "DeviousJoker",
+            "CraftyJoker",
+            "HalfJoker",
+            "CreditCard",
+            "Banner",
+            "MysticSummit",
+            "EightBall",
+            "Misprint",
+            "RaisedFist",
+            "ChaostheClown",
+            "ScaryFace",
+            "AbstractJoker",
+            "DelayedGratification",
+            "GrosMichel",
+            "EvenSteven",
+            "OddTodd",
+            "Scholar",
+            "BusinessCard",
+            "Supernova",
+            "RideTheBus",
+            "Egg",
+            "Runner",
+            "IceCream",
+            "Splash",
+            "BlueJoker",
+            "FacelessJoker",
+            "GreenJoker",
+            "Superposition",
+            "ToDoList",
+            "Cavendish",
+            "RedCard",
+            "SquareJoker",
+            "RiffRaff",
+            "Photograph",
+            "ReservedParking",
+            "MailInRebate",
+            "Hallucination",
+            "FortuneTeller",
+            "Juggler",
+            "Drunkard",
+            "GoldenJoker",
+            "Popcorn",
+            "WalkieTalkie",
+            "SmileyFace",
+            "GoldenTicket",
+            "Swashbuckler",
+            "HangingChad",
+            "ShootTheMoon",
+            "JokerStencil",
+            "FourFingers",
+            "Mime",
+            "CeremonialDagger",
+            "MarbleJoker",
+            "LoyaltyCard",
+            "Dusk",
+            "Fibonacci",
+            "SteelJoker",
+            "Hack",
+            "Pareidolia",
+            "SpaceJoker",
+            "Burglar",
+            "Blackboard",
+            "SixthSense",
+            "Constellation",
+            "Hiker",
+            "CardSharp",
+            "Madness",
+            "Seance",
+            "Vampire",
+            "Shortcut",
+            "Hologram",
+            "Cloud9",
+            "Rocket",
+            "MidasMask",
+            "Luchador",
+            "GiftCard",
+            "TurtleBean",
+            "Erosion",
+            "ToTheMoon",
+            "StoneJoker",
+            "LuckyCat",
+            "Bull",
+            "DietCola",
+            "TradingCard",
+            "FlashCard",
+            "SpareTrousers",
+            "Ramen",
+            "Seltzer",
+            "Castle",
+            "MrBones",
+            "Acrobat",
+            "SockAndBuskin",
+            "Troubadour",
+            "Certificate",
+            "SmearedJoker",
+            "Throwback",
+            "RoughGem",
+            "Bloodstone",
+            "Arrowhead",
+            "OnyxAgate",
+            "GlassJoker",
+            "Showman",
+            "FlowerPot",
+            "MerryAndy",
+            "OopsAll6s",
+            "TheIdol",
+            "SeeingDouble",
+            "Matador",
+            "Satellite",
+            "Cartomancer",
+            "Astronomer",
+            "Bootstraps",
+            "DNA",
+            "Vagabond",
+            "Baron",
+            "Obelisk",
+            "BaseballCard",
+            "AncientJoker",
+            "Campfire",
+            "Blueprint",
+            "WeeJoker",
+            "HitTheRoad",
+            "TheDuo",
+            "TheTrio",
+            "TheFamily",
+            "TheOrder",
+            "TheTribe",
+            "Stuntman",
+            "InvisibleJoker",
+            "Brainstorm",
+            "DriversLicense",
+            "BurntJoker",
+            "Canio",
+            "Triboulet",
+            "Yorick",
+            "Chicot",
+            "Perkeo"
+          ],
+          "description": "Mixed-rarity Joker clause."
+        },
+        "mixedJokers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Mixed-rarity Joker clause matching any listed joker names."
+        },
+        "soulJoker": {
+          "type": "string",
+          "enum": [
+            "Canio",
+            "Triboulet",
+            "Yorick",
+            "Chicot",
+            "Perkeo"
+          ],
+          "description": "Soul Joker clause."
         },
         "legendaryJoker": {
           "type": "string",
-          "description": "Shorthand for SoulJoker type. Example: 'legendaryJoker: Perkeo'"
+          "enum": [
+            "Canio",
+            "Triboulet",
+            "Yorick",
+            "Chicot",
+            "Perkeo"
+          ],
+          "description": "Legendary Joker clause."
         },
         "voucher": {
           "type": "string",
-          "description": "Shorthand for Voucher type."
+          "enum": [
+            "Overstock",
+            "OverstockPlus",
+            "ClearanceSale",
+            "Liquidation",
+            "Hone",
+            "GlowUp",
+            "RerollSurplus",
+            "RerollGlut",
+            "CrystalBall",
+            "OmenGlobe",
+            "Telescope",
+            "Observatory",
+            "Grabber",
+            "NachoTong",
+            "Wasteful",
+            "Recyclomancy",
+            "TarotMerchant",
+            "TarotTycoon",
+            "PlanetMerchant",
+            "PlanetTycoon",
+            "SeedMoney",
+            "MoneyTree",
+            "Blank",
+            "Antimatter",
+            "MagicTrick",
+            "Illusion",
+            "Hieroglyph",
+            "Petroglyph",
+            "DirectorsCut",
+            "Retcon",
+            "PaintBrush",
+            "Palette"
+          ],
+          "description": "Voucher clause."
+        },
+        "vouchers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Voucher clause matching any listed voucher names."
         },
         "tarot": {
           "type": "string",
-          "description": "Shorthand for TarotCard type."
+          "enum": [
+            "TheFool",
+            "TheMagician",
+            "TheHighPriestess",
+            "TheEmpress",
+            "TheEmperor",
+            "TheHierophant",
+            "TheLovers",
+            "TheChariot",
+            "Justice",
+            "TheHermit",
+            "TheWheelOfFortune",
+            "Strength",
+            "TheHangedMan",
+            "Death",
+            "Temperance",
+            "TheDevil",
+            "TheTower",
+            "TheStar",
+            "TheMoon",
+            "TheSun",
+            "Judgement",
+            "TheWorld"
+          ],
+          "description": "Tarot card clause."
         },
         "tarotCard": {
           "type": "string",
-          "description": "Shorthand for TarotCard type."
-        },
-        "planet": {
-          "type": "string",
-          "description": "Shorthand for PlanetCard type."
-        },
-        "planetCard": {
-          "type": "string",
-          "description": "Shorthand for PlanetCard type."
+          "enum": [
+            "TheFool",
+            "TheMagician",
+            "TheHighPriestess",
+            "TheEmpress",
+            "TheEmperor",
+            "TheHierophant",
+            "TheLovers",
+            "TheChariot",
+            "Justice",
+            "TheHermit",
+            "TheWheelOfFortune",
+            "Strength",
+            "TheHangedMan",
+            "Death",
+            "Temperance",
+            "TheDevil",
+            "TheTower",
+            "TheStar",
+            "TheMoon",
+            "TheSun",
+            "Judgement",
+            "TheWorld"
+          ],
+          "description": "Tarot card clause."
         },
         "spectral": {
           "type": "string",
-          "description": "Shorthand for SpectralCard type."
+          "enum": [
+            "Familiar",
+            "Grim",
+            "Incantation",
+            "Talisman",
+            "Aura",
+            "Wraith",
+            "Sigil",
+            "Ouija",
+            "Ectoplasm",
+            "Immolate",
+            "Ankh",
+            "DejaVu",
+            "Hex",
+            "Trance",
+            "Medium",
+            "Cryptid",
+            "TheSoul",
+            "BlackHole"
+          ],
+          "description": "Spectral card clause."
         },
         "spectralCard": {
           "type": "string",
-          "description": "Shorthand for SpectralCard type."
+          "enum": [
+            "Familiar",
+            "Grim",
+            "Incantation",
+            "Talisman",
+            "Aura",
+            "Wraith",
+            "Sigil",
+            "Ouija",
+            "Ectoplasm",
+            "Immolate",
+            "Ankh",
+            "DejaVu",
+            "Hex",
+            "Trance",
+            "Medium",
+            "Cryptid",
+            "TheSoul",
+            "BlackHole"
+          ],
+          "description": "Spectral card clause."
         },
-        "standardCard": {
+        "planet": {
           "type": "string",
-          "description": "Shorthand for StandardCard type."
+          "enum": [
+            "Mercury",
+            "Venus",
+            "Earth",
+            "Mars",
+            "Jupiter",
+            "Saturn",
+            "Uranus",
+            "Neptune",
+            "Pluto",
+            "PlanetX",
+            "Ceres",
+            "Eris"
+          ],
+          "description": "Planet card clause."
+        },
+        "planetCard": {
+          "type": "string",
+          "enum": [
+            "Mercury",
+            "Venus",
+            "Earth",
+            "Mars",
+            "Jupiter",
+            "Saturn",
+            "Uranus",
+            "Neptune",
+            "Pluto",
+            "PlanetX",
+            "Ceres",
+            "Eris"
+          ],
+          "description": "Planet card clause."
         },
         "boss": {
           "type": "string",
-          "description": "Shorthand for Boss type."
+          "enum": [
+            "TheClub",
+            "TheGoad",
+            "TheHead",
+            "TheHook",
+            "TheManacle",
+            "ThePillar",
+            "ThePsychic",
+            "TheWindow",
+            "TheArm",
+            "TheFish",
+            "TheFlint",
+            "TheHouse",
+            "TheMark",
+            "TheMouth",
+            "TheNeedle",
+            "TheWall",
+            "TheWater",
+            "TheWheel",
+            "TheEye",
+            "TheTooth",
+            "ThePlant",
+            "TheSerpent",
+            "TheOx",
+            "AmberAcorn",
+            "CeruleanBell",
+            "CrimsonHeart",
+            "VerdantLeaf",
+            "VioletVessel"
+          ],
+          "description": "Boss clause."
         },
         "tag": {
           "type": "string",
-          "description": "Shorthand for Tag type."
+          "enum": [
+            "UncommonTag",
+            "RareTag",
+            "NegativeTag",
+            "FoilTag",
+            "HolographicTag",
+            "PolychromeTag",
+            "InvestmentTag",
+            "VoucherTag",
+            "BossTag",
+            "StandardTag",
+            "CharmTag",
+            "MeteorTag",
+            "BuffoonTag",
+            "HandyTag",
+            "GarbageTag",
+            "EtherealTag",
+            "CouponTag",
+            "DoubleTag",
+            "JuggleTag",
+            "D6Tag",
+            "TopupTag",
+            "SpeedTag",
+            "OrbitalTag",
+            "EconomyTag"
+          ],
+          "description": "Tag clause matching either blind position."
         },
         "smallBlindTag": {
           "type": "string",
-          "description": "Shorthand for SmallBlindTag type."
+          "enum": [
+            "UncommonTag",
+            "RareTag",
+            "NegativeTag",
+            "FoilTag",
+            "HolographicTag",
+            "PolychromeTag",
+            "InvestmentTag",
+            "VoucherTag",
+            "BossTag",
+            "StandardTag",
+            "CharmTag",
+            "MeteorTag",
+            "BuffoonTag",
+            "HandyTag",
+            "GarbageTag",
+            "EtherealTag",
+            "CouponTag",
+            "DoubleTag",
+            "JuggleTag",
+            "D6Tag",
+            "TopupTag",
+            "SpeedTag",
+            "OrbitalTag",
+            "EconomyTag"
+          ],
+          "description": "Small blind tag clause."
         },
         "bigBlindTag": {
           "type": "string",
-          "description": "Shorthand for BigBlindTag type."
+          "enum": [
+            "UncommonTag",
+            "RareTag",
+            "NegativeTag",
+            "FoilTag",
+            "HolographicTag",
+            "PolychromeTag",
+            "InvestmentTag",
+            "VoucherTag",
+            "BossTag",
+            "StandardTag",
+            "CharmTag",
+            "MeteorTag",
+            "BuffoonTag",
+            "HandyTag",
+            "GarbageTag",
+            "EtherealTag",
+            "CouponTag",
+            "DoubleTag",
+            "JuggleTag",
+            "D6Tag",
+            "TopupTag",
+            "SpeedTag",
+            "OrbitalTag",
+            "EconomyTag"
+          ],
+          "description": "Big blind tag clause."
+        },
+        "standardCard": {
+          "type": "string",
+          "enum": [
+            "C2",
+            "C3",
+            "C4",
+            "C5",
+            "C6",
+            "C7",
+            "C8",
+            "C9",
+            "C10",
+            "CJ",
+            "CQ",
+            "CK",
+            "CA",
+            "D2",
+            "D3",
+            "D4",
+            "D5",
+            "D6",
+            "D7",
+            "D8",
+            "D9",
+            "D10",
+            "DJ",
+            "DQ",
+            "DK",
+            "DA",
+            "H2",
+            "H3",
+            "H4",
+            "H5",
+            "H6",
+            "H7",
+            "H8",
+            "H9",
+            "H10",
+            "HJ",
+            "HQ",
+            "HK",
+            "HA",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6",
+            "S7",
+            "S8",
+            "S9",
+            "S10",
+            "SJ",
+            "SQ",
+            "SK",
+            "SA"
+          ],
+          "description": "Playing card clause."
         },
         "erraticRank": {
           "type": "string",
-          "description": "Shorthand for ErraticRank type."
+          "enum": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "J",
+            "Jack",
+            "Q",
+            "Queen",
+            "K",
+            "King",
+            "A",
+            "Ace"
+          ],
+          "description": "Erratic deck rank clause."
         },
         "erraticSuit": {
           "type": "string",
-          "description": "Shorthand for ErraticSuit type."
+          "enum": [
+            "Hearts",
+            "Diamonds",
+            "Clubs",
+            "Spades"
+          ],
+          "description": "Erratic deck suit clause."
         },
         "erraticCard": {
           "type": "string",
-          "description": "Shorthand for ErraticCard type."
+          "enum": [
+            "C2",
+            "C3",
+            "C4",
+            "C5",
+            "C6",
+            "C7",
+            "C8",
+            "C9",
+            "C10",
+            "CJ",
+            "CQ",
+            "CK",
+            "CA",
+            "D2",
+            "D3",
+            "D4",
+            "D5",
+            "D6",
+            "D7",
+            "D8",
+            "D9",
+            "D10",
+            "DJ",
+            "DQ",
+            "DK",
+            "DA",
+            "H2",
+            "H3",
+            "H4",
+            "H5",
+            "H6",
+            "H7",
+            "H8",
+            "H9",
+            "H10",
+            "HJ",
+            "HQ",
+            "HK",
+            "HA",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6",
+            "S7",
+            "S8",
+            "S9",
+            "S10",
+            "SJ",
+            "SQ",
+            "SK",
+            "SA"
+          ],
+          "description": "Erratic deck card clause."
+        },
+        "startingDraw": {
+          "type": "string",
+          "enum": [
+            "C2",
+            "C3",
+            "C4",
+            "C5",
+            "C6",
+            "C7",
+            "C8",
+            "C9",
+            "C10",
+            "CJ",
+            "CQ",
+            "CK",
+            "CA",
+            "D2",
+            "D3",
+            "D4",
+            "D5",
+            "D6",
+            "D7",
+            "D8",
+            "D9",
+            "D10",
+            "DJ",
+            "DQ",
+            "DK",
+            "DA",
+            "H2",
+            "H3",
+            "H4",
+            "H5",
+            "H6",
+            "H7",
+            "H8",
+            "H9",
+            "H10",
+            "HJ",
+            "HQ",
+            "HK",
+            "HA",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6",
+            "S7",
+            "S8",
+            "S9",
+            "S10",
+            "SJ",
+            "SQ",
+            "SK",
+            "SA"
+          ],
+          "description": "Starting draw clause."
+        },
+        "event": {
+          "type": "string",
+          "enum": [
+            "LuckyMoney",
+            "LuckyMult",
+            "MisprintMult",
+            "WheelOfFortune",
+            "CavendishExtinct",
+            "GrosMichelExtinct"
+          ],
+          "description": "Event clause."
         },
         "antes": {
           "type": "array",
@@ -281,17 +1279,27 @@
             "minimum": 0,
             "maximum": 39
           },
-          "description": "Which antes (0-39) to search in"
+          "description": "Which antes to search in."
         },
         "score": {
           "type": "integer",
           "minimum": 0,
-          "default": 1,
-          "description": "Scoring weight for 'should' clauses"
+          "description": "Score contribution for should clauses.",
+          "default": 1
+        },
+        "min": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum matches required for this clause."
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum matches allowed for this clause."
         },
         "label": {
           "type": "string",
-          "description": "Custom label for display in results"
+          "description": "Custom label for result output."
         },
         "edition": {
           "type": "string",
@@ -301,17 +1309,29 @@
             "Polychrome",
             "Negative"
           ],
-          "description": "Required edition for the item"
+          "description": "Required edition for matching items."
+        },
+        "stickers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Eternal",
+              "Perishable",
+              "Rental"
+            ]
+          },
+          "description": "Required joker stickers."
         },
         "seal": {
           "type": "string",
           "enum": [
+            "Gold",
             "Red",
             "Blue",
-            "Gold",
             "Purple"
           ],
-          "description": "Required seal for playing cards"
+          "description": "Required seal for playing cards."
         },
         "enhancement": {
           "type": "string",
@@ -322,10 +1342,10 @@
             "Glass",
             "Steel",
             "Stone",
-            "Lucky",
-            "Gold"
+            "Gold",
+            "Lucky"
           ],
-          "description": "Required enhancement for playing cards"
+          "description": "Required enhancement for playing cards."
         },
         "rank": {
           "type": "string",
@@ -348,7 +1368,7 @@
             "A",
             "Ace"
           ],
-          "description": "Card rank for playing cards (abbreviation or full name)"
+          "description": "Required rank for playing-card-based clauses."
         },
         "suit": {
           "type": "string",
@@ -358,153 +1378,285 @@
             "Clubs",
             "Spades"
           ],
-          "description": "Card suit for playing cards"
+          "description": "Required suit for playing-card-based clauses."
+        },
+        "rolls": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "Event occurrence indices to check."
+        },
+        "shopItems": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1023
+          },
+          "description": "Clause-level source mapping for shop item slots."
+        },
+        "boosterPacks": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "description": "Clause-level source mapping for pack offering slots."
+        },
+        "minShopSlot": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum shop slot index for range generation.",
+          "maximum": 1023
+        },
+        "maxShopSlot": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum shop slot index for range generation.",
+          "maximum": 1023
+        },
+        "minPackSlot": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum pack slot index for range generation.",
+          "maximum": 5
+        },
+        "maxPackSlot": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum pack slot index for range generation.",
+          "maximum": 5
         },
         "sources": {
           "type": "object",
+          "description": "Source mapping that describes where the clause may be satisfied.",
           "properties": {
             "shopItems": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1023
               },
-              "description": "Shop slot indices (0-based). If empty array [], will be populated from minshopItem/maxshopItem if provided."
+              "description": "Shop item slot indices."
             },
             "boosterPacks": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
               },
-              "description": "Pack slot indices (0-based). If empty array [], will be populated from minboosterPack/maxboosterPack if provided."
+              "description": "Pack offering slot indices."
             },
-            "minshopItem": {
+            "minShopSlot": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 1023,
-              "description": "Minimum shop slot index (inclusive). If specified with maxshopItem, generates shopItems array [minshopItem..maxshopItem]."
+              "description": "Minimum shop slot index for range generation.",
+              "maximum": 1023
             },
-            "maxshopItem": {
+            "maxShopSlot": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 1023,
-              "description": "Maximum shop slot index (inclusive). If specified with minshopItem, generates shopItems array [minshopItem..maxshopItem]."
+              "description": "Maximum shop slot index for range generation.",
+              "maximum": 1023
             },
-            "minboosterPack": {
+            "minPackSlot": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 5,
-              "description": "Minimum pack slot index (inclusive). If specified with maxboosterPack, generates boosterPacks array [minboosterPack..maxboosterPack]."
+              "description": "Minimum pack slot index for range generation.",
+              "maximum": 5
             },
-            "maxboosterPack": {
+            "maxPackSlot": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 5,
-              "description": "Maximum pack slot index (inclusive). If specified with minboosterPack, generates boosterPacks array [minboosterPack..maxboosterPack]."
+              "description": "Maximum pack slot index for range generation.",
+              "maximum": 5
             },
             "tags": {
               "type": "boolean",
-              "description": "Whether item can come from tags (Rare Tag, Uncommon Tag, Negative Tag)"
+              "description": "Allow tag-based sources."
             },
             "requireMega": {
               "type": "boolean",
-              "description": "Whether pack must be a Mega pack (for pack slots 4-5)"
+              "description": "Require Mega pack sources where applicable."
             },
             "judgement": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Judgement tarot joker roll indices (e.g. [0, 1] for first two uses)"
+              "description": "Judgement roll indices."
             },
             "rareTag": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Rare tag joker roll indices (e.g. [0] for first rare tag)"
+              "description": "Rare Tag roll indices."
             },
             "uncommonTag": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Uncommon tag joker roll indices (e.g. [0] for first uncommon tag)"
+              "description": "Uncommon Tag roll indices."
+            },
+            "wraith": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Wraith roll indices."
+            },
+            "soulCard": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Soul card roll indices."
             },
             "riffRaff": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "RiffRaff joker roll indices (e.g. [0, 1] for first two RiffRaff jokers - RiffRaff creates 2 jokers)"
+              "description": "Riff-Raff roll indices."
             },
             "purpleSealOrEightBall": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Purple Seal / 8Ball tarot card roll indices (e.g. [0] for first tarot from Purple Seal or 8Ball - both use same PRNG key)"
+              "description": "Purple Seal or 8 Ball tarot roll indices."
             },
             "emperor": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Emperor tarot card roll indices (e.g. [0, 1] for first two tarot cards from Emperor - Emperor creates 2 tarot cards)"
+              "description": "Emperor roll indices."
             },
             "sixthSense": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "SixthSense spectral card roll indices (e.g. [0] for first spectral card from SixthSense joker)"
+              "description": "Sixth Sense roll indices."
             },
             "seance": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Seance spectral card roll indices (e.g. [0, 1] for first two spectral cards from Seance joker)"
+              "description": "Seance roll indices."
+            },
+            "certificate": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Certificate roll indices."
+            },
+            "incantation": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Incantation roll indices."
+            },
+            "familiar": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Familiar roll indices."
+            },
+            "grim": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Grim roll indices."
+            },
+            "deckDraw": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Deck draw positions."
             },
             "uncommonShopJokers": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Raw uncommon shop joker stream roll indices - FAST pre-filter that bypasses shop item type check (e.g. [0, 1, 2] for first 3 uncommon jokers in stream)"
+              "description": "Raw uncommon shop joker stream positions."
             },
             "rareShopJokers": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Raw rare shop joker stream roll indices - FAST pre-filter that bypasses shop item type check (e.g. [0] for first rare joker in stream)"
+              "description": "Raw rare shop joker stream positions."
             },
             "commonShopJokers": {
               "type": "array",
               "items": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
-              "description": "Raw common shop joker stream roll indices - FAST pre-filter that bypasses shop item type check (e.g. [0, 1] for first 2 common jokers in stream)"
+              "description": "Raw common shop joker stream positions."
+            },
+            "allShopJokers": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Raw shop joker stream positions across all rarities."
             }
           },
-          "additionalProperties": false,
-          "description": "Where the item can be found - object with source-specific roll indices. If sources: is specified (even with empty arrays), the Sources object will exist after processing."
+          "additionalProperties": false
         },
         "and": {
           "type": "array",
+          "description": "Nested AND clause list.",
           "items": {
             "$ref": "#/definitions/clause"
-          },
-          "description": "Nested AND conditions"
+          }
         },
         "or": {
           "type": "array",
+          "description": "Nested OR clause list.",
           "items": {
             "$ref": "#/definitions/clause"
-          },
-          "description": "Nested OR conditions (any match)"
+          }
         }
-      }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
     }
-  }
+  },
+  "additionalProperties": false
 }

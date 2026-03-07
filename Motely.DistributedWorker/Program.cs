@@ -78,12 +78,29 @@ class Program
             try
             {
                 claim = await pool.ClaimAsync(workerId, cts.Token);
+                if (claim.Idle)
+                {
+                    Console.WriteLine($"[MotelyWorker] Claim: idle | retryAfterMs={claim.RetryAfterMs}");
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"[MotelyWorker] Claim: filter={claim.FilterId} | batchIndex={claim.BatchIndex} | remaining={claim.Remaining} | deck={claim.Deck} | stake={claim.Stake} | batchCharCount={claim.BatchCharCount}"
+                    );
+                }
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[MotelyWorker] Pool claim failed: {ex.Message}. Retrying in 5s...");
-                await Task.Delay(5000, cts.Token).ConfigureAwait(false);
+                Console.Error.WriteLine($"[MotelyWorker] Pool claim failed: {ex.Message}. Retrying in 60s...");
+                try
+                {
+                    await Task.Delay(60000, cts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
                 continue;
             }
 
@@ -137,6 +154,7 @@ class Program
 
             try
             {
+                Console.WriteLine($"[MotelyWorker] Searching filter: {claim.FilterId}");
                 using var search = settings.Start();
                 search.Start(cts.Token);
                 await search.WaitForCompletionAsync(cts.Token);

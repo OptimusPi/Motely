@@ -1,21 +1,22 @@
 ---
-description: Prepare a MotelyJAML version update - bump version, clean, build all projects, AOT publish WASM, prepare npm packages, and guide user through npm publish
+description: Prepare a MotelyJAML version update - bump version, clean, build all projects, AOT-publish WASM, prepare npm packages, and guide user through npm publish
 ---
 
 # Prepare Update
 
 Bumps the MotelyVersion, cleans everything, builds all .NET projects, AOT-publishes both WASM targets, prepares both npm packages, and walks the user through publishing.
 
-**User provides**: the new version number — OR if not specified, read the current `<MotelyVersion>` from `Directory.Build.props` and auto-increment the patch (e.g. `2.2.1` → `2.2.2`).
+**User provides**: the new version number — OR if not specified, read the current `<MotelyVersion>` from `Directory.Packages.props` and auto-increment the patch (e.g. `2.2.1` → `2.2.2`).
 
 ---
 
 ## Step 1: Bump MotelyVersion
 
-Edit `x:\JammySeedFinder\src\MotelyJAML\Directory.Build.props` — set `<MotelyVersion>` to the new version.
+Edit `x:\JammySeedFinder\src\MotelyJAML\Directory.Packages.props` — set `<MotelyVersion>` to the new version.
 
-Then update **both** npm package.json files to match:
+Then update **all three** npm package.json files to match:
 - `x:\JammySeedFinder\src\MotelyJAML\Motely.npm\package.json` → set `"version"` to the new version
+- `x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread\package.json` → set `"version"` to the new version
 - `x:\JammySeedFinder\src\MotelyJAML\Motely.node\package.json` → set `"version"` to the new version
 
 Print the version you just set so the user can confirm.
@@ -65,39 +66,48 @@ If any project fails, report the error and stop.
 // turbo
 ```powershell
 Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\MotelyNode\_framework -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread\_framework -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.node\_framework -ErrorAction SilentlyContinue
 ```
 
 ---
 
 ## Step 7: AOT Release Publish — Browser WASM (frontend)
 
-This publishes `Motely.BrowserWasm` and auto-copies `_framework` into `Motely.npm/_framework/` via MSBuild target.
+This publishes `Motely.BrowserWasm` with browser AOT enabled at publish time and auto-copies `_framework` into `Motely.npm/_framework/` via MSBuild target. The packaged `_framework` output keeps raw `.wasm` assets only and excludes `.br` / `.gz` sidecars.
 
 ```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release -p:RunAOTCompilation=true -p:PublishReadyToRun=false
 ```
 
 Verify the output exists:
 // turbo
 ```powershell
-Test-Path x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework\dotnet.native.wasm
+@(Get-ChildItem x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework\dotnet.native*.wasm -ErrorAction SilentlyContinue).Count -gt 0
 ```
 
 ---
 
-## Step 8: AOT Release Publish — Node WASM (backend)
+## Step 8: AOT Release Publish — Single-thread WASM (Node + browser fallback)
 
-This publishes `Motely.SingleThread` and auto-copies `_framework` into `MotelyNode/_framework/` via MSBuild target.
+This publishes `Motely.SingleThread` with browser AOT enabled at publish time and auto-copies `_framework` into:
+- `Motely.node/_framework/`
+- `Motely.npm/_framework_st/`
+- `Motely.npm.singlethread/_framework/`
+
+The packaged `_framework` output keeps raw `.wasm` assets only and excludes `.br` / `.gz` sidecars.
 
 ```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release -p:RunAOTCompilation=true -p:PublishReadyToRun=false
 ```
 
-Verify the output exists:
+Verify the outputs exist:
 // turbo
 ```powershell
-Test-Path x:\JammySeedFinder\src\MotelyJAML\MotelyNode\_framework\dotnet.native.wasm
+@(Get-ChildItem x:\JammySeedFinder\src\MotelyJAML\Motely.node\_framework\dotnet.native*.wasm -ErrorAction SilentlyContinue).Count -gt 0
+@(Get-ChildItem x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st\dotnet.native*.wasm -ErrorAction SilentlyContinue).Count -gt 0
+@(Get-ChildItem x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread\_framework\dotnet.native*.wasm -ErrorAction SilentlyContinue).Count -gt 0
 ```
 
 ---
@@ -106,33 +116,50 @@ Test-Path x:\JammySeedFinder\src\MotelyJAML\MotelyNode\_framework\dotnet.native.
 
 // turbo
 ```powershell
-cd x:\JammySeedFinder\src\MotelyJAML\Motely.npm; npm install; npm run build
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm install
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm run build
 ```
 
 ---
 
-## Step 10: Prepare npm package — motely-node (backend)
+## Step 10: Prepare npm package — motely-wasm-singlethread (browser)
 
 // turbo
 ```powershell
-cd x:\JammySeedFinder\src\MotelyJAML\Motely.node; npm install; npm run build; npm run copy-framework
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread install
 ```
 
 ---
 
-## Step 11: Tell user to publish
+## Step 11: Prepare npm package — motely-node (backend)
+
+// turbo
+```powershell
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node install
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node run build
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node run copy-framework
+```
+
+---
+
+## Step 12: Tell user to publish
 
 Tell the user:
 
 ```
-Both npm packages are ready to publish!
+All npm packages are ready to publish!
 
 1. Publish motely-wasm (browser frontend):
    cd x:\JammySeedFinder\src\MotelyJAML\Motely.npm
    npm login       # if not already logged in
    npm publish
 
-2. Publish motely-node (backend/Node.js):
+2. Publish motely-wasm-singlethread (browser fallback):
+   cd x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread
+   npm login       # if not already logged in
+   npm publish
+
+3. Publish motely-node (backend/Node.js):
    cd x:\JammySeedFinder\src\MotelyJAML\Motely.node
    npm login       # if not already logged in
    npm publish
@@ -142,23 +169,25 @@ Wait for user to confirm they published.
 
 ---
 
-## Step 12: Cleanup _framework files
+## Step 13: Cleanup _framework files
 
 After user confirms publish, clean up the large _framework dirs to keep the repo lean:
 
 ```powershell
 Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\MotelyNode\_framework -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread\_framework -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.node\_framework -ErrorAction SilentlyContinue
 ```
 
 ---
 
-## Step 13: Summary
+## Step 14: Summary
 
 Print:
 
 ```
 ✅ MotelyJAML update complete!
    Version: <THE_VERSION>
-   Published: motely-wasm@<THE_VERSION>, motely-node@<THE_VERSION>
+   Published: motely-wasm@<THE_VERSION>, motely-wasm-singlethread@<THE_VERSION>, motely-node@<THE_VERSION>
 ```

@@ -1,6 +1,12 @@
 // Motely WASM Package Entry Point
 // Thin loader that calls [JSExport] methods and parses JSON responses.
 // The .NET WASM runtime is the source of truth; this is just the JS bridge.
+function resolveFrameworkUrl(baseUrl, frameworkFolder) {
+    if (baseUrl) {
+        return (baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl) || baseUrl;
+    }
+    return new URL(`./${frameworkFolder}/`, import.meta.url).href.replace(/\/$/, "");
+}
 // ──────────────────────────────── Loader ────────────────────────────────
 /**
  * Load the Motely WASM runtime and return the API.
@@ -11,18 +17,22 @@
  */
 export async function loadMotely(options) {
     // Diagnostic: warn if cross-origin isolation is missing (threads + SharedArrayBuffer require it)
-    if (typeof globalThis.crossOriginIsolated !== "undefined" && !globalThis.crossOriginIsolated) {
+    const supportsIsolation = typeof globalThis.crossOriginIsolated === "undefined" || globalThis.crossOriginIsolated;
+    const threadingMode = options?.threads ?? "auto";
+    if (!supportsIsolation && threadingMode !== "off") {
         console.warn("[motely-wasm] crossOriginIsolated is false. " +
-            "Multi-threading and SharedArrayBuffer are DISABLED. " +
+            (threadingMode === "on"
+                ? "Multi-threading and SharedArrayBuffer are REQUIRED by threads: \"on\" and will likely fail to initialize. "
+                : "Multi-threading and SharedArrayBuffer are DISABLED. Falling back to the single-thread runtime bundle. ") +
             "Your server must send these headers on ALL responses:\n" +
             "  Cross-Origin-Opener-Policy: same-origin\n" +
             "  Cross-Origin-Embedder-Policy: require-corp\n" +
             "See: https://web.dev/articles/coop-coep");
     }
-    const defaultBase = "/_framework";
-    const base = (options?.baseUrl ?? defaultBase).replace(/\/$/, "") || defaultBase;
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://localhost";
-    const url = base.startsWith("http") ? base : new URL(base, origin).href;
+    const frameworkFolder = threadingMode === "off" || (!supportsIsolation && threadingMode === "auto")
+        ? "_framework_st"
+        : "_framework";
+    const url = resolveFrameworkUrl(options?.baseUrl, frameworkFolder);
     const dotnetUrl = `${url}/dotnet.js`;
     // Dynamic import of the .NET WASM entry point.
     // @vite-ignore / webpackIgnore prevent bundlers from analyzing the URL.

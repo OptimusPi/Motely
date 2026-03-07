@@ -12,14 +12,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
-  <!-- Browser WASM: disable Native AOT conflicts -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
-    <PublishAot>false</PublishAot>
-  </PropertyGroup>
-
-  <!-- Desktop AOT -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PublishAot>true</PublishAot>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <TrimmerDefaultAction>link</TrimmerDefaultAction>
   </PropertyGroup>
@@ -40,7 +33,6 @@
     <TrimMode>link</TrimMode>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <TrimmerDefaultAction>link</TrimmerDefaultAction>
-    <PublishAot>false</PublishAot>
     <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
 
