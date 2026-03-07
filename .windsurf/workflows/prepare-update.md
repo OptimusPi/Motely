@@ -59,6 +59,8 @@ dotnet build x:\JammySeedFinder\src\MotelyJAML\Motely.sln -c Release
 
 If any project fails, report the error and stop.
 
+If browser or cross-platform builds fail because of incompatible APIs, do not force the shared/core project to reference platform-specific code. Keep shared code platform-agnostic, move platform services into platform-specific projects, or exclude incompatible files/references from the browser target.
+
 ---
 
 ## Step 6: Clean _framework dirs before AOT publish
@@ -75,11 +77,13 @@ Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.node\_frame
 
 ## Step 7: AOT Release Publish — Browser WASM (frontend)
 
-This publishes `Motely.BrowserWasm` with browser AOT enabled at publish time and auto-copies `_framework` into `Motely.npm/_framework/` via MSBuild target. The packaged `_framework` output keeps raw `.wasm` assets only and excludes `.br` / `.gz` sidecars.
+This publishes `Motely.BrowserWasm` using the browser publish AOT path we are currently validating and auto-copies `_framework` into `Motely.npm/_framework/` via MSBuild target. The packaged `_framework` output keeps raw `.wasm` assets only and excludes `.br` / `.gz` sidecars.
 
 ```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release -p:RunAOTCompilation=true -p:PublishReadyToRun=false
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release -p:PublishAot=true -p:PublishReadyToRun=false
 ```
+
+If this fails, capture the full SDK error and stop before changing other steps.
 
 Verify the output exists:
 // turbo
@@ -91,7 +95,7 @@ Verify the output exists:
 
 ## Step 8: AOT Release Publish — Single-thread WASM (Node + browser fallback)
 
-This publishes `Motely.SingleThread` with browser AOT enabled at publish time and auto-copies `_framework` into:
+This publishes `Motely.SingleThread` using the same browser publish AOT path and auto-copies `_framework` into:
 - `Motely.node/_framework/`
 - `Motely.npm/_framework_st/`
 - `Motely.npm.singlethread/_framework/`
@@ -99,8 +103,10 @@ This publishes `Motely.SingleThread` with browser AOT enabled at publish time an
 The packaged `_framework` output keeps raw `.wasm` assets only and excludes `.br` / `.gz` sidecars.
 
 ```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release -p:RunAOTCompilation=true -p:PublishReadyToRun=false
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release -p:PublishAot=true -p:PublishReadyToRun=false
 ```
+
+If this fails, capture the full SDK error and stop before npm packaging.
 
 Verify the outputs exist:
 // turbo
