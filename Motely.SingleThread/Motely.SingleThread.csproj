@@ -5,7 +5,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RunAOTCompilation>true</RunAOTCompilation>
     <PublishReadyToRun>false</PublishReadyToRun>
 
     <!-- AOT Build - NO THREADS for Node.js compatibility -->

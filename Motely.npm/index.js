@@ -5,7 +5,10 @@ function resolveFrameworkUrl(baseUrl, frameworkFolder) {
     if (baseUrl) {
         return (baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl) || baseUrl;
     }
-    return new URL(`./${frameworkFolder}/`, import.meta.url).href.replace(/\/$/, "");
+    if (frameworkFolder === "_framework_st") {
+        return new URL("./_framework_st/", import.meta.url).href.replace(/\/$/, "");
+    }
+    return new URL("./_framework/", import.meta.url).href.replace(/\/$/, "");
 }
 // ──────────────────────────────── Loader ────────────────────────────────
 /**
