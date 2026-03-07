@@ -12,9 +12,14 @@ namespace Motely.DistributedWorker;
 [JsonSerializable(typeof(ErrorDto))]
 internal partial class WorkerJsonContext : JsonSerializerContext { }
 
-/// <summary>POST body for /api/search/sessions/{filterId}/results</summary>
 internal sealed class SubmitResultsDto
 {
+    [JsonPropertyName("action")]
+    public string Action { get; set; } = "submit";
+
+    [JsonPropertyName("filterId")]
+    public string FilterId { get; set; } = "";
+
     [JsonPropertyName("startBatch")]
     public long StartBatch { get; set; }
 
@@ -49,11 +54,17 @@ internal sealed class ErrorDto
     public string? Error { get; set; }
 }
 
-/// <summary>POST body for /api/search/pool/claim</summary>
+/// <summary>POST body for /api/search/helper</summary>
 internal sealed class PoolClaimRequestDto
 {
+    [JsonPropertyName("action")]
+    public string Action { get; set; } = "request";
+
     [JsonPropertyName("workerId")]
     public string? WorkerId { get; set; }
+
+    [JsonPropertyName("estimatedBlocks")]
+    public int EstimatedBlocks { get; set; } = 1;
 }
 
 /// <summary>Response from /api/search/pool/claim</summary>

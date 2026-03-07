@@ -11,8 +11,8 @@ const __dirname = dirname(__filename);
 
 // Primary: published output from dotnet publish
 const publishedFramework = join(__dirname, '..', 'Motely.SingleThread', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
-// Fallback: pre-copied MotelyNode/_framework (from the csproj CopyToNodePackage target)
-const precopiedFramework = join(__dirname, '..', 'MotelyNode', '_framework');
+// Fallback: pre-copied Motely.node/_framework (from the csproj CopyToNodePackage target)
+const precopiedFramework = join(__dirname, '_framework');
 
 const sourceFramework = existsSync(publishedFramework) ? publishedFramework : precopiedFramework;
 const destFramework = join(__dirname, '_framework');
@@ -22,7 +22,7 @@ if (!existsSync(sourceFramework)) {
   console.error('Checked:', publishedFramework);
   console.error('Checked:', precopiedFramework);
   console.error('Build it first:');
-  console.error('  dotnet publish ../Motely.SingleThread/Motely.SingleThread.csproj -c Release');
+  console.error('  dotnet publish ../Motely.SingleThread/Motely.SingleThread.csproj -c Release -p:RunAOTCompilation=true -p:PublishReadyToRun=false');
   process.exit(1);
 }
 

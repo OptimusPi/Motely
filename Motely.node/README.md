@@ -107,10 +107,9 @@ motely.dispose();
 
 ### `loadMotely(options?): Promise<MotelyNodeApi>`
 
-Initialize Motely. Prefer **node-api-dotnet** addon when `addonPath` is set (in-process, faster); otherwise use .NET WASM.
+Initialize Motely using the packaged single-thread .NET WASM runtime.
 
-**Options:** ([reference](https://microsoft.github.io/node-api-dotnet/reference/js/))
-- `addonPath?: string` - Path to `Motely.NodeAddon.dll`. Uses `node-api-dotnet` (optional dependency). Build from `Motely.NodeAddon` in the MotelyJAML repo.
+**Options:**
 - `frameworkPath?: string` - When using WASM, path to the `_framework` directory (default: `./_framework`)
 
 ### `MotelyNodeApi`
@@ -143,7 +142,9 @@ Cleanup and free resources.
 
 ## Node API for .NET (addon)
 
-For in-process, faster execution use the **node-api-dotnet** addon:
+There is a separate `Motely.NodeAddon` project in the repo for **node-api-dotnet** work, but the published `motely-node` package entrypoint does not currently load that addon automatically.
+
+For in-process, faster execution, the addon project is the direction to extend next:
 
 1. Build the addon: from the MotelyJAML repo run `dotnet build Motely.NodeAddon/Motely.NodeAddon.csproj -c Release`.
 2. Install optional dependency: `npm install node-api-dotnet` (or it is listed as optionalDependency).
@@ -155,19 +156,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
-const motely = await loadMotely({
-  addonPath: path.join(dir, 'path-to-addon', 'Motely.NodeAddon.dll'),
-});
+const frameworkPath = path.join(dir, 'node_modules', 'motely-node', '_framework');
+const motely = await loadMotely({ frameworkPath });
 ```
 
-Same API; `runtime` in capabilities will be `"node-addon"`. Supports multi-threading. See [Node API for .NET](https://microsoft.github.io/node-api-dotnet/) and [.NET module for Node.js](https://microsoft.github.io/node-api-dotnet/scenarios/js-dotnet-module.html).
+If you want true addon loading from the npm package, that still needs to be implemented in `Motely.node/index.ts`. See [Node API for .NET](https://microsoft.github.io/node-api-dotnet/) and [.NET module for Node.js](https://microsoft.github.io/node-api-dotnet/scenarios/js-dotnet-module.html).
 
 ## Differences from Browser Version
 
 - Default: same .NET WASM runtime, adapted for Node.js. Optional: node-api-dotnet addon for in-process execution.
 - No browser-specific APIs (no DOM, no window object)
 - File system access via Node.js APIs
-- Multi-threading support (addon or WASM when Node supports SharedArrayBuffer)
+- Current npm package runtime is single-threaded WASM
 - Works in Node.js (Deno/Bun support may vary)
 
 ## License

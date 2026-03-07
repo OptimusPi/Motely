@@ -111,14 +111,15 @@ export interface MotelyWasmApi {
     disposeSearch(): Promise<void>;
 }
 export interface LoadMotelyOptions {
-    /** Base URL for _framework (e.g. "/_framework" or "https://cdn.example/assets"). Default "/_framework". */
+    /** Base URL for runtime assets. Defaults to this package's bundled framework folder. */
     baseUrl?: string;
     /**
-     * Threading mode. Only the threaded build (_framework) is shipped.
-     * - "auto": use _framework (default)
-     * - "on": use _framework
+     * Threading mode.
+     * - "auto": use threads when cross-origin isolation is available, otherwise fall back to the single-thread bundle
+     * - "on": require the threaded bundle
+     * - "off": force the single-thread bundle
      */
-    threads?: "auto" | "on";
+    threads?: "auto" | "on" | "off";
 }
 /**
  * Load the Motely WASM runtime and return the API.

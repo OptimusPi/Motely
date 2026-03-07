@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../../../v0-balatro-seed-hosting"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.jaml": "yaml"
+		},
+		"yaml.schemas": {
+			"jaml.schema.json": "*.jaml"
+		},
+		"yaml.completion": true,
+		"json.schemaDownload.enable": true,
+		"powershell.cwd": "v0-balatro-seed-hosting"
+	}
+}

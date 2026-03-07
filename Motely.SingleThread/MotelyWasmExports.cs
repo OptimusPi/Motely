@@ -34,7 +34,7 @@ public static partial class MotelyWasmExports
         var dto = new VersionDto
         {
             Version = GetCachedVersion(),
-            Runtime = "node-wasm",
+            Runtime = "browser-wasm",
             Features = GetFeatureList(),
         };
         return Task.FromResult(JsonSerializer.Serialize(dto, WasmJsonContext.Default.VersionDto));
@@ -48,7 +48,7 @@ public static partial class MotelyWasmExports
             Simd = IsSimdEnabled(),
             Threads = IsThreadingEnabled(),
             ProcessorCount = GetProcessorCount(),
-            Runtime = "node-wasm",
+            Runtime = "browser-wasm",
             Version = GetCachedVersion(),
             Timestamp = DateTime.UtcNow.ToString("O"),
         };

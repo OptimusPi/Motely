@@ -1,7 +1,7 @@
 {
-  "name": "motely-wasm",
+  "name": "motely-wasm-singlethread",
   "version": "2.3.1",
-  "description": "Run the classic Analyzer on a Balatro seed, and more all in your browser!",
+  "description": "Run Motely in the browser with a dedicated single-threaded .NET WASM runtime.",
   "type": "module",
   "main": "index.js",
   "browser": "index.js",
@@ -21,7 +21,6 @@
   },
   "files": [
     "_framework/",
-    "_framework_st/",
     "index.js",
     "index.d.ts",
     "jaml-schema.js",
@@ -35,23 +34,19 @@
     "wasm",
     "webassembly",
     "browser-only",
+    "single-thread",
     "jaml",
-    "filter",
-    "finder",
     "search"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OptimusPi/MotelyJAML.git",
-    "directory": "Motely.npm"
+    "directory": "Motely.npm.singlethread"
   },
   "license": "MIT",
   "scripts": {
     "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
-    "build": "npm run generate:jaml-schema && tsc",
+    "build": "npm run generate:jaml-schema",
     "prepublishOnly": "npm run build"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0"
   }
 }
