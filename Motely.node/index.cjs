@@ -33,6 +33,9 @@ function buildApi(raw, cachedCapabilities) {
     async getCapabilities() {
       return cachedCapabilities;
     },
+    getAvailableThreadCount() {
+      return cachedCapabilities.availableThreadCount;
+    },
     async analyzeSeed(seed, deck, stake) {
       const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
       const result = JSON.parse(json);

@@ -159,8 +159,6 @@ public class SearchWindow : Window
             )
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
 
-            parameters.Deck = config.Deck.ToString();
-            parameters.Stake = config.Stake.ToString();
             parameters.ResultCallback = onResult;
 
             _search = MotelySearchOrchestrator.LaunchWithContext(config, parameters);

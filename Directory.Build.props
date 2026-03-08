@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-browser'">
+    <PublishAot>false</PublishAot>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <IlcOptimizationPreference></IlcOptimizationPreference>
+    <IlcFoldIdenticalMethodBodies></IlcFoldIdenticalMethodBodies>
+    <IlcInstructionSet></IlcInstructionSet>
+  </PropertyGroup>
+</Project>

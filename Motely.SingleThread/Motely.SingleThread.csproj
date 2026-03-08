@@ -5,9 +5,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RunAOTCompilation>true</RunAOTCompilation>
     <PublishReadyToRun>false</PublishReadyToRun>
 
     <!-- AOT Build - NO THREADS for Node.js compatibility -->
+    <WasmBuildNative>true</WasmBuildNative>
     <WasmEnableThreads>false</WasmEnableThreads>
     <WasmEnableSIMD>true</WasmEnableSIMD>
 
@@ -21,7 +23,6 @@
     <WasmDebugLevel>0</WasmDebugLevel>
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
     <WasmEmitCompressedAssets>false</WasmEmitCompressedAssets>
-    <BlazorEnableCompression>false</BlazorEnableCompression>
 
     <!-- No ICU data needed -->
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -40,28 +41,9 @@
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
 
-  <Target Name="CopyToNodePackage" AfterTargets="Publish">
-    <PropertyGroup>
-      <_NodeFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.node\_framework</_NodeFrameworkPath>
-      <_BrowserSingleThreadFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.npm\_framework_st</_BrowserSingleThreadFrameworkPath>
-      <_SingleThreadNpmFrameworkPath>$(MSBuildThisFileDirectory)..\Motely.npm.singlethread\_framework</_SingleThreadNpmFrameworkPath>
-    </PropertyGroup>
-    <Message Importance="high" Text="Copying WASM to Motely.node/_framework..." />
-    <RemoveDir Directories="$(_NodeFrameworkPath)" />
-    <MakeDir Directories="$(_NodeFrameworkPath)" />
-    <RemoveDir Directories="$(_BrowserSingleThreadFrameworkPath)" />
-    <MakeDir Directories="$(_BrowserSingleThreadFrameworkPath)" />
-    <RemoveDir Directories="$(_SingleThreadNpmFrameworkPath)" />
-    <MakeDir Directories="$(_SingleThreadNpmFrameworkPath)" />
-    <ItemGroup>
-      <_FrameworkFiles Include="$(PublishDir)wwwroot\_framework\**\*" 
-                       Exclude="$(PublishDir)wwwroot\_framework\debug\**\*;$(PublishDir)wwwroot\_framework\tmp\**\*;$(PublishDir)wwwroot\_framework\**\*.br;$(PublishDir)wwwroot\_framework\**\*.gz" />
-    </ItemGroup>
-    <Copy SourceFiles="@(_FrameworkFiles)" 
-          DestinationFiles="@(_FrameworkFiles->'$(_NodeFrameworkPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
-    <Copy SourceFiles="@(_FrameworkFiles)"
-          DestinationFiles="@(_FrameworkFiles->'$(_BrowserSingleThreadFrameworkPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
-    <Copy SourceFiles="@(_FrameworkFiles)"
-          DestinationFiles="@(_FrameworkFiles->'$(_SingleThreadNpmFrameworkPath)\%(RecursiveDir)%(Filename)%(Extension)')" />
-  </Target>
-</Project>
+  <ItemGroup>
+    <Compile Remove="WasmDtos.cs" />
+    <Compile Remove="WasmJsonContext.cs" />
+    <Compile Remove="WasmProgressContext.cs" />
+  </ItemGroup>
+ </Project>

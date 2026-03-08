@@ -19,7 +19,7 @@ public record StartSearchRequest(
 );
 
 public record SearchInfo(
-    string Id,
+    string FilterId,
     string FilterName,
     bool IsCompleted,
     long TotalSeedsSearched,
@@ -27,7 +27,7 @@ public record SearchInfo(
     TimeSpan ElapsedTime
 );
 
-public record ActiveSearchInfo(string Id, bool IsCompleted, long SeedsSearched, long Matches, string Elapsed);
+public record ActiveSearchInfo(string FilterId, bool IsCompleted, long SeedsSearched, long Matches, string Elapsed);
 public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, string PoolUrl);
 
 [JsonSerializable(typeof(CreateFilterRequest))]
@@ -180,9 +180,15 @@ public class Program
                     settings = settings.WithSequentialSearch();
 
                 var search = settings.Start();
-                var id = Guid.NewGuid().ToString("N");
-                searches[id] = search;
-                return Results.Ok(new SearchInfo(id, req.FilterName, false, 0, 0, TimeSpan.Zero));
+                var filterId = MotelyRuntimeIds.GenerateFilterId(config);
+                if (searches.TryRemove(filterId, out var existingSearch))
+                {
+                    existingSearch.Cancel();
+                    existingSearch.Dispose();
+                }
+
+                searches[filterId] = search;
+                return Results.Ok(new SearchInfo(filterId, req.FilterName, false, 0, 0, TimeSpan.Zero));
             }
             catch (Exception ex)
             {
@@ -190,18 +196,18 @@ public class Program
             }
         }).WithName("StartSearch");
 
-        app.MapGet("/api/search/{id}", (string id) =>
+        app.MapGet("/api/search/{filterId}", (string filterId) =>
         {
-            if (!searches.TryGetValue(id, out var search))
+            if (!searches.TryGetValue(filterId, out var search))
                 return Results.NotFound();
             return Results.Ok(new SearchInfo(
-                id, "Unknown", search.IsCompleted,
+                filterId, "Unknown", search.IsCompleted,
                 search.TotalSeedsSearched, search.MatchingSeeds, search.ElapsedTime));
         }).WithName("GetSearch");
 
-        app.MapPost("/api/search/{id}/stop", (string id) =>
+        app.MapPost("/api/search/{filterId}/stop", (string filterId) =>
         {
-            if (!searches.TryRemove(id, out var search))
+            if (!searches.TryRemove(filterId, out var search))
                 return Results.NotFound();
             search.Cancel();
             search.Dispose();

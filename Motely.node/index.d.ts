@@ -6,6 +6,7 @@ export interface VersionInfo {
 export interface CapabilitiesInfo {
     simd: boolean;
     threads: boolean;
+    availableThreadCount: number;
     processorCount: number;
     runtime: string;
     version: string;
@@ -64,6 +65,8 @@ export interface SearchOptions {
 export interface MotelyNodeApi {
     /** Get runtime capabilities (SIMD, threads, etc.) */
     getCapabilities(): Promise<CapabilitiesInfo>;
+    /** Get the number of threads the runtime can actually use */
+    getAvailableThreadCount(): number;
     /** Analyze a single seed. Returns full ante-by-ante breakdown. */
     analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo>;
     /** Validate a JAML filter string. */

@@ -16,6 +16,7 @@ export interface VersionInfo {
 export interface CapabilitiesInfo {
   simd: boolean;
   threads: boolean;
+  availableThreadCount: number;
   processorCount: number;
   runtime: string;
   version: string;
@@ -85,6 +86,9 @@ export interface MotelyNodeApi {
   /** Get runtime capabilities (SIMD, threads, etc.) */
   getCapabilities(): Promise<CapabilitiesInfo>;
 
+  /** Get the number of threads the runtime can actually use */
+  getAvailableThreadCount(): number;
+
   /** Analyze a single seed. Returns full ante-by-ante breakdown. */
   analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo>;
 
@@ -133,6 +137,10 @@ function buildApi(raw: RawExports, cachedCapabilities: CapabilitiesInfo): Motely
       return cachedCapabilities;
     },
 
+    getAvailableThreadCount(): number {
+      return cachedCapabilities.availableThreadCount;
+    },
+
     async analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo> {
       const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
       const result = JSON.parse(json);
@@ -157,10 +165,10 @@ function buildApi(raw: RawExports, cachedCapabilities: CapabilitiesInfo): Motely
 
       const progressCb = onProgress
         ? (json: string) => {
-            const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
-            onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
-          }
-        : () => {};
+          const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
+          onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
+        }
+        : () => { };
       const resultCb = (seed: string, score: number) => {
         results.push({ seed, score });
         onResult?.(seed, score);

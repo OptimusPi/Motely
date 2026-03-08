@@ -3,7 +3,7 @@ function resolveFrameworkUrl(baseUrl) {
     return (baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl) || baseUrl;
   }
 
-  return new URL("./_framework/", import.meta.url).href.replace(/\/$/, "");
+  return new URL("./_framework/dotnet.js", import.meta.url).href.replace(/\/dotnet\.js$/, "");
 }
 
 export async function loadMotely(options) {
@@ -33,7 +33,8 @@ export async function loadMotely(options) {
     getVersion: () => cachedVersion,
     getCapabilities: () => cachedCapabilities,
     isSimdEnabled: () => cachedCapabilities.simd,
-    isThreadingEnabled: () => cachedCapabilities.threads,
+    isThreadingEnabled: () => cachedCapabilities.availableThreadCount > 1,
+    getAvailableThreadCount: () => cachedCapabilities.availableThreadCount,
     getProcessorCount: () => cachedCapabilities.processorCount,
     async analyzeSeed(seed, deck, stake) {
       const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
@@ -57,11 +58,11 @@ export async function loadMotely(options) {
       const optionsJson = JSON.stringify(withDefaults);
       const progressCb = onProgress
         ? json => {
-            const p = JSON.parse(json);
-            onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
-          }
-        : () => {};
-      const resultCb = onResult ?? (() => {});
+          const p = JSON.parse(json);
+          onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
+        }
+        : () => { };
+      const resultCb = onResult ?? (() => { });
       const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
       const result = JSON.parse(resultJson);
       if (result.error) {

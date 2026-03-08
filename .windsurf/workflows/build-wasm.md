@@ -1,24 +1,28 @@
-# Build WASM Browser Project
+# Build WASM Browser Projects
 
-Build the Motely NodeWasm project for browser/Node.js usage.
+Build the current Motely browser WASM projects and stage their publish outputs for npm packaging.
 
 ## Quick Build
 
 ```bash
-dotnet publish Motely.NodeWasm/Motely.BrowserWasm.csproj -c Release
+dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
+dotnet publish Motely.SingleThread/Motely.SingleThread.csproj -c Release
+node stage-packages.mjs all
 ```
 
 ## What This Produces
 
-- `Motely.NodeWasm/bin/Release/net10.0-browser/publish/wwwroot/_framework/`
-  - `dotnet.js` - Main entry point for JavaScript hosts
-  - `dotnet.runtime.js` - .NET runtime
-  - `dotnet.native.wasm` - Compiled AOT WASM module
-  - `Motely.NodeWasm.wasm` - Your compiled app
+- `Motely.BrowserWasm/bin/Release/net10.0-browser/publish/wwwroot/_framework/`
+- `Motely.SingleThread/bin/Release/net10.0-browser/publish/wwwroot/_framework/`
+- staged package assets in:
+  - `Motely.npm/_framework/`
+  - `Motely.npm/_framework_st/`
+  - `Motely.npm.singlethread/_framework/`
+  - `Motely.node/_framework/`
 
-## Auto-Copy to NPM Package
+## Staging to NPM Packages
 
-The build automatically copies files to `Motely.npm/_framework/` via the `PublishToNpmPackage` MSBuild target.
+The root `stage-packages.mjs` script copies filtered publish assets into the npm package folders.
 
 ## Requirements
 
@@ -32,5 +36,5 @@ The build automatically copies files to `Motely.npm/_framework/` via the `Publis
 Already disabled in csproj: `<WasmRunWasmOpt>false</WasmRunWasmOpt>`
 
 ### Missing SharedArrayBuffer
-For Node.js: Use `--experimental-wasm-threads` or enable via flags
-For Browser: Needs COOP/COEP headers (see vite-plugin in Motely.npm)
+For Browser: Needs COOP/COEP headers when using `Motely.BrowserWasm`
+For Node.js: use the staged `Motely.SingleThread` runtime via `motely-node`
