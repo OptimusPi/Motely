@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Motely;
 
@@ -58,12 +59,10 @@ public static class JamlSearchBuilder
         var mustLabels = new List<string>();
         AddDescsFromSet(mustDescs, mustLabels, config.Must);
 
-        // If no must but we have should, use a passthrough base filter
-        if (mustDescs.Count == 0 && config.Should.HasAnyClauses)
-        {
-            mustDescs.Add(new PassthroughFilterDesc());
-            mustLabels.Add("(passthrough)");
-        }
+        Debug.Assert(
+            mustDescs.Count > 0 || !config.Should.HasAnyClauses,
+            "Should-only JAML plans must provide a real base filter."
+        );
 
         if (mustDescs.Count == 0)
             throw new InvalidOperationException("JamlConfig produced no filter descriptors.");

@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm",
-  "version": "3.0.1",
+  "version": "3.0.4",
   "description": "Run the classic Analyzer on a Balatro seed, and more all in your browser!",
   "type": "module",
   "main": "index.js",
@@ -48,9 +48,10 @@
   "license": "MIT",
   "scripts": {
     "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
-    "build": "npm run generate:jaml-schema && tsc",
+    "build": "npm run generate:jaml-schema && node ./node_modules/typescript/lib/tsc.js",
     "stage-framework": "node ../stage-packages.mjs browser",
-    "prepublishOnly": "npm run build && npm run stage-framework"
+    "prepack": "npm run build && npm run stage-framework",
+    "prepublishOnly": "npm run prepack"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
