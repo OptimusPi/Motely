@@ -4,7 +4,7 @@ using DuckDB.NET.Data;
 namespace Motely.DB;
 
 /// <summary>
-/// Dead-simple DuckDB result store. File-backed, in-memory fast.
+/// Fast DuckLake result store. Backed by Parquet files using the ducklake extension.
 /// Schema: results(seed TEXT, score INTEGER, tally0 INTEGER, ..., tallyN INTEGER)
 /// </summary>
 public sealed class MotelyResultsDb : IDisposable
@@ -17,15 +17,42 @@ public sealed class MotelyResultsDb : IDisposable
     public int TallyCount => _tallyCount;
 
     /// <summary>
-    /// Opens or creates a result database.
+    /// Opens or creates a result database using DuckLake.
     /// </summary>
-    /// <param name="dbPath">File path for persistence, or ":memory:" for pure in-memory.</param>
+    /// <param name="dbPath">File path for persistence (treated as a DuckLake folder base), or ":memory:" for pure in-memory.</param>
     /// <param name="tallyCount">Number of should-clause tally columns.</param>
     public MotelyResultsDb(string dbPath, int tallyCount)
     {
         _tallyCount = Math.Max(0, tallyCount);
-        _conn = new DuckDBConnection($"Data Source={dbPath}");
+        
+        // We always boot up an in-memory core, then attach the ducklake.
+        _conn = new DuckDBConnection("Data Source=:memory:");
         _conn.Open();
+        
+        using var cmd = _conn.CreateCommand();
+
+        if (dbPath != ":memory:")
+        {
+            var baseName = Path.GetFileNameWithoutExtension(dbPath);
+            var lakeDir = $"{baseName}_lake";
+            var metaFile = $"{lakeDir}/metadata.ducklake";
+            var dataDir = $"{lakeDir}/data/";
+            
+            Directory.CreateDirectory(lakeDir);
+            Directory.CreateDirectory(dataDir);
+
+            // Install and attach the DuckLake
+            cmd.CommandText = "INSTALL ducklake; LOAD ducklake;";
+            cmd.ExecuteNonQuery();
+
+            // Note: Current DuckDB syntax for attaching DuckLake
+            cmd.CommandText = $"ATTACH 'ducklake:{metaFile}' AS motely_lake (DATA_PATH '{dataDir}');";
+            cmd.ExecuteNonQuery();
+
+            cmd.CommandText = "USE motely_lake;";
+            cmd.ExecuteNonQuery();
+        }
+
         CreateTable();
     }
 
@@ -123,37 +150,29 @@ public sealed class MotelyResultsDb : IDisposable
         }
     }
 
-    /// <summary>
-    /// Export all results as CSV string (seed,score,tally0,...,tallyN).
-    /// </summary>
-    public string ExportCsv()
+    public void ExportParquet(string parquetPath)
     {
+        ExportParquet(parquetPath, null);
+    }
+
+    public void ExportParquet(string parquetPath, int? limit)
+    {
+        if (string.IsNullOrWhiteSpace(parquetPath))
+            throw new ArgumentException("Parquet path is required.", nameof(parquetPath));
+
+        var fullPath = Path.GetFullPath(parquetPath);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+            Directory.CreateDirectory(directory);
+
+        var escapedPath = fullPath.Replace("'", "''");
+        var limitClause = limit is > 0 ? $" LIMIT {limit.Value}" : string.Empty;
+
         lock (_lock)
         {
             using var cmd = _conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM results ORDER BY score DESC";
-            using var reader = cmd.ExecuteReader();
-
-            var sb = new StringBuilder();
-            // Header
-            sb.Append("seed,score");
-            for (int i = 0; i < _tallyCount; i++)
-                sb.Append($",tally{i}");
-            sb.AppendLine();
-
-            while (reader.Read())
-            {
-                sb.Append(reader.GetString(0));
-                sb.Append(',');
-                sb.Append(reader.GetInt32(1));
-                for (int i = 0; i < _tallyCount; i++)
-                {
-                    sb.Append(',');
-                    sb.Append(reader.GetInt32(2 + i));
-                }
-                sb.AppendLine();
-            }
-            return sb.ToString();
+            cmd.CommandText = $"COPY (SELECT * FROM results ORDER BY score DESC{limitClause}) TO '{escapedPath}' (FORMAT PARQUET)";
+            cmd.ExecuteNonQuery();
         }
     }
 

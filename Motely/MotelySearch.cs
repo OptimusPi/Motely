@@ -337,6 +337,7 @@ public interface IMotelySearchSettings
     IMotelySearchSettings WithCsvOutput(bool csvOutput);
     IMotelySearchSettings WithQuietMode(bool quietMode);
     IMotelySearchSettings WithSeedMatchCallback(Action<string> callback);
+    IMotelySearchSettings WithScoredResultCallback(Action<MotelySeedScoreTally> callback);
     IMotelySearchSettings WithProgressMessageCallback(Action<string> callback);
     /// <summary>Create a search instance without starting it. Call Start() on a background thread to allow progress polling.</summary>
     IMotelySearch CreateSearch();
@@ -394,6 +395,11 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     /// Consumers provide their own output handler (e.g. Console.WriteLine for CLI).
     /// </summary>
     public Action<string>? SeedMatchCallback { get; set; }
+
+    /// <summary>
+    /// Callback invoked for scored result rows so callers can persist structured results.
+    /// </summary>
+    public Action<MotelySeedScoreTally>? ScoredResultCallback { get; set; }
 
     /// <summary>
     /// Callback for human-readable progress messages (e.g. "Progress: 12.3% | Found: 5/1000").
@@ -528,6 +534,10 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     IMotelySearchSettings IMotelySearchSettings.WithSeedMatchCallback(Action<string> callback) =>
         WithSeedMatchCallback(callback);
 
+    IMotelySearchSettings IMotelySearchSettings.WithScoredResultCallback(
+        Action<MotelySeedScoreTally> callback
+    ) => WithScoredResultCallback(callback);
+
     IMotelySearchSettings IMotelySearchSettings.WithProgressMessageCallback(
         Action<string> callback
     ) => WithProgressMessageCallback(callback);
@@ -572,6 +582,14 @@ public sealed class MotelySearchSettings<TBaseFilter>(
     public MotelySearchSettings<TBaseFilter> WithSeedMatchCallback(Action<string> callback)
     {
         SeedMatchCallback = callback;
+        return this;
+    }
+
+    public MotelySearchSettings<TBaseFilter> WithScoredResultCallback(
+        Action<MotelySeedScoreTally> callback
+    )
+    {
+        ScoredResultCallback = callback;
         return this;
     }
 
@@ -737,6 +755,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private readonly Action<MotelyProgress>? _progressCallback;
     private readonly Action<string>? _seedMatchCallback;
+    private readonly Action<MotelySeedScoreTally>? _scoredResultCallback;
     private readonly Action<string>? _progressMessageCallback;
     private readonly int _batchCharacterCount;
     private readonly bool _csvOutput;
@@ -750,6 +769,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         _searchParameters = new() { Deck = settings.Deck, Stake = settings.Stake };
         _progressCallback = settings.ProgressCallback;
         _seedMatchCallback = settings.SeedMatchCallback;
+        _scoredResultCallback = settings.ScoredResultCallback;
         _progressMessageCallback = settings.ProgressMessageCallback;
         _batchCharacterCount = settings.SequentialBatchCharacterCount;
         _csvOutput = settings.CsvOutput;
@@ -1400,6 +1420,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 if (resultMask[lane] && searchParams.IsLaneValid(lane))
                 {
+                    Search._scoredResultCallback?.Invoke(_resultBuffer[lane]);
                     _localMatchingSeeds++;
                 }
             }

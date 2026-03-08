@@ -170,7 +170,7 @@ npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node run stage-framework
 
 Tell the user:
 
-```
+```md
 All npm packages are ready to publish!
 
 1. Log into npm once:
@@ -210,7 +210,7 @@ Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.node\_frame
 
 Print:
 
-```
+```sh
 ✅ MotelyJAML update complete!
    Version: <THE_VERSION>
    Published: motely-wasm@<THE_VERSION>, motely-wasm-singlethread@<THE_VERSION>, motely-node@<THE_VERSION>
