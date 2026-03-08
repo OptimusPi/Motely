@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm-singlethread",
-  "version": "3.0.1",
+  "version": "3.0.4",
   "description": "Run Motely in the browser with a dedicated single-threaded .NET WASM runtime.",
   "type": "module",
   "main": "index.js",
@@ -48,6 +48,7 @@
     "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
     "build": "npm run generate:jaml-schema",
     "stage-framework": "node ../stage-packages.mjs singlethread",
-    "prepublishOnly": "npm run build && npm run stage-framework"
+    "prepack": "npm run build && npm run stage-framework",
+    "prepublishOnly": "npm run prepack"
   }
 }

@@ -8,45 +8,42 @@ Browser-only WebAssembly package for Motely Seed Oracle. Use in the browser, not
 npm install motely-wasm
 ```
 
-## One-time setup (no recurring chores)
+## Runtime asset setup
 
-Use the plugin for your bundler. It serves/copies `_framework` and sets the required COOP/COEP headers. After this, you never copy files or touch headers again.
+This package ships two runtime folders:
 
-### Vite
+1. **`_framework`** for the threaded runtime
+2. **`_framework_st`** for the bundled single-thread runtime
 
-```js
-// vite.config.js
-import { defineConfig } from "vite";
-import motelyWasm from "motely-wasm/vite-plugin";
+Your app must serve those folders somewhere the browser can fetch them.
 
-export default defineConfig({
-  plugins: [motelyWasm()],
-});
+If you call `loadMotely()` without a `baseUrl`, the package loads its bundled runtime assets package-relatively.
+
+If you copy the assets into your own public/static folder, pass an explicit `baseUrl` that points to the correct runtime folder.
+
+### Threaded runtime requirements
+
+For multi-threading, serve **`_framework`** and set COOP/COEP headers on **all** responses. Without these, the browser disables `SharedArrayBuffer` and threaded WebAssembly.
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Dev: `_framework` is served at `/_framework`, headers set. Build: `_framework` and `_framework_nt` are copied into `dist/`.
+### Single-thread runtime
 
-### Next.js
+If you want to force the single-thread runtime, serve **`_framework_st`** and call `loadMotely({ threads: "off", baseUrl: "/your-runtime-path" })`.
 
-```js
-// next.config.mjs (or .js)
-import withMotelyWasm from "motely-wasm/next-plugin";
+### Hosting examples
 
-export default withMotelyWasm({
-  // your existing next config
-});
-```
+If you are manually hosting the runtime assets, common setups look like this:
 
-On first run the plugin copies `_framework` and `_framework_nt` into `public/` and sets COOP/COEP. No manual copy, no recurring setup.
+- copy `node_modules/motely-wasm/_framework` to `public/_framework`
+- copy `node_modules/motely-wasm/_framework_st` to `public/_framework_st`
+- use `loadMotely({ threads: "auto", baseUrl: "/_framework" })` for threaded/prod hosting
+- use `loadMotely({ threads: "off", baseUrl: "/_framework_st" })` for forced single-thread hosting
 
-**Turbopack:** The way `loadMotely()` loads the WASM runtime does not work with Next.js when Turbopack is enabled. Use the default webpack bundler (do not enable `--turbo` / `turbo: true`) when using motely-wasm.
-
-### Other frameworks (SvelteKit, Astro, Remix, static host, etc.)
-
-No plugin needed. Do the same one-time setup in your stack:
-
-1. **Serve `_framework`**: copy `node_modules/motely-wasm/_framework` into your static/public folder, or configure your dev/server to serve that folder at `/_framework`.
-2. **Set COOP/COEP headers** on **all** responses. Without these, the browser silently disables SharedArrayBuffer and multi-threading — your search will run single-threaded without any error:
+Set COOP/COEP headers on **all** responses when using the threaded runtime:
    ```
    Cross-Origin-Opener-Policy: same-origin
    Cross-Origin-Embedder-Policy: require-corp
@@ -96,7 +93,7 @@ app.use((req, res, next) => {
 
 **Verify:** open DevTools Console and run `self.crossOriginIsolated` — must return `true`.
 
-Then call `loadMotely()` (auto-detects threads and falls back to the bundled single-thread runtime when isolation is unavailable) or `loadMotely({ baseUrl: "/your/path" })` if you hosted the runtime assets somewhere else.
+Then call `loadMotely()` (auto-detects threads and falls back to the bundled single-thread runtime when isolation is unavailable), `loadMotely({ threads: "auto", baseUrl: "/your-threaded-runtime" })`, or `loadMotely({ threads: "off", baseUrl: "/your-single-thread-runtime" })`.
 
 ## Usage
 
