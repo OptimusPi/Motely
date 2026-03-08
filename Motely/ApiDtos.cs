@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using Motely.Analysis;
+using Motely.Filters;
 
 namespace Motely;
 
@@ -10,6 +12,9 @@ public sealed class CapabilitiesDto
 
     [JsonPropertyName("threads")]
     public bool Threads { get; set; }
+
+    [JsonPropertyName("availableThreadCount")]
+    public int AvailableThreadCount { get; set; }
 
     [JsonPropertyName("processorCount")]
     public int ProcessorCount { get; set; }
@@ -95,8 +100,8 @@ public sealed class SearchOptionsDto
 
 public sealed class SearchStatusDto
 {
-    [JsonPropertyName("searchId")]
-    public string SearchId { get; set; } = string.Empty;
+    [JsonPropertyName("filterId")]
+    public string FilterId { get; set; } = string.Empty;
 
     [JsonPropertyName("status")]
     public string Status { get; set; } = string.Empty;
@@ -134,3 +139,70 @@ public sealed class SearchHitDto
     [JsonPropertyName("tallies")]
     public string[] Tallies { get; set; } = [];
 }
+
+public sealed class ProgressCallbackDto
+{
+    [JsonPropertyName("seedsSearched")]
+    public long SeedsSearched { get; set; }
+
+    [JsonPropertyName("matchingSeeds")]
+    public long MatchingSeeds { get; set; }
+
+    [JsonPropertyName("elapsedMs")]
+    public long ElapsedMs { get; set; }
+
+    [JsonPropertyName("resultCount")]
+    public int ResultCount { get; set; }
+}
+
+public static class MotelyRuntimeIds
+{
+    public static string GenerateFilterId(JamlConfig config)
+    {
+        var name = SanitizeForId(config.Name ?? "Unknown", maxLength: 30);
+        var deck = config.Deck.ToString();
+        var stake = config.Stake.ToString();
+        return $"{name}_{deck}_{stake}";
+    }
+
+    public static string SanitizeForId(string input, int maxLength = 50)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return "unknown";
+
+        var firstPart = input.Split(
+            new[] { ",", " - ", "–", "—", ";", ". " },
+            StringSplitOptions.None
+        )[0];
+        var sanitized = firstPart.Trim().Replace(" ", "");
+        var invalidChars = Path.GetInvalidFileNameChars();
+        foreach (var c in invalidChars)
+        {
+            sanitized = sanitized.Replace(c, '_');
+        }
+
+        if (sanitized.Length > maxLength)
+            sanitized = sanitized[..maxLength];
+
+        return sanitized;
+    }
+}
+
+[JsonSourceGenerationOptions(
+    WriteIndented = false,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+)]
+[JsonSerializable(typeof(CapabilitiesDto))]
+[JsonSerializable(typeof(VersionDto))]
+[JsonSerializable(typeof(ErrorDto))]
+[JsonSerializable(typeof(ValidateResultDto))]
+[JsonSerializable(typeof(SearchOptionsDto))]
+[JsonSerializable(typeof(SearchStatusDto))]
+[JsonSerializable(typeof(SearchHitDto[]))]
+[JsonSerializable(typeof(ProgressCallbackDto))]
+[JsonSerializable(typeof(SeedAnalysisDto))]
+[JsonSerializable(typeof(AnteAnalysisDto))]
+[JsonSerializable(typeof(ShopItemDto))]
+[JsonSerializable(typeof(PackDto))]
+public partial class MotelyJsonContext : JsonSerializerContext { }

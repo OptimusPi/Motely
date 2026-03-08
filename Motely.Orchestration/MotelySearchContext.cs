@@ -12,14 +12,12 @@ public sealed class MotelySearchContext : IMotelySearchContext
     private readonly IMotelySearch _search;
     private Task? _runTask;
 
-    public MotelySearchContext(IMotelySearch search, string searchId, string filterId)
+    public MotelySearchContext(IMotelySearch search, string filterId)
     {
         _search = search;
-        SearchId = searchId;
         FilterId = filterId;
     }
 
-    public string SearchId { get; }
     public string FilterId { get; }
     public bool IsCompleted => _search.IsCompleted;
     public bool IsSequentialBatchSearch => _search.IsSequentialBatchSearch;

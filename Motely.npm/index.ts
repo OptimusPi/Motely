@@ -13,6 +13,7 @@ export interface VersionInfo {
 export interface CapabilitiesInfo {
   simd: boolean;
   threads: boolean;
+  availableThreadCount: number;
   processorCount: number;
   runtime: string;
   version: string;
@@ -56,6 +57,7 @@ export interface SearchResultInfo {
 }
 
 export interface SearchStatusInfo {
+  filterId: string;
   status: string;
   isRunning: boolean;
   totalSeedsSearched: number;
@@ -107,6 +109,9 @@ export interface MotelyWasmApi {
 
   /** Check if threading is enabled */
   isThreadingEnabled(): boolean;
+
+  /** Get the number of threads the runtime can actually use */
+  getAvailableThreadCount(): number;
 
   /** Get available processor count */
   getProcessorCount(): number;
@@ -175,10 +180,10 @@ function resolveFrameworkUrl(baseUrl: string | undefined, frameworkFolder: "_fra
   }
 
   if (frameworkFolder === "_framework_st") {
-    return new URL("./_framework_st/", import.meta.url).href.replace(/\/$/, "");
+    return new URL("./_framework_st/dotnet.js", import.meta.url).href.replace(/\/dotnet\.js$/, "");
   }
 
-  return new URL("./_framework/", import.meta.url).href.replace(/\/$/, "");
+  return new URL("./_framework/dotnet.js", import.meta.url).href.replace(/\/dotnet\.js$/, "");
 }
 
 // ──────────────────────────────── Loader ────────────────────────────────
@@ -248,7 +253,8 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
     getVersion: () => cachedVersion,
     getCapabilities: () => cachedCapabilities,
     isSimdEnabled: () => cachedCapabilities.simd,
-    isThreadingEnabled: () => cachedCapabilities.threads,
+    isThreadingEnabled: () => cachedCapabilities.availableThreadCount > 1,
+    getAvailableThreadCount: () => cachedCapabilities.availableThreadCount,
     getProcessorCount: () => cachedCapabilities.processorCount,
 
     async analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo> {

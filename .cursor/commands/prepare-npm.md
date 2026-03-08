@@ -77,19 +77,21 @@ Remove-Item -Recurse -Force X:\JammySeedFinder\src\MotelyJAML\Motely.node\_frame
 
 ### 6. AOT publish browser WASM
 
-This should publish `Motely.BrowserWasm` and copy `_framework` into `Motely.npm\_framework`.
+This should publish `Motely.BrowserWasm`, then stage `_framework` into `Motely.npm\_framework`.
 
 ```powershell
 dotnet publish X:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release
+node X:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs browser
 Test-Path X:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework\dotnet.native.wasm
 ```
 
 ### 7. AOT publish node WASM
 
-This should publish `Motely.SingleThread` and copy `_framework` into `Motely.node\_framework`.
+This should publish `Motely.SingleThread`, then stage `_framework` into `Motely.node\_framework`.
 
 ```powershell
 dotnet publish X:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release
+node X:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs singlethread node
 Test-Path X:\JammySeedFinder\src\MotelyJAML\Motely.node\_framework\dotnet.native.wasm
 ```
 
@@ -107,7 +109,7 @@ npm run build
 cd X:\JammySeedFinder\src\MotelyJAML\Motely.node
 npm install
 npm run build
-npm run copy-framework
+npm run stage-framework
 ```
 
 Optional (addon path): copy addon DLL + Motely.dll to `Motely.node\bin\` so `loadMotely({ addonPath: path.join(__dirname, 'bin', 'Motely.NodeAddon.dll') })` works when `node-api-dotnet` is installed.

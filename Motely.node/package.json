@@ -1,6 +1,6 @@
 {
   "name": "motely-node",
-  "version": "2.3.2",
+  "version": "3.0.1",
   "description": "MotelyJAML for Node.js/V8 - Balatro seed analyzer and JAML filter engine using .NET WASM",
   "type": "module",
   "main": "index.js",
@@ -61,8 +61,8 @@
   "scripts": {
     "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
     "build": "npm run generate:jaml-schema && tsc && esbuild index.js --outfile=index.cjs --format=cjs --platform=node --banner:js=\"const import_meta_url=require('url').pathToFileURL(__filename).href;\" --define:import.meta.url=import_meta_url",
-    "copy-framework": "node copy-framework.js",
-    "prepublishOnly": "npm run build",
+    "stage-framework": "node ../stage-packages.mjs node",
+    "prepublishOnly": "npm run build && npm run stage-framework",
     "prove": "node prove-node.mjs && node -e \"console.log(require('fs').readFileSync('prove-node-result.txt','utf8'))\""
   }
 }

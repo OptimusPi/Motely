@@ -15,13 +15,15 @@ Remove-Item -Recurse -Force */bin, */obj -ErrorAction SilentlyContinue
 
 # 2. Publish BrowserWasm (outputs to Motely.npm/_framework)
 dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release
+node stage-packages.mjs browser
 
-# 3. Publish SingleThread (outputs to MotelyNode/_framework)
+# 3. Publish SingleThread (outputs to Motely.node/_framework)
 dotnet publish Motely.SingleThread/Motely.SingleThread.csproj -c Release
+node stage-packages.mjs singlethread node
 
 # 4. Verify files exist
 Test-Path Motely.npm\_framework\dotnet.wasm
-Test-Path MotelyNode\_framework\dotnet.wasm
+Test-Path Motely.node\_framework\dotnet.wasm
 ```
 
 ---
@@ -61,8 +63,8 @@ npm install
 # 11. Build TypeScript → JavaScript
 npm run build
 
-# 12. Copy framework files
-npm run copy-framework
+# 12. Stage framework files
+npm run stage-framework
 
 # 13. Verify package contents
 Get-ChildItem -Force
