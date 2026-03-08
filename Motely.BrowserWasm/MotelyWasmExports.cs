@@ -5,13 +5,21 @@ using System.Text.Json;
 using Motely;
 using Motely.Analysis;
 using Motely.Filters;
+using CapabilitiesDto = global::Motely.CapabilitiesDto;
+using ErrorDto = global::Motely.ErrorDto;
+using ProgressCallbackDto = global::Motely.ProgressCallbackDto;
+using SearchHitDto = global::Motely.SearchHitDto;
+using ValidateResultDto = global::Motely.ValidateResultDto;
+using VersionDto = global::Motely.VersionDto;
+using SearchOptionsDto = global::Motely.SearchOptionsDto;
+using SearchStatusDto = global::Motely.SearchStatusDto;
 
 namespace Motely.BrowserWasm;
 
 /// <summary>
 /// All [JSExport] methods for the Motely WASM npm package.
 /// Async push-based: StartJamlSearch returns Task (Promise), progress pushed via [JSImport].
-/// Uses WasmJsonContext for AOT-safe serialization.
+/// Uses MotelyJsonContext for AOT-safe serialization.
 /// </summary>
 [SupportedOSPlatform("browser")]
 public static partial class MotelyWasmExports
@@ -19,6 +27,7 @@ public static partial class MotelyWasmExports
     // SINGLE search only - no dictionary needed for Blueprint
     private static IMotelySearch? _currentSearch;
     private static CancellationTokenSource? _currentCts;
+    private static string? _currentFilterId;
     private static readonly object _searchLock = new object();
     private static readonly ConcurrentQueue<(string Seed, int Score)> _resultQueue = new();
 
@@ -37,7 +46,7 @@ public static partial class MotelyWasmExports
             Runtime = "browser-wasm",
             Features = GetFeatureList(),
         };
-        return Task.FromResult(JsonSerializer.Serialize(dto, WasmJsonContext.Default.VersionDto));
+        return Task.FromResult(JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.VersionDto));
     }
 
     [JSExport]
@@ -47,26 +56,22 @@ public static partial class MotelyWasmExports
         {
             Simd = IsSimdEnabled(),
             Threads = IsThreadingEnabled(),
+            AvailableThreadCount = GetAvailableThreadCount(),
             ProcessorCount = GetProcessorCount(),
             Runtime = "browser-wasm",
             Version = GetCachedVersion(),
             Timestamp = DateTime.UtcNow.ToString("O"),
         };
         return Task.FromResult(
-            JsonSerializer.Serialize(dto, WasmJsonContext.Default.CapabilitiesDto)
+            JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.CapabilitiesDto)
         );
     }
 
-    public static bool IsSimdEnabled()
-    {
-#if NET10_0_OR_GREATER
-        return System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
-#else
-        return false;
-#endif
-    }
+    public static bool IsSimdEnabled() => System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
 
-    public static bool IsThreadingEnabled() => Environment.ProcessorCount > 1;
+    public static bool IsThreadingEnabled() => GetAvailableThreadCount() > 1;
+
+    public static int GetAvailableThreadCount() => Environment.ProcessorCount;
 
     public static int GetProcessorCount() => Environment.ProcessorCount;
 
@@ -79,16 +84,16 @@ public static partial class MotelyWasmExports
     {
         try
         {
-            if (!Enum.TryParse<MotelyDeck>(deck, ignoreCase: true, out var deckEnum))
+            if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
                 return JsonSerializer.Serialize(
                     new ErrorDto { Error = $"Unknown deck: {deck}" },
-                    WasmJsonContext.Default.ErrorDto
+                    global::Motely.MotelyJsonContext.Default.ErrorDto
                 );
 
-            if (!Enum.TryParse<MotelyStake>(stake, ignoreCase: true, out var stakeEnum))
+            if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
                 return JsonSerializer.Serialize(
                     new ErrorDto { Error = $"Unknown stake: {stake}" },
-                    WasmJsonContext.Default.ErrorDto
+                    global::Motely.MotelyJsonContext.Default.ErrorDto
                 );
 
             var cfg = new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum);
@@ -97,17 +102,17 @@ public static partial class MotelyWasmExports
             if (!string.IsNullOrEmpty(analysis.Error))
                 return JsonSerializer.Serialize(
                     new ErrorDto { Error = analysis.Error },
-                    WasmJsonContext.Default.ErrorDto
+                    global::Motely.MotelyJsonContext.Default.ErrorDto
                 );
 
-            var dto = MapAnalysisToDto(analysis, seed, deck, stake);
-            return JsonSerializer.Serialize(dto, WasmJsonContext.Default.SeedAnalysisDto);
+            var dto = MapAnalysisToDto(analysis, seed, deckEnum, stakeEnum);
+            return JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.SeedAnalysisDto);
         }
         catch (Exception ex)
         {
             return JsonSerializer.Serialize(
                 new ErrorDto { Error = ex.Message },
-                WasmJsonContext.Default.ErrorDto
+                global::Motely.MotelyJsonContext.Default.ErrorDto
             );
         }
     }
@@ -136,7 +141,7 @@ public static partial class MotelyWasmExports
                         Valid = false,
                         Error = parseError ?? "Failed to parse JAML",
                     },
-                    WasmJsonContext.Default.ValidateResultDto
+                    global::Motely.MotelyJsonContext.Default.ValidateResultDto
                 );
             }
 
@@ -148,14 +153,14 @@ public static partial class MotelyWasmExports
                     Deck = config.Deck.ToString(),
                     Stake = config.Stake.ToString(),
                 },
-                WasmJsonContext.Default.ValidateResultDto
+                global::Motely.MotelyJsonContext.Default.ValidateResultDto
             );
         }
         catch (Exception ex)
         {
             return JsonSerializer.Serialize(
                 new ValidateResultDto { Valid = false, Error = ex.Message },
-                WasmJsonContext.Default.ValidateResultDto
+                global::Motely.MotelyJsonContext.Default.ValidateResultDto
             );
         }
     }
@@ -167,7 +172,7 @@ public static partial class MotelyWasmExports
     // ──────────────────────────────── Search (non-blocking, JS polls status) ────────────────────────────────
 
     [JSExport]
-    public static async Task<string> StartJamlSearch(
+    public static Task<string> StartJamlSearch(
         string jamlContent,
         string optionsJson,
         [JSMarshalAs<JSType.Function<JSType.String>>]
@@ -181,30 +186,47 @@ public static partial class MotelyWasmExports
                 !JamlConfigLoader.TryLoad(jamlContent, out var config, out var parseError)
                 || config == null
             )
-                return ErrorJson(parseError ?? "Failed to parse JAML filter");
+                return Task.FromResult(ErrorJson(parseError ?? "Failed to parse JAML filter"));
 
             // Parse search options (required for explicit runtime behavior under AOT)
-            SearchOptionsDto? options = null;
+            global::Motely.SearchOptionsDto? options = null;
             if (!string.IsNullOrEmpty(optionsJson) && optionsJson != "{}")
             {
-                options = JsonSerializer.Deserialize(
+                var parsedOptions = JsonSerializer.Deserialize(
                     optionsJson,
-                    WasmJsonContext.Default.SearchOptionsDto
+                    global::Motely.MotelyJsonContext.Default.SearchOptionsDto
                 );
+
+                if (parsedOptions != null)
+                {
+                    options = new global::Motely.SearchOptionsDto
+                    {
+                        ThreadCount = parsedOptions.ThreadCount,
+                        BatchCharCount = parsedOptions.BatchCharCount,
+                        Cutoff = parsedOptions.Cutoff,
+                        StartBatch = parsedOptions.StartBatch,
+                        EndBatch = parsedOptions.EndBatch,
+                        SpecificSeed = parsedOptions.SpecificSeed,
+                        Seeds = parsedOptions.Seeds,
+                        Keyword = parsedOptions.Keyword,
+                        RandomSeeds = parsedOptions.RandomSeeds,
+                        Palindrome = parsedOptions.Palindrome,
+                    };
+                }
             }
 
             if (options == null)
-                return ErrorJson("Search options are required. Provide threadCount and batchCharCount.");
+                return Task.FromResult(ErrorJson("Search options are required. Provide threadCount and batchCharCount."));
 
             if (!options.ThreadCount.HasValue || options.ThreadCount.Value < 1)
-                return ErrorJson("Invalid options.threadCount. Provide an integer >= 1.");
+                return Task.FromResult(ErrorJson("Invalid options.threadCount. Provide an integer >= 1."));
 
             if (
                 !options.BatchCharCount.HasValue
                 || options.BatchCharCount.Value < 1
                 || options.BatchCharCount.Value > 7
             )
-                return ErrorJson("Invalid options.batchCharCount. Provide an integer in range 1..7.");
+                return Task.FromResult(ErrorJson("Invalid options.batchCharCount. Provide an integer in range 1..7."));
 
             // Browser WASM: force single-thread (no thread pool in browser by default)
             int threadCount = 1;
@@ -213,15 +235,14 @@ public static partial class MotelyWasmExports
 
             if (threadCount > Environment.ProcessorCount)
             {
-                return ErrorJson(
+                return Task.FromResult(ErrorJson(
                     $"Invalid options.threadCount. Requested {threadCount}, but runtime reports {Environment.ProcessorCount} available processor(s)."
-                );
+                ));
             }
 
             // Cancel any existing search first (only one at a time)
             StopSearch();
 
-            _drainedResults.Clear();
             _resultQueue.Clear();
 
             var settings = JamlSearchBuilder
@@ -242,8 +263,8 @@ public static partial class MotelyWasmExports
                         SeedsSearched = prog.SeedsSearched,
                         MatchingSeeds = prog.MatchingSeeds,
                         ElapsedMs = (long)prog.ElapsedTime.TotalMilliseconds,
-                        ResultCount = _drainedResults.Count + _resultQueue.Count,
-                    }, WasmJsonContext.Default.ProgressCallbackDto));
+                        ResultCount = _resultQueue.Count,
+                    }, global::Motely.MotelyJsonContext.Default.ProgressCallbackDto));
                 });
 
             if (options.StartBatch.HasValue)
@@ -260,7 +281,7 @@ public static partial class MotelyWasmExports
                 string kw = options.Keyword.ToUpperInvariant();
                 int padLen = MotelyCore.MaxSeedLength - kw.Length;
                 if (padLen < 0)
-                    return ErrorJson($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars).");
+                    return Task.FromResult(ErrorJson($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars)."));
                 settings = settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
             }
             else if (options.RandomSeeds.HasValue)
@@ -272,11 +293,13 @@ public static partial class MotelyWasmExports
 
             var cts = new CancellationTokenSource();
             var search = settings.CreateSearch();
+            var filterId = MotelyRuntimeIds.GenerateFilterId(config);
 
             lock (_searchLock)
             {
                 _currentSearch = search;
                 _currentCts = cts;
+                _currentFilterId = filterId;
             }
 
             try
@@ -289,20 +312,20 @@ public static partial class MotelyWasmExports
                 {
                     _currentSearch = null;
                     _currentCts = null;
+                    _currentFilterId = null;
                 }
             }
 
-            DrainResultQueue();
-            return BuildStatusJson(search);
+            return Task.FromResult(BuildStatusJson(search));
         }
         catch (Exception ex)
         {
-            return ErrorJson(ex.Message);
+            return Task.FromResult(ErrorJson(ex.Message));
         }
     }
 
     /// <summary>
-    /// Poll current search progress. Drains result queue and returns status JSON.
+    /// Poll current search progress. Returns status JSON.
     /// JS calls this on setInterval (e.g. every 1s). No JSInterop on the hot path.
     /// </summary>
     [JSExport]
@@ -317,8 +340,6 @@ public static partial class MotelyWasmExports
         if (search == null)
             return Task.FromResult(ErrorJson("No active search"));
 
-        // Drain any queued results into the status response
-        DrainResultQueue();
         return Task.FromResult(BuildStatusJson(search));
     }
 
@@ -375,49 +396,38 @@ public static partial class MotelyWasmExports
         }
     }
 
-    // ──────────────────────────────── Result Queue ────────────────────────────────
-
-    /// <summary>
-    /// Drain queued results from worker threads into _drainedResults for inclusion in status JSON.
-    /// </summary>
-    private static readonly List<(string Seed, int Score)> _drainedResults = new();
-
-    private static void DrainResultQueue()
-    {
-        while (_resultQueue.TryDequeue(out var r))
-        {
-            _drainedResults.Add(r);
-        }
-    }
-
     // ──────────────────────────────── Helpers ────────────────────────────────
 
     private static string ErrorJson(string message) =>
         JsonSerializer.Serialize(
             new ErrorDto { Error = message },
-            WasmJsonContext.Default.ErrorDto
+            global::Motely.MotelyJsonContext.Default.ErrorDto
         );
 
     private static string BuildStatusJson(IMotelySearch search)
     {
-        var dto = new SearchStatusDto
+        var results = _resultQueue
+            .Select(r => new global::Motely.SearchHitDto
+            {
+                Seed = r.Seed,
+                Score = r.Score,
+                Tallies = [],
+            })
+            .ToArray();
+
+        var dto = new global::Motely.SearchStatusDto
         {
+            FilterId = _currentFilterId ?? string.Empty,
             Status = search.IsCompleted ? "Completed" : "Running",
             IsRunning = !search.IsCompleted,
             TotalSeedsSearched = search.TotalSeedsSearched,
             MatchingSeeds = search.MatchingSeeds,
+            ResultCount = results.Length,
             ElapsedMs = (long)search.ElapsedTime.TotalMilliseconds,
-            Results = _drainedResults
-                .Select(r => new SearchHitDto
-                {
-                    Seed = r.Seed,
-                    Score = r.Score,
-                    Tallies = [],
-                })
-                .ToArray(),
+            Results = results,
         };
 
-        return JsonSerializer.Serialize(dto, WasmJsonContext.Default.SearchStatusDto);
+        return JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.SearchStatusDto);
     }
 
     private static string GetCachedVersion() =>
@@ -431,7 +441,7 @@ public static partial class MotelyWasmExports
         var features = new List<string> { "analyzer", "jaml-search", "jaml-validate" };
         if (IsSimdEnabled())
             features.Add("simd");
-        if (IsThreadingEnabled())
+        if (GetAvailableThreadCount() > 1)
             features.Add("threads");
         _cachedFeatures = features.ToArray();
         return _cachedFeatures;
@@ -440,15 +450,15 @@ public static partial class MotelyWasmExports
     private static SeedAnalysisDto MapAnalysisToDto(
         MotelySeedAnalysis analysis,
         string seed,
-        string deck,
-        string stake
+        MotelyDeck deck,
+        MotelyStake stake
     )
     {
         return new SeedAnalysisDto
         {
             Seed = seed,
-            Deck = deck,
-            Stake = stake,
+            Deck = deck.ToString(),
+            Stake = stake.ToString(),
             Error = analysis.Error,
             ErraticDeckComposition =
                 analysis.ErraticDeckComposition?.Split(

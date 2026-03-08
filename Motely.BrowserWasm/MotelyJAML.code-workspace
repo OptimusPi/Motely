@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "../../../../v0-balatro-seed-hosting"
+		},
+		{
+			"path": "../../../../weejoker.app"
+		},
+		{
+			"path": "../../../../Blueprint"
 		}
 	],
 	"settings": {

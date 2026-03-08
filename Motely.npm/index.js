@@ -6,9 +6,9 @@ function resolveFrameworkUrl(baseUrl, frameworkFolder) {
         return (baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl) || baseUrl;
     }
     if (frameworkFolder === "_framework_st") {
-        return new URL("./_framework_st/", import.meta.url).href.replace(/\/$/, "");
+        return new URL("./_framework_st/dotnet.js", import.meta.url).href.replace(/\/dotnet\.js$/, "");
     }
-    return new URL("./_framework/", import.meta.url).href.replace(/\/$/, "");
+    return new URL("./_framework/dotnet.js", import.meta.url).href.replace(/\/dotnet\.js$/, "");
 }
 // ──────────────────────────────── Loader ────────────────────────────────
 /**
@@ -57,7 +57,8 @@ export async function loadMotely(options) {
         getVersion: () => cachedVersion,
         getCapabilities: () => cachedCapabilities,
         isSimdEnabled: () => cachedCapabilities.simd,
-        isThreadingEnabled: () => cachedCapabilities.threads,
+        isThreadingEnabled: () => cachedCapabilities.availableThreadCount > 1,
+        getAvailableThreadCount: () => cachedCapabilities.availableThreadCount,
         getProcessorCount: () => cachedCapabilities.processorCount,
         async analyzeSeed(seed, deck, stake) {
             const json = await raw.AnalyzeSeedAsync(seed, deck, stake);

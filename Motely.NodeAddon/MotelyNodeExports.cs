@@ -4,6 +4,13 @@ using Microsoft.JavaScript.NodeApi;
 using Motely;
 using Motely.Analysis;
 using Motely.Filters;
+using CapabilitiesDto = global::Motely.CapabilitiesDto;
+using ErrorDto = global::Motely.ErrorDto;
+using SearchHitDto = global::Motely.SearchHitDto;
+using SearchOptionsDto = global::Motely.SearchOptionsDto;
+using SearchStatusDto = global::Motely.SearchStatusDto;
+using ValidateResultDto = global::Motely.ValidateResultDto;
+using VersionDto = global::Motely.VersionDto;
 
 namespace Motely.NodeAddon;
 
@@ -17,6 +24,7 @@ public static class MotelyNodeExports
 {
     private static IMotelySearch? _currentSearch;
     private static CancellationTokenSource? _currentCts;
+    private static string? _currentFilterId;
     private static readonly object SearchLock = new();
     private static readonly ConcurrentQueue<(string Seed, int Score)> ResultQueue = new();
     private static readonly List<(string Seed, int Score)> DrainedResults = new();
@@ -33,7 +41,7 @@ public static class MotelyNodeExports
             Runtime = "node-addon",
             Features = GetFeatureList(),
         };
-        return Task.FromResult(JsonSerializer.Serialize(dto, NodeJsonContext.Default.VersionDto));
+        return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.VersionDto));
     }
 
     [JSExport]
@@ -43,22 +51,18 @@ public static class MotelyNodeExports
         {
             Simd = IsSimdEnabled(),
             Threads = true,
+            AvailableThreadCount = Environment.ProcessorCount,
             ProcessorCount = Environment.ProcessorCount,
             Runtime = "node-addon",
             Version = GetCachedVersion(),
             Timestamp = DateTime.UtcNow.ToString("O"),
         };
         return Task.FromResult(
-            JsonSerializer.Serialize(dto, NodeJsonContext.Default.CapabilitiesDto)
+            JsonSerializer.Serialize(dto, MotelyJsonContext.Default.CapabilitiesDto)
         );
     }
 
-    private static bool IsSimdEnabled() =>
-#if NET10_0_OR_GREATER
-        System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
-#else
-        false;
-#endif
+    private static bool IsSimdEnabled() => System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
 
     [JSExport]
     public static Task<string> AnalyzeSeedAsync(string seed, string deck, string stake)
@@ -71,16 +75,16 @@ public static class MotelyNodeExports
     {
         try
         {
-            if (!Enum.TryParse<MotelyDeck>(deck, ignoreCase: true, out var deckEnum))
+            if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
                 return JsonSerializer.Serialize(
                     new ErrorDto { Error = $"Unknown deck: {deck}" },
-                    NodeJsonContext.Default.ErrorDto
+                    MotelyJsonContext.Default.ErrorDto
                 );
 
-            if (!Enum.TryParse<MotelyStake>(stake, ignoreCase: true, out var stakeEnum))
+            if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
                 return JsonSerializer.Serialize(
                     new ErrorDto { Error = $"Unknown stake: {stake}" },
-                    NodeJsonContext.Default.ErrorDto
+                    MotelyJsonContext.Default.ErrorDto
                 );
 
             var cfg = new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum);
@@ -89,17 +93,17 @@ public static class MotelyNodeExports
             if (!string.IsNullOrEmpty(analysis.Error))
                 return JsonSerializer.Serialize(
                     new ErrorDto { Error = analysis.Error },
-                    NodeJsonContext.Default.ErrorDto
+                    MotelyJsonContext.Default.ErrorDto
                 );
 
-            var dto = MapAnalysisToDto(analysis, seed, deck, stake);
-            return JsonSerializer.Serialize(dto, NodeJsonContext.Default.SeedAnalysisDto);
+            var dto = MapAnalysisToDto(analysis, seed, deckEnum, stakeEnum);
+            return JsonSerializer.Serialize(dto, MotelyJsonContext.Default.SeedAnalysisDto);
         }
         catch (Exception ex)
         {
             return JsonSerializer.Serialize(
                 new ErrorDto { Error = ex.Message },
-                NodeJsonContext.Default.ErrorDto
+                MotelyJsonContext.Default.ErrorDto
             );
         }
     }
@@ -126,7 +130,7 @@ public static class MotelyNodeExports
                         Valid = false,
                         Error = parseError ?? "Failed to parse JAML",
                     },
-                    NodeJsonContext.Default.ValidateResultDto
+                    MotelyJsonContext.Default.ValidateResultDto
                 );
             }
 
@@ -138,14 +142,14 @@ public static class MotelyNodeExports
                     Deck = config.Deck.ToString(),
                     Stake = config.Stake.ToString(),
                 },
-                NodeJsonContext.Default.ValidateResultDto
+                MotelyJsonContext.Default.ValidateResultDto
             );
         }
         catch (Exception ex)
         {
             return JsonSerializer.Serialize(
                 new ValidateResultDto { Valid = false, Error = ex.Message },
-                NodeJsonContext.Default.ValidateResultDto
+                MotelyJsonContext.Default.ValidateResultDto
             );
         }
     }
@@ -166,7 +170,7 @@ public static class MotelyNodeExports
             {
                 options = JsonSerializer.Deserialize(
                     optionsJson,
-                    NodeJsonContext.Default.SearchOptionsDto
+                    MotelyJsonContext.Default.SearchOptionsDto
                 );
             }
 
@@ -232,11 +236,13 @@ public static class MotelyNodeExports
 
             var cts = new CancellationTokenSource();
             var search = settings.CreateSearch();
+            var filterId = MotelyRuntimeIds.GenerateFilterId(config);
 
             lock (SearchLock)
             {
                 _currentSearch = search;
                 _currentCts = cts;
+                _currentFilterId = filterId;
             }
 
             try
@@ -249,6 +255,7 @@ public static class MotelyNodeExports
                 {
                     _currentSearch = null;
                     _currentCts = null;
+                    _currentFilterId = null;
                 }
             }
 
@@ -318,7 +325,7 @@ public static class MotelyNodeExports
     private static string ErrorJson(string message) =>
         JsonSerializer.Serialize(
             new ErrorDto { Error = message },
-            NodeJsonContext.Default.ErrorDto
+            MotelyJsonContext.Default.ErrorDto
         );
 
     private static string BuildStatusJson(IMotelySearch search)
@@ -328,6 +335,7 @@ public static class MotelyNodeExports
             .ToArray();
         var dto = new SearchStatusDto
         {
+            FilterId = _currentFilterId ?? string.Empty,
             Status = search.IsCompleted ? "Completed" : "Running",
             IsRunning = !search.IsCompleted,
             TotalSeedsSearched = search.TotalSeedsSearched,
@@ -337,7 +345,7 @@ public static class MotelyNodeExports
             Results = results,
         };
 
-        return JsonSerializer.Serialize(dto, NodeJsonContext.Default.SearchStatusDto);
+        return JsonSerializer.Serialize(dto, MotelyJsonContext.Default.SearchStatusDto);
     }
 
     private static string GetCachedVersion() =>
@@ -358,15 +366,15 @@ public static class MotelyNodeExports
     private static SeedAnalysisDto MapAnalysisToDto(
         MotelySeedAnalysis analysis,
         string seed,
-        string deck,
-        string stake
+        MotelyDeck deck,
+        MotelyStake stake
     )
     {
         return new SeedAnalysisDto
         {
             Seed = seed,
-            Deck = deck,
-            Stake = stake,
+            Deck = deck.ToString(),
+            Stake = stake.ToString(),
             Error = analysis.Error,
             ErraticDeckComposition =
                 analysis.ErraticDeckComposition?.Split(

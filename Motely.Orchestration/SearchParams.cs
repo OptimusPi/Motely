@@ -19,8 +19,6 @@ public sealed class JsonSearchParams
     public string? SpecificSeed { get; set; }
     public int RandomSeeds { get; set; }
     public bool PalindromeSeeds { get; set; }
-    public string? Deck { get; set; }
-    public string? Stake { get; set; }
     public int Cutoff { get; set; }
     public ScoreCutoffMode CutoffMode { get; set; }
     public bool Quiet { get; set; }
@@ -32,7 +30,6 @@ public sealed class JsonSearchParams
 
 public interface IMotelySearchContext : IDisposable
 {
-    string SearchId { get; }
     string FilterId { get; }
     bool IsCompleted { get; }
     bool IsSequentialBatchSearch { get; }

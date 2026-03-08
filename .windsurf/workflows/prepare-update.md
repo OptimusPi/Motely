@@ -4,7 +4,7 @@ description: Prepare a MotelyJAML version update - bump version, clean, build al
 
 # Prepare Update
 
-Bumps the MotelyVersion, cleans everything, builds all .NET projects, AOT-publishes both WASM targets, prepares both npm packages, and walks the user through publishing.
+Bumps the MotelyVersion, cleans everything, builds all .NET projects, AOT-publishes both WASM targets, prepares all three npm packages, and walks the user through publishing.
 
 **User provides**: the new version number — OR if not specified, read the current `<MotelyVersion>` from `Directory.Packages.props` and auto-increment the patch (e.g. `2.2.1` → `2.2.2`).
 
@@ -77,10 +77,13 @@ Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.node\_frame
 
 ## Step 7: AOT Release Publish — Browser WASM (frontend)
 
-This publishes `Motely.BrowserWasm` using the browser publish AOT path we are currently validating and auto-copies `_framework` into `Motely.npm/_framework/` via MSBuild target. The packaged `_framework` output keeps raw `.wasm` assets only and excludes `.br` / `.gz` sidecars.
+This publishes `Motely.BrowserWasm` using the validated browser-wasm AOT path. After publish, run the central staging script to copy the filtered `_framework` output into `Motely.npm/_framework/`.
+
+Keep `x:\JammySeedFinder\src\MotelyJAML\Directory.Build.props` in place so browser-wasm projects explicitly reset `PublishAot=false` and `PublishReadyToRun=false` at the local repo level. The actual browser AOT settings live in the project files via `RunAOTCompilation=true` and `WasmBuildNative=true`.
 
 ```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release -p:PublishAot=true -p:PublishReadyToRun=false
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release
+node x:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs browser
 ```
 
 If this fails, capture the full SDK error and stop before changing other steps.
@@ -95,7 +98,7 @@ Verify the output exists:
 
 ## Step 8: AOT Release Publish — Single-thread WASM (Node + browser fallback)
 
-This publishes `Motely.SingleThread` using the same browser publish AOT path and auto-copies `_framework` into:
+This publishes `Motely.SingleThread` using the same browser publish AOT path and then stages `_framework` into:
 - `Motely.node/_framework/`
 - `Motely.npm/_framework_st/`
 - `Motely.npm.singlethread/_framework/`
@@ -103,7 +106,8 @@ This publishes `Motely.SingleThread` using the same browser publish AOT path and
 The packaged `_framework` output keeps raw `.wasm` assets only and excludes `.br` / `.gz` sidecars.
 
 ```powershell
-dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release -p:PublishAot=true -p:PublishReadyToRun=false
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release
+node x:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs singlethread node
 ```
 
 If this fails, capture the full SDK error and stop before npm packaging.
@@ -133,6 +137,7 @@ npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm run build
 // turbo
 ```powershell
 npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread install
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread run build
 ```
 
 ---
@@ -143,7 +148,7 @@ npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread install
 ```powershell
 npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node install
 npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node run build
-npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node run copy-framework
+npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node run stage-framework
 ```
 
 ---

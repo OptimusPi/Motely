@@ -115,16 +115,6 @@ partial class Program
             "Comma-separated seeds",
             CommandOptionType.SingleValue
         );
-        var deckOption = app.Option<string>(
-            "--deck <DECK>",
-            "Deck override",
-            CommandOptionType.SingleValue
-        );
-        var stakeOption = app.Option<string>(
-            "--stake <STAKE>",
-            "Stake override",
-            CommandOptionType.SingleValue
-        );
         var cutoffOption = app.Option<string>(
             "--cutoff <VALUE>",
             "Minimum score to print, or 'auto' to only show new highs",
@@ -164,8 +154,8 @@ partial class Program
             if (analyzeOption.HasValue())
                 return ExecuteAnalyze(
                     analyzeOption.ParsedValue,
-                    deckOption.HasValue() ? deckOption.Value()! : "Red",
-                    stakeOption.HasValue() ? stakeOption.Value()! : "White",
+                    "Red",
+                    "White",
                     outputJsonOption.HasValue()
                 );
 
@@ -194,16 +184,8 @@ partial class Program
                 return 1;
             }
 
-            var deck =
-                deckOption.HasValue()
-                && Enum.TryParse<MotelyDeck>(deckOption.Value(), true, out var d)
-                    ? d
-                    : config.Deck;
-            var stake =
-                stakeOption.HasValue()
-                && Enum.TryParse<MotelyStake>(stakeOption.Value(), true, out var s)
-                    ? s
-                    : config.Stake;
+            var deck = config.Deck;
+            var stake = config.Stake;
             int threads = threadsOption.HasValue()
                 ? threadsOption.ParsedValue
                 : Environment.ProcessorCount;

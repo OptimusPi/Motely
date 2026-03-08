@@ -1,39 +1,33 @@
 # Project Cleanup Guide
 
-Remove the redundant/haunted projects that are confusing the build.
+Remove the dead runtime experiments and keep the current publish flow explicit.
 
 ## Projects to Remove
 
-### 1. Motely.BrowserWasm/ (DUPLICATE)
-- Same as Motely.NodeWasm/
-- Just copies to Motely.npm/_framework
+### 1. Motely.NodeWasm/
+- Not part of the solution
+- Not the source of truth for `motely-node`
+- Duplicates browser-wasm concepts already covered by `Motely.BrowserWasm` and `Motely.SingleThread`
 - **Action**: Delete this entire folder
 
-### 2. Motely.WASI/ (FAILED EXPERIMENT)
-- WASI AOT compilation is broken in .NET 10
-- Missing wasi-sdk requirement
-- LLVM linker issues
-- **Action**: Delete this entire folder
+## Projects to Keep
 
-### 3. Motely.node/ (MESSY ADAPTER)
-- Previous AI tried to create a Node.js "adapter"
-- Unnecessary complexity
-- **Action**: Delete this entire folder
+### 1. Motely.BrowserWasm/
+- Primary threaded browser runtime
 
-### 4. Motely.NodeWasm/Motely.BrowserWasm.csproj (MISNAMED)
-- Project file name doesn't match folder
-- **Action**: Rename to Motely.NodeWasm.csproj
+### 2. Motely.SingleThread/
+- Single-thread browser runtime
+- Source of truth for `motely-node`
+
+### 3. Motely.node/
+- npm package wrapper for the single-thread runtime
+- Keep, but stage its `_framework` via the root `stage-packages.mjs` script
 
 ## Clean Commands
 
 ```bash
-# Remove duplicate projects
-rm -rf Motely.BrowserWasm/
-rm -rf Motely.WASI/
-rm -rf Motely.node/
-
-# Rename project file
-mv Motely.NodeWasm/Motely.BrowserWasm.csproj Motely.NodeWasm/Motely.NodeWasm.csproj
+# Remove dead runtime experiment
+rm -rf Motely.NodeWasm/
 
 # Clean build artifacts
 dotnet clean
@@ -43,15 +37,17 @@ rm -rf */bin */obj
 ## What's Left
 
 - `Motely/` - Core library
-- `Motely.NodeWasm/` - Browser WASM build (use this for Node.js too!)
+- `Motely.BrowserWasm/` - Threaded browser WASM build
+- `Motely.SingleThread/` - Single-thread browser/Node WASM build
 - `Motely.CLI/` - Command line tool
 - `Motely.npm/` - Browser npm package
+- `Motely.npm.singlethread/` - Browser single-thread npm package
+- `Motely.node/` - Node npm package
 - `Motely.Tests/` - Unit tests
 
 ## Result
 
-Single source of truth: `Motely.NodeWasm` produces WASM that works in:
-- Browser (via Motely.npm)
-- Node.js (direct dotnet.js import)
-- Web Workers
-- Any JS host with WASM support
+Single source of truth:
+- `Motely.BrowserWasm` produces the threaded browser runtime
+- `Motely.SingleThread` produces the single-thread runtime for browser fallback and Node.js
+- `stage-packages.mjs` stages publish output into the npm package folders

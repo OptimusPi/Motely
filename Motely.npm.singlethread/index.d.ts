@@ -7,6 +7,7 @@ export interface VersionInfo {
 export interface CapabilitiesInfo {
   simd: boolean;
   threads: boolean;
+  availableThreadCount: number;
   processorCount: number;
   runtime: string;
   version: string;
@@ -50,6 +51,7 @@ export interface SearchResultInfo {
 }
 
 export interface SearchStatusInfo {
+  filterId: string;
   status: string;
   isRunning: boolean;
   totalSeedsSearched: number;
@@ -86,6 +88,7 @@ export interface MotelyWasmApi {
   getCapabilities(): CapabilitiesInfo;
   isSimdEnabled(): boolean;
   isThreadingEnabled(): boolean;
+  getAvailableThreadCount(): number;
   getProcessorCount(): number;
   analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo>;
   validateJaml(jamlContent: string): Promise<ValidateResult>;

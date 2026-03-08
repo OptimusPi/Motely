@@ -6,6 +6,7 @@ export interface VersionInfo {
 export interface CapabilitiesInfo {
     simd: boolean;
     threads: boolean;
+    availableThreadCount: number;
     processorCount: number;
     runtime: string;
     version: string;
@@ -43,6 +44,7 @@ export interface SearchResultInfo {
     tallies?: number[] | null;
 }
 export interface SearchStatusInfo {
+    filterId: string;
     status: string;
     isRunning: boolean;
     totalSeedsSearched: number;
@@ -85,6 +87,8 @@ export interface MotelyWasmApi {
     isSimdEnabled(): boolean;
     /** Check if threading is enabled */
     isThreadingEnabled(): boolean;
+    /** Get the number of threads the runtime can actually use */
+    getAvailableThreadCount(): number;
     /** Get available processor count */
     getProcessorCount(): number;
     /**

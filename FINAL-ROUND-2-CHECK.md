@@ -4,38 +4,33 @@ Generated after the big cleanup/wiring session. Read this before publishing anyt
 
 ---
 
-## ✅ What Was Done This Session
+## What Was Done This Session
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Fix `public static partial void JsOnProgress/JsOnResult` in BrowserWasm | ✅ | Removed `public` — partial methods with access modifiers require implementation; source generator provides it |
-| Same fix in SingleThread | ✅ | |
-| Same fix in NodeWasm | ✅ | Not in .sln but kept consistent |
-| `Motely.npm/index.ts`: rename `batchSize` → `batchCharCount` | ✅ | Was silently broken — C# expected `batchCharCount` |
-| `Motely.npm/index.ts`: enforce default `batchCharCount=4` | ✅ | 35^4 = 1.5M seeds/block |
-| `Motely.API`: fix `StartSearch` to actually apply `ThreadCount`/`BatchCharCount` | ✅ | Old code ignored them |
-| `Motely.API`: add coordinator session endpoints for `MotelyWorker` | ✅ | POST/GET/claim/results/delete |
-| `v0-balatro-seed-hosting`: add `motely-node` dependency | ✅ | `pnpm install` required |
-| `v0-balatro-seed-hosting`: create `lib/jaml/motelyServer.ts` singleton | ✅ | Lazy-loads motely-node once at server startup |
-| `v0-balatro-seed-hosting`: `app/api/analyze-seed/route.ts` → real implementation | ✅ | GET + POST, uses motely-node |
+| Fix `public static partial void JsOnProgress/JsOnResult` in BrowserWasm | | Removed `public` — partial methods with access modifiers require implementation; source generator provides it |
+| Same fix in SingleThread | | |
+| `Motely.npm/index.ts`: rename `batchSize` → `batchCharCount` | | Was silently broken — C# expected `batchCharCount` |
+| `Motely.npm/index.ts`: enforce default `batchCharCount=4` | | 35^4 = 1.5M seeds/block |
+| `Motely.API`: fix `StartSearch` to actually apply `ThreadCount`/`BatchCharCount` | | Old code ignored them |
+| `Motely.API`: add coordinator session endpoints for `MotelyWorker` | | POST/GET/claim/results/delete |
+| `v0-balatro-seed-hosting`: add `motely-node` dependency | | `pnpm install` required |
+| `v0-balatro-seed-hosting`: create `lib/jaml/motelyServer.ts` singleton | | Lazy-loads motely-node once at server startup |
+| `Blueprint`: update `motely-wasm` → `2.2.0` | | Version pinned |
 | `v0-balatro-seed-hosting`: `analyzeSeedTool` in chat route → server-side | ✅ | Falls back to browserOnly on error |
 | `Blueprint`: update `motely-wasm` → `2.2.0` | ✅ | Version pinned |
-| `weejoker.app`: update `motely-wasm` → `2.2.0` | ✅ | Was `1.2.8` |
-| `MotelyVersion` = `2.2.0` across all projects | ✅ | Directory.Build.props is the source of truth |
 
 ---
 
-## 🚨 Clarifying Questions / Assumptions
+## Clarifying Questions / Assumptions
 
-### 1. `Motely.NodeWasm` — cleanup workflow exists
-- Per `cleanup-projects.md`, the `.csproj` file was renamed from `Motely.BrowserWasm.csproj` → `Motely.NodeWasm.csproj`.
-- It is **NOT in the `.sln`** — it builds separately.
-- **`Motely.BrowserWasm` is the primary browser WASM project and must not be touched.**
+### 1. `Motely.BrowserWasm` + `Motely.SingleThread` are the runtime pair to keep
+- `Motely.BrowserWasm` is the primary threaded browser WASM project.
+- `Motely.SingleThread` is the single-thread browser/Node runtime.
+- `Motely.NodeWasm` is extra historical surface area and should be removed.
 
 ### 2. Backend WASM flavor — answer confirmed: `Motely.SingleThread`
-- WASI in .NET 10 has known LLVM memory layout issues (documented in `Motely.WASI/Motely.WASI.csproj`).
-- **`Motely.SingleThread`** (browser SDK, `WasmEnableThreads=false`, SIMD on) loads in Node.js 18+, Bun, Deno. ✅
-- `Motely.WASI` is disabled (`<SkipBuild>true</SkipBuild>`) and should remain so until .NET/WASI matures.
+- **`Motely.SingleThread`** (browser SDK, `WasmEnableThreads=false`, SIMD on) loads in Node.js 18+, Bun, Deno. 
 - **No action needed** — the Node.js path is already the right call for 2026.
 
 ### 3. `Motely.API` coordinator — auth is token-based but naïve
@@ -66,8 +61,8 @@ Generated after the big cleanup/wiring session. Read this before publishing anyt
 - **Fix needed**: either add `threadCount` default in `Motely.npm/index.ts` `startJamlSearch` OR make `threadCount` optional on the C# side.
 - **Suggestion**: Let the caller omit `threadCount` and have C# default to `Environment.ProcessorCount`.
 
-### 8. `WasmDtos.cs` — duplicate files in BrowserWasm, NodeWasm, SingleThread
-- All three projects have identical `WasmDtos.cs` and `WasmJsonContext.cs` files.
+### 8. `WasmDtos.cs` — duplicate files in BrowserWasm and SingleThread
+- Both projects have duplicated `WasmDtos.cs` and `WasmJsonContext.cs` files.
 - **Suggestion**: Move them to a shared `Motely.WasmShared` project (or Motely core) and reference from all three.
 - **Risk**: Breaking changes if `WasmJsonContext` uses `[JsonSerializable]` source generation which requires the project to compile.
 
@@ -131,14 +126,11 @@ C# Core (Motely.csproj)
     ├── Motely.DistributedWorker ───────► CLI worker (connects to API coordinator)
     │   [net10.0, native AOT, SIMD+AVX512]  └── claim batches → search → submit results
     │
-    ├── Motely.WASI ────────────────────► DISABLED (LLVM memory layout issue in .NET 10)
-    │
-    └── Motely.NodeWasm ────────────────► Separate build (see cleanup-projects.md)
 ```
 
 ---
 
-## 🔢 Version Reference
+## Version Reference
 
 | Package | Version | Source |
 |---------|---------|--------|

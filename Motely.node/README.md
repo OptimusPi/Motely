@@ -2,7 +2,7 @@
 
 MotelyJAML for **Node.js** — Balatro seed analyzer and JAML filter engine.
 
-**High-level:** This package is for **Node.js only** (not WASI, not browser). The intended path is [*Develop a Node.js addon module in C# with .NET Native AOT*](https://microsoft.github.io/node-api-dotnet/scenarios/): a native `.node` binary that loads fast and does not depend on the .NET runtime. Today you can use either the **node-api-dotnet addon** (DLL + `addonPath`) or a **WASM fallback** (browser-style .NET WASM run in Node via `_framework`). Native AOT will produce a single platform-specific `.node` file for the addon path.
+**High-level:** This package is for **Node.js only**. The intended path is [*Develop a Node.js addon module in C# with .NET Native AOT*](https://microsoft.github.io/node-api-dotnet/scenarios/): a native `.node` binary that loads fast and does not depend on the .NET runtime. Today you can use either the **node-api-dotnet addon** (DLL + `addonPath`) or a **WASM fallback** (browser-style .NET WASM run in Node via `_framework`). Native AOT will produce a single platform-specific `.node` file for the addon path.
 
 ## Installation
 
