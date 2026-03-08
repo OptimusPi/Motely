@@ -7,4 +7,13 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="duckdb-reader.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <!-- If we want it packaged cleanly for NuGet distribution later: -->
+      <!-- <Pack>true</Pack> -->
+      <!-- <PackagePath>contentFiles\any\any\wwwroot\</PackagePath> -->
+    </Content>
+  </ItemGroup>
+
 </Project>
