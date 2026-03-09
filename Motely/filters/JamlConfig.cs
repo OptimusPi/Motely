@@ -702,6 +702,10 @@ public static class JamlConfigLoader
                     RiffRaff = c.Sources?.RiffRaff ?? [],
                     RareTag = c.Sources?.RareTag ?? [],
                     UncommonTag = c.Sources?.UncommonTag ?? [],
+                    CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
+                    UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
+                    RareShopJokers = c.Sources?.RareShopJokers ?? [],
+                    AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
             MotelyFilterItemType.CommonJoker => new CommonJokerClause
@@ -729,6 +733,10 @@ public static class JamlConfigLoader
                     RiffRaff = c.Sources?.RiffRaff ?? [],
                     RareTag = c.Sources?.RareTag ?? [],
                     UncommonTag = c.Sources?.UncommonTag ?? [],
+                    CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
+                    UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
+                    RareShopJokers = c.Sources?.RareShopJokers ?? [],
+                    AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
             MotelyFilterItemType.UncommonJoker => new UncommonJokerClause
@@ -756,6 +764,10 @@ public static class JamlConfigLoader
                     RiffRaff = c.Sources?.RiffRaff ?? [],
                     RareTag = c.Sources?.RareTag ?? [],
                     UncommonTag = c.Sources?.UncommonTag ?? [],
+                    CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
+                    UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
+                    RareShopJokers = c.Sources?.RareShopJokers ?? [],
+                    AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
             MotelyFilterItemType.RareJoker => new RareJokerClause
@@ -783,6 +795,10 @@ public static class JamlConfigLoader
                     RiffRaff = c.Sources?.RiffRaff ?? [],
                     RareTag = c.Sources?.RareTag ?? [],
                     UncommonTag = c.Sources?.UncommonTag ?? [],
+                    CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
+                    UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
+                    RareShopJokers = c.Sources?.RareShopJokers ?? [],
+                    AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
             MotelyFilterItemType.MixedJoker => new MixedJokerClause
@@ -810,6 +826,10 @@ public static class JamlConfigLoader
                     RiffRaff = c.Sources?.RiffRaff ?? [],
                     RareTag = c.Sources?.RareTag ?? [],
                     UncommonTag = c.Sources?.UncommonTag ?? [],
+                    CommonShopJokers = c.Sources?.CommonShopJokers ?? [],
+                    UncommonShopJokers = c.Sources?.UncommonShopJokers ?? [],
+                    RareShopJokers = c.Sources?.RareShopJokers ?? [],
+                    AllShopJokers = c.Sources?.AllShopJokers ?? [],
                 },
             },
             MotelyFilterItemType.SoulJoker => new LegendaryJokerClause
@@ -1263,6 +1283,10 @@ public sealed class JokerSourceConfig
     public int[] RiffRaff { get; set; } = [];
     public int[] RareTag { get; set; } = [];
     public int[] UncommonTag { get; set; } = [];
+    public int[] CommonShopJokers { get; set; } = [];
+    public int[] UncommonShopJokers { get; set; } = [];
+    public int[] RareShopJokers { get; set; } = [];
+    public int[] AllShopJokers { get; set; } = [];
 }
 
 public sealed class SoulJokerSourceConfig

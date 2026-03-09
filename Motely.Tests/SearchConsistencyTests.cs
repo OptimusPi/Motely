@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Motely.Analysis;
 using Motely.Filters;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,6 +17,18 @@ namespace Motely.Tests;
 /// </summary>
 public class SearchConsistencyTests(ITestOutputHelper output)
 {
+    private static readonly string[] AnalyzerSeedCandidates =
+    [
+        "AAAAAAAA",
+        "BBBBBBBB",
+        "CCCCCCCC",
+        "DDDDDDDD",
+        "EEEEEEEE",
+        "FFFFFFFF",
+        "GGGGGGGG",
+        "HHHHHHHH",
+    ];
+
     /// <summary>
     /// A simple JAML filter that should match *some* seeds in a sequential search.
     /// Uses a broad filter (any joker in antes 1-2) so we're likely to find hits.
@@ -31,6 +44,64 @@ public class SearchConsistencyTests(ITestOutputHelper output)
               shopItems: [0,1]
               boosterPacks: [0,1]
         """;
+
+    private static MotelyJokerRarity GetJokerRarity(MotelyItem item) =>
+        (MotelyJokerRarity)((int)item.Type & (int)MotelyJokerRarity.Legendary);
+
+    private static (string Seed, int Ante, string JokerName, int ShopSlotIndex)?
+        FindAnalyzedUncommonShopItem()
+    {
+        foreach (var seed in AnalyzerSeedCandidates)
+        {
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
+            );
+
+            if (!string.IsNullOrEmpty(analysis.Error))
+                continue;
+
+            foreach (var ante in analysis.Antes)
+            {
+                for (int shopSlotIndex = 0; shopSlotIndex < ante.ShopQueue.Count; shopSlotIndex++)
+                {
+                    var item = ante.ShopQueue[shopSlotIndex];
+                    if (item.TypeCategory != MotelyItemTypeCategory.Joker)
+                        continue;
+
+                    if (GetJokerRarity(item) == MotelyJokerRarity.Uncommon)
+                        return (seed, ante.Ante, item.Type.ToString(), shopSlotIndex);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static (string Seed, int Ante, string TarotName, int ShopSlotIndex)?
+        FindAnalyzedTarotShopItem()
+    {
+        foreach (var seed in AnalyzerSeedCandidates)
+        {
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
+            );
+
+            if (!string.IsNullOrEmpty(analysis.Error))
+                continue;
+
+            foreach (var ante in analysis.Antes)
+            {
+                for (int shopSlotIndex = 0; shopSlotIndex < ante.ShopQueue.Count; shopSlotIndex++)
+                {
+                    var item = ante.ShopQueue[shopSlotIndex];
+                    if (item.TypeCategory == MotelyItemTypeCategory.TarotCard)
+                        return (seed, ante.Ante, item.Type.ToString(), shopSlotIndex);
+                }
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Non-matching seeds should produce 0 matches.
@@ -202,6 +273,86 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         // Just verify it completes without exceptions and searches some seeds
         Assert.True(search.TotalSeedsSearched > 0, "Should have searched some seeds");
         Assert.True(search.IsCompleted, "Search should be completed");
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedUncommonShopItemFilter_MatchesSameSeed()
+    {
+        var match = FindAnalyzedUncommonShopItem();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed uncommon shop joker");
+
+        var derived = match!.Value;
+        var jaml = $$"""
+            name: AnalyzerDerivedUncommonShopItem
+            deck: Red
+            stake: White
+            must:
+              - uncommonJoker: {{derived.JokerName}}
+                antes: [{{derived.Ante}}]
+                sources:
+                  shopItems: [{{derived.ShopSlotIndex}}]
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        output.WriteLine(
+            $"Analyzer-derived uncommon shop item test: seed={derived.Seed}, ante={derived.Ante}, joker={derived.JokerName}, shopSlot={derived.ShopSlotIndex}, matched={search.MatchingSeeds}"
+        );
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(1, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedTarotShopItemFilter_MatchesSameSeed()
+    {
+        var match = FindAnalyzedTarotShopItem();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed tarot shop item");
+
+        var derived = match!.Value;
+        var jaml = $$"""
+            name: AnalyzerDerivedTarotShopItem
+            deck: Red
+            stake: White
+            must:
+              - tarot: {{derived.TarotName}}
+                antes: [{{derived.Ante}}]
+                sources:
+                  shopItems: [{{derived.ShopSlotIndex}}]
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        output.WriteLine(
+            $"Analyzer-derived tarot shop item test: seed={derived.Seed}, ante={derived.Ante}, tarot={derived.TarotName}, shopSlot={derived.ShopSlotIndex}, matched={search.MatchingSeeds}"
+        );
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(1, search.MatchingSeeds);
     }
 }
 

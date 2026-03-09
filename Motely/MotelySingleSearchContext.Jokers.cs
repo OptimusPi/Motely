@@ -277,6 +277,57 @@ unsafe ref partial struct MotelySingleSearchContext
         );
     }
 
+    public MotelySingleJokerFixedRarityStream CreateUncommonShopJokerStream(
+        int ante,
+        MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default,
+        bool isCached = false
+    )
+    {
+        return CreateJokerFixedRarityStream(
+            MotelyPrngKeys.ShopItemSource,
+            MotelyPrngKeys.DefaultJokerEternalPerishableSource,
+            MotelyPrngKeys.DefaultJokerRentalSource,
+            ante,
+            flags,
+            MotelyJokerRarity.Uncommon,
+            isCached
+        );
+    }
+
+    public MotelySingleJokerFixedRarityStream CreateRareShopJokerStream(
+        int ante,
+        MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default,
+        bool isCached = false
+    )
+    {
+        return CreateJokerFixedRarityStream(
+            MotelyPrngKeys.ShopItemSource,
+            MotelyPrngKeys.DefaultJokerEternalPerishableSource,
+            MotelyPrngKeys.DefaultJokerRentalSource,
+            ante,
+            flags,
+            MotelyJokerRarity.Rare,
+            isCached
+        );
+    }
+
+    public MotelySingleJokerFixedRarityStream CreateCommonShopJokerStream(
+        int ante,
+        MotelyJokerFixedRarityStreamFlags flags = MotelyJokerFixedRarityStreamFlags.Default,
+        bool isCached = false
+    )
+    {
+        return CreateJokerFixedRarityStream(
+            MotelyPrngKeys.ShopItemSource,
+            MotelyPrngKeys.DefaultJokerEternalPerishableSource,
+            MotelyPrngKeys.DefaultJokerRentalSource,
+            ante,
+            flags,
+            MotelyJokerRarity.Common,
+            isCached
+        );
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private MotelySingleJokerFixedRarityStream CreateJokerFixedRarityStream(
         string source,

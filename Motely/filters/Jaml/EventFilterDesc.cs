@@ -101,7 +101,7 @@ public struct LuckyMoneyFilterDesc(LuckyMoneyClause clause)
                 _clause,
                 static (ref MotelyVectorSearchContext sctx, int rollIndex) =>
                 {
-                    var stream = sctx.CreateLuckyCardMoneyStream(true);
+                    var stream = sctx.CreateLuckyCardMoneyStream();
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextLuckyMoney(ref stream);
                     return sctx.GetNextLuckyMoney(ref stream);
@@ -132,7 +132,7 @@ public struct LuckyMultFilterDesc(LuckyMultClause clause)
                 _clause,
                 static (ref MotelyVectorSearchContext sctx, int rollIndex) =>
                 {
-                    var stream = sctx.CreateLuckyCardMultStream(true);
+                    var stream = sctx.CreateLuckyCardMultStream();
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextLuckyMult(ref stream);
                     return sctx.GetNextLuckyMult(ref stream);
@@ -163,7 +163,7 @@ public struct MisprintMultFilterDesc(MisprintMultClause clause)
                 _clause,
                 static (ref MotelyVectorSearchContext sctx, int rollIndex) =>
                 {
-                    var stream = sctx.CreateMisprintPrngStream(true);
+                    var stream = sctx.CreateMisprintPrngStream();
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextMisprintMult(ref stream);
                     var multValue = sctx.GetNextMisprintMult(ref stream);
@@ -195,7 +195,7 @@ public struct WheelOfFortuneFilterDesc(WheelOfFortuneClause clause)
                 _clause,
                 static (ref MotelyVectorSearchContext sctx, int rollIndex) =>
                 {
-                    var stream = sctx.CreateWheelOfFortuneStream(true);
+                    var stream = sctx.CreateWheelOfFortuneStream();
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextWheelOfFortune(ref stream);
                     var edition = sctx.GetNextWheelOfFortune(ref stream);
@@ -227,7 +227,7 @@ public struct CavendishExtinctFilterDesc(CavendishExtinctClause clause)
                 _clause,
                 static (ref MotelyVectorSearchContext sctx, int rollIndex) =>
                 {
-                    var stream = sctx.CreateCavendishPrngStream(true);
+                    var stream = sctx.CreateCavendishPrngStream(false);
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextCavendishExtinct(ref stream);
                     return sctx.GetNextCavendishExtinct(ref stream);
@@ -259,7 +259,7 @@ public struct GrosMichelExtinctFilterDesc(GrosMichelExtinctClause clause)
                 _clause,
                 static (ref MotelyVectorSearchContext sctx, int rollIndex) =>
                 {
-                    var stream = sctx.CreateGrosMichelPrngStream(true);
+                    var stream = sctx.CreateGrosMichelPrngStream(false);
                     for (int i = 0; i < rollIndex; i++)
                         sctx.GetNextGrosMichelExtinct(ref stream);
                     return sctx.GetNextGrosMichelExtinct(ref stream);
