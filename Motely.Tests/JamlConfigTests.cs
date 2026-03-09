@@ -31,11 +31,8 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void UnknownSourceKey_shopItems_IsIgnored()
+    public void Sources_shopItems_AreMapped()
     {
-        // shopItems is not a recognized key — the parser silently ignores it
-        // (IgnoreUnmatchedProperties). The clause still parses, but shopItems
-        // won't map to any source. Users should use shopItems instead.
         var jaml = """
             name: Test
             must:
@@ -50,13 +47,12 @@ public class JamlConfigTests
         Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
         Assert.NotNull(config);
         Assert.Single(config!.Must.Jokers);
+        Assert.Equal([0, 1], config.Must.Jokers[0].Sources.ShopItems);
     }
 
     [Fact]
-    public void UnknownSourceKey_boosterPacks_IsIgnored()
+    public void Sources_boosterPacks_AreMapped()
     {
-        // boosterPacks is not a recognized key — silently ignored.
-        // Users should use boosterPacks instead.
         var jaml = """
             name: Test
             must:
@@ -71,6 +67,73 @@ public class JamlConfigTests
         Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
         Assert.NotNull(config);
         Assert.Single(config!.Must.Jokers);
+        Assert.Equal([0, 1], config.Must.Jokers[0].Sources.BoosterPacks);
+    }
+
+    [Fact]
+    public void JokerRarityClauses_ParseIntoTypedLists()
+    {
+        var jaml = """
+            name: TypedJokers
+            must:
+              - commonJoker: HalfJoker
+              - uncommonJoker: Showman
+              - rareJoker: Blueprint
+              - mixedJokers: [Blueprint, Showman]
+              - soulJoker: Perkeo
+                sources:
+                  boosterPacks: [0,1,2,3]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        Assert.Single(config!.Must.CommonJokers);
+        Assert.Single(config.Must.UncommonJokers);
+        Assert.Single(config.Must.RareJokers);
+        Assert.Single(config.Must.MixedJokers);
+        Assert.Single(config.Must.LegendaryJokers);
+    }
+
+    [Fact]
+    public void JokerSources_RawShopStreams_AreMapped()
+    {
+        var jaml = """
+            name: RawStreams
+            must:
+              - uncommonJoker: Showman
+                antes: [1]
+                sources:
+                  shopItems: [0,1]
+                  boosterPacks: [0,1]
+                  judgement: [0]
+                  wraith: [0]
+                  riffRaff: [0,1]
+                  rareTag: [0]
+                  uncommonTag: [0]
+                  commonShopJokers: [0,2]
+                  uncommonShopJokers: [1,3]
+                  rareShopJokers: [4]
+                  allShopJokers: [0,1,2,3,4]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        var clause = config!.Must.UncommonJokers[0];
+        Assert.Equal([0, 1], clause.Sources.ShopItems);
+        Assert.Equal([0, 1], clause.Sources.BoosterPacks);
+        Assert.Equal([0], clause.Sources.Judgement);
+        Assert.Equal([0], clause.Sources.Wraith);
+        Assert.Equal([0, 1], clause.Sources.RiffRaff);
+        Assert.Equal([0], clause.Sources.RareTag);
+        Assert.Equal([0], clause.Sources.UncommonTag);
+        Assert.Equal([0, 2], clause.Sources.CommonShopJokers);
+        Assert.Equal([1, 3], clause.Sources.UncommonShopJokers);
+        Assert.Equal([4], clause.Sources.RareShopJokers);
+        Assert.Equal([0, 1, 2, 3, 4], clause.Sources.AllShopJokers);
     }
 
     [Fact]
