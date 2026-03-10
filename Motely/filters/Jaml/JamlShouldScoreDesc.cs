@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using static Motely.MotelyVectorUtils;
@@ -60,6 +61,9 @@ public struct JamlShouldScoreDesc
             Action<string>? seedMatchCallback
         )
         {
+            Debug.Assert(shouldClauses.Length <= MotelySeedScoreTally.MAX_TALLY_COUNT, 
+            $"Too many should clauses: {shouldClauses.Length}. Maximum allowed: {MotelySeedScoreTally.MAX_TALLY_COUNT}");
+
             _mustFilters = mustFilters;
             _shouldClauses = shouldClauses;
             _seedMatchCallback = seedMatchCallback;
@@ -108,6 +112,12 @@ public struct JamlShouldScoreDesc
                 string seedStr = new Span<char>(seed, length).ToString();
 
                 buffer[lane] = new MotelySeedScoreTally(seedStr, laneScore);
+
+                // Store individual should clause results as tallies
+                for (int c = 0; c < shouldCount; c++)
+                {
+                    buffer[lane].AddTally(shouldMasks[c][lane] ? _shouldClauses[c].score : 0);
+                }
 
                 if (_seedMatchCallback != null)
                 {

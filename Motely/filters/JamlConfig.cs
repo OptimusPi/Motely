@@ -444,6 +444,7 @@ public static class JamlConfigLoader
         try
         {
             var deserializer = new StaticDeserializerBuilder(new JamlYamlContext())
+                .IgnoreUnmatchedProperties()
                 .Build();
             var dto = deserializer.Deserialize<JamlDto>(jaml);
             if (dto == null)
@@ -653,7 +654,7 @@ public static class JamlConfigLoader
 
         var (itemType, value) = ResolveType(c);
         var edition = ParseEnum<MotelyItemEdition>(c.Edition);
-        var label = c.Label ?? JamlClauseLabeler.Generate(itemType, c, antes, min);
+        var label = c.Label ?? "Label"; // TODO JamlClauseLabeler.Generate(itemType, c, antes, min);
 
         var shopItems = c.Sources?.ShopItems ?? c.ShopItems ?? defaults?.ShopItems;
         var boosterPacks = c.Sources?.BoosterPacks ?? c.BoosterPacks ?? defaults?.BoosterPacks;

@@ -4,7 +4,7 @@ namespace Motely.Filters;
 
 public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 {
-    public const int MAX_TALLY_COUNT = 16;
+    public const int MAX_TALLY_COUNT = 256;
 
     public int Score { get; set; }
     public string Seed { get; set; }
@@ -23,11 +23,8 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 
     public void AddTally(int value)
     {
-        if (_tallyCount < MAX_TALLY_COUNT)
-        {
-            _tallyValues[_tallyCount] = value;
-            _tallyCount++;
-        }
+        _tallyValues[_tallyCount] = value;
+        _tallyCount++;
     }
 
     public int GetTally(int index)

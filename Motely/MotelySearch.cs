@@ -1141,7 +1141,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private abstract class MotelySearchPlan : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 5000;
+        public const int MAX_SEED_WAIT_MS = 200;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
