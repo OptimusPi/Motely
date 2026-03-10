@@ -5,7 +5,7 @@ namespace Motely.Tests;
 
 /// <summary>
 /// Tests for JAML config parsing — verifies shorthand keys, source config mapping,
-/// and graceful handling of unknown YAML keys (which are silently ignored).
+/// and strict handling of unknown YAML keys.
 /// </summary>
 public class JamlConfigTests
 {
@@ -189,10 +189,8 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void UnknownClauseKey_IsIgnored()
+    public void UnknownClauseKey_FailsParse()
     {
-        // Unknown top-level clause keys are silently ignored by YamlDotNet's
-        // IgnoreUnmatchedProperties — this is by design for forward compatibility.
         var jaml = """
             name: Test
             must:
@@ -202,9 +200,48 @@ public class JamlConfigTests
 
         var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
 
-        Assert.True(success, $"Parse should succeed (unknown keys are ignored): {error}");
-        Assert.NotNull(config);
-        Assert.Single(config!.Must.Jokers);
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("totallyFakeKey", error!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void UnknownNestedSourcesKey_FailsParse()
+    {
+        var jaml = """
+            name: Test
+            must:
+              - joker: ScaryFace
+                antes: [1]
+                sources:
+                  boosterPakcz: [0, 1]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("boosterPakcz", error!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void UnknownTopLevelKey_FailsParse()
+    {
+        var jaml = """
+            name: Test
+            madeUpTopLevel: 123
+            must:
+              - joker: Showman
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("madeUpTopLevel", error!, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

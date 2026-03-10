@@ -171,22 +171,8 @@ npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node run stage-framework
 Tell the user:
 
 ```md
-All npm packages are ready to publish!
-
-1. Log into npm once:
-   npm login
-
-2. Publish motely-wasm (browser frontend):
-   cd x:\JammySeedFinder\src\MotelyJAML\Motely.npm
-   npm publish
-
-3. Publish motely-wasm-singlethread (browser fallback):
-   cd x:\JammySeedFinder\src\MotelyJAML\Motely.npm.singlethread
-   npm publish
-
-4. Publish motely-node (backend/Node.js):
-   cd x:\JammySeedFinder\src\MotelyJAML\Motely.node
-   npm publish
+cd x:\JammySeedFinder\src\MotelyJAML\Motely.npm && npm publish
+cd x:\JammySeedFinder\src\MotelyJAML\Motely.node && npm publish
 ```
 
 Wait for user to confirm they published.
@@ -213,5 +199,5 @@ Print:
 ```sh
 ✅ MotelyJAML update complete!
    Version: <THE_VERSION>
-   Published: motely-wasm@<THE_VERSION>, motely-wasm-singlethread@<THE_VERSION>, motely-node@<THE_VERSION>
+   Published: motely-wasm@<THE_VERSION>, motely-node@<THE_VERSION>
 ```

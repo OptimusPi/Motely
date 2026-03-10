@@ -1,6 +1,6 @@
 {
   "name": "motely-wasm-singlethread",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "description": "Run Motely in the browser with a dedicated single-threaded .NET WASM runtime.",
   "type": "module",
   "main": "index.js",

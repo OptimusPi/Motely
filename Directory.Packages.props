@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>3.0.5</MotelyVersion>
+    <MotelyVersion>3.0.6</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Node API for .NET addon: https://microsoft.github.io/node-api-dotnet/scenarios/js-dotnet-module.html (CPM requires fixed version) -->
