@@ -108,30 +108,44 @@ export interface MotelyNodeApi {
 export interface LoadMotelyOptions {
   /** Path to the folder containing dotnet.js (default: package _framework). */
   frameworkPath?: string;
+  addonPath?: string;
+  pollIntervalMs?: number;
 }
 
 // ──────────────────────────────── Internals ────────────────────────────────
 
 interface RawExports {
-  GetVersionAsync(): Promise<string>;
-  GetCapabilitiesAsync(): Promise<string>;
-  AnalyzeSeedAsync(seed: string, deck: string, stake: string): Promise<string>;
-  ValidateJamlAsync(jamlContent: string): Promise<string>;
-  StartJamlSearch(
+  getVersionAsync(): Promise<string>;
+  getCapabilitiesAsync(): Promise<string>;
+  analyzeSeedAsync(seed: string, deck: string, stake: string): Promise<string>;
+  validateJamlAsync(jamlContent: string): Promise<string>;
+  startJamlSearch(
     jamlContent: string,
     optionsJson: string,
-    onProgress: (progressJson: string) => void,
-    onResult: (seed: string, score: number) => void,
   ): Promise<string>;
-  StopSearch(): void;
-  DisposeSearch(): Promise<void>;
+  getSearchStatus(): Promise<string>;
+  stopSearch(): void;
+  disposeSearch(): Promise<void>;
+}
+
+interface SearchStatusInfo {
+  error?: string | null;
+  status: string;
+  isRunning: boolean;
+  totalSeedsSearched: number;
+  matchingSeeds: number;
+  resultCount: number;
+  elapsedMs: number;
+  results: SearchResultInfo[];
 }
 
 function _dir(): string {
   return dirname(fileURLToPath(import.meta.url));
 }
 
-function buildApi(raw: RawExports, cachedCapabilities: CapabilitiesInfo): MotelyNodeApi {
+function buildApi(raw: RawExports, cachedCapabilities: CapabilitiesInfo, pollIntervalMs: number): MotelyNodeApi {
+  let disposed = false
+
   return {
     async getCapabilities(): Promise<CapabilitiesInfo> {
       return cachedCapabilities;
@@ -142,47 +156,85 @@ function buildApi(raw: RawExports, cachedCapabilities: CapabilitiesInfo): Motely
     },
 
     async analyzeSeed(seed: string, deck: string, stake: string): Promise<SeedAnalysisInfo> {
-      const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
+      const json = await raw.analyzeSeedAsync(seed, deck, stake);
       const result = JSON.parse(json);
       if (result.error && !result.seed) throw new Error(result.error);
       return result as SeedAnalysisInfo;
     },
 
     async validateJaml(jaml: string): Promise<ValidateResult> {
-      const json = await raw.ValidateJamlAsync(jaml);
+      const json = await raw.validateJamlAsync(jaml);
       return JSON.parse(json) as ValidateResult;
     },
 
     async startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchResultInfo[]> {
+      if (disposed) {
+        throw new Error('Motely instance has been disposed');
+      }
+
       const { onProgress, onResult, ...searchParams } = options ?? {};
       const optionsJson = JSON.stringify({
-        threadCount: 1,
+        threadCount: Math.max(1, searchParams.threadCount ?? cachedCapabilities.availableThreadCount ?? 1),
         batchCharCount: 4,
+        palindrome: searchParams.palindrome ?? !(searchParams.specificSeed || searchParams.randomSeeds),
         ...searchParams,
       });
 
       const results: SearchResultInfo[] = [];
 
-      const progressCb = onProgress
-        ? (json: string) => {
-          const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
-          onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
-        }
-        : () => { };
-      const resultCb = (seed: string, score: number) => {
-        results.push({ seed, score });
-        onResult?.(seed, score);
-      };
+      const seen = new Set<string>()
 
-      const response = JSON.parse(
-        await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb)
-      ) as { error?: string };
-      if (response.error) throw new Error(response.error);
-      return results;
+      const applyStatus = (status: SearchStatusInfo) => {
+        onProgress?.(status.totalSeedsSearched, status.matchingSeeds, status.elapsedMs, status.resultCount)
+
+        for (const result of status.results ?? []) {
+          const key = `${result.seed}:${result.score}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          results.push(result)
+          onResult?.(result.seed, result.score)
+        }
+      }
+
+      const completionPromise = raw.startJamlSearch(jamlContent, optionsJson)
+        .then(json => ({ kind: 'done' as const, json }))
+        .catch(error => ({ kind: 'error' as const, error }))
+
+      while (true) {
+        const next = await Promise.race([
+          completionPromise,
+          new Promise<{ kind: 'tick' }>(resolve => setTimeout(() => resolve({ kind: 'tick' }), pollIntervalMs)),
+        ])
+
+        if (next.kind === 'error') {
+          throw next.error
+        }
+
+        if (next.kind === 'done') {
+          const status = JSON.parse(next.json) as SearchStatusInfo
+          if (status.error) throw new Error(status.error)
+          applyStatus(status)
+          return results
+        }
+
+        const statusJson = await raw.getSearchStatus()
+        const status = JSON.parse(statusJson) as SearchStatusInfo
+        if (status.error) {
+          if (status.error === 'No active search') continue
+          throw new Error(status.error)
+        }
+
+        applyStatus(status)
+      }
     },
 
     dispose(): void {
-      void raw.DisposeSearch();
+      disposed = true
+      try {
+        raw.stopSearch()
+      } catch {
+      }
+      void raw.disposeSearch()
     },
   };
 }
@@ -191,21 +243,16 @@ function buildApi(raw: RawExports, cachedCapabilities: CapabilitiesInfo): Motely
  * Load the Motely WASM engine for Node.js. Call once at startup; reuse the returned API.
  */
 export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyNodeApi> {
-  const frameworkPath = options?.frameworkPath ?? join(_dir(), '_framework');
-  const dotnetJsPath = join(frameworkPath, 'dotnet.js');
-  const dotnetUrl = pathToFileURL(dotnetJsPath).href;
-  const mod = await import(dotnetUrl) as { dotnet: { withDiagnosticTracing: (v: boolean) => { create: () => Promise<unknown> }; create?: () => Promise<unknown> } };
-  const dotnet = mod.dotnet;
-  const runtime = await dotnet.withDiagnosticTracing(false).create();
-  const config = (runtime as { getConfig: () => { mainAssemblyName: string } }).getConfig();
-  const allExports = (await (runtime as { getAssemblyExports: (name: string) => Promise<unknown> }).getAssemblyExports(config.mainAssemblyName)) as {
-    Motely: { BrowserWasm: { MotelyWasmExports: RawExports } };
-  };
-  const raw = allExports.Motely.BrowserWasm.MotelyWasmExports;
+  const addonModulePath = options?.addonPath
+    ?? (options?.frameworkPath
+      ? join(options.frameworkPath, 'Motely.NodeAddon.mjs')
+      : join(_dir(), 'addon', 'Motely.NodeAddon.mjs'))
 
-  (runtime as { runMain: () => Promise<unknown> }).runMain?.().catch((err: unknown) => console.error('[motely-node] runMain failed:', err));
+  const addonUrl = pathToFileURL(addonModulePath).href
+  const mod = await import(addonUrl) as { MotelyNodeExports: RawExports }
+  const raw = mod.MotelyNodeExports
 
-  const capabilitiesJson = await raw.GetCapabilitiesAsync();
-  const cachedCapabilities = JSON.parse(capabilitiesJson) as CapabilitiesInfo;
-  return buildApi(raw, cachedCapabilities);
+  const capabilitiesJson = await raw.getCapabilitiesAsync()
+  const cachedCapabilities = JSON.parse(capabilitiesJson) as CapabilitiesInfo
+  return buildApi(raw, cachedCapabilities, Math.max(25, options?.pollIntervalMs ?? 100))
 }

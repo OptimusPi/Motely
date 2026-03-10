@@ -352,12 +352,11 @@ partial class Program
                 $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batchCharCount={batchCharCount}"
             );
 
-            using var search = settings.Start();
+            using var search = settings.CreateSearch();
             _activeSearch = search;
             try
             {
-                search.Start(_cts.Token);
-                await search.WaitForCompletionAsync(_cts.Token);
+                await Task.Run(() => search.Start(_cts.Token));
             }
             catch (OperationCanceledException) { }
             finally

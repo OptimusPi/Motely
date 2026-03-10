@@ -56,6 +56,8 @@ export interface SearchOptions {
     startBatch?: number;
     endBatch?: number;
     specificSeed?: string;
+    seeds?: string[];
+    keyword?: string;
     palindrome?: boolean;
     /** Called every ~2 seconds by the .NET search engine with current progress. */
     onProgress?: (seedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
@@ -82,6 +84,8 @@ export interface MotelyNodeApi {
 export interface LoadMotelyOptions {
     /** Path to the folder containing dotnet.js (default: package _framework). */
     frameworkPath?: string;
+    addonPath?: string;
+    pollIntervalMs?: number;
 }
 /**
  * Load the Motely WASM engine for Node.js. Call once at startup; reuse the returned API.

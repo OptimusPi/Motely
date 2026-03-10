@@ -232,7 +232,7 @@ public static class MotelyNodeExports
             else if (options.Palindrome == true)
                 settings = settings.WithPalindromeSearch();
             else
-                settings = settings.WithSequentialSearch();
+                settings = settings.WithPalindromeSearch();
 
             var cts = new CancellationTokenSource();
             var search = settings.CreateSearch();
