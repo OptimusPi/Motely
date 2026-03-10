@@ -1,6 +1,6 @@
 {
   "name": "motely-node",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "description": "MotelyJAML for Node.js/V8 - Balatro seed analyzer and JAML filter engine using .NET WASM",
   "type": "module",
   "main": "index.js",
@@ -18,7 +18,7 @@
     "./jaml.schema.json": "./jaml.schema.json"
   },
   "files": [
-    "_framework/",
+    "addon/",
     "index.js",
     "index.cjs",
     "index.d.ts",
@@ -49,8 +49,7 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "dependencies": {},
-  "optionalDependencies": {
+  "dependencies": {
     "node-api-dotnet": "^0.9.0"
   },
   "devDependencies": {
@@ -62,7 +61,7 @@
     "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
     "build": "npm run generate:jaml-schema && node ./node_modules/typescript/lib/tsc.js && .\\node_modules\\@esbuild\\win32-x64\\esbuild.exe index.js --outfile=index.cjs --format=cjs --platform=node --banner:js=\"const import_meta_url=require('url').pathToFileURL(__filename).href;\" --define:import.meta.url=import_meta_url",
     "stage-framework": "node ../stage-packages.mjs node",
-    "prepack": "npm run build && npm run stage-framework",
+    "prepack": "dotnet build ../Motely.NodeAddon/Motely.NodeAddon.csproj -c Release && npm run build && npm run stage-framework",
     "prepublishOnly": "npm run prepack",
     "prove": "node prove-node.mjs && node -e \"console.log(require('fs').readFileSync('prove-node-result.txt','utf8'))\""
   }

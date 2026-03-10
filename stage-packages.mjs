@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cpSync, existsSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const browserFrameworkSource = join(__dirname, 'Motely.BrowserWasm', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
 const singleThreadFrameworkSource = join(__dirname, 'Motely.SingleThread', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
+const nodeAddonSource = join(__dirname, 'Motely.NodeAddon', 'bin', 'Release', 'net10.0');
 
 const targets = {
   browser: [
@@ -17,7 +18,7 @@ const targets = {
     { source: singleThreadFrameworkSource, destination: join(__dirname, 'Motely.npm.singlethread', '_framework') },
   ],
   node: [
-    { source: singleThreadFrameworkSource, destination: join(__dirname, 'Motely.node', '_framework') },
+    { source: nodeAddonSource, destination: join(__dirname, 'Motely.node', 'addon') },
   ],
 };
 
@@ -33,6 +34,19 @@ const shouldInclude = (path) => {
     && !normalized.includes('/debug/')
     && !normalized.includes('/tmp/');
 };
+
+function patchNodeAddonLoaders(destination) {
+  const files = ['Motely.NodeAddon.mjs', 'Motely.NodeAddon.cjs'];
+  for (const file of files) {
+    const fullPath = join(destination, file);
+    if (!existsSync(fullPath)) continue;
+    const original = readFileSync(fullPath, 'utf8');
+    const patched = original.replaceAll('node-api-dotnet/net10.0', 'node-api-dotnet/net9.0');
+    if (patched !== original) {
+      writeFileSync(fullPath, patched);
+    }
+  }
+}
 
 for (const mode of selectedModes) {
   if (!(mode in targets)) {
@@ -52,6 +66,9 @@ for (const mode of selectedModes) {
       force: true,
       filter: (src) => shouldInclude(src),
     });
+    if (mode === 'node') {
+      patchNodeAddonLoaders(destination);
+    }
     console.log(`${mode}: ${source} -> ${destination}`);
   }
 }

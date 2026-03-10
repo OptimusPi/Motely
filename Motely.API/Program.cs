@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Options;
 using Motely.DistributedWorker;
 using Motely.Filters;
 
@@ -13,6 +14,7 @@ public record FilterInfo(string Name, DateTime LastModified);
 public record StartSearchRequest(
     string FilterName,
     string? Seed = null,
+    string? Keyword = null,
     int ThreadCount = -1,
     int BatchCharCount = 4,
     bool Palindrome = false
@@ -28,7 +30,15 @@ public record SearchInfo(
 );
 
 public record ActiveSearchInfo(string FilterId, bool IsCompleted, long SeedsSearched, long Matches, string Elapsed);
-public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, string PoolUrl);
+public record WorkerStatusResponse(bool Enabled, bool Configured, string PoolUrl, string WorkerId, int Threads, string State);
+public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, string PoolUrl, WorkerStatusResponse Worker);
+
+internal sealed class SearchHandle(IMotelySearch search, CancellationTokenSource cancellation, Task runTask)
+{
+    public IMotelySearch Search { get; } = search;
+    public CancellationTokenSource Cancellation { get; } = cancellation;
+    public Task RunTask { get; } = runTask;
+}
 
 [JsonSerializable(typeof(CreateFilterRequest))]
 [JsonSerializable(typeof(UpdateFilterRequest))]
@@ -39,6 +49,7 @@ public record ServerStatusResponse(string Hostname, int ProcessorCount, string O
 [JsonSerializable(typeof(SearchInfo))]
 [JsonSerializable(typeof(ActiveSearchInfo))]
 [JsonSerializable(typeof(ActiveSearchInfo[]))]
+[JsonSerializable(typeof(WorkerStatusResponse))]
 [JsonSerializable(typeof(ServerStatusResponse))]
 internal partial class ApiJsonSerializerContext : JsonSerializerContext
 {
@@ -47,6 +58,20 @@ internal partial class ApiJsonSerializerContext : JsonSerializerContext
 public class Program
 {
     public static void Main(string[] args) => CreateHost(args).Run();
+
+    private static string ResolveJamlDirectory(IConfiguration configuration)
+    {
+        var configured = configuration["Jaml:Directory"]?.Trim();
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            Directory.CreateDirectory(configured);
+            return configured;
+        }
+
+        var sharedJamlDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "JamlFilters"));
+        Directory.CreateDirectory(sharedJamlDir);
+        return sharedJamlDir;
+    }
 
     /// <summary>
     /// Builds the WebApplication without starting it.
@@ -93,13 +118,20 @@ public class Program
 
         app.UseStaticFiles();
         app.UseDefaultFiles();
-        app.MapGet("/BSO", () => Results.Redirect("/BSO/", permanent: false));
-        app.MapGet("/jammy-seed-searcher", () => Results.Redirect("/jammy-seed-searcher/", permanent: false));
+        app.MapGet("/jammy-seed-finder", () => Results.Redirect("/jammy-seed-finder/", permanent: false));
 
-        var jamlDir = Path.Combine(Directory.GetCurrentDirectory(), "jaml-filters");
-        Directory.CreateDirectory(jamlDir);
+        var jamlDir = ResolveJamlDirectory(builder.Configuration);
 
-        var searches = new ConcurrentDictionary<string, IMotelySearch>();
+        var searches = new ConcurrentDictionary<string, SearchHandle>();
+
+        app.Lifetime.ApplicationStopping.Register(() =>
+        {
+            foreach (var handle in searches.Values)
+            {
+                try { handle.Cancellation.Cancel(); } catch { }
+                try { handle.Search.Cancel(); } catch { }
+            }
+        });
 
         // ── Filters ──
 
@@ -172,22 +204,43 @@ public class Program
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchCharCount);
 
-                if (!string.IsNullOrEmpty(req.Seed))
-                    settings = settings.WithListSearch([req.Seed.ToUpperInvariant()]);
-                else if (req.Palindrome)
-                    settings = settings.WithPalindromeSearch();
+                if (!string.IsNullOrWhiteSpace(req.Seed))
+                    settings = settings.WithListSearch([req.Seed.Trim().ToUpperInvariant()]);
+                else if (!string.IsNullOrWhiteSpace(req.Keyword))
+                {
+                    string kw = req.Keyword.Trim().ToUpperInvariant();
+                    int padLen = MotelyCore.MaxSeedLength - kw.Length;
+                    if (padLen < 0)
+                        return Results.BadRequest($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars).");
+                    settings = settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
+                }
                 else
-                    settings = settings.WithSequentialSearch();
+                    settings = settings.WithPalindromeSearch();
 
-                var search = settings.Start();
+                var search = settings.CreateSearch();
                 var filterId = MotelyRuntimeIds.GenerateFilterId(config);
                 if (searches.TryRemove(filterId, out var existingSearch))
                 {
-                    existingSearch.Cancel();
-                    existingSearch.Dispose();
+                    existingSearch.Cancellation.Cancel();
+                    existingSearch.Search.Cancel();
+                    existingSearch.Search.Dispose();
+                    existingSearch.Cancellation.Dispose();
                 }
 
-                searches[filterId] = search;
+                var searchCts = CancellationTokenSource.CreateLinkedTokenSource(app.Lifetime.ApplicationStopping);
+                var runTask = Task.Run(() => search.Start(searchCts.Token), searchCts.Token);
+                var handle = new SearchHandle(search, searchCts, runTask);
+                searches[filterId] = handle;
+
+                _ = runTask.ContinueWith(_ =>
+                {
+                    if (searches.TryRemove(filterId, out var completedHandle))
+                    {
+                        try { completedHandle.Search.Dispose(); } catch { }
+                        completedHandle.Cancellation.Dispose();
+                    }
+                }, TaskScheduler.Default);
+
                 return Results.Ok(new SearchInfo(filterId, req.FilterName, false, 0, 0, TimeSpan.Zero));
             }
             catch (Exception ex)
@@ -198,19 +251,21 @@ public class Program
 
         app.MapGet("/api/search/{filterId}", (string filterId) =>
         {
-            if (!searches.TryGetValue(filterId, out var search))
+            if (!searches.TryGetValue(filterId, out var handle))
                 return Results.NotFound();
             return Results.Ok(new SearchInfo(
-                filterId, "Unknown", search.IsCompleted,
-                search.TotalSeedsSearched, search.MatchingSeeds, search.ElapsedTime));
+                filterId, "Unknown", handle.Search.IsCompleted,
+                handle.Search.TotalSeedsSearched, handle.Search.MatchingSeeds, handle.Search.ElapsedTime));
         }).WithName("GetSearch");
 
         app.MapPost("/api/search/{filterId}/stop", (string filterId) =>
         {
-            if (!searches.TryRemove(filterId, out var search))
+            if (!searches.TryRemove(filterId, out var handle))
                 return Results.NotFound();
-            search.Cancel();
-            search.Dispose();
+            handle.Cancellation.Cancel();
+            handle.Search.Cancel();
+            handle.Search.Dispose();
+            handle.Cancellation.Dispose();
             return Results.Ok();
         }).WithName("StopSearch");
 
@@ -218,11 +273,11 @@ public class Program
 
         var serverStart = DateTime.UtcNow;
 
-        app.MapGet("/api/status", () =>
+        app.MapGet("/api/status", (IOptions<PoolWorkerOptions> poolOptionsAccessor) =>
         {
             var activeSearches = searches.Select(kvp =>
             {
-                var s = kvp.Value;
+                var s = kvp.Value.Search;
                 return new ActiveSearchInfo(
                     kvp.Key,
                     s.IsCompleted,
@@ -232,6 +287,21 @@ public class Program
                 );
             }).ToArray();
 
+            var poolOptions = poolOptionsAccessor.Value;
+            var configuredPoolUrl = poolOptions.Url?.Trim() ?? string.Empty;
+            var configuredWorkerId = poolOptions.WorkerId?.Trim();
+            var workerConfigured = !string.IsNullOrWhiteSpace(configuredPoolUrl) && !string.IsNullOrWhiteSpace(poolOptions.Token);
+            var workerEnabled = workerConfigured;
+            var workerState = workerConfigured ? "running" : "disabled";
+            var workerStatus = new WorkerStatusResponse(
+                workerEnabled,
+                workerConfigured,
+                configuredPoolUrl,
+                string.IsNullOrWhiteSpace(configuredWorkerId) ? $"{Environment.MachineName}-{Environment.ProcessId}" : configuredWorkerId,
+                Math.Clamp(poolOptions.Threads, 1, Environment.ProcessorCount),
+                workerState
+            );
+
             return Results.Ok(new ServerStatusResponse(
                 Environment.MachineName,
                 Environment.ProcessorCount,
@@ -240,7 +310,8 @@ public class Program
                 (DateTime.UtcNow - serverStart).ToString(@"d\.hh\:mm\:ss"),
                 activeSearches,
                 Directory.GetFiles(jamlDir, "*.jaml").Length,
-                "https://www.seedfinder.app"
+                string.IsNullOrWhiteSpace(configuredPoolUrl) ? "https://www.seedfinder.app" : configuredPoolUrl,
+                workerStatus
             ));
         }).WithName("GetStatus");
 
