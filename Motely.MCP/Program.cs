@@ -165,7 +165,9 @@ public static class Program
         try
         {
             // Parse JAML using YamlDotNet deserializer
-            var deserializer = new YamlDotNet.Serialization.Deserializer();
+            var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
+                .IgnoreUnmatchedProperties()
+                .Build();
             var jamlDto = deserializer.Deserialize<JamlDto>(jaml);
 
             // Convert DTO to JamlConfig manually
