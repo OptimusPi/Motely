@@ -161,21 +161,33 @@ public static class JamlSearchBuilder
         string[] shouldLabelsArray = [];
 
         if (config.Should.HasAnyClauses)
-        {
-            var shouldDescs = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-            AddDescsFromSet(shouldDescs, config.Should);
 
-            (IJamlClause clause, int score, string label)[] scored = shouldDescs
-                .Select(x => (x.clause, 1, x.label))
+        {
+
+            var shouldDescs = new List<IMotelySeedFilterDesc>();
+
+            var shouldLabels = new List<string>();
+
+            AddDescsFromSet(shouldDescs, shouldLabels, config.Should);
+
+
+
+            (IMotelySeedFilterDesc desc, int score, string label)[] scored = shouldDescs
+
+                .Zip(shouldLabels, (desc, label) => (desc, 1, label))
+
                 .ToArray();
 
             (IMotelySeedFilterDesc desc, string label)[] mustArr = mustDescs
+
                 .Zip(mustLabels, (desc, label) => (desc, label))
+
                 .ToArray();
 
             settings.WithSeedScoreProvider(new JamlShouldScoreDesc(mustArr, scored));
 
-            shouldLabelsArray = shouldDescs.Select(x => x.label).ToArray();
+            shouldLabelsArray = shouldLabels.ToArray();
+
         }
 
 
@@ -186,136 +198,246 @@ public static class JamlSearchBuilder
 
 
 
-    private static void AddDescsFromSet(List<IMotelySeedFilterDesc> descs, List<string> labels, JamlClauseSet set)
-    {
-        var list = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-        AddDescsFromSet(list, set);
-        foreach (var item in list)
-        {
-            descs.Add(item.desc);
-            labels.Add(item.label);
-        }
-    }
-
     private static void AddDescsFromSet(
-        List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)> list,
+
+        List<IMotelySeedFilterDesc> descs,
+
+        List<string> labels,
+
         JamlClauseSet set
+
     )
+
     {
 
         foreach (var c in set.Jokers)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.CommonJokers)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.UncommonJokers)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.RareJokers)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.MixedJokers)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.LegendaryJokers)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.Vouchers)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.TarotCards)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.SpectralCards)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.PlanetCards)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.Bosses)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.Tags)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.StandardCards)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.ErraticRanks)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.ErraticSuits)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.ErraticCards)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.LuckyMoney)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.LuckyMult)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.MisprintMult)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.WheelOfFortune)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.CavendishExtinct)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.GrosMichelExtinct)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
         foreach (var c in set.StartingDraw)
+
         {
-            list.Add((CreateDesc(c), c, c.Label));
+
+            descs.Add(CreateDesc(c));
+
+            labels.Add(c.Label);
+
         }
 
     }

@@ -4,38 +4,29 @@ namespace Motely.Filters;
 
 public unsafe struct MotelySeedScoreTally : IMotelySeedScore
 {
-    public const int MAX_TALLY_COUNT = 1024; // Aligning with MotelyJsonSeedScoreTally which is larger for complicated scans
+    public const int MAX_TALLY_COUNT = 16;
 
     public int Score { get; set; }
-    
-    // We only create this string when absolutely needed by the callback
     public string Seed { get; set; }
-    
-    private fixed int _tallyValues[MAX_TALLY_COUNT];
     private int _tallyCount;
-    
-    public byte[] Tally 
-    {
-        get 
-        {
-            var result = new byte[_tallyCount];
-            for (int i = 0; i < _tallyCount; i++) result[i] = (byte)_tallyValues[i];
-            return result;
-        }
-    }
+    private int[] _tallyValues;
+
+    public byte[] Tally => TallyColumns.Select(x => (byte)x).ToArray();
 
     public MotelySeedScoreTally(string seed, int score)
     {
         Seed = seed;
         Score = score;
         _tallyCount = 0;
+        _tallyValues = new int[MAX_TALLY_COUNT];
     }
 
     public void AddTally(int value)
     {
         if (_tallyCount < MAX_TALLY_COUNT)
         {
-            _tallyValues[_tallyCount++] = value;
+            _tallyValues[_tallyCount] = value;
+            _tallyCount++;
         }
     }
 
@@ -47,6 +38,12 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     }
 
     public int TallyCount => _tallyCount;
+
+    public ReadOnlySpan<int> TallyValuesSpan
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new ReadOnlySpan<int>((int*)Unsafe.AsPointer(ref _tallyValues[0]), _tallyCount);
+    }
 
     public List<int> TallyColumns
     {
