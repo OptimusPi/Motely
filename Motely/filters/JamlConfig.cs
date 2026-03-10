@@ -444,7 +444,6 @@ public static class JamlConfigLoader
         try
         {
             var deserializer = new StaticDeserializerBuilder(new JamlYamlContext())
-                .IgnoreUnmatchedProperties()
                 .Build();
             var dto = deserializer.Deserialize<JamlDto>(jaml);
             if (dto == null)
