@@ -9,12 +9,14 @@
     <RootNamespace>Motely.NodeAddon</RootNamespace>
     <AssemblyName>Motely.NodeAddon</AssemblyName>
     <Description>Node.js addon for Motely (node-api-dotnet). Exports getCapabilities, analyzeSeed, validateJaml, startJamlSearch, etc.</Description>
-    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <PublishAot>true</PublishAot>
+    <PublishNodeModule>true</PublishNodeModule>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.JavaScript.NodeApi" />
-    <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,5 +30,18 @@
 
   <Target Name="ExportNodePackageIndex" AfterTargets="Build">
     <Copy SourceFiles="$(MSBuildThisFileDirectory)NodePackage\index.ts" DestinationFiles="$(MSBuildThisFileDirectory)..\Motely.node\index.ts" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Delete build-time-only assemblies from the output dir so they are never staged -->
+  <Target Name="RemoveBuildOnlyAssemblies" AfterTargets="Build">
+    <ItemGroup>
+      <_BuildOnlyDll Include="$(OutputPath)Microsoft.CodeAnalysis.dll" />
+      <_BuildOnlyDll Include="$(OutputPath)Microsoft.CodeAnalysis.CSharp.dll" />
+      <_BuildOnlyDll Include="$(OutputPath)Microsoft.JavaScript.NodeApi.Generator.dll" />
+      <_BuildOnlyDll Include="$(OutputPath)JetBrains.Annotations.dll" />
+      <_BuildOnlyDll Include="$(OutputPath)System.Reflection.MetadataLoadContext.dll" />
+      <_BuildOnlyDll Include="$(OutputPath)SixLabors.ImageSharp.dll" />
+    </ItemGroup>
+    <Delete Files="@(_BuildOnlyDll)" ContinueOnError="true" />
   </Target>
 </Project>

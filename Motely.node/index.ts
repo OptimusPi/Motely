@@ -38,6 +38,7 @@ export interface AnteAnalysisInfo {
   voucher: string;
   smallBlindTag: string;
   bigBlindTag: string;
+  drawOrder: string;
   shopQueue: ShopItemInfo[];
   packs: PackInfo[];
 }
@@ -46,6 +47,7 @@ export interface SeedAnalysisInfo {
   seed: string;
   deck: string;
   stake: string;
+  erraticDeckComposition: string[];
   error?: string | null;
   antes: AnteAnalysisInfo[];
 }
@@ -53,6 +55,7 @@ export interface SeedAnalysisInfo {
 export interface SearchResultInfo {
   seed: string;
   score: number;
+  tallies?: string[] | null;
 }
 
 export interface ValidateResult {

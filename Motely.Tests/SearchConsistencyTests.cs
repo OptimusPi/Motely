@@ -77,6 +77,122 @@ public class SearchConsistencyTests(ITestOutputHelper output)
         return null;
     }
 
+    private static (string Seed, int Ante, string SmallBlindTag, string BigBlindTag)?
+        FindAnalyzedAnteWithDistinctTags()
+    {
+        foreach (var seed in AnalyzerSeedCandidates)
+        {
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
+            );
+
+            if (!string.IsNullOrEmpty(analysis.Error))
+                continue;
+
+            foreach (var ante in analysis.Antes)
+            {
+                if (ante.SmallBlindTag != ante.BigBlindTag)
+                    return (
+                        seed,
+                        ante.Ante,
+                        ante.SmallBlindTag.ToString(),
+                        ante.BigBlindTag.ToString()
+                    );
+            }
+        }
+
+        return null;
+    }
+
+    private static (string Seed, string TagName, int[] Antes, int Occurrences)?
+        FindAnalyzedRepeatedAnyTag(int minOccurrences)
+    {
+        foreach (var seed in AnalyzerSeedCandidates)
+        {
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
+            );
+
+            if (!string.IsNullOrEmpty(analysis.Error))
+                continue;
+
+            var counts = new Dictionary<MotelyTag, int>();
+            var antesByTag = new Dictionary<MotelyTag, HashSet<int>>();
+
+            foreach (var ante in analysis.Antes)
+            {
+                Record(ante.SmallBlindTag, ante.Ante);
+                Record(ante.BigBlindTag, ante.Ante);
+            }
+
+            foreach (var pair in counts)
+            {
+                if (pair.Value >= minOccurrences)
+                    return (seed, pair.Key.ToString(), antesByTag[pair.Key].Order().ToArray(), pair.Value);
+            }
+
+            void Record(MotelyTag tag, int ante)
+            {
+                counts[tag] = counts.TryGetValue(tag, out var existing) ? existing + 1 : 1;
+                if (!antesByTag.TryGetValue(tag, out var antes))
+                {
+                    antes = [];
+                    antesByTag[tag] = antes;
+                }
+                antes.Add(ante);
+            }
+        }
+
+        return null;
+    }
+
+    private static (string Seed, string VoucherName, int Ante)?
+        FindAnalyzedSingleVoucherOccurrence()
+    {
+        foreach (var seed in AnalyzerSeedCandidates)
+        {
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
+            );
+
+            if (!string.IsNullOrEmpty(analysis.Error))
+                continue;
+
+            var ante = analysis.Antes.FirstOrDefault();
+            if (ante == null)
+                continue;
+
+            return (seed, ante.Voucher.ToString(), ante.Ante);
+        }
+
+        return null;
+    }
+
+    private static (string Seed, string TagName, int Ante)?
+        FindAnalyzedSingleTagOccurrence()
+    {
+        foreach (var seed in AnalyzerSeedCandidates)
+        {
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
+            );
+
+            if (!string.IsNullOrEmpty(analysis.Error))
+                continue;
+
+            foreach (var ante in analysis.Antes)
+            {
+                var targetTag = ante.BigBlindTag != ante.SmallBlindTag
+                    ? ante.BigBlindTag
+                    : ante.SmallBlindTag;
+
+                return (seed, targetTag.ToString(), ante.Ante);
+            }
+        }
+
+        return null;
+    }
+
     private static (string Seed, int Ante, string TarotName, int ShopSlotIndex)?
         FindAnalyzedTarotShopItem()
     {
@@ -353,6 +469,293 @@ public class SearchConsistencyTests(ITestOutputHelper output)
 
         Assert.Equal(1, search.TotalSeedsSearched);
         Assert.Equal(1, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedTagShorthand_MatchesEitherBlind()
+    {
+        var match = FindAnalyzedAnteWithDistinctTags();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+
+        var derived = match!.Value;
+        var jaml = $$"""
+            name: AnalyzerDerivedAnyTag
+            deck: Red
+            stake: White
+            must:
+              - tag: {{derived.BigBlindTag}}
+                antes: [{{derived.Ante}}]
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(1, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedLogicalAndFilter_MatchesSameSeed()
+    {
+        var match = FindAnalyzedAnteWithDistinctTags();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+
+        var derived = match!.Value;
+        var jaml = $$"""
+            name: AnalyzerDerivedAnd
+            deck: Red
+            stake: White
+            must:
+              - and:
+                  - smallBlindTag: {{derived.SmallBlindTag}}
+                    antes: [{{derived.Ante}}]
+                  - bigBlindTag: {{derived.BigBlindTag}}
+                    antes: [{{derived.Ante}}]
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(1, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedLogicalOrFilter_MatchesSameSeed()
+    {
+        var match = FindAnalyzedAnteWithDistinctTags();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+
+        var derived = match!.Value;
+        var alternateTag = Enum
+            .GetValues<MotelyTag>()
+            .First(tag =>
+                !string.Equals(tag.ToString(), derived.SmallBlindTag, StringComparison.Ordinal)
+                && !string.Equals(tag.ToString(), derived.BigBlindTag, StringComparison.Ordinal)
+            )
+            .ToString();
+
+        var jaml = $$"""
+            name: AnalyzerDerivedOr
+            deck: Red
+            stake: White
+            must:
+              - or:
+                  - smallBlindTag: {{alternateTag}}
+                    antes: [{{derived.Ante}}]
+                  - bigBlindTag: {{derived.BigBlindTag}}
+                    antes: [{{derived.Ante}}]
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(1, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedLegacyNestedAndFilter_MatchesSameSeed()
+    {
+        var match = FindAnalyzedAnteWithDistinctTags();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed ante with distinct blind tags");
+
+        var derived = match!.Value;
+        var jaml = $$"""
+            name: AnalyzerDerivedLegacyAnd
+            deck: Red
+            stake: White
+            must:
+              - and:
+                  label: Exact blind pair
+                  mode: sum
+                  score: 100
+                  clauses:
+                    - smallBlindTag: {{derived.SmallBlindTag}}
+                      antes: [{{derived.Ante}}]
+                    - bigBlindTag: {{derived.BigBlindTag}}
+                      antes: [{{derived.Ante}}]
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(1, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedTagMinFilter_MatchesSameSeed()
+    {
+        var match = FindAnalyzedRepeatedAnyTag(2);
+        Assert.True(match.HasValue, "Expected to find at least one analyzed seed with repeated tag occurrences");
+
+        var derived = match!.Value;
+        var antes = string.Join(", ", derived.Antes);
+        var jaml = $$"""
+            name: AnalyzerDerivedTagMin
+            deck: Red
+            stake: White
+            must:
+              - tag: {{derived.TagName}}
+                antes: [{{antes}}]
+                min: 2
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(1, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedTagMinFilter_RejectsSingleOccurrence()
+    {
+        var match = FindAnalyzedSingleTagOccurrence();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed seed with a tag occurrence");
+
+        var derived = match!.Value;
+        var jaml = $$"""
+            name: AnalyzerDerivedTagMinReject
+            deck: Red
+            stake: White
+            must:
+              - tag: {{derived.TagName}}
+                antes: [{{derived.Ante}}]
+                min: 2
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(0, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public async Task AnalyzerDerivedVoucherMinFilter_RejectsSingleOccurrence()
+    {
+        var match = FindAnalyzedSingleVoucherOccurrence();
+        Assert.True(match.HasValue, "Expected to find at least one analyzed seed with a voucher occurrence");
+
+        var derived = match!.Value;
+        var jaml = $$"""
+            name: AnalyzerDerivedVoucherMinReject
+            deck: Red
+            stake: White
+            must:
+              - voucher: {{derived.VoucherName}}
+                antes: [{{derived.Ante}}]
+                min: 2
+            """;
+
+        Assert.True(
+            JamlConfigLoader.TryLoad(jaml, out var config, out var error),
+            $"JAML parse failed: {error}"
+        );
+
+        var settings = JamlSearchBuilder
+            .CreateSettings(config!)
+            .WithListSearch([derived.Seed], 1)
+            .WithThreadCount(1)
+            .WithQuietMode(true);
+
+        using var search = settings.Start();
+        await search.WaitForCompletionAsync();
+
+        Assert.Equal(1, search.TotalSeedsSearched);
+        Assert.Equal(0, search.MatchingSeeds);
+    }
+
+    [Fact]
+    public void Analyzer_FirstAnteFirstPack_IsNormalBuffoon()
+    {
+        foreach (var seed in AnalyzerSeedCandidates)
+        {
+            var analysis = MotelySeedAnalyzer.Analyze(
+                new MotelySeedAnalysisConfig(seed, MotelyDeck.Red, MotelyStake.White)
+            );
+
+            Assert.True(string.IsNullOrEmpty(analysis.Error), $"Analyzer failed for {seed}: {analysis.Error}");
+            Assert.NotEmpty(analysis.Antes);
+
+            var ante = analysis.Antes[0];
+            Assert.Equal(1, ante.Ante);
+            Assert.NotEmpty(ante.Packs);
+
+            var pack = ante.Packs[0];
+            Assert.Equal(MotelyBoosterPack.Buffoon, pack.Type);
+            Assert.Equal(MotelyBoosterPackType.Buffoon, pack.Type.GetPackType());
+            Assert.Equal(MotelyBoosterPackSize.Normal, pack.Type.GetPackSize());
+            Assert.Equal(2, pack.Items.Count);
+        }
     }
 }
 

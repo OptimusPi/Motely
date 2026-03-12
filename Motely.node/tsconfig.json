@@ -20,11 +20,13 @@
   },
   "include": [
     "index.ts",
+    "server.ts",
     "node-api-dotnet.d.ts"
   ],
   "exclude": [
     "node_modules",
     "*.js",
-    "index.d.ts"
+    "index.d.ts",
+    "server.d.ts"
   ]
 }

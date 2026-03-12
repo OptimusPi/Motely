@@ -9,7 +9,8 @@ public sealed class LegendaryJokerClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyJoker[] Jokers { get; init; }
+    public MotelyJoker[] Jokers { get; init; } = [];
+    public bool IsWildcard { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public SoulJokerSourceConfig Sources { get; init; } = new();
     public int[] Antes { get; init; } = [];
@@ -23,16 +24,20 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
 
     public LegendaryJokerFilter CreateFilter(ref MotelyFilterCreationContext ctx)
     {
+        var boosterPacks = _clause.Sources.BoosterPacks;
+        Debug.Assert(boosterPacks.Length > 0,
+            "Legendary joker clause should have normalized default sources at config load time.");
+
         foreach (var ante in _clause.Antes)
         {
             ctx.CacheBoosterPackStream(ante);
         }
 
         int maxBoosterPack = 0;
-        for (int i = 0; i < _clause.Sources.BoosterPacks.Length; i++)
+        for (int i = 0; i < boosterPacks.Length; i++)
         {
-            if (_clause.Sources.BoosterPacks[i] > maxBoosterPack)
-                maxBoosterPack = _clause.Sources.BoosterPacks[i];
+            if (boosterPacks[i] > maxBoosterPack)
+                maxBoosterPack = boosterPacks[i];
         }
 
         // Pre-compute target joker type (cold path)
@@ -42,7 +47,23 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
                 (int)MotelyItemTypeCategory.Joker | (int)_clause.Jokers[i]
             );
 
-        return new LegendaryJokerFilter(_clause, maxBoosterPack, jokerTypes);
+        var normalizedClause = new LegendaryJokerClause
+        {
+            Label = _clause.Label,
+            Score = _clause.Score,
+            Jokers = _clause.Jokers,
+            Edition = _clause.Edition,
+            Antes = _clause.Antes,
+            Min = _clause.Min,
+            Sources = new SoulJokerSourceConfig
+            {
+                ShopItems = _clause.Sources.ShopItems,
+                BoosterPacks = boosterPacks,
+                SoulCard = _clause.Sources.SoulCard,
+            },
+        };
+
+        return new LegendaryJokerFilter(normalizedClause, maxBoosterPack, jokerTypes);
     }
 
     public struct LegendaryJokerFilter(
@@ -77,15 +98,24 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
             var soulStream = singleCtx.CreateSoulJokerStream(ante);
             var legendaryJoker = singleCtx.GetNextJoker(ref soulStream);
 
-            bool jokerMatch = false;
-            for (int i = 0; i < targetTypes.Length; i++)
+            bool jokerMatch;
+            if (targetTypes.Length == 0)
             {
-                if (legendaryJoker.Type == targetTypes[i])
+                // Wildcard: any legendary joker
+                jokerMatch = !clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value;
+            }
+            else
+            {
+                jokerMatch = false;
+                for (int i = 0; i < targetTypes.Length; i++)
                 {
-                    if (!clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value)
+                    if (legendaryJoker.Type == targetTypes[i])
                     {
-                        jokerMatch = true;
-                        break;
+                        if (!clause.Edition.HasValue || legendaryJoker.Edition == clause.Edition.Value)
+                        {
+                            jokerMatch = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -163,7 +193,7 @@ public struct LegendaryJokerFilterDesc(LegendaryJokerClause clause)
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.Jokers.Length > 0);
+            Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
 
             // Copy struct fields to locals — lambdas can't capture struct 'this'
             var clause = _clause;

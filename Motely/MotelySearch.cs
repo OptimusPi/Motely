@@ -133,7 +133,7 @@ public sealed class MotelyRandomSeedProvider(int? count) : IMotelySeedProvider
 /// </summary>
 public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
 {
-    public int? SeedCount { get; } = -1; // Unknown - generates infinitely many palindromes
+    public int? SeedCount { get; } = CalculateSeedCount();
 
     private readonly IEnumerator<string> _palindromeEnumerator;
     private readonly object _enumeratorLock = new();
@@ -141,6 +141,28 @@ public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
     public MotelyPalindromeSeedProvider()
     {
         _palindromeEnumerator = GeneratePalindromes().GetEnumerator();
+    }
+
+    private static int CalculateSeedCount()
+    {
+        checked
+        {
+            int total = 0;
+            int seedDigitCount = MotelyCore.SeedDigits.Length;
+
+            for (int len = 1; len <= MotelyCore.MaxSeedLength; len++)
+            {
+                int halfLen = (len + 1) / 2;
+                int countForLength = 1;
+
+                for (int i = 0; i < halfLen; i++)
+                    countForLength *= seedDigitCount;
+
+                total += countForLength;
+            }
+
+            return total;
+        }
     }
 
     private IEnumerable<string> GeneratePalindromes()
@@ -265,7 +287,24 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     {
         // Don't materialize! Seeds are used in the order provided from generator/enumerator
         _seedEnumerator = seeds.GetEnumerator();
-        SeedCount = seedCount; // Allow setting count for keyword generation
+        SeedCount = ResolveSeedCount(seeds, seedCount);
+    }
+
+    private static int ResolveSeedCount(IEnumerable<string> seeds, int seedCount)
+    {
+        if (seedCount >= 0)
+            return seedCount;
+
+        if (seeds is ICollection<string> collection)
+            return collection.Count;
+
+        if (seeds is IReadOnlyCollection<string> readOnlyCollection)
+            return readOnlyCollection.Count;
+
+        if (seeds is System.Collections.ICollection nonGenericCollection)
+            return nonGenericCollection.Count;
+
+        return -1;
     }
 
     public ReadOnlySpan<char> NextSeed()
@@ -1141,7 +1180,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private abstract class MotelySearchPlan : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 200;
+        public const int MAX_SEED_WAIT_MS = 2000;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;

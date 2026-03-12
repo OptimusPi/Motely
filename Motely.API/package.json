@@ -1,0 +1,11 @@
+{
+  "name": "motely-api-wwwroot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "copy-wasm": "node copy-wasm.mjs"
+  },
+  "dependencies": {
+    "motely-wasm": "3.0.13"
+  }
+}

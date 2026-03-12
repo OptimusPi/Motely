@@ -1,7 +1,7 @@
 {
   "name": "motely-wasm",
-  "version": "3.0.6",
-  "description": "Run the classic Analyzer on a Balatro seed, and more all in your browser!",
+  "version": "3.0.13",
+  "description": "Front-End WebAssembly build of MotelyJAML. Search for Balatro seeds using Jimbo Ante Markup Language",
   "type": "module",
   "main": "index.js",
   "browser": "index.js",

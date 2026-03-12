@@ -21,7 +21,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_options.Url) || string.IsNullOrWhiteSpace(_options.Token))
+        if (string.IsNullOrWhiteSpace(_options.Url))
             return;
 
         var workerId = string.IsNullOrWhiteSpace(_options.WorkerId)
@@ -31,7 +31,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
 
         _logger?.LogInformation("Pool worker starting: {PoolUrl}, WorkerId={WorkerId}, Threads={Threads}", _options.Url, workerId, threads);
 
-        using var pool = new PoolClient(_options.Url.TrimEnd('/'), _options.Token);
+        using var pool = new PoolClient(_options.Url.TrimEnd('/'));
         long totalSeedsSearched = 0;
         long totalMatches = 0;
         int chunksCompleted = 0;
@@ -82,6 +82,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
 
             var matchResults = new ConcurrentBag<SeedResultDto>();
             long seedsSearched = 0;
+            long endBatchExclusive = claim.BatchIndex + Math.Max(1, claim.Remaining);
 
             var plan = JamlSearchBuilder.CreatePlan(config);
             var settings = plan.Settings
@@ -90,7 +91,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
                 .WithThreadCount(threads)
                 .WithBatchCharacterCount(claim.BatchCharCount)
                 .WithStartBatchIndex(claim.BatchIndex)
-                .WithEndBatchIndex(claim.BatchIndex + 1)
+                .WithEndBatchIndex(endBatchExclusive)
                 .WithSequentialSearch();
 
             settings.WithSeedMatchCallback(line =>
@@ -118,7 +119,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
             var submitBody = new SubmitResultsDto
             {
                 StartBatch = claim.BatchIndex,
-                EndBatch = claim.BatchIndex + 1,
+                EndBatch = endBatchExclusive,
                 Results = matchResults.ToArray(),
                 SeedsSearched = seedsSearched,
             };

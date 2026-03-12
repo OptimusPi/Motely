@@ -1,5 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 
 namespace Motely.Filters;
@@ -10,6 +16,7 @@ namespace Motely.Filters;
 /// </summary>
 public sealed class JamlClauseSet : IEnumerable<IJamlClause>
 {
+    public List<IJamlClause> OrderedClauses { get; } = [];
     public List<JokerClause> Jokers { get; set; } = [];
     public List<CommonJokerClause> CommonJokers { get; set; } = [];
     public List<UncommonJokerClause> UncommonJokers { get; set; } = [];
@@ -35,59 +42,11 @@ public sealed class JamlClauseSet : IEnumerable<IJamlClause>
     public List<StartingDrawClause> StartingDraw { get; set; } = [];
 
     // Add Count property for compatibility
-    public int Count =>
-        Jokers.Count
-        + CommonJokers.Count
-        + UncommonJokers.Count
-        + RareJokers.Count
-        + MixedJokers.Count
-        + LegendaryJokers.Count
-        + Vouchers.Count
-        + TarotCards.Count
-        + SpectralCards.Count
-        + PlanetCards.Count
-        + StandardCards.Count
-        + Bosses.Count
-        + Tags.Count
-        + ErraticRanks.Count
-        + ErraticSuits.Count
-        + ErraticCards.Count
-        + LuckyMoney.Count
-        + LuckyMult.Count
-        + MisprintMult.Count
-        + WheelOfFortune.Count
-        + CavendishExtinct.Count
-        + GrosMichelExtinct.Count
-        + StartingDraw.Count;
+    public int Count => OrderedClauses.Count;
 
-    public bool HasAnyClauses => Count > 0;
+    public bool HasAnyClauses => OrderedClauses.Count > 0;
 
-    public IEnumerator<IJamlClause> GetEnumerator()
-    {
-        foreach (var c in Jokers) yield return c;
-        foreach (var c in CommonJokers) yield return c;
-        foreach (var c in UncommonJokers) yield return c;
-        foreach (var c in RareJokers) yield return c;
-        foreach (var c in MixedJokers) yield return c;
-        foreach (var c in LegendaryJokers) yield return c;
-        foreach (var c in Vouchers) yield return c;
-        foreach (var c in TarotCards) yield return c;
-        foreach (var c in SpectralCards) yield return c;
-        foreach (var c in PlanetCards) yield return c;
-        foreach (var c in StandardCards) yield return c;
-        foreach (var c in Bosses) yield return c;
-        foreach (var c in Tags) yield return c;
-        foreach (var c in ErraticRanks) yield return c;
-        foreach (var c in ErraticSuits) yield return c;
-        foreach (var c in ErraticCards) yield return c;
-        foreach (var c in LuckyMoney) yield return c;
-        foreach (var c in LuckyMult) yield return c;
-        foreach (var c in MisprintMult) yield return c;
-        foreach (var c in WheelOfFortune) yield return c;
-        foreach (var c in CavendishExtinct) yield return c;
-        foreach (var c in GrosMichelExtinct) yield return c;
-        foreach (var c in StartingDraw) yield return c;
-    }
+    public IEnumerator<IJamlClause> GetEnumerator() => OrderedClauses.GetEnumerator();
 
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }
@@ -268,6 +227,24 @@ public sealed class JamlClauseDto
     [YamlMember(Alias = "eventType")]
     public string? EventType { get; set; }
 
+    [YamlMember(Alias = "LuckyMoney")]
+    public int[]? LuckyMoney { get; set; }
+
+    [YamlMember(Alias = "LuckyMult")]
+    public int[]? LuckyMult { get; set; }
+
+    [YamlMember(Alias = "MisprintMult")]
+    public int[]? MisprintMult { get; set; }
+
+    [YamlMember(Alias = "WheelOfFortune")]
+    public int[]? WheelOfFortune { get; set; }
+
+    [YamlMember(Alias = "CavendishExtinct")]
+    public int[]? CavendishExtinct { get; set; }
+
+    [YamlMember(Alias = "GrosMichelExtinct")]
+    public int[]? GrosMichelExtinct { get; set; }
+
     // Common clause properties
     [YamlMember(Alias = "antes")]
     public int[]? Antes { get; set; }
@@ -311,6 +288,12 @@ public sealed class JamlClauseDto
 
     [YamlMember(Alias = "or")]
     public List<JamlClauseDto>? Or { get; set; }
+
+    [YamlMember(Alias = "clauses")]
+    public List<JamlClauseDto>? Clauses { get; set; }
+
+    [YamlMember(Alias = "mode")]
+    public string? Mode { get; set; }
 
     // Flat source shortcuts (top-level on clause)
     [YamlMember(Alias = "shopItems")]
@@ -443,13 +426,13 @@ public static class JamlConfigLoader
 
         try
         {
+            var normalizedJaml = NormalizeLegacyLogicSyntax(jaml);
             var deserializer = new StaticDeserializerBuilder(new JamlYamlContext())
-                .IgnoreUnmatchedProperties()
                 .Build();
-            var dto = deserializer.Deserialize<JamlDto>(jaml);
+            var dto = deserializer.Deserialize<JamlDto>(normalizedJaml);
             if (dto == null)
             {
-                error = "Failed to deserialize JAML content.";
+                error = "YAML deserialized to null.";
                 return false;
             }
 
@@ -465,6 +448,9 @@ public static class JamlConfigLoader
             config = new JamlConfig
             {
                 Name = dto.Name,
+                Description = dto.Description,
+                Author = dto.Author,
+                DateCreated = dto.DateCreated ?? System.DateTime.UtcNow.ToString("O"),
                 Deck = deck,
                 Stake = stake,
             };
@@ -482,9 +468,137 @@ public static class JamlConfigLoader
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            config = null;
+            error = FormatLoadError(ex);
             return false;
         }
+    }
+
+    private static string FormatLoadError(Exception ex)
+    {
+        var message = ex.Message;
+
+        if (ex is YamlException yamlEx)
+        {
+            var mark = yamlEx.Start;
+            var location = mark.Line > 0 && mark.Column > 0
+                ? $"on line {mark.Line}, col {mark.Column}: "
+                : string.Empty;
+
+            var unknownPropertyMatch = Regex.Match(
+                message,
+                "Property '([^']+)' not found on type '([^']+)'",
+                RegexOptions.CultureInvariant
+            );
+
+            if (unknownPropertyMatch.Success)
+            {
+                var propertyName = unknownPropertyMatch.Groups[1].Value;
+                var targetType = unknownPropertyMatch.Groups[2].Value;
+                return $"{location}Unknown property '{propertyName}' in {DescribeYamlTarget(targetType)}.";
+            }
+
+            return $"{location}{message}";
+        }
+
+        return message;
+    }
+
+    private static string DescribeYamlTarget(string targetType) =>
+        targetType switch
+        {
+            "Motely.Filters.JamlDto" => "the top-level JAML document",
+            "Motely.Filters.JamlClauseDto" => "a clause",
+            "Motely.Filters.JamlSourcesDto" => "a clause's sources block",
+            "Motely.Filters.JamlDefaultsDto" => "the defaults block",
+            _ => $"{targetType}",
+        };
+
+    private static string NormalizeLegacyLogicSyntax(string jaml)
+    {
+        var yaml = new YamlStream();
+        using var reader = new StringReader(jaml);
+        yaml.Load(reader);
+
+        foreach (var document in yaml.Documents)
+            NormalizeLegacyLogicSyntax(document.RootNode);
+
+        using var writer = new StringWriter();
+        yaml.Save(writer, assignAnchors: false);
+        return writer.ToString();
+    }
+
+    private static void NormalizeLegacyLogicSyntax(YamlNode node)
+    {
+        switch (node)
+        {
+            case YamlMappingNode mapping:
+                NormalizeLegacyLogicBlock(mapping, "and");
+                NormalizeLegacyLogicBlock(mapping, "or");
+
+                foreach (var child in mapping.Children.Values.ToArray())
+                    NormalizeLegacyLogicSyntax(child);
+                break;
+
+            case YamlSequenceNode sequence:
+                foreach (var child in sequence.Children)
+                    NormalizeLegacyLogicSyntax(child);
+                break;
+        }
+    }
+
+    private static void NormalizeLegacyLogicBlock(YamlMappingNode mapping, string key)
+    {
+        if (!TryGetChild(mapping, key, out var keyNode, out var valueNode))
+            return;
+
+        if (valueNode is not YamlMappingNode legacyLogicBlock)
+            return;
+
+        if (!TryGetChild(legacyLogicBlock, "clauses", out _, out var clausesNode))
+            return;
+
+        foreach (var child in legacyLogicBlock.Children)
+        {
+            if (child.Key is not YamlScalarNode childKey || childKey.Value == null)
+                continue;
+
+            if (string.Equals(childKey.Value, "clauses", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (!ContainsKey(mapping, childKey.Value))
+                mapping.Add(new YamlScalarNode(childKey.Value), child.Value);
+        }
+
+        mapping.Children[keyNode] = clausesNode;
+    }
+
+    private static bool ContainsKey(YamlMappingNode mapping, string key) =>
+        mapping.Children.Keys.OfType<YamlScalarNode>().Any(node =>
+            string.Equals(node.Value, key, StringComparison.OrdinalIgnoreCase)
+        );
+
+    private static bool TryGetChild(
+        YamlMappingNode mapping,
+        string key,
+        [NotNullWhen(true)] out YamlScalarNode? keyNode,
+        [NotNullWhen(true)] out YamlNode? valueNode
+    )
+    {
+        foreach (var child in mapping.Children)
+        {
+            if (child.Key is YamlScalarNode scalarNode
+                && string.Equals(scalarNode.Value, key, StringComparison.OrdinalIgnoreCase))
+            {
+                keyNode = scalarNode;
+                valueNode = child.Value;
+                return true;
+            }
+        }
+
+        keyNode = null;
+        valueNode = null;
+        return false;
     }
 
     public static bool TryLoadFromFile(
@@ -533,15 +647,23 @@ public static class JamlConfigLoader
     {
         if (clauses == null || clauses.Count == 0)
             return;
+        bool inheritedAntesSpecifiedByUser = defaults?.Antes != null;
         foreach (var c in clauses)
         {
-            var clause = CreateClauseFromDto(c, defaultAntes, defaults);
+            var clause = CreateClauseFromDto(
+                c,
+                defaultAntes,
+                defaults,
+                inheritedAntesSpecifiedByUser
+            );
             AddClauseToSet(set, clause);
         }
     }
 
     private static void AddClauseToSet(JamlClauseSet set, IJamlClause clause)
     {
+        set.OrderedClauses.Add(clause);
+
         switch (clause)
         {
             case JokerClause c:
@@ -614,7 +736,7 @@ public static class JamlConfigLoader
                 set.StartingDraw.Add(c);
                 break;
             case AndClause:
-                break; // logic combinators not yet dispatched to filter descs
+                break;
             case OrClause:
                 break;
             default:
@@ -627,34 +749,63 @@ public static class JamlConfigLoader
     private static IJamlClause CreateClauseFromDto(
         JamlClauseDto c,
         int[] defaultAntes,
-        JamlDefaultsDto? defaults
+        JamlDefaultsDto? defaults,
+        bool inheritedAntesSpecifiedByUser
     )
     {
+        bool clauseHasExplicitAntes = c.Antes != null;
         var antes = c.Antes ?? defaultAntes;
+        bool hasUserSpecifiedAntes = clauseHasExplicitAntes || inheritedAntesSpecifiedByUser;
         int min = c.Min ?? 1;
         int score = c.Score ?? 1;
+        var label = c.Label ?? "Label"; // TODO JamlClauseLabeler.Generate(itemType, c, antes, min);
 
-        if (c.And != null)
+        bool explicitAnd = string.Equals(c.Type, "And", StringComparison.OrdinalIgnoreCase);
+        bool explicitOr = string.Equals(c.Type, "Or", StringComparison.OrdinalIgnoreCase);
+
+        if (c.And != null || explicitAnd)
+        {
+            var children = c.And ?? c.Clauses ?? [];
+
+            return new AndClause
+            {
+                Label = label,
+                Score = score,
+                Clauses = children
+                    .Select(sub => CreateClauseFromDto(sub, antes, defaults, hasUserSpecifiedAntes))
+                    .ToArray(),
+            };
+        }
+
+        if (c.Or != null || explicitOr)
+        {
+            var children = c.Or ?? c.Clauses ?? [];
+
+            return new OrClause
+            {
+                Label = label,
+                Score = score,
+                Min = min,
+                Clauses = children
+                    .Select(sub => CreateClauseFromDto(sub, antes, defaults, hasUserSpecifiedAntes))
+                    .ToArray(),
+            };
+        }
+
+        if (c.Clauses != null)
         {
             return new AndClause
             {
+                Label = label,
                 Score = score,
-                Clauses = c.And.Select(sub => CreateClauseFromDto(sub, [], defaults)).ToArray(),
-            };
-        }
-        if (c.Or != null)
-        {
-            return new OrClause
-            {
-                Score = score,
-                Min = min,
-                Clauses = c.Or.Select(sub => CreateClauseFromDto(sub, [], defaults)).ToArray(),
+                Clauses = c.Clauses
+                    .Select(sub => CreateClauseFromDto(sub, antes, defaults, hasUserSpecifiedAntes))
+                    .ToArray(),
             };
         }
 
         var (itemType, value) = ResolveType(c);
         var edition = ParseEnum<MotelyItemEdition>(c.Edition);
-        var label = c.Label ?? "Label"; // TODO JamlClauseLabeler.Generate(itemType, c, antes, min);
 
         var shopItems = c.Sources?.ShopItems ?? c.ShopItems ?? defaults?.ShopItems;
         var boosterPacks = c.Sources?.BoosterPacks ?? c.BoosterPacks ?? defaults?.BoosterPacks;
@@ -675,6 +826,8 @@ public static class JamlConfigLoader
                 .Range(minPack.Value, maxPack.Value - minPack.Value + 1)
                 .ToArray();
 
+        NormalizeDefaultSources(ref shopItems, ref boosterPacks, itemType);
+
         var (shRank, shSuit) = ParseCardShorthand(value ?? "");
 
         return itemType switch
@@ -685,10 +838,14 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
+                IsWildcard = IsAnyWildcard(value ?? c.Jokers?.FirstOrDefault()),
+                WildcardRarity = ParseWildcardRarity(value ?? c.Jokers?.FirstOrDefault()),
                 Jokers =
-                    value != null
-                        ? [Enum.Parse<MotelyJoker>(value, true)]
-                        : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
+                    IsAnyWildcard(value ?? c.Jokers?.FirstOrDefault())
+                        ? []
+                        : value != null
+                            ? [Enum.Parse<MotelyJoker>(value, true)]
+                            : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
                     c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
@@ -714,12 +871,13 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
+                IsWildcard = IsAnyWildcard(value ?? (c.CommonJokers ?? c.Jokers)?.FirstOrDefault()),
                 Jokers =
-                    value != null
-                        ? [Enum.Parse<MotelyJokerCommon>(value, true)]
-                        : (c.CommonJokers ?? c.Jokers)
-                            ?.Select(j => Enum.Parse<MotelyJokerCommon>(j, true))
-                            .ToArray() ?? [],
+                    IsAnyWildcard(value ?? (c.CommonJokers ?? c.Jokers)?.FirstOrDefault())
+                        ? []
+                        : value != null
+                            ? [Enum.Parse<MotelyJokerCommon>(value, true)]
+                            : (c.CommonJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerCommon>(j, true)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
                     c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
@@ -745,12 +903,13 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
+                IsWildcard = IsAnyWildcard(value ?? (c.UncommonJokers ?? c.Jokers)?.FirstOrDefault()),
                 Jokers =
-                    value != null
-                        ? [Enum.Parse<MotelyJokerUncommon>(value, true)]
-                        : (c.UncommonJokers ?? c.Jokers)
-                            ?.Select(j => Enum.Parse<MotelyJokerUncommon>(j, true))
-                            .ToArray() ?? [],
+                    IsAnyWildcard(value ?? (c.UncommonJokers ?? c.Jokers)?.FirstOrDefault())
+                        ? []
+                        : value != null
+                            ? [Enum.Parse<MotelyJokerUncommon>(value, true)]
+                            : (c.UncommonJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerUncommon>(j, true)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
                     c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
@@ -776,12 +935,13 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
+                IsWildcard = IsAnyWildcard(value ?? (c.RareJokers ?? c.Jokers)?.FirstOrDefault()),
                 Jokers =
-                    value != null
-                        ? [Enum.Parse<MotelyJokerRare>(value, true)]
-                        : (c.RareJokers ?? c.Jokers)
-                            ?.Select(j => Enum.Parse<MotelyJokerRare>(j, true))
-                            .ToArray() ?? [],
+                    IsAnyWildcard(value ?? (c.RareJokers ?? c.Jokers)?.FirstOrDefault())
+                        ? []
+                        : value != null
+                            ? [Enum.Parse<MotelyJokerRare>(value, true)]
+                            : (c.RareJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJokerRare>(j, true)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
                     c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
@@ -807,12 +967,14 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
+                IsWildcard = IsAnyWildcard(value ?? (c.MixedJokers ?? c.Jokers)?.FirstOrDefault()),
+                WildcardRarity = ParseWildcardRarity(value ?? (c.MixedJokers ?? c.Jokers)?.FirstOrDefault()),
                 Jokers =
-                    value != null
-                        ? [Enum.Parse<MotelyJoker>(value, true)]
-                        : (c.MixedJokers ?? c.Jokers)
-                            ?.Select(j => Enum.Parse<MotelyJoker>(j, true))
-                            .ToArray() ?? [],
+                    IsAnyWildcard(value ?? (c.MixedJokers ?? c.Jokers)?.FirstOrDefault())
+                        ? []
+                        : value != null
+                            ? [Enum.Parse<MotelyJoker>(value, true)]
+                            : (c.MixedJokers ?? c.Jokers)?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
                 Edition = edition,
                 Stickers =
                     c.Stickers?.Select(s => Enum.Parse<MotelyJokerSticker>(s, true)).ToArray()
@@ -838,10 +1000,13 @@ public static class JamlConfigLoader
                 Score = score,
                 Antes = antes,
                 Min = min,
+                IsWildcard = IsAnyWildcard(value ?? c.Jokers?.FirstOrDefault()),
                 Jokers =
-                    value != null
-                        ? [Enum.Parse<MotelyJoker>(value, true)]
-                        : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
+                    IsAnyWildcard(value ?? c.Jokers?.FirstOrDefault())
+                        ? []
+                        : value != null
+                            ? [Enum.Parse<MotelyJoker>(value, true)]
+                            : c.Jokers?.Select(j => Enum.Parse<MotelyJoker>(j, true)).ToArray() ?? [],
                 Edition = edition,
                 Sources = new SoulJokerSourceConfig
                 {
@@ -920,7 +1085,9 @@ public static class JamlConfigLoader
                 Antes = antes,
                 Min = min,
                 Tags = value != null ? [Enum.Parse<MotelyTag>(value, true)] : [],
-                Position = TagPosition.SmallBlind,
+                Position = c.Tag != null || string.Equals(c.Type, "Tag", StringComparison.OrdinalIgnoreCase)
+                    ? TagPosition.Any
+                    : TagPosition.SmallBlind,
             },
             MotelyFilterItemType.BigBlindTag => new TagClause
             {
@@ -989,7 +1156,14 @@ public static class JamlConfigLoader
                 Rank = ParseRank(c.Rank) ?? shRank,
                 Suit = ParseSuit(c.Suit) ?? shSuit,
             },
-            MotelyFilterItemType.Event => CreateEventClause(c.Event ?? value, c.Rolls, antes, min, score),
+            MotelyFilterItemType.Event => CreateEventClause(
+                c.Event ?? value,
+                ResolveEventRolls(c),
+                min,
+                score,
+                label,
+                hasUserSpecifiedAntes
+            ),
             _ => throw new NotSupportedException($"Unsupported clause type: {itemType}"),
         };
     }
@@ -1035,61 +1209,101 @@ public static class JamlConfigLoader
     private static IRollClause CreateEventClause(
         string? eventName,
         int[]? rolls,
-        int[] antes,
         int min,
-        int score
+        int score,
+        string label,
+        bool hasUserSpecifiedAntes
     )
     {
         if (string.IsNullOrEmpty(eventName))
             throw new NotSupportedException("Event clause is missing event type name.");
+        if (hasUserSpecifiedAntes)
+            throw new NotSupportedException(
+                "Event clauses do not support 'antes'. Remove 'antes' from the event clause, enclosing logic block, or defaults section."
+            );
 
         var r = (rolls == null || rolls.Length == 0) ? new int[] { 0 } : rolls;
         return Enum.Parse<MotelyEventType>(eventName, true) switch
         {
             MotelyEventType.LuckyMoney => new LuckyMoneyClause
             {
+                Label = label,
                 Score = score,
-                Antes = antes,
                 Min = min,
                 Rolls = r,
             },
             MotelyEventType.LuckyMult => new LuckyMultClause
             {
+                Label = label,
                 Score = score,
-                Antes = antes,
                 Min = min,
                 Rolls = r,
             },
             MotelyEventType.MisprintMult => new MisprintMultClause
             {
+                Label = label,
                 Score = score,
-                Antes = antes,
                 Min = min,
                 Rolls = r,
             },
             MotelyEventType.WheelOfFortune => new WheelOfFortuneClause
             {
+                Label = label,
                 Score = score,
-                Antes = antes,
                 Min = min,
                 Rolls = r,
             },
             MotelyEventType.CavendishExtinct => new CavendishExtinctClause
             {
+                Label = label,
                 Score = score,
-                Antes = antes,
                 Min = min,
                 Rolls = r,
             },
             MotelyEventType.GrosMichelExtinct => new GrosMichelExtinctClause
             {
+                Label = label,
                 Score = score,
-                Antes = antes,
                 Min = min,
                 Rolls = r,
             },
             _ => throw new NotSupportedException($"Unsupported event type: {eventName}"),
         };
+    }
+
+    private static int[]? ResolveEventRolls(JamlClauseDto c) =>
+        c.Rolls
+        ?? c.LuckyMoney
+        ?? c.LuckyMult
+        ?? c.MisprintMult
+        ?? c.WheelOfFortune
+        ?? c.CavendishExtinct
+        ?? c.GrosMichelExtinct;
+
+    private static void NormalizeDefaultSources(
+        ref int[]? shopItems,
+        ref int[]? boosterPacks,
+        MotelyFilterItemType itemType
+    )
+    {
+        if (shopItems != null || boosterPacks != null)
+            return;
+
+        switch (itemType)
+        {
+            case MotelyFilterItemType.Joker:
+            case MotelyFilterItemType.CommonJoker:
+            case MotelyFilterItemType.UncommonJoker:
+            case MotelyFilterItemType.RareJoker:
+            case MotelyFilterItemType.MixedJoker:
+                shopItems = [0, 1, 2, 3, 4];
+                boosterPacks = [0, 1, 2, 3, 4, 5];
+                break;
+
+            case MotelyFilterItemType.SoulJoker:
+                boosterPacks = [0, 1, 2, 3, 4, 5];
+                break;
+        }
     }
 
     // ── Resolve type from shorthand keys or explicit type field ──
@@ -1157,6 +1371,18 @@ public static class JamlConfigLoader
             return (MotelyFilterItemType.StartingDraw, c.StartingDraw);
         if (c.Event != null)
             return (MotelyFilterItemType.Event, c.Event);
+        if (c.LuckyMoney != null)
+            return (MotelyFilterItemType.Event, nameof(MotelyEventType.LuckyMoney));
+        if (c.LuckyMult != null)
+            return (MotelyFilterItemType.Event, nameof(MotelyEventType.LuckyMult));
+        if (c.MisprintMult != null)
+            return (MotelyFilterItemType.Event, nameof(MotelyEventType.MisprintMult));
+        if (c.WheelOfFortune != null)
+            return (MotelyFilterItemType.Event, nameof(MotelyEventType.WheelOfFortune));
+        if (c.CavendishExtinct != null)
+            return (MotelyFilterItemType.Event, nameof(MotelyEventType.CavendishExtinct));
+        if (c.GrosMichelExtinct != null)
+            return (MotelyFilterItemType.Event, nameof(MotelyEventType.GrosMichelExtinct));
 
         // Explicit type+value
         if (c.Type != null)
@@ -1165,7 +1391,7 @@ public static class JamlConfigLoader
             return (itemType, c.Value ?? c.EventType);
         }
 
-        throw new InvalidOperationException("Clause has no type key or shorthand key.");
+        throw new InvalidOperationException("Clause is missing a recognized clause key or type.");
     }
 
     private static MotelyFilterItemType ParseItemType(string type) =>
@@ -1254,6 +1480,24 @@ public static class JamlConfigLoader
             return (card.GetRank(), card.GetSuit());
         }
         return (null, null);
+    }
+
+    private static bool IsAnyWildcard(string? v) =>
+        v != null && (
+            string.Equals(v, "any", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(v, "anycommon", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(v, "anyuncommon", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(v, "anyrare", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(v, "anylegendary", StringComparison.OrdinalIgnoreCase)
+        );
+
+    private static MotelyJokerRarity? ParseWildcardRarity(string? v)
+    {
+        if (string.Equals(v, "anycommon", StringComparison.OrdinalIgnoreCase)) return MotelyJokerRarity.Common;
+        if (string.Equals(v, "anyuncommon", StringComparison.OrdinalIgnoreCase)) return MotelyJokerRarity.Uncommon;
+        if (string.Equals(v, "anyrare", StringComparison.OrdinalIgnoreCase)) return MotelyJokerRarity.Rare;
+        if (string.Equals(v, "anylegendary", StringComparison.OrdinalIgnoreCase)) return MotelyJokerRarity.Legendary;
+        return null;
     }
 }
 

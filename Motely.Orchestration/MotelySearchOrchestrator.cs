@@ -50,7 +50,7 @@ namespace Motely.Executors
             else
                 settings.WithSequentialSearch();
 
-            return settings.Start();
+            return settings.CreateSearch();
         }
 
         public static string GenerateFilterId(JamlConfig config)
