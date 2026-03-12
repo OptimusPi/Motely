@@ -5,11 +5,10 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
+      "launchUrl": "jammy-seed-finder/",
       "applicationUrl": "http://192.168.0.171:3141",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "SEARCH_POOL_TOKEN": "ABCD1234",
-        "POOL_URL": "https://www.seedfinder.app/api/search/helper"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   }

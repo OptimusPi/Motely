@@ -428,32 +428,7 @@ public class FilterBuilderWindow : Window
 
     private void LoadFilter()
     {
-        var filters = new List<(string name, string format, string fullPath)>();
-
-        // Scan for available filters
-        var currentDir = Directory.GetCurrentDirectory();
-
-        // JAML files first (promoted format!)
-        if (Directory.Exists(Path.Combine(currentDir, "JamlFilters")))
-        {
-            var jamlFiles = Directory.GetFiles(Path.Combine(currentDir, "JamlFilters"), "*.jaml");
-            foreach (var file in jamlFiles)
-            {
-                var name = Path.GetFileNameWithoutExtension(file);
-                filters.Add((name, "jaml", file));
-            }
-        }
-
-        // JSON files second
-        if (Directory.Exists(Path.Combine(currentDir, "JsonFilters")))
-        {
-            var jsonFiles = Directory.GetFiles(Path.Combine(currentDir, "JsonFilters"), "*.json");
-            foreach (var file in jsonFiles)
-            {
-                var name = Path.GetFileNameWithoutExtension(file);
-                filters.Add((name, "json", file));
-            }
-        }
+        var filters = FilterLibrary.DiscoverLocalFilters();
 
         if (filters.Count == 0)
         {
@@ -481,7 +456,7 @@ public class FilterBuilderWindow : Window
         };
         dialog.Add(instructionLabel);
 
-        var filterStrings = filters.Select(f => $"{f.name}.{f.format}").ToArray();
+        var filterStrings = filters.Select(static filter => filter.DisplayName).ToArray();
         var filterList = new ListView()
         {
             X = 1,
@@ -510,7 +485,7 @@ public class FilterBuilderWindow : Window
                 var selected = filters[selectedIndex];
                 try
                 {
-                    var content = File.ReadAllText(selected.fullPath);
+                    var content = File.ReadAllText(selected.FullPath);
                     if (!JamlConfigLoader.TryLoad(content, out var config, out _) || config == null)
                     {
                         ShowErrorDialog("Load Error", "Failed to parse filter file");
@@ -531,12 +506,12 @@ public class FilterBuilderWindow : Window
                     _shouldList.SetSource(new ObservableCollection<string>(_shouldItems));
 
                     // Enable Start Search since filter is now loaded
-                    _loadedFilterPath = selected.fullPath;
+                    _loadedFilterPath = selected.FullPath;
                     _startSearchBtn.Text = " Start Search ";
                     _startSearchBtn.Enabled = true;
                     _startSearchBtn.SetScheme(BalatroTheme.BlueButton);
 
-                    _statusLabel.Text = $"Loaded: {selected.name}.{selected.format}";
+                    _statusLabel.Text = $"Loaded: {selected.DisplayName}";
                     App?.RequestStop(dialog);
                 }
                 catch (Exception ex)
@@ -648,12 +623,10 @@ public class FilterBuilderWindow : Window
                     .Build();
                 var jaml = serializer.Serialize(config);
 
-                // Save to file
-                var fileName = $"{name.Replace(" ", "_")}.jaml";
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
-                File.WriteAllText(filePath, jaml);
+                var filePath = FilterLibrary.SaveJamlFilter(name.ToString() ?? "Untitled", jaml);
 
-                _statusLabel.Text = $"Filter '{name}' saved to {fileName}";
+                _statusLabel.Text = $"Filter '{name}' saved to {Path.GetFileName(filePath)}";
+                _loadedFilterPath = filePath;
 
                 // Enable Start Search button now that filter is saved
                 _startSearchBtn.Text = " Start Search ";
@@ -694,7 +667,12 @@ public class FilterBuilderWindow : Window
                 ? "jaml"
                 : "json";
             _statusLabel.Text = $"Starting search with loaded filter...";
-            var searchWindow = new SearchWindow(_loadedFilterPath, format);
+            var searchWindow = new SearchWindow(
+                _loadedFilterPath,
+                format,
+                TuiSettings.DefaultSource,
+                TuiSettings.DefaultSink
+            );
             MotelyTUI.ShowWindow(searchWindow);
             return;
         }
@@ -731,21 +709,17 @@ public class FilterBuilderWindow : Window
 
         try
         {
-            // Save to temporary file in JamlFilters
-            var jamlDir = Path.Combine(Directory.GetCurrentDirectory(), "JamlFilters");
-            if (!Directory.Exists(jamlDir))
-            {
-                Directory.CreateDirectory(jamlDir);
-            }
-
-            var fileName = "TUI_QuickFilter.jaml";
-            var filePath = Path.Combine(jamlDir, fileName);
-            File.WriteAllText(filePath, jaml);
+            var filePath = FilterLibrary.SaveJamlFilter("TUI_QuickFilter", jaml);
 
             _statusLabel.Text = $"Starting search with quick filter...";
 
             // Launch search window with full file path
-            var searchWindow = new SearchWindow(filePath, "jaml");
+            var searchWindow = new SearchWindow(
+                filePath,
+                "jaml",
+                TuiSettings.DefaultSource,
+                TuiSettings.DefaultSink
+            );
             MotelyTUI.ShowWindow(searchWindow);
         }
         catch (Exception ex)

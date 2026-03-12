@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>3.0.6</MotelyVersion>
+    <MotelyVersion>3.0.13</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Node API for .NET addon: https://microsoft.github.io/node-api-dotnet/scenarios/js-dotnet-module.html (CPM requires fixed version) -->
@@ -9,7 +9,7 @@
     <PackageVersion Include="Microsoft.JavaScript.NodeApi.Generator" Version="0.9.19" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.4.4" />
-    <PackageVersion Include="Terminal.Gui" Version="2.0.0-develop.5043" />
+    <PackageVersion Include="Terminal.Gui" Version="2.0.0-develop.5185" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.3" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />

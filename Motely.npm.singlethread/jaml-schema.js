@@ -1,8 +1,8 @@
-export const JAML_SCHEMA_VERSION = "3.0.6";
+export const JAML_SCHEMA_VERSION = "3.0.10";
 export const jamlSchema = {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://seedfinder.app/jaml.schema.json",
-  "version": "3.0.6",
+  "version": "3.0.10",
   "title": "JAML - Jimbo\u0027s Ante Markup Language",
   "description": "Schema for Balatro seed filter configuration files (.jaml)",
   "type": "object",
@@ -1655,6 +1655,49 @@ export const jamlSchema = {
           }
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "event"
+                ]
+              },
+              {
+                "required": [
+                  "eventType"
+                ]
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "Event",
+                      "LuckyMoney",
+                      "LuckyMult",
+                      "MisprintMult",
+                      "WheelOfFortune",
+                      "CavendishExtinct",
+                      "GrosMichelExtinct"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "antes"
+              ]
+            }
+          }
+        }
+      ],
       "additionalProperties": false,
       "minProperties": 1
     }

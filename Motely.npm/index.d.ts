@@ -41,7 +41,7 @@ export interface SeedAnalysisInfo {
 export interface SearchResultInfo {
     seed: string;
     score: number;
-    tallies?: number[] | null;
+    tallies?: string[] | null;
 }
 export interface SearchStatusInfo {
     filterId: string;
@@ -73,7 +73,7 @@ export interface SearchOptions {
     randomSeeds?: number;
     palindrome?: boolean;
     /** Called with native primitives every ~15ms during search. No JSON overhead. */
-    onProgress?: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
+    onProgress?: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => void;
     /** Called with native primitives for each new result found. No JSON overhead. */
     onResult?: (seed: string, score: number) => void;
 }

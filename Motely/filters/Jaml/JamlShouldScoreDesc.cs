@@ -1,70 +1,35 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics;
-using static Motely.MotelyVectorUtils;
+using System.Text;
 
 namespace Motely.Filters;
 
-/// <summary>
-/// Score provider built from JAML "should" clauses.
-/// Also accepts must descs to re-run them in single-seed path for per-seed debug tallies.
-/// Must tallies: 1 (pass) / 0 (fail).
-/// Should tallies: plain int (score weight or 0).
-/// </summary>
 public struct JamlShouldScoreDesc
     : IMotelySeedScoreDesc<JamlShouldScoreDesc.JamlShouldScoreProvider>
 {
-    private const char PassChar = 'Y';
-    private const char FailChar = 'N';
-
-    private readonly (IMotelySeedFilterDesc desc, string label)[] _mustDescs;
-    private readonly (IMotelySeedFilterDesc desc, int score, string label)[] _shouldDescs;
+    private readonly IJamlClause[] _shouldClauses;
     private readonly Action<string>? _seedMatchCallback;
 
-    public JamlShouldScoreDesc(
-        (IMotelySeedFilterDesc desc, string label)[] mustDescs,
-        (IMotelySeedFilterDesc desc, int score, string label)[] shouldDescs,
-        Action<string>? seedMatchCallback = null
-    )
+    public JamlShouldScoreDesc(IJamlClause[] shouldClauses, Action<string>? seedMatchCallback = null)
     {
-        _mustDescs = mustDescs;
-        _shouldDescs = shouldDescs;
+        _shouldClauses = shouldClauses;
         _seedMatchCallback = seedMatchCallback;
     }
 
     public JamlShouldScoreProvider CreateScoreProvider(ref MotelyFilterCreationContext ctx)
-    {
-        var mustFilters = new IMotelySeedFilter[_mustDescs.Length];
-        for (int i = 0; i < _mustDescs.Length; i++)
-            mustFilters[i] = _mustDescs[i].desc.CreateFilter(ref ctx);
-
-        var shouldFilters = new (IMotelySeedFilter filter, int score)[_shouldDescs.Length];
-        for (int i = 0; i < _shouldDescs.Length; i++)
-            shouldFilters[i] = (_shouldDescs[i].desc.CreateFilter(ref ctx), _shouldDescs[i].score);
-
-        return new JamlShouldScoreProvider(
-            mustFilters,
-            shouldFilters,
-            _seedMatchCallback ?? ctx.SeedMatchCallback
-        );
-    }
+        => new(_shouldClauses, _seedMatchCallback ?? ctx.SeedMatchCallback);
 
     public struct JamlShouldScoreProvider : IMotelySeedScoreProvider
     {
-        private readonly IMotelySeedFilter[] _mustFilters;
-        private readonly (IMotelySeedFilter filter, int score)[] _shouldClauses;
+        private readonly IJamlClause[] _shouldClauses;
         private readonly Action<string>? _seedMatchCallback;
 
-        public JamlShouldScoreProvider(
-            IMotelySeedFilter[] mustFilters,
-            (IMotelySeedFilter filter, int score)[] shouldClauses,
-            Action<string>? seedMatchCallback
-        )
+        public JamlShouldScoreProvider(IJamlClause[] shouldClauses, Action<string>? seedMatchCallback)
         {
-            Debug.Assert(shouldClauses.Length <= MotelySeedScoreTally.MAX_TALLY_COUNT, 
-            $"Too many should clauses: {shouldClauses.Length}. Maximum allowed: {MotelySeedScoreTally.MAX_TALLY_COUNT}");
+            if (shouldClauses.Length > MotelySeedScoreTally.MAX_TALLY_COUNT)
+                throw new InvalidOperationException(
+                    $"Too many should clauses: {shouldClauses.Length}. Maximum allowed: {MotelySeedScoreTally.MAX_TALLY_COUNT}"
+                );
 
-            _mustFilters = mustFilters;
             _shouldClauses = shouldClauses;
             _seedMatchCallback = seedMatchCallback;
         }
@@ -79,76 +44,62 @@ public struct JamlShouldScoreDesc
             int scoreThreshold = 0
         )
         {
-            int shouldCount = _shouldClauses.Length;
+            if (baseFilterMask.IsAllFalse())
+                return VectorMask.NoBitsSet;
 
-            // Per-should-clause match masks + accumulated scores
-            Span<VectorMask> shouldMasks = stackalloc VectorMask[shouldCount];
-            var scores = Vector256<int>.Zero;
+            var shouldClauses = _shouldClauses;
+            var seedMatchCallback = _seedMatchCallback;
+            int cutoff = scoreThreshold;
 
-            for (int i = 0; i < shouldCount; i++)
-            {
-                shouldMasks[i] = _shouldClauses[i].filter.Filter(ref searchContext);
-                var scoreVec = Vector256.Create(_shouldClauses[i].score);
-                scores = Vector256.Add(
-                    scores,
-                    Vector256.ConditionalSelect(
-                        VectorMaskToConditionalSelectMask(shouldMasks[i]),
-                        scoreVec,
-                        Vector256<int>.Zero
-                    )
-                );
-            }
-
-            var resultMask = baseFilterMask;
-            char* seed = stackalloc char[MotelyCore.MaxSeedLength];
-
-            for (int lane = 0; lane < MotelyCore.MaxVectorWidth; lane++)
-            {
-                if (!baseFilterMask[lane] || !searchContext.IsLaneValid(lane))
-                    continue;
-
-                int laneScore = scores.GetElement(lane);
-                int length = searchContext.GetSeed(lane, seed);
-                string seedStr = new Span<char>(seed, length).ToString();
-
-                buffer[lane] = new MotelySeedScoreTally(seedStr, laneScore);
-
-                // Store individual should clause results as tallies
-                for (int c = 0; c < shouldCount; c++)
+            return searchContext.SearchIndividualSeeds(
+                baseFilterMask,
+                (ref MotelySingleSearchContext singleCtx) =>
                 {
-                    buffer[lane].AddTally(shouldMasks[c][lane] ? _shouldClauses[c].score : 0);
-                }
+                    var runState = new MotelyRunState();
+                    JamlScoring.PrepareRunState(ref singleCtx, shouldClauses, ref runState);
 
-                if (_seedMatchCallback != null)
-                {
-                    int mustCount = _mustFilters.Length;
-                    var sb = new System.Text.StringBuilder(
-                        seedStr.Length + 8 + mustCount * 4 + shouldCount * 2
-                    );
-                    sb.Append(seedStr);
-                    sb.Append(',');
-                    sb.Append(laneScore);
+                    int totalScore = 0;
+                    ref var tally = ref buffer[singleCtx.VectorLane];
+                    tally.Reset(string.Empty);
 
-                    // Must tallies: re-run each must filter on the same context, check bit lane
-                    for (int m = 0; m < mustCount; m++)
+                    for (int i = 0; i < shouldClauses.Length; i++)
                     {
-                        VectorMask mustResult = _mustFilters[m].Filter(ref searchContext);
-                        sb.Append(',');
-                        sb.Append(mustResult[lane] ? PassChar : FailChar);
+                        int count = JamlScoring.CountOccurrences(ref singleCtx, shouldClauses[i], ref runState);
+                        tally.AddTally(count);
+                        totalScore += count * shouldClauses[i].Score;
                     }
 
-                    // Should tallies: plain int
-                    for (int c = 0; c < shouldCount; c++)
+                    tally.Score = totalScore;
+
+                    bool passedCutoff = totalScore >= cutoff;
+                    if (passedCutoff && seedMatchCallback != null)
                     {
+                        char* seedPtr = stackalloc char[MotelyCore.MaxSeedLength];
+                        int seedLength = singleCtx.GetSeed(seedPtr);
+                        string seedStr = new string(seedPtr, 0, seedLength);
+                        tally.Seed = seedStr;
+
+                        var sb = new StringBuilder(seedStr.Length + 16 + shouldClauses.Length * 4);
+                        sb.Append(seedStr);
                         sb.Append(',');
-                        sb.Append(shouldMasks[c][lane] ? _shouldClauses[c].score : 0);
+                        sb.Append(totalScore);
+                        for (int i = 0; i < tally.TallyCount; i++)
+                        {
+                            sb.Append(',');
+                            sb.Append(tally.GetTally(i));
+                        }
+                        seedMatchCallback(sb.ToString());
+                    }
+                    else if (passedCutoff)
+                    {
+                        char* seedPtr = stackalloc char[MotelyCore.MaxSeedLength];
+                        int seedLength = singleCtx.GetSeed(seedPtr);
+                        tally.Seed = new string(seedPtr, 0, seedLength);
                     }
 
-                    _seedMatchCallback(sb.ToString());
+                    return passedCutoff;
                 }
-            }
-
-            return resultMask;
+            );
         }
     }
 }

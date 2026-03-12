@@ -87,8 +87,8 @@ public class MainMenuWindow : View
         };
         btnDesigner.Accept += (s, e) =>
         {
-            var filterBuilder = new FilterBuilderWindow();
-            MotelyTUI.ShowWindow(filterBuilder);
+            var editor = new JamlEditorWindow();
+            MotelyTUI.ShowWindow(editor);
         };
         dockBar.Add(btnDesigner);
 
@@ -148,8 +148,8 @@ public class MainMenuWindow : View
                     break;
                 case KeyCode.D:
                     btnDesigner.SetFocus();
-                    var fb = new FilterBuilderWindow();
-                    MotelyTUI.ShowWindow(fb);
+                    var editor = new JamlEditorWindow();
+                    MotelyTUI.ShowWindow(editor);
                     e.Handled = true;
                     break;
                 case KeyCode.X:
@@ -180,35 +180,7 @@ public class MainMenuWindow : View
 
     private void ShowFilterSelect()
     {
-        var filters = new System.Collections.Generic.List<(
-            string name,
-            string format,
-            string fullPath
-        )>();
-
-        // Scan for available filters
-        var currentDir = Directory.GetCurrentDirectory();
-
-        if (Directory.Exists(Path.Combine(currentDir, "JsonFilters")))
-        {
-            var jsonFiles = Directory.GetFiles(Path.Combine(currentDir, "JsonFilters"), "*.json");
-            foreach (var file in jsonFiles)
-            {
-                var name = Path.GetFileNameWithoutExtension(file);
-                filters.Add((name, "json", file));
-            }
-        }
-
-        // Check for JAML filters (new format)
-        if (Directory.Exists(Path.Combine(currentDir, "JamlFilters")))
-        {
-            var jamlFiles = Directory.GetFiles(Path.Combine(currentDir, "JamlFilters"), "*.jaml");
-            foreach (var file in jamlFiles)
-            {
-                var name = Path.GetFileNameWithoutExtension(file);
-                filters.Add((name, "jaml", file));
-            }
-        }
+        var filters = FilterLibrary.DiscoverLocalFilters();
 
         if (filters.Count == 0)
         {
@@ -236,7 +208,7 @@ public class MainMenuWindow : View
         };
         dialog.Add(instructionLabel);
 
-        var filterStrings = filters.Select(f => $"{f.name}.{f.format}").ToArray();
+        var filterStrings = filters.Select(static filter => filter.DisplayName).ToArray();
         var filterList = new ListView()
         {
             X = 1,
@@ -266,7 +238,12 @@ public class MainMenuWindow : View
                 var selected = filters[selectedIndex];
                 App?.RequestStop(dialog);
 
-                var searchWindow = new SearchWindow(selected.fullPath, selected.format);
+                var searchWindow = new SearchWindow(
+                    selected.FullPath,
+                    selected.Format,
+                    TuiSettings.DefaultSource,
+                    TuiSettings.DefaultSink
+                );
                 MotelyTUI.ShowWindow(searchWindow);
             }
         }
@@ -383,7 +360,7 @@ public class MainMenuWindow : View
         {
             Title = "Seed Search Settings",
             Width = 55,
-            Height = 12,
+            Height = 16,
         };
         dialog.SetScheme(BalatroTheme.Window);
 
@@ -423,11 +400,45 @@ public class MainMenuWindow : View
         };
         dialog.Add(batchField);
 
+        var sourceLabel = new Label()
+        {
+            X = 2,
+            Y = 6,
+            Text = "Default Source:",
+        };
+        dialog.Add(sourceLabel);
+
+        var sourceField = new TextField()
+        {
+            X = Pos.Right(sourceLabel) + 2,
+            Y = 6,
+            Width = 24,
+            Text = TuiSettings.DefaultSource,
+        };
+        dialog.Add(sourceField);
+
+        var sinkLabel = new Label()
+        {
+            X = 2,
+            Y = 8,
+            Text = "Default Sink:",
+        };
+        dialog.Add(sinkLabel);
+
+        var sinkField = new TextField()
+        {
+            X = Pos.Right(sinkLabel) + 2,
+            Y = 8,
+            Width = 24,
+            Text = TuiSettings.DefaultSink,
+        };
+        dialog.Add(sinkField);
+
         // Hidden secret button - invisible until focused
         var secretBtn = new CleanButton()
         {
             X = Pos.Center() - 18,
-            Y = 7,
+            Y = 11,
             Text = "       ",
             Width = 9,
         };
@@ -446,7 +457,7 @@ public class MainMenuWindow : View
         var saveBtn = new CleanButton()
         {
             X = Pos.Center() - 5,
-            Y = 7,
+            Y = 11,
             Text = " Save ",
         };
         saveBtn.SetScheme(BalatroTheme.GreenButton);
@@ -456,6 +467,8 @@ public class MainMenuWindow : View
                 TuiSettings.ThreadCount = threads;
             if (int.TryParse(batchField.Text, out int batch) && batch >= 1 && batch <= 7)
                 TuiSettings.BatchCharacterCount = batch;
+            TuiSettings.DefaultSource = sourceField.Text?.ToString() ?? string.Empty;
+            TuiSettings.DefaultSink = sinkField.Text?.ToString() ?? string.Empty;
 
             TuiSettings.Save();
             App?.RequestStop(dialog);

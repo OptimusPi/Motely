@@ -11,7 +11,16 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
     private int _tallyCount;
     private int[] _tallyValues;
 
-    public byte[] Tally => TallyColumns.Select(x => (byte)x).ToArray();
+    public byte[] Tally
+    {
+        get
+        {
+            var tally = new byte[_tallyCount];
+            for (int i = 0; i < _tallyCount; i++)
+                tally[i] = (byte)_tallyValues[i];
+            return tally;
+        }
+    }
 
     public MotelySeedScoreTally(string seed, int score)
     {
@@ -21,8 +30,18 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
         _tallyValues = new int[MAX_TALLY_COUNT];
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Reset(string seed, int score = 0)
+    {
+        EnsureTallyStorage();
+        Seed = seed;
+        Score = score;
+        _tallyCount = 0;
+    }
+
     public void AddTally(int value)
     {
+        EnsureTallyStorage();
         _tallyValues[_tallyCount] = value;
         _tallyCount++;
     }
@@ -53,6 +72,13 @@ public unsafe struct MotelySeedScoreTally : IMotelySeedScore
             }
             return list;
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsureTallyStorage()
+    {
+        if (_tallyValues == null || _tallyValues.Length != MAX_TALLY_COUNT)
+            _tallyValues = new int[MAX_TALLY_COUNT];
     }
 }
 

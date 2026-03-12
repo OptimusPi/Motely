@@ -26,16 +26,9 @@
 
     <!-- No ICU data needed -->
     <InvariantGlobalization>true</InvariantGlobalization>
-    <BlazorWebAssemblyPreserveCollationData>false</BlazorWebAssemblyPreserveCollationData>
 
-    <!-- Skip wasm-opt -->
-    <WasmRunWasmOpt>false</WasmRunWasmOpt>
+    <WasmRunWasmOpt>true</WasmRunWasmOpt>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />

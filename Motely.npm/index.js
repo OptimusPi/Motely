@@ -57,7 +57,7 @@ export async function loadMotely(options) {
         getVersion: () => cachedVersion,
         getCapabilities: () => cachedCapabilities,
         isSimdEnabled: () => cachedCapabilities.simd,
-        isThreadingEnabled: () => cachedCapabilities.availableThreadCount > 1,
+        isThreadingEnabled: () => cachedCapabilities.threads,
         getAvailableThreadCount: () => cachedCapabilities.availableThreadCount,
         getProcessorCount: () => cachedCapabilities.processorCount,
         async analyzeSeed(seed, deck, stake) {
@@ -74,17 +74,12 @@ export async function loadMotely(options) {
         async startJamlSearch(jamlContent, options) {
             const { onProgress, onResult, ...searchParams } = options ?? {};
             const withDefaults = {
-                threadCount: cachedCapabilities.processorCount,
+                threadCount: Math.max(1, cachedCapabilities.availableThreadCount),
                 batchCharCount: 4,
                 ...searchParams,
             };
             const optionsJson = JSON.stringify(withDefaults);
-            const progressCb = onProgress
-                ? (json) => {
-                    const p = JSON.parse(json);
-                    onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
-                }
-                : () => { };
+            const progressCb = onProgress ?? (() => { });
             const resultCb = onResult ?? (() => { });
             const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);
             const result = JSON.parse(resultJson);

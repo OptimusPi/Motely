@@ -7,7 +7,6 @@ using Motely.Analysis;
 using Motely.Filters;
 using CapabilitiesDto = global::Motely.CapabilitiesDto;
 using ErrorDto = global::Motely.ErrorDto;
-using ProgressCallbackDto = global::Motely.ProgressCallbackDto;
 using SearchHitDto = global::Motely.SearchHitDto;
 using SearchOptionsDto = global::Motely.SearchOptionsDto;
 using SearchStatusDto = global::Motely.SearchStatusDto;
@@ -175,8 +174,8 @@ public static partial class MotelyWasmExports
     public static async Task<string> StartJamlSearch(
         string jamlContent,
         string optionsJson,
-        [JSMarshalAs<JSType.Function<JSType.String>>]
-        Action<string> onProgress,
+        [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>]
+        Action<long, long, long> onProgress,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>]
         Action<string, int> onResult)
     {
@@ -244,14 +243,11 @@ public static partial class MotelyWasmExports
                 })
                 .WithProgressCallback(prog =>
                 {
-                    var dto = new ProgressCallbackDto
-                    {
-                        SeedsSearched = prog.SeedsSearched,
-                        MatchingSeeds = prog.MatchingSeeds,
-                        ElapsedMs = (long)prog.ElapsedTime.TotalMilliseconds,
-                        ResultCount = _drainedResults.Count + _resultQueue.Count,
-                    };
-                    onProgress(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.ProgressCallbackDto));
+                    onProgress(
+                        prog.SeedsSearched,
+                        prog.MatchingSeeds,
+                        (long)prog.ElapsedTime.TotalMilliseconds
+                    );
                 });
 
             if (options.StartBatch.HasValue)
@@ -269,7 +265,10 @@ public static partial class MotelyWasmExports
                 int padLen = MotelyCore.MaxSeedLength - kw.Length;
                 if (padLen < 0)
                     return ErrorJson($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars).");
-                settings = settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
+                settings = settings.WithListSearch(
+                    MotelyCore.GeneratePaddedSeeds(kw, padLen),
+                    MotelyCore.GetPaddedSeedCount(kw, padLen)
+                );
             }
             else if (options.RandomSeeds.HasValue)
                 settings = settings.WithRandomSearch(options.RandomSeeds.Value);

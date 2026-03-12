@@ -189,7 +189,7 @@ public class JamlConfigTests
     }
 
     [Fact]
-    public void UnknownClauseKey_FailsParse()
+    public void UnknownClauseKey_IsRejected()
     {
         var jaml = """
             name: Test
@@ -203,11 +203,11 @@ public class JamlConfigTests
         Assert.False(success);
         Assert.Null(config);
         Assert.NotNull(error);
-        Assert.Contains("totallyFakeKey", error!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("totallyFakeKey", error);
     }
 
     [Fact]
-    public void UnknownNestedSourcesKey_FailsParse()
+    public void UnknownNestedSourcesKey_IsRejected()
     {
         var jaml = """
             name: Test
@@ -223,11 +223,14 @@ public class JamlConfigTests
         Assert.False(success);
         Assert.Null(config);
         Assert.NotNull(error);
-        Assert.Contains("boosterPakcz", error!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("on line", error);
+        Assert.Contains("col", error);
+        Assert.Contains("boosterPakcz", error);
+        Assert.Contains("sources block", error);
     }
 
     [Fact]
-    public void UnknownTopLevelKey_FailsParse()
+    public void UnknownTopLevelKey_IsRejected()
     {
         var jaml = """
             name: Test
@@ -241,7 +244,32 @@ public class JamlConfigTests
         Assert.False(success);
         Assert.Null(config);
         Assert.NotNull(error);
-        Assert.Contains("madeUpTopLevel", error!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("on line", error);
+        Assert.Contains("col", error);
+        Assert.Contains("madeUpTopLevel", error);
+        Assert.Contains("top-level JAML document", error);
+    }
+
+    [Fact]
+    public void UnknownEventProperty_IsRejectedAtLoadTime()
+    {
+        var jaml = """
+            name: EventTypo
+            must:
+              - event: LuckyMoney
+                rolls: [0, 1]
+                mint: 4
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("on line", error);
+        Assert.Contains("col", error);
+        Assert.Contains("mint", error);
+        Assert.Contains("a clause", error);
     }
 
     [Fact]
@@ -262,6 +290,194 @@ public class JamlConfigTests
         Assert.NotNull(config);
         Assert.Equal(MotelyDeck.Anaglyph, config!.Deck);
         Assert.Equal(MotelyStake.Gold, config.Stake);
+    }
+
+    [Fact]
+    public void Metadata_Fields_ArePreserved()
+    {
+        var jaml = """
+            name: MetaTest
+            author: Cascade
+            description: Metadata round-trip
+            dateCreated: 2025-01-02T03:04:05Z
+            must:
+              - joker: Showman
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        Assert.Equal("MetaTest", config!.Name);
+        Assert.Equal("Cascade", config.Author);
+        Assert.Equal("Metadata round-trip", config.Description);
+        Assert.Equal("2025-01-02T03:04:05Z", config.DateCreated);
+    }
+
+    [Fact]
+    public void CreatePlan_PreservesMustLabelsInOrder()
+    {
+        var jaml = """
+            name: LabelTest
+            must:
+              - label: First must
+                joker: Showman
+                antes: [1]
+              - label: Second must
+                bigBlindTag: CharmTag
+                antes: [2]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+
+        var plan = JamlSearchBuilder.CreatePlan(config!);
+
+        Assert.Equal(["First must", "Second must"], plan.MustLabels);
+    }
+
+    [Fact]
+    public void LegacyNestedLogicalClause_ParsesSuccessfully()
+    {
+        var jaml = """
+            name: LegacyLogic
+            should:
+              - and:
+                  label: Ante Pair
+                  mode: sum
+                  score: 100
+                  clauses:
+                    - smallBlindTag: NegativeTag
+                      antes: [2]
+                    - bigBlindTag: CharmTag
+                      antes: [2]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        var clause = Assert.Single(config!.Should.OrderedClauses);
+        var andClause = Assert.IsType<AndClause>(clause);
+        Assert.Equal("Ante Pair", andClause.Label);
+        Assert.Equal(2, andClause.Clauses.Length);
+    }
+
+    [Fact]
+    public void EventClause_WithoutAntes_ParsesSuccessfully()
+    {
+        var jaml = """
+            name: EventOk
+            must:
+              - event: LuckyMoney
+                rolls: [0, 1]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        var clause = Assert.Single(config!.Must.LuckyMoney);
+        Assert.Equal([0, 1], clause.Rolls);
+    }
+
+    [Fact]
+    public void EventClause_WithDirectEventKey_ParsesSuccessfully()
+    {
+        var jaml = """
+            name: EventDirectKey
+            must:
+              - LuckyMoney: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        var clause = Assert.Single(config!.Must.LuckyMoney);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 8], clause.Rolls);
+    }
+
+    [Fact]
+    public void EventClause_WithMin_ParsesSuccessfully()
+    {
+        var jaml = """
+            name: EventMin
+            must:
+              - event: LuckyMoney
+                rolls: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+                min: 8
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.True(success, $"Failed to parse: {error}");
+        Assert.NotNull(config);
+        var clause = Assert.Single(config!.Must.LuckyMoney);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 8], clause.Rolls);
+        Assert.Equal(8, clause.Min);
+    }
+
+    [Fact]
+    public void EventClause_WithAntes_IsRejected()
+    {
+        var jaml = """
+            name: EventBad
+            must:
+              - event: LuckyMoney
+                antes: [1]
+                rolls: [0]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("Event clauses do not support 'antes'", error);
+    }
+
+    [Fact]
+    public void EventClause_WithDefaultAntes_IsRejected()
+    {
+        var jaml = """
+            name: EventBadDefaults
+            defaults:
+              antes: [2]
+            must:
+              - event: LuckyMoney
+                rolls: [0]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("Event clauses do not support 'antes'", error);
+    }
+
+    [Fact]
+    public void EventClause_WithInheritedLogicAntes_IsRejected()
+    {
+        var jaml = """
+            name: EventBadInherited
+            must:
+              - type: And
+                antes: [3]
+                clauses:
+                  - event: LuckyMoney
+                    rolls: [0]
+            """;
+
+        var success = JamlConfigLoader.TryLoad(jaml, out var config, out var error);
+
+        Assert.False(success);
+        Assert.Null(config);
+        Assert.NotNull(error);
+        Assert.Contains("Event clauses do not support 'antes'", error);
     }
 }
 

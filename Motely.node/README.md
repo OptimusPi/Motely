@@ -2,7 +2,7 @@
 
 MotelyJAML for **Node.js** — Balatro seed analyzer and JAML filter engine.
 
-**High-level:** This package is for **Node.js only**. The intended path is [*Develop a Node.js addon module in C# with .NET Native AOT*](https://microsoft.github.io/node-api-dotnet/scenarios/): a native `.node` binary that loads fast and does not depend on the .NET runtime. Today you can use either the **node-api-dotnet addon** (DLL + `addonPath`) or a **WASM fallback** (browser-style .NET WASM run in Node via `_framework`). Native AOT will produce a single platform-specific `.node` file for the addon path.
+This package ships a **platform-specific native `.node` addon** for Node.js. It does **not** use the browser WASM runtime, and consumers should not need hand-rolled loader glue to use it.
 
 ## Installation
 
@@ -44,7 +44,7 @@ motely.dispose();
 
 ## Proof it works
 
-From the package directory (after `dotnet publish` has populated `_framework/`):
+From the package directory (after `dotnet publish` has populated `addon/win-x64/` through `prepack` or staging):
 
 ```bash
 npm run prove
@@ -54,27 +54,27 @@ Writes `prove-node-result.txt` with getCapabilities, validateJaml, and analyzeSe
 
 ## Usage
 
-Initialize the runtime, then call the API. (Use [CommonJS or ES](#commonjs-and-es) imports as above.)
+Initialize the native addon once, then reuse the returned API. (Use [CommonJS or ES](#commonjs-and-es) imports as above.)
 
 ```javascript
 import { loadMotely } from 'motely-node';
 
-// Initialize the runtime
+// Initialize the packaged native addon
 const motely = await loadMotely();
 
 // Get capabilities
 const caps = await motely.getCapabilities();
 console.log('SIMD:', caps.simd);
 console.log('Runtime:', caps.runtime);
+console.log('Threads available:', motely.getAvailableThreadCount());
 
 // Validate JAML
 const validation = await motely.validateJaml(`
-name: "Test Filter"
+name: Test Filter
 deck: Red
 stake: White
-filters:
+must:
   - joker: Joker
-    ante: 1
 `);
 console.log('Valid:', validation.valid);
 
@@ -82,15 +82,22 @@ console.log('Valid:', validation.valid);
 const analysis = await motely.analyzeSeed('ABCD1234', 'Red', 'White');
 console.log('Boss at ante 1:', analysis.antes[0].boss);
 console.log('Draw order:', analysis.antes[0].drawOrder); // e.g., "H S D C"
+console.log('Erratic deck:', analysis.erraticDeckComposition);
 analysis.antes[0].shopQueue.forEach(item => {
   console.log(`  Shop: ${item.name}`);
 });
 
 // Search with JAML
-await motely.startJamlSearch(jamlContent, {
+const results = await motely.startJamlSearch(`
+name: Demo Search
+deck: Red
+stake: White
+must:
+  - joker: Joker
+`, {
   randomSeeds: 1000,
-  threadCount: 4,       // default: all available cores
-  batchCharCount: 4,    // default: 4 (1.5M seeds per batch, range 1-7)
+  threadCount: 4,
+  batchCharCount: 4,
   onProgress: (searched, matches, elapsed, count) => {
     console.log(`Searched: ${searched}, Matches: ${matches}`);
   },
@@ -98,19 +105,53 @@ await motely.startJamlSearch(jamlContent, {
     console.log(`Found: ${seed} (score: ${score})`);
   }
 });
+console.log('Final result count:', results.length);
 
 // Cleanup
 motely.dispose();
 ```
 
+## Loading behavior
+
+By default, `loadMotely()` resolves the addon at:
+
+```text
+addon/<rid>/Motely.NodeAddon.node
+```
+
+For the currently published package flow, that means:
+
+```text
+addon/win-x64/Motely.NodeAddon.node
+```
+
+You can override the path when embedding or testing:
+
+- `addonPath` — full path to a specific `.node` file
+- `addonDirectory` — directory containing RID folders such as `win-x64/`
+- `frameworkPath` — legacy alias retained for older consumers; treated like `addonDirectory`
+
+## Server helpers
+
+For server runtimes like Next.js route handlers, the package also exports:
+
+```javascript
+import { analyzeSeedServer, getServerApi, startJamlSearchServer } from 'motely-node/server';
+```
+
+That subpath provides a cached singleton API loader so app code does not need to maintain its own drifting `motelyServer.ts` wrapper.
+
 ## API
 
 ### `loadMotely(options?): Promise<MotelyNodeApi>`
 
-Initialize Motely using the packaged single-thread .NET WASM runtime.
+Initialize Motely using the packaged native Node addon.
 
 **Options:**
-- `frameworkPath?: string` - When using WASM, path to the `_framework` directory (default: `./_framework`)
+- `addonPath?: string` - Full path to a specific native `.node` addon file
+- `addonDirectory?: string` - Directory containing RID folders such as `win-x64/`
+- `frameworkPath?: string` - Legacy alias for `addonDirectory`
+- `pollIntervalMs?: number` - Poll interval for progress collection during `startJamlSearch`
 
 ### `MotelyNodeApi`
 
@@ -122,17 +163,27 @@ Get runtime capabilities (SIMD, threads, processor count).
 
 Analyze a Balatro seed and get ante-by-ante breakdown.
 
+The returned object includes normalized consumer-facing fields used by downstream apps:
+
+- `erraticDeckComposition: string[]`
+- `antes[].drawOrder: string`
+
 #### `validateJaml(jamlContent: string): Promise<ValidateResult>`
 
 Validate JAML filter syntax.
 
-#### `startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<void>`
+#### `startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchResultInfo[]>`
 
-Start a JAML-based seed search.
+Start a JAML-based seed search and resolve with the collected matching results.
 
 **Options:**
 - `randomSeeds?: number` - Number of random seeds to search (default: 1000)
-- `cutoff?: string` - Search cutoff criteria
+- `cutoff?: string | number` - Search cutoff criteria
+- `specificSeed?: string` - Search exactly one seed
+- `seeds?: string[]` - Restrict the search to an explicit list of seeds
+- `keyword?: string` - Restrict the search to seeds matching a keyword pattern
+- `threadCount?: number` - Requested search thread count
+- `batchCharCount?: number` - Search batch width (1-7)
 - `onProgress?: (searched, matches, elapsed, count) => void` - Progress callback
 - `onResult?: (seed, score) => void` - Result callback
 
@@ -140,35 +191,11 @@ Start a JAML-based seed search.
 
 Cleanup and free resources.
 
-## Node API for .NET (addon)
+## Notes for server-app integrations
 
-There is a separate `Motely.NodeAddon` project in the repo for **node-api-dotnet** work, but the published `motely-node` package entrypoint does not currently load that addon automatically.
-
-For in-process, faster execution, the addon project is the direction to extend next:
-
-1. Build the addon: from the MotelyJAML repo run `dotnet build Motely.NodeAddon/Motely.NodeAddon.csproj -c Release`.
-2. Install optional dependency: `npm install node-api-dotnet` (or it is listed as optionalDependency).
-3. Load with the DLL path:
-
-```javascript
-import { loadMotely } from 'motely-node';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const dir = path.dirname(fileURLToPath(import.meta.url));
-const frameworkPath = path.join(dir, 'node_modules', 'motely-node', '_framework');
-const motely = await loadMotely({ frameworkPath });
-```
-
-If you want true addon loading from the npm package, that still needs to be implemented in `Motely.node/index.ts`. See [Node API for .NET](https://microsoft.github.io/node-api-dotnet/) and [.NET module for Node.js](https://microsoft.github.io/node-api-dotnet/scenarios/js-dotnet-module.html).
-
-## Differences from Browser Version
-
-- Default: same .NET WASM runtime, adapted for Node.js. Optional: node-api-dotnet addon for in-process execution.
-- No browser-specific APIs (no DOM, no window object)
-- File system access via Node.js APIs
-- Current npm package runtime is single-threaded WASM
-- Works in Node.js (Deno/Bun support may vary)
+- `motely-node` is a **server/runtime package**, not a browser package.
+- In Next.js or similar SSR apps, load it only in **Node runtime** code paths.
+- You should not need a wrapper just to normalize `analyzeSeed()` payload fields or hand-resolve the packaged addon path.
 
 ## License
 

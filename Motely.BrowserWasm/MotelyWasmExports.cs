@@ -7,7 +7,6 @@ using Motely.Analysis;
 using Motely.Filters;
 using CapabilitiesDto = global::Motely.CapabilitiesDto;
 using ErrorDto = global::Motely.ErrorDto;
-using ProgressCallbackDto = global::Motely.ProgressCallbackDto;
 using SearchHitDto = global::Motely.SearchHitDto;
 using ValidateResultDto = global::Motely.ValidateResultDto;
 using VersionDto = global::Motely.VersionDto;
@@ -175,8 +174,8 @@ public static partial class MotelyWasmExports
     public static Task<string> StartJamlSearch(
         string jamlContent,
         string optionsJson,
-        [JSMarshalAs<JSType.Function<JSType.String>>]
-        Action<string> onProgress,
+        [JSMarshalAs<JSType.Function<JSType.Number, JSType.Number, JSType.Number>>]
+        Action<long, long, long> onProgress,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Number>>]
         Action<string, int> onResult)
     {
@@ -249,7 +248,7 @@ public static partial class MotelyWasmExports
                 .CreateSettings(config)
                 .WithDeck(config.Deck)
                 .WithStake(config.Stake)
-                .WithThreadCount(options.ThreadCount.Value)
+                .WithThreadCount(threadCount)
                 .WithBatchCharacterCount(options.BatchCharCount.Value)
                 .WithSeedMatchCallback(seed =>
                 {
@@ -258,13 +257,11 @@ public static partial class MotelyWasmExports
                 })
                 .WithProgressCallback(prog =>
                 {
-                    onProgress(JsonSerializer.Serialize(new ProgressCallbackDto
-                    {
-                        SeedsSearched = prog.SeedsSearched,
-                        MatchingSeeds = prog.MatchingSeeds,
-                        ElapsedMs = (long)prog.ElapsedTime.TotalMilliseconds,
-                        ResultCount = _resultQueue.Count,
-                    }, global::Motely.MotelyJsonContext.Default.ProgressCallbackDto));
+                    onProgress(
+                        prog.SeedsSearched,
+                        prog.MatchingSeeds,
+                        (long)prog.ElapsedTime.TotalMilliseconds
+                    );
                 });
 
             if (options.StartBatch.HasValue)
@@ -282,7 +279,10 @@ public static partial class MotelyWasmExports
                 int padLen = MotelyCore.MaxSeedLength - kw.Length;
                 if (padLen < 0)
                     return Task.FromResult(ErrorJson($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars)."));
-                settings = settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
+                settings = settings.WithListSearch(
+                    MotelyCore.GeneratePaddedSeeds(kw, padLen),
+                    MotelyCore.GetPaddedSeedCount(kw, padLen)
+                );
             }
             else if (options.RandomSeeds.HasValue)
                 settings = settings.WithRandomSearch(options.RandomSeeds.Value);

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 
 namespace Motely.Filters;
 
@@ -46,7 +47,7 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
             Debug.Assert(_clause.Tags.Length > 0);
             var clause = _clause;
 
-            VectorMask result = VectorMask.NoBitsSet;
+            Vector256<int> matchCounts = Vector256<int>.Zero;
 
             foreach (var ante in clause.Antes)
             {
@@ -55,29 +56,40 @@ public struct TagFilterDesc(TagClause clause) : IMotelySeedFilterDesc<TagFilterD
                 var bigTag = ctx.GetNextTag(ref tagStream);
 
                 foreach (var t in clause.Tags)
-                    result |= MatchTag(smallTag, bigTag, t, clause.Position);
+                {
+                    if (clause.Position == TagPosition.SmallBlind || clause.Position == TagPosition.Any)
+                    {
+                        var match = VectorEnum256.Equals(smallTag, t);
+                        matchCounts = Vector256.Add(
+                            matchCounts,
+                            Vector256.ConditionalSelect(
+                                match,
+                                Vector256.Create(1),
+                                Vector256<int>.Zero
+                            )
+                        );
+                    }
 
-                if (result.IsAllTrue())
-                    return result;
+                    if (clause.Position == TagPosition.BigBlind || clause.Position == TagPosition.Any)
+                    {
+                        var match = VectorEnum256.Equals(bigTag, t);
+                        matchCounts = Vector256.Add(
+                            matchCounts,
+                            Vector256.ConditionalSelect(
+                                match,
+                                Vector256.Create(1),
+                                Vector256<int>.Zero
+                            )
+                        );
+                    }
+                }
             }
 
-            return result;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static VectorMask MatchTag(
-            VectorEnum256<MotelyTag> smallTag,
-            VectorEnum256<MotelyTag> bigTag,
-            MotelyTag target,
-            TagPosition position
-        )
-        {
-            return position switch
-            {
-                TagPosition.SmallBlind => VectorEnum256.Equals(smallTag, target),
-                TagPosition.BigBlind => VectorEnum256.Equals(bigTag, target),
-                _ => VectorEnum256.Equals(smallTag, target) | VectorEnum256.Equals(bigTag, target),
-            };
+            var comparison = Vector256.GreaterThan(
+                matchCounts,
+                Vector256.Subtract(Vector256.Create(clause.Min), Vector256.Create(1))
+            );
+            return new VectorMask(MotelyVectorUtils.VectorizedComparisonToMask(comparison));
         }
     }
 }
