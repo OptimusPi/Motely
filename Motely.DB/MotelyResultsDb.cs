@@ -33,10 +33,15 @@ public sealed class MotelyResultsDb : IDisposable
 
         if (dbPath != ":memory:")
         {
-            var baseName = Path.GetFileNameWithoutExtension(dbPath);
-            var lakeDir = $"{baseName}_lake";
-            var metaFile = $"{lakeDir}/metadata.ducklake";
-            var dataDir = $"{lakeDir}/data/";
+            var fullPath = Path.GetFullPath(dbPath);
+            var directory = Path.GetDirectoryName(fullPath);
+            var baseName = Path.GetFileNameWithoutExtension(fullPath);
+            var basePath = string.IsNullOrWhiteSpace(directory)
+                ? Path.Combine(Directory.GetCurrentDirectory(), baseName)
+                : Path.Combine(directory, baseName);
+            var lakeDir = $"{basePath}_lake";
+            var metaFile = Path.Combine(lakeDir, "metadata.ducklake");
+            var dataDir = Path.Combine(lakeDir, "data");
             
             Directory.CreateDirectory(lakeDir);
             Directory.CreateDirectory(dataDir);
@@ -46,7 +51,7 @@ public sealed class MotelyResultsDb : IDisposable
             cmd.ExecuteNonQuery();
 
             // Note: Current DuckDB syntax for attaching DuckLake
-            cmd.CommandText = $"ATTACH 'ducklake:{metaFile}' AS motely_lake (DATA_PATH '{dataDir}');";
+            cmd.CommandText = $"ATTACH 'ducklake:{EscapeSqlPath(metaFile)}' AS motely_lake (DATA_PATH '{EscapeSqlPath(dataDir)}');";
             cmd.ExecuteNonQuery();
 
             cmd.CommandText = "USE motely_lake;";
@@ -134,6 +139,24 @@ public sealed class MotelyResultsDb : IDisposable
         }
     }
 
+    public List<string> GetSeeds()
+    {
+        lock (_lock)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = "SELECT seed FROM results";
+            using var reader = cmd.ExecuteReader();
+
+            var results = new List<string>();
+            while (reader.Read())
+            {
+                results.Add(reader.GetString(0));
+            }
+
+            return results;
+        }
+    }
+
     /// <summary>
     /// Total number of stored results.
     /// </summary>
@@ -171,7 +194,7 @@ public sealed class MotelyResultsDb : IDisposable
         lock (_lock)
         {
             using var cmd = _conn.CreateCommand();
-            cmd.CommandText = $"COPY (SELECT * FROM results ORDER BY score DESC{limitClause}) TO '{escapedPath}' (FORMAT PARQUET)";
+            cmd.CommandText = $"COPY (SELECT * FROM results ORDER BY score DESC{limitClause}) TO '{EscapeSqlPath(fullPath)}' (FORMAT PARQUET)";
             cmd.ExecuteNonQuery();
         }
     }
@@ -193,6 +216,8 @@ public sealed class MotelyResultsDb : IDisposable
     {
         _conn.Dispose();
     }
+
+    private static string EscapeSqlPath(string path) => path.Replace("\\", "/").Replace("'", "''");
 }
 
 /// <summary>

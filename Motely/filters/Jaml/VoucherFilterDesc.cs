@@ -48,7 +48,7 @@ public struct VoucherFilterDesc(VoucherClause clause)
             var clause = _clause;
             int maxAnte = _maxAnte;
 
-            VectorMask result = VectorMask.NoBitsSet;
+            Vector256<int> matchCounts = Vector256<int>.Zero;
             var voucherState = new MotelyVectorRunState();
 
             for (int ante = 1; ante <= maxAnte; ante++)
@@ -66,33 +66,63 @@ public struct VoucherFilterDesc(VoucherClause clause)
                     continue;
 
                 var vouchers = ctx.GetAnteFirstVoucher(ante, voucherState);
-                result |= GetVoucherMatch(vouchers, clause);
+                matchCounts = AddVoucherMatches(matchCounts, vouchers, clause);
 
                 voucherState.ActivateVoucher(vouchers);
 
-                if (result.IsAllTrue())
-                    return result;
+                var hieroglyphMask = new VectorMask(
+                    VectorizedComparisonToMask(VectorEnum256.Equals(vouchers, MotelyVoucher.Hieroglyph))
+                );
+
+                if (!hieroglyphMask.IsAllFalse())
+                {
+                    var voucherStream = ctx.CreateVoucherStream(ante);
+                    var bonusVouchers = ctx.GetNextVoucher(ref voucherStream, voucherState);
+                    matchCounts = AddVoucherMatches(matchCounts, bonusVouchers, clause, hieroglyphMask);
+                    voucherState.ActivateVoucher(bonusVouchers, hieroglyphMask);
+                }
             }
 
-            return result;
+            var comparison = Vector256.GreaterThan(
+                matchCounts,
+                Vector256.Subtract(Vector256.Create(clause.Min), Vector256.Create(1))
+            );
+            return new VectorMask(VectorizedComparisonToMask(comparison));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static VectorMask GetVoucherMatch(
+        private static Vector256<int> AddVoucherMatches(
+            Vector256<int> counts,
             VectorEnum256<MotelyVoucher> vouchers,
-            VoucherClause clause
+            VoucherClause clause,
+            VectorMask? includeMask = null
         )
         {
+            Vector256<int> matchMask = Vector256<int>.Zero;
+
             if (clause.Vouchers.Length == 1)
             {
-                Vector256<int> r = VectorEnum256.Equals(vouchers, clause.Vouchers[0]);
-                return new VectorMask(VectorizedComparisonToMask(r));
+                matchMask = VectorEnum256.Equals(vouchers, clause.Vouchers[0]);
             }
 
-            Vector256<int> anyMatch = Vector256<int>.Zero;
-            foreach (var v in clause.Vouchers)
-                anyMatch = Vector256.Max(anyMatch, VectorEnum256.Equals(vouchers, v));
-            return new VectorMask(VectorizedComparisonToMask(anyMatch));
+            else
+            {
+                foreach (var v in clause.Vouchers)
+                    matchMask = Vector256.Max(matchMask, VectorEnum256.Equals(vouchers, v));
+            }
+
+            if (includeMask.HasValue)
+            {
+                matchMask = Vector256.BitwiseAnd(
+                    matchMask,
+                    MotelyVectorUtils.VectorMaskToConditionalSelectMask(includeMask.Value)
+                );
+            }
+
+            return Vector256.Add(
+                counts,
+                Vector256.ConditionalSelect(matchMask, Vector256.Create(1), Vector256<int>.Zero)
+            );
         }
     }
 }

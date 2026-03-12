@@ -20,6 +20,10 @@ public static class TuiSettings
     public static string ApiServerHost { get; set; } = "localhost";
     public static int ApiServerPort { get; set; } = 3141;
 
+    // Default search IO settings
+    public static string DefaultSource { get; set; } = string.Empty;
+    public static string DefaultSink { get; set; } = string.Empty;
+
     // Secret settings (in-memory only, not persisted)
     public static bool CrudeSeedsEnabled { get; set; } = false;
 
@@ -42,6 +46,8 @@ public static class TuiSettings
         BatchCharacterCount = 2;
         ApiServerHost = "localhost";
         ApiServerPort = 3141;
+        DefaultSource = string.Empty;
+        DefaultSink = string.Empty;
         Save();
     }
 }
@@ -71,6 +77,8 @@ public class SettingsService
                 TuiSettings.BatchCharacterCount = settings.BatchCharacterCount ?? 2;
                 TuiSettings.ApiServerHost = settings.ApiServerHost ?? "localhost";
                 TuiSettings.ApiServerPort = settings.ApiServerPort ?? 3141;
+                TuiSettings.DefaultSource = settings.DefaultSource ?? string.Empty;
+                TuiSettings.DefaultSink = settings.DefaultSink ?? string.Empty;
             }
         }
         catch (Exception)
@@ -89,6 +97,8 @@ public class SettingsService
                 BatchCharacterCount = TuiSettings.BatchCharacterCount,
                 ApiServerHost = TuiSettings.ApiServerHost,
                 ApiServerPort = TuiSettings.ApiServerPort,
+                DefaultSource = TuiSettings.DefaultSource,
+                DefaultSink = TuiSettings.DefaultSink,
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true };
@@ -108,5 +118,7 @@ public class SettingsService
         public int? BatchCharacterCount { get; set; }
         public string? ApiServerHost { get; set; }
         public int? ApiServerPort { get; set; }
+        public string? DefaultSource { get; set; }
+        public string? DefaultSink { get; set; }
     }
 }

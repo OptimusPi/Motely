@@ -53,7 +53,7 @@ export interface SeedAnalysisInfo {
 export interface SearchResultInfo {
   seed: string;
   score: number;
-  tallies?: number[] | null;
+  tallies?: string[] | null;
 }
 
 export interface SearchStatusInfo {
@@ -88,7 +88,7 @@ export interface SearchOptions {
   randomSeeds?: number;
   palindrome?: boolean;
   /** Called with native primitives every ~15ms during search. No JSON overhead. */
-  onProgress?: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
+  onProgress?: (totalSeedsSearched: number, matchingSeeds: number, elapsedMs: number) => void;
   /** Called with native primitives for each new result found. No JSON overhead. */
   onResult?: (seed: string, score: number) => void;
 }
@@ -160,7 +160,11 @@ export interface LoadMotelyOptions {
 
 // ──────────────────────────────── Raw Export Shape ────────────────────────────────
 
-/** Shape of the raw [JSExport] methods from .NET (async where required for threaded WASM) */
+/**
+ * Shape of the raw [JSExport] methods from .NET.
+ * onProgress receives primitives directly via JSMarshalAs - no JSON.
+ * See: https://learn.microsoft.com/en-us/aspnet/core/client-side/dotnet-interop/wasm-browser-app
+ */
 interface RawExports {
   GetVersionAsync(): Promise<string>;
   GetCapabilitiesAsync(): Promise<string>;
@@ -169,7 +173,7 @@ interface RawExports {
   StartJamlSearch(
     jamlContent: string,
     optionsJson: string,
-    onProgress: (progressJson: string) => void,
+    onProgress: (seedsSearched: number, matchingSeeds: number, elapsedMs: number) => void,
     onResult: (seed: string, score: number) => void,
   ): Promise<string>;
   StopSearch(): void;
@@ -255,7 +259,7 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
     getVersion: () => cachedVersion,
     getCapabilities: () => cachedCapabilities,
     isSimdEnabled: () => cachedCapabilities.simd,
-    isThreadingEnabled: () => cachedCapabilities.availableThreadCount > 1,
+    isThreadingEnabled: () => cachedCapabilities.threads,
     getAvailableThreadCount: () => cachedCapabilities.availableThreadCount,
     getProcessorCount: () => cachedCapabilities.processorCount,
 
@@ -275,18 +279,13 @@ export async function loadMotely(options?: LoadMotelyOptions): Promise<MotelyWas
       const { onProgress, onResult, ...searchParams } = options ?? {};
 
       const withDefaults = {
-        threadCount: cachedCapabilities.processorCount,
+        threadCount: Math.max(1, cachedCapabilities.availableThreadCount),
         batchCharCount: 4,
         ...searchParams,
       };
       const optionsJson = JSON.stringify(withDefaults);
 
-      const progressCb = onProgress
-        ? (json: string) => {
-          const p = JSON.parse(json) as { seedsSearched: number; matchingSeeds: number; elapsedMs: number; resultCount: number };
-          onProgress(p.seedsSearched, p.matchingSeeds, p.elapsedMs, p.resultCount);
-        }
-        : () => { };
+      const progressCb = onProgress ?? (() => { });
       const resultCb = onResult ?? (() => { });
 
       const resultJson = await raw.StartJamlSearch(jamlContent, optionsJson, progressCb, resultCb);

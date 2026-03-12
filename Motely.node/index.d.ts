@@ -25,6 +25,7 @@ export interface AnteAnalysisInfo {
     voucher: string;
     smallBlindTag: string;
     bigBlindTag: string;
+    drawOrder: string;
     shopQueue: ShopItemInfo[];
     packs: PackInfo[];
 }
@@ -32,12 +33,14 @@ export interface SeedAnalysisInfo {
     seed: string;
     deck: string;
     stake: string;
+    erraticDeckComposition: string[];
     error?: string | null;
     antes: AnteAnalysisInfo[];
 }
 export interface SearchResultInfo {
     seed: string;
     score: number;
+    tallies?: string[] | null;
 }
 export interface ValidateResult {
     valid: boolean;
@@ -56,8 +59,6 @@ export interface SearchOptions {
     startBatch?: number;
     endBatch?: number;
     specificSeed?: string;
-    seeds?: string[];
-    keyword?: string;
     palindrome?: boolean;
     /** Called every ~2 seconds by the .NET search engine with current progress. */
     onProgress?: (seedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;

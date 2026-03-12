@@ -15,4 +15,9 @@
     <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
     <ProjectReference Include="..\Motely.DistributedWorker\Motely.DistributedWorker.csproj" />
   </ItemGroup>
+
+  <Target Name="CopyWasmFramework" BeforeTargets="Build">
+    <Exec Command="npm install --prefer-offline" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Exec Command="node copy-wasm.mjs" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
 </Project>

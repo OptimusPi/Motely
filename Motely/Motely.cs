@@ -116,6 +116,34 @@ public static partial class MotelyCore
     /// Generate all seed variations by padding a keyword with the given valid characters.
     /// Pads 0-3 characters at all positions (prefix, suffix, infix).
     /// </summary>
+    public static int GetPaddedSeedCount(string keyword, int padLen, char[]? validChars = null)
+    {
+        validChars ??= SeedDigits;
+
+        if (validChars.Length == 0)
+            throw new ArgumentException("validChars cannot be empty", nameof(validChars));
+        if (string.IsNullOrEmpty(keyword))
+            throw new ArgumentException("keyword cannot be null or empty", nameof(keyword));
+
+        if (padLen <= 0)
+            return 1;
+
+        checked
+        {
+            int combinations = 1;
+            for (int i = 0; i < padLen; i++)
+                combinations *= validChars.Length;
+
+            return padLen switch
+            {
+                1 => combinations * 2,
+                2 => combinations * 3,
+                3 => combinations * 4,
+                _ => combinations * (keyword.Length + 1),
+            };
+        }
+    }
+
     public static IEnumerable<string> GeneratePaddedSeeds(
         string keyword,
         int padLen,

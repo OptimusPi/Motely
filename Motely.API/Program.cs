@@ -117,8 +117,18 @@ public class Program
         });
 
         app.UseStaticFiles();
-        app.UseDefaultFiles();
+        var jammyIndexPath = Path.Combine(
+            app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
+            "jammy-seed-finder",
+            "index.html");
+
         app.MapGet("/jammy-seed-finder", () => Results.Redirect("/jammy-seed-finder/", permanent: false));
+        app.MapGet("/jammy-seed-finder/", async context =>
+        {
+            context.Response.ContentType = "text/html";
+            await context.Response.SendFileAsync(jammyIndexPath);
+        });
+        app.MapFallbackToFile("/jammy-seed-finder/{*path:nonfile}", "jammy-seed-finder/index.html");
 
         var jamlDir = ResolveJamlDirectory(builder.Configuration);
 
@@ -290,7 +300,7 @@ public class Program
             var poolOptions = poolOptionsAccessor.Value;
             var configuredPoolUrl = poolOptions.Url?.Trim() ?? string.Empty;
             var configuredWorkerId = poolOptions.WorkerId?.Trim();
-            var workerConfigured = !string.IsNullOrWhiteSpace(configuredPoolUrl) && !string.IsNullOrWhiteSpace(poolOptions.Token);
+            var workerConfigured = !string.IsNullOrWhiteSpace(configuredPoolUrl);
             var workerEnabled = workerConfigured;
             var workerState = workerConfigured ? "running" : "disabled";
             var workerStatus = new WorkerStatusResponse(

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
+using Motely.DB.SeedSource;
 using Motely.Filters;
 
 namespace Motely;
@@ -105,14 +106,19 @@ partial class Program
             "Palindrome seeds",
             CommandOptionType.NoValue
         );
-        var seedOption = app.Option<string>(
-            "--seed <SEED>",
-            "Single seed to test",
+        var sourceOption = app.Option<string>(
+            "--source <NAME_OR_PATH>",
+            "Seed source file name or absolute path",
+            CommandOptionType.SingleValue
+        );
+        var sinkOption = app.Option<string>(
+            "--sink <NAME_OR_PATH>",
+            "Result sink file name or absolute path",
             CommandOptionType.SingleValue
         );
         var seedsOption = app.Option<string>(
             "--seeds <LIST>",
-            "Comma-separated seeds",
+            "Inline comma-separated seeds",
             CommandOptionType.SingleValue
         );
         var cutoffOption = app.Option<string>(
@@ -191,70 +197,93 @@ partial class Program
                 : Environment.ProcessorCount;
             int batchCharCount = batchCharCountOption.HasValue() ? batchCharCountOption.ParsedValue : 4;
 
+            int explicitSearchModeCount = 0;
+            if (sourceOption.HasValue()) explicitSearchModeCount++;
+            if (seedsOption.HasValue()) explicitSearchModeCount++;
+            if (keywordOption.HasValue()) explicitSearchModeCount++;
+            if (randomOption.HasValue()) explicitSearchModeCount++;
+            if (palindromeOption.HasValue()) explicitSearchModeCount++;
+
+            if (explicitSearchModeCount > 1)
+            {
+                Console.Error.WriteLine(
+                    "Error: choose only one search input mode: --source, --seeds, --keyword, --random, or --palindrome."
+                );
+                return 1;
+            }
+
             var plan = JamlSearchBuilder.CreatePlan(config);
             var settings = plan
                 .Settings.WithDeck(deck)
                 .WithStake(stake)
                 .WithThreadCount(threads)
                 .WithBatchCharacterCount(batchCharCount);
+            bool hasStructuredScores = plan.ShouldClauseCount > 0;
+            using ISeedResultSink? sink = sinkOption.HasValue()
+                ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
+                : null;
 
             if (startBatchOption.HasValue())
                 settings.WithStartBatchIndex(startBatchOption.ParsedValue);
             if (endBatchOption.HasValue())
                 settings.WithEndBatchIndex(endBatchOption.ParsedValue);
 
-            if (seedOption.HasValue())
-                settings.WithListSearch([seedOption.ParsedValue.ToUpperInvariant()]);
-            else if (seedsOption.HasValue())
+            if (sourceOption.HasValue())
             {
-                string seedsValue = seedsOption.ParsedValue;
-
-                // Check if it's a file path
-                if (File.Exists(seedsValue))
+                try
                 {
-                    string ext = Path.GetExtension(seedsValue).ToLowerInvariant();
-                    if (ext == ".db")
+                    var sourceSeeds = SeedReader.ReadSeeds(sourceOption.ParsedValue);
+                    if (sourceSeeds.Count == 0)
                     {
-                        Console.Error.WriteLine(
-                            "Error: .db database files are not supported in this build."
-                        );
+                        Console.Error.WriteLine("Error: resolved source contained no seeds.");
                         return 1;
                     }
-                    else
-                    {
-                        // Other file types - treat as seed list file
-                        var seedLines = File.ReadAllLines(seedsValue)
-                            .Where(line => !string.IsNullOrWhiteSpace(line))
-                            .Select(line =>
-                            {
-                                // CSV support: take first column, strip quotes
-                                var span = line.AsSpan();
-                                int comma = span.IndexOf(',');
-                                if (comma >= 0)
-                                    span = span[..comma];
-                                if (span.Length >= 2 && span[0] == '"' && span[^1] == '"')
-                                    span = span[1..^1];
-                                return span.ToString().ToUpperInvariant().Replace('0', 'O');
-                            })
-                            .Where(line => !string.IsNullOrEmpty(line));
-                        settings.WithListSearch(seedLines);
-                    }
+
+                    settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
                 }
-                else if (seedsValue.Contains(','))
+                catch (Exception ex)
                 {
-                    // Comma-separated seeds
-                    var seedList = seedsValue
-                        .Split(
-                            ',',
-                            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
-                        )
-                        .Select(x => x.ToUpperInvariant());
-                    settings.WithListSearch(seedList);
+                    Console.Error.WriteLine($"Error: {ex.Message}");
+                    return 1;
+                }
+            }
+            else if (seedsOption.HasValue())
+            {
+                var seedsValue = seedsOption.ParsedValue;
+                var looksLikeSourcePath = seedsValue.Contains(Path.DirectorySeparatorChar)
+                    || seedsValue.Contains(Path.AltDirectorySeparatorChar)
+                    || Path.HasExtension(seedsValue);
+
+                if (looksLikeSourcePath)
+                {
+                    try
+                    {
+                        var sourceSeeds = SeedReader.ReadSeeds(seedsValue);
+                        if (sourceSeeds.Count == 0)
+                        {
+                            Console.Error.WriteLine("Error: resolved seed source contained no seeds.");
+                            return 1;
+                        }
+
+                        Console.Error.WriteLine("Warning: --seeds <path> is deprecated; use --source <path>.");
+                        settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Error: {ex.Message}");
+                        return 1;
+                    }
                 }
                 else
                 {
-                    // Single seed
-                    settings.WithListSearch([seedsValue.ToUpperInvariant()]);
+                    var inlineSeeds = SeedReader.ParseInlineSeeds(seedsValue);
+                    if (inlineSeeds.Count == 0)
+                    {
+                        Console.Error.WriteLine("Error: --seeds requires at least one inline seed.");
+                        return 1;
+                    }
+
+                    settings.WithListSearch(inlineSeeds, inlineSeeds.Count);
                 }
             }
             else if (keywordOption.HasValue())
@@ -268,7 +297,10 @@ partial class Program
                     );
                     return 1;
                 }
-                settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
+                settings.WithListSearch(
+                    MotelyCore.GeneratePaddedSeeds(kw, padLen),
+                    MotelyCore.GetPaddedSeedCount(kw, padLen)
+                );
             }
             else if (randomOption.HasValue())
                 settings.WithRandomSearch(randomOption.ParsedValue);
@@ -298,11 +330,22 @@ partial class Program
                 }
             }
 
-            int bestScoreSoFar = 0;
+            int bestScoreSoFar = int.MinValue;
             object bestLock = new();
+
+            if (hasStructuredScores)
+            {
+                settings.WithScoredResultCallback(tally =>
+                {
+                    sink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
+                });
+            }
 
             settings.WithSeedMatchCallback(line =>
             {
+                if (!hasStructuredScores)
+                    sink?.AppendSeed(line);
+
                 // Parse score from format: SEED,SCORE,...
                 int firstComma = line.IndexOf(',');
                 if (firstComma < 0)
@@ -327,7 +370,7 @@ partial class Program
                 {
                     lock (bestLock)
                     {
-                        if (score >= bestScoreSoFar)
+                        if (score > bestScoreSoFar)
                         {
                             bestScoreSoFar = score;
                             Console.WriteLine(line);
@@ -351,6 +394,8 @@ partial class Program
             Console.Error.WriteLine(
                 $"Motely: {config.Name ?? jamlOption.ParsedValue} | {deck} {stake} | threads={threads} batchCharCount={batchCharCount}"
             );
+            if (sink != null)
+                Console.Error.WriteLine($"Sink: {sink.OutputPath}");
 
             using var search = settings.CreateSearch();
             _activeSearch = search;

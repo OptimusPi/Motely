@@ -27,23 +27,13 @@
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
 
     <WasmEmitCompressedAssets>false</WasmEmitCompressedAssets>
-    <BlazorEnableCompression>false</BlazorEnableCompression>
 
     <!-- Globalization: Search doesn't need ICU data (~2.5MB saved) -->
     <InvariantGlobalization>true</InvariantGlobalization>
-    <BlazorWebAssemblyPreserveCollationData>false</BlazorWebAssemblyPreserveCollationData>
 
-    <!-- Skip wasm-opt as it crashes on this specific binary output -->
-    <WasmRunWasmOpt>false</WasmRunWasmOpt>
+    <!-- Re-enabled: testing with Binaryen 117 from .NET 10 Emscripten pack -->
+    <WasmRunWasmOpt>true</WasmRunWasmOpt>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
-    <PackageReference
-      Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"
-      PrivateAssets="all"
-    />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />

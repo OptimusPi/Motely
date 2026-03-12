@@ -34,7 +34,7 @@ public sealed class MotelySearchContext : IMotelySearchContext
     {
         if (_runTask is { IsCompleted: false })
             return _runTask;
-        _runTask = Task.Run(() => _search.Start().WaitForCompletionAsync(cancellationToken));
+        _runTask = Task.Run(() => _search.Start(cancellationToken), cancellationToken);
         return _runTask;
     }
 

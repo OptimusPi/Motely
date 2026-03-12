@@ -80,7 +80,7 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.Jokers.Length > 0);
+            Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
             int needed = _clause.Min;
             Debug.Assert(needed > 0, "CommonJokerClause.Min must be > 0 — loader bug.");
             Vector256<int> matchCounts = Vector256<int>.Zero;
@@ -210,10 +210,19 @@ public struct CommonJokerFilterDesc(CommonJokerClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private readonly VectorMask MatchJokers(in MotelyItemVector item)
         {
-            VectorMask jokerMatch = VectorMask.NoBitsSet;
-            for (int t = 0; t < _targetTypes.Length; t++)
+            VectorMask jokerMatch;
+            if (_clause.IsWildcard)
             {
-                jokerMatch |= VectorEnum256.Equals(item.Type, _targetTypes[t]);
+                jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
+                var rarityVec = new VectorEnum256<MotelyJokerRarity>(
+                    Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyCore.JokerRarityMask)));
+                jokerMatch &= VectorEnum256.Equals(rarityVec, MotelyJokerRarity.Common);
+            }
+            else
+            {
+                jokerMatch = VectorMask.NoBitsSet;
+                for (int t = 0; t < _targetTypes.Length; t++)
+                    jokerMatch |= VectorEnum256.Equals(item.Type, _targetTypes[t]);
             }
 
             if (_clause.Edition.HasValue)

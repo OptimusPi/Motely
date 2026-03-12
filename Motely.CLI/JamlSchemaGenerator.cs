@@ -110,21 +110,18 @@ internal static class JamlSchemaGenerator
         yield return Path.Combine(repoRoot, "jaml.schema.json");
         yield return Path.Combine(repoRoot, "public", "jaml.schema.json");
         yield return Path.Combine(repoRoot, "Motely.npm", "jaml.schema.json");
-        yield return Path.Combine(repoRoot, "Motely.npm.singlethread", "jaml.schema.json");
         yield return Path.Combine(repoRoot, "Motely.node", "jaml.schema.json");
     }
 
     private static IEnumerable<string> GetHelperJsOutputPaths(string repoRoot)
     {
         yield return Path.Combine(repoRoot, "Motely.npm", "jaml-schema.js");
-        yield return Path.Combine(repoRoot, "Motely.npm.singlethread", "jaml-schema.js");
         yield return Path.Combine(repoRoot, "Motely.node", "jaml-schema.js");
     }
 
     private static IEnumerable<string> GetHelperDtsOutputPaths(string repoRoot)
     {
         yield return Path.Combine(repoRoot, "Motely.npm", "jaml-schema.d.ts");
-        yield return Path.Combine(repoRoot, "Motely.npm.singlethread", "jaml-schema.d.ts");
         yield return Path.Combine(repoRoot, "Motely.node", "jaml-schema.d.ts");
     }
 
@@ -289,8 +286,55 @@ internal static class JamlSchemaGenerator
         {
             ["type"] = "object",
             ["properties"] = properties,
+            ["allOf"] = new JsonArray(BuildEventAntesRestriction()),
             ["additionalProperties"] = false,
             ["minProperties"] = 1
+        };
+    }
+
+    private static JsonObject BuildEventAntesRestriction()
+    {
+        return new JsonObject
+        {
+            ["if"] = new JsonObject
+            {
+                ["anyOf"] = new JsonArray(
+                    new JsonObject
+                    {
+                        ["required"] = ToJsonArray(["event"])
+                    },
+                    new JsonObject
+                    {
+                        ["required"] = ToJsonArray(["eventType"])
+                    },
+                    new JsonObject
+                    {
+                        ["properties"] = new JsonObject
+                        {
+                            ["type"] = new JsonObject
+                            {
+                                ["enum"] = ToJsonArray([
+                                    "Event",
+                                    "LuckyMoney",
+                                    "LuckyMult",
+                                    "MisprintMult",
+                                    "WheelOfFortune",
+                                    "CavendishExtinct",
+                                    "GrosMichelExtinct"
+                                ])
+                            }
+                        },
+                        ["required"] = ToJsonArray(["type"])
+                    }
+                )
+            },
+            ["then"] = new JsonObject
+            {
+                ["not"] = new JsonObject
+                {
+                    ["required"] = ToJsonArray(["antes"])
+                }
+            }
         };
     }
 

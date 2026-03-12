@@ -112,6 +112,8 @@ public static class JamlSearchBuilder
 
 
 
+        var allMustDescs = new List<IMotelySeedFilterDesc>();
+
         // ── MUST: required filters (AND logic) ──
 
         var mustDescs = new List<IMotelySeedFilterDesc>();
@@ -120,11 +122,23 @@ public static class JamlSearchBuilder
 
         AddDescsFromSet(mustDescs, mustLabels, config.Must);
 
+        allMustDescs.AddRange(mustDescs);
+
+        var mustNotDescs = new List<IMotelySeedFilterDesc>();
+
+        var mustNotLabels = new List<string>();
+
+        AddDescsFromSet(mustNotDescs, mustNotLabels, config.MustNot);
+
+        for (int i = 0; i < mustNotDescs.Count; i++)
+
+            allMustDescs.Add(new NegationFilterDesc(mustNotDescs[i]));
+
 
 
         Debug.Assert(
 
-            mustDescs.Count > 0 || !config.Should.HasAnyClauses,
+            allMustDescs.Count > 0 || !config.Should.HasAnyClauses,
 
             "Should-only JAML plans must provide a real base filter."
 
@@ -132,15 +146,13 @@ public static class JamlSearchBuilder
 
 
 
-        if (mustDescs.Count == 0)
-
-            throw new InvalidOperationException("JamlConfig produced no filter descriptors.");
-
-
-
         // Build settings: first must desc = base filter, rest = additional required filters
 
-        var settings = CreateSettingsFromDesc(mustDescs[0]);
+        var settings = allMustDescs.Count == 0
+
+            ? CreateSettingsFromDesc(new PassthroughFilterDesc())
+
+            : CreateSettingsFromDesc(allMustDescs[0]);
 
 
 
@@ -152,9 +164,9 @@ public static class JamlSearchBuilder
 
 
 
-        for (int i = 1; i < mustDescs.Count; i++)
+        for (int i = 1; i < allMustDescs.Count; i++)
 
-            settings.WithAdditionalFilter(mustDescs[i]);
+            settings.WithAdditionalFilter(allMustDescs[i]);
 
 
 
@@ -167,17 +179,11 @@ public static class JamlSearchBuilder
             var shouldDescs = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
             AddDescsFromSet(shouldDescs, config.Should);
 
-            (IMotelySeedFilterDesc desc, int score, string label)[] scored = shouldDescs
-                .Select(x => (x.desc, x.clause.Score, x.label))
-                .ToArray();
-
-            (IMotelySeedFilterDesc desc, string label)[] mustArr = mustDescs
-                .Zip(mustLabels, (desc, label) => (desc, label))
-                .ToArray();
-
-            settings.WithSeedScoreProvider(new JamlShouldScoreDesc(mustArr, scored));
-
             shouldLabelsArray = shouldDescs.Select(x => x.label).ToArray();
+
+            settings.WithSeedScoreProvider(
+                new JamlShouldScoreDesc(shouldDescs.Select(x => x.clause).ToArray())
+            );
         }
 
 
@@ -188,138 +194,34 @@ public static class JamlSearchBuilder
 
 
 
-    private static void AddDescsFromSet(List<IMotelySeedFilterDesc> descs, List<string> labels, JamlClauseSet set)
+
+    private static void AddDescsFromSet(
+        List<IMotelySeedFilterDesc> list,
+        List<string> labels,
+        JamlClauseSet set
+    )
     {
-        var list = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
-        AddDescsFromSet(list, set);
-        foreach (var item in list)
+        var typed = new List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)>();
+        AddDescsFromSet(typed, set);
+
+        for (int i = 0; i < typed.Count; i++)
         {
-            descs.Add(item.desc);
-            labels.Add(item.label);
+            list.Add(typed[i].desc);
+            labels.Add(typed[i].label);
         }
     }
+
+
 
     private static void AddDescsFromSet(
         List<(IMotelySeedFilterDesc desc, IJamlClause clause, string label)> list,
         JamlClauseSet set
     )
     {
-
-        foreach (var c in set.Jokers)
+        foreach (var c in set.OrderedClauses)
         {
             list.Add((CreateDesc(c), c, c.Label));
         }
-
-        foreach (var c in set.CommonJokers)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.UncommonJokers)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.RareJokers)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.MixedJokers)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.LegendaryJokers)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.Vouchers)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.TarotCards)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.SpectralCards)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.PlanetCards)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.Bosses)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.Tags)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.StandardCards)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.ErraticRanks)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.ErraticSuits)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.ErraticCards)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.LuckyMoney)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.LuckyMult)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.MisprintMult)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.WheelOfFortune)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.CavendishExtinct)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.GrosMichelExtinct)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
-        foreach (var c in set.StartingDraw)
-        {
-            list.Add((CreateDesc(c), c, c.Label));
-        }
-
     }
 
 
@@ -418,6 +320,12 @@ public static class JamlSearchBuilder
 
                 new MotelySearchSettings<GrosMichelExtinctFilterDesc.GrosMichelExtinctFilter>(d),
 
+            AndFilterDesc d => new MotelySearchSettings<AndFilterDesc.AndFilter>(d),
+
+            OrFilterDesc d => new MotelySearchSettings<OrFilterDesc.OrFilter>(d),
+
+            NegationFilterDesc d => new MotelySearchSettings<NegationFilterDesc.NegationFilter>(d),
+
             PassthroughFilterDesc d =>
 
                 new MotelySearchSettings<PassthroughFilterDesc.PassthroughFilter>(d),
@@ -493,6 +401,10 @@ public static class JamlSearchBuilder
             GrosMichelExtinctClause c => new GrosMichelExtinctFilterDesc(c),
 
             StartingDrawClause c => new StartingDrawFilterDesc(c),
+
+            AndClause c => new AndFilterDesc(c.Clauses.Select(CreateDesc).ToArray()),
+
+            OrClause c => new OrFilterDesc(c.Clauses.Select(CreateDesc).ToArray(), c.Min),
 
             _ => throw new NotSupportedException($"Unknown clause type: {clause.GetType().Name}"),
 

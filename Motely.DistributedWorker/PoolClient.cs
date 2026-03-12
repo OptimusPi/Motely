@@ -12,12 +12,18 @@ internal sealed class PoolClient : IDisposable
     private readonly HttpClient _http;
     private readonly string _poolUrl;
 
-    public PoolClient(string poolUrl, string poolToken)
+    private static string NormalizePoolUrl(string poolUrl)
     {
-        _poolUrl = poolUrl.TrimEnd('/');
+        var trimmed = poolUrl.Trim().TrimEnd('/');
+        return trimmed.EndsWith("/api/search/helper", StringComparison.OrdinalIgnoreCase)
+            ? trimmed
+            : $"{trimmed}/api/search/helper";
+    }
+
+    public PoolClient(string poolUrl)
+    {
+        _poolUrl = NormalizePoolUrl(poolUrl);
         _http = new HttpClient();
-        _http.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", poolToken);
         _http.Timeout = TimeSpan.FromSeconds(30);
     }
 

@@ -21,7 +21,7 @@ class Program
     static async Task<int> Main(string[] args)
     {
         // ── Parse args ──────────────────────────────────────────────────
-        string? url = null, poolToken = null, workerId = null;
+        string? url = null, workerId = null;
         int threads = Environment.ProcessorCount;
 
         for (int i = 0; i < args.Length - 1; i++)
@@ -29,16 +29,15 @@ class Program
             switch (args[i].ToLowerInvariant())
             {
                 case "--pool": url = args[++i]; break;
-                case "--pool-token": poolToken = args[++i]; break;
                 case "--threads": threads = int.Parse(args[++i]); break;
                 case "--worker-id": workerId = args[++i]; break;
             }
         }
 
-        if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(poolToken))
+        if (string.IsNullOrEmpty(url))
         {
             Console.Error.WriteLine("Usage:");
-            Console.Error.WriteLine("  MotelyWorker --pool <base-url> --pool-token <POOL_TOKEN>");
+            Console.Error.WriteLine("  MotelyWorker --pool <helper-url>");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Options:");
             Console.Error.WriteLine("  --threads <N>      Thread count (default: all cores)");
@@ -51,15 +50,15 @@ class Program
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        return await RunPoolMode(url, poolToken, workerId, threads, cts);
+        return await RunPoolMode(url, workerId, threads, cts);
     }
 
     // ═══════════════════════════════════════════════════════════════════
     //  POOL MODE — claim one block at a time from the help-wanted queue
     // ═══════════════════════════════════════════════════════════════════
-    static async Task<int> RunPoolMode(string poolUrl, string poolToken, string workerId, int threads, CancellationTokenSource cts)
+    static async Task<int> RunPoolMode(string poolUrl, string workerId, int threads, CancellationTokenSource cts)
     {
-        using var pool = new PoolClient(poolUrl, poolToken);
+        using var pool = new PoolClient(poolUrl);
 
         Console.Error.WriteLine($"[MotelyWorker] → {poolUrl}");
         Console.Error.WriteLine($"[MotelyWorker] Worker: {workerId} | Threads: {threads}");
@@ -131,6 +130,7 @@ class Program
             // ── SEARCH ───────────────────────────────────────────────
             var matchResults = new ConcurrentBag<SeedResultDto>();
             long seedsSearched = 0;
+            long endBatchExclusive = claim.BatchIndex + Math.Max(1, claim.Remaining);
 
             var plan = JamlSearchBuilder.CreatePlan(config);
             var settings = plan.Settings
@@ -139,7 +139,7 @@ class Program
                 .WithThreadCount(threads)
                 .WithBatchCharacterCount(claim.BatchCharCount)
                 .WithStartBatchIndex(claim.BatchIndex)
-                .WithEndBatchIndex(claim.BatchIndex + 1)
+                .WithEndBatchIndex(endBatchExclusive)
                 .WithSequentialSearch();
 
             settings.WithSeedMatchCallback(line =>
@@ -173,7 +173,7 @@ class Program
             var submitBody = new SubmitResultsDto
             {
                 StartBatch = claim.BatchIndex,
-                EndBatch = claim.BatchIndex + 1,
+                EndBatch = endBatchExclusive,
                 Results = matchResults.ToArray(),
                 SeedsSearched = seedsSearched,
             };

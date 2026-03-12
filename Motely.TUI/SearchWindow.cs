@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Motely.Executors;
+using Motely.DB.SeedSource;
 using Motely.Filters;
 
 namespace Motely.TUI;
@@ -8,19 +8,24 @@ public class SearchWindow : Window
 {
     private readonly string _configPath;
     private readonly string _configFormat;
+    private readonly string? _source;
+    private readonly string? _sink;
     private Label _statusLabel;
     private Label _progressLabel;
     private TextView _resultsView;
     private CleanButton _stopBtn;
-    private IMotelySearchContext? _search;
+    private IMotelySearch? _search;
+    private ISeedResultSink? _activeSink;
     private CancellationTokenSource? _cts;
     private bool _searchRunning = false;
     private int _resultCount = 0;
 
-    public SearchWindow(string configPath, string configFormat)
+    public SearchWindow(string configPath, string configFormat, string? source = null, string? sink = null)
     {
         _configPath = configPath;
         _configFormat = configFormat;
+        _source = string.IsNullOrWhiteSpace(source) ? null : source;
+        _sink = string.IsNullOrWhiteSpace(sink) ? null : sink;
 
         Title = $"Search: {Path.GetFileNameWithoutExtension(configPath)}";
         X = Pos.Center();
@@ -134,34 +139,72 @@ public class SearchWindow : Window
             _cts = new CancellationTokenSource();
             _searchRunning = true;
 
-            var parameters = new JsonSearchParams
-            {
-                Threads = TuiSettings.ThreadCount,
-                BatchCharCount = TuiSettings.BatchCharacterCount,
-                Quiet = true,
-            };
-
-            // Launch search via orchestrator
-            Action<MotelySeedScoreTally> onResult = (tally) =>
-            {
-                var resultCount = Interlocked.Increment(ref _resultCount);
-                var line = $"{tally.Seed}  score: {tally.Score}";
-                App?.Invoke(() =>
-                {
-                    _resultsView.Text += line + "\n";
-                    _resultsView.MoveEnd();
-                });
-            };
-
             if (
                 !TryLoadConfig(_configPath, _configFormat, out var config, out var configError)
                 || config == null
             )
                 throw new InvalidOperationException(configError ?? "Failed to load search config.");
 
-            parameters.ResultCallback = onResult;
+            var plan = JamlSearchBuilder.CreatePlan(config);
+            var settings = plan
+                .Settings.WithDeck(config.Deck)
+                .WithStake(config.Stake)
+                .WithThreadCount(TuiSettings.ThreadCount)
+                .WithBatchCharacterCount(TuiSettings.BatchCharacterCount)
+                .WithQuietMode(true);
 
-            _search = MotelySearchOrchestrator.LaunchWithContext(config, parameters);
+            if (!string.IsNullOrWhiteSpace(_source))
+            {
+                var sourceSeeds = SeedReader.ReadSeeds(_source);
+                if (sourceSeeds.Count == 0)
+                    throw new InvalidOperationException("Resolved source contained no seeds.");
+
+                settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
+            }
+            else
+            {
+                settings.WithSequentialSearch();
+            }
+
+            bool hasStructuredScores = plan.ShouldClauseCount > 0;
+            _activeSink = !string.IsNullOrWhiteSpace(_sink)
+                ? SeedResultSinkFactory.Create(_sink, plan.ShouldClauseCount)
+                : null;
+
+            if (hasStructuredScores)
+            {
+                settings.WithScoredResultCallback(tally =>
+                {
+                    _activeSink?.AppendScoredResult(tally.Seed, tally.Score, tally.TallyValuesSpan);
+
+                    var resultCount = Interlocked.Increment(ref _resultCount);
+                    var line = $"{resultCount,6} | {tally.Seed,-10} | {tally.Score,6}";
+                    App?.Invoke(() =>
+                    {
+                        _resultsView.Text += line + "\n";
+                        _resultsView.MoveEnd();
+                    });
+                });
+            }
+
+            if (!hasStructuredScores)
+            {
+                settings.WithSeedMatchCallback(line =>
+                {
+                    _activeSink?.AppendSeed(line);
+
+                    var resultCount = Interlocked.Increment(ref _resultCount);
+                    var displayLine = $"{resultCount,6} | {line}";
+
+                    App?.Invoke(() =>
+                    {
+                        _resultsView.Text += displayLine + "\n";
+                        _resultsView.MoveEnd();
+                    });
+                });
+            }
+
+            _search = settings.CreateSearch();
 
             App?.Invoke(() =>
             {
@@ -174,7 +217,7 @@ public class SearchWindow : Window
                 );
             });
 
-            var searchTask = _search.Start(_cts.Token);
+            var searchTask = Task.Run(() => _search.Start(_cts.Token), _cts.Token);
 
             // Poll progress on a timer
             MotelyTUI.App?.AddTimeout(
@@ -242,6 +285,8 @@ public class SearchWindow : Window
             new Scheme() { Normal = new Attribute(BalatroTheme.Green, BalatroTheme.ModalGrey) }
         );
         _stopBtn.Visible = false;
+        _activeSink?.Dispose();
+        _activeSink = null;
 
         // Final progress update
         if (_search != null)
@@ -262,6 +307,8 @@ public class SearchWindow : Window
             new Scheme() { Normal = new Attribute(BalatroTheme.Gray, BalatroTheme.ModalGrey) }
         );
         _stopBtn.Visible = false;
+        _activeSink?.Dispose();
+        _activeSink = null;
     }
 
     private void StopSearch()
@@ -290,6 +337,8 @@ public class SearchWindow : Window
         try
         {
             _search?.Dispose();
+            _activeSink?.Dispose();
+            _activeSink = null;
         }
         catch { }
 

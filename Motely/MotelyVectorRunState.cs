@@ -46,6 +46,13 @@ public ref struct MotelyVectorRunState
         );
     }
 
+    public void ActivateVoucher(VectorEnum256<MotelyVoucher> voucherVector, VectorMask mask)
+    {
+        var voucherBits = MotelyVectorUtils.ShiftLeft(Vector256<int>.One, voucherVector.HardwareVector);
+        var maskVector = MotelyVectorUtils.VectorMaskToConditionalSelectMask(mask);
+        VoucherStateBitfield |= Vector256.BitwiseAnd(voucherBits, maskVector);
+    }
+
     public Vector256<int> IsVoucherActive(MotelyVoucher voucher)
     {
         return Vector256.OnesComplement(

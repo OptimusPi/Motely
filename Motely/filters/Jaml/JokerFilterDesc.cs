@@ -12,7 +12,9 @@ public sealed class JokerClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyJoker[] Jokers { get; init; }
+    public MotelyJoker[] Jokers { get; init; } = [];
+    public bool IsWildcard { get; init; }
+    public MotelyJokerRarity? WildcardRarity { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();
@@ -52,6 +54,9 @@ public struct JokerFilterDesc(JokerClause clause)
         // Extract source indices from config
         var shopIndices = _clause.Sources.ShopItems;
         var boosterIndices = _clause.Sources.BoosterPacks;
+
+        Debug.Assert(shopIndices.Length > 0 || boosterIndices.Length > 0,
+            "Joker clause should have normalized default sources at config load time.");
 
         int maxShopItem = 0;
         foreach (var idx in shopIndices)
@@ -94,7 +99,7 @@ public struct JokerFilterDesc(JokerClause clause)
         )]
         public VectorMask Filter(ref MotelyVectorSearchContext ctx)
         {
-            Debug.Assert(_clause.Jokers.Length > 0);
+            Debug.Assert(_clause.IsWildcard || _clause.Jokers.Length > 0);
             int needed = _clause.Min;
             Debug.Assert(needed > 0, "JokerClause.Min must be > 0 — loader bug.");
             Vector256<int> matchCounts = Vector256<int>.Zero;
@@ -224,10 +229,22 @@ public struct JokerFilterDesc(JokerClause clause)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private readonly VectorMask MatchJokers(in MotelyItemVector item)
         {
-            VectorMask jokerMatch = VectorMask.NoBitsSet;
-            for (int t = 0; t < _targetTypes.Length; t++)
+            VectorMask jokerMatch;
+            if (_clause.IsWildcard)
             {
-                jokerMatch |= VectorEnum256.Equals(item.Type, _targetTypes[t]);
+                jokerMatch = VectorEnum256.Equals(item.TypeCategory, MotelyItemTypeCategory.Joker);
+                if (_clause.WildcardRarity.HasValue)
+                {
+                    var rarityVec = new VectorEnum256<MotelyJokerRarity>(
+                        Vector256.BitwiseAnd(item.Value, Vector256.Create(MotelyCore.JokerRarityMask)));
+                    jokerMatch &= VectorEnum256.Equals(rarityVec, _clause.WildcardRarity.Value);
+                }
+            }
+            else
+            {
+                jokerMatch = VectorMask.NoBitsSet;
+                for (int t = 0; t < _targetTypes.Length; t++)
+                    jokerMatch |= VectorEnum256.Equals(item.Type, _targetTypes[t]);
             }
 
             if (_clause.Edition.HasValue)
@@ -289,7 +306,8 @@ public sealed class CommonJokerClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyJokerCommon[] Jokers { get; init; }
+    public MotelyJokerCommon[] Jokers { get; init; } = [];
+    public bool IsWildcard { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();
@@ -301,7 +319,8 @@ public sealed class UncommonJokerClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyJokerUncommon[] Jokers { get; init; }
+    public MotelyJokerUncommon[] Jokers { get; init; } = [];
+    public bool IsWildcard { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();
@@ -313,7 +332,8 @@ public sealed class RareJokerClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyJokerRare[] Jokers { get; init; }
+    public MotelyJokerRare[] Jokers { get; init; } = [];
+    public bool IsWildcard { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();
@@ -325,7 +345,9 @@ public sealed class MixedJokerClause : IJamlClause
 {
     public string Label { get; init; } = "";
     public int Score { get; init; }
-    public required MotelyJoker[] Jokers { get; init; }
+    public MotelyJoker[] Jokers { get; init; } = [];
+    public bool IsWildcard { get; init; }
+    public MotelyJokerRarity? WildcardRarity { get; init; }
     public MotelyItemEdition? Edition { get; init; }
     public MotelyJokerSticker[] Stickers { get; init; } = [];
     public JokerSourceConfig Sources { get; init; } = new();
