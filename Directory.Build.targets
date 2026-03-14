@@ -1,0 +1,7 @@
+<Project>
+  <Target Name="SyncVersionToPackageJson" BeforeTargets="BeforeBuild" Condition="'$(MSBuildProjectName)' == 'Motely'">
+    <Exec Command="node &quot;$(MSBuildThisFileDirectory)sync-version.mjs&quot;" 
+          WorkingDirectory="$(MSBuildThisFileDirectory)" 
+          ConsoleToMSBuild="true" />
+  </Target>
+</Project>

@@ -82,12 +82,6 @@ internal sealed class PoolClaimResponseDto
     [JsonPropertyName("jaml")]
     public string? Jaml { get; set; }
 
-    [JsonPropertyName("deck")]
-    public string Deck { get; set; } = "Red";
-
-    [JsonPropertyName("stake")]
-    public string Stake { get; set; } = "White";
-
     [JsonPropertyName("batchIndex")]
     public long BatchIndex { get; set; }
 

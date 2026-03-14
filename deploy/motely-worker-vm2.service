@@ -1,0 +1,16 @@
+[Unit]
+Description=Motely Worker VM2
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/motely-worker-vm2
+ExecStart=/opt/motely-worker-vm2/MotelyWorker --pool https://www.seedfinder.app --threads 16 --worker-id proxmox-vm2
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

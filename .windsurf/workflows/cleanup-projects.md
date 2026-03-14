@@ -10,6 +10,11 @@ Remove the dead runtime experiments and keep the current publish flow explicit.
 - Duplicates browser-wasm concepts already covered by `Motely.BrowserWasm` and `Motely.SingleThread`
 - **Action**: Delete this entire folder
 
+### 2. Motely.npm.singlethread/
+- Dead package surface
+- Replaced by `motely-wasm`, which now carries both `_framework/` and `_framework_st/`
+- **Action**: Delete this entire folder
+
 ## Projects to Keep
 
 ### 1. Motely.BrowserWasm/
@@ -21,13 +26,16 @@ Remove the dead runtime experiments and keep the current publish flow explicit.
 
 ### 3. Motely.node/
 - npm package wrapper for the single-thread runtime
-- Keep, but stage its `_framework` via the root `stage-packages.mjs` script
+- Keep, but publish only the native `.node` binaries in `bin/`
 
 ## Clean Commands
 
 ```bash
 # Remove dead runtime experiment
 rm -rf Motely.NodeWasm/
+
+# Remove dead browser package split
+rm -rf Motely.npm.singlethread/
 
 # Clean build artifacts
 dotnet clean
@@ -41,7 +49,6 @@ rm -rf */bin */obj
 - `Motely.SingleThread/` - Single-thread browser/Node WASM build
 - `Motely.CLI/` - Command line tool
 - `Motely.npm/` - Browser npm package
-- `Motely.npm.singlethread/` - Browser single-thread npm package
 - `Motely.node/` - Node npm package
 - `Motely.Tests/` - Unit tests
 
@@ -50,4 +57,4 @@ rm -rf */bin */obj
 Single source of truth:
 - `Motely.BrowserWasm` produces the threaded browser runtime
 - `Motely.SingleThread` produces the single-thread runtime for browser fallback and Node.js
-- `stage-packages.mjs` stages publish output into the npm package folders
+- `stage-packages.mjs` stages browser publish output into `Motely.npm/_framework` and `Motely.npm/_framework_st`
