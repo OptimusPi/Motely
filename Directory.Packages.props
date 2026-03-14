@@ -1,9 +1,11 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MotelyVersion>3.0.13</MotelyVersion>
+    <MotelyVersion>3.1.2</MotelyVersion>
   </PropertyGroup>
   <ItemGroup>
+    <!-- MinVer: auto-version from git tags -->
+    <PackageVersion Include="MinVer" Version="6.0.0" />
     <!-- Node API for .NET addon: https://microsoft.github.io/node-api-dotnet/scenarios/js-dotnet-module.html (CPM requires fixed version) -->
     <PackageVersion Include="Microsoft.JavaScript.NodeApi" Version="0.9.19" />
     <PackageVersion Include="Microsoft.JavaScript.NodeApi.Generator" Version="0.9.19" />

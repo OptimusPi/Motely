@@ -55,39 +55,93 @@ public static class MotelyTUI
     private static MainMenuWindow? _mainMenu;
     private static IApplication? _app;
 
+    /// <summary>Window stack — open overlay windows in order they were opened.</summary>
+    private static readonly List<Window> _windowStack = [];
+
+    /// <summary>Cascade offset applied to each new window so stacked windows are distinguishable.</summary>
+    private static readonly (int X, int Y)[] _cascadeOffsets =
+    [
+        (0, 0), (2, 1), (4, 2), (6, 3), (8, 4), (10, 5),
+    ];
+
     /// <summary>
     /// The v2 instance-based application context.
     /// Views should use View.App property, but this is available for static access if needed.
     /// </summary>
     public static IApplication? App => _app;
 
+    /// <summary>Number of overlay windows currently open.</summary>
+    public static int OpenWindowCount => _windowStack.Count;
+
     /// <summary>
     /// Show a window as a non-modal overlay on the desktop.
-    /// The main menu is hidden and the new window is focused.
+    /// Multiple windows can be open simultaneously — they stack with cascade offsets.
+    /// The main menu stays in the background; focus moves to the new window.
+    /// Use Alt+Tab to cycle between open windows.
     /// </summary>
     public static void ShowWindow(Window window)
     {
         if (_desktop == null)
             return;
-        if (_mainMenu != null)
-            _mainMenu.Visible = false;
+
+        // Apply cascade offset so stacked windows are visually distinct
+        var offset = _cascadeOffsets[_windowStack.Count % _cascadeOffsets.Length];
+        if (offset.X != 0 || offset.Y != 0)
+        {
+            window.X = Pos.Center() + offset.X;
+            window.Y = Pos.Center() + offset.Y;
+        }
+
+        _windowStack.Add(window);
         _desktop.Add(window);
         window.SetFocus();
     }
 
     /// <summary>
-    /// Close an overlay window and return to the main menu.
+    /// Close an overlay window. Focus returns to the previous window in the stack,
+    /// or to the main menu if no other windows are open.
     /// </summary>
     public static void CloseWindow(Window window)
     {
         if (_desktop == null)
             return;
+        _windowStack.Remove(window);
         _desktop.Remove(window);
-        if (_mainMenu != null)
+
+        // Restore focus to topmost remaining window, or main menu
+        if (_windowStack.Count > 0)
         {
-            _mainMenu.Visible = true;
+            _windowStack[^1].SetFocus();
+        }
+        else if (_mainMenu != null)
+        {
             _mainMenu.SetFocus();
         }
+    }
+
+    /// <summary>
+    /// Cycle focus to the next open window (wraps around).
+    /// Called by Alt+Tab global hotkey on the desktop.
+    /// </summary>
+    private static void CycleWindowFocus()
+    {
+        if (_windowStack.Count == 0)
+        {
+            _mainMenu?.SetFocus();
+            return;
+        }
+
+        // Find which window currently has focus and move to the next
+        var focused = _windowStack.FirstOrDefault(w => w.HasFocus);
+        if (focused == null)
+        {
+            _windowStack[^1].SetFocus();
+            return;
+        }
+
+        var idx = _windowStack.IndexOf(focused);
+        var next = _windowStack[(idx + 1) % _windowStack.Count];
+        next.SetFocus();
     }
 
     public static int Run(string? configName = null, string? configFormat = null)
@@ -135,6 +189,16 @@ public static class MotelyTUI
                 LogCrash("Shader init (continuing without shader)", ex);
             }
 
+            // Global Alt+Tab: cycle focus between open windows
+            _desktop.KeyDown += (_, e) =>
+            {
+                if (e.KeyCode == (KeyCode.Tab | KeyCode.AltMask))
+                {
+                    CycleWindowFocus();
+                    e.Handled = true;
+                }
+            };
+
             if (!string.IsNullOrEmpty(configName) && !string.IsNullOrEmpty(configFormat))
             {
                 // Direct search mode (CLI arg) — show search window immediately
@@ -167,6 +231,7 @@ public static class MotelyTUI
         finally
         {
             _shaderBackground?.Stop();
+            _windowStack.Clear();
             try
             {
                 (_app as IDisposable)?.Dispose();

@@ -1,51 +1,22 @@
 {
   "name": "motely-node",
-  "version": "3.0.13",
-  "description": "MotelyJAML for Node.js - Balatro seed analyzer and JAML filter engine using a native .node addon",
+  "version": "3.1.2",
+  "description": "MotelyJAML for Node.js - Balatro seed analyzer and JAML filter engine using .NET 10 Native AOT",
   "type": "module",
   "main": "index.js",
-  "types": "index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js",
-      "require": "./index.cjs"
-    },
-    "./server": {
-      "types": "./server.d.ts",
-      "import": "./server.js",
-      "require": "./server.cjs"
-    },
-    "./jaml-schema": {
-      "types": "./jaml-schema.d.ts",
-      "import": "./jaml-schema.js"
-    },
-    "./jaml.schema.json": "./jaml.schema.json"
-  },
+  "exports": "./index.js",
   "files": [
-    "addon/",
+    "bin/",
     "index.js",
-    "index.cjs",
-    "index.d.ts",
-    "server.js",
-    "server.cjs",
-    "server.d.ts",
-    "jaml-schema.js",
-    "jaml-schema.d.ts",
-    "README.md",
-    "jaml.schema.json"
+    "README.md"
   ],
   "keywords": [
     "balatro",
     "seed",
     "dotnet",
-    "node",
-    "native-addon",
     "node-api",
-    "jaml",
-    "filter",
-    "finder",
-    "search"
+    "aot",
+    "jaml"
   ],
   "repository": {
     "type": "git",
@@ -55,19 +26,5 @@
   "license": "MIT",
   "engines": {
     "node": ">=22.0.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^24.0.0",
-    "esbuild": "^0.24.0"
-  },
-  "scripts": {
-    "generate:jaml-schema": "dotnet run --project ../Motely.CLI/Motely.CLI.csproj -- --write-jaml-schema",
-    "build": "npm run generate:jaml-schema && node ./node_modules/typescript/lib/tsc.js && .\\node_modules\\@esbuild\\win32-x64\\esbuild.exe index.js --outfile=index.cjs --format=cjs --platform=node --banner:js=\"const import_meta_url=require('url').pathToFileURL(__filename).href;\" --define:import.meta.url=import_meta_url && .\\node_modules\\@esbuild\\win32-x64\\esbuild.exe server.js --outfile=server.cjs --format=cjs --platform=node --banner:js=\"const import_meta_url=require('url').pathToFileURL(__filename).href;\" --define:import.meta.url=import_meta_url",
-    "stage-framework": "node ../stage-packages.mjs node",
-    "pack:local": "npm run build && npm run stage-framework && npm pack --json --ignore-scripts",
-    "prepack": "dotnet publish ../Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r win-x64 && npm run build && npm run stage-framework",
-    "prepublishOnly": "npm run prepack",
-    "prove": "node prove-node.mjs && node -e \"console.log(require('fs').readFileSync('prove-node-result.txt','utf8'))\""
   }
 }

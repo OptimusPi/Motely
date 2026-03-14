@@ -7,8 +7,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const browserFrameworkSource = join(__dirname, 'Motely.BrowserWasm', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
 const singleThreadFrameworkSource = join(__dirname, 'Motely.SingleThread', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
-const nodeAddonSource = join(__dirname, 'Motely.NodeAddon', 'bin', 'Release', 'net10.0', 'win-x64', 'publish');
-
 const targets = {
   browser: [
     { source: browserFrameworkSource, destination: join(__dirname, 'Motely.npm', '_framework') },
@@ -16,51 +14,17 @@ const targets = {
   singlethread: [
     { source: singleThreadFrameworkSource, destination: join(__dirname, 'Motely.npm', '_framework_st') },
   ],
-  node: [
-    { source: nodeAddonSource, destination: join(__dirname, 'Motely.node', 'addon', 'win-x64') },
-  ],
 };
 
 const modes = process.argv.slice(2);
 const selectedModes = modes.length === 0 || modes.includes('all')
-  ? ['browser', 'singlethread', 'node']
+  ? ['browser', 'singlethread']
   : modes;
 
-// DLLs only needed at build/codegen time — must NOT ship in the runtime npm package.
-const NODE_ADDON_BUILD_ONLY_DLLS = new Set([
-  'Microsoft.CodeAnalysis.CSharp.dll',
-  'Microsoft.CodeAnalysis.dll',
-  'Microsoft.JavaScript.NodeApi.Generator.dll',
-  'JetBrains.Annotations.dll',
-  'System.Reflection.MetadataLoadContext.dll',
-  'SixLabors.ImageSharp.dll',
-]);
-
-// .NET SDK localisation resource directories — irrelevant for a search/analyzer engine.
-const DOTNET_LOCALE_DIRS = new Set([
-  'cs', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'tr', 'zh-Hans', 'zh-Hant',
-]);
-
-const shouldInclude = (path, mode) => {
+const shouldInclude = (path) => {
   const normalized = path.replace(/\\/g, '/');
-
   if (normalized.endsWith('.br') || normalized.endsWith('.gz')) return false;
   if (normalized.includes('/debug/') || normalized.includes('/tmp/')) return false;
-
-  const segments = normalized.split('/');
-  const filename = segments[segments.length - 1] ?? '';
-
-  if (mode === 'node') {
-    // Strip build-time-only DLLs
-    if (NODE_ADDON_BUILD_ONLY_DLLS.has(filename)) return false;
-    // Strip PDB files (debug symbols, not needed at runtime)
-    if (filename.endsWith('.pdb')) return false;
-    // Strip empty .NET locale resource dirs
-    for (const seg of segments) {
-      if (DOTNET_LOCALE_DIRS.has(seg)) return false;
-    }
-  }
-
   return true;
 };
 
@@ -144,9 +108,6 @@ for (const mode of selectedModes) {
     process.exit(1);
   }
 
-  if (mode === 'node') {
-    rmSync(join(__dirname, 'Motely.node', 'addon'), { recursive: true, force: true });
-  }
   for (const { source, destination } of targets[mode]) {
     if (!existsSync(source)) {
       console.error(`Missing publish output for ${mode}: ${source}`);
@@ -157,7 +118,7 @@ for (const mode of selectedModes) {
     cpSync(source, destination, {
       recursive: true,
       force: true,
-      filter: (src) => shouldInclude(src, mode),
+      filter: (src) => shouldInclude(src),
     });
     console.log(`${mode}: ${source} -> ${destination}`);
 

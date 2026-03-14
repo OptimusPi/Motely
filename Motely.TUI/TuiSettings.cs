@@ -24,6 +24,10 @@ public static class TuiSettings
     public static string DefaultSource { get; set; } = string.Empty;
     public static string DefaultSink { get; set; } = string.Empty;
 
+    // Distributed worker settings
+    public static string WorkerPoolUrl { get; set; } = "https://www.seedfinder.app";
+    public static int WorkerThreads { get; set; } = Environment.ProcessorCount;
+
     // Secret settings (in-memory only, not persisted)
     public static bool CrudeSeedsEnabled { get; set; } = false;
 
@@ -79,6 +83,8 @@ public class SettingsService
                 TuiSettings.ApiServerPort = settings.ApiServerPort ?? 3141;
                 TuiSettings.DefaultSource = settings.DefaultSource ?? string.Empty;
                 TuiSettings.DefaultSink = settings.DefaultSink ?? string.Empty;
+                TuiSettings.WorkerPoolUrl = settings.WorkerPoolUrl ?? "https://www.seedfinder.app";
+                TuiSettings.WorkerThreads = settings.WorkerThreads ?? Environment.ProcessorCount;
             }
         }
         catch (Exception)
@@ -99,6 +105,8 @@ public class SettingsService
                 ApiServerPort = TuiSettings.ApiServerPort,
                 DefaultSource = TuiSettings.DefaultSource,
                 DefaultSink = TuiSettings.DefaultSink,
+                WorkerPoolUrl = TuiSettings.WorkerPoolUrl,
+                WorkerThreads = TuiSettings.WorkerThreads,
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true };
@@ -120,5 +128,7 @@ public class SettingsService
         public int? ApiServerPort { get; set; }
         public string? DefaultSource { get; set; }
         public string? DefaultSink { get; set; }
+        public string? WorkerPoolUrl { get; set; }
+        public int? WorkerThreads { get; set; }
     }
 }
