@@ -1,24 +1,62 @@
-# Build artifacts
-Motely.npm/dist/
-Motely.npm/pkg/
-*.DLL
-*.DB
-JamlFilters-old/
-Motely/JsonFilters/
-Motely/JsonFiltersArchive/
-Motely/JsonItemFilters/
-Motely/JsonItemFiltersArchive/
-
-# Publish artifacts
+# Build outputs
+bin/
+obj/
+**/bin/
+**/obj/
 publish/
-publish-wasm/
-wwwroot/BSO/
+**/publish/
+*.pdb
 
-# Large static assets
-Motely.API/wwwroot/BSO/Assets/
-Motely.API/wwwroot/JamlGenie/
+# Node
+node_modules/
+**/node_modules/
+Motely.node/node_modules/
+Motely.npm/node_modules/
 
-# Configuration files that change frequently
-mcp-config.json
-tui.json
-*.editorconfig
+# .NET / NuGet
+**/packages/
+*.user
+*.suo
+
+# NPM / package build
+Motely.npm/dist/
+Motely.npm/_framework/
+Motely.npm/pkg/
+Motely.node/_framework/
+Motely.node/addon/
+
+# Web / static
+Motely.API/wwwroot/
+**/wwwroot/
+vue-jaml-ui/
+**/dist/
+
+# Data / large or generated
+WordLists/
+SearchResults/
+JsonFilters/
+JsonItemFilters/
+JamlFilters-old/
+**/JamlFilters/
+**/JsonFiltersArchive/
+**/JsonItemFiltersArchive/
+SeedSources/
+seeds/
+
+# IDE / tools
+.vscode/
+.windsurf/
+.claude/
+Terminal.Gui-2_develop/
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+.cursor/debug.log
+
+# Misc (from .gitignore)
+*.csv
+*.wal
+MotelyNode/
+/jamluiv99/dist
