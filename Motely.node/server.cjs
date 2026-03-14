@@ -23,7 +23,13 @@ __export(server_exports, {
   disposeServerApi: () => disposeServerApi,
   getServerApi: () => getServerApi,
   getServerCapabilities: () => getServerCapabilities,
-  startJamlSearchServer: () => startJamlSearchServer
+  startJamlSearchServer: () => startJamlSearchServer,
+  startKeywordSearchServer: () => startKeywordSearchServer,
+  startKeywordsSearchServer: () => startKeywordsSearchServer,
+  startPalindromeSearchServer: () => startPalindromeSearchServer,
+  startRandomSearchServer: () => startRandomSearchServer,
+  startSeedListSearchServer: () => startSeedListSearchServer,
+  verifySeedServer: () => verifySeedServer
 });
 module.exports = __toCommonJS(server_exports);
 var import_index = require("./index.js");
@@ -64,6 +70,30 @@ async function startJamlSearchServer(jamlContent, options, loadOptions) {
   const api = await getServerApi(loadOptions);
   return api.startJamlSearch(jamlContent, options);
 }
+async function startPalindromeSearchServer(jamlContent, options, loadOptions) {
+  const api = await getServerApi(loadOptions);
+  return api.startJamlSearch(jamlContent, { ...options, palindrome: true });
+}
+async function startKeywordSearchServer(jamlContent, keyword, padding, options, loadOptions) {
+  const api = await getServerApi(loadOptions);
+  return api.startJamlSearch(jamlContent, { ...options, keyword, ...padding ? { padding } : {} });
+}
+async function startKeywordsSearchServer(jamlContent, keywords, padding, options, loadOptions) {
+  const api = await getServerApi(loadOptions);
+  return api.startJamlSearch(jamlContent, { ...options, keywords, ...padding ? { padding } : {} });
+}
+async function startSeedListSearchServer(jamlContent, seeds, options, loadOptions) {
+  const api = await getServerApi(loadOptions);
+  return api.startJamlSearch(jamlContent, { ...options, seeds });
+}
+async function verifySeedServer(jamlContent, seed, options, loadOptions) {
+  const api = await getServerApi(loadOptions);
+  return api.startJamlSearch(jamlContent, { ...options, specificSeed: seed });
+}
+async function startRandomSearchServer(jamlContent, count, options, loadOptions) {
+  const api = await getServerApi(loadOptions);
+  return api.startJamlSearch(jamlContent, { ...options, randomSeeds: count });
+}
 async function getServerCapabilities(options) {
   const api = await getServerApi(options);
   return api.getCapabilities();
@@ -74,5 +104,11 @@ async function getServerCapabilities(options) {
   disposeServerApi,
   getServerApi,
   getServerCapabilities,
-  startJamlSearchServer
+  startJamlSearchServer,
+  startKeywordSearchServer,
+  startKeywordsSearchServer,
+  startPalindromeSearchServer,
+  startRandomSearchServer,
+  startSeedListSearchServer,
+  verifySeedServer
 });

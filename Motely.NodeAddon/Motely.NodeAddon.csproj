@@ -5,13 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <RootNamespace>Motely.NodeAddon</RootNamespace>
     <AssemblyName>Motely.NodeAddon</AssemblyName>
-    <Description>Node.js addon for Motely (node-api-dotnet). Exports getCapabilities, analyzeSeed, validateJaml, startJamlSearch, etc.</Description>
+    <Description>Node.js addon for Motely (node-api-dotnet AOT).</Description>
+    <!-- AOT + Node Module (official pattern) -->
     <PublishAot>true</PublishAot>
     <PublishNodeModule>true</PublishNodeModule>
     <IsAotCompatible>true</IsAotCompatible>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,26 +23,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
-
-  <!-- Canonical Node package entry: edit NodePackage/index.ts; it is copied to Motely.node on build -->
-  <ItemGroup>
-    <Content Include="NodePackage\index.ts" CopyToOutputDirectory="Never" />
-  </ItemGroup>
-
-  <Target Name="ExportNodePackageIndex" AfterTargets="Build">
-    <Copy SourceFiles="$(MSBuildThisFileDirectory)NodePackage\index.ts" DestinationFiles="$(MSBuildThisFileDirectory)..\Motely.node\index.ts" SkipUnchangedFiles="true" />
-  </Target>
-
-  <!-- Delete build-time-only assemblies from the output dir so they are never staged -->
-  <Target Name="RemoveBuildOnlyAssemblies" AfterTargets="Build">
-    <ItemGroup>
-      <_BuildOnlyDll Include="$(OutputPath)Microsoft.CodeAnalysis.dll" />
-      <_BuildOnlyDll Include="$(OutputPath)Microsoft.CodeAnalysis.CSharp.dll" />
-      <_BuildOnlyDll Include="$(OutputPath)Microsoft.JavaScript.NodeApi.Generator.dll" />
-      <_BuildOnlyDll Include="$(OutputPath)JetBrains.Annotations.dll" />
-      <_BuildOnlyDll Include="$(OutputPath)System.Reflection.MetadataLoadContext.dll" />
-      <_BuildOnlyDll Include="$(OutputPath)SixLabors.ImageSharp.dll" />
-    </ItemGroup>
-    <Delete Files="@(_BuildOnlyDll)" ContinueOnError="true" />
-  </Target>
 </Project>

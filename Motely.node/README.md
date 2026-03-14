@@ -197,6 +197,10 @@ Cleanup and free resources.
 - In Next.js or similar SSR apps, load it only in **Node runtime** code paths.
 - You should not need a wrapper just to normalize `analyzeSeed()` payload fields or hand-resolve the packaged addon path.
 
+### Production / Vercel (Linux)
+
+Server platforms like **Vercel** run Node on **Linux**. The published package includes addon builds for both `win-x64` and `linux-x64`. Production deployment (e.g. Vercel) uses the **linux-x64** addon; a win-x64-only build would not run on Vercel. Ensure `prepack`/publish includes the linux-x64 addon before publishing.
+
 ## License
 
 MIT

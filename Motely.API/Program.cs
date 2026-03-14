@@ -15,6 +15,8 @@ public record StartSearchRequest(
     string FilterName,
     string? Seed = null,
     string? Keyword = null,
+    string? Keywords = null,
+    string? Padding = null,
     int ThreadCount = -1,
     int BatchCharCount = 4,
     bool Palindrome = false
@@ -31,7 +33,7 @@ public record SearchInfo(
 
 public record ActiveSearchInfo(string FilterId, bool IsCompleted, long SeedsSearched, long Matches, string Elapsed);
 public record WorkerStatusResponse(bool Enabled, bool Configured, string PoolUrl, string WorkerId, int Threads, string State);
-public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, string PoolUrl, WorkerStatusResponse Worker);
+public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string MotelyVersion, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, string PoolUrl, WorkerStatusResponse Worker);
 
 internal sealed class SearchHandle(IMotelySearch search, CancellationTokenSource cancellation, Task runTask)
 {
@@ -72,11 +74,6 @@ public class Program
         Directory.CreateDirectory(sharedJamlDir);
         return sharedJamlDir;
     }
-
-    /// <summary>
-    /// Builds the WebApplication without starting it.
-    /// Called by TUI ApiServerWindow to host in-process.
-    /// </summary>
     public static WebApplication CreateHost(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -104,11 +101,7 @@ public class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-
-        // No UseHttpsRedirection — breaks plain HTTP behind Cloudflare Tunnel / reverse proxy
         app.UseCors();
-
-        // Required for WASM threads (SharedArrayBuffer). Browser blocks it without COOP/COEP.
         app.Use(async (ctx, next) =>
         {
             ctx.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
@@ -142,8 +135,6 @@ public class Program
                 try { handle.Search.Cancel(); } catch { }
             }
         });
-
-        // ── Filters ──
 
         app.MapGet("/api/filters", () =>
         {
@@ -188,8 +179,6 @@ public class Program
             return Results.NoContent();
         }).WithName("DeleteFilter");
 
-        // ── Local Search (single-machine) ──
-
         app.MapPost("/api/search/start", (StartSearchRequest req) =>
         {
             var filterPath = Path.Combine(jamlDir, $"{req.FilterName}.jaml");
@@ -214,18 +203,18 @@ public class Program
                     .WithThreadCount(threads)
                     .WithBatchCharacterCount(batchCharCount);
 
-                if (!string.IsNullOrWhiteSpace(req.Seed))
-                    settings = settings.WithListSearch([req.Seed.Trim().ToUpperInvariant()]);
-                else if (!string.IsNullOrWhiteSpace(req.Keyword))
+                var searchOpts = new SearchOptionsDto
                 {
-                    string kw = req.Keyword.Trim().ToUpperInvariant();
-                    int padLen = MotelyCore.MaxSeedLength - kw.Length;
-                    if (padLen < 0)
-                        return Results.BadRequest($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars).");
-                    settings = settings.WithListSearch(MotelyCore.GeneratePaddedSeeds(kw, padLen));
-                }
-                else
-                    settings = settings.WithPalindromeSearch();
+                    SpecificSeed = string.IsNullOrWhiteSpace(req.Seed) ? null : req.Seed,
+                    Keyword = string.IsNullOrWhiteSpace(req.Keyword) ? null : req.Keyword,
+                    Keywords = string.IsNullOrWhiteSpace(req.Keywords) ? null
+                        : req.Keywords.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+                    Padding = string.IsNullOrWhiteSpace(req.Padding) ? null : req.Padding,
+                    Palindrome = req.Palindrome ? true : null,
+                };
+                var (_, modeError) = settings.ApplySearchMode(searchOpts);
+                if (modeError != null)
+                    return Results.BadRequest(modeError);
 
                 var search = settings.CreateSearch();
                 var filterId = MotelyRuntimeIds.GenerateFilterId(config);
@@ -279,8 +268,6 @@ public class Program
             return Results.Ok();
         }).WithName("StopSearch");
 
-        // ── Server Status (Dashboard) ──
-
         var serverStart = DateTime.UtcNow;
 
         app.MapGet("/api/status", (IOptions<PoolWorkerOptions> poolOptionsAccessor) =>
@@ -312,11 +299,16 @@ public class Program
                 workerState
             );
 
+            var motelyVer = typeof(MotelyCore).Assembly
+                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "unknown";
+
             return Results.Ok(new ServerStatusResponse(
                 Environment.MachineName,
                 Environment.ProcessorCount,
                 $"{System.Runtime.InteropServices.RuntimeInformation.OSDescription}",
                 System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+                motelyVer,
                 (DateTime.UtcNow - serverStart).ToString(@"d\.hh\:mm\:ss"),
                 activeSearches,
                 Directory.GetFiles(jamlDir, "*.jaml").Length,
@@ -330,3 +322,4 @@ public class Program
         return app;
     }
 }
+
