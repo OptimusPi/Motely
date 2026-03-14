@@ -1,0 +1,29 @@
+# Ubuntu 22.04 (jammy) = glibc 2.35 = Vercel-compatible.
+# .NET 10 has no official 10.0-jammy image; we install SDK via script.
+# Avoid libicu: InvariantGlobalization in csproj + DOTNET_SYSTEM_GLOBALIZATION_INVARIANT below.
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+# Native AOT needs: clang or gcc + zlib. build-essential = gcc in PATH. (dotnet/core#8663)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    nodejs \
+    npm \
+    build-essential \
+    clang \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# SDK runs without libicu (invariant mode). Published binary also uses InvariantGlobalization.
+ENV DOTNET_ROOT=/usr/share/dotnet
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+# Ensure build tools are in PATH
+ENV PATH="${DOTNET_ROOT}:${DOTNET_ROOT}/tools:/usr/bin:/bin:${PATH}"
+RUN wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh \
+    && chmod +x /tmp/dotnet-install.sh \
+    && /tmp/dotnet-install.sh --install-dir /usr/share/dotnet --channel 10.0 \
+    && rm /tmp/dotnet-install.sh
+
+WORKDIR /src
+ENTRYPOINT ["dotnet", "publish", "Motely.NodeAddon/Motely.NodeAddon.csproj", "-c", "Release", "-r", "linux-x64"]

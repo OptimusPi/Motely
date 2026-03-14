@@ -8,13 +8,15 @@
     <RootNamespace>Motely.NodeAddon</RootNamespace>
     <AssemblyName>Motely.NodeAddon</AssemblyName>
     <Description>Node.js addon for Motely (node-api-dotnet AOT).</Description>
-    <!-- AOT + Node Module (official pattern). Flat bin/<rid>/ for npm pack. -->
+    <!-- Per https://microsoft.github.io/node-api-dotnet/scenarios/js-aot-module.html -->
     <PublishAot>true</PublishAot>
     <PublishNodeModule>true</PublishNodeModule>
     <PublishMultiPlatformNodeModule>true</PublishMultiPlatformNodeModule>
     <PublishDir>$(MSBuildThisFileDirectory)..\Motely.node\bin</PublishDir>
     <IsAotCompatible>true</IsAotCompatible>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <!-- No libicu needed; smaller image, fewer deps, perf tip -->
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>

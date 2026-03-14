@@ -27,10 +27,11 @@ Then `dotnet publish -r win-x64` (and linux-x64, osx-x64) writes the `.node` int
 
 ### 1.3 After changing layout
 
-1. From repo root: `dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r win-x64` (and linux-x64 if you have it).
-2. Confirm the `.node` file is under `Motely.node/bin/<rid>/`.
-3. `cd Motely.node && npm run build && npm pack`.
-4. Publish: `npm publish`.
+1. From repo root: `dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r win-x64`.
+2. Run `./build-linux.sh` (or `./build-linux.ps1` on Windows) — builds linux-x64 in Docker (Ubuntu 22.04) for Vercel GLIBC 2.35. (No official `10.0-jammy` image; use `Dockerfile.linux-node`.)
+3. Confirm the `.node` file is under `Motely.node/bin/<rid>/`.
+4. `cd Motely.node && npm run build && npm pack`.
+5. Publish: `npm publish`.
 
 ---
 
@@ -55,7 +56,7 @@ After Part 1 is done and motely-node is published to npm:
 
 - [x] **Motely.node:** loadMotely present in index.js + index.d.ts.
 - [x] **Motely.node:** Bin layout: C# PublishDir + PublishMultiPlatformNodeModule; index.js uses `bin/<rid>/`.
-- [ ] **Motely.node:** `dotnet publish -r win-x64` (and linux-x64, osx-x64) then confirm .node in `Motely.node/bin/<rid>/`.
+- [ ] **Motely.node:** `dotnet publish -r win-x64`, then `./build-linux.sh` (or `.ps1`), then confirm .node in `Motely.node/bin/<rid>/`.
 - [ ] **Motely.node:** `cd Motely.node && npm run build && npm pack` → inspect tarball: `bin/` must contain the RID dirs and the .node files.
 - [ ] **Motely.node:** `npm publish`.
 - [x] **JAMMY:** `components/chat/ChatInterface.tsx` (conversation + prompt input).
