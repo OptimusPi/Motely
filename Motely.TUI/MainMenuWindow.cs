@@ -46,14 +46,14 @@ public class MainMenuWindow : View
 
         // ═══════════════════════════════════════════════════════════════
         // BUTTON DOCK AT BOTTOM - Transparent container with clean buttons
-        // Layout: SEARCH(12) + DESIGNER(12) + EXIT(11) + SETTINGS(11) + SERVER(10) + gaps = 60
+        // Layout: SEARCH(12) + DESIGNER(12) + EXIT(8) + CONFIG(8) + HOST API(12) + WORKER(14) + gaps = 76
         // ═══════════════════════════════════════════════════════════════
 
         var dockBar = new View()
         {
             X = Pos.Center(),
             Y = Pos.AnchorEnd(5),
-            Width = 62,
+            Width = 76,
             Height = 5,
             CanFocus = true,
         };
@@ -96,7 +96,7 @@ public class MainMenuWindow : View
         {
             X = 27,
             Y = 1,
-            Width = 10,
+            Width = 8,
             Height = 3,
             DynamicFocusHeight = true,
         };
@@ -105,19 +105,19 @@ public class MainMenuWindow : View
 
         var btnConfig = new MenuButton("_CONFIG", BalatroTheme.BackButton)
         {
-            X = 38,
+            X = 36,
             Y = 1,
-            Width = 10,
+            Width = 8,
             Height = 3,
             DynamicFocusHeight = true,
         };
         btnConfig.Accept += (s, e) => ShowSettingsModal();
         dockBar.Add(btnConfig);
 
-        // HOST API on far right - purple
+        // HOST API - purple
         var btnHostApi = new MenuButton("_HOST API", BalatroTheme.PurpleButton)
         {
-            X = 49,
+            X = 45,
             Y = 1,
             Width = 12,
             Height = 3,
@@ -132,6 +132,22 @@ public class MainMenuWindow : View
             MotelyTUI.ShowWindow(serverWindow);
         };
         dockBar.Add(btnHostApi);
+
+        // WORKER - launch distributed worker
+        var btnWorker = new MenuButton("_WORKER", BalatroTheme.GreenButton)
+        {
+            X = 58,
+            Y = 1,
+            Width = 12,
+            Height = 3,
+            DynamicFocusHeight = true,
+        };
+        btnWorker.Accept += (s, e) =>
+        {
+            var workerWindow = new DistributedWorkerWindow();
+            MotelyTUI.ShowWindow(workerWindow);
+        };
+        dockBar.Add(btnWorker);
 
         // Set focus to SEARCH
         btnSearch.SetFocus();
@@ -168,6 +184,11 @@ public class MainMenuWindow : View
                         TuiSettings.ApiServerPort
                     );
                     MotelyTUI.ShowWindow(srv);
+                    e.Handled = true;
+                    break;
+                case KeyCode.W:
+                    btnWorker.SetFocus();
+                    MotelyTUI.ShowWindow(new DistributedWorkerWindow());
                     e.Handled = true;
                     break;
                 case KeyCode.Esc:

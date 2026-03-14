@@ -58,6 +58,20 @@ export interface SearchResultInfo {
   tallies?: string[] | null;
 }
 
+/** One seed match from a block (processBlock). */
+export interface BlockSeedResult {
+  seed: string;
+  score: number;
+}
+
+/** Result of running one block of sequential search (processBlock). */
+export interface BlockSearchResult {
+  blockId: number;
+  seedsSearched: number;
+  seedsFound: number;
+  seeds: BlockSeedResult[];
+}
+
 export interface ValidateResult {
   valid: boolean;
   error?: string | null;
@@ -76,6 +90,14 @@ export interface SearchOptions {
   startBatch?: number;
   endBatch?: number;
   specificSeed?: string;
+  /** Search a specific list of seed strings (uppercase, max 8 chars each). */
+  seeds?: string[];
+  /** Single keyword filter — seeds whose name contains this substring. */
+  keyword?: string;
+  /** Multiple keyword filter — seeds whose name matches any of these. */
+  keywords?: string[];
+  /** Padding length for keyword search (default 0). */
+  padding?: number;
   palindrome?: boolean;
   /** Called every ~2 seconds by the .NET search engine with current progress. */
   onProgress?: (seedsSearched: number, matchingSeeds: number, elapsedMs: number, resultCount: number) => void;
@@ -104,6 +126,12 @@ export interface MotelyNodeApi {
    */
   startJamlSearch(jamlContent: string, options?: SearchOptions): Promise<SearchResultInfo[]>;
 
+  /**
+   * Run one block of sequential search. Single call = one block done; no start/poll/stop.
+   * blockId in range 0 .. 42874 (35^3).
+   */
+  processBlock(jamlContent: string, blockId: number): Promise<BlockSearchResult>;
+
   /** Stop any running search and release resources. */
   dispose(): void;
 }
@@ -129,6 +157,7 @@ interface RawExports {
   getSearchStatus(): Promise<string>;
   stopSearch(): void;
   disposeSearch(): Promise<void>;
+  processBlockAsync(jamlContent: string, blockId: number): Promise<string>;
 }
 
 interface SearchStatusInfo {
@@ -229,6 +258,18 @@ function buildApi(raw: RawExports, cachedCapabilities: CapabilitiesInfo, pollInt
 
         applyStatus(status)
       }
+    },
+
+    async processBlock(jamlContent: string, blockId: number): Promise<BlockSearchResult> {
+      if (disposed) {
+        throw new Error('Motely instance has been disposed');
+      }
+      const json = await raw.processBlockAsync(jamlContent, blockId);
+      const result = JSON.parse(json) as BlockSearchResult & { error?: string };
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result as BlockSearchResult;
     },
 
     dispose(): void {

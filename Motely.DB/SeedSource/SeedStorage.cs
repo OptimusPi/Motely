@@ -79,8 +79,9 @@ public static class SeedReader
         {
             ".txt" or ".csv" or ".list" => ReadSeedLines(source.ResolvedPath),
             ".db" => ReadDbSeeds(source.ResolvedPath),
+            ".parquet" => ReadParquetSeeds(source.ResolvedPath),
             _ => throw new NotSupportedException(
-                $"Unsupported source format '{source.Extension}'. Supported source formats: .txt, .csv, .list, .db"
+                $"Unsupported source format '{source.Extension}'. Supported source formats: .txt, .csv, .list, .db, .parquet"
             ),
         };
 
@@ -111,6 +112,27 @@ public static class SeedReader
     {
         using var db = new MotelyResultsDb(path, 0);
         return db.GetSeeds().Select(NormalizeSeedToken).Where(static seed => !string.IsNullOrWhiteSpace(seed)).ToArray();
+    }
+
+    private static IReadOnlyList<string> ReadParquetSeeds(string path)
+    {
+        var escapedPath = path.Replace("'", "''");
+        using var conn = new DuckDB.NET.Data.DuckDBConnection("Data Source=:memory:");
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT seed FROM read_parquet('{escapedPath}') WHERE seed IS NOT NULL";
+        using var reader = cmd.ExecuteReader();
+        var seeds = new List<string>();
+        while (reader.Read())
+        {
+            var raw = reader.IsDBNull(0) ? null : reader.GetString(0);
+            var normalized = NormalizeSeedToken(raw ?? "");
+            if (!string.IsNullOrWhiteSpace(normalized))
+                seeds.Add(normalized);
+        }
+        return seeds
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 }
 

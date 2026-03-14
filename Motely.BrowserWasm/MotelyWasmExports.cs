@@ -269,27 +269,9 @@ public static partial class MotelyWasmExports
             if (options.EndBatch.HasValue)
                 settings = settings.WithEndBatchIndex(options.EndBatch.Value);
 
-            if (options.SpecificSeed != null)
-                settings = settings.WithListSearch([options.SpecificSeed], 1);
-            else if (options.Seeds is { Length: > 0 })
-                settings = settings.WithListSearch(options.Seeds);
-            else if (!string.IsNullOrEmpty(options.Keyword))
-            {
-                string kw = options.Keyword.ToUpperInvariant();
-                int padLen = MotelyCore.MaxSeedLength - kw.Length;
-                if (padLen < 0)
-                    return Task.FromResult(ErrorJson($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars)."));
-                settings = settings.WithListSearch(
-                    MotelyCore.GeneratePaddedSeeds(kw, padLen),
-                    MotelyCore.GetPaddedSeedCount(kw, padLen)
-                );
-            }
-            else if (options.RandomSeeds.HasValue)
-                settings = settings.WithRandomSearch(options.RandomSeeds.Value);
-            else if (options.Palindrome == true)
-                settings = settings.WithPalindromeSearch();
-            else
-                settings = settings.WithSequentialSearch();
+            var (_, modeError) = settings.ApplySearchMode(options);
+            if (modeError != null)
+                return Task.FromResult(ErrorJson(modeError));
 
             var cts = new CancellationTokenSource();
             var search = settings.CreateSearch();

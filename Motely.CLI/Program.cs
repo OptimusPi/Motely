@@ -67,14 +67,24 @@ partial class Program
             CommandOptionType.SingleValue
         );
         var analyzeOption = app.Option<string>(
-            "--analyze <SEED>",
-            "Analyze a specific seed",
+            "--analyze <SEED[,SEED...]>",
+            "Analyze one or more seeds (comma-separated). With --output-json emits NDJSON.",
             CommandOptionType.SingleValue
         );
         var outputJsonOption = app.Option(
             "--output-json",
-            "Output analysis as JSON",
+            "Output analysis as JSON (or NDJSON for multiple seeds)",
             CommandOptionType.NoValue
+        );
+        var deckOption = app.Option<string>(
+            "--deck <DECK>",
+            "Deck name for analysis/search (default: Red for search, Erratic for analyze)",
+            CommandOptionType.SingleValue
+        );
+        var stakeOption = app.Option<string>(
+            "--stake <STAKE>",
+            "Stake name for analysis/search (default: White)",
+            CommandOptionType.SingleValue
         );
         var threadsOption = app.Option<int>(
             "--threads <N>",
@@ -128,7 +138,17 @@ partial class Program
         );
         var keywordOption = app.Option<string>(
             "--keyword <WORD>",
-            "Search seeds containing this keyword (pads to 8 chars)",
+            "Search seeds containing this keyword (pads to 8 chars with all valid chars)",
+            CommandOptionType.SingleValue
+        );
+        var keywordsOption = app.Option<string>(
+            "--keywords <WORDS>",
+            "Comma-separated keywords, each padded to 8 chars (e.g. \"OW,OH,BOOB\")",
+            CommandOptionType.SingleValue
+        );
+        var paddingOption = app.Option<string>(
+            "--padding <CHARS>",
+            "Restrict padding chars for --keyword/--keywords (e.g. \"67Z\" uses only 6, 7, Z as padding)",
             CommandOptionType.SingleValue
         );
         var writeJamlSchemaOption = app.Option(
@@ -156,14 +176,20 @@ partial class Program
                 return 0;
             }
 
-            // --analyze mode
+            // --analyze mode — supports single seed or comma-separated batch
             if (analyzeOption.HasValue())
-                return ExecuteAnalyze(
-                    analyzeOption.ParsedValue,
-                    "Red",
-                    "White",
-                    outputJsonOption.HasValue()
-                );
+            {
+                var analyzeDeck = deckOption.HasValue() ? deckOption.ParsedValue : "Erratic";
+                var analyzeStake = stakeOption.HasValue() ? stakeOption.ParsedValue : "White";
+                var seedTokens = analyzeOption.ParsedValue
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                if (seedTokens.Length == 1)
+                    return ExecuteAnalyze(seedTokens[0], analyzeDeck, analyzeStake, outputJsonOption.HasValue());
+
+                // Batch mode — emit NDJSON for each seed (one JSON object per line)
+                return ExecuteAnalyzeBatch(seedTokens, analyzeDeck, analyzeStake, outputJsonOption.HasValue());
+            }
 
             // --jaml mode
             if (!jamlOption.HasValue())
@@ -201,13 +227,14 @@ partial class Program
             if (sourceOption.HasValue()) explicitSearchModeCount++;
             if (seedsOption.HasValue()) explicitSearchModeCount++;
             if (keywordOption.HasValue()) explicitSearchModeCount++;
+            if (keywordsOption.HasValue()) explicitSearchModeCount++;
             if (randomOption.HasValue()) explicitSearchModeCount++;
             if (palindromeOption.HasValue()) explicitSearchModeCount++;
 
             if (explicitSearchModeCount > 1)
             {
                 Console.Error.WriteLine(
-                    "Error: choose only one search input mode: --source, --seeds, --keyword, --random, or --palindrome."
+                    "Error: choose only one search input mode: --source, --seeds, --keyword, --keywords, --random, or --palindrome."
                 );
                 return 1;
             }
@@ -286,28 +313,27 @@ partial class Program
                     settings.WithListSearch(inlineSeeds, inlineSeeds.Count);
                 }
             }
-            else if (keywordOption.HasValue())
+            else
             {
-                string kw = keywordOption.ParsedValue.ToUpperInvariant();
-                int padLen = MotelyCore.MaxSeedLength - kw.Length;
-                if (padLen < 0)
+                // Build SearchOptionsDto for all keyword/random/palindrome/sequential modes
+                // and delegate to the shared ApplySearchMode — single source of truth.
+                var searchOpts = new SearchOptionsDto
                 {
-                    Console.Error.WriteLine(
-                        $"Error: keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars)."
-                    );
+                    Keyword = keywordOption.HasValue() ? keywordOption.ParsedValue : null,
+                    Keywords = keywordsOption.HasValue()
+                        ? keywordsOption.ParsedValue.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                        : null,
+                    Padding = paddingOption.HasValue() ? paddingOption.ParsedValue : null,
+                    RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
+                    Palindrome = palindromeOption.HasValue() ? true : null,
+                };
+                var (_, modeError) = settings.ApplySearchMode(searchOpts);
+                if (modeError != null)
+                {
+                    Console.Error.WriteLine($"Error: {modeError}");
                     return 1;
                 }
-                settings.WithListSearch(
-                    MotelyCore.GeneratePaddedSeeds(kw, padLen),
-                    MotelyCore.GetPaddedSeedCount(kw, padLen)
-                );
             }
-            else if (randomOption.HasValue())
-                settings.WithRandomSearch(randomOption.ParsedValue);
-            else if (palindromeOption.HasValue())
-                settings.WithPalindromeSearch();
-            else
-                settings.WithSequentialSearch();
 
             // CLI output — seeds to stdout, progress to stderr
             // Parse cutoff: number = fixed threshold, "best" = only print new highs
@@ -460,7 +486,91 @@ partial class Program
         }
     }
 
-    // ── Analyze ──
+    // ── Analyze (batch) ──
+
+    static int ExecuteAnalyzeBatch(string[] seeds, string deckName, string stakeName, bool json)
+    {
+        if (!Enum.TryParse<MotelyDeck>(deckName, true, out var d))
+        {
+            Console.Error.WriteLine($"Invalid deck: {deckName}");
+            return 1;
+        }
+        if (!Enum.TryParse<MotelyStake>(stakeName, true, out var s))
+        {
+            Console.Error.WriteLine($"Invalid stake: {stakeName}");
+            return 1;
+        }
+
+        int errors = 0;
+        foreach (var seed in seeds)
+        {
+            try
+            {
+                var normalizedSeed = seed.Trim().ToUpperInvariant().Replace('0', 'O');
+                var analysis = MotelySeedAnalyzer.Analyze(new MotelySeedAnalysisConfig(normalizedSeed, d, s));
+
+                if (json)
+                {
+                    var erratic =
+                        analysis.ErraticDeckComposition?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        ?? [];
+                    var dto = new SeedAnalysisDto
+                    {
+                        Seed = normalizedSeed,
+                        Deck = d.ToString(),
+                        Stake = s.ToString(),
+                        ErraticDeckComposition = erratic,
+                        Twos = erratic.Count(c => c.StartsWith("2_")),
+                        Error = analysis.Error,
+                        Antes = analysis
+                            .Antes.Select(a => new AnteAnalysisDto
+                            {
+                                Ante = a.Ante,
+                                Boss = FormatUtils.FormatBoss(a.Boss),
+                                Voucher = FormatUtils.FormatVoucher(a.Voucher),
+                                SmallBlindTag = FormatUtils.FormatTag(a.SmallBlindTag),
+                                BigBlindTag = FormatUtils.FormatTag(a.BigBlindTag),
+                                DrawOrder = a.DrawOrder ?? "",
+                                ShopQueue = a
+                                    .ShopQueue.Select(item => new ShopItemDto
+                                    {
+                                        Id = item.ToString(),
+                                        Name = FormatUtils.FormatItem(item),
+                                    })
+                                    .ToArray(),
+                                Packs = a
+                                    .Packs.Select(p => new PackDto
+                                    {
+                                        Type = FormatUtils.FormatPackName(p.Type),
+                                        Items = p.Items.Select(FormatUtils.FormatItem).ToArray(),
+                                    })
+                                    .ToArray(),
+                            })
+                            .ToArray(),
+                    };
+                    // NDJSON: one JSON object per line, no extra whitespace
+                    Console.WriteLine(
+                        JsonSerializer.Serialize(dto, AnalysisJsonContext.Default.SeedAnalysisDto)
+                    );
+                }
+                else
+                {
+                    Console.WriteLine($"=== {normalizedSeed} | {d} {s} ===");
+                    Console.Write(analysis);
+                    Console.WriteLine();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] {seed}: {ex.Message}");
+                errors++;
+            }
+        }
+
+        return errors == 0 ? 0 : 1;
+    }
+
+    // ── Analyze (single) ──
 
     static int ExecuteAnalyze(string seed, string deckName, string stakeName, bool json)
     {

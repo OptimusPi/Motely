@@ -113,6 +113,61 @@ public static partial class MotelyCore
     ];
 
     /// <summary>
+    /// Parse a padding string like "67Z" into the specific chars to use for padding.
+    /// Filters to valid seed digits, deduplicates, uppercases. Returns null if empty/invalid.
+    /// </summary>
+    public static char[]? ParsePaddingChars(string? padding)
+    {
+        if (string.IsNullOrEmpty(padding))
+            return null;
+
+        var chars = padding.ToUpperInvariant()
+            .Where(c => Array.IndexOf(SeedDigits, c) >= 0)
+            .Distinct()
+            .ToArray();
+
+        return chars.Length > 0 ? chars : null;
+    }
+
+    /// <summary>
+    /// Generate seeds for multiple keywords, combining their padded variations lazily.
+    /// All keywords use the same padding chars and pad length derived from the longest keyword.
+    /// </summary>
+    public static IEnumerable<string> GeneratePaddedSeedsForKeywords(
+        IEnumerable<string> keywords,
+        char[]? validChars = null
+    )
+    {
+        foreach (var keyword in keywords)
+        {
+            if (string.IsNullOrEmpty(keyword)) continue;
+            int padLen = MaxSeedLength - keyword.Length;
+            if (padLen < 0) continue; // keyword too long — skip silently
+            foreach (var seed in GeneratePaddedSeeds(keyword, padLen, validChars))
+                yield return seed;
+        }
+    }
+
+    /// <summary>
+    /// Total seed count for multiple keywords with the given padding chars.
+    /// </summary>
+    public static int GetPaddedSeedCountForKeywords(
+        IEnumerable<string> keywords,
+        char[]? validChars = null
+    )
+    {
+        int total = 0;
+        foreach (var keyword in keywords)
+        {
+            if (string.IsNullOrEmpty(keyword)) continue;
+            int padLen = MaxSeedLength - keyword.Length;
+            if (padLen < 0) continue;
+            total += GetPaddedSeedCount(keyword, padLen, validChars);
+        }
+        return total;
+    }
+
+    /// <summary>
     /// Generate all seed variations by padding a keyword with the given valid characters.
     /// Pads 0-3 characters at all positions (prefix, suffix, infix).
     /// </summary>

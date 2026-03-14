@@ -91,6 +91,12 @@ public sealed class SearchOptionsDto
     [JsonPropertyName("keyword")]
     public string? Keyword { get; set; }
 
+    [JsonPropertyName("keywords")]
+    public string[]? Keywords { get; set; }
+
+    [JsonPropertyName("padding")]
+    public string? Padding { get; set; }
+
     [JsonPropertyName("randomSeeds")]
     public int? RandomSeeds { get; set; }
 
@@ -155,6 +161,32 @@ public sealed class ProgressCallbackDto
     public int ResultCount { get; set; }
 }
 
+/// <summary>One seed match for block result (ProcessBlock).</summary>
+public sealed class BlockSeedResultDto
+{
+    [JsonPropertyName("seed")]
+    public string Seed { get; set; } = string.Empty;
+
+    [JsonPropertyName("score")]
+    public int Score { get; set; }
+}
+
+/// <summary>Result of one block of sequential search (ProcessBlock).</summary>
+public sealed class BlockSearchResultDto
+{
+    [JsonPropertyName("blockId")]
+    public int BlockId { get; set; }
+
+    [JsonPropertyName("seedsSearched")]
+    public long SeedsSearched { get; set; }
+
+    [JsonPropertyName("seedsFound")]
+    public int SeedsFound { get; set; }
+
+    [JsonPropertyName("seeds")]
+    public BlockSeedResultDto[] Seeds { get; set; } = [];
+}
+
 public static class MotelyRuntimeIds
 {
     public static string GenerateFilterId(JamlConfig config)
@@ -201,6 +233,8 @@ public static class MotelyRuntimeIds
 [JsonSerializable(typeof(SearchStatusDto))]
 [JsonSerializable(typeof(SearchHitDto[]))]
 [JsonSerializable(typeof(ProgressCallbackDto))]
+[JsonSerializable(typeof(BlockSeedResultDto))]
+[JsonSerializable(typeof(BlockSearchResultDto))]
 [JsonSerializable(typeof(SeedAnalysisDto))]
 [JsonSerializable(typeof(AnteAnalysisDto))]
 [JsonSerializable(typeof(ShopItemDto))]
