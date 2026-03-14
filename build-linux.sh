@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Build linux-x64 in Docker (Ubuntu 22.04 = glibc 2.35 = Vercel-safe).
+# Run from MotelyJAML repo root.
+# Requires: Docker
+set -e
+src="$(pwd)"
+docker build -f Dockerfile.linux-node -t motely-linux-node .
+docker run --rm -v "$src:/src" -w /src motely-linux-node
+echo "Done. Check Motely.node/bin/linux-x64/Motely.NodeAddon.node"
