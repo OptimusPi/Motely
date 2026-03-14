@@ -77,8 +77,7 @@ public sealed class PoolWorkerHostedService : BackgroundService
                 await Task.Delay(2000, stoppingToken).ConfigureAwait(false);
                 continue;
             }
-            if (Enum.TryParse<MotelyDeck>(claim.Deck, true, out var deck)) config.Deck = deck;
-            if (Enum.TryParse<MotelyStake>(claim.Stake, true, out var stake)) config.Stake = stake;
+            // deck/stake come from JAML - no override needed
 
             var matchResults = new ConcurrentBag<SeedResultDto>();
             long seedsSearched = 0;
