@@ -81,6 +81,7 @@ If browser or cross-platform builds fail because of incompatible APIs, do not fo
 
 ```powershell
 Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
 ```
 
 ---
@@ -107,7 +108,25 @@ Verify the output exists:
 
 ---
 
-## Step 8: AOT Release Publish — Node Addon (win-x64 + linux-x64)
+## Step 8: AOT Release Publish — Browser WASM single-thread fallback
+
+This publishes `Motely.SingleThread` and stages the fallback browser runtime into `Motely.npm/_framework_st/`.
+
+```powershell
+dotnet publish x:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release
+node x:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs singlethread
+```
+
+Verify the fallback output exists:
+// turbo
+
+```powershell
+@(Get-ChildItem x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st\dotnet.native*.wasm -ErrorAction SilentlyContinue).Count -gt 0
+```
+
+---
+
+## Step 9: AOT Release Publish — Node Addon (win-x64 + linux-x64)
 
 Publish the native AOT addon for both platforms:
 
@@ -135,7 +154,7 @@ Test-Path x:\JammySeedFinder\src\MotelyJAML\Motely.node\bin\Release\net10.0\linu
 
 ---
 
-## Step 9: Prepare npm package — motely-wasm (browser)
+## Step 10: Prepare npm package — motely-wasm (browser)
 
 // turbo
 
@@ -146,9 +165,9 @@ npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.npm run build
 
 ---
 
-## Step 10: Pack motely-node
+## Step 11: Pack motely-node
 
-The .node files are already published in Step 8. Just pack:
+The .node files are already published in Step 9. Just pack:
 
 // turbo
 
@@ -158,7 +177,7 @@ npm --prefix x:\JammySeedFinder\src\MotelyJAML\Motely.node pack
 
 ---
 
-## Step 11: Tell user to publish
+## Step 12: Tell user to publish
 
 Tell the user:
 
@@ -172,23 +191,24 @@ npm login
 npm publish
 ```
 
-Mention that `motely-wasm` includes `_framework/`, while `motely-node` includes native AOT `.node` files in `bin/`.
+Mention that `motely-wasm` includes `_framework/` and `_framework_st/`, while `motely-node` includes native AOT `.node` files in `bin/`.
 
 Wait for user to confirm they published.
 
 ---
 
-## Step 12: Cleanup _framework files
+## Step 13: Cleanup _framework files
 
 After user confirms publish, clean up the large _framework dirs to keep the repo lean:
 
 ```powershell
 Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force x:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
 ```
 
 ---
 
-## Step 13: Summary
+## Step 14: Summary
 
 Print:
 

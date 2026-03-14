@@ -84,7 +84,7 @@ class Program
                 else
                 {
                     Console.WriteLine(
-                        $"[MotelyWorker] Claim: filter={claim.FilterId} | batchIndex={claim.BatchIndex} | remaining={claim.Remaining} | deck={claim.Deck} | stake={claim.Stake} | batchCharCount={claim.BatchCharCount}"
+                        $"[MotelyWorker] Claim: filter={claim.FilterId} | batchIndex={claim.BatchIndex} | remaining={claim.Remaining} | batchCharCount={claim.BatchCharCount}"
                     );
                 }
             }
@@ -124,8 +124,7 @@ class Program
                 await Task.Delay(2000, cts.Token).ConfigureAwait(false);
                 continue;
             }
-            if (Enum.TryParse<MotelyDeck>(claim.Deck, true, out var deck)) config.Deck = deck;
-            if (Enum.TryParse<MotelyStake>(claim.Stake, true, out var stake)) config.Stake = stake;
+            // deck/stake come from JAML - no override needed
 
             // ── SEARCH ───────────────────────────────────────────────
             var matchResults = new ConcurrentBag<SeedResultDto>();

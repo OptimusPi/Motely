@@ -1,8 +1,7 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Options;
-using Motely.DistributedWorker;
 using Motely.Filters;
 
 namespace Motely.API;
@@ -32,8 +31,9 @@ public record SearchInfo(
 );
 
 public record ActiveSearchInfo(string FilterId, bool IsCompleted, long SeedsSearched, long Matches, string Elapsed);
-public record WorkerStatusResponse(bool Enabled, bool Configured, string PoolUrl, string WorkerId, int Threads, string State);
-public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string MotelyVersion, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, string PoolUrl, WorkerStatusResponse Worker);
+public record ServerStatusResponse(string Hostname, int ProcessorCount, string OS, string Runtime, string MotelyVersion, string Uptime, IEnumerable<ActiveSearchInfo> ActiveSearches, int FilterCount, WorkerStatusResponse? Worker);
+public record WorkerStatusResponse(bool Running, int? Pid, string? PoolUrl, int Threads, string? WorkerId, string? Error);
+public record StartWorkerRequest(string PoolUrl, int Threads = -1, string? WorkerId = null);
 
 internal sealed class SearchHandle(IMotelySearch search, CancellationTokenSource cancellation, Task runTask)
 {
@@ -51,8 +51,9 @@ internal sealed class SearchHandle(IMotelySearch search, CancellationTokenSource
 [JsonSerializable(typeof(SearchInfo))]
 [JsonSerializable(typeof(ActiveSearchInfo))]
 [JsonSerializable(typeof(ActiveSearchInfo[]))]
-[JsonSerializable(typeof(WorkerStatusResponse))]
 [JsonSerializable(typeof(ServerStatusResponse))]
+[JsonSerializable(typeof(WorkerStatusResponse))]
+[JsonSerializable(typeof(StartWorkerRequest))]
 internal partial class ApiJsonSerializerContext : JsonSerializerContext
 {
 }
@@ -91,8 +92,7 @@ public class Program
             options.AddDefaultPolicy(policy =>
                 policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-        builder.Services.Configure<PoolWorkerOptions>(builder.Configuration.GetSection(PoolWorkerOptions.SectionName));
-        builder.Services.AddHostedService<PoolWorkerHostedService>();
+        // PoolWorkerOptions removed - standalone AOT worker doesn't need API config
 
         var app = builder.Build();
 
@@ -127,12 +127,21 @@ public class Program
 
         var searches = new ConcurrentDictionary<string, SearchHandle>();
 
+        // Worker process management
+        var workerProcess = new ConcurrentBag<Process>();
+        var workerConfig = new ConcurrentBag<(string PoolUrl, int Threads, string WorkerId)>();
+
         app.Lifetime.ApplicationStopping.Register(() =>
         {
             foreach (var handle in searches.Values)
             {
                 try { handle.Cancellation.Cancel(); } catch { }
                 try { handle.Search.Cancel(); } catch { }
+            }
+            // Kill worker on shutdown
+            foreach (var proc in workerProcess)
+            {
+                try { proc.Kill(); } catch { }
             }
         });
 
@@ -270,7 +279,7 @@ public class Program
 
         var serverStart = DateTime.UtcNow;
 
-        app.MapGet("/api/status", (IOptions<PoolWorkerOptions> poolOptionsAccessor) =>
+        app.MapGet("/api/status", () =>
         {
             var activeSearches = searches.Select(kvp =>
             {
@@ -284,24 +293,27 @@ public class Program
                 );
             }).ToArray();
 
-            var poolOptions = poolOptionsAccessor.Value;
-            var configuredPoolUrl = poolOptions.Url?.Trim() ?? string.Empty;
-            var configuredWorkerId = poolOptions.WorkerId?.Trim();
-            var workerConfigured = !string.IsNullOrWhiteSpace(configuredPoolUrl);
-            var workerEnabled = workerConfigured;
-            var workerState = workerConfigured ? "running" : "disabled";
-            var workerStatus = new WorkerStatusResponse(
-                workerEnabled,
-                workerConfigured,
-                configuredPoolUrl,
-                string.IsNullOrWhiteSpace(configuredWorkerId) ? $"{Environment.MachineName}-{Environment.ProcessId}" : configuredWorkerId,
-                Math.Clamp(poolOptions.Threads, 1, Environment.ProcessorCount),
-                workerState
-            );
-
             var motelyVer = typeof(MotelyCore).Assembly
                 .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion ?? "unknown";
+
+            WorkerStatusResponse? workerStatus = null;
+            if (workerProcess.TryTake(out var proc) && !proc.HasExited)
+            {
+                workerProcess.Add(proc); // Put it back
+                var cfg = workerConfig.ToArray().FirstOrDefault();
+                workerStatus = new WorkerStatusResponse(true, proc.Id, cfg.PoolUrl, cfg.Threads, cfg.WorkerId, null);
+            }
+            else
+            {
+                // Clean up dead process
+                workerProcess.Clear();
+                var cfg = workerConfig.ToArray().FirstOrDefault();
+                if (!string.IsNullOrEmpty(cfg.PoolUrl))
+                {
+                    workerStatus = new WorkerStatusResponse(false, null, cfg.PoolUrl, cfg.Threads, cfg.WorkerId, "Worker stopped");
+                }
+            }
 
             return Results.Ok(new ServerStatusResponse(
                 Environment.MachineName,
@@ -312,10 +324,122 @@ public class Program
                 (DateTime.UtcNow - serverStart).ToString(@"d\.hh\:mm\:ss"),
                 activeSearches,
                 Directory.GetFiles(jamlDir, "*.jaml").Length,
-                string.IsNullOrWhiteSpace(configuredPoolUrl) ? "https://www.seedfinder.app" : configuredPoolUrl,
                 workerStatus
             ));
         }).WithName("GetStatus");
+
+        // Worker management endpoints
+        app.MapPost("/api/worker/start", (StartWorkerRequest req) =>
+        {
+            // Check if already running
+            if (workerProcess.TryTake(out var existing) && !existing.HasExited)
+            {
+                workerProcess.Add(existing);
+                return Results.Conflict("Worker already running");
+            }
+            workerProcess.Clear();
+
+            // Find MotelyWorker executable
+            var exeName = OperatingSystem.IsWindows() ? "MotelyWorker.exe" : "MotelyWorker";
+            var searchPaths = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, exeName),
+                Path.Combine(AppContext.BaseDirectory, "..", exeName),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", exeName),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Motely.DistributedWorker", "bin", "Release", exeName),
+            };
+
+            string? workerPath = null;
+            foreach (var p in searchPaths)
+            {
+                var full = Path.GetFullPath(p);
+                if (File.Exists(full))
+                {
+                    workerPath = full;
+                    break;
+                }
+            }
+
+            if (workerPath == null)
+                return Results.NotFound("MotelyWorker executable not found. Build with: dotnet publish Motely.DistributedWorker -c Release");
+
+            var threads = req.Threads < 1 ? Environment.ProcessorCount : Math.Clamp(req.Threads, 1, Environment.ProcessorCount);
+            var workerId = string.IsNullOrWhiteSpace(req.WorkerId) ? $"{Environment.MachineName}-{Environment.ProcessId}" : req.WorkerId;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = workerPath,
+                Arguments = $"--pool \"{req.PoolUrl}\" --threads {threads} --worker-id \"{workerId}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+
+            try
+            {
+                var proc = Process.Start(startInfo);
+                if (proc == null)
+                    return Results.Problem("Failed to start worker process");
+
+                workerProcess.Add(proc);
+                workerConfig.Clear();
+                workerConfig.Add((req.PoolUrl, threads, workerId));
+
+                // Log output
+                _ = Task.Run(async () =>
+                {
+                    while (!proc.HasExited)
+                    {
+                        var line = await proc.StandardOutput.ReadLineAsync();
+                        if (line != null) Console.WriteLine($"[Worker] {line}");
+                    }
+                });
+
+                return Results.Ok(new WorkerStatusResponse(true, proc.Id, req.PoolUrl, threads, workerId, null));
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem($"Failed to start worker: {ex.Message}");
+            }
+        }).WithName("StartWorker");
+
+        app.MapPost("/api/worker/stop", () =>
+        {
+            if (!workerProcess.TryTake(out var proc) || proc.HasExited)
+            {
+                workerProcess.Clear();
+                return Results.Ok(new WorkerStatusResponse(false, null, null, 0, null, "Worker not running"));
+            }
+
+            try
+            {
+                proc.Kill(entireProcessTree: true);
+                proc.WaitForExit(5000);
+            }
+            catch { }
+
+            var cfg = workerConfig.ToArray().FirstOrDefault();
+            workerProcess.Clear();
+            workerConfig.Clear();
+
+            return Results.Ok(new WorkerStatusResponse(false, proc.Id, cfg.PoolUrl, cfg.Threads, cfg.WorkerId, "Stopped"));
+        }).WithName("StopWorker");
+
+        app.MapGet("/api/worker/status", () =>
+        {
+            if (workerProcess.TryTake(out var proc))
+            {
+                if (!proc.HasExited)
+                {
+                    workerProcess.Add(proc);
+                    var cfg = workerConfig.ToArray().FirstOrDefault();
+                    return Results.Ok(new WorkerStatusResponse(true, proc.Id, cfg.PoolUrl, cfg.Threads, cfg.WorkerId, null));
+                }
+                workerProcess.Clear();
+            }
+
+            return Results.Ok(new WorkerStatusResponse(false, null, null, 0, null, null));
+        }).WithName("GetWorkerStatus");
 
         app.MapFallbackToFile("/index.html");
 

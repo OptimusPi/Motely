@@ -17,8 +17,6 @@ node stage-packages.mjs all
 - staged package assets in:
   - `Motely.npm/_framework/`
   - `Motely.npm/_framework_st/`
-  - `Motely.npm.singlethread/_framework/`
-  - `Motely.node/_framework/`
 
 ## Staging to NPM Packages
 
@@ -37,4 +35,4 @@ Already disabled in csproj: `<WasmRunWasmOpt>false</WasmRunWasmOpt>`
 
 ### Missing SharedArrayBuffer
 For Browser: Needs COOP/COEP headers when using `Motely.BrowserWasm`
-For Node.js: use the staged `Motely.SingleThread` runtime via `motely-node`
+For browser fallback: use the staged `Motely.SingleThread` runtime via `motely-wasm/_framework_st`
