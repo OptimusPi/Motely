@@ -1,0 +1,11 @@
+*.ts
+!*.d.ts
+tsconfig.json
+node_modules/
+.git/
+.gitignore
+*.log
+test/
+tests/
+*.test.js
+*.spec.js

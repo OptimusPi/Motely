@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using McMaster.Extensions.CommandLineUtils;
 using Motely.Analysis;
 using Motely.DB.SeedSource;
+using Motely.Executors;
 using Motely.Filters;
 
 namespace Motely;
@@ -223,11 +224,20 @@ partial class Program
                 : Environment.ProcessorCount;
             int batchCharCount = batchCharCountOption.HasValue() ? batchCharCountOption.ParsedValue : 4;
 
+            bool hasSeedListMode = sourceOption.HasValue() || seedsOption.HasValue();
+            bool hasKeywordMode = keywordOption.HasValue() || keywordsOption.HasValue();
+
+            if (sourceOption.HasValue() && seedsOption.HasValue())
+            {
+                Console.Error.WriteLine(
+                    "Error: choose only one explicit seed input: --source or --seeds."
+                );
+                return 1;
+            }
+
             int explicitSearchModeCount = 0;
-            if (sourceOption.HasValue()) explicitSearchModeCount++;
-            if (seedsOption.HasValue()) explicitSearchModeCount++;
-            if (keywordOption.HasValue()) explicitSearchModeCount++;
-            if (keywordsOption.HasValue()) explicitSearchModeCount++;
+            if (hasSeedListMode) explicitSearchModeCount++;
+            if (hasKeywordMode) explicitSearchModeCount++;
             if (randomOption.HasValue()) explicitSearchModeCount++;
             if (palindromeOption.HasValue()) explicitSearchModeCount++;
 
@@ -239,22 +249,7 @@ partial class Program
                 return 1;
             }
 
-            var plan = JamlSearchBuilder.CreatePlan(config);
-            var settings = plan
-                .Settings.WithDeck(deck)
-                .WithStake(stake)
-                .WithThreadCount(threads)
-                .WithBatchCharacterCount(batchCharCount);
-            bool hasStructuredScores = plan.ShouldClauseCount > 0;
-            using ISeedResultSink? sink = sinkOption.HasValue()
-                ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
-                : null;
-
-            if (startBatchOption.HasValue())
-                settings.WithStartBatchIndex(startBatchOption.ParsedValue);
-            if (endBatchOption.HasValue())
-                settings.WithEndBatchIndex(endBatchOption.ParsedValue);
-
+            string[]? explicitSeeds = null;
             if (sourceOption.HasValue())
             {
                 try
@@ -266,7 +261,7 @@ partial class Program
                         return 1;
                     }
 
-                    settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
+                    explicitSeeds = sourceSeeds.ToArray();
                 }
                 catch (Exception ex)
                 {
@@ -293,7 +288,7 @@ partial class Program
                         }
 
                         Console.Error.WriteLine("Warning: --seeds <path> is deprecated; use --source <path>.");
-                        settings.WithListSearch(sourceSeeds, sourceSeeds.Count);
+                        explicitSeeds = sourceSeeds.ToArray();
                     }
                     catch (Exception ex)
                     {
@@ -310,30 +305,57 @@ partial class Program
                         return 1;
                     }
 
-                    settings.WithListSearch(inlineSeeds, inlineSeeds.Count);
+                    explicitSeeds = inlineSeeds.ToArray();
                 }
             }
-            else
+
+            var keywordInputs = new List<string>();
+            if (keywordOption.HasValue())
+                keywordInputs.Add(keywordOption.ParsedValue);
+
+            if (keywordsOption.HasValue())
             {
-                // Build SearchOptionsDto for all keyword/random/palindrome/sequential modes
-                // and delegate to the shared ApplySearchMode — single source of truth.
-                var searchOpts = new SearchOptionsDto
-                {
-                    Keyword = keywordOption.HasValue() ? keywordOption.ParsedValue : null,
-                    Keywords = keywordsOption.HasValue()
-                        ? keywordsOption.ParsedValue.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                        : null,
-                    Padding = paddingOption.HasValue() ? paddingOption.ParsedValue : null,
-                    RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
-                    Palindrome = palindromeOption.HasValue() ? true : null,
-                };
-                var (_, modeError) = settings.ApplySearchMode(searchOpts);
-                if (modeError != null)
-                {
-                    Console.Error.WriteLine($"Error: {modeError}");
-                    return 1;
-                }
+                keywordInputs.AddRange(
+                    keywordsOption.ParsedValue.Split(',', StringSplitOptions.TrimEntries)
+                );
             }
+
+            var rawSearchOptions = new SearchOptionsDto
+            {
+                StartBatch = startBatchOption.HasValue() ? startBatchOption.ParsedValue : null,
+                EndBatch = endBatchOption.HasValue() ? endBatchOption.ParsedValue : null,
+                Seeds = explicitSeeds,
+                Keywords = keywordInputs.Count > 0 ? keywordInputs.ToArray() : null,
+                Padding = paddingOption.HasValue() ? paddingOption.ParsedValue : null,
+                RandomSeeds = randomOption.HasValue() ? randomOption.ParsedValue : null,
+                Palindrome = palindromeOption.HasValue() ? true : null,
+            };
+            var (searchRequest, requestError) = MotelySearchRequestFactory.FromOptions(
+                rawSearchOptions,
+                threads,
+                batchCharCount
+            );
+            if (requestError != null || searchRequest == null)
+            {
+                Console.Error.WriteLine($"Error: {requestError ?? "Search request could not be created."}");
+                return 1;
+            }
+
+            var (plan, _, prepareError) = MotelySearchOrchestrator.PrepareSearch(
+                config,
+                searchRequest
+            );
+            if (prepareError != null || plan == null)
+            {
+                Console.Error.WriteLine($"Error: {prepareError ?? "Search could not be prepared."}");
+                return 1;
+            }
+
+            var settings = plan.Settings;
+            bool hasStructuredScores = plan.ShouldClauseCount > 0;
+            using ISeedResultSink? sink = sinkOption.HasValue()
+                ? SeedResultSinkFactory.Create(sinkOption.ParsedValue, plan.ShouldClauseCount)
+                : null;
 
             // CLI output — seeds to stdout, progress to stderr
             // Parse cutoff: number = fixed threshold, "best" = only print new highs

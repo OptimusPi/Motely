@@ -4,6 +4,7 @@ using System.Runtime.Versioning;
 using System.Text.Json;
 using Motely;
 using Motely.Analysis;
+using Motely.Executors;
 using Motely.Filters;
 using CapabilitiesDto = global::Motely.CapabilitiesDto;
 using ErrorDto = global::Motely.ErrorDto;
@@ -28,7 +29,7 @@ public static partial class MotelyWasmExports
     private static CancellationTokenSource? _currentCts;
     private static string? _currentFilterId;
     private static readonly object _searchLock = new object();
-    private static readonly ConcurrentQueue<(string Seed, int Score)> _resultQueue = new();
+    private static readonly ConcurrentQueue<SearchHitDto> _resultQueue = new();
 
     // Cached immutable values (computed once, reused forever)
     private static string? _cachedVersion;
@@ -187,7 +188,6 @@ public static partial class MotelyWasmExports
             )
                 return ErrorJson(parseError ?? "Failed to parse JAML filter");
 
-            // Parse search options (required for explicit runtime behavior under AOT)
             SearchOptionsDto? options = null;
             if (!string.IsNullOrEmpty(optionsJson) && optionsJson != "{}")
             {
@@ -230,56 +230,56 @@ public static partial class MotelyWasmExports
             _drainedResults.Clear();
             _resultQueue.Clear();
 
-            var settings = JamlSearchBuilder
-                .CreateSettings(config)
-                .WithDeck(config.Deck)
-                .WithStake(config.Stake)
-                .WithThreadCount(options.ThreadCount.Value)
-                .WithBatchCharacterCount(options.BatchCharCount.Value)
-                .WithSeedMatchCallback(seed =>
-                {
-                    onResult(seed, 0);
-                    _resultQueue.Enqueue((seed, 0));
-                })
-                .WithProgressCallback(prog =>
-                {
-                    onProgress(
-                        prog.SeedsSearched,
-                        prog.MatchingSeeds,
-                        (long)prog.ElapsedTime.TotalMilliseconds
-                    );
-                });
+            var (request, requestError) = MotelySearchRequestFactory.FromOptions(
+                options,
+                options.ThreadCount.Value,
+                options.BatchCharCount.Value
+            );
+            if (requestError != null || request == null)
+                return ErrorJson(requestError ?? "Search request could not be created.");
 
-            if (options.StartBatch.HasValue)
-                settings = settings.WithStartBatchIndex(options.StartBatch.Value);
-            if (options.EndBatch.HasValue)
-                settings = settings.WithEndBatchIndex(options.EndBatch.Value);
+            var (plan, filterId, prepareError) = MotelySearchOrchestrator.PrepareSearch(
+                config,
+                request
+            );
+            if (prepareError != null || plan == null || filterId == null)
+                return ErrorJson(prepareError ?? "Search could not be prepared.");
 
-            if (options.SpecificSeed != null)
-                settings = settings.WithListSearch([options.SpecificSeed], 1);
-            else if (options.Seeds is { Length: > 0 })
-                settings = settings.WithListSearch(options.Seeds);
-            else if (!string.IsNullOrEmpty(options.Keyword))
+            var settings = plan.Settings.WithProgressCallback(prog =>
             {
-                string kw = options.Keyword.ToUpperInvariant();
-                int padLen = MotelyCore.MaxSeedLength - kw.Length;
-                if (padLen < 0)
-                    return ErrorJson($"Keyword '{kw}' is too long (max {MotelyCore.MaxSeedLength} chars).");
-                settings = settings.WithListSearch(
-                    MotelyCore.GeneratePaddedSeeds(kw, padLen),
-                    MotelyCore.GetPaddedSeedCount(kw, padLen)
+                onProgress(
+                    prog.SeedsSearched,
+                    prog.MatchingSeeds,
+                    (long)prog.ElapsedTime.TotalMilliseconds
                 );
+            });
+
+            if (plan.ShouldClauseCount > 0)
+            {
+                settings = settings.WithScoredResultCallback(tally =>
+                {
+                    var hit = CreateSearchHit(plan.ShouldLabels, tally);
+                    onResult(hit.Seed, hit.Score);
+                    _resultQueue.Enqueue(hit);
+                });
             }
-            else if (options.RandomSeeds.HasValue)
-                settings = settings.WithRandomSearch(options.RandomSeeds.Value);
-            else if (options.Palindrome == true)
-                settings = settings.WithPalindromeSearch();
             else
-                settings = settings.WithSequentialSearch();
+            {
+                settings = settings.WithSeedMatchCallback(seed =>
+                {
+                    var hit = new SearchHitDto
+                    {
+                        Seed = seed,
+                        Score = 0,
+                        Tallies = [],
+                    };
+                    onResult(hit.Seed, hit.Score);
+                    _resultQueue.Enqueue(hit);
+                });
+            }
 
             var cts = new CancellationTokenSource();
-            var search = settings.Start();
-            var filterId = MotelyRuntimeIds.GenerateFilterId(config);
+            var search = settings.CreateSearch();
 
             lock (_searchLock)
             {
@@ -288,18 +288,24 @@ public static partial class MotelyWasmExports
                 _currentFilterId = filterId;
             }
 
-            // Wait until completion
-            await search.WaitForCompletionAsync();
-
-            lock (_searchLock)
+            string finalStatus;
+            try
             {
-                _currentSearch = null;
-                _currentCts = null;
-                _currentFilterId = null;
+                search.Start(cts.Token);
+                DrainResultQueue();
+                finalStatus = BuildStatusJson(search, filterId);
+            }
+            finally
+            {
+                lock (_searchLock)
+                {
+                    _currentSearch = null;
+                    _currentCts = null;
+                    _currentFilterId = null;
+                }
             }
 
-            DrainResultQueue();
-            return BuildStatusJson(search);
+            return finalStatus;
         }
         catch (Exception ex)
         {
@@ -371,7 +377,7 @@ public static partial class MotelyWasmExports
     /// <summary>
     /// Drain queued results from worker threads into _drainedResults for inclusion in status JSON.
     /// </summary>
-    private static readonly List<(string Seed, int Score)> _drainedResults = new();
+    private static readonly List<SearchHitDto> _drainedResults = new();
 
     private static void DrainResultQueue()
     {
@@ -389,27 +395,52 @@ public static partial class MotelyWasmExports
             MotelyJsonContext.Default.ErrorDto
         );
 
-    private static string BuildStatusJson(IMotelySearch search)
+    private static string BuildStatusJson(IMotelySearch search, string? filterId = null)
     {
+        var results = _drainedResults.ToArray();
+
         var dto = new SearchStatusDto
         {
-            FilterId = _currentFilterId ?? string.Empty,
+            FilterId = filterId ?? _currentFilterId ?? string.Empty,
             Status = search.IsCompleted ? "Completed" : "Running",
             IsRunning = !search.IsCompleted,
             TotalSeedsSearched = search.TotalSeedsSearched,
             MatchingSeeds = search.MatchingSeeds,
             ElapsedMs = (long)search.ElapsedTime.TotalMilliseconds,
-            Results = _drainedResults
-                .Select(r => new SearchHitDto
-                {
-                    Seed = r.Seed,
-                    Score = r.Score,
-                    Tallies = [],
-                })
-                .ToArray(),
+            ResultCount = results.Length,
+            Results = results,
         };
 
         return JsonSerializer.Serialize(dto, MotelyJsonContext.Default.SearchStatusDto);
+    }
+
+    private static SearchHitDto CreateSearchHit(
+        string[] shouldLabels,
+        MotelySeedScoreTally tally
+    )
+    {
+        return new SearchHitDto
+        {
+            Seed = tally.Seed,
+            Score = tally.Score,
+            Tallies = BuildTallies(shouldLabels, tally),
+        };
+    }
+
+    private static string[] BuildTallies(
+        string[] shouldLabels,
+        MotelySeedScoreTally tally
+    )
+    {
+        if (shouldLabels.Length == 0 || tally.TallyCount == 0)
+            return [];
+
+        int count = Math.Min(shouldLabels.Length, tally.TallyCount);
+        var tallies = new string[count];
+        for (int i = 0; i < count; i++)
+            tallies[i] = $"{shouldLabels[i]}={tally.GetTally(i)}";
+
+        return tallies;
     }
 
     private static string GetCachedVersion() =>

@@ -1,150 +1,54 @@
 # Prepare MotelyJAML npm packages
 
-Prepare `motely-wasm` and `motely-node` for npm publish from `X:\JammySeedFinder\src\MotelyJAML`.
+**Canonical workflow:** [docs/BUILD_NPM_PACKAGES_WORKFLOW.md](../docs/BUILD_NPM_PACKAGES_WORKFLOW.md). Follow it exactly. Both motely-wasm and motely-node, same version, every time. No optional steps.
 
-Goal: bump version if requested, clean, restore, build, publish the threaded and single-thread browser WASM runtimes, prepare both npm packages, and stop with publish-ready output. Do **not** publish automatically.
+Goal: bump version if requested, build both packages (WASM + Node addon), pack both, and stop with publish-ready output. Do **not** publish unless the user explicitly asks.
 
-## Inputs
+## Version (Phase A)
 
-- Optional version number from the user.
-- If no version is provided:
-  1. Read `X:\JammySeedFinder\src\MotelyJAML\Directory.Build.props`
-  2. Read `<MotelyVersion>`
-  3. Auto-increment the patch version
+- **Single source:** `Directory.Packages.props` → `<MotelyVersion>`. Do not edit any package.json or jaml.schema.json by hand.
+- If user provides a version: set it in Directory.Packages.props only. No separate sync — `dotnet build`/`dotnet publish` runs `sync-version.mjs` automatically (Directory.Build.props).
+- If no version provided: read `<MotelyVersion>` from Directory.Packages.props, optionally auto-increment patch, set it there.
+- Print the version. The next dotnet publish in Phase B or C will sync both Motely.npm and motely-node package.json in one go.
 
-## Files to update
+## Workflow (Phases B → C → D)
 
-Set the same version in:
+Execute in order. See [BUILD_NPM_PACKAGES_WORKFLOW.md](../docs/BUILD_NPM_PACKAGES_WORKFLOW.md) for full steps.
 
-- `X:\JammySeedFinder\src\MotelyJAML\Directory.Build.props` (MotelyVersion)
-- `X:\JammySeedFinder\src\MotelyJAML\Motely.npm\package.json`
-- `X:\JammySeedFinder\src\MotelyJAML\Motely.node\package.json`
-- `X:\JammySeedFinder\src\MotelyJAML\jaml.schema.json` (root — **single source** for schema)
+### Phase B: motely-wasm
 
-Then **copy** root schema to the other locations (so there is only one schema file to edit):
+- Remove `Motely.npm\_framework` and `Motely.npm\_framework_st` if present.
+- `dotnet publish Motely.BrowserWasm/Motely.BrowserWasm.csproj -c Release` then `node stage-packages.mjs browser`.
+- `dotnet publish Motely.SingleThread/Motely.SingleThread.csproj -c Release` then `node stage-packages.mjs singlethread`.
+- `cd Motely.npm && npm install && npm run build`.
 
-```powershell
-$root = "X:\JammySeedFinder\src\MotelyJAML\jaml.schema.json"
-Copy-Item -Path $root -Destination "X:\JammySeedFinder\src\MotelyJAML\public\jaml.schema.json" -Force
-Copy-Item -Path $root -Destination "X:\JammySeedFinder\src\MotelyJAML\Motely.npm\jaml.schema.json" -Force
-Copy-Item -Path $root -Destination "X:\JammySeedFinder\src\MotelyJAML\Motely.node\jaml.schema.json" -Force
-```
+### Phase C: motely-node
 
-Print the version you set so the user can confirm it.
+- `dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r win-x64` → confirm `motely-node\bin\win-x64\Motely.NodeAddon.node`.
+- `.\build-linux.ps1` (Windows) or `./build-linux.sh` (Unix) → confirm `motely-node\bin\linux-x64\Motely.NodeAddon.node`. Do not publish without linux binary.
+- `cd motely-node && npm pack` (no `build` script; pack uses bin/ as-is). Confirm tarball has both bin/win-x64/ and bin/linux-x64/.
 
-## Workflow
+### Phase D
 
-### 1. Nuke `bin/` and `obj/`
+- If user asked to publish: `npm publish` in Motely.npm and in motely-node. Then in JAMMY: `pnpm add motely-node@<V> motely-wasm@<V>` and `pnpm run build`.
+- If user did not ask: stop after pack and print the publish commands and JAMMY update command.
 
-```powershell
-Get-ChildItem -Path X:\JammySeedFinder\src\MotelyJAML -Include bin,obj -Recurse -Directory | Remove-Item -Recurse -Force
-```
-
-### 2. Clean
-
-```powershell
-dotnet clean X:\JammySeedFinder\src\MotelyJAML\Motely.sln -c Release
-```
-
-### 3. Restore
-
-```powershell
-dotnet restore X:\JammySeedFinder\src\MotelyJAML\Motely.sln
-```
-
-### 4. Build solution
-
-```powershell
-dotnet build X:\JammySeedFinder\src\MotelyJAML\Motely.sln -c Release
-```
-
-If any project fails, report the error and stop.
-
-### 4b. Build Node addon (for node-api-dotnet path)
-
-```powershell
-dotnet build X:\JammySeedFinder\src\MotelyJAML\Motely.NodeAddon\Motely.NodeAddon.csproj -c Release
-```
-
-Addon output: `Motely.NodeAddon\bin\Release\net10.0\` (Motely.NodeAddon.dll + deps). Optional: copy to `Motely.node\bin\` when shipping addon with the package.
-
-### 5. Clean `_framework` dirs before publish
-
-```powershell
-Remove-Item -Recurse -Force X:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force X:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
-```
-
-### 6. AOT publish browser WASM
-
-This publishes `Motely.BrowserWasm`, then stages the threaded runtime into `Motely.npm\_framework`.
-
-```powershell
-dotnet publish X:\JammySeedFinder\src\MotelyJAML\Motely.BrowserWasm\Motely.BrowserWasm.csproj -c Release
-node X:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs browser
-Test-Path X:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework\dotnet.native.wasm
-```
-
-### 7. AOT publish browser single-thread fallback WASM
-
-This publishes `Motely.SingleThread`, then stages the single-thread fallback runtime into `Motely.npm\_framework_st`.
-
-```powershell
-dotnet publish X:\JammySeedFinder\src\MotelyJAML\Motely.SingleThread\Motely.SingleThread.csproj -c Release
-node X:\JammySeedFinder\src\MotelyJAML\stage-packages.mjs singlethread
-Test-Path X:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st\dotnet.native*.wasm
-```
-
-### 8. Prepare `motely-wasm`
-
-```powershell
-cd X:\JammySeedFinder\src\MotelyJAML\Motely.npm
-npm install
-npm run build
-```
-
-### 9. Prepare `motely-node`
-
-```powershell
-npm install
-npm pack
-```
-
-Run this in:
-
-```powershell
-cd X:\JammySeedFinder\src\MotelyJAML\Motely.node
-```
-
-The Node package ships native `.node` outputs in `bin/`; it does not stage browser `_framework` assets.
-
-## Final output to user
-
-Print:
+## Final output (when not publishing)
 
 ```text
-Both npm packages are ready to publish!
+Both npm packages are ready. Version: <V>
 
 1. Publish motely-wasm:
    cd X:\JammySeedFinder\src\MotelyJAML\Motely.npm
-   npm login
    npm publish
 
 2. Publish motely-node:
-   cd X:\JammySeedFinder\src\MotelyJAML\Motely.node
-   npm login
+   cd X:\JammySeedFinder\src\MotelyJAML\motely-node
    npm publish
 
-   (`motely-wasm` includes `_framework/` and `_framework_st/`. `motely-node` ships native `.node` binaries in `bin/`.)
+3. Update JAMMY:
+   pnpm add motely-node@<V> motely-wasm@<V>
+   pnpm run build
 ```
 
 Then stop and wait for the user to confirm publish.
-
-## Optional cleanup after publish
-
-Only after the user confirms publish:
-
-```powershell
-Remove-Item -Recurse -Force X:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force X:\JammySeedFinder\src\MotelyJAML\Motely.npm\_framework_st -ErrorAction SilentlyContinue
-```
