@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text.Json.Serialization;
+using Motely.Executors;
 using Motely.Filters;
 
 namespace Motely.API;
@@ -205,28 +207,40 @@ public class Program
                     : Math.Clamp(req.ThreadCount, 1, Environment.ProcessorCount);
                 var batchCharCount = Math.Clamp(req.BatchCharCount, 1, 7);
 
-                var settings = JamlSearchBuilder
-                    .CreateSettings(config)
-                    .WithDeck(config.Deck)
-                    .WithStake(config.Stake)
-                    .WithThreadCount(threads)
-                    .WithBatchCharacterCount(batchCharCount);
+                var keywordInputs = new List<string>();
+                if (!string.IsNullOrWhiteSpace(req.Keyword))
+                    keywordInputs.Add(req.Keyword);
+                if (!string.IsNullOrWhiteSpace(req.Keywords))
+                    keywordInputs.AddRange(
+                        req.Keywords.Split(',', StringSplitOptions.TrimEntries)
+                    );
 
-                var searchOpts = new SearchOptionsDto
+                var rawOptions = new SearchOptionsDto
                 {
-                    SpecificSeed = string.IsNullOrWhiteSpace(req.Seed) ? null : req.Seed,
-                    Keyword = string.IsNullOrWhiteSpace(req.Keyword) ? null : req.Keyword,
-                    Keywords = string.IsNullOrWhiteSpace(req.Keywords) ? null
-                        : req.Keywords.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+                    Seeds = string.IsNullOrWhiteSpace(req.Seed) ? null : [req.Seed],
+                    Keywords = keywordInputs.Count > 0 ? keywordInputs.ToArray() : null,
                     Padding = string.IsNullOrWhiteSpace(req.Padding) ? null : req.Padding,
                     Palindrome = req.Palindrome ? true : null,
                 };
-                var (_, modeError) = settings.ApplySearchMode(searchOpts);
-                if (modeError != null)
-                    return Results.BadRequest(modeError);
 
-                var search = settings.CreateSearch();
-                var filterId = MotelyRuntimeIds.GenerateFilterId(config);
+                var (searchRequest, requestError) = MotelySearchRequestFactory.FromOptions(
+                    rawOptions,
+                    threads,
+                    batchCharCount
+                );
+                if (requestError != null || searchRequest == null)
+                    return Results.BadRequest(
+                        requestError ?? "Search request could not be created."
+                    );
+
+                var (plan, filterId, prepareError) = MotelySearchOrchestrator.PrepareSearch(
+                    config,
+                    searchRequest
+                );
+                if (prepareError != null || plan == null || filterId == null)
+                    return Results.BadRequest(prepareError ?? "Search could not be prepared.");
+
+                var search = plan.Settings.CreateSearch();
                 if (searches.TryRemove(filterId, out var existingSearch))
                 {
                     existingSearch.Cancellation.Cancel();
@@ -294,7 +308,7 @@ public class Program
             }).ToArray();
 
             var motelyVer = typeof(MotelyCore).Assembly
-                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion ?? "unknown";
 
             WorkerStatusResponse? workerStatus = null;

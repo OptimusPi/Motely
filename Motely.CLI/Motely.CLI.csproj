@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
     <ProjectReference Include="..\Motely.DB\Motely.DB.csproj" />
   </ItemGroup>
 </Project>

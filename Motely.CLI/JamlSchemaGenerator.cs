@@ -110,19 +110,19 @@ internal static class JamlSchemaGenerator
         yield return Path.Combine(repoRoot, "jaml.schema.json");
         yield return Path.Combine(repoRoot, "public", "jaml.schema.json");
         yield return Path.Combine(repoRoot, "Motely.npm", "jaml.schema.json");
-        yield return Path.Combine(repoRoot, "Motely.node", "jaml.schema.json");
+        yield return Path.Combine(repoRoot, "motely-node", "jaml.schema.json");
     }
 
     private static IEnumerable<string> GetHelperJsOutputPaths(string repoRoot)
     {
         yield return Path.Combine(repoRoot, "Motely.npm", "jaml-schema.js");
-        yield return Path.Combine(repoRoot, "Motely.node", "jaml-schema.js");
+        yield return Path.Combine(repoRoot, "motely-node", "jaml-schema.js");
     }
 
     private static IEnumerable<string> GetHelperDtsOutputPaths(string repoRoot)
     {
         yield return Path.Combine(repoRoot, "Motely.npm", "jaml-schema.d.ts");
-        yield return Path.Combine(repoRoot, "Motely.node", "jaml-schema.d.ts");
+        yield return Path.Combine(repoRoot, "motely-node", "jaml-schema.d.ts");
     }
 
     private static JsonObject Generate(string version)

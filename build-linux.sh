@@ -6,4 +6,4 @@ set -e
 src="$(pwd)"
 docker build -f Dockerfile.linux-node -t motely-linux-node .
 docker run --rm -v "$src:/src" -w /src motely-linux-node
-echo "Done. Check Motely.node/bin/linux-x64/Motely.NodeAddon.node"
+echo "Done. Check motely-node/bin/linux-x64/Motely.NodeAddon.node"

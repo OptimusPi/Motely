@@ -12,7 +12,7 @@
     <PublishAot>true</PublishAot>
     <PublishNodeModule>true</PublishNodeModule>
     <PublishMultiPlatformNodeModule>true</PublishMultiPlatformNodeModule>
-    <PublishDir>$(MSBuildThisFileDirectory)..\Motely.node\bin</PublishDir>
+    <PublishDir>$(MSBuildThisFileDirectory)..\motely-node\bin</PublishDir>
     <IsAotCompatible>true</IsAotCompatible>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <!-- No libicu needed; smaller image, fewer deps, perf tip -->
@@ -26,5 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
+    <ProjectReference Include="..\Motely.Orchestration\Motely.Orchestration.csproj" />
   </ItemGroup>
 </Project>
