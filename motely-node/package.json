@@ -10,11 +10,6 @@
       "require": "./index.cjs",
       "types": "./index.d.ts"
     },
-    "./server": {
-      "import": "./server.js",
-      "require": "./server.cjs",
-      "types": "./server.d.ts"
-    },
     "./jaml-schema": {
       "import": "./jaml-schema.js",
       "types": "./jaml-schema.d.ts"
@@ -26,9 +21,6 @@
     "index.js",
     "index.cjs",
     "index.d.ts",
-    "server.js",
-    "server.cjs",
-    "server.d.ts",
     "jaml-schema.js",
     "jaml-schema.d.ts",
     "jaml.schema.json",
