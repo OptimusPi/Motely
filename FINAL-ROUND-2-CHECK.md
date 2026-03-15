@@ -39,8 +39,8 @@ Generated after the big cleanup/wiring session. Read this before publishing anyt
 - **Missing**: token validation on the coordinator endpoints! Currently anyone can call `/claim` if they know the session ID.
 - **Suggestion**: Add `if (session.Token != req.Token)` check or use the Bearer auth middleware.
 
-### 4. `Motely.node/index.d.ts` — `drawOrder` field missing from `AnteAnalysisInfo`
-- C# `MotelySeedAnalyzer` outputs `DrawOrder` but the `Motely.node` TypeScript interface doesn't expose it.
+### 4. `motely-node/index.d.ts` — `drawOrder` field missing from `AnteAnalysisInfo`
+- C# `MotelySeedAnalyzer` outputs `DrawOrder` but the `motely-node` TypeScript interface doesn't expose it.
 - The `Motely.npm` interface also omits `drawOrder`.
 - **Fix needed**: add `drawOrder: string` to both `AnteAnalysisInfo` interfaces.
 
@@ -55,7 +55,7 @@ Generated after the big cleanup/wiring session. Read this before publishing anyt
 - **Note**: `motely-node@2.2.0` must be published to npm first! Verify with `npm view motely-node`.
 
 ### 7. `Motely.npm` (browser) — `threadCount` default NOT set
-- `Motely.node` sets `threadCount=1` default (single thread for Node.js).
+- `motely-node` sets `threadCount=1` default (single thread for Node.js).
 - `Motely.npm` does NOT set a `threadCount` default — it expects the caller to pass it.
 - **C# side**: if `threadCount` is missing, `options.ThreadCount.HasValue` is false → returns error.
 - **Fix needed**: either add `threadCount` default in `Motely.npm/index.ts` `startJamlSearch` OR make `threadCount` optional on the C# side.
@@ -76,7 +76,7 @@ Generated after the big cleanup/wiring session. Read this before publishing anyt
 3. **Run `pnpm install`** in `v0-balatro-seed-hosting` to pull `motely-node@2.2.0`.
 4. **Publish `motely-wasm@2.2.0` and `motely-node@2.2.0`** to npm.
 5. ✅ `threadCount` default added in `Motely.npm/index.ts` (defaults to `processorCount`).
-6. ✅ `drawOrder` field added to `Motely.node/index.d.ts` `AnteAnalysisInfo`.
+6. ✅ `drawOrder` field added to `motely-node/index.d.ts` `AnteAnalysisInfo`.
 
 ### Motely.API:
 7. **Add token auth validation** to coordinator endpoints.
@@ -136,7 +136,7 @@ C# Core (Motely.csproj)
 |---------|---------|--------|
 | `MotelyVersion` (.NET) | `2.2.0` | `Directory.Build.props` |
 | `motely-wasm` (npm, browser) | `2.2.0` | `Motely.npm/package.json` |
-| `motely-node` (npm, Node.js) | `2.2.0` | `Motely.node/package.json` |
+| `motely-node` (npm, Node.js) | `2.2.0` | `motely-node/package.json` |
 | Blueprint dependency | `2.2.0` | `Blueprint/package.json` |
 | weejoker.app dependency | `2.2.0` | `weejoker.app/package.json` |
 | v0-balatro-seed-hosting motely-wasm | `2.2.0` | `v0/package.json` |

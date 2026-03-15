@@ -1,0 +1,8 @@
+<Project>
+  <!-- Sync npm package.json version from Directory.Packages.props before build/publish.
+       Edit only <MotelyVersion> in Directory.Packages.props, then dotnet publish — sync runs in one go. -->
+  <Target Name="SyncNpmVersionBeforeBuild" BeforeTargets="Build;Publish"
+          Condition="'$(MSBuildProjectName)' == 'Motely.BrowserWasm' or '$(MSBuildProjectName)' == 'Motely.NodeAddon' or '$(MSBuildProjectName)' == 'Motely.SingleThread'">
+    <Exec Command="node &quot;$(MSBuildThisFileDirectory)sync-version.mjs&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="false" />
+  </Target>
+</Project>

@@ -25,9 +25,9 @@ Per [js-aot-module](https://microsoft.github.io/node-api-dotnet/scenarios/js-aot
    <PublishAot>true</PublishAot>
    <PublishNodeModule>true</PublishNodeModule>
    <PublishMultiPlatformNodeModule>true</PublishMultiPlatformNodeModule>
-   <PublishDir>$(MSBuildThisFileDirectory)..\Motely.node\bin</PublishDir>
+   <PublishDir>$(MSBuildThisFileDirectory)..\motely-node\bin</PublishDir>
    ```
-   (Our `PublishDir` points to Motely.node/bin; `PublishMultiPlatformNodeModule` puts each RID in `bin/<rid>/`.)
+   (Our `PublishDir` points to motely-node/bin; `PublishMultiPlatformNodeModule` puts each RID in `bin/<rid>/`.)
 
 3. **Publish** produces `.node` binary:
    ```bash
@@ -38,7 +38,7 @@ Per [js-aot-module](https://microsoft.github.io/node-api-dotnet/scenarios/js-aot
 
 ## Flow (MotelyJAML layout)
 
-We have C# (Motely.NodeAddon) and JS (Motely.node) as sibling folders. Per docs, native module does **not** depend on `node-api-dotnet`; we `require()` the `.node` directly.
+We have C# (Motely.NodeAddon) and JS (motely-node) as sibling folders. Per docs, native module does **not** depend on `node-api-dotnet`; we `require()` the `.node` directly.
 
 ### 1. Bump version
 
@@ -51,7 +51,7 @@ Run: `node sync-version.mjs`
 dotnet publish Motely.NodeAddon/Motely.NodeAddon.csproj -c Release -r win-x64
 ```
 
-Output: `Motely.node/bin/win-x64/Motely.NodeAddon.node`
+Output: `motely-node/bin/win-x64/Motely.NodeAddon.node`
 
 ### 3. Build linux-x64 (Docker, GLIBC 2.35)
 
@@ -63,12 +63,12 @@ Output: `Motely.node/bin/win-x64/Motely.NodeAddon.node`
 ./build-linux.sh
 ```
 
-Output: `Motely.node/bin/linux-x64/Motely.NodeAddon.node`
+Output: `motely-node/bin/linux-x64/Motely.NodeAddon.node`
 
 ### 4. Pack and publish
 
 ```powershell
-cd Motely.node
+cd motely-node
 npm pack
 npm publish
 ```

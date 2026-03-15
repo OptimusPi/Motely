@@ -70,13 +70,13 @@ mcp-config.json
 /vue-jaml-ui
 /jamluiv99/dist
 /JamlFilters
-/Motely.node/_framework
+/motely-node/_framework
 /Motely.npm/test-extract
 Motely.npm/test-extract/package/_framework/dotnet.runtime.o3mjeid0aj.js
 /Motely.npm/test-extract
 /MotelyNode
 /.windsurf
 /Motely.npm/_framework_st
-Motely.node/jaml.schema.json
-Motely.node/jaml-schema.js
-/Motely.node/addon
+motely-node/jaml.schema.json
+motely-node/jaml-schema.js
+/motely-node/addon

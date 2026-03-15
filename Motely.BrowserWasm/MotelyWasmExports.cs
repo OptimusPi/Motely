@@ -4,6 +4,7 @@ using System.Runtime.Versioning;
 using System.Text.Json;
 using Motely;
 using Motely.Analysis;
+using Motely.Executors;
 using Motely.Filters;
 using CapabilitiesDto = global::Motely.CapabilitiesDto;
 using ErrorDto = global::Motely.ErrorDto;
@@ -28,7 +29,7 @@ public static partial class MotelyWasmExports
     private static CancellationTokenSource? _currentCts;
     private static string? _currentFilterId;
     private static readonly object _searchLock = new object();
-    private static readonly ConcurrentQueue<(string Seed, int Score)> _resultQueue = new();
+    private static readonly ConcurrentQueue<SearchHitDto> _resultQueue = new();
 
     // Cached immutable values (computed once, reused forever)
     private static string? _cachedVersion;
@@ -244,38 +245,60 @@ public static partial class MotelyWasmExports
 
             _resultQueue.Clear();
 
-            var settings = JamlSearchBuilder
-                .CreateSettings(config)
-                .WithDeck(config.Deck)
-                .WithStake(config.Stake)
-                .WithThreadCount(threadCount)
-                .WithBatchCharacterCount(options.BatchCharCount.Value)
-                .WithSeedMatchCallback(seed =>
+            var (request, requestError) = MotelySearchRequestFactory.FromOptions(
+                options,
+                threadCount,
+                options.BatchCharCount.Value
+            );
+            if (requestError != null || request == null)
+                return Task.FromResult(
+                    ErrorJson(requestError ?? "Search request could not be created.")
+                );
+
+            var (plan, filterId, prepareError) = MotelySearchOrchestrator.PrepareSearch(
+                config,
+                request
+            );
+            if (prepareError != null || plan == null || filterId == null)
+                return Task.FromResult(
+                    ErrorJson(prepareError ?? "Search could not be prepared.")
+                );
+
+            var settings = plan.Settings.WithProgressCallback(prog =>
+            {
+                onProgress(
+                    prog.SeedsSearched,
+                    prog.MatchingSeeds,
+                    (long)prog.ElapsedTime.TotalMilliseconds
+                );
+            });
+
+            if (plan.ShouldClauseCount > 0)
+            {
+                settings = settings.WithScoredResultCallback(tally =>
                 {
-                    onResult(seed, 0);
-                    _resultQueue.Enqueue((seed, 0));
-                })
-                .WithProgressCallback(prog =>
-                {
-                    onProgress(
-                        prog.SeedsSearched,
-                        prog.MatchingSeeds,
-                        (long)prog.ElapsedTime.TotalMilliseconds
-                    );
+                    var hit = CreateSearchHit(plan.ShouldLabels, tally);
+                    onResult(hit.Seed, hit.Score);
+                    _resultQueue.Enqueue(hit);
                 });
-
-            if (options.StartBatch.HasValue)
-                settings = settings.WithStartBatchIndex(options.StartBatch.Value);
-            if (options.EndBatch.HasValue)
-                settings = settings.WithEndBatchIndex(options.EndBatch.Value);
-
-            var (_, modeError) = settings.ApplySearchMode(options);
-            if (modeError != null)
-                return Task.FromResult(ErrorJson(modeError));
+            }
+            else
+            {
+                settings = settings.WithSeedMatchCallback(seed =>
+                {
+                    var hit = new SearchHitDto
+                    {
+                        Seed = seed,
+                        Score = 0,
+                        Tallies = [],
+                    };
+                    onResult(hit.Seed, hit.Score);
+                    _resultQueue.Enqueue(hit);
+                });
+            }
 
             var cts = new CancellationTokenSource();
             var search = settings.CreateSearch();
-            var filterId = MotelyRuntimeIds.GenerateFilterId(config);
 
             lock (_searchLock)
             {
@@ -284,9 +307,11 @@ public static partial class MotelyWasmExports
                 _currentFilterId = filterId;
             }
 
+            string finalStatus;
             try
             {
                 search.Start(cts.Token);
+                finalStatus = BuildStatusJson(search, filterId);
             }
             finally
             {
@@ -298,7 +323,7 @@ public static partial class MotelyWasmExports
                 }
             }
 
-            return Task.FromResult(BuildStatusJson(search));
+            return Task.FromResult(finalStatus);
         }
         catch (Exception ex)
         {
@@ -386,20 +411,13 @@ public static partial class MotelyWasmExports
             global::Motely.MotelyJsonContext.Default.ErrorDto
         );
 
-    private static string BuildStatusJson(IMotelySearch search)
+    private static string BuildStatusJson(IMotelySearch search, string? filterId = null)
     {
-        var results = _resultQueue
-            .Select(r => new global::Motely.SearchHitDto
-            {
-                Seed = r.Seed,
-                Score = r.Score,
-                Tallies = [],
-            })
-            .ToArray();
+        var results = _resultQueue.ToArray();
 
         var dto = new global::Motely.SearchStatusDto
         {
-            FilterId = _currentFilterId ?? string.Empty,
+            FilterId = filterId ?? _currentFilterId ?? string.Empty,
             Status = search.IsCompleted ? "Completed" : "Running",
             IsRunning = !search.IsCompleted,
             TotalSeedsSearched = search.TotalSeedsSearched,
@@ -410,6 +428,35 @@ public static partial class MotelyWasmExports
         };
 
         return JsonSerializer.Serialize(dto, global::Motely.MotelyJsonContext.Default.SearchStatusDto);
+    }
+
+    private static SearchHitDto CreateSearchHit(
+        string[] shouldLabels,
+        MotelySeedScoreTally tally
+    )
+    {
+        return new SearchHitDto
+        {
+            Seed = tally.Seed,
+            Score = tally.Score,
+            Tallies = BuildTallies(shouldLabels, tally),
+        };
+    }
+
+    private static string[] BuildTallies(
+        string[] shouldLabels,
+        MotelySeedScoreTally tally
+    )
+    {
+        if (shouldLabels.Length == 0 || tally.TallyCount == 0)
+            return [];
+
+        int count = Math.Min(shouldLabels.Length, tally.TallyCount);
+        var tallies = new string[count];
+        for (int i = 0; i < count; i++)
+            tallies[i] = $"{shouldLabels[i]}={tally.GetTally(i)}";
+
+        return tallies;
     }
 
     private static string GetCachedVersion() =>

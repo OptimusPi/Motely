@@ -70,6 +70,8 @@ export interface SearchOptions {
     specificSeed?: string;
     seeds?: string[];
     keyword?: string;
+    keywords?: string[];
+    padding?: string;
     randomSeeds?: number;
     palindrome?: boolean;
     /** Called with native primitives every ~15ms during search. No JSON overhead. */

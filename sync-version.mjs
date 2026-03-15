@@ -26,7 +26,7 @@ console.log(`MotelyVersion: ${motelyVersion}`);
 // Update all package.json files
 const packageJsonPaths = [
   join(__dirname, 'Motely.npm', 'package.json'),
-  join(__dirname, 'Motely.node', 'package.json'),
+  join(__dirname, 'motely-node', 'package.json'),
 ];
 
 for (const pkgPath of packageJsonPaths) {

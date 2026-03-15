@@ -32,7 +32,7 @@ __export(server_exports, {
   verifySeedServer: () => verifySeedServer
 });
 module.exports = __toCommonJS(server_exports);
-var import_index = require("./index.js");
+var import_index = require("./index.cjs");
 let apiPromise = null;
 let apiOptionsKey = null;
 function getOptionsKey(options) {

@@ -4,16 +4,24 @@
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-# Native AOT needs: clang or gcc + zlib. build-essential = gcc in PATH. (dotnet/core#8663)
+# Native AOT needs gcc + zlib. Pin to gcc-10 - newer GCC can break AOT. (dotnet/core#8663)
+# AOT tooling looks for 'gcc' in PATH, so we symlink gcc-10 -> gcc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     wget \
     nodejs \
     npm \
-    build-essential \
-    clang \
+    gcc-10 \
+    g++-10 \
+    make \
     zlib1g-dev \
+    && (test -e /usr/bin/node || ln -sf /usr/bin/nodejs /usr/bin/node) \
+    && ln -sf /usr/bin/gcc-10 /usr/bin/gcc \
+    && ln -sf /usr/bin/g++-10 /usr/bin/g++ \
     && rm -rf /var/lib/apt/lists/*
+
+ENV CC=gcc-10
+ENV CXX=g++-10
 
 # SDK runs without libicu (invariant mode). Published binary also uses InvariantGlobalization.
 ENV DOTNET_ROOT=/usr/share/dotnet

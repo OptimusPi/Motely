@@ -1,12 +1,14 @@
 # Publishing motely-node and motely-wasm
 
+**Canonical build workflow:** [docs/BUILD_NPM_PACKAGES_WORKFLOW.md](docs/BUILD_NPM_PACKAGES_WORKFLOW.md) — both packages, one version, every time. Use it for the full build and pack steps.
+
 No Blazor. Use **WebAssembly Browser App** and **dotnet/runtime WASM** docs only (see [Official docs](#official-docs)).
 
 ## Checklist before every publish
 
-### Motely.node (motely-node)
+### motely-node (Node addon package)
 
-1. **Motely.node/package.json**
+1. **motely-node/package.json**
    - No `"motely-node"` (or package name) in `dependencies` or `devDependencies`.
    - No `file:` or `link:` for any published package.
    - `main` / `types` / `exports` point to built artifacts; `files` includes only those artifacts and required assets.
@@ -16,7 +18,7 @@ No Blazor. Use **WebAssembly Browser App** and **dotnet/runtime WASM** docs only
    - Run `npm pack` and verify the tarball: no self-refs and no `file:` deps in package.json inside the tarball.
 
 3. **Publish**
-   - Bump version in package.json, then `npm publish` from the package directory (e.g. `Motely.node/`).
+   - Bump version in package.json, then `npm publish` from the package directory (e.g. `motely-node/`).
 
 ### Motely.npm (motely-wasm)
 
