@@ -1,5 +1,4 @@
-// Motely Node.js AOT Addon - platform detection + JS wrapper (camelCase API)
-import { existsSync } from 'node:fs';
+// Motely Node.js AOT Addon - package-relative native module wrapper
 import { platform } from 'node:os';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -16,40 +15,27 @@ function getRid() {
   return rid;
 }
 
-function resolveAddonPath(options = {}) {
-  if (options.addonPath) {
-    return options.addonPath;
-  }
-
-  const rid = getRid();
-  const baseDirectory = options.addonDirectory ?? options.frameworkPath ?? __dirname;
-  const candidates = options.addonDirectory || options.frameworkPath
-    ? [
-        join(baseDirectory, 'Motely.NodeAddon.node'),
-        join(baseDirectory, rid, 'Motely.NodeAddon.node'),
-        join(baseDirectory, 'bin', rid, 'Motely.NodeAddon.node'),
-        join(baseDirectory, 'addon', rid, 'Motely.NodeAddon.node'),
-      ]
-    : [
-        join(baseDirectory, 'bin', rid, 'Motely.NodeAddon.node'),
-        join(baseDirectory, 'addon', rid, 'Motely.NodeAddon.node'),
-      ];
-
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  throw new Error(
-    `Unable to locate Motely.NodeAddon.node for RID ${rid}. Tried: ${candidates.join(', ')}`
-  );
+function resolveAddonPath() {
+  return join(__dirname, 'bin', getRid(), 'Motely.NodeAddon.node');
 }
 
-function loadRawAddon(options) {
-  const addonPath = resolveAddonPath(options);
+function loadRawAddon() {
+  const addonPath = resolveAddonPath();
   const addon = require(addonPath);
-  return addon.MotelyNodeExports;
+  const raw = addon?.MotelyNodeExports;
+  if (!raw || typeof raw !== 'object') {
+    throw new Error(`Motely native addon at '${addonPath}' did not expose MotelyNodeExports.`);
+  }
+  return raw;
+}
+
+function getRawMethod(raw, methodName) {
+  const method = raw?.[methodName];
+  if (typeof method !== 'function') {
+    const available = raw && typeof raw === 'object' ? Object.keys(raw).sort().join(', ') : '<none>';
+    throw new Error(`Motely native addon is missing '${methodName}'. Available exports: ${available}`);
+  }
+  return method.bind(raw);
 }
 
 function parseJson(json, errKey = 'error') {
@@ -162,70 +148,76 @@ function normalizeSearchParams(options = {}) {
   };
 }
 
+function appendSearchResults(dto, results, onResult) {
+  for (const hit of dto.seeds ?? []) {
+    const result = { seed: hit.seed, score: hit.score ?? 0 };
+    results.push(result);
+    onResult?.(result.seed, result.score);
+  }
+}
+
+async function runSearchWithRaw(raw, jamlContent, options = {}) {
+  const { onProgress, onResult, ...searchParams } = options;
+  const results = [];
+  const CHUNK = 500;
+  const TOTAL_BLOCKS = 35 * 35 * 35;
+
+  const runBlock = (dto) => {
+    onProgress?.(dto.seedsSearched ?? 0, dto.seedsFound ?? 0, 0, dto.seeds?.length ?? 0);
+    appendSearchResults(dto, results, onResult);
+  };
+
+  const opts = normalizeSearchParams({
+    threadCount: Math.max(1, searchParams.threadCount ?? 1),
+    batchCharCount: searchParams.batchCharCount ?? 4,
+    ...searchParams,
+  });
+  const optionsJson = JSON.stringify(opts);
+
+  if (opts.seeds?.length || opts.keywords?.length || typeof opts.randomSeeds === 'number' || opts.palindrome) {
+    const json = await getRawMethod(raw, 'runSearchAsync')(jamlContent, optionsJson);
+    runBlock(parseJson(json));
+    return results;
+  }
+
+  const startBatch = Math.max(0, opts.startBatch ?? 0);
+  const endBatch = opts.endBatch != null ? Math.min(TOTAL_BLOCKS, opts.endBatch) : TOTAL_BLOCKS;
+  for (let start = startBatch; start < endBatch; start += CHUNK) {
+    const end = Math.min(start + CHUNK, endBatch);
+    const json = await getRawMethod(raw, 'runSequentialRangeAsync')(jamlContent, start, end);
+    runBlock(parseJson(json));
+  }
+
+  return results;
+}
+
 function buildApi(raw) {
   let disposed = false;
 
   return {
     async getCapabilities() {
-      const json = await raw.GetCapabilitiesAsync();
+      const json = await getRawMethod(raw, 'getCapabilitiesAsync')();
       return parseJson(json);
     },
 
     async analyzeSeed(seed, deck, stake) {
-      const json = await raw.AnalyzeSeedAsync(seed, deck, stake);
+      const json = await getRawMethod(raw, 'analyzeSeedAsync')(seed, deck, stake);
       return parseJson(json);
     },
 
     async validateJaml(jamlContent) {
-      const json = await raw.ValidateJamlAsync(jamlContent);
+      const json = await getRawMethod(raw, 'validateJamlAsync')(jamlContent);
       return parseJson(json);
     },
 
     async startJamlSearch(jamlContent, options = {}) {
       if (disposed) throw new Error('Motely instance has been disposed');
-      const { onProgress, onResult, ...searchParams } = options;
-      const results = [];
-      const CHUNK = 500;
-      const TOTAL_BLOCKS = 35 * 35 * 35;
-
-      const runBlock = (dto) => {
-        onProgress?.(dto.seedsSearched ?? 0, dto.seedsFound ?? 0, 0, dto.seeds?.length ?? 0);
-        for (const s of dto.seeds ?? []) {
-          results.push({ seed: s.seed, score: s.score ?? 0 });
-          onResult?.(s.seed, s.score ?? 0);
-        }
-      };
-
-      const opts = normalizeSearchParams({
-        threadCount: Math.max(1, searchParams.threadCount ?? 1),
-        batchCharCount: searchParams.batchCharCount ?? 4,
-        ...searchParams,
-      });
-      const optionsJson = JSON.stringify(opts);
-
-      if (opts.seeds?.length || opts.keywords?.length || typeof opts.randomSeeds === 'number' || opts.palindrome) {
-        const json = await raw.RunSearchAsync(jamlContent, optionsJson);
-        runBlock(parseJson(json));
-        return results;
-      }
-
-      // Full sequential: run in chunks via RunSequentialRangeAsync
-      let totalSearched = 0;
-      const startBatch = Math.max(0, opts.startBatch ?? 0);
-      const endBatch = opts.endBatch != null ? Math.min(TOTAL_BLOCKS, opts.endBatch) : TOTAL_BLOCKS;
-      for (let start = startBatch; start < endBatch; start += CHUNK) {
-        const end = Math.min(start + CHUNK, endBatch);
-        const json = await raw.RunSequentialRangeAsync(jamlContent, start, end);
-        const dto = parseJson(json);
-        totalSearched += dto.seedsSearched ?? 0;
-        runBlock(dto);
-      }
-      return results;
+      return runSearchWithRaw(raw, jamlContent, options);
     },
 
     async processBlock(jamlContent, blockId) {
       if (disposed) throw new Error('Motely instance has been disposed');
-      const json = await raw.ProcessBlockAsync(jamlContent, blockId);
+      const json = await getRawMethod(raw, 'processBlockAsync')(jamlContent, blockId);
       const dto = parseJson(json);
       return {
         blockId: dto.blockId,
@@ -280,8 +272,8 @@ function createDefaultApi() {
   };
 }
 
-export function loadMotely(options) {
-  return Promise.resolve(buildApi(loadRawAddon(options)));
+export function loadMotely() {
+  return Promise.resolve(buildApi(loadRawAddon()));
 }
 
 const api = createDefaultApi();

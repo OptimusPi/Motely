@@ -10,14 +10,6 @@ export interface CapabilitiesInfo {
   [key: string]: unknown;
 }
 
-/** Options for loadMotely (addon path, directory, etc.). */
-export interface LoadMotelyOptions {
-  addonPath?: string;
-  addonDirectory?: string;
-  frameworkPath?: string;
-  pollIntervalMs?: number;
-}
-
 /** Options for startJamlSearch. */
 export interface SearchOptions {
   threadCount?: number;
@@ -72,10 +64,9 @@ export interface MotelyNodeApi {
 }
 
 /**
- * Load Motely for Node.js. Returns a Promise of the wrapped API (camelCase).
- * Addon is loaded from package bin path when options omitted.
+ * Load Motely for Node.js from the packaged native addon.
  */
-export function loadMotely(options?: LoadMotelyOptions): Promise<MotelyNodeApi>;
+export function loadMotely(): Promise<MotelyNodeApi>;
 
 /** Default export is the wrapped API (same as loadMotely() then await). */
 declare const api: MotelyNodeApi;
