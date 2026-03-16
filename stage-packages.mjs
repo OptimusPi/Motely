@@ -6,20 +6,14 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const browserFrameworkSource = join(__dirname, 'Motely.BrowserWasm', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
-const singleThreadFrameworkSource = join(__dirname, 'Motely.SingleThread', 'bin', 'Release', 'net10.0-browser', 'publish', 'wwwroot', '_framework');
 const targets = {
   browser: [
     { source: browserFrameworkSource, destination: join(__dirname, 'Motely.npm', '_framework') },
   ],
-  singlethread: [
-    { source: singleThreadFrameworkSource, destination: join(__dirname, 'Motely.npm', '_framework_st') },
-  ],
 };
 
 const modes = process.argv.slice(2);
-const selectedModes = modes.length === 0 || modes.includes('all')
-  ? ['browser', 'singlethread']
-  : modes;
+const selectedModes = modes.length === 0 || modes.includes('all') ? ['browser'] : modes;
 
 const shouldInclude = (path) => {
   const normalized = path.replace(/\\/g, '/');
@@ -28,7 +22,7 @@ const shouldInclude = (path) => {
   return true;
 };
 
-// worker.js host template — written into _framework/ and _framework_st/ after staging.
+// worker.js host template — written into _framework/ after staging.
 // Boots the .NET WASM runtime inside a Web Worker and dispatches messages to [JSExport] methods.
 // See: https://learn.microsoft.com/en-us/aspnet/core/client-side/dotnet-on-webworkers
 const WORKER_JS = `\
@@ -123,7 +117,7 @@ for (const mode of selectedModes) {
     console.log(`${mode}: ${source} -> ${destination}`);
 
     // Write the worker.js host into browser framework folders
-    if (mode === 'browser' || mode === 'singlethread') {
+    if (mode === 'browser') {
       const workerDest = join(destination, 'worker.js');
       writeFileSync(workerDest, WORKER_JS, 'utf8');
       console.log(`${mode}: wrote worker.js -> ${workerDest}`);

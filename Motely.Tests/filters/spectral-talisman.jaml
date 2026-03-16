@@ -1,0 +1,15 @@
+name: Talisman Gold Seal
+author: jammy
+description: Talisman spectral with Certificate for Gold Seal economy
+deck: Red
+stake: White
+must:
+  - spectral: Talisman
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Certificate
+    score: 40

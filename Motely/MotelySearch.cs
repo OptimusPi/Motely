@@ -75,7 +75,7 @@ public enum MotelySearchMode
 
 public interface IMotelySeedProvider
 {
-    public int? SeedCount { get; }
+    public int SeedCount { get; }
     public ReadOnlySpan<char> NextSeed();
 
     /// <summary>
@@ -85,10 +85,9 @@ public interface IMotelySeedProvider
     public int NextSeeds(string[] seeds);
 }
 
-public sealed class MotelyRandomSeedProvider(int? count) : IMotelySeedProvider
+public sealed class MotelyRandomSeedProvider(int seedCount) : IMotelySeedProvider
 {
-    public int? SeedCount { get; } = count;
-
+    public int SeedCount { get; } = seedCount;
     private int _seedsGenerated;
 
     public ReadOnlySpan<char> NextSeed()
@@ -96,8 +95,6 @@ public sealed class MotelyRandomSeedProvider(int? count) : IMotelySeedProvider
         if (Interlocked.Increment(ref _seedsGenerated) > SeedCount)
             return [];
 
-        // Random.Shared is thread-safe; string.Create writes directly into the
-        // string's backing buffer — zero stackalloc, zero intermediate copies.
         return string.Create(
             MotelyCore.MaxSeedLength,
             (object?)null,
@@ -133,7 +130,7 @@ public sealed class MotelyRandomSeedProvider(int? count) : IMotelySeedProvider
 /// </summary>
 public sealed class MotelyPalindromeSeedProvider : IMotelySeedProvider
 {
-    public int? SeedCount { get; } = CalculateSeedCount();
+    public int SeedCount { get; } = CalculateSeedCount();
 
     private readonly IEnumerator<string> _palindromeEnumerator;
     private readonly object _enumeratorLock = new();
@@ -281,7 +278,7 @@ public sealed class MotelySeedListProvider : IMotelySeedProvider
     // This is a lightweight lock for the hot path - contention should be minimal
     private readonly object _enumeratorLock = new object();
 
-    public int? SeedCount { get; private set; } = -1; // Unknown for enumerables
+    public int SeedCount { get; private set; } = -1; // Unknown for enumerables
 
     public MotelySeedListProvider(IEnumerable<string> seeds, int seedCount = -1)
     {
@@ -703,16 +700,8 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     int* IInternalMotelySearch.PseudoHashKeyLengths => _pseudoHashKeyLengths;
 
     private readonly long _startBatchIndex;
-    private long _completedBatchIndex;
     private readonly long _endBatchIndex;
     private long _batchIndex;
-    private long _matchingSeeds;
-    private long _actualBatchesCompleted; // Aggregated from thread-local counters
-    private long _seedsSearched; // Provider-mode: actual seeds pulled (deterministic)
-
-    // Plan-local counters to eliminate Interlocked contention
-    private readonly long[] _planMatchingSeeds;
-    private readonly long[] _planBatchesCompleted;
     private readonly MotelySearchPlan[] _plans;
     private readonly int _threadCount;
 
@@ -726,19 +715,14 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
     {
         get
         {
-            // Aggregate from thread-local arrays (no Interlocked contention!)
             long totalBatches = 0;
-            for (int i = 0; i < _planBatchesCompleted.Length; i++)
+            for (int i = 0; i < _plans.Length; i++)
             {
-                totalBatches += _planBatchesCompleted[i];
+                totalBatches += _plans[i].SnapshotBatchesCompleted();
             }
-            _actualBatchesCompleted = totalBatches; // Cache for other uses
 
-            // Both modes track _actualBatchesCompleted - no need to recalculate from seeds
             // In provider mode, _startBatchIndex doesn't apply (batches aren't sequential)
-            return _isProviderMode
-                ? _actualBatchesCompleted
-                : _startBatchIndex + _actualBatchesCompleted;
+            return _isProviderMode ? totalBatches : _startBatchIndex + totalBatches;
         }
     }
 
@@ -748,32 +732,33 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             if (_isProviderMode)
             {
-                return Interlocked.Read(ref _seedsSearched);
+                long totalSeeds = 0;
+                for (int i = 0; i < _plans.Length; i++)
+                {
+                    totalSeeds += _plans[i].SnapshotSeedsSearched();
+                }
+                return totalSeeds;
             }
 
-            // Aggregate from thread-local arrays
             long totalBatches = 0;
-            for (int i = 0; i < _planBatchesCompleted.Length; i++)
+            for (int i = 0; i < _plans.Length; i++)
             {
-                totalBatches += _planBatchesCompleted[i];
+                totalBatches += _plans[i].SnapshotBatchesCompleted();
             }
-            _actualBatchesCompleted = totalBatches;
 
-            return _actualBatchesCompleted * _plans[0].SeedsPerBatch;
+            return totalBatches * _plans[0].SeedsPerBatch;
         }
     }
     public long MatchingSeeds
     {
         get
         {
-            // Aggregate from thread-local arrays (no Interlocked contention!)
             long totalSeeds = 0;
-            for (int i = 0; i < _planMatchingSeeds.Length; i++)
+            for (int i = 0; i < _plans.Length; i++)
             {
-                totalSeeds += _planMatchingSeeds[i];
+                totalSeeds += _plans[i].SnapshotMatchingSeeds();
             }
-            _matchingSeeds = totalSeeds; // Cache for other uses
-            return _matchingSeeds;
+            return totalSeeds;
         }
     }
     public long FilteredSeeds => 0; // TODO: rebuild score desc on JamlConfig
@@ -851,8 +836,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // StartBatchIndex is always >= 0 now (defaults to 0)
         _batchIndex = _startBatchIndex - 1;
 
-        _completedBatchIndex = _startBatchIndex;
-
         int[] pseudohashKeyLengths = [.. filterCreationContext.CachedPseudohashKeyLengths];
         _pseudoHashKeyLengthCount = pseudohashKeyLengths.Length;
 
@@ -863,8 +846,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         }
 
         _threadCount = Math.Max(1, settings.ThreadCount);
-        _planMatchingSeeds = new long[_threadCount];
-        _planBatchesCompleted = new long[_threadCount];
         _plans = new MotelySearchPlan[_threadCount];
         for (int i = 0; i < _threadCount; i++)
         {
@@ -942,23 +923,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 break;
             }
 
-            plan.SearchBatch(0);
+            plan.SearchProviderBatch();
             if (plan._providerExhausted)
             {
-                plan.FlushLocalCounters();
                 break;
             }
 
             plan._localBatchesCompleted++;
-
-            // Flush counters
-            if (plan._localMatchingSeeds > 0)
-            {
-                _planMatchingSeeds[plan.ThreadIndex] += plan._localMatchingSeeds;
-                plan._localMatchingSeeds = 0;
-            }
-            _planBatchesCompleted[plan.ThreadIndex] += plan._localBatchesCompleted;
-            plan._localBatchesCompleted = 0;
 
             // Report progress
             PrintReport();
@@ -976,8 +947,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
             }
         }
-
-        plan.FlushLocalCounters();
     }
 
     public Task RunSearchAsync(CancellationToken cancellationToken = default)
@@ -1051,7 +1020,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
         if (_isProviderMode && _plans[0] is MotelyProviderSearchPlan providerPlan)
         {
-            long totalSeeds = providerPlan.SeedProvider.SeedCount ?? -1;
+            long totalSeeds = providerPlan.SeedProvider.SeedCount;
             totalPortionFinished = totalSeeds > 0 ? (double)seedsSearched / totalSeeds : 0;
             percentComplete = totalPortionFinished * 100.0;
             thisPortionFinished = totalPortionFinished;
@@ -1180,7 +1149,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
     private abstract class MotelySearchPlan : IDisposable
     {
-        public const int MAX_SEED_WAIT_MS = 2000;
+        public const int MAX_SEED_WAIT_MS = 20;
 
         public readonly MotelySearch<TBaseFilter> Search;
         public readonly int ThreadIndex;
@@ -1193,9 +1162,10 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         // This eliminates hot-path Interlocked operations and I/O bottlenecks
 
         // Thread-local counters - NO Interlocked in hot path!
-        // Each thread accumulates locally, flushes to global at batch boundaries
+        // Each thread owns these counters; reporting aggregates snapshots.
         internal long _localMatchingSeeds = 0;
         internal long _localBatchesCompleted = 0;
+        internal long _localSeedsSearched = 0;
 
         // Pre-allocated result buffer - ONE allocation per thread, reused forever
         // Old stale data is fine - mask controls which slots are valid
@@ -1295,7 +1265,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     break;
                 }
 
-                SearchBatch(batchIdx);
+                SearchSequentialBatch(batchIdx);
 
                 _localBatchesCompleted++;
 
@@ -1323,15 +1293,6 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     }
                 }
 
-                // Flush counters
-                if (_localMatchingSeeds > 0)
-                {
-                    Search._planMatchingSeeds[ThreadIndex] += _localMatchingSeeds;
-                    _localMatchingSeeds = 0;
-                }
-                Search._planBatchesCompleted[ThreadIndex] += _localBatchesCompleted;
-                _localBatchesCompleted = 0;
-
                 // Report progress
                 Search.PrintReport();
             }
@@ -1349,33 +1310,29 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
             }
 
-            FlushLocalCounters();
         }
 
-        internal abstract void SearchBatch(long batchIdx);
+        internal abstract void SearchProviderBatch();
+        internal abstract void SearchSequentialBatch(long batchIdx);
 
-        // PERFORMANCE: Flush thread-local counters to global state
-        // Called periodically and at thread completion to aggregate thread-local data
+        // Kept for compatibility with call sites; counters are per-thread and never flushed.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void FlushLocalCounters()
         {
-            // Flush any remaining local counters to global (no Interlocked contention!)
-            if (_localMatchingSeeds > 0)
-            {
-                Search._planMatchingSeeds[ThreadIndex] += _localMatchingSeeds;
-                _localMatchingSeeds = 0;
-            }
-            if (_localBatchesCompleted > 0)
-            {
-                Search._planBatchesCompleted[ThreadIndex] += _localBatchesCompleted;
-                _localBatchesCompleted = 0;
-            }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal long SnapshotMatchingSeeds() => Volatile.Read(ref _localMatchingSeeds);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal long SnapshotBatchesCompleted() => Volatile.Read(ref _localBatchesCompleted);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal long SnapshotSeedsSearched() => Volatile.Read(ref _localSeedsSearched);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void SearchSeeds(in MotelySearchContextParams searchContextParams)
         {
-            char* seed = stackalloc char[MotelyCore.MaxSeedLength];
             // This is the method for searching the base filter, we should not be searching additional filters
             Debug.Assert(!searchContextParams.IsAdditionalFilter);
 
@@ -1625,6 +1582,19 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
         {
             Debug.Assert(filterBatch->SeedCount != 0);
 
+            // Zero unused lanes so IsLaneValid returns false for lane >= SeedCount.
+            // Without this, stale data from the previous batch makes those lanes appear
+            // valid, causing the same seeds to be re-processed and reported as duplicates.
+            int count = filterBatch->SeedCount;
+            if (count < MotelyCore.MaxVectorWidth)
+            {
+                double* chars = (double*)&filterBatch->SeedCharacters;
+                for (int lane = count; lane < MotelyCore.MaxVectorWidth; lane++)
+                {
+                    chars[lane] = 0; // First char of each lane; enough for IsLaneValid
+                }
+            }
+
             MotelySearchContextParams searchParams = new(
                 &filterBatch->SeedHashCache,
                 filterBatch->SeedLength,
@@ -1722,9 +1692,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
 
             // Calculate MaxBatch - handle unknown seed count (-1) by using a large estimate
             // This is only used for progress reporting, not actual batch termination
-            int? seedCount = SeedProvider.SeedCount;
-            MaxBatch = seedCount is >= 0
-                ? (seedCount.Value + (long)(MotelyCore.MaxVectorWidth - 1))
+            int seedCount = SeedProvider.SeedCount;
+            MaxBatch = seedCount >= 0
+                ? (seedCount + (long)(MotelyCore.MaxVectorWidth - 1))
                     / (long)MotelyCore.MaxVectorWidth
                 : long.MaxValue / MotelyCore.MaxVectorWidth; // Large estimate for unknown count
             SeedsPerBatch = (long)MotelyCore.MaxVectorWidth;
@@ -1739,7 +1709,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 Marshal.AllocHGlobal(sizeof(Vector512<double>) * MotelyCore.MaxSeedLength);
         }
 
-        internal override void SearchBatch(long batchIdx)
+        internal override void SearchProviderBatch()
         {
             // Batch retrieve seeds in one lock operation - much faster!
             // Use thread-local buffer to avoid allocations per batch
@@ -1820,11 +1790,9 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                 }
             }
 
-            // Provider-mode determinism: count actual seeds pulled, not (batches * vectorWidth).
-            // This avoids nondeterministic totals caused by variable partial batches across threads.
             if (actualSeedCount > 0)
             {
-                Interlocked.Add(ref Search._seedsSearched, actualSeedCount);
+                _localSeedsSearched += actualSeedCount;
             }
 
             if (homogeneousSeedLength)
@@ -1890,6 +1858,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
                     SearchSingleSeed(seed[..seedLength]);
                 }
             }
+        }
+
+        internal override void SearchSequentialBatch(long batchIdx)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(MotelyProviderSearchPlan)} does not support sequential batch search."
+            );
         }
 
         private void SearchSingleSeed(ReadOnlySpan<char> seed)
@@ -2026,7 +2001,7 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             *_hashCache = new PartialSeedHashCache(search, &_hashes[0]);
         }
 
-        internal override void SearchBatch(long batchIdx)
+        internal override void SearchSequentialBatch(long batchIdx)
         {
             // Figure out which digits this search is doing
             for (int i = _nonBatchCharCount - 1; i >= 0; i--)
@@ -2069,6 +2044,13 @@ public sealed unsafe class MotelySearch<TBaseFilter> : IInternalMotelySearch
             {
                 SearchVector(_batchCharCount - 1, SeedDigitVectors[vectorIndex], hashes, 0);
             }
+        }
+
+        internal override void SearchProviderBatch()
+        {
+            throw new InvalidOperationException(
+                $"{nameof(MotelySequentialSearchPlan)} does not support provider batch search."
+            );
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
