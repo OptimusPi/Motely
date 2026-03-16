@@ -6,15 +6,14 @@ namespace Motely.Tests;
 public class SeedProviderCountTests
 {
     [Theory]
-    [InlineData("A", 0)]
-    [InlineData("A", 1)]
-    [InlineData("AB", 2)]
-    [InlineData("SHOW", 3)]
-    [InlineData("HI", 4)]
-    public void GetPaddedSeedCount_MatchesGeneratedSequenceCount(string keyword, int padLen)
+    [InlineData("A", 0, 1)]
+    [InlineData("A", 1, 6)]
+    [InlineData("AB", 2, 27)]
+    [InlineData("SHOW", 3, 108)]
+    [InlineData("HI", 4, 243)]
+    public void GetPaddedSeedCount_MatchesExpectedCount(string keyword, int padLen, int expected)
     {
         char[] validChars = ['A', 'B', 'C'];
-        int expected = MotelyCore.GeneratePaddedSeeds(keyword, padLen, validChars).Count();
         int actual = MotelyCore.GetPaddedSeedCount(keyword, padLen, validChars);
 
         Assert.Equal(expected, actual);
@@ -36,7 +35,7 @@ public class SeedProviderCountTests
             total += pulled;
         }
 
-        Assert.Equal(total, provider.SeedCount.GetValueOrDefault(-1));
+        Assert.Equal(total, provider.SeedCount);
     }
 
     [Fact]
@@ -45,6 +44,6 @@ public class SeedProviderCountTests
         string[] seeds = ["ABCD1234", "BCDE2345", "CDEF3456"];
         var provider = new MotelySeedListProvider(seeds);
 
-        Assert.Equal(seeds.Length, provider.SeedCount.GetValueOrDefault(-1));
+        Assert.Equal(seeds.Length, provider.SeedCount);
     }
 }

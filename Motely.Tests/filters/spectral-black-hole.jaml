@@ -1,0 +1,17 @@
+name: BlackHole Hand Levels
+author: jammy
+description: BlackHole spectral with Constellation for universal hand level upgrade
+deck: Red
+stake: White
+must:
+  - spectral: BlackHole
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: Constellation
+    score: 60
+  - soulJoker: Perkeo
+    score: 80

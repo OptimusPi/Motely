@@ -10,7 +10,7 @@ One plan. Two repos.
 
 ### 1.1 loadMotely — DONE
 
-Already added in `motely-node/index.js`: `export function loadMotely(/* options */) { return Promise.resolve(api); }` and types in `index.d.ts`. server.js now resolves. No further change.
+`motely-node` has a single root entry point. `index.js` / `index.cjs` export `loadMotely()` and a default lazy API. There is no `motely-node/server` subpath; consumers use the root package only.
 
 ### 1.2 Bin path (DONE in source)
 

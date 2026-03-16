@@ -1,0 +1,15 @@
+name: Aura Polychrome Card
+author: jammy
+description: Aura spectral for Polychrome edition on playing cards
+deck: Red
+stake: White
+must:
+  - spectral: Aura
+    antes:
+      - 1
+      - 2
+      - 3
+      - 4
+should:
+  - uncommonJoker: GlassJoker
+    score: 40

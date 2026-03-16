@@ -25,4 +25,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Motely\Motely.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="filters\**\*.jaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
