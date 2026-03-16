@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.JavaScript.NodeApi;
 using Motely;
 using Motely.Analysis;
@@ -7,7 +6,6 @@ using Motely.Filters;
 using BlockSearchResultDto = global::Motely.BlockSearchResultDto;
 using BlockSeedResultDto = global::Motely.BlockSeedResultDto;
 using CapabilitiesDto = global::Motely.CapabilitiesDto;
-using ErrorDto = global::Motely.ErrorDto;
 using SearchOptionsDto = global::Motely.SearchOptionsDto;
 using ValidateResultDto = global::Motely.ValidateResultDto;
 using VersionDto = global::Motely.VersionDto;
@@ -15,8 +13,9 @@ using VersionDto = global::Motely.VersionDto;
 namespace Motely.NodeAddon;
 
 /// <summary>
-/// Node addon exports for Motely - clean direct functions matching CLI pattern.
-/// No optionsJson complexity - just simple async functions.
+/// Node addon exports — typed returns, no JSON serialization.
+/// node-api-dotnet Generator marshals C# types ↔ JS objects at compile time.
+/// Errors throw exceptions; they propagate as JS errors automatically.
 /// </summary>
 [JSExport]
 public static class MotelyNodeExports
@@ -24,22 +23,20 @@ public static class MotelyNodeExports
     private static string? _cachedVersion;
     private static string[]? _cachedFeatures;
 
+    // ── Version / Capabilities ───────────────────────────────────────────────
+
     [JSExport]
-    public static Task<string> GetVersionAsync()
-    {
-        var dto = new VersionDto
+    public static VersionDto GetVersion() =>
+        new()
         {
             Version = GetCachedVersion(),
             Runtime = "node-addon",
             Features = GetFeatureList(),
         };
-        return Task.FromResult(JsonSerializer.Serialize(dto, MotelyJsonContext.Default.VersionDto));
-    }
 
     [JSExport]
-    public static Task<string> GetCapabilitiesAsync()
-    {
-        var dto = new CapabilitiesDto
+    public static CapabilitiesDto GetCapabilities() =>
+        new()
         {
             Simd = IsSimdEnabled(),
             Threads = true,
@@ -49,277 +46,223 @@ public static class MotelyNodeExports
             Version = GetCachedVersion(),
             Timestamp = DateTime.UtcNow.ToString("O"),
         };
-        return Task.FromResult(
-            JsonSerializer.Serialize(dto, MotelyJsonContext.Default.CapabilitiesDto)
-        );
-    }
 
-    private static bool IsSimdEnabled() => System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
+    // ── Seed Analysis ────────────────────────────────────────────────────────
 
     [JSExport]
-    public static Task<string> AnalyzeSeedAsync(string seed, string deck, string stake)
+    public static SeedAnalysisDto AnalyzeSeed(string seed, string deck, string stake)
     {
-        var result = AnalyzeSeed(seed, deck, stake);
-        return Task.FromResult(result);
+        if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
+            throw new ArgumentException($"Unknown deck: '{deck}'", nameof(deck));
+        if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
+            throw new ArgumentException($"Unknown stake: '{stake}'", nameof(stake));
+
+        var cfg = new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum);
+        var analysis = MotelySeedAnalyzer.Analyze(cfg);
+
+        if (!string.IsNullOrEmpty(analysis.Error))
+            throw new InvalidOperationException(analysis.Error);
+
+        return MapAnalysisToDto(analysis, seed, deckEnum, stakeEnum);
     }
 
-    private static string AnalyzeSeed(string seed, string deck, string stake)
-    {
-        try
-        {
-            if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
-                return JsonSerializer.Serialize(
-                    new ErrorDto { Error = $"Unknown deck: {deck}" },
-                    MotelyJsonContext.Default.ErrorDto
-                );
-
-            if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
-                return JsonSerializer.Serialize(
-                    new ErrorDto { Error = $"Unknown stake: {stake}" },
-                    MotelyJsonContext.Default.ErrorDto
-                );
-
-            var cfg = new MotelySeedAnalysisConfig(seed, deckEnum, stakeEnum);
-            var analysis = MotelySeedAnalyzer.Analyze(cfg);
-
-            if (!string.IsNullOrEmpty(analysis.Error))
-                return JsonSerializer.Serialize(
-                    new ErrorDto { Error = analysis.Error },
-                    MotelyJsonContext.Default.ErrorDto
-                );
-
-            var dto = MapAnalysisToDto(analysis, seed, deckEnum, stakeEnum);
-            return JsonSerializer.Serialize(dto, MotelyJsonContext.Default.SeedAnalysisDto);
-        }
-        catch (Exception ex)
-        {
-            return JsonSerializer.Serialize(
-                new ErrorDto { Error = ex.Message },
-                MotelyJsonContext.Default.ErrorDto
-            );
-        }
-    }
+    // ── JAML Validation ──────────────────────────────────────────────────────
 
     [JSExport]
-    public static Task<string> ValidateJamlAsync(string jamlContent)
+    public static ValidateResultDto ValidateJaml(string jamlContent)
     {
-        var result = ValidateJaml(jamlContent);
-        return Task.FromResult(result);
+        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var parseError) || config == null)
+            return new ValidateResultDto { Valid = false, Error = parseError ?? "Failed to parse JAML" };
+
+        return new ValidateResultDto
+        {
+            Valid = true,
+            Name = config.Name,
+            Deck = config.Deck.ToString(),
+            Stake = config.Stake.ToString(),
+        };
     }
 
-    private static string ValidateJaml(string jamlContent)
-    {
-        try
-        {
-            if (
-                !JamlConfigLoader.TryLoad(jamlContent, out var config, out var parseError)
-                || config == null
-            )
-            {
-                return JsonSerializer.Serialize(
-                    new ValidateResultDto
-                    {
-                        Valid = false,
-                        Error = parseError ?? "Failed to parse JAML",
-                    },
-                    MotelyJsonContext.Default.ValidateResultDto
-                );
-            }
+    // ── Shop PRNG Stream ─────────────────────────────────────────────────────
 
-            return JsonSerializer.Serialize(
-                new ValidateResultDto
-                {
-                    Valid = true,
-                    Name = config.Name,
-                    Deck = config.Deck.ToString(),
-                    Stake = config.Stake.ToString(),
-                },
-                MotelyJsonContext.Default.ValidateResultDto
-            );
-        }
-        catch (Exception ex)
-        {
-            return JsonSerializer.Serialize(
-                new ValidateResultDto { Valid = false, Error = ex.Message },
-                MotelyJsonContext.Default.ValidateResultDto
-            );
-        }
-    }
-
-    /// <summary>Run keyword search - single keyword padded to 8 chars</summary>
+    /// <summary>
+    /// Infinite shop item stream hook-in. The shop PRNG sub-stream for a given
+    /// seed/deck/stake/ante is deterministic and unbounded — call this with
+    /// skip=0,count=50 to get the first 50 potential shop items, then skip=50,count=50
+    /// for the next 50, etc. Each call is O(skip+count): the context is created once
+    /// per call, fast-forwarded, then count items are collected in one pass.
+    /// </summary>
     [JSExport]
-    public static Task<string> RunKeywordSearchAsync(string jamlContent, string keyword, string? padding = null)
-        => RunSearchAsyncCore(
+    public static ShopItemDto[] GetShopItems(
+        string seed,
+        string deck,
+        string stake,
+        int ante,
+        int skip,
+        int count
+    )
+    {
+        if (!Enum.TryParse<MotelyDeck>(deck, true, out var deckEnum))
+            throw new ArgumentException($"Unknown deck: '{deck}'", nameof(deck));
+        if (!Enum.TryParse<MotelyStake>(stake, true, out var stakeEnum))
+            throw new ArgumentException($"Unknown stake: '{stake}'", nameof(stake));
+        if (skip < 0)
+            throw new ArgumentOutOfRangeException(nameof(skip), "skip must be >= 0.");
+        if (count <= 0)
+            throw new ArgumentOutOfRangeException(nameof(count), "count must be > 0.");
+
+        return MotelyShopCursor.GetRange(seed, deckEnum, stakeEnum, ante, skip, count);
+    }
+
+    // ── Searches ─────────────────────────────────────────────────────────────
+
+    /// <summary>Single keyword padded to 8 chars.</summary>
+    [JSExport]
+    public static Task<BlockSearchResultDto> RunKeywordSearchAsync(
+        string jamlContent,
+        string keyword,
+        string? padding = null
+    ) =>
+        RunSearchAsyncCore(
             jamlContent,
-            new SearchOptionsDto
-            {
-                Keyword = keyword,
-                Padding = padding,
-            },
+            new SearchOptionsDto { Keyword = keyword, Padding = padding },
             NodeSearchMode.Keywords
         );
 
-    /// <summary>Run keyword search - multiple keywords</summary>
+    /// <summary>Multiple keywords — each padded to 8 chars, results unioned.</summary>
     [JSExport]
-    public static async Task<string> RunKeywordsSearchAsync(
+    public static async Task<BlockSearchResultDto> RunKeywordsSearchAsync(
         string jamlContent,
         string[]? keywords,
         string? padding = null
     )
     {
-        if (keywords == null)
-            return ErrorJson("keywords is required.");
+        if (keywords == null || keywords.Length == 0)
+            throw new ArgumentException("At least one keyword is required.", nameof(keywords));
 
         return await RunSearchAsyncCore(
             jamlContent,
-            new SearchOptionsDto
-            {
-                Keywords = keywords,
-                Padding = padding,
-            },
+            new SearchOptionsDto { Keywords = keywords, Padding = padding },
             NodeSearchMode.Keywords
         );
     }
 
-    /// <summary>Run random seed search</summary>
+    /// <summary>Random seed search.</summary>
     [JSExport]
-    public static Task<string> RunRandomSearchAsync(string jamlContent, int count)
-        => RunSearchAsyncCore(
+    public static Task<BlockSearchResultDto> RunRandomSearchAsync(string jamlContent, int count) =>
+        RunSearchAsyncCore(
             jamlContent,
             new SearchOptionsDto { RandomSeeds = count },
             NodeSearchMode.Random
         );
 
-    /// <summary>Run palindrome search</summary>
+    /// <summary>Palindrome seed search.</summary>
     [JSExport]
-    public static Task<string> RunPalindromeSearchAsync(string jamlContent)
-        => RunSearchAsyncCore(
+    public static Task<BlockSearchResultDto> RunPalindromeSearchAsync(string jamlContent) =>
+        RunSearchAsyncCore(
             jamlContent,
             new SearchOptionsDto { Palindrome = true },
             NodeSearchMode.Palindrome
         );
 
-    /// <summary>Run any non-sequential search mode from JSON options.</summary>
+    /// <summary>Search a specific list of seeds.</summary>
     [JSExport]
-    public static async Task<string> RunSearchAsync(string jamlContent, string optionsJson)
+    public static async Task<BlockSearchResultDto> RunListSearchAsync(
+        string jamlContent,
+        string[] seeds
+    )
     {
-        SearchOptionsDto? opts;
-        try
-        {
-            opts = JsonSerializer.Deserialize<SearchOptionsDto>(
-                optionsJson,
-                MotelyJsonContext.Default.SearchOptionsDto
-            );
-        }
-        catch (Exception ex)
-        {
-            return ErrorJson("Invalid options JSON: " + ex.Message);
-        }
+        if (seeds == null || seeds.Length == 0)
+            throw new ArgumentException("At least one seed is required.", nameof(seeds));
 
-        if (opts == null)
-            return ErrorJson("Search options are required.");
-
-        return await RunSearchAsyncCore(jamlContent, opts, null);
+        return await RunSearchAsyncCore(
+            jamlContent,
+            new SearchOptionsDto { Seeds = seeds },
+            NodeSearchMode.List
+        );
     }
 
-    /// <summary>Run list search (seeds[] or specificSeed). Returns JSON BlockSearchResultDto or ErrorDto.</summary>
+    /// <summary>
+    /// Sequential range search [startBlockId, endBlockId).
+    /// Returns the aggregated results across all blocks in the range.
+    /// </summary>
     [JSExport]
-    public static async Task<string> RunListSearchAsync(string jamlContent, string optionsJson)
-    {
-        SearchOptionsDto? opts;
-        try
-        {
-            opts = JsonSerializer.Deserialize<SearchOptionsDto>(optionsJson, MotelyJsonContext.Default.SearchOptionsDto);
-        }
-        catch (Exception ex)
-        {
-            return ErrorJson("Invalid options JSON: " + ex.Message);
-        }
-
-        if (opts == null)
-            return ErrorJson("Options required for list search");
-
-        return await RunSearchAsyncCore(jamlContent, opts, NodeSearchMode.List);
-    }
-
-    /// <summary>Run a range of blocks [startBlockId, endBlockId). Returns aggregated JSON BlockSearchResultDto.</summary>
-    [JSExport]
-    public static async Task<string> RunSequentialRangeAsync(string jamlContent, int startBlockId, int endBlockId)
+    public static async Task<BlockSearchResultDto> RunSequentialRangeAsync(
+        string jamlContent,
+        int startBlockId,
+        int endBlockId
+    )
     {
         const int maxBlocks = 35 * 35 * 35;
         if (startBlockId < 0 || endBlockId > maxBlocks || startBlockId >= endBlockId)
-            return ErrorJson($"Block range must be 0..{maxBlocks}, start < end");
+            throw new ArgumentOutOfRangeException(
+                nameof(startBlockId),
+                $"Block range must be 0..{maxBlocks} with start < end."
+            );
 
-        try
-        {
-            long totalSearched = 0;
-            var allSeeds = new List<BlockSeedResultDto>();
-            for (int blockId = startBlockId; blockId < endBlockId; blockId++)
-            {
-                var result = await ProcessBlockRunner.ProcessBlockAsync(jamlContent, blockId).ConfigureAwait(false);
-                if (result == null)
-                    return ErrorJson("Invalid JAML or blockId out of range");
-                totalSearched += result.SeedsSearched;
-                foreach (var s in result.Seeds)
-                    allSeeds.Add(new BlockSeedResultDto { Seed = s.Seed, Score = s.Score });
-            }
+        long totalSearched = 0;
+        var allSeeds = new List<BlockSeedResultDto>();
 
-            var dto = new BlockSearchResultDto
-            {
-                BlockId = startBlockId,
-                SeedsSearched = totalSearched,
-                SeedsFound = allSeeds.Count,
-                Seeds = allSeeds.ToArray(),
-            };
-            return JsonSerializer.Serialize(dto, MotelyJsonContext.Default.BlockSearchResultDto);
-        }
-        catch (Exception ex)
+        for (int blockId = startBlockId; blockId < endBlockId; blockId++)
         {
-            return ErrorJson(ex.Message);
-        }
-    }
+            var result = await ProcessBlockRunner
+                .ProcessBlockAsync(jamlContent, blockId)
+                .ConfigureAwait(false);
 
-    /// <summary>Run one block of sequential search. Returns JSON BlockSearchResultDto or ErrorDto.</summary>
-    [JSExport]
-    public static async Task<string> ProcessBlockAsync(string jamlContent, int blockId)
-    {
-        try
-        {
-            var result = await ProcessBlockRunner.ProcessBlockAsync(jamlContent, blockId).ConfigureAwait(false);
             if (result == null)
-                return ErrorJson("Invalid JAML or blockId out of range");
-            var dto = new BlockSearchResultDto
-            {
-                BlockId = result.BlockId,
-                SeedsSearched = result.SeedsSearched,
-                SeedsFound = result.SeedsFound,
-                Seeds = result.Seeds
-                    .Select(s => new BlockSeedResultDto { Seed = s.Seed, Score = s.Score })
-                    .ToArray(),
-            };
-            return JsonSerializer.Serialize(dto, MotelyJsonContext.Default.BlockSearchResultDto);
+                throw new InvalidOperationException(
+                    $"Invalid JAML or block {blockId} out of range."
+                );
+
+            totalSearched += result.SeedsSearched;
+            foreach (var s in result.Seeds)
+                allSeeds.Add(new BlockSeedResultDto { Seed = s.Seed, Score = s.Score });
         }
-        catch (Exception ex)
+
+        return new BlockSearchResultDto
         {
-            return ErrorJson(ex.Message);
-        }
+            BlockId = startBlockId,
+            SeedsSearched = totalSearched,
+            SeedsFound = allSeeds.Count,
+            Seeds = allSeeds.ToArray(),
+        };
     }
 
+    /// <summary>Run a single block of sequential search.</summary>
+    [JSExport]
+    public static async Task<BlockSearchResultDto> ProcessBlockAsync(
+        string jamlContent,
+        int blockId
+    )
+    {
+        var result = await ProcessBlockRunner
+            .ProcessBlockAsync(jamlContent, blockId)
+            .ConfigureAwait(false);
 
-    private static string ErrorJson(string message) =>
-        JsonSerializer.Serialize(
-            new ErrorDto { Error = message },
-            MotelyJsonContext.Default.ErrorDto
-        );
+        if (result == null)
+            throw new InvalidOperationException("Invalid JAML or blockId out of range.");
 
-    private static async Task<string> RunSearchAsyncCore(
+        return new BlockSearchResultDto
+        {
+            BlockId = result.BlockId,
+            SeedsSearched = result.SeedsSearched,
+            SeedsFound = result.SeedsFound,
+            Seeds = result
+                .Seeds.Select(s => new BlockSeedResultDto { Seed = s.Seed, Score = s.Score })
+                .ToArray(),
+        };
+    }
+
+    // ── Internal ─────────────────────────────────────────────────────────────
+
+    private static async Task<BlockSearchResultDto> RunSearchAsyncCore(
         string jamlContent,
         SearchOptionsDto rawOptions,
         NodeSearchMode? expectedMode
     )
     {
-        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error))
-            return ErrorJson(error ?? "Invalid JAML");
+        if (!JamlConfigLoader.TryLoad(jamlContent, out var config, out var error) || config == null)
+            throw new InvalidOperationException(error ?? "Invalid JAML.");
 
         var (request, requestError) = MotelySearchRequestFactory.FromOptions(
             rawOptions,
@@ -327,78 +270,60 @@ public static class MotelyNodeExports
             rawOptions.BatchCharCount ?? 4
         );
         if (requestError != null || request == null)
-            return ErrorJson(requestError ?? "Search request could not be created.");
+            throw new InvalidOperationException(requestError ?? "Search request could not be created.");
 
         if (expectedMode.HasValue)
-        {
-            var expectedModeError = ValidateExpectedMode(expectedMode.Value, request);
-            if (expectedModeError != null)
-                return ErrorJson(expectedModeError);
-        }
+            ValidateExpectedMode(expectedMode.Value, request);
 
         var (plan, _, prepareError) = MotelySearchOrchestrator.PrepareSearch(config, request);
         if (prepareError != null || plan == null)
-            return ErrorJson(prepareError ?? "Search could not be prepared.");
+            throw new InvalidOperationException(prepareError ?? "Search could not be prepared.");
 
         var results = new List<BlockSeedResultDto>();
         var settings = plan.Settings;
+
         if (plan.ShouldClauseCount > 0)
         {
             settings = settings.WithScoredResultCallback(tally =>
-                results.Add(
-                    new BlockSeedResultDto
-                    {
-                        Seed = tally.Seed,
-                        Score = tally.Score,
-                    }
-                )
+                results.Add(new BlockSeedResultDto { Seed = tally.Seed, Score = tally.Score })
             );
         }
         else
         {
             settings = settings.WithSeedMatchCallback(seed =>
-                results.Add(
-                    new BlockSeedResultDto
-                    {
-                        Seed = seed,
-                        Score = 0,
-                    }
-                )
+                results.Add(new BlockSeedResultDto { Seed = seed, Score = 0 })
             );
         }
 
         using var search = settings.CreateSearch();
         await Task.Run(() => search.Start(CancellationToken.None));
 
-        return JsonSerializer.Serialize(
-            new BlockSearchResultDto
-            {
-                BlockId = 0,
-                SeedsSearched = search.TotalSeedsSearched,
-                SeedsFound = results.Count,
-                Seeds = results.ToArray(),
-            },
-            MotelyJsonContext.Default.BlockSearchResultDto
-        );
+        return new BlockSearchResultDto
+        {
+            BlockId = 0,
+            SeedsSearched = search.TotalSeedsSearched,
+            SeedsFound = results.Count,
+            Seeds = results.ToArray(),
+        };
     }
 
-    private static string? ValidateExpectedMode(
-        NodeSearchMode expectedMode,
-        MotelySearchRequest request
-    )
+    private static void ValidateExpectedMode(NodeSearchMode mode, MotelySearchRequest request)
     {
-        return expectedMode switch
+        var error = mode switch
         {
             NodeSearchMode.List when request.Seeds is not { Length: > 0 } =>
                 "List search requires at least one seed.",
             NodeSearchMode.Keywords when request.Keywords is not { Length: > 0 } =>
                 "Keyword search requires at least one keyword.",
             NodeSearchMode.Random when !request.RandomSeeds.HasValue =>
-                "Random search requires randomSeeds.",
+                "Random search requires a count.",
             NodeSearchMode.Palindrome when !request.Palindrome =>
                 "Palindrome search requires palindrome=true.",
             _ => null,
         };
+
+        if (error != null)
+            throw new ArgumentException(error);
     }
 
     private enum NodeSearchMode
@@ -409,6 +334,7 @@ public static class MotelyNodeExports
         Palindrome,
     }
 
+    private static bool IsSimdEnabled() => System.Runtime.Intrinsics.Vector128.IsHardwareAccelerated;
 
     private static string GetCachedVersion() =>
         _cachedVersion ??= MotelyBuildVersion.For(typeof(MotelyNodeExports).Assembly);
@@ -417,12 +343,13 @@ public static class MotelyNodeExports
     {
         if (_cachedFeatures is not null)
             return _cachedFeatures;
-        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate" };
+
+        var features = new List<string> { "analyzer", "jaml-search", "jaml-validate", "shop-stream" };
         if (IsSimdEnabled())
             features.Add("simd");
         features.Add("threads");
-        _cachedFeatures = features.ToArray();
-        return _cachedFeatures;
+
+        return _cachedFeatures = features.ToArray();
     }
 
     private static SeedAnalysisDto MapAnalysisToDto(
@@ -430,9 +357,8 @@ public static class MotelyNodeExports
         string seed,
         MotelyDeck deck,
         MotelyStake stake
-    )
-    {
-        return new SeedAnalysisDto
+    ) =>
+        new()
         {
             Seed = seed,
             Deck = deck.ToString(),
@@ -469,5 +395,4 @@ public static class MotelyNodeExports
                 })
                 .ToArray(),
         };
-    }
 }
