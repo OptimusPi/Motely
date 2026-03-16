@@ -18,6 +18,41 @@ internal unsafe struct PartialSeedHashCache : IDisposable
     public readonly Vector512<double>* DynamicCacheMemory;
     public int DynamicCacheEntryCount;
 
+    /// <summary>
+    /// Empty cache for single-seed contexts (e.g. MotelyShopCursor) that have no filter
+    /// and therefore need no pre-computed partial-seed hashes.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public PartialSeedHashCache(bool empty)
+    {
+        Cache = (Vector512<double>**)
+            Marshal.AllocHGlobal(
+                sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+            );
+        InitialCache = (Vector512<double>**)
+            Marshal.AllocHGlobal(
+                sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+            );
+        // All dynamic entries available, since there are no static pseudohash key lengths.
+        DynamicCacheMemory = (Vector512<double>*)
+            Marshal.AllocHGlobal(
+                sizeof(Vector512<double>) * MotelyCore.MaxCachedPseudoHashKeyLength
+            );
+        DynamicCacheEntryCount = 0;
+
+        // Zero both tables — no static entries at all.
+        Unsafe.InitBlockUnaligned(
+            InitialCache,
+            0,
+            (uint)sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+        );
+        Unsafe.InitBlockUnaligned(
+            Cache,
+            0,
+            (uint)sizeof(Vector512<double>*) * MotelyCore.MaxCachedPseudoHashKeyLength
+        );
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public PartialSeedHashCache(IInternalMotelySearch search, Vector512<double>* partialSeedHashes)
     {
