@@ -4,7 +4,6 @@ using System.Runtime.Versioning;
 using System.Text.Json;
 using Motely;
 using Motely.Analysis;
-using Motely.Executors;
 using Motely.Filters;
 using CapabilitiesDto = global::Motely.CapabilitiesDto;
 using ErrorDto = global::Motely.ErrorDto;

@@ -8,4 +8,4 @@ docker build -f Dockerfile.linux-node -t motely-linux-node .
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 docker run --rm -v "${src}:/src" -w /src motely-linux-node
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Write-Host "Done. Check Motely.NodeAddon/bin/linux-x64/Motely.NodeAddon.node"
+Write-Host "Done. Check motely-node/bin/linux-x64/Motely.NodeAddon.node"

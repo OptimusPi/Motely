@@ -24,7 +24,7 @@ if (!motelyVersion) {
 console.log(`MotelyVersion: ${motelyVersion}`);
 
 const packageJsonPaths = [
-  join(__dirname, 'Motely.NodeAddon', 'package.json'),
+  join(__dirname, 'motely-node', 'package.json'),
   join(__dirname, 'motely-wasm', 'package.json'),
 ];
 
